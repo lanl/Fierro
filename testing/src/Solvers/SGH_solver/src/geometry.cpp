@@ -10,16 +10,14 @@
 ///
 /// \fn update_position
 ///
-/// \brief <insert brief description>
+/// \brief Updates the nodal positions based on the nodal velocity
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param Runge Kutta time integration alpha value
+/// \param Time step size 
+/// \param Number of dimensions in the mesh (REMOVE)
+/// \param Number of nodes in the mesh
+/// \param View of nodal position data
+/// \param View of nodal velocity data
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_position(double rk_alpha,
@@ -42,16 +40,19 @@ void SGH::update_position(double rk_alpha,
 ///
 /// \fn get_bmatrix
 ///
-/// \brief <insert brief description>
+/// \brief Theis function calculate the finite element B matrix:
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
+///  B_p =  J^{-T} \cdot (\nabla_{xi} \phi_p w,   where:
+///  \phi_p is the basis function for vertex p
+///  w is the 1 gauss point for the cell (everything is evaluted at this point)
+///  J^{-T} is the inverse transpose of the Jacobi matrix
+///  \nabla_{xi} is the gradient opperator in the reference coordinates
+///  B_p is the OUTWARD corner area normal at node p
 ///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param B matrix
+/// \param Global index of the element
+/// \param View of nodal position data
+/// \param View of the elements node ids
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -253,16 +254,7 @@ void SGH::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
 ///
 /// \fn get_vol
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \brief Compute Volume of each finite element
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_vol(const DViewCArrayKokkos<double>& elem_vol,
@@ -291,7 +283,18 @@ void SGH::get_vol(const DViewCArrayKokkos<double>& elem_vol,
     return;
 } // end subroutine
 
-// Exact volume for a hex element
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_vol_hex
+///
+/// \brief Exact volume for a hex element
+///
+/// \param View of element volume data
+/// \param Global element index
+/// \param View into nodal position data
+/// \param Runge Kutta time integration level
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void SGH::get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
@@ -338,16 +341,12 @@ void SGH::get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
 ///
 /// \fn get_bmatrix2D
 ///
-/// \brief <insert brief description>
+/// \brief Calculate the 2D finite element B matrix
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param B Matrix
+/// \param Global index of the element
+/// \param Nodal coordinates
+/// \param Global indices of the nodes of this element
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -412,7 +411,18 @@ void SGH::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
     return;
 } // end subroutine
 
-// true volume of a quad in RZ coords
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_vol_quad
+///
+/// \brief True volume of a quad in RZ coords
+///
+/// \param Element volume
+/// \param Global index of the element
+/// \param Nodal coordinates
+/// \param Global ids of the nodes in this element
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void SGH::get_vol_quad(const DViewCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
@@ -468,7 +478,19 @@ void SGH::get_vol_quad(const DViewCArrayKokkos<double>& elem_vol,
     return;
 } // end subroutine
 
-// element facial area
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_area_quad
+///
+/// \brief Calculate the area of a elements face
+///
+/// \param Global index of the element
+/// \param Nodal coordinates
+/// \param Global ids of the nodes in this element
+///
+/// \return Elements face area (double)
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 double SGH::get_area_quad(const size_t elem_gid,
     const DViewCArrayKokkos<double>&   node_coords,
@@ -505,16 +527,16 @@ double SGH::get_area_quad(const size_t elem_gid,
 ///
 /// \fn heron
 ///
-/// \brief <insert brief description>
+/// \brief Calculate the area of a triangle using the heron algorithm
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
+/// \param Node 1 X coordinate
+/// \param Node 1 Y coordinate
+/// \param Node 2 X coordinate
+/// \param Node 2 Y coordinate
+/// \param Node 3 X coordinate
+/// \param Node 3 Y coordinate
 ///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \return Triangle area (double)
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -545,16 +567,12 @@ double SGH::heron(const double x1,
 ///
 /// \fn get_area_weights2D
 ///
-/// \brief <insert brief description>
+/// \brief Calculate the corner weighted area
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param Corner areas
+/// \param Element global index
+/// \param Nodal coordinates
+/// \param Node global IDs associated with this element
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION

@@ -636,16 +636,7 @@ size_t check_bdy(const size_t patch_gid,
 ///
 /// \fn build_boundry_node_sets
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// REMOVE TO SETUP
 ///
 /////////////////////////////////////////////////////////////////////////////
 void build_boundry_node_sets(const CArrayKokkos<boundary_t>& boundary,
@@ -761,16 +752,7 @@ std::vector<double> extract_list(std::string str)
 ///
 /// \fn ltrim
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// REMOVE TO SETUP
 ///
 /////////////////////////////////////////////////////////////////////////////
 std::string ltrim(const std::string& s)
@@ -783,16 +765,7 @@ std::string ltrim(const std::string& s)
 ///
 /// \fn rtrim
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// REMOVE TO SETUP
 ///
 /////////////////////////////////////////////////////////////////////////////
 std::string rtrim(const std::string& s)
@@ -805,17 +778,7 @@ std::string rtrim(const std::string& s)
 ///
 /// \fn trim
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
-///
+/// REMOVE TO SETUP
 /////////////////////////////////////////////////////////////////////////////
 std::string trim(const std::string& s)
 {

@@ -39,16 +39,16 @@
 ///
 /// \fn update_energy
 ///
-/// \brief <insert brief description>
+/// \brief Evolves the specific internal energy
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param The current Runge Kutta alpha value
+/// \param Time step size
+/// \param The simulation mesh
+/// \param A view into the nodal velocity data
+/// \param A view into the nodal position data
+/// \param A view into the element specific internal energy
+/// \param A view into the element mass
+/// \param A view into the corner force data
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_energy(double rk_alpha,

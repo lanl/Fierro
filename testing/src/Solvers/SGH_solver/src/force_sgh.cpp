@@ -39,16 +39,25 @@
 ///
 /// \fn get_force
 ///
-/// \brief <insert brief description>
+/// \brief This function calculates the corner forces and the evolves stress
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param fuzz
+/// \param small
+/// \param Element state variable array
+/// \param Time step size
+/// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_force(const CArrayKokkos<material_t>& material,
@@ -395,16 +404,25 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
 ///
 /// \fn get_force_2D
 ///
-/// \brief <insert brief description>
+/// \brief This function calculates the corner forces and the evolves stress
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param fuzz (REMOVE)
+/// \param small (REMOVE)
+/// \param Element state variable array
+/// \param Time step size
+/// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_force_2D(const CArrayKokkos<material_t>& material,

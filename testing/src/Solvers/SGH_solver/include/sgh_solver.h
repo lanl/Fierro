@@ -268,16 +268,7 @@ public:
     ///
     /// \fn setup
     ///
-    /// \brief <insert brief description>
-    ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \brief Calls setup_sgh, which initializes mesh, state, and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
     void setup()
@@ -312,16 +303,8 @@ public:
     ///
     /// \fn run
     ///
-    /// \brief <insert brief description>
+    /// \brief Calls the solve function which evolves the state
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
     ///
     /////////////////////////////////////////////////////////////////////////////
     void run()
@@ -406,10 +389,6 @@ public:
         size_t&      graphics_id,
         const double time_value);
 
-    // void cleanup_material_models();
-
-    // void module_cleanup();
-
     void solve(CArrayKokkos<material_t>& material,
                CArrayKokkos<boundary_t>& boundary,
                mesh_t& mesh,
@@ -462,19 +441,6 @@ public:
         DViewCArrayKokkos<double>& elem_sie,
         const DViewCArrayKokkos<double>& elem_mass,
         const DViewCArrayKokkos<double>& corner_force);
-
-    // **** Functions defined in eos.cpp **** //
-    // NOTE: This should be moved up so multiple solvers can use the ideal gas equation
-    // KOKKOS_FUNCTION
-    // void ideal_gas(
-    //     const DViewCArrayKokkos<double>& elem_pres,
-    //     const DViewCArrayKokkos<double>& elem_stress,
-    //     const size_t                     elem_gid,
-    //     const size_t                     mat_id,
-    //     const DViewCArrayKokkos<double>& elem_state_vars,
-    //     const DViewCArrayKokkos<double>& elem_sspd,
-    //     const double                     den,
-    //     const double                     sie);
 
     // **** Functions defined in force_sgh.cpp **** //
     void get_force(
@@ -750,32 +716,6 @@ public:
         const double vol,
         const double dt,
         const double rk_alpha);
-
-    // KOKKOS_FUNCTION
-    // void user_strength_model_vpsc(
-    //     const DViewCArrayKokkos<double>& elem_pres,
-    //     const DViewCArrayKokkos<double>& elem_stress,
-    //     const size_t                     elem_gid,
-    //     const size_t                     mat_id,
-    //     const DViewCArrayKokkos<double>& elem_state_vars,
-    //     const DViewCArrayKokkos<double>& elem_sspd,
-    //     const double                     den,
-    //     const double                     sie,
-    //     const ViewCArrayKokkos<double>&  vel_grad,
-    //     const ViewCArrayKokkos<size_t>&  elem_node_gids,
-    //     const DViewCArrayKokkos<double>& node_coords,
-    //     const DViewCArrayKokkos<double>& node_vel,
-    //     const double                     vol,
-    //     const double                     dt,
-    //     const double                     rk_alpha);
-
-    // // **** Functions defined in user_mat_init.cpp **** //
-    // // NOTE: Pull up into high level
-    // void user_model_init(
-    //     const DCArrayKokkos<double>& file_state_vars,
-    //     const size_t                 num_state_vars,
-    //     const size_t                 mat_id,
-    //     const size_t                 num_elems);
 };
 
 #endif // end HEADER_H

@@ -38,16 +38,19 @@
 ///
 /// \fn ideal_gas
 ///
-/// \brief <insert brief description>
+/// \brief Ideal gas model, gamma law
 ///
 /// <Insert longer more detailed description which
 /// can span multiple lines if needed>
 ///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param Element pressure
+/// \param Element stress
+/// \param Global ID for the element
+/// \param Material ID for the element
+/// \param Element state variables
+/// \param Element Sound speed
+/// \param Material density
+/// \param Material specific internal energy
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION

@@ -40,16 +40,23 @@
 ///
 /// \fn update_state
 ///
-/// \brief <insert brief description>
+/// \brief This calls the models to update state
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element volume array
+/// \param A view into the element mass
+/// \param A view into the element material identifier array
+/// \param A view into the element state variables
+/// \param Time step size
+/// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_state(const CArrayKokkos<material_t>& material,
@@ -150,16 +157,23 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
 ///
 /// \fn update_state2D
 ///
-/// \brief <insert brief description>
+/// \brief Updates the state for 2D elements
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element volume array
+/// \param A view into the element mass
+/// \param A view into the element material identifier array
+/// \param A view into the element state variables
+/// \param Time step size
+/// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_state2D(const CArrayKokkos<material_t>& material,

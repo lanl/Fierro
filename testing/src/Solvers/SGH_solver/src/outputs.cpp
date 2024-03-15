@@ -42,16 +42,8 @@
 ///
 /// \fn write_outputs
 ///
-/// \brief <insert brief description>
+/// REMOVE: Move to mesh writer
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::write_outputs(const mesh_t& mesh,
@@ -126,16 +118,7 @@ void SGH::write_outputs(const mesh_t& mesh,
 ///
 /// \fn ensight
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// REMOVE: Move to mesh writer
 ///
 /////////////////////////////////////////////////////////////////////////////
 void ensight(const mesh_t& mesh,
@@ -444,16 +427,7 @@ void ensight(const mesh_t& mesh,
 ///
 /// \fn state_file
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// REMOVE: Move to mesh writer
 ///
 /////////////////////////////////////////////////////////////////////////////
 void state_file(const mesh_t& mesh,

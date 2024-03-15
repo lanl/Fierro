@@ -11,14 +11,7 @@
 ///
 /// \brief <insert brief description>
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// REMOVE TO MATERIAL MODEL LIBRARY
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -52,16 +45,7 @@ void user_eos_model(const DViewCArrayKokkos<double>& elem_pres,
 ///
 /// \fn user_strength_model
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// REMOVE TO MATERIAL MODEL LIBRARY
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -100,17 +84,8 @@ void user_strength_model(const DViewCArrayKokkos<double>& elem_pres,
 ///
 /// \fn user_strength_model_vpsc
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
-///
+/// REMOVE TO MATERIAL MODEL LIBRARY
+/// 
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void user_strength_model_vpsc(const DViewCArrayKokkos<double>& elem_pres,

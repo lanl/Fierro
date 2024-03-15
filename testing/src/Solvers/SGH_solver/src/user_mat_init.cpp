@@ -51,16 +51,7 @@
 ///
 /// \fn user_model_init
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// REMOVE TO MATERIAL MODEL LIBRARY
 ///
 /////////////////////////////////////////////////////////////////////////////
 void user_model_init(const DCArrayKokkos<double>& file_state_vars,

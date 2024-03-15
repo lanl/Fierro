@@ -39,16 +39,15 @@
 ///
 /// \fn rk_init
 ///
-/// \brief <insert brief description>
+/// \brief This function saves the variables at rk_stage = 0, which is t_n
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param View of nodal position data
+/// \param View of nodal velocity data
+/// \param View of element specific internal energy data
+/// \param View of element stress
+/// \param Number of dimension (REMOVE)
+/// \param Number of elements
+/// \param Number of nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::rk_init(DViewCArrayKokkos<double>& node_coords,
@@ -87,16 +86,18 @@ void SGH::rk_init(DViewCArrayKokkos<double>& node_coords,
 ///
 /// \fn get_timestep
 ///
-/// \brief <insert brief description>
+/// \brief This function calculates the time step by finding the shortest distance
+///        between any two nodes in the mesh.
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
+/// WARNING WARNING :  Only works for 3D, 8 node elements
 ///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
+/// \param Simulation mesh
+/// \param View of nodal position data
+/// \param View of nodal velocity data
+/// \param View of element sound speed
+/// \param View of element volume
 ///
-/// \return <return type and definition description if not void>
+/// REMOVE EXCESS TIME RELATED VARIABLES
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep(mesh_t& mesh,
@@ -198,16 +199,18 @@ void SGH::get_timestep(mesh_t& mesh,
 ///
 /// \fn get_timestep2D
 ///
-/// \brief <insert brief description>
+/// \brief This function calculates the time step by finding the shortest distance
+///        between any two nodes in the mesh.
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
+/// WARNING WARNING :  Only works for 2D, 4 node elements
 ///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param Simulation mesh
+/// \param View of nodal position data
+/// \param View of nodal velocity data
+/// \param View of element sound speed
+/// \param View of element volume
+/// 
+/// REMOVE EXCESS TIME RELATED VARIABLES
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep2D(mesh_t& mesh,

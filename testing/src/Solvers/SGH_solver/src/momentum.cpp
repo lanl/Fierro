@@ -39,16 +39,13 @@
 ///
 /// \fn update_velocity
 ///
-/// \brief <insert brief description>
+/// \brief This function evolves the velocity at the nodes of the mesh
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param Runge Kutta time integration alpha
+/// \param Time step size
+/// \param View of the nodal velocity array
+/// \param View of the nodal mass array
+/// \param View of the corner forces
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_velocity(double rk_alpha,
@@ -93,16 +90,14 @@ void SGH::update_velocity(double rk_alpha,
 ///
 /// \fn get_velgrad
 ///
-/// \brief <insert brief description>
+/// \brief This function calculates the velocity gradient
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param Velocity gradient
+/// \param Global ids of the nodes in this element
+/// \param View of the nodal velocity data
+/// \param The finite element B matrix
+/// \param The volume of the particular element
+/// \param The global id of this particular element
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -190,16 +185,15 @@ void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
 ///
 /// \fn get_velgrad2D
 ///
-/// \brief <insert brief description>
+/// \brief This function calculates the velocity gradient for a 2D element
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param Velocity gradient
+/// \param Global ids of the nodes in this element
+/// \param View of the nodal velocity data
+/// \param The finite element B matrix
+/// \param The volume of the particular element
+/// \param The elements surface area
+/// \param The global id of this particular element
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -264,16 +258,13 @@ void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
 ///
 /// \fn get_divergence
 ///
-/// \brief <insert brief description>
+/// \brief This function calculates the divergence of velocity for all elements
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param Divergence of velocity for all elements
+/// \param Simulation mesh (POSSIBLY REMOVE)
+/// \param View of the nodal position data
+/// \param View of the nodal velocity data
+/// \param View of the volumes of each element
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_divergence(DViewCArrayKokkos<double>& elem_div,
@@ -347,16 +338,13 @@ void SGH::get_divergence(DViewCArrayKokkos<double>& elem_div,
 ///
 /// \fn get_divergence2D
 ///
-/// \brief <insert brief description>
+/// \brief This function calculates the divergence of velocity for all 2D elements
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param Divergence of velocity for all elements
+/// \param Simulation mesh (POSSIBLY REMOVE)
+/// \param iew of the nodal position data
+/// \param View of the nodal velocity data
+/// \param View of the volumes of each element
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_divergence2D(DViewCArrayKokkos<double>& elem_div,
@@ -435,16 +423,19 @@ void SGH::get_divergence2D(DViewCArrayKokkos<double>& elem_div,
 ///
 /// \fn decompose_vel_grad
 ///
-/// \brief <insert brief description>
+/// \brief Decomposes the velocity gradient into symmetric and antisymmetric tensors
 ///
-/// <Insert longer more detailed description which
+/// L = D*W, where L = vel_grad, D = sym(L), W = antisym(L)
 /// can span multiple lines if needed>
 ///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param Symmetric decomposition of velocity gradient
+/// \param Antisymmetric decomposition of velocity gradient
+/// \param Gradient of velocity
+/// \param Global ids of the nodes associated with this element
+/// \param Global id of a specific element
+/// \param View of the nodal coordinate data
+/// \param View of the nodal velocity data
+/// \param Volume of the element
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION

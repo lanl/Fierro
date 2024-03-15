@@ -25,7 +25,7 @@ uncrustify_exe=$(pwd)/uncrustify
 cd $startDir
 
 # Get the source directory
-cd src
+cd testing
 sourceDir=$(pwd)
 
 # Function to walk through files
@@ -59,25 +59,35 @@ treeProcess() {
 }
 
 
-# Uncrustify SGH Solver
-echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/SGH_Solver"
-cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/SGH_Solver" || exit
+# Uncrustify testing directory
+echo "Uncrusting: $sourceDir/src/Solvers/SGH_solver"
+cd "$sourceDir/src/Solvers/SGH_solver" || exit
 treeProcess
 
-# Uncrustify Topology Optimization
-echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Topology_Optimization"
-cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Topology_Optimization" || exit
+echo "Uncrusting: $sourceDir/src/common"
+cd "$sourceDir/src/common" || exit
 treeProcess
 
-# Uncrustify Eulerian Solver
-echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Eulerian_Solver"
-cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Eulerian_Solver" || exit
-treeProcess
 
-# Uncrustify Dynamic Elastic
-echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Dynamic_Elastic_Solver"
-cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Dynamic_Elastic_Solver" || exit
-treeProcess
+# # Uncrustify SGH Solver
+# echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/SGH_Solver"
+# cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/SGH_Solver" || exit
+# treeProcess
+
+# # Uncrustify Topology Optimization
+# echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Topology_Optimization"
+# cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Topology_Optimization" || exit
+# treeProcess
+
+# # Uncrustify Eulerian Solver
+# echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Eulerian_Solver"
+# cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Eulerian_Solver" || exit
+# treeProcess
+
+# # Uncrustify Dynamic Elastic
+# echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Dynamic_Elastic_Solver"
+# cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Dynamic_Elastic_Solver" || exit
+# treeProcess
 
 exit
 
