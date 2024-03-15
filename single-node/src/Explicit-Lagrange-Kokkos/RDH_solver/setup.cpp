@@ -59,17 +59,19 @@ void setup(const CArrayKokkos <material_t> &material,
            const CArrayKokkos <boundary_t> &boundary,
            mesh_t &mesh,
            elem_t &elem,
+           zone_t &zone,
+           mat_pt_t &mat_pt,
            fe_ref_elem_t &ref_elem,
            const DViewCArrayKokkos <double> &node_coords,
            DViewCArrayKokkos <double> &node_vel,
            DViewCArrayKokkos <double> &node_mass,
-           const DViewCArrayKokkos <double> &elem_den,
-           const DViewCArrayKokkos <double> &elem_pres,
-           const DViewCArrayKokkos <double> &elem_stress,
-           const DViewCArrayKokkos <double> &elem_sspd,
-           const DViewCArrayKokkos <double> &elem_sie,
+           const DViewCArrayKokkos <double> &mat_pt_den,
+           const DViewCArrayKokkos <double> &mat_pt_pres,
+           const DViewCArrayKokkos <double> &mat_pt_stress,
+           const DViewCArrayKokkos <double> &mat_pt_sspd,
+           const DViewCArrayKokkos <double> &zone_sie,
            const DViewCArrayKokkos <double> &elem_vol,
-           const DViewCArrayKokkos <double> &elem_mass,
+           const DViewCArrayKokkos <double> &mat_pt_mass,
            const DViewCArrayKokkos <size_t> &elem_mat_id,
            const DViewCArrayKokkos <double> &elem_statev,
            const CArrayKokkos <double> &state_vars,
@@ -354,8 +356,8 @@ void setup(const CArrayKokkos <material_t> &material,
                     
                     
                     // specific internal energy at each "time bin"
-                    elem_sie( 0, zone_gid) = mat_fill(f_id).sie;
-                    elem_sie( 1, zone_gid) = mat_fill(f_id).sie;
+                    zone_sie( 0, zone_gid) = mat_fill(f_id).sie;
+                    zone_sie( 1, zone_gid) = mat_fill(f_id).sie;
                     
                     
                     
@@ -505,8 +507,8 @@ void setup(const CArrayKokkos <material_t> &material,
                         //printf("density is %f \n", mat_fill(f_id).den);
                         //printf("gamma is %f \n", gamma);
 
-                        elem_sie(0, zone_gid) = temp_pres/(mat_fill(f_id).den*(gamma - 1.0));
-                        elem_sie(1, zone_gid) = temp_pres/(mat_fill(f_id).den*(gamma - 1.0));
+                        zone_sie(0, zone_gid) = temp_pres/(mat_fill(f_id).den*(gamma - 1.0));
+                        zone_sie(1, zone_gid) = temp_pres/(mat_fill(f_id).den*(gamma - 1.0));
                         //printf("elem_sie in zone %d is %f \n", zone_gid, elem_sie(1, zone_gid));
 
                     } // end if
@@ -516,35 +518,35 @@ void setup(const CArrayKokkos <material_t> &material,
                 for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
                     int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
                     // density
-                    elem_den(leg_gid) = mat_fill(f_id).den;
+                    mat_pt_den(leg_gid) = mat_fill(f_id).den;
                     //printf( "density in elem %d at legendre_pt %d is %f \n", elem_gid, leg_lid, elem_den(leg_gid) ); 
                     // --- stress tensor ---
                     // always 3D even for 2D-RZ
                     for (size_t i=0; i<3; i++){
                         for (size_t j=0; j<3; j++){
-                            elem_stress( 0, leg_gid, i, j) = 0.0;
-                            elem_stress( 1, leg_gid, i, j) = 0.0;
+                            mat_pt_stress( 0, leg_gid, i, j) = 0.0;
+                            mat_pt_stress( 1, leg_gid, i, j) = 0.0;
                         }        
                     }  // end for
                     // WARNING WARNING : Note elem_vol //
-                    elem_mass(leg_gid) = elem_den(leg_gid)/elem_vol(elem_gid);
+                    mat_pt_mass(leg_gid) = mat_pt_den(leg_gid)/elem_vol(elem_gid);
                     
                     // interpolate sie at quad point //
                     double interp_sie = 0.0;
                     for (int T_dof = 0; T_dof < ref_elem.num_elem_basis; T_dof++){
                         int T_dof_gid = mesh.zones_in_elem(elem_gid, T_dof);
-                        interp_sie += ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*elem_sie(1, T_dof_gid);
+                        interp_sie += ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*zone_sie(1, T_dof_gid);
                     }
                     // -- FIX make over legendre points
                     // --- Pressure and stress ---
-                    material(mat_id).eos_model(elem_pres,
-                                            elem_stress,
+                    material(mat_id).eos_model(mat_pt_pres,
+                                            mat_pt_stress,
                                             elem_gid,
                                             leg_gid,
                                             elem_mat_id(elem_gid),
                                             elem_statev,
-                                            elem_sspd,
-                                            elem_den(leg_gid),
+                                            mat_pt_sspd,
+                                            mat_pt_den(leg_gid),
                                             interp_sie);
                 }
             } // end if fill

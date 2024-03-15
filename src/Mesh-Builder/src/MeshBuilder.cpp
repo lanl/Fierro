@@ -184,7 +184,7 @@ Mesh build_rectilinear(const Input_Rectilinear& input) {
         if (mesh.num_dim == 2)
             element_type = 9;  // Linear Quad
         if (mesh.num_dim == 3)
-            element_type = 12; // Linear Hex
+            element_type = 72; // Linear Hex
     } else if (input.p_order > 1) {
         if (mesh.num_dim == 2)
             element_type = 70;  // Lagrange Quadrilateral 

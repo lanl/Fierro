@@ -153,8 +153,8 @@ struct fe_ref_elem_t{
         gauss_lob_elem_basis = CArrayKokkos <double> (num_gauss_lob_in_elem, num_elem_basis, "gauss_lob_elem_basis");
         gauss_leg_elem_basis = CArrayKokkos <double> (num_gauss_leg_in_elem, num_elem_basis, "gauss_leg_elem_basis");
         
-        gauss_lob_positions = CArrayKokkos <double> (num_gauss_lob_in_elem, num_dim,"gauss_lob_positions"); 
-        gauss_leg_positions = CArrayKokkos <double> (num_gauss_leg_in_elem, num_dim,"gauss_leg_positions");
+        gauss_lob_positions = CArrayKokkos <double> (num_gauss_lob_in_elem, num_dim, "gauss_lob_positions"); 
+        gauss_leg_positions = CArrayKokkos <double> (num_gauss_leg_in_elem, num_dim, "gauss_leg_positions");
 
         // gauss_leg_surf_positions = CArrayKokkos <double> (num_surfs, num_gauss_leg_in_surfs, num_dim-1, "gauss_leg_surf_positions");
         // gauss_leg_surf_weights = CArrayKokkos <double> (num_surfs, num_gauss_leg_in_surfs, "gauss_leg_surf_weights");

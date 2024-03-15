@@ -106,6 +106,7 @@ struct zones_in_elem_t {
         };
 };
 
+// if material points are defined strictly internal to the element. 
 struct legendre_in_elem_t {
 	private:
 	  size_t num_leg_gauss_in_elem_;
@@ -127,7 +128,7 @@ struct legendre_in_elem_t {
 	  };
 };
 
-
+/// if material points are defined at element interfaces
 struct lobatto_in_elem_t {
 	private:
 	  size_t num_lob_gauss_in_elem_;
@@ -1766,6 +1767,8 @@ void readVTKPn(char* MESH,
                  mesh_t &mesh,
                  node_t &node,
                  elem_t &elem,
+                 zone_t &zone,
+                 mat_pt_t &mat_pt,
                  corner_t &corner,
                  fe_ref_elem_t &ref_elem,
                  const size_t num_dims,
@@ -1848,6 +1851,8 @@ void setup(const CArrayKokkos <material_t> &material,
            const CArrayKokkos <boundary_t> &boundary,
            mesh_t &mesh,
            elem_t &elem,
+           zone_t &zone,
+           mat_pt_t &mat_pt,
            fe_ref_elem_t &ref_elem,
            const DViewCArrayKokkos <double> &node_coords,
            DViewCArrayKokkos <double> &node_vel,
@@ -1911,13 +1916,13 @@ void VTKHexN(const mesh_t &mesh,
              const DViewCArrayKokkos <double> &node_coords,
              const DViewCArrayKokkos <double> &node_vel,
              const DViewCArrayKokkos <double> &node_mass,
-             const DViewCArrayKokkos <double> &elem_den,
-             const DViewCArrayKokkos <double> &elem_pres,
-             const DViewCArrayKokkos <double> &elem_stress,
-             const DViewCArrayKokkos <double> &elem_sspd,
-             const DViewCArrayKokkos <double> &elem_sie,
+             const DViewCArrayKokkos <double> &mat_pt_den,
+             const DViewCArrayKokkos <double> &mat_pt_pres,
+             const DViewCArrayKokkos <double> &mat_pt_stress,
+             const DViewCArrayKokkos <double> &mat_pt_sspd,
+             const DViewCArrayKokkos <double> &zone_sie,
              const DViewCArrayKokkos <double> &elem_vol,
-             const DViewCArrayKokkos <double> &elem_mass,
+             const DViewCArrayKokkos <double> &mat_pt_mass,
              const DViewCArrayKokkos <size_t> &elem_mat_id,
              CArray <double> &graphics_times,
              size_t &graphics_id,

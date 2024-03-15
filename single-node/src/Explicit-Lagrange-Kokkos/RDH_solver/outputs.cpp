@@ -614,13 +614,13 @@ void VTKHexN(const mesh_t &mesh,
              const DViewCArrayKokkos <double> &node_coords,
              const DViewCArrayKokkos <double> &node_vel,
              const DViewCArrayKokkos <double> &node_mass,
-             const DViewCArrayKokkos <double> &elem_den,
-             const DViewCArrayKokkos <double> &elem_pres,
-             const DViewCArrayKokkos <double> &elem_stress,
-             const DViewCArrayKokkos <double> &elem_sspd,
-             const DViewCArrayKokkos <double> &elem_sie,
+             const DViewCArrayKokkos <double> &mat_pt_den,
+             const DViewCArrayKokkos <double> &mat_pt_pres,
+             const DViewCArrayKokkos <double> &mat_pt_stress,
+             const DViewCArrayKokkos <double> &mat_pt_sspd,
+             const DViewCArrayKokkos <double> &zone_sie,
              const DViewCArrayKokkos <double> &elem_vol,
-             const DViewCArrayKokkos <double> &elem_mass,
+             const DViewCArrayKokkos <double> &mat_pt_mass,
              const DViewCArrayKokkos <size_t> &elem_mat_id,
              CArray <double> &graphics_times,
              size_t &graphics_id,
@@ -714,17 +714,17 @@ void VTKHexN(const mesh_t &mesh,
 
         for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
             int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
-            elem_fields(elem_gid,4) += elem_sie.host(1, zone_gid);
+            elem_fields(elem_gid,4) += zone_sie.host(1, zone_gid);
         }
         elem_fields(elem_gid, 4) = elem_fields(elem_gid,4)/mesh.num_zones_in_elem;
         
         for (int legendre_lid = 0; legendre_lid < mesh.num_leg_gauss_in_elem; legendre_lid++){
             int legendre_gid = mesh.legendre_in_elem(elem_gid, legendre_lid);
             
-            elem_fields(elem_gid, 5) += elem_den.host(legendre_gid);
-            elem_fields(elem_gid, 6) += elem_pres.host(legendre_gid);
-            elem_fields(elem_gid, 7) += elem_mass.host(legendre_gid);
-            elem_fields(elem_gid, 8) += elem_sspd.host(legendre_gid);
+            elem_fields(elem_gid, 5) += mat_pt_den.host(legendre_gid);
+            elem_fields(elem_gid, 6) += mat_pt_pres.host(legendre_gid);
+            elem_fields(elem_gid, 7) += mat_pt_mass.host(legendre_gid);
+            elem_fields(elem_gid, 8) += mat_pt_sspd.host(legendre_gid);
         }
         elem_fields(elem_gid, 5) = elem_fields(elem_gid, 5)/mesh.num_leg_gauss_in_elem;
         elem_fields(elem_gid, 6) = elem_fields(elem_gid, 6)/mesh.num_leg_gauss_in_elem;

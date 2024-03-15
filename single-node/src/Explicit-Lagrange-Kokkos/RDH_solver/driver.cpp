@@ -93,6 +93,8 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         node_t  node;
         elem_t  elem;
+        zone_t zone;
+        mat_pt_t mat_pt;
 	      corner_t corner;
         fe_ref_elem_t ref_elem;
         CArrayKokkos <material_t> material;
@@ -149,7 +151,7 @@ int main(int argc, char *argv[]){
             //printf("inside conditional to readVTKPn \n");
             // arbitrary order elements
             //printf("Calling readVTKPn \n");
-            readVTKPn(argv[1], mesh, node, elem, corner, ref_elem, num_dims, rk_num_bins);
+            readVTKPn(argv[1], mesh, node, elem, zone, mat_pt, corner, ref_elem, num_dims, rk_num_bins);
             //printf("after readVTKPn \n");
         }
 
@@ -177,8 +179,8 @@ int main(int argc, char *argv[]){
         const size_t num_elems = mesh.num_elems;
         const size_t num_corners = mesh.num_corners;
         const size_t num_zones = mesh.num_elems*mesh.num_zones_in_elem;
-        const size_t num_lob_pts = elem.num_lob_pts;//*num_elems;
-        const size_t num_leg_pts = elem.num_leg_pts;//*num_elems;
+        const size_t num_lob_pts = mat_pt.num_lob_pts;//*num_elems;
+        const size_t num_leg_pts = mat_pt.num_leg_pts;//*num_elems;
         const size_t num_lob_pts_per_elem = ref_elem.num_gauss_lob_in_elem;
         const size_t num_leg_pts_per_elem = ref_elem.num_gauss_leg_in_elem;
         // printf(" num_leg_pts_per_elem = %d\n", num_leg_pts_per_elem);
@@ -218,33 +220,33 @@ int main(int argc, char *argv[]){
         
         
         // create Dual Views of the individual elem struct variables
-        DViewCArrayKokkos <double> elem_den(&elem.den(0),
+        DViewCArrayKokkos <double> mat_pt_den(&mat_pt.den(0),
                                             num_leg_pts);
 
-        DViewCArrayKokkos <double> elem_pressure(&elem.pres(0),
+        DViewCArrayKokkos <double> mat_pt_pressure(&mat_pt.pres(0),
                                              num_leg_pts);
 
-        DViewCArrayKokkos <double> elem_stress(&elem.stress(0,0,0,0),
+        DViewCArrayKokkos <double> mat_pt_stress(&mat_pt.stress(0,0,0,0),
                                                rk_num_bins,
                                                num_leg_pts,
                                                3,
                                                3); // always 3D even in 2D-RZ
 
-        DViewCArrayKokkos <double> elem_sspd(&elem.sspd(0),
+        DViewCArrayKokkos <double> mat_pt_sspd(&mat_pt.sspd(0),
                                              num_leg_pts);
 
-        DViewCArrayKokkos <double> elem_sie(&elem.sie(0,0),
+        DViewCArrayKokkos <double> zone_sie(&zone.sie(0,0),
                                             rk_num_bins,
                                             num_zones);
 
-        DViewCArrayKokkos <double> elem_div(&elem.div(0),
+        DViewCArrayKokkos <double> mat_pt_div(&mat_pt.div(0),
                                             num_leg_pts);
 
         DViewCArrayKokkos <double> elem_vol(&elem.vol(0),
                                             num_elems);
         
 
-        DViewCArrayKokkos <double> elem_mass(&elem.mass(0),
+        DViewCArrayKokkos <double> mat_pt_mass(&mat_pt.mass(0),
                                              num_leg_pts);
 
         DViewCArrayKokkos <size_t> elem_mat_id(&elem.mat_id(0),
@@ -254,30 +256,30 @@ int main(int argc, char *argv[]){
                                                num_elems,
                                                num_state_vars);
         
-	      DViewCArrayKokkos <double> lobatto_jacobian(&elem.gauss_lobatto_jacobian(0,0,0),
+	      DViewCArrayKokkos <double> lobatto_jacobian(&mat_pt.gauss_lobatto_jacobian(0,0,0),
                                                     num_lob_pts,
                                                     num_dims,
                                                     num_dims);
 	
-	      DViewCArrayKokkos <double> legendre_jacobian(&elem.gauss_legendre_jacobian(0,0,0),
+	      DViewCArrayKokkos <double> legendre_jacobian(&mat_pt.gauss_legendre_jacobian(0,0,0),
                                                     num_leg_pts,
                                                     num_dims,
                                                     num_dims);
 
-        DViewCArrayKokkos <double> lobatto_jacobian_inverse(&elem.gauss_lobatto_jacobian_inverse(0,0,0),
+        DViewCArrayKokkos <double> lobatto_jacobian_inverse(&mat_pt.gauss_lobatto_jacobian_inverse(0,0,0),
                                                                   num_lob_pts,
                                                                   num_dims,
                                                                   num_dims);
         
-        DViewCArrayKokkos <double> legendre_jacobian_inverse(&elem.gauss_legendre_jacobian_inverse(0,0,0),
+        DViewCArrayKokkos <double> legendre_jacobian_inverse(&mat_pt.gauss_legendre_jacobian_inverse(0,0,0),
                                                                   num_leg_pts,
                                                                   num_dims,
                                                                   num_dims);
         
-        DViewCArrayKokkos <double> lobatto_det(&elem.gauss_lobatto_det_j(0),
+        DViewCArrayKokkos <double> lobatto_det(&mat_pt.gauss_lobatto_det_j(0),
                                                       num_lob_pts);
 
-        DViewCArrayKokkos <double> legendre_det(&elem.gauss_legendre_det_j(0),
+        DViewCArrayKokkos <double> legendre_det(&mat_pt.gauss_legendre_det_j(0),
                                                       num_leg_pts);
 
         // create Dual Views of the corner struct variables
@@ -366,17 +368,19 @@ int main(int argc, char *argv[]){
               boundary,
               mesh,
               elem,
+              zone,
+              mat_pt,
               ref_elem,
               node_coords,
               node_vel,
               node_mass,
-              elem_den,
-              elem_pressure,
-              elem_stress,
-              elem_sspd,
-              elem_sie,
+              mat_pt_den,
+              mat_pt_pressure,
+              mat_pt_stress,
+              mat_pt_sspd,
+              zone_sie,
               elem_vol,
-              elem_mass,
+              mat_pt_mass,
               elem_mat_id,
               elem_statev,
               state_vars,
@@ -403,14 +407,14 @@ int main(int argc, char *argv[]){
                   node_coords,
                   node_vel,
                   node_mass,
-                  elem_den,
-                  elem_pressure,
-                  elem_stress,
-                  elem_sspd,
-                  elem_sie,
+                  mat_pt_den,
+                  mat_pt_pressure,
+                  mat_pt_stress,
+                  mat_pt_sspd,
+                  zone_sie,
                   elem_vol,
-		              elem_div,
-                  elem_mass,
+		              mat_pt_div,
+                  mat_pt_mass,
                   elem_mat_id,
                   elem_statev,
                   corner_force,
@@ -434,13 +438,13 @@ int main(int argc, char *argv[]){
 
 
         // calculate total energy at time=t_end
-        elem_den.update_host();
-        elem_pressure.update_host();
-        elem_stress.update_host();
-        elem_sspd.update_host();
-        elem_sie.update_host();
+        mat_pt_den.update_host();
+        mat_pt_pressure.update_host();
+        mat_pt_stress.update_host();
+        mat_pt_sspd.update_host();
+        zone_sie.update_host();
         elem_vol.update_host();
-        elem_mass.update_host();
+        mat_pt_mass.update_host();
         elem_mat_id.update_host();
         
         node_coords.update_host();
@@ -452,13 +456,13 @@ int main(int argc, char *argv[]){
                 node_coords,
                 node_vel,
                 node_mass,
-                elem_den,
-                elem_pressure,
-                elem_stress,
-                elem_sspd,
-                elem_sie,
+                mat_pt_den,
+                mat_pt_pressure,
+                mat_pt_stress,
+                mat_pt_sspd,
+                zone_sie,
                 elem_vol,
-                elem_mass,
+                mat_pt_mass,
                 elem_mat_id,
                 graphics_times,
                 graphics_id,

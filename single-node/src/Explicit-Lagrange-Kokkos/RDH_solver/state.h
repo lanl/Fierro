@@ -52,6 +52,91 @@ struct corner_t {
 
 }; // end corner_t
 
+struct zone_t {
+    
+    CArray <double> sie;
+    
+    size_t num_zones;
+
+    void initialize_Pn(size_t num_rk, 
+		       size_t num_elems, 
+		       size_t num_zones_in_elem)
+               {
+
+        //thermodynamic variables are internal to the element and located at the zone centers
+        num_zones = num_elems*num_zones_in_elem; // to keep things global.
+
+        this->sie = CArray <double> (num_rk, num_zones);
+    
+    }
+};
+
+struct mat_pt_t {
+    
+    // den
+    CArray <double> den;
+
+    // pres
+    CArray <double> pres;
+    
+    // stress
+    CArray <double> stress;
+    
+    // sspd
+    CArray <double> sspd;
+
+    // div
+    CArray <double> div; 
+    
+    // mass of elem
+    CArray <double> mass;
+
+    // jacobians
+    CArray <double> gauss_lobatto_jacobian;
+    CArray <double> gauss_legendre_jacobian;
+   
+    // jacobian inverses
+    CArray <double> gauss_lobatto_jacobian_inverse;
+    CArray <double> gauss_legendre_jacobian_inverse;
+    
+    // det of jacobian
+    CArray <double> gauss_lobatto_det_j;
+    CArray <double> gauss_legendre_det_j;
+    
+    // global number of quadrature points
+    size_t num_leg_pts;
+    size_t num_lob_pts;
+
+    void initialize_Pn(size_t num_rk, 
+		       size_t num_elems, 
+		       size_t num_nodes_in_elem, 
+		       size_t num_zones_in_elem, 
+		       size_t num_dims, 
+		       size_t p_order)
+    {
+        num_leg_pts = num_elems*std::pow( (2*p_order), 3 ); // continuous index across mesh
+        num_lob_pts = num_elems*std::pow( (2*p_order+1), 3 ); // discontinuous index across mesh
+
+        this->div    = CArray <double> (num_leg_pts);
+        this->mass   = CArray <double> (num_leg_pts);
+
+        this->den    = CArray <double> (num_leg_pts); 
+        this->pres   = CArray <double> (num_leg_pts);
+        this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);
+        this->sspd   = CArray <double> (num_leg_pts);
+	
+        this->gauss_lobatto_jacobian  = CArray <double> (num_lob_pts, num_dims, num_dims);
+        this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);
+        
+        this->gauss_lobatto_jacobian_inverse  = CArray <double> (num_lob_pts, num_dims, num_dims);
+        this->gauss_legendre_jacobian_inverse = CArray <double> (num_leg_pts, num_dims, num_dims);
+        
+        this->gauss_lobatto_det_j  = CArray <double> (num_lob_pts);
+        this->gauss_legendre_det_j = CArray <double> (num_leg_pts);
+
+    }
+
+};
 
 // elem_state
 struct elem_t {
@@ -86,20 +171,6 @@ struct elem_t {
     // state variables
     CArray <double> statev;
 
-    CArray <double> gauss_lobatto_jacobian;
-    CArray <double> gauss_legendre_jacobian;
-   
-    CArray <double> gauss_lobatto_jacobian_inverse;
-    CArray <double> gauss_legendre_jacobian_inverse;
-    
-    CArray <double> gauss_lobatto_det_j;
-    CArray <double> gauss_legendre_det_j;
-    
-    size_t num_leg_pts;
-    size_t num_lob_pts;
-    
-    size_t num_zones;
-
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
     {
@@ -107,8 +178,8 @@ struct elem_t {
         this->den    = CArray <double> (num_elems);
         this->pres   = CArray <double> (num_elems);
         this->stress = CArray <double> (num_rk, num_elems, num_dims, num_dims);
-        this->sspd = CArray <double> (num_elems);
-        this->sie = CArray <double> (num_rk, num_elems);
+        this->sspd   = CArray <double> (num_elems);
+        this->sie    = CArray <double> (num_rk, num_elems);
         this->vol    = CArray <double> (num_elems);
         this->div    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
@@ -116,41 +187,11 @@ struct elem_t {
 
     }; // end method
 
-    // initialization method (num_rk_storage_bins, num_cells, num_dims)
-    void initialize_Pn(size_t num_rk, 
-		       size_t num_elems, 
-		       size_t num_nodes_in_elem, 
-		       size_t num_zones_in_elem, 
-		       size_t num_surfs_in_elem, 
-		       size_t num_dims, 
-		       size_t p_order)
+    void initialize_Pn( size_t num_elems )
     {
-        num_leg_pts = num_elems*std::pow( (2*p_order), 3 );// discontinuous index across mesh
-        num_lob_pts = num_elems*std::pow( (2*p_order+1), 3 );// discontinuous index across mesh
-            
-        // thermodynamic variables are internal to the element and located at the zone centers
-        num_zones = num_elems*num_zones_in_elem; // to keep things global.
-
-        this->sie = CArray <double> (num_rk, num_zones);
-
+        
         this->vol    = CArray <double> (num_elems);
-        this->div    = CArray <double> (num_leg_pts);
-        this->mass   = CArray <double> (num_leg_pts);
         this->mat_id = CArray <size_t> (num_elems);
-
-        this->den    = CArray <double> (num_leg_pts); 
-        this->pres   = CArray <double> (num_leg_pts);//leg_pts);
-        this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);//(num_rk, num_leg_pts, num_dims, num_dims);
-        this->sspd = CArray <double> (num_leg_pts);//leg_pts);
-	
-        this->gauss_lobatto_jacobian = CArray <double> (num_lob_pts, num_dims, num_dims);
-        this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);
-        
-        this->gauss_lobatto_jacobian_inverse = CArray <double> (num_lob_pts, num_dims, num_dims);
-        this->gauss_legendre_jacobian_inverse = CArray <double> (num_leg_pts, num_dims, num_dims);
-        
-        this->gauss_lobatto_det_j = CArray <double> (num_lob_pts);
-        this->gauss_legendre_det_j = CArray <double> (num_leg_pts);
 
     }; // end method
 
