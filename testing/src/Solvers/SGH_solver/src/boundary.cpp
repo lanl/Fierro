@@ -45,7 +45,7 @@
 /// \param The simulation mesh
 /// \param An array of boundary_t that contain information about BCs
 /// \param A view into the nodal velocity array
-/// \param The current simulation time 
+/// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_velocity(const mesh_t& mesh,

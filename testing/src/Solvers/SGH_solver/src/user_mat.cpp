@@ -85,7 +85,7 @@ void user_strength_model(const DViewCArrayKokkos<double>& elem_pres,
 /// \fn user_strength_model_vpsc
 ///
 /// REMOVE TO MATERIAL MODEL LIBRARY
-/// 
+///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void user_strength_model_vpsc(const DViewCArrayKokkos<double>& elem_pres,

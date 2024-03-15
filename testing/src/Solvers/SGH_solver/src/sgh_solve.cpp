@@ -357,7 +357,6 @@ void SGH::solve(CArrayKokkos<material_t>& material,
                 }); // end parallel for over node_gid
                 Kokkos::fence();
 
-
                 FOR_ALL(node_bdy_gid, 0, mesh.num_bdy_nodes, {
                     size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
 

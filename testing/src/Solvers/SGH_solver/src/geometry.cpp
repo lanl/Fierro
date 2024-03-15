@@ -13,7 +13,7 @@
 /// \brief Updates the nodal positions based on the nodal velocity
 ///
 /// \param Runge Kutta time integration alpha value
-/// \param Time step size 
+/// \param Time step size
 /// \param Number of dimensions in the mesh (REMOVE)
 /// \param Number of nodes in the mesh
 /// \param View of nodal position data

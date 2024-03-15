@@ -209,7 +209,7 @@ void SGH::get_timestep(mesh_t& mesh,
 /// \param View of nodal velocity data
 /// \param View of element sound speed
 /// \param View of element volume
-/// 
+///
 /// REMOVE EXCESS TIME RELATED VARIABLES
 ///
 /////////////////////////////////////////////////////////////////////////////
