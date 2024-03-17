@@ -46,7 +46,7 @@
 //     });// end FOR_ALL over elements
 //     Kokkos::fence();
     
-// }// end assemble force tensor routin
+// }// end assemble force tensor routine
 
 
 
@@ -77,9 +77,9 @@ void build_force_tensor( CArrayKokkos <double> &force_tensor,
 
                         for (int i = 0; i < mesh.num_dims; i++){
                             for (int j = 0; j < mesh.num_dims; j++){
-                                force_tensor( stage, global_K_dof, global_T_dof, dim) +=  stress_tensor(stage, leg_gid, dim, i)
+                                force_tensor( stage, global_K_dof, global_T_dof, dim) +=  stress_tensor(stage, leg_gid, dim, j)
                                                                                         * legendre_jacobian_inverse(leg_gid, i, j)
-                                                                                        * legendre_grad_basis( leg_lid, K_dof, j)
+                                                                                        * legendre_grad_basis( leg_lid, K_dof, i)
                                                                                         * bernstein_basis(leg_lid, T_dof)
                                                                                         * legendre_weights(leg_lid)
                                                                                         * legendre_jacobian_det(leg_gid);

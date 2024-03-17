@@ -34,6 +34,20 @@ void assemble_kinematic_mass_matrix(CArrayKokkos <double> &M_V,
         }// end loop over i
     });// end FOR_ALL
      Kokkos::fence();
+
+    // check partition of unity
+    // for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
+        
+    //     for (int i = 0; i < mesh.num_leg_gauss_in_elem; i++){
+    //         double sum = 0.0;
+            
+    //         for (int j = 0; j < mesh.num_nodes_in_elem; j++){
+    //             sum += basis(i,j);
+    //         }
+    //         printf("basis sum = %f \n", sum);
+    //     }  
+    // }
+     
 }// end assemble kinematic mass matrix
 
 

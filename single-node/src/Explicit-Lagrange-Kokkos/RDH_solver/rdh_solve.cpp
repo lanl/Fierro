@@ -96,6 +96,45 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                                     ref_elem.gauss_leg_weights,
                                     mat_pt.gauss_legendre_det_j,
                                     mat_pt_den);
+    
+    // for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
+        
+    //     for (int i = 0; i < mesh.num_leg_gauss_in_elem; i++){
+            
+    //         for (int dim = 0; dim < mesh.num_dims; dim++){
+    //             double sum = 0.0;
+    //             for (int j = 0; j < mesh.num_nodes_in_elem; j++){
+    //             sum += ref_elem.gauss_leg_grad_basis(i,j,dim);
+    //             }
+    //             printf("basis sum = %f \n", sum);
+    //         }
+            
+    //     }  
+    // }
+
+    // CArrayKokkos <double> VanderMtx(mat_pt.num_leg_pts, mesh.num_nodes, mesh.num_dims, "VanderMtx");
+    // for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
+    //     for (int leg_lid = 0; leg_lid < ref_elem.num_gauss_leg_in_elem; leg_lid++){
+    //         int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
+    //         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+    //             int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+    //             for (int dim = 0; dim < mesh.num_dims; dim++){
+    //                 VanderMtx(leg_gid, node_gid, dim) = ref_elem.gauss_leg_grad_basis(leg_lid, node_lid, dim); 
+    //             }
+    //         }
+    //     }
+    // }
+
+    // for (int leg_gid = 0; leg_gid < mat_pt.num_leg_pts; leg_gid++){
+
+    //     for (int dim = 0; dim < mesh.num_dims; dim++){
+    //         double sum = 0.0;
+    //         for (int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
+    //             sum += VanderMtx(leg_gid, node_gid, dim);
+    //         }
+    //         printf("VanderMtx sum = %f \n", sum);
+    //     }
+    // }
 
     // compute_lumped_mass(lumped_mass,
     //                     mesh,
@@ -121,7 +160,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
     //     }
     //     printf("\n");
     // }
-    //printf("\n");
+    // printf("\n");
 
     // printf("Lumped mass assembled \n");
     // for (int i = 0; i < mesh.num_elems; i++){
@@ -178,7 +217,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                         dt,
                         fuzz);
         //printf("Time step is %f \n", dt);
-        //dt = 0.000001;
+        //dt = 0.0001;
         
         if (cycle==0){
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
@@ -234,6 +273,15 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                             ref_elem.gauss_leg_weights, mat_pt.gauss_legendre_det_j, 
                             mat_pt.gauss_legendre_jacobian_inverse );
             //printf("Force tensor built \n");
+            // for (int i = 0; i < mesh.num_nodes; i++){
+            //     for (int j = 0; j < mesh.num_zones; j++){
+            //         //for (int k = 0; k < mesh.num_dims; k++){
+            //             printf("F(%d, %d) = %f ", i, j, force_tensor(rk_stage, i, j, 1));
+            //         //}
+            //         //printf("\n");
+            //     }
+            //     printf("\n");
+            // }
 
             CArrayKokkos <double> A1(mesh.num_nodes, mesh.num_dims);
             CArrayKokkos <double> F_dot_ones(mesh.num_nodes, mesh.num_dims);
@@ -321,15 +369,15 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                     zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
                     zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
                     
-                    double gamma = 5.0/3.0;
+                    // double gamma = 5.0/3.0;
 
-                    double temp_pres = 0.0;
-                    temp_pres = 0.25*( cos(2.0*PI*zone_coords[0]) + cos(2.0*PI*zone_coords[1]) ) + 1.0;
+                    // double temp_pres = 0.0;
+                    // temp_pres = 0.25*( cos(2.0*PI*zone_coords[0]) + cos(2.0*PI*zone_coords[1]) ) + 1.0;
                     
 
-                    //zone_sie(1, zone_gid) = zone_sie(0, zone_gid) + dt*(3.0/8.0)*PI*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
-                    zone_sie(0, zone_gid) = temp_pres/((gamma - 1.0));
-                    zone_sie(1, zone_gid) = temp_pres/((gamma - 1.0));
+                    zone_sie(1, zone_gid) = zone_sie(0, zone_gid) + dt*(3.0/8.0)*PI*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
+                    // zone_sie(0, zone_gid) = temp_pres/((gamma - 1.0));
+                    // zone_sie(1, zone_gid) = temp_pres/((gamma - 1.0));
                     //printf("elem_sie in zone %d is %f \n", zone_gid, elem_sie(1, zone_gid));
 
                 }// end loop over zones
@@ -352,7 +400,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                 for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
                     int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
                     // density
-                    mat_pt_den(leg_gid) = 1.0;//rho0_detJ0(leg_gid)/mat_pt.gauss_legendre_det_j(leg_gid) ;// 
+                    mat_pt_den(leg_gid) = rho0_detJ0(leg_gid)/mat_pt.gauss_legendre_det_j(leg_gid) ;// 1.0;//
                     //printf("mat_pt_den(%d) = %f \n", leg_gid, mat_pt_den(leg_gid));
                     
                     // interpolate sie at quad point //
@@ -377,43 +425,43 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             //printf("TG vortex solutions used for pres and stress\n");
 
             
-            for (int j = 0; j < mesh.num_nodes; j++){
+            // for (int j = 0; j < mesh.num_nodes; j++){
                 
-                for (int k = 0; k < mesh.num_nodes; k++){
-                    M_V(j,k) = 0.0;
-                }
-                lumped_mass(j) = 0.0;
-            }
+            //     for (int k = 0; k < mesh.num_nodes; k++){
+            //         M_V(j,k) = 0.0;
+            //     }
+            //     lumped_mass(j) = 0.0;
+            // }
             
 
-            assemble_kinematic_mass_matrix(M_V,
-                                            lumped_mass,
-                                            mesh,
-                                            ref_elem.gauss_leg_basis,
-                                            ref_elem.gauss_leg_weights,
-                                            mat_pt.gauss_legendre_det_j,
-                                            mat_pt_den);
+            // assemble_kinematic_mass_matrix(M_V,
+            //                                 lumped_mass,
+            //                                 mesh,
+            //                                 ref_elem.gauss_leg_basis,
+            //                                 ref_elem.gauss_leg_weights,
+            //                                 mat_pt.gauss_legendre_det_j,
+            //                                 mat_pt_den);
             
-            // for (int i = 0; i < mesh.num_elems; i++){
-            //     for (int j = 0; j < mesh.num_nodes_in_elem; j++){
-            //         if (lumped_mass(i,j) <= 0.0){
-            //             printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i,j));
-            //             stop_calc = 1;
-            //         }
+            // // for (int i = 0; i < mesh.num_elems; i++){
+            // //     for (int j = 0; j < mesh.num_nodes_in_elem; j++){
+            // //         if (lumped_mass(i,j) <= 0.0){
+            // //             printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i,j));
+            // //             stop_calc = 1;
+            // //         }
+            // //     }
+            // // }
+            // // compute_lumped_mass(lumped_mass,
+            // //                     mesh,
+            // //                     ref_elem.gauss_leg_basis,
+            // //                     ref_elem.gauss_leg_weights,
+            // //                     mat_pt.gauss_legendre_det_j,
+            // //                     mat_pt_den);
+            // for (int i = 0; i < mesh.num_nodes; i++){
+            //     if (lumped_mass(i) <= 0.0){
+            //         printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i));
+            //         stop_calc = 1;
             //     }
             // }
-            // compute_lumped_mass(lumped_mass,
-            //                     mesh,
-            //                     ref_elem.gauss_leg_basis,
-            //                     ref_elem.gauss_leg_weights,
-            //                     mat_pt.gauss_legendre_det_j,
-            //                     mat_pt_den);
-            for (int i = 0; i < mesh.num_nodes; i++){
-                if (lumped_mass(i) <= 0.0){
-                    printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i));
-                    stop_calc = 1;
-                }
-            }
             
 
         } // end of RK loop
