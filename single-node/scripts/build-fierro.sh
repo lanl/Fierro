@@ -45,9 +45,9 @@ show_help() {
 # Initialize variables with default values
 build_action="full-app"
 solver="RDH"
-machine="darwin"
+machine="mac"
 kokkos_build_type="serial"
-build_corer="32"
+build_corer="16"
 
 
 # Define arrays of valid options

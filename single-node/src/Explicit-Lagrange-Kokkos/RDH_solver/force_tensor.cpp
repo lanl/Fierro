@@ -16,8 +16,8 @@
 //                          const DViewCArrayKokkos <double> &legendre_jacobian_inverse ){
                     
 //     FOR_ALL(elem_gid, 0, mesh.num_elems, {
-//         for (int kinematic_dof = 0; kinematic_dof < mesh.num_nodes_in_elem; kinematic_dof++){
-//             int global_kinematic_dof = (mesh.num_nodes_in_elem-1)*elem_gid + kinematic_dof;
+//         for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++){
+//             int global_kinematic_dof = (mesh.num_nodes_in_elem-1)*elem_gid + K_dof;
 
 //             for (int thermodynamic_dof_1 = 0; thermodynamic_dof_1 < mesh.num_zones_in_elem; thermodynamic_dof_1++){
 //                 int global_thermodynamic_dof_1 = (mesh.num_zones_in_elem-1)*elem_gid + thermodynamic_dof_1;
@@ -27,16 +27,16 @@
 
 //                     for (int dim = 0; dim < mesh.num_dims; dim++){
 
-//                         for (int legendre_node = 0; legendre_node < mesh.num_leg_gauss_in_elem; legendre_node++){
-//                             int global_legendre_node = mesh.legendre_in_elem(elem_gid, legendre_node);
+//                         for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+//                             int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
 
 //                             for (int contraction_dim = 0; contraction_dim < mesh.num_dims; contraction_dim++){
-//                                 force_tensor( stage, global_kinematic_dof, global_thermodynamic_dof_1, global_thermodynamic_dof_2, dim) +=  legendre_jacobian_inverse(global_legendre_node, dim, contraction_dim)
-//                                                                                                                 * grad_kine_basis(kinematic_dof, legendre_node, contraction_dim)
-//                                                                                                                 * thermo_basis(thermodynamic_dof_1, legendre_node)
-//                                                                                                                 * thermo_basis(thermodynamic_dof_2, legendre_node)
-//                                                                                                                 * legendre_weights(legendre_node)
-//                                                                                                                 * legendre_jacobian_det(global_legendre_node);
+//                                 force_tensor( stage, global_kinematic_dof, global_thermodynamic_dof_1, global_thermodynamic_dof_2, dim) +=  legendre_jacobian_inverse(leg_gid, dim, contraction_dim)
+//                                                                                                                 * grad_kine_basis(K_dof, leg_lid, contraction_dim)
+//                                                                                                                 * thermo_basis(thermodynamic_dof_1, leg_lid)
+//                                                                                                                 * thermo_basis(thermodynamic_dof_2, leg_lid)
+//                                                                                                                 * legendre_weights(leg_lid)
+//                                                                                                                 * legendre_jacobian_det(leg_gid);
 //                             }// end loop over contraction dimension
 //                         }// end loop over legendre quadrature nodes
 //                     }// end loop over dimension
@@ -60,29 +60,29 @@ void build_force_tensor( CArrayKokkos <double> &force_tensor,
                          const CArrayKokkos <double> &legendre_grad_basis,
                          const CArrayKokkos <double> &bernstein_basis,
                          const CArrayKokkos <double> &legendre_weights,
-                         const DViewCArrayKokkos <double> &legendre_jacobian_det,
-                         const DViewCArrayKokkos <double> &legendre_jacobian_inverse ){
+                         const CArrayKokkos <double> &legendre_jacobian_det,
+                         const CArrayKokkos <double> &legendre_jacobian_inverse ){
                     
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
-        for (int kinematic_dof = 0; kinematic_dof < mesh.num_nodes_in_elem; kinematic_dof++){
-            int global_kinematic_dof = (mesh.num_nodes_in_elem-1)*elem_gid + kinematic_dof;
+        for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++){
+            //int global_kinematic_dof = mesh.nodes_in_elem(elem_gid, K_dof);
 
-            for (int thermodynamic_dof = 0; thermodynamic_dof < mesh.num_zones_in_elem; thermodynamic_dof++){
-                int global_thermodynamic_dof = (mesh.num_zones_in_elem-1)*elem_gid + thermodynamic_dof;
+            for (int T_dof = 0; T_dof < mesh.num_zones_in_elem; T_dof++){
+                //int global_thermodynamic_dof = mesh.zones_in_elem(elem_gid, T_dof);
 
                 for (int dim = 0; dim < mesh.num_dims; dim++){
 
-                    for (int legendre_node = 0; legendre_node < mesh.num_leg_gauss_in_elem; legendre_node++){
-                        int global_legendre_node = mesh.legendre_in_elem(elem_gid, legendre_node);
+                    for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+                        int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
 
-                        for (int contraction_dim1 = 0; contraction_dim1 < mesh.num_dims; contraction_dim1++){
-                            for (int contraction_dim2 = 0; contraction_dim2 < mesh.num_dims; contraction_dim2++){
-                                force_tensor( stage, global_kinematic_dof, global_thermodynamic_dof, dim) +=  legendre_jacobian_inverse(global_legendre_node, contraction_dim1, contraction_dim1)
-                                                                                                                * legendre_grad_basis(kinematic_dof, legendre_node, contraction_dim2)
-                                                                                                                * stress_tensor(stage, global_legendre_node, dim, contraction_dim1)
-                                                                                                                * bernstein_basis(thermodynamic_dof, legendre_node)
-                                                                                                                * legendre_weights(legendre_node)
-                                                                                                                * legendre_jacobian_det(global_legendre_node);
+                        for (int i = 0; i < mesh.num_dims; i++){
+                            for (int j = 0; j < mesh.num_dims; j++){
+                                force_tensor( stage, elem_gid, K_dof, T_dof, dim) +=  stress_tensor(stage, leg_gid, dim, j)
+                                                                                        * legendre_jacobian_inverse(leg_gid, i, j)
+                                                                                        * legendre_grad_basis( leg_lid, K_dof, i)
+                                                                                        * bernstein_basis(leg_lid, T_dof)
+                                                                                        * legendre_weights(leg_lid)
+                                                                                        * legendre_jacobian_det(leg_gid);
                             }// end loop over contraction dimension 2
                         }// end loop over contraction dimension 1
                     }// end loop over legendre quadrature nodes

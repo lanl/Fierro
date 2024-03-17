@@ -502,7 +502,6 @@ struct fe_ref_elem_t{
                     }
 
                     get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
-                    
                     //double check_basis = 0.0;
 
                     for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){

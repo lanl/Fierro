@@ -732,7 +732,7 @@ void input(CArrayKokkos <material_t> &material,
     // Taylor-Green Vortex
     if (test_problem == test::TaylorGreen){
 
-        time_final = 0.5;
+        time_final = 0.2;
         
         RUN({
             

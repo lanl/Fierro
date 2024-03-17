@@ -1798,15 +1798,15 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
                                const elem_t &elem,
                                const fe_ref_elem_t &ref_elem,
                                const DViewCArrayKokkos <double> &node_coords,
-                               DViewCArrayKokkos <double> &gauss_legendre_jacobian,
-                               DViewCArrayKokkos <double> &gauss_legendre_det_j,
-                               DViewCArrayKokkos <double> &gauss_legendre_jacobian_inverse);
+                               CArrayKokkos <double> &gauss_legendre_jacobian,
+                               CArrayKokkos <double> &gauss_legendre_det_j,
+                               CArrayKokkos <double> &gauss_legendre_jacobian_inverse);
 
 KOKKOS_FUNCTION
 void get_vol(DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
              const CArrayKokkos <double> &legendre_weights,
-             const DViewCArrayKokkos <double> &legendre_jacobian_det,
+             const CArrayKokkos <double> &legendre_jacobian_det,
              const mesh_t &mesh,
              const elem_t &elem,
              const fe_ref_elem_t &ref_elem);
@@ -2030,15 +2030,15 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                      const size_t mat_id,
                      const size_t num_elems);
 
-void build_force_tensor(DViewCArrayKokkos <double> &force_tensor,
+void build_force_tensor(CArrayKokkos <double> &force_tensor,
                         const size_t stage,
                         const mesh_t &mesh,
                         const DViewCArrayKokkos <double> &stress_tensor,
                         const CArrayKokkos <double> &legendre_grad_basis,
                         const CArrayKokkos <double> &bernstein_basis,
                         const CArrayKokkos <double> &legendre_weights,
-                        const DViewCArrayKokkos <double> &legendre_jacobian_det,
-                        const DViewCArrayKokkos <double> &legendre_jacobian_inverse );
+                        const CArrayKokkos <double> &legendre_jacobian_det,
+                        const CArrayKokkos <double> &legendre_jacobian_inverse );
 
 void get_stress_tensor(DViewCArrayKokkos <double> &elem_stress,
                        const size_t stage,
@@ -2050,8 +2050,15 @@ void assemble_kinematic_mass_matrix( CArrayKokkos <double> &M_V,
                                     const mesh_t &mesh,
                                     const CArrayKokkos <double> &basis,
                                     const CArrayKokkos <double> &legendre_weights,
-                                    const DViewCArrayKokkos <double> &legendre_jacobian_det,
+                                    const CArrayKokkos <double> &legendre_jacobian_det,
                                     const DViewCArrayKokkos <double> &density );
+
+void compute_lumped_mass(CArrayKokkos <double> &lumped_mass,
+                         const mesh_t &mesh,
+                         const CArrayKokkos <double> &basis,
+                         const CArrayKokkos <double> &legendre_weights,
+                         const CArrayKokkos <double> &legendre_jacobian_det,
+                         const DViewCArrayKokkos <double> &density);
 
 void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
                                     const mesh_t &mesh,
@@ -2063,7 +2070,6 @@ void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
 void assemble_A1(   CArrayKokkos <double> &A1,
                     CArrayKokkos <double> &residual_in_elem,
                     const size_t stage,
-                    const double factor,
                     const double dt,
                     const mesh_t &mesh,
                     CArrayKokkos <double> &M_dot_u,
@@ -2074,11 +2080,11 @@ void assemble_A1(   CArrayKokkos <double> &A1,
 
 void update_momentum(DViewCArrayKokkos <double> &node_vel,
                      const size_t stage,
-                     const CArrayKokkos <double> &residual,
-                     const CArrayKokkos <double> &mass_matrix);
+                     const mesh_t &mesh,
+                     const CArrayKokkos <double> &A1,
+                     const CArrayKokkos <double> &lumped_mass);
 
 void update_position_rdh(const size_t stage,
-                         double factor,
                          double dt,
                          const mesh_t &mesh,
                          DViewCArrayKokkos <double> &node_coords,
@@ -2087,21 +2093,23 @@ void update_position_rdh(const size_t stage,
 void rdh_solve(CArrayKokkos <material_t> &material,
                CArrayKokkos <boundary_t> &boundary,
                mesh_t &mesh,
+               elem_t &elem,
+               fe_ref_elem_t &ref_elem,
+               mat_pt_t &mat_pt,
+               zone_t &zone,
                DViewCArrayKokkos <double> &node_coords,
                DViewCArrayKokkos <double> &node_vel,
                DViewCArrayKokkos <double> &node_mass,
-               DViewCArrayKokkos <double> &elem_den,
-               DViewCArrayKokkos <double> &elem_pres,
-               DViewCArrayKokkos <double> &elem_stress,
-               DViewCArrayKokkos <double> &elem_sspd,
-               DViewCArrayKokkos <double> &elem_sie,
+               DViewCArrayKokkos <double> &mat_pt_den,
+               DViewCArrayKokkos <double> &mat_pt_pres,
+               DViewCArrayKokkos <double> &mat_pt_stress,
+               DViewCArrayKokkos <double> &mat_pt_sspd,
+               DViewCArrayKokkos <double> &zone_sie,
                DViewCArrayKokkos <double> &elem_vol,
-               DViewCArrayKokkos <double> &elem_div,
-               DViewCArrayKokkos <double> &elem_mass,
+               DViewCArrayKokkos <double> &mat_pt_div,
+               DViewCArrayKokkos <double> &mat_pt_mass,
                DViewCArrayKokkos <size_t> &elem_mat_id,
                DViewCArrayKokkos <double> &elem_statev,
-               DViewCArrayKokkos <double> &corner_force,
-               DViewCArrayKokkos <double> &corner_mass,
                double &time_value,
                const double time_final,
                const double dt_max,
@@ -2143,11 +2151,31 @@ void get_timestep(mesh_t &mesh,
                   double &dt,
                   const double fuzz);
 
-
-
-
-
 */
+
+void get_timestep_HexN(mesh_t &mesh,
+                  DViewCArrayKokkos <double> &node_coords,
+                  DViewCArrayKokkos <double> &node_vel,
+                  DViewCArrayKokkos <double> &mat_pt_sspd,
+                  DViewCArrayKokkos <double> &elem_vol,
+                  double time_value,
+                  const double graphics_time,
+                  const double time_final,
+                  const double dt_max,
+                  const double dt_min,
+                  const double dt_cfl,
+                  double &dt,
+                  const double fuzz);
+
+void init_tn(mesh_t &mesh,
+             DViewCArrayKokkos <double> &node_coords,
+             DViewCArrayKokkos <double> &node_vel,
+             DViewCArrayKokkos <double> &zone_sie,
+             DViewCArrayKokkos <double> &mat_pt_stress,
+             const size_t num_dims,
+             const size_t num_elems,
+             const size_t num_nodes);
+
 KOKKOS_FUNCTION
 double heron(const double x1,
              const double y1,

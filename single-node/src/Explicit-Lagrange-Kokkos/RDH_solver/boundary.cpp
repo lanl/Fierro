@@ -32,6 +32,7 @@ void boundary_velocity(const mesh_t &mesh,
                     
                 // Set velocity to zero in that directdion
                 node_vel(1, bdy_node_gid, direction) = 0.0;
+
                         
             }
             else if (boundary(bdy_set).hydro_bc == bdy::fixed){
@@ -42,6 +43,7 @@ void boundary_velocity(const mesh_t &mesh,
                 for(size_t dim=0; dim<mesh.num_dims; dim++){
                     // Set velocity to zero
                     node_vel(1, bdy_node_gid, dim) = 0.0;
+
                 }
                 
             }// end if
@@ -80,3 +82,4 @@ void boundary_velocity(const mesh_t &mesh,
     
     return;
 } // end boundary_velocity function
+

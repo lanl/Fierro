@@ -314,60 +314,12 @@ void setup(const CArrayKokkos <material_t> &material,
                     
                 } // end logical on type
 
-                
-                
-
-                
-                    // loop over the nodes in elem and apply velocity
-                
-
-                // Building polynomial coefficients for elem fields //
-                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
-                    
-                    int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
-                    //printf("zone_gid is %d \n", zone_gid);
-
-                    // zonal coords for initializations that depend on functions of x
-                    // calculate the coordinates and radius of the element
-                    double zone_coords[3]; 
-                    zone_coords[0] = 0.0;
-                    zone_coords[1] = 0.0;
-                    zone_coords[2] = 0.0;
-
-                    // get the coordinates of the zone center
-                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
-                        zone_coords[0] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 0);
-                        zone_coords[1] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 1);
-                        if (mesh.num_dims == 3){
-                            zone_coords[2] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 2);
-                        } else
-                        {
-                            zone_coords[2] = 0.0;
-                        }
-                    } // end loop over nodes in element
-                    zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
-                    zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
-                    zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
-
-                    
-                    // printf("zone_coord at dim %d is %f \n", 0, zone_coords[0] );
-                    // printf("zone_coord at dim %d is %f \n", 1, zone_coords[1] );
-                    // printf("zone_coord at dim %d is %f \n", 2, zone_coords[2] );
-                    
-                    
-                    // specific internal energy at each "time bin"
-                    zone_sie( 0, zone_gid) = mat_fill(f_id).sie;
-                    zone_sie( 1, zone_gid) = mat_fill(f_id).sie;
-                    
-                    
-                    
-                            
-
-                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
+                // loop over the nodes in elem and apply velocity
+                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
 
                     // get the mesh node index
                     
-                    size_t node_gid = mesh.nodes_in_zone(zone_gid, node_lid);
+                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
                     
                     
                     // --- Velocity ---
@@ -490,10 +442,46 @@ void setup(const CArrayKokkos <material_t> &material,
                         }
                     } // end of switch
 
-                }// end loop over nodes of element
+                }// end loop over nodes of element                
+
+                // Building polynomial coefficients for elem fields //
+                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+                    
+                    int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+                    //printf("zone_gid is %d \n", zone_gid);
+
+                    // zonal coords for initializations that depend on functions of x
+                    // calculate the coordinates and radius of the element
+                    double zone_coords[3]; 
+                    zone_coords[0] = 0.0;
+                    zone_coords[1] = 0.0;
+                    zone_coords[2] = 0.0;
+
+                    // get the coordinates of the zone center
+                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
+                        zone_coords[0] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 0);
+                        zone_coords[1] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 1);
+                        if (mesh.num_dims == 3){
+                            zone_coords[2] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 2);
+                        } else
+                        {
+                            zone_coords[2] = 0.0;
+                        }
+                    } // end loop over nodes in element
+                    zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
+                    zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
+                    zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
+
+                    
+                    // printf("zone_coord at dim %d is %f \n", 0, zone_coords[0] );
+                    // printf("zone_coord at dim %d is %f \n", 1, zone_coords[1] );
+                    // printf("zone_coord at dim %d is %f \n", 2, zone_coords[2] );
                     
                     
-                    
+                    // specific internal energy at each "time bin"
+                    zone_sie( 0, zone_gid) = mat_fill(f_id).sie;
+                    zone_sie( 1, zone_gid) = mat_fill(f_id).sie;
+                     
                     if(mat_fill(f_id).velocity == init_conds::tg_vortex)
                     {
                         // p = rho*ie*(gamma - 1)
@@ -514,7 +502,6 @@ void setup(const CArrayKokkos <material_t> &material,
                     } // end if
                 }// end loop over zones
 
-                // -- FIX to be mat_pt_den -- //
                 for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
                     int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
                     // density

@@ -23,11 +23,12 @@ void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
                     M(global_i, global_j) += density(legendre_gid)
                                                *legendre_weights(legendre_lid)
                                                *legendre_jacobian_det(legendre_gid)
-                                               *basis(i, legendre_lid)
-                                               *basis(j, legendre_lid); 
+                                               *basis(legendre_lid, i)
+                                               *basis(legendre_lid, j); 
                                                
                 }// end loop over legendre_lid
             }// end loop over j
         }// end loop over i
     }); // end FOR_ALL
+     Kokkos::fence();
 }// end assemble kinematic mass matrix

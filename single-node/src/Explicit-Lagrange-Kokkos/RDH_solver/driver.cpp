@@ -46,7 +46,7 @@ double time_final = 1.e16;
 double dt = 1.e-8;
 double dt_max = 1.0e-2;
 double dt_min = 1.0e-8;
-double dt_cfl = 0.4;
+double dt_cfl = 0.2;
 double dt_start = 1.0e-8;
 
 size_t rk_num_stages = 2;
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]){
         elem_t  elem;
         zone_t zone;
         mat_pt_t mat_pt;
-	      corner_t corner;
+	    corner_t corner;
         fe_ref_elem_t ref_elem;
         CArrayKokkos <material_t> material;
         CArrayKokkos <double> state_vars; // array to hold init model variables
@@ -256,31 +256,31 @@ int main(int argc, char *argv[]){
                                                num_elems,
                                                num_state_vars);
         
-	      DViewCArrayKokkos <double> lobatto_jacobian(&mat_pt.gauss_lobatto_jacobian(0,0,0),
-                                                    num_lob_pts,
-                                                    num_dims,
-                                                    num_dims);
+	      // DViewCArrayKokkos <double> lobatto_jacobian(&mat_pt.gauss_lobatto_jacobian(0,0,0),
+        //                                             num_lob_pts,
+        //                                             num_dims,
+        //                                             num_dims);
 	
-	      DViewCArrayKokkos <double> legendre_jacobian(&mat_pt.gauss_legendre_jacobian(0,0,0),
-                                                    num_leg_pts,
-                                                    num_dims,
-                                                    num_dims);
+	      // DViewCArrayKokkos <double> legendre_jacobian(&mat_pt.gauss_legendre_jacobian(0,0,0),
+        //                                             num_leg_pts,
+        //                                             num_dims,
+        //                                             num_dims);
 
-        DViewCArrayKokkos <double> lobatto_jacobian_inverse(&mat_pt.gauss_lobatto_jacobian_inverse(0,0,0),
-                                                                  num_lob_pts,
-                                                                  num_dims,
-                                                                  num_dims);
+        // DViewCArrayKokkos <double> lobatto_jacobian_inverse(&mat_pt.gauss_lobatto_jacobian_inverse(0,0,0),
+        //                                                           num_lob_pts,
+        //                                                           num_dims,
+        //                                                           num_dims);
         
-        DViewCArrayKokkos <double> legendre_jacobian_inverse(&mat_pt.gauss_legendre_jacobian_inverse(0,0,0),
-                                                                  num_leg_pts,
-                                                                  num_dims,
-                                                                  num_dims);
+        // DViewCArrayKokkos <double> legendre_jacobian_inverse(&mat_pt.gauss_legendre_jacobian_inverse(0,0,0),
+        //                                                           num_leg_pts,
+        //                                                           num_dims,
+        //                                                           num_dims);
         
-        DViewCArrayKokkos <double> lobatto_det(&mat_pt.gauss_lobatto_det_j(0),
-                                                      num_lob_pts);
+        // DViewCArrayKokkos <double> lobatto_det(&mat_pt.gauss_lobatto_det_j(0),
+        //                                               num_lob_pts);
 
-        DViewCArrayKokkos <double> legendre_det(&mat_pt.gauss_legendre_det_j(0),
-                                                      num_leg_pts);
+        // DViewCArrayKokkos <double> legendre_det(&mat_pt.gauss_legendre_det_j(0),
+        //                                               num_leg_pts);
 
         // create Dual Views of the corner struct variables
         DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
@@ -301,65 +301,58 @@ int main(int argc, char *argv[]){
                                   elem,
                                   ref_elem,
                                   node_coords,
-                                  legendre_jacobian,
-                                  legendre_det,
-                                  legendre_jacobian_inverse);
+                                  mat_pt.gauss_legendre_jacobian,
+                                  mat_pt.gauss_legendre_det_j,
+                                  mat_pt.gauss_legendre_jacobian_inverse);
         
-        get_vol(elem_vol, node_coords, ref_elem.gauss_leg_weights, legendre_det, mesh, elem, ref_elem);
+        get_vol(elem_vol, node_coords, ref_elem.gauss_leg_weights, mat_pt.gauss_legendre_det_j, mesh, elem, ref_elem);
         
-        /*
-        for (int elem_gid  = 0; elem_gid < mesh.num_elems; elem_gid++){
-          for (int i = 0; i < mesh.num_nodes_in_elem; i++){
-            std::cout << mesh.nodes_in_elem(elem_gid, i) << std::endl;
-          }
-        }
-        */
-        //printf("calculated volume is: %f \n", elem_vol.host(0));
-        // double vol_check = 0.0;
+        
+        // // double vol_check = 0.0;
         // for (int i = 0; i < mesh.num_elems; i++){
         //    vol_check += elem_vol(i);
         // }
         // printf("calculated volume is: %f \n", vol_check); 
         
-       /* 
-        // check jacobian inverse works //
-        double temp_left = 0.0;
-        double temp_right = 0.0;
         
-        std::cout << "left inverse " << std::endl;
-        for (int i = 0; i < num_leg_pts; i++){
-          std::cout << " At gauss pt " << i << std::endl;
-          std::cout << " ######################## " << std::endl;
-          for (int dim_1 = 0; dim_1 < mesh.num_dims; dim_1++){
-            for (int dim_2 = 0; dim_2 < mesh.num_dims; dim_2++){
-              for (int k = 0; k < mesh.num_dims; k++){
-                temp_left += legendre_jacobian_inverse(i,dim_1,k)*legendre_jacobian(i, k, dim_2); 
-              }
-              std::cout<<  temp_left << ", ";
-              temp_left = 0.0;
-            }
-            std::cout<< " "<< std::endl;
-          }
-          std::cout << " ######################## " << std::endl;
-        }
+        // // check jacobian inverse works //
+        // double temp_left = 0.0;
+        // double temp_right = 0.0;
         
-        std::cout << "right inverse " << std::endl;
-        for (int i = 0; i < num_leg_pts; i++){
-          std::cout << " At gauss pt " << i << std::endl;
-          std::cout << " ######################## " << std::endl;
-          for (int dim_1 = 0; dim_1 < mesh.num_dims; dim_1++){
-            for (int dim_2 = 0; dim_2 < mesh.num_dims; dim_2++){
-              for (int k = 0; k < mesh.num_dims; k++){
-                temp_right += legendre_jacobian(i,dim_1,k)*legendre_jacobian_inverse(i, k, dim_2); 
-              }
-              std::cout<< temp_right <<", ";
-              temp_right = 0.0;
-            }
-            std::cout<< " "<< std::endl;
-          }
-          std::cout << " ######################## " << std::endl;
-        }
-        */
+        // std::cout << "left inverse " << std::endl;
+        // for (int i = 0; i < num_leg_pts; i++){
+        //   std::cout << " At gauss pt " << i << std::endl;
+        //   std::cout << " ######################## " << std::endl;
+        //   for (int dim_1 = 0; dim_1 < mesh.num_dims; dim_1++){
+        //     for (int dim_2 = 0; dim_2 < mesh.num_dims; dim_2++){
+        //       for (int k = 0; k < mesh.num_dims; k++){
+        //         temp_left += mat_pt.gauss_legendre_jacobian_inverse(i,dim_1,k)*mat_pt.gauss_legendre_jacobian(i, k, dim_2); 
+        //       }
+        //       std::cout<<  temp_left << ", ";
+        //       temp_left = 0.0;
+        //     }
+        //     std::cout<< " "<< std::endl;
+        //   }
+        //   std::cout << " ######################## " << std::endl;
+        // }
+        
+        // std::cout << "right inverse " << std::endl;
+        // for (int i = 0; i < num_leg_pts; i++){
+        //   std::cout << " At gauss pt " << i << std::endl;
+        //   std::cout << " ######################## " << std::endl;
+        //   for (int dim_1 = 0; dim_1 < mesh.num_dims; dim_1++){
+        //     for (int dim_2 = 0; dim_2 < mesh.num_dims; dim_2++){
+        //       for (int k = 0; k < mesh.num_dims; k++){
+        //         temp_right += mat_pt.gauss_legendre_jacobian(i,dim_1,k)*mat_pt.gauss_legendre_jacobian_inverse(i, k, dim_2); 
+        //       }
+        //       std::cout<< temp_right <<", ";
+        //       temp_right = 0.0;
+        //     }
+        //     std::cout<< " "<< std::endl;
+        //   }
+        //   std::cout << " ######################## " << std::endl;
+        // }
+        
         // ---------------------------------------------------------------------
         //   setup the IC's and BC's
         // ---------------------------------------------------------------------
@@ -404,6 +397,10 @@ int main(int argc, char *argv[]){
         rdh_solve(material,
                   boundary,
                   mesh,
+                  elem,
+                  ref_elem,
+                  mat_pt,
+                  zone,
                   node_coords,
                   node_vel,
                   node_mass,
@@ -417,8 +414,6 @@ int main(int argc, char *argv[]){
                   mat_pt_mass,
                   elem_mat_id,
                   elem_statev,
-                  corner_force,
-                  corner_mass,
                   time_value,
                   time_final,
                   dt_max,

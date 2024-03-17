@@ -92,16 +92,16 @@ struct mat_pt_t {
     CArray <double> mass;
 
     // jacobians
-    CArray <double> gauss_lobatto_jacobian;
-    CArray <double> gauss_legendre_jacobian;
+    CArrayKokkos <double> gauss_lobatto_jacobian;
+    CArrayKokkos <double> gauss_legendre_jacobian;
    
     // jacobian inverses
-    CArray <double> gauss_lobatto_jacobian_inverse;
-    CArray <double> gauss_legendre_jacobian_inverse;
+    CArrayKokkos <double> gauss_lobatto_jacobian_inverse;
+    CArrayKokkos <double> gauss_legendre_jacobian_inverse;
     
     // det of jacobian
-    CArray <double> gauss_lobatto_det_j;
-    CArray <double> gauss_legendre_det_j;
+    CArrayKokkos <double> gauss_lobatto_det_j;
+    CArrayKokkos <double> gauss_legendre_det_j;
     
     // global number of quadrature points
     size_t num_leg_pts;
@@ -125,14 +125,14 @@ struct mat_pt_t {
         this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);
         this->sspd   = CArray <double> (num_leg_pts);
 	
-        this->gauss_lobatto_jacobian  = CArray <double> (num_lob_pts, num_dims, num_dims);
-        this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);
+        this->gauss_lobatto_jacobian  = CArrayKokkos <double> (num_lob_pts, num_dims, num_dims);
+        this->gauss_legendre_jacobian = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
         
-        this->gauss_lobatto_jacobian_inverse  = CArray <double> (num_lob_pts, num_dims, num_dims);
-        this->gauss_legendre_jacobian_inverse = CArray <double> (num_leg_pts, num_dims, num_dims);
+        this->gauss_lobatto_jacobian_inverse  = CArrayKokkos <double> (num_lob_pts, num_dims, num_dims);
+        this->gauss_legendre_jacobian_inverse = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
         
-        this->gauss_lobatto_det_j  = CArray <double> (num_lob_pts);
-        this->gauss_legendre_det_j = CArray <double> (num_leg_pts);
+        this->gauss_lobatto_det_j  = CArrayKokkos <double> (num_lob_pts);
+        this->gauss_legendre_det_j = CArrayKokkos <double> (num_leg_pts);
 
     }
 

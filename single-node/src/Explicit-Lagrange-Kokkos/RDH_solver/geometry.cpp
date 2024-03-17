@@ -7,7 +7,6 @@
 #include "ref_elem.h"
 
 void update_position_rdh(const size_t stage,
-                         double factor,
                          double dt,
                          const mesh_t &mesh,
                          DViewCArrayKokkos <double> &node_coords,
@@ -17,7 +16,7 @@ void update_position_rdh(const size_t stage,
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
 
         for (int dim = 0; dim < mesh.num_dims; dim++){
-            double half_vel = factor*(node_vel(stage, node_gid, dim) + node_vel(0, node_gid, dim));
+            double half_vel = 0.5*(node_vel(stage, node_gid, dim) + node_vel(0, node_gid, dim));
             node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + dt*half_vel;
         }
         
@@ -239,9 +238,9 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
                                const elem_t &elem,
                                const fe_ref_elem_t &ref_elem,
                                const DViewCArrayKokkos <double> &node_coords, 
-                               DViewCArrayKokkos <double> &gauss_legendre_jacobian,
-                               DViewCArrayKokkos <double> &gauss_legendre_det_j,
-                               DViewCArrayKokkos <double> &gauss_legendre_jacobian_inverse){
+                               CArrayKokkos <double> &gauss_legendre_jacobian,
+                               CArrayKokkos <double> &gauss_legendre_det_j,
+                               CArrayKokkos <double> &gauss_legendre_jacobian_inverse){
 
     // loop over the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems,{
@@ -296,7 +295,7 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
 void get_vol(DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
              const CArrayKokkos <double> &legendre_weights,
-             const DViewCArrayKokkos <double> &legendre_jacobian_det,
+             const CArrayKokkos <double> &legendre_jacobian_det,
              const mesh_t &mesh,
              const elem_t &elem,
              const fe_ref_elem_t &ref_elem) {
