@@ -66,17 +66,24 @@ void rdh_solve(CArrayKokkos <material_t> &material,
     
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-    CArrayKokkos <double> M_V(mesh.num_elems, mesh.num_nodes_in_elem, mesh.num_nodes_in_elem, "M_V");
-    CArrayKokkos <double> lumped_mass(mesh.num_elems, mesh.num_nodes_in_elem, "lumped_mass");
+    CArrayKokkos <double> M_V(mesh.num_nodes, mesh.num_nodes, "M_V");
+    CArrayKokkos <double> lumped_mass(mesh.num_nodes, "lumped_mass");
 
-    for (int i = 0; i < mesh.num_elems; i++){
-        for (int j = 0; j < mesh.num_nodes_in_elem; j++){
-            for (int k = 0; k < mesh.num_nodes_in_elem; k++){
-                M_V(i,j,k) = 0.0;
-            }
-            lumped_mass(i,j) = 0.0;
+    for (int i = 0; i < mesh.num_nodes; i++){
+        for (int j = 0; j < mesh.num_nodes; j++){
+            M_V(i,j) = 0.0;
         }
+        lumped_mass(i) = 0.0;
     }
+
+    // for (int i = 0; i < mesh.num_elems; i++){
+    //     for (int j = 0; j < mesh.num_nodes_in_elem; j++){
+    //         for (int k = 0; k < mesh.num_nodes_in_elem; k++){
+    //             M_V(i,j,k) = 0.0;
+    //         }
+    //         lumped_mass(i,j) = 0.0;
+    //     }
+    // }
 
     // for (int i = 0; i < mesh.num_nodes; i++){
     //     lumped_mass(i) = 0.0;
@@ -116,22 +123,22 @@ void rdh_solve(CArrayKokkos <material_t> &material,
     // }
     //printf("\n");
 
-    printf("Lumped mass assembled \n");
-    for (int i = 0; i < mesh.num_elems; i++){
-        for (int j = 0; j < mesh.num_nodes_in_elem; j++){
-            if (lumped_mass(i,j) <= 0.0){
-                printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i,j));
-                stop_calc = 1;
-            }
-        }
-    }
-
-    // for (int i = 0; i < mesh.num_nodes; i++){
-    //     if (lumped_mass(i) <= 0.0){
-    //         printf("NEGATIVE lumped mass at node %d and val = %f \n", i, lumped_mass(i));
-    //         stop_calc = 1;
+    // printf("Lumped mass assembled \n");
+    // for (int i = 0; i < mesh.num_elems; i++){
+    //     for (int j = 0; j < mesh.num_nodes_in_elem; j++){
+    //         if (lumped_mass(i,j) <= 0.0){
+    //             printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i,j));
+    //             stop_calc = 1;
+    //         }
     //     }
     // }
+
+    for (int i = 0; i < mesh.num_nodes; i++){
+        if (lumped_mass(i) <= 0.0){
+            printf("NEGATIVE lumped mass at node %d and val = %f \n", i, lumped_mass(i));
+            stop_calc = 1;
+        }
+    }
     printf("\n");
 
     if (mesh.num_nodes_in_elem != ref_elem.num_basis){
@@ -195,15 +202,14 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                 mesh.num_nodes);
         //printf("Values at t_n initialized \n");
 	    
-        CArrayKokkos <double> force_tensor(rk_num_stages, mesh.num_elems, mesh.num_nodes_in_elem, mesh.num_zones_in_elem, mesh.num_dims);
+        
+        CArrayKokkos <double> force_tensor(rk_num_stages, mesh.num_nodes, mesh.num_zones, mesh.num_dims);
 
         for (int i = 0; i < rk_num_stages; i++){
-            for (int j = 0; j < mesh.num_elems; j++){
-                for (int k = 0; k < mesh.num_nodes_in_elem; k++){
-                    for (int l = 0; l < mesh.num_zones_in_elem; l++){
-                        for (int m = 0; m < mesh.num_dims; m++){
-                            force_tensor(i,j,k,l,m) = 0.0;
-                        }
+            for (int k = 0; k < mesh.num_nodes; k++){
+                for (int l = 0; l < mesh.num_zones; l++){
+                    for (int m = 0; m < mesh.num_dims; m++){
+                        force_tensor(i,k,l,m) = 0.0;
                     }
                 }
             }
@@ -230,24 +236,17 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             //printf("Force tensor built \n");
 
             CArrayKokkos <double> A1(mesh.num_nodes, mesh.num_dims);
-            CArrayKokkos <double> F_dot_ones(mesh.num_elems, mesh.num_nodes_in_elem, mesh.num_dims);
-            CArrayKokkos <double> M_dot_u(mesh.num_elems, mesh.num_nodes_in_elem, mesh.num_dims);
+            CArrayKokkos <double> F_dot_ones(mesh.num_nodes, mesh.num_dims);
+            CArrayKokkos <double> M_dot_u(mesh.num_nodes, mesh.num_dims);
             CArrayKokkos <double> residual_in_elem(mesh.num_elems, mesh.num_nodes, mesh.num_dims);
             for (int i = 0; i < mesh.num_nodes; i++){
                 for (int j = 0; j < mesh.num_dims; j++){
                     A1(i,j) = 0.0;
-                    // F_dot_ones(i,j) = 0.0;
-                    // M_dot_u(i,j) = 0.0;
+                    F_dot_ones(i,j) = 0.0;
+                    M_dot_u(i,j) = 0.0;
                 }
             }
-            for (int i = 0; i < mesh.num_elems; i++){
-                for (int j = 0; j < mesh.num_nodes_in_elem; j++){
-                    for (int k = 0; k < mesh.num_dims; k++){
-                        F_dot_ones(i,j,k) = 0.0;
-                        M_dot_u(i,j,k) = 0.0;
-                    }
-                }
-            }
+            
             for (int i = 0; i < mesh.num_elems; i++){
                 for (int j = 0; j < mesh.num_nodes; j++){
                     for (int k = 0; k < mesh.num_dims; k++){
@@ -377,15 +376,15 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             }// end loop over elems
             //printf("TG vortex solutions used for pres and stress\n");
 
-            for (int i = 0; i < mesh.num_elems; i++){
-                for (int j = 0; j < mesh.num_nodes_in_elem; j++){
-                    
-                    for (int k = 0; k < mesh.num_nodes_in_elem; k++){
-                        M_V(i,j,k) = 0.0;
-                    }
-                    lumped_mass(i,j) = 0.0;
+            
+            for (int j = 0; j < mesh.num_nodes; j++){
+                
+                for (int k = 0; k < mesh.num_nodes; k++){
+                    M_V(j,k) = 0.0;
                 }
+                lumped_mass(j) = 0.0;
             }
+            
 
             assemble_kinematic_mass_matrix(M_V,
                                             lumped_mass,
@@ -395,26 +394,26 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                                             mat_pt.gauss_legendre_det_j,
                                             mat_pt_den);
             
-            for (int i = 0; i < mesh.num_elems; i++){
-                for (int j = 0; j < mesh.num_nodes_in_elem; j++){
-                    if (lumped_mass(i,j) <= 0.0){
-                        printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i,j));
-                        stop_calc = 1;
-                    }
-                }
-            }
+            // for (int i = 0; i < mesh.num_elems; i++){
+            //     for (int j = 0; j < mesh.num_nodes_in_elem; j++){
+            //         if (lumped_mass(i,j) <= 0.0){
+            //             printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i,j));
+            //             stop_calc = 1;
+            //         }
+            //     }
+            // }
             // compute_lumped_mass(lumped_mass,
             //                     mesh,
             //                     ref_elem.gauss_leg_basis,
             //                     ref_elem.gauss_leg_weights,
             //                     mat_pt.gauss_legendre_det_j,
             //                     mat_pt_den);
-            // for (int i = 0; i < mesh.num_nodes; i++){
-            //     if (lumped_mass(i) <= 0.0){
-            //         printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i));
-            //         stop_calc = 1;
-            //     }
-            // }
+            for (int i = 0; i < mesh.num_nodes; i++){
+                if (lumped_mass(i) <= 0.0){
+                    printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i));
+                    stop_calc = 1;
+                }
+            }
             
 
         } // end of RK loop

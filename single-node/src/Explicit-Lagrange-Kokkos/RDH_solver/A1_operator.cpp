@@ -22,23 +22,26 @@ void assemble_A1(   CArrayKokkos <double> &A1,
             int node_gid_1 = mesh.nodes_in_elem(elem_gid, node_lid_1);
 
             for (int dim = 0; dim < mesh.num_dims; dim++){
+                
 
-                for (int node_lid_2 = 0; node_lid_2 < mesh.num_nodes_in_elem; node_lid_2++){
-                    int node_gid_2 = mesh.nodes_in_elem(elem_gid, node_lid_2);
+                for (int node_gid_2 = 0; node_gid_2 < mesh.num_nodes; node_gid_2++){
+                // for (int node_lid_2 = 0; node_lid_2 < mesh.num_nodes_in_elem; node_lid_2++){
+                //     int node_gid_2 = mesh.nodes_in_elem(elem_gid, node_lid_2);
 
-                    M_dot_u(elem_gid, node_lid_1, dim ) += mass_matrix(elem_gid, node_lid_1, node_lid_2)*( node_vel(stage, node_gid_2, dim) - node_vel(0, node_gid_2, dim) );
+                    M_dot_u(node_gid_1, dim ) += mass_matrix(node_gid_1, node_gid_2)*( node_vel(stage, node_gid_2, dim) - node_vel(0, node_gid_2, dim) );
 
                 }// end loop over node_lid_2
                 
                 // Compute \int 1.F.sigma dt
-                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
-                    //int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+                for (int zone_gid = 0; zone_gid < mesh.num_zones; zone_gid++){
+                // for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+                //     int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
                 
-                    F_dot_ones(elem_gid, node_lid_1, dim) += 0.5*( force_tensor(stage, elem_gid, node_lid_1, zone_lid, dim) + force_tensor(0, elem_gid, node_lid_1, zone_lid, dim) );
+                    F_dot_ones(node_gid_1, dim) += 0.5*( force_tensor(stage, node_gid_1, zone_gid, dim) + force_tensor(0, node_gid_1, zone_gid, dim) );
 
                 }// end loop over zone_lid
 
-                residual_in_elem(elem_gid, node_gid_1, dim) = M_dot_u(elem_gid, node_lid_1, dim) + dt*F_dot_ones(elem_gid, node_lid_1, dim);
+                residual_in_elem(elem_gid, node_gid_1, dim) = M_dot_u(node_gid_1, dim) + dt*F_dot_ones(node_gid_1, dim);
 
             }// end loop over dim
             

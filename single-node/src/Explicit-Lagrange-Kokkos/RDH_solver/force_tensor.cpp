@@ -65,10 +65,10 @@ void build_force_tensor( CArrayKokkos <double> &force_tensor,
                     
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
         for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++){
-            //int global_kinematic_dof = mesh.nodes_in_elem(elem_gid, K_dof);
+            int global_K_dof = mesh.nodes_in_elem(elem_gid, K_dof);
 
             for (int T_dof = 0; T_dof < mesh.num_zones_in_elem; T_dof++){
-                //int global_thermodynamic_dof = mesh.zones_in_elem(elem_gid, T_dof);
+                int global_T_dof = mesh.zones_in_elem(elem_gid, T_dof);
 
                 for (int dim = 0; dim < mesh.num_dims; dim++){
 
@@ -77,9 +77,9 @@ void build_force_tensor( CArrayKokkos <double> &force_tensor,
 
                         for (int i = 0; i < mesh.num_dims; i++){
                             for (int j = 0; j < mesh.num_dims; j++){
-                                force_tensor( stage, elem_gid, K_dof, T_dof, dim) +=  stress_tensor(stage, leg_gid, dim, j)
+                                force_tensor( stage, global_K_dof, global_T_dof, dim) +=  stress_tensor(stage, leg_gid, dim, i)
                                                                                         * legendre_jacobian_inverse(leg_gid, i, j)
-                                                                                        * legendre_grad_basis( leg_lid, K_dof, i)
+                                                                                        * legendre_grad_basis( leg_lid, K_dof, j)
                                                                                         * bernstein_basis(leg_lid, T_dof)
                                                                                         * legendre_weights(leg_lid)
                                                                                         * legendre_jacobian_det(leg_gid);
