@@ -61,7 +61,7 @@ materials:
     q2: 0
     q1ex: 1.0
     q2ex: 0.0
-    global_vars:
+    eos_global_vars:
       - 1.666666666666667
       - 1.0E-14
       - 1.0

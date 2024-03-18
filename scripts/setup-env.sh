@@ -18,6 +18,18 @@ export trilinosdir=${libdir}
 export builddir=${basedir}/${my_build}
 export installdir=${basedir}/install
 
+export devutilsdir=${topdir}/dev-utils
+
+if { [ ! -d "${devutilsdir}/uncrustify/build" ] ;}
+then
+    echo "Missing uncrustify build directory, making it now "
+    mkdir ${devutilsdir}/uncrustify/build
+fi
+
+export UNCRUSTIFY_SOURCE_DIR=${devutilsdir}/uncrustify
+export UNCRUSTIFY_BUILD_DIR=${devutilsdir}/uncrustify/build
+export UNCRUSTIFY_INSTALL_DIR=${devutilsdir}/uncrustify/build
+
 export FIERRO_BASE_DIR=${basedir}
 export FIERRO_SOURCE_DIR=${srcdir}
 export FIERRO_EXPLICIT_SOURCE_DIR=${srcdir}/Parallel-Solvers/Parallel-Explicit

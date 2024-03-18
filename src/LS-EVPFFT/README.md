@@ -105,19 +105,7 @@ mpirun -np 4 ls-evpfft --infile=example_ls-evpfft_standalone_inputfile.txt
 
 To use LS-EVPFFT as a user material model for Fierro, build Fierro with the following cmake flags `-DBUILD_LS_EVPFFT_FIERRO=ON`, choose the FFT backend with `-D<USE_FFTW,USE_CUFFT,USE_ROCFFT>=ON`, and use `-DABSOLUTE_NO_OUTPUT=ON` to specify that LS-EVPFFT does not provide output per element which can be cumbersome and memory intensive. It is best to modify LS-EVPFFT to output for a few elements of interst.
 
-The yaml file for Fierro should include:
-
-```
-material_options:
-  - eos_model: user_eos_model
-    eos_run_location: device
-    strength_model: user_strength_model
-    strength_type: hypo
-    strength_run_location: host
-    global_vars:
-      - 0.0001 #udotAccTh (LS-EVPFFT accumulated strain threshold before full solve)
-      - 3000000 #[mm/s] (LS-EVPFFT material sound speed)
-```
+See `example_input_files/taylor_anvil.yaml` for the yaml file setup when using EVPFFT with Fierro.
 
 Also, input files for each material should be defined as `evpfft1.in`, `evpfft2.in`, etc. and should be provided in the directory Fierro is being run from.
 
