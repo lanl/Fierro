@@ -29,8 +29,9 @@ SERIALIZABLE_ENUM(FileType,
 struct MeshBuilderOutput {
     FileType file_type = FileType::VTK;
     std::string name = "mesh";
+    std::string file_location = "none";
 };
-IMPL_YAML_SERIALIZABLE_FOR(MeshBuilderOutput, name, file_type)
+IMPL_YAML_SERIALIZABLE_FOR(MeshBuilderOutput, name, file_type, file_location)
 
 struct MeshBuilderInput
     : Yaml::TypeDiscriminated<MeshBuilderInput, MeshType>, 

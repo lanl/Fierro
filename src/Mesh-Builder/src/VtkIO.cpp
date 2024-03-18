@@ -276,9 +276,14 @@ void MeshIO::write_vtk(std::ostream& out, const Mesh& mesh) {
     write_element_variables(out, mesh);
 }
 
-void MeshIO::write_vtk(std::string filename, const Mesh& mesh, bool verbose) {
-    IOUtilities::mkdir("vtk");
-    auto path = std::filesystem::path("vtk") / (filename + ".vtk");
+void MeshIO::write_vtk(std::string filename, std::string file_location, const Mesh& mesh, bool verbose) {
+    std::filesystem::path path;
+    if (file_location == "none"){
+        IOUtilities::mkdir("vtk");
+        path = std::filesystem::path("vtk") / (filename + ".vtk");
+    } else {
+        path = std::filesystem::path(file_location) / (filename + ".vtk");
+    }
 
     std::ofstream out(path.c_str(), std::ofstream::out);
     if (verbose)

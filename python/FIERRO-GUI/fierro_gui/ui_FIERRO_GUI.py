@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUImbtYwA.ui'
+## Form generated from reading UI file 'FIERRO_GUIPaKypO.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QForm
     QStackedWidget, QStatusBar, QTabWidget, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget)
 import IconResourceFile_rc
+import IconResourceFile_rc
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -31,13 +32,15 @@ class Ui_MainWindow(object):
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1156, 1012)
         icon = QIcon()
-        icon.addFile(u"Icons/EVPFFT_logo_A2.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u"../../../../../../../../.designer/backup/Icons/EVPFFT_logo_A2.png", QSize(), QIcon.Normal, QIcon.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setAutoFillBackground(False)
         MainWindow.setToolButtonStyle(Qt.ToolButtonIconOnly)
         MainWindow.setDockNestingEnabled(False)
-        self.actionEVPFFT_Manual = QAction(MainWindow)
-        self.actionEVPFFT_Manual.setObjectName(u"actionEVPFFT_Manual")
+        self.actionManual = QAction(MainWindow)
+        self.actionManual.setObjectName(u"actionManual")
+        self.actionChange_Working_Directory = QAction(MainWindow)
+        self.actionChange_Working_Directory.setObjectName(u"actionChange_Working_Directory")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setStyleSheet(u"#TitlePage, #GeometryInformationTool, #DefineMaterialTool, #BoundaryConditionsTool, #SolverSettingsTool, #ResultsTool, #Tools, #RunOutputs, #RunOutputWindow, #Main{\n"
@@ -3158,13 +3161,17 @@ class Ui_MainWindow(object):
         self.menubar.setGeometry(QRect(0, 0, 1156, 24))
         self.menuHelp = QMenu(self.menubar)
         self.menuHelp.setObjectName(u"menuHelp")
+        self.menuFile = QMenu(self.menubar)
+        self.menuFile.setObjectName(u"menuFile")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
+        self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
-        self.menuHelp.addAction(self.actionEVPFFT_Manual)
+        self.menuHelp.addAction(self.actionManual)
+        self.menuFile.addAction(self.actionChange_Working_Directory)
 
         self.retranslateUi(MainWindow)
 
@@ -3182,7 +3189,8 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"EVPFFT", None))
-        self.actionEVPFFT_Manual.setText(QCoreApplication.translate("MainWindow", u"EVPFFT Manual", None))
+        self.actionManual.setText(QCoreApplication.translate("MainWindow", u"Manual", None))
+        self.actionChange_Working_Directory.setText(QCoreApplication.translate("MainWindow", u"Change Working Directory", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:700; color:#ff2600;\">\u2b06</span><span style=\" font-size:18pt; font-weight:700;\"> SELECT A TYPE OF SOLVER </span><span style=\" font-size:18pt; font-weight:700; color:#ff2600;\">\u2b06</span></p></body></html>", None))
         self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.ChooseSolver), "")
         self.BGlobalMesh.setText("")
@@ -3555,13 +3563,13 @@ class Ui_MainWindow(object):
         self.LGamma.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Gamma:</p></body></html>", None))
         self.LSpecificHeat.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Specific Heat:</p></body></html>", None))
         self.Lq1ex.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Accoustic Coefficient in Expansion (q1ex):</p></body></html>", None))
-        self.INEOS.setItemText(0, QCoreApplication.translate("MainWindow", u"None", None))
-        self.INEOS.setItemText(1, QCoreApplication.translate("MainWindow", u"Ideal Gas", None))
+        self.INEOS.setItemText(0, QCoreApplication.translate("MainWindow", u"none", None))
+        self.INEOS.setItemText(1, QCoreApplication.translate("MainWindow", u"ideal_gas", None))
 
         self.Lq1.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Accoustic Coefficient in Compression (q1):</p></body></html>", None))
         self.Lq2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Linear Slope in Compression (q2):</p></body></html>", None))
         self.LStrengthModel.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Strength Model:</p></body></html>", None))
-        self.INStrengthModel.setItemText(0, QCoreApplication.translate("MainWindow", u"None", None))
+        self.INStrengthModel.setItemText(0, QCoreApplication.translate("MainWindow", u"none", None))
 
         self.BAddMaterialSGH.setText(QCoreApplication.translate("MainWindow", u"Add Material", None))
         ___qtablewidgetitem49 = self.TMaterialsSGH.horizontalHeaderItem(0)
@@ -3653,5 +3661,6 @@ class Ui_MainWindow(object):
         self.Lmaxcycle.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Maximum # of cycles: </span></p></body></html>", None))
         self.INmaxcycles.setText(QCoreApplication.translate("MainWindow", u"100000", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
+        self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
     # retranslateUi
 

@@ -262,7 +262,7 @@ void MeshBuilder::build_mesh_from_file(std::string mesh_file){
             MeshIO::write_ensight(config.output.name, mesh, true);
             break;
         case FileType::VTK:
-            MeshIO::write_vtk(config.output.name, mesh, true);
+            MeshIO::write_vtk(config.output.name, config.output.file_location, mesh, true);
             break;
     }
 }

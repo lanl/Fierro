@@ -140,15 +140,15 @@ struct Volume : Yaml::ValidatedYaml {
             fill_this = false;  // default is no, don't fill it
               
             // Get variables from vtk file
-              std::cout << "voxel dx: " << voxel_dx << std::endl;
-              std::cout << "voxel dy: " << voxel_dy << std::endl;
-              std::cout << "voxel dz: " << voxel_dz << std::endl;
-              std::cout << "origin x: " << orig_x << std::endl;
-              std::cout << "origin y: " << orig_y << std::endl;
-              std::cout << "origin z: " << orig_z << std::endl;
-              std::cout << "number of voxels x: " << num_voxel_x << std::endl;
-              std::cout << "number of voxels y: " << num_voxel_y << std::endl;
-              std::cout << "number of voxels z: " << num_voxel_z << std::endl;
+//              std::cout << "voxel dx: " << voxel_dx << std::endl;
+//              std::cout << "voxel dy: " << voxel_dy << std::endl;
+//              std::cout << "voxel dz: " << voxel_dz << std::endl;
+//              std::cout << "origin x: " << orig_x << std::endl;
+//              std::cout << "origin y: " << orig_y << std::endl;
+//              std::cout << "origin z: " << orig_z << std::endl;
+//              std::cout << "number of voxels x: " << num_voxel_x << std::endl;
+//              std::cout << "number of voxels y: " << num_voxel_y << std::endl;
+//              std::cout << "number of voxels z: " << num_voxel_z << std::endl;
 //            auto [voxel_elem_values, voxel_dx, voxel_dy, voxel_dz, orig_x, orig_y, orig_z, num_voxel_x, num_voxel_y, num_voxel_z] = user_voxel_init(stl_file_path);
             
             // find the closest element in the voxel mesh to this element

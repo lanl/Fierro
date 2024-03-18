@@ -78,7 +78,10 @@ class FIERRO_GUI(Ui_MainWindow):
                 QMessageBox.warning(self, 'Open Url', 'Could not open url')
         
         # Help menu
-        self.actionEVPFFT_Manual.triggered.connect(openUrl)
+        self.actionManual.triggered.connect(openUrl)
+        
+        # Working Directory Menu
+        self.actionChange_Working_Directory.triggered.connect(self.open_working_directory_dialog)
         
         # Upload Geometry
         def geometry_upload_click():
@@ -381,8 +384,10 @@ class FIERRO_GUI(Ui_MainWindow):
             message.setText(msg)
             message.exec()
             
-        # ======= MESH BUILDER WRITE INPUT FILE =======
-        Mesh_Builder_WInput(self)
+        # Write input file for mesh builder
+        def global_mesh_click():
+            Mesh_Builder_WInput(self, self.GLOBAL_MESH, self.global_mesh_dir)
+        self.BGenerateGlobalMesh.clicked.connect(global_mesh_click)
             
         # ======= EVPFFT SOLVER LATTICE PIPELINE =======
         EVPFFT_Lattice(self)
@@ -391,8 +396,8 @@ class FIERRO_GUI(Ui_MainWindow):
         Explicit_SGH(self)
         
     # ========== SET WORKING DIRECTORY ============
-    def open_working_directory_dialog(self):
-        dialog = WorkingDirectoryDialog()
+    def open_working_directory_dialog(self, gself):
+        dialog = WorkingDirectoryDialog(gself)
         dialog.setWindowModality(Qt.WindowModal)
         if dialog.exec() == QDialog.Accepted:
             self.directory = dialog.get_directory()
@@ -410,11 +415,15 @@ class FIERRO_GUI(Ui_MainWindow):
             self.EVPFFT_INPUT = os.path.join(evpfft_dir, 'evpfft_lattice_input.txt')
             
             # Create a temp file for the global mesh
-            global_mesh_dir = os.path.join(self.directory, 'global_mesh')
-            os.makedirs(global_mesh_dir, exist_ok=True)
-            GLOBAL_MESH = os.path.join(self.directory, 'global_mesh.yaml')
+            self.global_mesh_dir = os.path.join(self.directory, 'global_mesh')
+            os.makedirs(self.global_mesh_dir, exist_ok=True)
+            self.GLOBAL_MESH = os.path.join(self.global_mesh_dir, 'global_mesh.yaml')
+            self.GLOBAL_MESH_OUTPUT = os.path.join(self.global_mesh_dir, 'mesh.vtk')
+            
+            # Create temp files for SGH
+            sgh_dir = os.path.join(self.directory, 'sgh')
+            os.makedirs(sgh_dir, exist_ok=True)
+            self.EXPLICIT_SGH_INPUT = os.path.join(sgh_dir, 'explicit_sgh_input.yaml')
         else:
             warning_message("ERROR: Working directory was not defined")
-#        if self.directory:
-#            print("Working directory confirmed:", self.directory)
-        
+
