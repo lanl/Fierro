@@ -272,13 +272,31 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                     if (igradient == node_lid) {
                         mag_vel_gradient(igradient, jdim) = (1.0 - 1.0 / ((real_t) num_nodes_in_elem)) * ((vel(jdim) - vel_star(jdim) )) / mag_vel;
                         if (mag_vel < fuzz) {
-                            mag_vel_gradient(igradient, jdim) = (1.0 - 1.0 / ((real_t) num_nodes_in_elem));
+                            // if(mag_vel!=0) std::cout << " SMALL MAG VEL ENCOUNTERED " << std::endl;
+                            if (vel(jdim) < 0) {
+                                mag_vel_gradient(igradient, jdim) = -(1.0 - 1.0 / ((real_t) num_nodes_in_elem));
+                            }
+                            else if (vel(jdim) > 0) {
+                                mag_vel_gradient(igradient, jdim) = (1.0 - 1.0 / ((real_t) num_nodes_in_elem));
+                            }
+                            else if (mag_vel == 0) {
+                                mag_vel_gradient(igradient, jdim) = 0;
+                            }
                         }
                     }
-                    else{
+                    else {
                         mag_vel_gradient(igradient, jdim) = -1.0 / ((real_t) num_nodes_in_elem) * ( (vel(jdim) - vel_star(jdim) )) / mag_vel;
                         if (mag_vel < fuzz) {
-                            mag_vel_gradient(igradient, jdim) = 1.0 / ((real_t) num_nodes_in_elem);
+                            // if(mag_vel!=0) std::cout << " SMALL MAG VEL ENCOUNTERED " << std::endl;
+                            if (vel(jdim) < 0) {
+                                mag_vel_gradient(igradient, jdim) = -1.0 / ((real_t) num_nodes_in_elem);
+                            }
+                            else if (vel(jdim) > 0) {
+                                mag_vel_gradient(igradient, jdim) = 1.0 / ((real_t) num_nodes_in_elem);
+                            }
+                            else if (mag_vel == 0) {
+                                mag_vel_gradient(igradient, jdim) = 0;
+                            }
                         }
                     }
                 }
@@ -311,7 +329,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
 
                 for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
                     for (int jdim = 0; jdim < num_dim; jdim++) {
-                        muc_gradient(node_lid, igradient, jdim) = material(mat_id).q2 * mag_vel_gradient(igradient, jdim);
+                        muc_gradient(node_lid, igradient, jdim) = elem_den(elem_gid) * material(mat_id).q2 * mag_vel_gradient(igradient, jdim);
                         // if(muc_gradient(node_lid, igradient, jdim)!=0) std::cout << " NON ZERO " << muc_gradient(node_lid, igradient, jdim) << std::endl;
                     }
                 }
@@ -321,7 +339,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                                 (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
                 for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
                     for (int jdim = 0; jdim < num_dim; jdim++) {
-                        muc_gradient(node_lid, igradient, jdim) = material(mat_id).q2ex * mag_vel_gradient(igradient, jdim);
+                        muc_gradient(node_lid, igradient, jdim) = elem_den(elem_gid) * material(mat_id).q2ex * mag_vel_gradient(igradient, jdim);
                         // if(muc_gradient(node_lid, igradient, jdim)!=0) std::cout << " NON ZERO " << muc_gradient(node_lid, igradient, jdim) << std::endl;
                     }
                 }
@@ -1262,11 +1280,11 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
 
                 for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
                     muc_gradient(node_lid, igradient, 0) = -elem_den(elem_gid) * volume_gradients(igradient, 0) / vol *
-                                                           (material(mat_id).q1 * elem_sspd(elem_gid));
+                                                           (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
                     muc_gradient(node_lid, igradient, 1) = -elem_den(elem_gid) * volume_gradients(igradient, 1) / vol *
-                                                           (material(mat_id).q1 * elem_sspd(elem_gid));
+                                                           (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
                     muc_gradient(node_lid, igradient, 2) = -elem_den(elem_gid) * volume_gradients(igradient, 2) / vol *
-                                                           (material(mat_id).q1 * elem_sspd(elem_gid));
+                                                           (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
                 }
             }
             else{  // element in expansion
@@ -1274,11 +1292,11 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
                                 (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
                 for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
                     muc_gradient(node_lid, igradient, 0) = -elem_den(elem_gid) * volume_gradients(igradient, 0) / vol *
-                                                           (material(mat_id).q1ex * elem_sspd(elem_gid));
+                                                           (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
                     muc_gradient(node_lid, igradient, 1) = -elem_den(elem_gid) * volume_gradients(igradient, 1) / vol *
-                                                           (material(mat_id).q1ex * elem_sspd(elem_gid));
+                                                           (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
                     muc_gradient(node_lid, igradient, 2) = -elem_den(elem_gid) * volume_gradients(igradient, 2) / vol *
-                                                           (material(mat_id).q1ex * elem_sspd(elem_gid));
+                                                           (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
                 }
             } // end if on divergence sign
 
