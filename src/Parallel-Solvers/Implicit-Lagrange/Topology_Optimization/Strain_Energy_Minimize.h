@@ -93,6 +93,7 @@ private:
   ROL::Ptr<ROL_MV> ROL_Displacements;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> all_node_displacements_distributed_temp;
+  real_t initial_strain_energy;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
 
@@ -124,6 +125,7 @@ public:
       ROL_Displacements = ROL::makePtr<ROL_MV>(FEM_->node_displacements_distributed);
 
       real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force)/2;
+      initial_strain_energy = current_strain_energy;
       std::cout.precision(10);
       if(FEM_->myrank==0)
       std::cout << "INITIAL STRAIN ENERGY " << current_strain_energy << std::endl;
@@ -228,10 +230,10 @@ public:
     real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force)/2;
     std::cout.precision(10);
     if(FEM_->myrank==0)
-    std::cout << "CURRENT STRAIN ENERGY " << current_strain_energy << std::endl;
+    std::cout << "CURRENT NORMALIZED STRAIN ENERGY " << current_strain_energy/initial_strain_energy << std::endl;
 
     //std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
-    return current_strain_energy;
+    return current_strain_energy/initial_strain_energy;
   }
 
   //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
@@ -263,6 +265,7 @@ public:
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
+    gp->scale(1/initial_strain_energy);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -305,6 +308,7 @@ public:
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
+    hvp->scale(1/initial_strain_energy);
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);
