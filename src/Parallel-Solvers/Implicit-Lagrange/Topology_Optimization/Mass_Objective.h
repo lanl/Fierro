@@ -89,6 +89,7 @@ private:
 
   FEA_Module_Inertial *FEM_;
   ROL::Ptr<ROL_MV> ROL_Element_Masses;
+  real_t initial_mass;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
 
@@ -112,6 +113,14 @@ public:
     last_comm_step = last_solve_step = -1;
     current_step = 0;
     ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
+    const_host_vec_array design_densities = FEM_->all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    FEM_->compute_element_masses(design_densities,false);
+    
+    //sum per element results across all MPI ranks
+    ROL::Elementwise::ReductionSum<real_t> sumreduc;
+    initial_mass = ROL_Element_Masses->reduce(sumreduc);
+    //debug print
+    std::cout << "INITIAL SYSTEM MASS: " << initial_mass << std::endl;
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
@@ -146,8 +155,8 @@ public:
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
     c = ROL_Element_Masses->reduce(sumreduc);
     //debug print
-    std::cout << "SYSTEM MASS: " << c << std::endl;
-    return c;
+    std::cout << "NORMALIZED SYSTEM MASS: " << c/initial_mass << std::endl;
+    return c/initial_mass;
   }
 
   //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
@@ -185,6 +194,7 @@ public:
       for(int ig = 0; ig < rnum_elem; ig++)
         objective_gradients(ig,0) = element_volumes(ig,0);
     }
+    gp->scale(1/initial_mass);
     std::cout << "Objective Gradient called"<< std::endl;
     //debug print of design variables
     //std::ostream &out = std::cout;
