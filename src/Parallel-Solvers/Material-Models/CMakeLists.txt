@@ -1,19 +1,26 @@
 include_directories(../Parallel-Explicit)
 include_directories(../../Yaml-Serializable/include)
 
-# Ideal Gas Models
-add_subdirectory(Ideal-Gas-Models)
-
-if (BUILD_EVPFFT_FIERRO)
-  add_subdirectory(../../EVPFFT/src EVPFFT)
-elseif(BUILD_EVP_FIERRO)
-  add_subdirectory(../../EVP/src EVP)
-else()
-  # Default do-nothing user material models
-  add_subdirectory(User-Material-Models)
-endif()
+add_subdirectory(eos)
+add_subdirectory(strength)
 
 set(SRC_Files material_models.cpp)
 add_library(material_models ${SRC_Files})
-target_link_libraries(material_models ideal_gas_models)
-target_link_libraries(material_models user_material_models Elements)
+
+# link all eos models
+target_link_libraries(material_models
+                      ConstantEOSModel
+                      IdealGasEOSModel
+                      UserDefinedEOSModel)
+
+# link all strength models
+target_link_libraries(material_models
+                      EVPStrengthModel
+                      EVPFFTStrengthModel
+                      LSEVPFFTStrengthModel
+                      UserDefinedStrengthModel
+                      VUMATStrengthModel)
+
+
+# link Matar from Elements
+target_link_libraries(material_models Elements)

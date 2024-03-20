@@ -69,20 +69,23 @@ echo "Script location: $SCRIPT_DIR"
 # Determine the parent directory of the script's directory
 PARENT_DIR=$(dirname $(dirname "${SCRIPT_DIR}"))
 
-# Check if the 'MATAR' directory exists in the parent directory; if not, clone it
-MATAR_DIR="$PARENT_DIR/MATAR"
-if [ ! -d "$MATAR_DIR" ]; then
-  echo "Directory 'MATAR' does not exist in '$PARENT_DIR', downloading 'MATAR'...."
-  git clone --depth 1 https://github.com/lanl/MATAR.git "$MATAR_DIR"
-else
-  echo "Directory 'MATAR' exists in '$PARENT_DIR', skipping 'MATAR' download"
-fi
+# make lib directory to store all dependencies
+LIB_DIR="$PARENT_DIR/lib"
+mkdir -p "$LIB_DIR"
 
-# Define kokkos directories
-MATAR_SOURCE_DIR="$PARENT_DIR/MATAR"
-MATAR_INSTALL_DIR="$PARENT_DIR/MATAR/install_MATAR_$kokkos_build_type"
-MATAR_BUILD_DIR="$PARENT_DIR/MATAR/build_MATAR_$kokkos_build_type"
-KOKKOS_INSTALL_DIR="${PARENT_DIR}/kokkos/install_kokkos_$kokkos_build_type"
+# Define MATAR and kokkos directories
+MATAR_SOURCE_DIR="$LIB_DIR/MATAR"
+MATAR_INSTALL_DIR="$LIB_DIR/MATAR/install_MATAR_$kokkos_build_type"
+MATAR_BUILD_DIR="$LIB_DIR/MATAR/build_MATAR_$kokkos_build_type"
+KOKKOS_INSTALL_DIR="${LIB_DIR}/kokkos/install_kokkos_$kokkos_build_type"
+
+# Check if the 'MATAR' directory exists in the parent directory; if not, clone it
+if [ ! -d "$MATAR_SOURCE_DIR" ]; then
+  echo "Directory 'MATAR' does not exist in '$LIB_DIR', downloading 'MATAR'...."
+  git clone --depth 1 https://github.com/lanl/MATAR.git "$MATAR_SOURCE_DIR"
+else
+  echo "Directory 'MATAR' exists in '$LIB_DIR', skipping 'MATAR' download"
+fi
 
 cmake_options=(
     -D CMAKE_INSTALL_PREFIX="${MATAR_INSTALL_DIR}"

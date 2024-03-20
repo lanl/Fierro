@@ -84,7 +84,7 @@ public:
 
   void collect_information();
 
-  void sort_information();
+  void sort_information(bool mesh_conversion_flag = false);
 
   //process input to decide TO problem and FEA modules
   void FEA_module_setup();
@@ -106,11 +106,11 @@ public:
 
   void init_topology_conditions (int num_sets);
 
-  void output_design(int current_step);
+  void output_design(int current_step, bool mesh_conversion_flag = false);
 
   void tecplot_writer();
 
-  void parallel_tecplot_writer();
+  void parallel_tecplot_writer(bool mesh_conversion_flag = false);
 
   //void init_boundary_sets(int num_boundary_sets);
 

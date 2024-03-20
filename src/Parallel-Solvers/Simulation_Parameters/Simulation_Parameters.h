@@ -24,7 +24,8 @@ struct Simulation_Parameters
     std::optional<Input_Options> input_options;
     std::optional<std::shared_ptr<MeshBuilderInput>> mesh_generation_options;
     Output_Options output_options;
-    size_t max_num_state_vars = 0;
+    size_t max_num_eos_state_vars = 0;
+    size_t max_num_strength_state_vars = 0;
 
     std::vector<Region> regions;
     std::vector<Material> materials;
@@ -56,28 +57,42 @@ struct Simulation_Parameters
     
     DCArrayKokkos<mat_fill_t> mat_fill;
     DCArrayKokkos<material_t> material;
-    DCArrayKokkos<double> global_vars;
+    DCArrayKokkos<double> eos_global_vars;
+    DCArrayKokkos<double> strength_global_vars;
 
     void init_material_variable_arrays() {
-        size_t max_global_vars = 0;
-        for (const auto& mat : materials)
-            max_global_vars = std::max(mat.global_vars.size(), max_global_vars);
+        size_t max_eos_global_vars = 0;
+        size_t max_strength_global_vars = 0;
+        for (const auto& mat : materials) {
+            max_eos_global_vars = std::max(mat.eos_global_vars.size(), max_eos_global_vars);
+            max_strength_global_vars = std::max(mat.strength_global_vars.size(), max_strength_global_vars);
+        }
 
-        global_vars = DCArrayKokkos <double> (materials.size(), max_global_vars);
+        eos_global_vars = DCArrayKokkos <double> (materials.size(), max_eos_global_vars);
+        strength_global_vars = DCArrayKokkos <double> (materials.size(), max_strength_global_vars);
 
         for (size_t i = 0; i < materials.size(); i++) {
             auto mat = materials[i];
 
-            for (size_t j = 0; j < mat.global_vars.size(); j++)
-                global_vars.host(i, j) = mat.global_vars[j];
+            for (size_t j = 0; j < mat.eos_global_vars.size(); j++) {
+                eos_global_vars.host(i, j) = mat.eos_global_vars[j];
+            }
+            eos_global_vars.update_device();
+
+            for (size_t j = 0; j < mat.strength_global_vars.size(); j++) {
+                strength_global_vars.host(i, j) = mat.strength_global_vars[j];
+            }
         }
-        global_vars.update_device();
+        strength_global_vars.update_device();
     }
 
     void derive_max_num_state_vars() {
-        max_num_state_vars = 0;
-        for (const auto& mat : materials)
-          max_num_state_vars = std::max(mat.num_state_vars, max_num_state_vars);
+        max_num_eos_state_vars = 0;
+        max_num_strength_state_vars = 0;
+        for (const auto& mat : materials) {
+          max_num_eos_state_vars = std::max(mat.num_eos_state_vars, max_num_eos_state_vars);
+          max_num_strength_state_vars = std::max(mat.num_strength_state_vars, max_num_strength_state_vars);
+        }
     }
 
     void derive_objective_module() {
@@ -144,6 +159,20 @@ struct Simulation_Parameters
                     TO_MODULE_TYPE::Moment_of_Inertia_Constraint, 
                     f_type, 
                     {constraint.value, (double)component_to_int(constraint.component.value())}
+                );
+                break;
+            case CONSTRAINT_TYPE::center_of_mass:
+                add_TO_module(
+                    TO_MODULE_TYPE::Center_of_Mass_Constraint, 
+                    f_type, 
+                    {constraint.value, (double)component_to_int(constraint.component.value())}
+                );
+                break;
+            case CONSTRAINT_TYPE::displacement:
+                add_TO_module(
+                    TO_MODULE_TYPE::Displacement_Constraint, 
+                    f_type, 
+                    {constraint.value}
                 );
                 break;
             default:
@@ -276,8 +305,10 @@ struct Simulation_Parameters
             {TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint,    {FEA_MODULE_TYPE::Heat_Conduction}},
             {TO_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize, {FEA_MODULE_TYPE::Heat_Conduction}},
             {TO_MODULE_TYPE::Mass_Constraint,                       {FEA_MODULE_TYPE::Inertial       }},
+            {TO_MODULE_TYPE::Center_of_Mass_Constraint,             {FEA_MODULE_TYPE::Inertial       }},
             {TO_MODULE_TYPE::Moment_of_Inertia_Constraint,          {FEA_MODULE_TYPE::Inertial       }},
             {TO_MODULE_TYPE::Strain_Energy_Minimize,                {FEA_MODULE_TYPE::Elasticity     }},
+            {TO_MODULE_TYPE::Displacement_Constraint,               {FEA_MODULE_TYPE::Elasticity     }},
             {TO_MODULE_TYPE::Strain_Energy_Constraint,              {FEA_MODULE_TYPE::Elasticity     }},
             {TO_MODULE_TYPE::Kinetic_Energy_Minimize,               {FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity}},
         };

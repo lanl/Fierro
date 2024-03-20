@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
- 
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
- 
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
- 
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -39,7 +36,7 @@
 #include <string>
 #include <sstream>
 #include <stdio.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <math.h>  // fmin, fmax, abs note: fminl is long
 #include <sys/stat.h>
 #include <mpi.h>
@@ -74,1795 +71,2096 @@
 
 using namespace utils;
 
-
 FEA_Module_Inertial::FEA_Module_Inertial(
-      Inertial_Parameters& params, Solver *Solver_Pointer,
-      const int my_fea_module_index)
-    : FEA_Module(Solver_Pointer) {
-  
-  //assign interfacing index
-  my_fea_module_index_ = my_fea_module_index;
-  Module_Type = FEA_MODULE_TYPE::Inertial;
+    Inertial_Parameters& params, Solver* Solver_Pointer,
+    const int my_fea_module_index)
+    : FEA_Module(Solver_Pointer)
+{
+    // assign interfacing index
+    my_fea_module_index_ = my_fea_module_index;
+    Module_Type = FEA_MODULE_TYPE::Inertial;
 
-  //acquire base class data from existing simparam in solver (gets yaml options etc.)
-  module_params = &params;
-  simparam = &(Solver_Pointer->simparam);
+    // acquire base class data from existing simparam in solver (gets yaml options etc.)
+    module_params = &params;
+    simparam      = &(Solver_Pointer->simparam);
 
-  //TO parameters
-  nodal_density_flag = simparam->nodal_density_flag;
+    // TO parameters
+    nodal_density_flag = simparam->nodal_density_flag;
 
-  //property initialization flags
-  mass_init = false;
-  com_init[0] = com_init[1] = com_init[2] = false;
+    // property initialization flags
+    mass_init   = false;
+    com_init[0] = com_init[1] = com_init[2] = false;
 
-  //property update counters
-  mass_update = com_update[0] = com_update[1] = com_update[2] = -1;
+    // property update counters
+    mass_update = com_update[0] = com_update[1] = com_update[2] = -1;
 
-  //RCP initialization
-  mass_gradients_distributed = Teuchos::null;
-  center_of_mass_gradients_distributed = Teuchos::null;
+    // RCP initialization
+    mass_gradients_distributed = Teuchos::null;
+    center_of_mass_gradients_distributed = Teuchos::null;
 
-  //construct per element inertial property vectors
-  Global_Element_Masses = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Volumes = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_x = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_y = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_z = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_xx = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_yy = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_zz = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_xy = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_xz = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_yz = Teuchos::rcp(new MV(element_map, 1));
+    // construct per element inertial property vectors
+    Global_Element_Masses    = Teuchos::rcp(new MV(element_map, 1));
+    Global_Element_Volumes   = Teuchos::rcp(new MV(element_map, 1));
+    Global_Element_Moments_x = Teuchos::rcp(new MV(element_map, 1));
+    Global_Element_Moments_y = Teuchos::rcp(new MV(element_map, 1));
+    Global_Element_Moments_z = Teuchos::rcp(new MV(element_map, 1));
+    Global_Element_Moments_of_Inertia_xx = Teuchos::rcp(new MV(element_map, 1));
+    Global_Element_Moments_of_Inertia_yy = Teuchos::rcp(new MV(element_map, 1));
+    Global_Element_Moments_of_Inertia_zz = Teuchos::rcp(new MV(element_map, 1));
+    Global_Element_Moments_of_Inertia_xy = Teuchos::rcp(new MV(element_map, 1));
+    Global_Element_Moments_of_Inertia_xz = Teuchos::rcp(new MV(element_map, 1));
+    Global_Element_Moments_of_Inertia_yz = Teuchos::rcp(new MV(element_map, 1));
 }
 
-FEA_Module_Inertial::~FEA_Module_Inertial(){ }
+FEA_Module_Inertial::~FEA_Module_Inertial()
+{
+}
 
 /* ----------------------------------------------------------------------
    Compute the mass of each element; estimated with quadrature
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_densities, bool max_flag, bool use_initial_coords){
-  //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getLocalNumElements();
-  //initialize memory for volume storage
-  host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  if(!nodal_density_flag) compute_element_volumes();
-  const_host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  //local variable for host view in the dual view
-  const_host_vec_array all_node_coords;
-  if(use_initial_coords){
-    all_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
-  else{
-    all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
-  const_host_vec_array all_design_densities;
-  if(nodal_density_flag)
-  all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int nodes_per_elem = elem->num_basis();
-  int z_quad,y_quad,x_quad, direct_product_count;
-  size_t local_node_id;
-  LO ielem;
-  GO global_element_index;
-
-  real_t Jacobian, current_density, weight_multiply;
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
-  real_t pointer_quad_coordinate[num_dim];
-  real_t pointer_quad_coordinate_weight[num_dim];
-  real_t pointer_interpolated_point[num_dim];
-  real_t pointer_JT_row1[num_dim];
-  real_t pointer_JT_row2[num_dim];
-  real_t pointer_JT_row3[num_dim];
-  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
-  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
-  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  ViewCArray<real_t> JT_row1(pointer_JT_row1,num_dim);
-  ViewCArray<real_t> JT_row2(pointer_JT_row2,num_dim);
-  ViewCArray<real_t> JT_row3(pointer_JT_row3,num_dim);
-
-  real_t pointer_basis_values[elem->num_basis()];
-  real_t pointer_basis_derivative_s1[elem->num_basis()];
-  real_t pointer_basis_derivative_s2[elem->num_basis()];
-  real_t pointer_basis_derivative_s3[elem->num_basis()];
-  ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
-
-  //initialize weights
-  elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-  elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-  
-  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 3;
-    convert_node_order(3) = 2;
-    if(num_dim == 3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 7;
-      convert_node_order(7) = 6;
+void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_densities, bool max_flag, bool use_initial_coords)
+{
+    // local number of uniquely assigned elements
+    size_t nonoverlap_nelements = element_map->getLocalNumElements();
+    // initialize memory for volume storage
+    host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+    if (!nodal_density_flag)
+    {
+        compute_element_volumes();
     }
-  }
-  else{
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 2;
-    convert_node_order(3) = 3;
-    if(num_dim==3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 6;
-      convert_node_order(7) = 7;
+    const_host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    // local variable for host view in the dual view
+    const_host_vec_array all_node_coords;
+    if (use_initial_coords)
+    {
+        all_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-  }
-
-  //loop over elements and use quadrature rule to compute volume from Jacobian determinant
-  for(int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++){
-    global_element_index = element_map->getGlobalElement(nonoverlapping_ielem);
-    ielem = all_element_map->getLocalElement(global_element_index);
-    if(nodal_density_flag){
-    //acquire set of nodes for this local element
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
-      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      if(nodal_density_flag) nodal_density(node_loop) = all_design_densities(local_node_id,0);
-      /*
-      if(myrank==1&&nodal_positions(node_loop,2)>10000000){
-        std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
-        std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
-        std::fflush(stdout);
-      }
-      */
-      //std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " "
-       //<< nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) << " " << nodal_density(node_loop) <<std::endl;
+    else
+    {
+        all_node_coords = all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-    
-    //debug print of index
-    //std::cout << "nonoverlap element id on TASK " << myrank << " is " << nonoverlapping_ielem << std::endl;
-    //std::fflush(stdout);
-
-    //initialize element mass
-    Element_Masses(nonoverlapping_ielem,0) = 0;
-    
-    if(Element_Types(ielem)==elements::elem_types::Hex8){
-      direct_product_count = std::pow(num_gauss_points,num_dim);
+    const_host_vec_array all_design_densities;
+    if (nodal_density_flag)
+    {
+        all_design_densities = all_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-  
-    //loop over quadrature points
-    for(int iquad=0; iquad < direct_product_count; iquad++){
+    const_host_elem_conn_array nodes_in_elem  = global_nodes_in_elem_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    int                        nodes_per_elem = elem->num_basis();
+    int                        z_quad, y_quad, x_quad, direct_product_count;
+    size_t                     local_node_id;
+    LO                         ielem;
+    GO                         global_element_index;
 
-      //set current quadrature point
-      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-      x_quad = iquad % num_gauss_points;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(1) = legendre_nodes_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate(2) = legendre_nodes_1D(z_quad);
-
-      //set current quadrature weight
-      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-      else
-      quad_coordinate_weight(2) = 1;
-      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
-
-      //compute shape functions at this point for the element type
-      elem->basis(basis_values,quad_coordinate);
-
-      //compute all the necessary coordinates and derivatives at this point
-
-      //compute shape function derivatives
-      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
-
-      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-      //derivative of x,y,z w.r.t s
-      JT_row1(0) = 0;
-      JT_row1(1) = 0;
-      JT_row1(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-      }
-
-      //derivative of x,y,z w.r.t t
-      JT_row2(0) = 0;
-      JT_row2(1) = 0;
-      JT_row2(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-      }
-
-      //derivative of x,y,z w.r.t w
-      JT_row3(0) = 0;
-      JT_row3(1) = 0;
-      JT_row3(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-        //debug print
-        /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
-        std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
-        std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
-        std::fflush(stdout);
-        }*/
-      }
+    real_t Jacobian, current_density, weight_multiply;
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+    CArray<real_t>     legendre_nodes_1D(num_gauss_points);
+    CArray<real_t>     legendre_weights_1D(num_gauss_points);
     
+    real_t pointer_quad_coordinate[num_dim];
+    real_t pointer_quad_coordinate_weight[num_dim];
+    real_t pointer_interpolated_point[num_dim];
+    real_t pointer_JT_row1[num_dim];
+    real_t pointer_JT_row2[num_dim];
+    real_t pointer_JT_row3[num_dim];
     
-      //compute the determinant of the Jacobian
-      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-      if(Jacobian<0) Jacobian = -Jacobian;
+    ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
+    ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
+    ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
+    ViewCArray<real_t> JT_row1(pointer_JT_row1, num_dim);
+    ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
+    ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
 
-      //compute density
-      current_density = 0;
-      if(max_flag){
-        current_density = 1;
-      }
-      else{
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          current_density += nodal_density(node_loop)*basis_values(node_loop);
+    real_t pointer_basis_values[elem->num_basis()];
+    real_t pointer_basis_derivative_s1[elem->num_basis()];
+    real_t pointer_basis_derivative_s2[elem->num_basis()];
+    real_t pointer_basis_derivative_s3[elem->num_basis()];
+    
+    ViewCArray<real_t> basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+
+    // initialize weights
+    elements::legendre_nodes_1D(legendre_nodes_1D, num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D, num_gauss_points);
+
+    Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+    
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+    
+    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 3;
+        convert_node_order(3) = 2;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 7;
+            convert_node_order(7) = 6;
         }
-      }
-    
-      Element_Masses(nonoverlapping_ielem,0) += current_density*weight_multiply*Jacobian;
     }
+    else
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 2;
+        convert_node_order(3) = 3;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 6;
+            convert_node_order(7) = 7;
+        }
     }
-    else{
-      Element_Masses(nonoverlapping_ielem,0) = Element_Volumes(nonoverlapping_ielem,0)*design_densities(nonoverlapping_ielem,0);
-    }
-  }
 
-  //std::ostream &out = std::cout;
-  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  //if(myrank==0)
-  //*fos << "Global Element Masses:" << std::endl;
-  //Global_Element_Masses->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
+    // loop over elements and use quadrature rule to compute volume from Jacobian determinant
+    for (int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++)
+    {
+        global_element_index = element_map->getGlobalElement(nonoverlapping_ielem);
+        ielem = all_element_map->getLocalElement(global_element_index);
+        if (nodal_density_flag)
+        {
+            // acquire set of nodes for this local element
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
+                nodal_positions(node_loop, 0) = all_node_coords(local_node_id, 0);
+                nodal_positions(node_loop, 1) = all_node_coords(local_node_id, 1);
+                nodal_positions(node_loop, 2) = all_node_coords(local_node_id, 2);
+                if (nodal_density_flag)
+                {
+                    nodal_density(node_loop) = all_design_densities(local_node_id, 0);
+                }
+                /*
+                if(myrank==1&&nodal_positions(node_loop,2)>10000000){
+                  std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+                  std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
+                  std::fflush(stdout);
+                }
+                */
+                // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " "
+                // << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) << " " << nodal_density(node_loop) <<std::endl;
+            }
+
+            // debug print of index
+            // std::cout << "nonoverlap element id on TASK " << myrank << " is " << nonoverlapping_ielem << std::endl;
+            // std::fflush(stdout);
+
+            // initialize element mass
+            Element_Masses(nonoverlapping_ielem, 0) = 0;
+
+            if (Element_Types(ielem) == elements::elem_types::Hex8)
+            {
+                direct_product_count = std::pow(num_gauss_points, num_dim);
+            }
+
+            // loop over quadrature points
+            for (int iquad = 0; iquad < direct_product_count; iquad++)
+            {
+                // set current quadrature point
+                if (num_dim == 3)
+                {
+                    z_quad = iquad / (num_gauss_points * num_gauss_points);
+                }
+                y_quad = (iquad % (num_gauss_points * num_gauss_points)) / num_gauss_points;
+                x_quad = iquad % num_gauss_points;
+                quad_coordinate(0) = legendre_nodes_1D(x_quad);
+                quad_coordinate(1) = legendre_nodes_1D(y_quad);
+                if (num_dim == 3)
+                {
+                    quad_coordinate(2) = legendre_nodes_1D(z_quad);
+                }
+
+                // set current quadrature weight
+                quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+                quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+                if (num_dim == 3)
+                {
+                    quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+                }
+                else
+                {
+                    quad_coordinate_weight(2) = 1;
+                }
+                weight_multiply = quad_coordinate_weight(0) * quad_coordinate_weight(1) * quad_coordinate_weight(2);
+
+                // compute shape functions at this point for the element type
+                elem->basis(basis_values, quad_coordinate);
+
+                // compute all the necessary coordinates and derivatives at this point
+
+                // compute shape function derivatives
+                elem->partial_xi_basis(basis_derivative_s1, quad_coordinate);
+                elem->partial_eta_basis(basis_derivative_s2, quad_coordinate);
+                elem->partial_mu_basis(basis_derivative_s3, quad_coordinate);
+
+                // compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+                // derivative of x,y,z w.r.t s
+                JT_row1(0) = 0;
+                JT_row1(1) = 0;
+                JT_row1(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row1(0) += nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                    JT_row1(1) += nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                    JT_row1(2) += nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t t
+                JT_row2(0) = 0;
+                JT_row2(1) = 0;
+                JT_row2(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row2(0) += nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                    JT_row2(1) += nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                    JT_row2(2) += nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t w
+                JT_row3(0) = 0;
+                JT_row3(1) = 0;
+                JT_row3(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row3(0) += nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                    JT_row3(1) += nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                    JT_row3(2) += nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                    // debug print
+                    /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
+                    std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
+                    std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
+                    std::fflush(stdout);
+                    }*/
+                }
+
+                // compute the determinant of the Jacobian
+                Jacobian = JT_row1(0) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
+                           JT_row1(1) * (JT_row2(0) * JT_row3(2) - JT_row3(0) * JT_row2(2)) +
+                           JT_row1(2) * (JT_row2(0) * JT_row3(1) - JT_row3(0) * JT_row2(1));
+                if (Jacobian < 0)
+                {
+                    Jacobian = -Jacobian;
+                }
+
+                // compute density
+                current_density = 0;
+                if (max_flag)
+                {
+                    current_density = 1;
+                }
+                else
+                {
+                    for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                    {
+                        current_density += nodal_density(node_loop) * basis_values(node_loop);
+                    }
+                }
+
+                Element_Masses(nonoverlapping_ielem, 0) += current_density * weight_multiply * Jacobian;
+            }
+        }
+        else
+        {
+            Element_Masses(nonoverlapping_ielem, 0) = Element_Volumes(nonoverlapping_ielem, 0) * design_densities(nonoverlapping_ielem, 0);
+        }
+    }
+
+    // std::ostream &out = std::cout;
+    // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    // if(myrank==0)
+    // *fos << "Global Element Masses:" << std::endl;
+    // Global_Element_Masses->describe(*fos,Teuchos::VERB_EXTREME);
+    // *fos << std::endl;
 }
 
 /* ----------------------------------------------------------------------
    Compute the gradients of mass function with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, bool use_initial_coords){
-  //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getLocalNumElements();
-  //local variable for host view in the dual view
-  const_host_vec_array all_node_coords;
-  if(use_initial_coords){
-    all_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
-  else{
-    all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
-  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_node_densities;
-  if(nodal_density_flag)
-  all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int nodes_per_elem = elem->num_basis();
-  int z_quad,y_quad,x_quad, direct_product_count;
-  size_t local_node_id;
-  LO ielem;
-  GO global_element_index;
-  
-  real_t Jacobian, weight_multiply;
-  //CArrayKokkos<real_t> legendre_nodes_1D(num_gauss_points);
-  //CArrayKokkos<real_t> legendre_weights_1D(num_gauss_points);
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
-  real_t pointer_quad_coordinate[num_dim];
-  real_t pointer_quad_coordinate_weight[num_dim];
-  real_t pointer_interpolated_point[num_dim];
-  real_t pointer_JT_row1[num_dim];
-  real_t pointer_JT_row2[num_dim];
-  real_t pointer_JT_row3[num_dim];
-  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
-  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
-  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  ViewCArray<real_t> JT_row1(pointer_JT_row1,num_dim);
-  ViewCArray<real_t> JT_row2(pointer_JT_row2,num_dim);
-  ViewCArray<real_t> JT_row3(pointer_JT_row3,num_dim);
-
-  real_t pointer_basis_values[elem->num_basis()];
-  real_t pointer_basis_derivative_s1[elem->num_basis()];
-  real_t pointer_basis_derivative_s2[elem->num_basis()];
-  real_t pointer_basis_derivative_s3[elem->num_basis()];
-  ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
-
-  //initialize weights
-  elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-  elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-  
-  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 3;
-    convert_node_order(3) = 2;
-    if(num_dim == 3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 7;
-      convert_node_order(7) = 6;
+void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, bool use_initial_coords)
+{
+    // local number of uniquely assigned elements
+    size_t nonoverlap_nelements = element_map->getLocalNumElements();
+    // local variable for host view in the dual view
+    const_host_vec_array all_node_coords;
+    if (use_initial_coords)
+    {
+        all_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-  }
-  else{
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 2;
-    convert_node_order(3) = 3;
-    if(num_dim==3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 6;
-      convert_node_order(7) = 7;
+    else
+    {
+        all_node_coords = all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-  }
-  
-  //initialize design gradients to 0
-  for(int init = 0; init < nlocal_nodes; init++)
-    design_gradients(init,0) = 0;
-
-  //loop over elements and use quadrature rule to compute volume from Jacobian determinant
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    //acquire set of nodes for this local element
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
-      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
-      /*
-      if(myrank==1&&nodal_positions(node_loop,2)>10000000){
-        std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
-        std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
-        std::fflush(stdout);
-      }
-      */
-      //std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
+    const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    const_host_vec_array       all_node_densities;
+    if (nodal_density_flag)
+    {
+        all_node_densities = all_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-    
-    if(Element_Types(ielem)==elements::elem_types::Hex8){
-      direct_product_count = std::pow(num_gauss_points,num_dim);
-    }
-  
-    //loop over quadrature points
-    for(int iquad=0; iquad < direct_product_count; iquad++){
+    int    nodes_per_elem = elem->num_basis();
+    int    z_quad, y_quad, x_quad, direct_product_count;
+    size_t local_node_id;
+    LO     ielem;
+    GO     global_element_index;
 
-      //set current quadrature point
-      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-      x_quad = iquad % num_gauss_points;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(1) = legendre_nodes_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate(2) = legendre_nodes_1D(z_quad);
+    real_t Jacobian, weight_multiply;
+    // CArrayKokkos<real_t> legendre_nodes_1D(num_gauss_points);
+    // CArrayKokkos<real_t> legendre_weights_1D(num_gauss_points);
+    CArray<real_t> legendre_nodes_1D(num_gauss_points);
+    CArray<real_t> legendre_weights_1D(num_gauss_points);
+    real_t pointer_quad_coordinate[num_dim];
+    real_t pointer_quad_coordinate_weight[num_dim];
+    real_t pointer_interpolated_point[num_dim];
+    real_t pointer_JT_row1[num_dim];
+    real_t pointer_JT_row2[num_dim];
+    real_t pointer_JT_row3[num_dim];
+    ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
+    ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
+    ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
+    ViewCArray<real_t> JT_row1(pointer_JT_row1, num_dim);
+    ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
+    ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
 
-      //set current quadrature weight
-      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-      else
-      quad_coordinate_weight(2) = 1;
-      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
+    real_t pointer_basis_values[elem->num_basis()];
+    real_t pointer_basis_derivative_s1[elem->num_basis()];
+    real_t pointer_basis_derivative_s2[elem->num_basis()];
+    real_t pointer_basis_derivative_s3[elem->num_basis()];
+    ViewCArray<real_t> basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
-      //compute shape functions at this point for the element type
-      elem->basis(basis_values,quad_coordinate);
+    // initialize weights
+    elements::legendre_nodes_1D(legendre_nodes_1D, num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D, num_gauss_points);
 
-      //compute all the necessary coordinates and derivatives at this point
-
-      //compute shape function derivatives
-      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
-
-      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-      //derivative of x,y,z w.r.t s
-      JT_row1(0) = 0;
-      JT_row1(1) = 0;
-      JT_row1(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-      }
-
-      //derivative of x,y,z w.r.t t
-      JT_row2(0) = 0;
-      JT_row2(1) = 0;
-      JT_row2(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-      }
-
-      //derivative of x,y,z w.r.t w
-      JT_row3(0) = 0;
-      JT_row3(1) = 0;
-      JT_row3(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-        //debug print
-        /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
-        std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
-        std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
-        std::fflush(stdout);
-        }*/
-      }
-    
-    
-      //compute the determinant of the Jacobian
-      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-      if(Jacobian<0) Jacobian = -Jacobian;
-      
-      //assign contribution to every local node this element has
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
-          local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
-          design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*Jacobian;
+    Solver::node_ordering_convention                             active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 3;
+        convert_node_order(3) = 2;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 7;
+            convert_node_order(7) = 6;
         }
-      }
     }
-    
-  }
+    else
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 2;
+        convert_node_order(3) = 3;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 6;
+            convert_node_order(7) = 7;
+        }
+    }
 
+    // initialize design gradients to 0
+    for (int init = 0; init < nlocal_nodes; init++)
+    {
+        design_gradients(init, 0) = 0;
+    }
+
+    // loop over elements and use quadrature rule to compute volume from Jacobian determinant
+    for (int ielem = 0; ielem < rnum_elem; ielem++)
+    {
+        // acquire set of nodes for this local element
+        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+        {
+            local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
+            nodal_positions(node_loop, 0) = all_node_coords(local_node_id, 0);
+            nodal_positions(node_loop, 1) = all_node_coords(local_node_id, 1);
+            nodal_positions(node_loop, 2) = all_node_coords(local_node_id, 2);
+            if (nodal_density_flag)
+            {
+                nodal_density(node_loop) = all_node_densities(local_node_id, 0);
+            }
+            /*
+            if(myrank==1&&nodal_positions(node_loop,2)>10000000){
+              std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+              std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
+              std::fflush(stdout);
+            }
+            */
+            // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
+        }
+
+        if (Element_Types(ielem) == elements::elem_types::Hex8)
+        {
+            direct_product_count = std::pow(num_gauss_points, num_dim);
+        }
+
+        // loop over quadrature points
+        for (int iquad = 0; iquad < direct_product_count; iquad++)
+        {
+            // set current quadrature point
+            if (num_dim == 3)
+            {
+                z_quad = iquad / (num_gauss_points * num_gauss_points);
+            }
+            y_quad = (iquad % (num_gauss_points * num_gauss_points)) / num_gauss_points;
+            x_quad = iquad % num_gauss_points;
+            quad_coordinate(0) = legendre_nodes_1D(x_quad);
+            quad_coordinate(1) = legendre_nodes_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate(2) = legendre_nodes_1D(z_quad);
+            }
+
+            // set current quadrature weight
+            quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+            quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+            }
+            else
+            {
+                quad_coordinate_weight(2) = 1;
+            }
+            weight_multiply = quad_coordinate_weight(0) * quad_coordinate_weight(1) * quad_coordinate_weight(2);
+
+            // compute shape functions at this point for the element type
+            elem->basis(basis_values, quad_coordinate);
+
+            // compute all the necessary coordinates and derivatives at this point
+
+            // compute shape function derivatives
+            elem->partial_xi_basis(basis_derivative_s1, quad_coordinate);
+            elem->partial_eta_basis(basis_derivative_s2, quad_coordinate);
+            elem->partial_mu_basis(basis_derivative_s3, quad_coordinate);
+
+            // compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+            // derivative of x,y,z w.r.t s
+            JT_row1(0) = 0;
+            JT_row1(1) = 0;
+            JT_row1(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                JT_row1(0) += nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                JT_row1(1) += nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                JT_row1(2) += nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+            }
+
+            // derivative of x,y,z w.r.t t
+            JT_row2(0) = 0;
+            JT_row2(1) = 0;
+            JT_row2(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                JT_row2(0) += nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                JT_row2(1) += nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                JT_row2(2) += nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+            }
+
+            // derivative of x,y,z w.r.t w
+            JT_row3(0) = 0;
+            JT_row3(1) = 0;
+            JT_row3(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                JT_row3(0) += nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                JT_row3(1) += nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                JT_row3(2) += nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                // debug print
+                /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
+                std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
+                std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
+                std::fflush(stdout);
+                }*/
+            }
+
+            // compute the determinant of the Jacobian
+            Jacobian = JT_row1(0) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
+                       JT_row1(1) * (JT_row2(0) * JT_row3(2) - JT_row3(0) * JT_row2(2)) +
+                       JT_row1(2) * (JT_row2(0) * JT_row3(1) - JT_row3(0) * JT_row2(1));
+            if (Jacobian < 0)
+            {
+                Jacobian = -Jacobian;
+            }
+
+            // assign contribution to every local node this element has
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                if (map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop)))
+                {
+                    local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
+                    design_gradients(local_node_id, 0) += weight_multiply * basis_values(node_loop) * Jacobian;
+                }
+            }
+        }
+    }
 }
 
 /* ------------------------------------------------------------------------------------------------------------------------
    Compute the moment of each element for a specified component; estimated with quadrature
 --------------------------------------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component, bool use_initial_coords){
-  //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getLocalNumElements();
-  //initialize memory for volume storage
-  host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  host_vec_array Element_Moments;
+void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component, bool use_initial_coords)
+{
+    // local number of uniquely assigned elements
+    size_t nonoverlap_nelements = element_map->getLocalNumElements();
+    // initialize memory for volume storage
+    host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+    host_vec_array Element_Moments;
 
-  if(moment_component==0) Element_Moments = Global_Element_Moments_x->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  if(moment_component==1) Element_Moments = Global_Element_Moments_y->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  if(moment_component==2) Element_Moments = Global_Element_Moments_z->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-
-  const_host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  //local variable for host view in the dual view
-  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_initial_node_coords;
-  if(use_initial_coords)
-    all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_design_densities;
-  if(nodal_density_flag)
-  all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int nodes_per_elem = elem->num_basis();
-  int z_quad,y_quad,x_quad, direct_product_count;
-  size_t local_node_id;
-  LO ielem;
-  GO global_element_index;
-  
-  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 3;
-    convert_node_order(3) = 2;
-    if(num_dim == 3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 7;
-      convert_node_order(7) = 6;
+    if (moment_component == 0)
+    {
+        Element_Moments = Global_Element_Moments_x->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     }
-  }
-  else{
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 2;
-    convert_node_order(3) = 3;
-    if(num_dim==3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 6;
-      convert_node_order(7) = 7;
+    if (moment_component == 1)
+    {
+        Element_Moments = Global_Element_Moments_y->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     }
-  }
-  
-  real_t Jacobian, current_density, weight_multiply;
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
-  real_t pointer_quad_coordinate[num_dim];
-  real_t pointer_quad_coordinate_weight[num_dim];
-  real_t pointer_interpolated_point[num_dim];
-  real_t pointer_JT_row1[num_dim];
-  real_t pointer_JT_row2[num_dim];
-  real_t pointer_JT_row3[num_dim];
-  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
-  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
-  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  ViewCArray<real_t> JT_row1(pointer_JT_row1,num_dim);
-  ViewCArray<real_t> JT_row2(pointer_JT_row2,num_dim);
-  ViewCArray<real_t> JT_row3(pointer_JT_row3,num_dim);
-
-  real_t pointer_basis_values[elem->num_basis()];
-  real_t pointer_basis_derivative_s1[elem->num_basis()];
-  real_t pointer_basis_derivative_s2[elem->num_basis()];
-  real_t pointer_basis_derivative_s3[elem->num_basis()];
-  ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> initial_nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
-
-  //initialize weights
-  elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-  elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-
-  //loop over elements and use quadrature rule to compute volume from Jacobian determinant
-  for(int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++){
-    global_element_index = element_map->getGlobalElement(nonoverlapping_ielem);
-    ielem = all_element_map->getLocalElement(global_element_index);
-    //acquire set of nodes for this local element
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
-      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      if(use_initial_coords){
-        initial_nodal_positions(node_loop,0) = all_initial_node_coords(local_node_id,0);
-        initial_nodal_positions(node_loop,1) = all_initial_node_coords(local_node_id,1);
-        initial_nodal_positions(node_loop,2) = all_initial_node_coords(local_node_id,2);
-      }
-
-
-      if(nodal_density_flag) nodal_density(node_loop) = all_design_densities(local_node_id,0);
-      /*
-      if(myrank==1&&nodal_positions(node_loop,2)>10000000){
-        std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
-        std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
-        std::fflush(stdout);
-      }
-      */
-      //std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " "
-       //<< nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) << " " << nodal_density(node_loop) <<std::endl;
+    if (moment_component == 2)
+    {
+        Element_Moments = Global_Element_Moments_z->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     }
-    
-    //debug print of index
-    //std::cout << "nonoverlap element id on TASK " << myrank << " is " << nonoverlapping_ielem << std::endl;
-    //std::fflush(stdout);
 
-    //initialize element mass
-    Element_Moments(nonoverlapping_ielem,0) = 0;
-    
-    if(Element_Types(ielem)==elements::elem_types::Hex8){
-      direct_product_count = std::pow(num_gauss_points,num_dim);
+    const_host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    // local variable for host view in the dual view
+    const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    const_host_vec_array all_initial_node_coords;
+    if (use_initial_coords)
+    {
+        all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-  
-    //loop over quadrature points
-    for(int iquad=0; iquad < direct_product_count; iquad++){
-
-      //set current quadrature point
-      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-      x_quad = iquad % num_gauss_points;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(1) = legendre_nodes_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate(2) = legendre_nodes_1D(z_quad);
-
-      //set current quadrature weight
-      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-      else
-      quad_coordinate_weight(2) = 1;
-      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
-
-      //compute shape functions at this point for the element type
-      elem->basis(basis_values,quad_coordinate);
-
-      //compute all the necessary coordinates and derivatives at this point
-
-      //compute shape function derivatives
-      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
-
-      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-      //derivative of x,y,z w.r.t s
-      JT_row1(0) = 0;
-      JT_row1(1) = 0;
-      JT_row1(2) = 0;
-      if(use_initial_coords){
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row1(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-          JT_row1(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-          JT_row1(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-        }
-
-        //derivative of x,y,z w.r.t t
-        JT_row2(0) = 0;
-        JT_row2(1) = 0;
-        JT_row2(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row2(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-          JT_row2(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-          JT_row2(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-        }
-
-        //derivative of x,y,z w.r.t w
-        JT_row3(0) = 0;
-        JT_row3(1) = 0;
-        JT_row3(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row3(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-          JT_row3(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-          JT_row3(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-          //debug print
-          /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
-          std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
-          std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
-          std::fflush(stdout);
-          }*/
-        }
-
-      }
-      else{
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-          JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-          JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-        }
-
-        //derivative of x,y,z w.r.t t
-        JT_row2(0) = 0;
-        JT_row2(1) = 0;
-        JT_row2(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-          JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-          JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-        }
-
-        //derivative of x,y,z w.r.t w
-        JT_row3(0) = 0;
-        JT_row3(1) = 0;
-        JT_row3(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-          JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-          JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-          //debug print
-          /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
-          std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
-          std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
-          std::fflush(stdout);
-          }*/
-        }
-      }
-    
-    
-      //compute the determinant of the Jacobian
-      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-      if(Jacobian<0) Jacobian = -Jacobian;
-
-      //compute density
-      if(max_flag){
-        current_density = 1;
-      }
-      else{
-        if(nodal_density_flag){
-          current_density = 0;
-          for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-            current_density += nodal_density(node_loop)*basis_values(node_loop);
-          }
-        }// if
-        else{
-          current_density = design_densities(nonoverlapping_ielem,0);
-        }
-      }
-
-      //compute current position
-      current_position(0) = current_position(1) = current_position(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        current_position(moment_component) += nodal_positions(node_loop,moment_component)*basis_values(node_loop);
-      }
-
-      Element_Moments(nonoverlapping_ielem,0) += current_density*current_position(moment_component)*weight_multiply*Jacobian;
+    const_host_vec_array all_design_densities;
+    if (nodal_density_flag)
+    {
+        all_design_densities = all_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-  }
+    const_host_elem_conn_array nodes_in_elem  = global_nodes_in_elem_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    int                        nodes_per_elem = elem->num_basis();
+    int                        z_quad, y_quad, x_quad, direct_product_count;
+    size_t                     local_node_id;
+    LO                         ielem;
+    GO                         global_element_index;
 
-  //std::ostream &out = std::cout;
-  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  //if(myrank==0)
-  //*fos << "Global Element Masses:" << std::endl;
-  //Global_Element_Masses->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
+    Solver::node_ordering_convention                             active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 3;
+        convert_node_order(3) = 2;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 7;
+            convert_node_order(7) = 6;
+        }
+    }
+    else
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 2;
+        convert_node_order(3) = 3;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 6;
+            convert_node_order(7) = 7;
+        }
+    }
+
+    real_t Jacobian, current_density, weight_multiply;
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+    CArray<real_t>     legendre_nodes_1D(num_gauss_points);
+    CArray<real_t>     legendre_weights_1D(num_gauss_points);
+    real_t             pointer_quad_coordinate[num_dim];
+    real_t             pointer_quad_coordinate_weight[num_dim];
+    real_t             pointer_interpolated_point[num_dim];
+    real_t             pointer_JT_row1[num_dim];
+    real_t             pointer_JT_row2[num_dim];
+    real_t             pointer_JT_row3[num_dim];
+    ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
+    ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
+    ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
+    ViewCArray<real_t> JT_row1(pointer_JT_row1, num_dim);
+    ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
+    ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
+
+    real_t                                                         pointer_basis_values[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s1[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s2[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s3[elem->num_basis()];
+    ViewCArray<real_t>                                             basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> initial_nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
+
+    // initialize weights
+    elements::legendre_nodes_1D(legendre_nodes_1D, num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D, num_gauss_points);
+
+    // loop over elements and use quadrature rule to compute volume from Jacobian determinant
+    for (int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++)
+    {
+        global_element_index = element_map->getGlobalElement(nonoverlapping_ielem);
+        ielem = all_element_map->getLocalElement(global_element_index);
+        // acquire set of nodes for this local element
+        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+        {
+            local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
+            nodal_positions(node_loop, 0) = all_node_coords(local_node_id, 0);
+            nodal_positions(node_loop, 1) = all_node_coords(local_node_id, 1);
+            nodal_positions(node_loop, 2) = all_node_coords(local_node_id, 2);
+            if (use_initial_coords)
+            {
+                initial_nodal_positions(node_loop, 0) = all_initial_node_coords(local_node_id, 0);
+                initial_nodal_positions(node_loop, 1) = all_initial_node_coords(local_node_id, 1);
+                initial_nodal_positions(node_loop, 2) = all_initial_node_coords(local_node_id, 2);
+            }
+
+            if (nodal_density_flag)
+            {
+                nodal_density(node_loop) = all_design_densities(local_node_id, 0);
+            }
+            /*
+            if(myrank==1&&nodal_positions(node_loop,2)>10000000){
+              std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+              std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
+              std::fflush(stdout);
+            }
+            */
+            // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " "
+            // << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) << " " << nodal_density(node_loop) <<std::endl;
+        }
+
+        // debug print of index
+        // std::cout << "nonoverlap element id on TASK " << myrank << " is " << nonoverlapping_ielem << std::endl;
+        // std::fflush(stdout);
+
+        // initialize element mass
+        Element_Moments(nonoverlapping_ielem, 0) = 0;
+
+        if (Element_Types(ielem) == elements::elem_types::Hex8)
+        {
+            direct_product_count = std::pow(num_gauss_points, num_dim);
+        }
+
+        // loop over quadrature points
+        for (int iquad = 0; iquad < direct_product_count; iquad++)
+        {
+            // set current quadrature point
+            if (num_dim == 3)
+            {
+                z_quad = iquad / (num_gauss_points * num_gauss_points);
+            }
+            y_quad = (iquad % (num_gauss_points * num_gauss_points)) / num_gauss_points;
+            x_quad = iquad % num_gauss_points;
+            quad_coordinate(0) = legendre_nodes_1D(x_quad);
+            quad_coordinate(1) = legendre_nodes_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate(2) = legendre_nodes_1D(z_quad);
+            }
+
+            // set current quadrature weight
+            quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+            quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+            }
+            else
+            {
+                quad_coordinate_weight(2) = 1;
+            }
+            weight_multiply = quad_coordinate_weight(0) * quad_coordinate_weight(1) * quad_coordinate_weight(2);
+
+            // compute shape functions at this point for the element type
+            elem->basis(basis_values, quad_coordinate);
+
+            // compute all the necessary coordinates and derivatives at this point
+
+            // compute shape function derivatives
+            elem->partial_xi_basis(basis_derivative_s1, quad_coordinate);
+            elem->partial_eta_basis(basis_derivative_s2, quad_coordinate);
+            elem->partial_mu_basis(basis_derivative_s3, quad_coordinate);
+
+            // compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+            // derivative of x,y,z w.r.t s
+            JT_row1(0) = 0;
+            JT_row1(1) = 0;
+            JT_row1(2) = 0;
+            if (use_initial_coords)
+            {
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row1(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                    JT_row1(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                    JT_row1(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t t
+                JT_row2(0) = 0;
+                JT_row2(1) = 0;
+                JT_row2(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row2(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                    JT_row2(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                    JT_row2(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t w
+                JT_row3(0) = 0;
+                JT_row3(1) = 0;
+                JT_row3(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row3(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                    JT_row3(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                    JT_row3(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                    // debug print
+                    /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
+                    std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
+                    std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
+                    std::fflush(stdout);
+                    }*/
+                }
+            }
+            else
+            {
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row1(0) += nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                    JT_row1(1) += nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                    JT_row1(2) += nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t t
+                JT_row2(0) = 0;
+                JT_row2(1) = 0;
+                JT_row2(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row2(0) += nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                    JT_row2(1) += nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                    JT_row2(2) += nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t w
+                JT_row3(0) = 0;
+                JT_row3(1) = 0;
+                JT_row3(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row3(0) += nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                    JT_row3(1) += nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                    JT_row3(2) += nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                    // debug print
+                    /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
+                    std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
+                    std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
+                    std::fflush(stdout);
+                    }*/
+                }
+            }
+
+            // compute the determinant of the Jacobian
+            Jacobian = JT_row1(0) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
+                       JT_row1(1) * (JT_row2(0) * JT_row3(2) - JT_row3(0) * JT_row2(2)) +
+                       JT_row1(2) * (JT_row2(0) * JT_row3(1) - JT_row3(0) * JT_row2(1));
+            if (Jacobian < 0)
+            {
+                Jacobian = -Jacobian;
+            }
+
+            // compute density
+            if (max_flag)
+            {
+                current_density = 1;
+            }
+            else
+            {
+                if (nodal_density_flag)
+                {
+                    current_density = 0;
+                    for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                    {
+                        current_density += nodal_density(node_loop) * basis_values(node_loop);
+                    }
+                } // if
+                else
+                {
+                    current_density = design_densities(nonoverlapping_ielem, 0);
+                }
+            }
+
+            // compute current position
+            current_position(0) = current_position(1) = current_position(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                current_position(moment_component) += nodal_positions(node_loop, moment_component) * basis_values(node_loop);
+            }
+
+            Element_Moments(nonoverlapping_ielem, 0) += current_density * current_position(moment_component) * weight_multiply * Jacobian;
+        }
+    }
+
+    // std::ostream &out = std::cout;
+    // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    // if(myrank==0)
+    // *fos << "Global Element Masses:" << std::endl;
+    // Global_Element_Masses->describe(*fos,Teuchos::VERB_EXTREME);
+    // *fos << std::endl;
 }
 
 /* ---------------------------------------------------------------------------------------------------
    Compute the gradients of the specified moment component with respect to design densities
 ------------------------------------------------------------------------------------------------------ */
 
-void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, int moment_component, bool use_initial_coords){
-  //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getLocalNumElements();
-  //local variable for host view in the dual view
-  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_initial_node_coords;
-  if(use_initial_coords)
-    all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_node_densities;
-  if(nodal_density_flag)
-  all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int nodes_per_elem = elem->num_basis();
-  int z_quad,y_quad,x_quad, direct_product_count;
-  size_t local_node_id;
-  LO ielem;
-  GO global_element_index;
-  
-  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 3;
-    convert_node_order(3) = 2;
-    if(num_dim == 3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 7;
-      convert_node_order(7) = 6;
+void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, int moment_component, bool use_initial_coords)
+{
+    // local number of uniquely assigned elements
+    size_t nonoverlap_nelements = element_map->getLocalNumElements();
+    // local variable for host view in the dual view
+    const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    const_host_vec_array all_initial_node_coords;
+    if (use_initial_coords)
+    {
+        all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-  }
-  else{
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 2;
-    convert_node_order(3) = 3;
-    if(num_dim==3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 6;
-      convert_node_order(7) = 7;
+    const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    const_host_vec_array       all_node_densities;
+    if (nodal_density_flag)
+    {
+        all_node_densities = all_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-  }
-  
-  
-  real_t Jacobian, weight_multiply;
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
-  real_t pointer_quad_coordinate[num_dim];
-  real_t pointer_quad_coordinate_weight[num_dim];
-  real_t pointer_interpolated_point[num_dim];
-  real_t pointer_JT_row1[num_dim];
-  real_t pointer_JT_row2[num_dim];
-  real_t pointer_JT_row3[num_dim];
-  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
-  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
-  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  ViewCArray<real_t> JT_row1(pointer_JT_row1,num_dim);
-  ViewCArray<real_t> JT_row2(pointer_JT_row2,num_dim);
-  ViewCArray<real_t> JT_row3(pointer_JT_row3,num_dim);
+    int    nodes_per_elem = elem->num_basis();
+    int    z_quad, y_quad, x_quad, direct_product_count;
+    size_t local_node_id;
+    LO     ielem;
+    GO     global_element_index;
 
-  real_t pointer_basis_values[elem->num_basis()];
-  real_t pointer_basis_derivative_s1[elem->num_basis()];
-  real_t pointer_basis_derivative_s2[elem->num_basis()];
-  real_t pointer_basis_derivative_s3[elem->num_basis()];
-  ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> initial_nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
-
-  //initialize weights
-  elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-  elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-
-  //initialize design gradients to 0
-  for(int init = 0; init < nlocal_nodes; init++)
-    design_gradients(init,moment_component) = 0;
-
-  //loop over elements and use quadrature rule to compute volume from Jacobian determinant
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    //acquire set of nodes for this local element
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
-      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      if(use_initial_coords){
-        initial_nodal_positions(node_loop,0) = all_initial_node_coords(local_node_id,0);
-        initial_nodal_positions(node_loop,1) = all_initial_node_coords(local_node_id,1);
-        initial_nodal_positions(node_loop,2) = all_initial_node_coords(local_node_id,2);
-      }
-      if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
-      /*
-      if(myrank==1&&nodal_positions(node_loop,2)>10000000){
-        std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
-        std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
-        std::fflush(stdout);
-      }
-      */
-      //std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
+    Solver::node_ordering_convention                             active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 3;
+        convert_node_order(3) = 2;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 7;
+            convert_node_order(7) = 6;
+        }
     }
-    
-    if(Element_Types(ielem)==elements::elem_types::Hex8){
-      direct_product_count = std::pow(num_gauss_points,num_dim);
+    else
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 2;
+        convert_node_order(3) = 3;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 6;
+            convert_node_order(7) = 7;
+        }
     }
-  
-    //loop over quadrature points
-    for(int iquad=0; iquad < direct_product_count; iquad++){
 
-      //set current quadrature point
-      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-      x_quad = iquad % num_gauss_points;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(1) = legendre_nodes_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate(2) = legendre_nodes_1D(z_quad);
+    real_t Jacobian, weight_multiply;
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+    CArray<real_t>     legendre_nodes_1D(num_gauss_points);
+    CArray<real_t>     legendre_weights_1D(num_gauss_points);
+    real_t             pointer_quad_coordinate[num_dim];
+    real_t             pointer_quad_coordinate_weight[num_dim];
+    real_t             pointer_interpolated_point[num_dim];
+    real_t             pointer_JT_row1[num_dim];
+    real_t             pointer_JT_row2[num_dim];
+    real_t             pointer_JT_row3[num_dim];
+    ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
+    ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
+    ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
+    ViewCArray<real_t> JT_row1(pointer_JT_row1, num_dim);
+    ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
+    ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
 
-      //set current quadrature weight
-      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-      else
-      quad_coordinate_weight(2) = 1;
-      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
+    real_t                                                         pointer_basis_values[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s1[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s2[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s3[elem->num_basis()];
+    ViewCArray<real_t>                                             basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> initial_nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
 
-      //compute shape functions at this point for the element type
-      elem->basis(basis_values,quad_coordinate);
+    // initialize weights
+    elements::legendre_nodes_1D(legendre_nodes_1D, num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D, num_gauss_points);
 
-      //compute all the necessary coordinates and derivatives at this point
-
-      //compute shape function derivatives
-      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
-
-      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-      //derivative of x,y,z w.r.t s
-      JT_row1(0) = 0;
-      JT_row1(1) = 0;
-      JT_row1(2) = 0;
-      if(use_initial_coords){
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row1(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-          JT_row1(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-          JT_row1(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-        }
-
-        //derivative of x,y,z w.r.t t
-        JT_row2(0) = 0;
-        JT_row2(1) = 0;
-        JT_row2(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row2(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-          JT_row2(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-          JT_row2(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-        }
-
-        //derivative of x,y,z w.r.t w
-        JT_row3(0) = 0;
-        JT_row3(1) = 0;
-        JT_row3(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row3(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-          JT_row3(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-          JT_row3(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-        }
-
-      }
-      else{
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-          JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-          JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-        }
-
-        //derivative of x,y,z w.r.t t
-        JT_row2(0) = 0;
-        JT_row2(1) = 0;
-        JT_row2(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-          JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-          JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-        }
-
-        //derivative of x,y,z w.r.t w
-        JT_row3(0) = 0;
-        JT_row3(1) = 0;
-        JT_row3(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-          JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-          JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-        }
-      }
-    
-    
-      //compute the determinant of the Jacobian
-      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-      if(Jacobian<0) Jacobian = -Jacobian;
-
-      //compute current position
-      current_position(0) = current_position(1) = current_position(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        current_position(moment_component) += nodal_positions(node_loop,moment_component)*basis_values(node_loop);
-      }
-      
-      //assign contribution to every local node this element has
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
-          local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
-            design_gradients(local_node_id,moment_component)+=weight_multiply*basis_values(node_loop)*current_position(moment_component)*Jacobian;
-        }
-      }
+    // initialize design gradients to 0
+    for (int init = 0; init < nlocal_nodes; init++)
+    {
+        design_gradients(init, 0) = 0;
     }
-    
-  }
 
+    // loop over elements and use quadrature rule to compute volume from Jacobian determinant
+    for (int ielem = 0; ielem < rnum_elem; ielem++)
+    {
+        // acquire set of nodes for this local element
+        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+        {
+            local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
+            nodal_positions(node_loop, 0) = all_node_coords(local_node_id, 0);
+            nodal_positions(node_loop, 1) = all_node_coords(local_node_id, 1);
+            nodal_positions(node_loop, 2) = all_node_coords(local_node_id, 2);
+            if (use_initial_coords)
+            {
+                initial_nodal_positions(node_loop, 0) = all_initial_node_coords(local_node_id, 0);
+                initial_nodal_positions(node_loop, 1) = all_initial_node_coords(local_node_id, 1);
+                initial_nodal_positions(node_loop, 2) = all_initial_node_coords(local_node_id, 2);
+            }
+            if (nodal_density_flag)
+            {
+                nodal_density(node_loop) = all_node_densities(local_node_id, 0);
+            }
+            /*
+            if(myrank==1&&nodal_positions(node_loop,2)>10000000){
+              std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+              std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
+              std::fflush(stdout);
+            }
+            */
+            // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
+        }
+
+        if (Element_Types(ielem) == elements::elem_types::Hex8)
+        {
+            direct_product_count = std::pow(num_gauss_points, num_dim);
+        }
+
+        // loop over quadrature points
+        for (int iquad = 0; iquad < direct_product_count; iquad++)
+        {
+            // set current quadrature point
+            if (num_dim == 3)
+            {
+                z_quad = iquad / (num_gauss_points * num_gauss_points);
+            }
+            y_quad = (iquad % (num_gauss_points * num_gauss_points)) / num_gauss_points;
+            x_quad = iquad % num_gauss_points;
+            quad_coordinate(0) = legendre_nodes_1D(x_quad);
+            quad_coordinate(1) = legendre_nodes_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate(2) = legendre_nodes_1D(z_quad);
+            }
+
+            // set current quadrature weight
+            quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+            quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+            }
+            else
+            {
+                quad_coordinate_weight(2) = 1;
+            }
+            weight_multiply = quad_coordinate_weight(0) * quad_coordinate_weight(1) * quad_coordinate_weight(2);
+
+            // compute shape functions at this point for the element type
+            elem->basis(basis_values, quad_coordinate);
+
+            // compute all the necessary coordinates and derivatives at this point
+
+            // compute shape function derivatives
+            elem->partial_xi_basis(basis_derivative_s1, quad_coordinate);
+            elem->partial_eta_basis(basis_derivative_s2, quad_coordinate);
+            elem->partial_mu_basis(basis_derivative_s3, quad_coordinate);
+
+            // compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+            // derivative of x,y,z w.r.t s
+            JT_row1(0) = 0;
+            JT_row1(1) = 0;
+            JT_row1(2) = 0;
+            if (use_initial_coords)
+            {
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row1(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                    JT_row1(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                    JT_row1(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t t
+                JT_row2(0) = 0;
+                JT_row2(1) = 0;
+                JT_row2(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row2(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                    JT_row2(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                    JT_row2(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t w
+                JT_row3(0) = 0;
+                JT_row3(1) = 0;
+                JT_row3(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row3(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                    JT_row3(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                    JT_row3(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                }
+            }
+            else
+            {
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row1(0) += nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                    JT_row1(1) += nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                    JT_row1(2) += nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t t
+                JT_row2(0) = 0;
+                JT_row2(1) = 0;
+                JT_row2(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row2(0) += nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                    JT_row2(1) += nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                    JT_row2(2) += nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t w
+                JT_row3(0) = 0;
+                JT_row3(1) = 0;
+                JT_row3(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row3(0) += nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                    JT_row3(1) += nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                    JT_row3(2) += nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                }
+            }
+
+            // compute the determinant of the Jacobian
+            Jacobian = JT_row1(0) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
+                       JT_row1(1) * (JT_row2(0) * JT_row3(2) - JT_row3(0) * JT_row2(2)) +
+                       JT_row1(2) * (JT_row2(0) * JT_row3(1) - JT_row3(0) * JT_row2(1));
+            if (Jacobian < 0)
+            {
+                Jacobian = -Jacobian;
+            }
+
+            // compute current position
+            current_position(0) = current_position(1) = current_position(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                current_position(moment_component) += nodal_positions(node_loop, moment_component) * basis_values(node_loop);
+            }
+
+            // assign contribution to every local node this element has
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                if (map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop)))
+                {
+                    local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
+                    design_gradients(local_node_id, 0) += weight_multiply * basis_values(node_loop) * current_position(moment_component) * Jacobian;
+                }
+            }
+        }
+    }
 }
-
 
 /* ------------------------------------------------------------------------------------------------------------------------
    Compute the moment of inertia of each element for a specified component of the inertia tensor; estimated with quadrature
 --------------------------------------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component, bool use_initial_coords){
-  //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getLocalNumElements();
-  //initialize memory for volume storage
-  host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  host_vec_array Element_Moments_of_Inertia;
-  
-  if(inertia_component==0) Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_xx->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  if(inertia_component==1) Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_yy->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  if(inertia_component==2) Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_zz->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  if(inertia_component==3) Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_xy->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  if(inertia_component==4) Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_xz->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  if(inertia_component==5) Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_yz->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component, bool use_initial_coords)
+{
+    // local number of uniquely assigned elements
+    size_t nonoverlap_nelements = element_map->getLocalNumElements();
+    // initialize memory for volume storage
+    host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+    host_vec_array Element_Moments_of_Inertia;
 
-  const_host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  //local variable for host view in the dual view
-  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_initial_node_coords;
-  if(use_initial_coords)
-    all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_design_densities;
-  if(nodal_density_flag)
-    all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  double inertia_center[3];
-  if(module_params->enable_inertia_center[0]){
-    inertia_center[0] = module_params->moment_of_inertia_center[0];
-  }
-  else{
-    inertia_center[0] = center_of_mass[0];
-  }
-  if(module_params->enable_inertia_center[1]){
-    inertia_center[1] = module_params->moment_of_inertia_center[1];
-  }
-  else{
-    inertia_center[1] = center_of_mass[1];
-  }
-  if(num_dim==3){
-    if(module_params->enable_inertia_center[2]){
-      inertia_center[2] = module_params->moment_of_inertia_center[2];
+    if (inertia_component == 0)
+    {
+        Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_xx->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     }
-    else{
-      inertia_center[2] = center_of_mass[2];
+    if (inertia_component == 1)
+    {
+        Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_yy->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     }
-  }
-  int nodes_per_elem = elem->num_basis();
-  int z_quad,y_quad,x_quad, direct_product_count;
-  size_t local_node_id;
-  LO ielem;
-  GO global_element_index;
-  real_t delx1, delx2;
-
-  real_t Jacobian, current_density, weight_multiply;
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
-  real_t pointer_quad_coordinate[num_dim];
-  real_t pointer_quad_coordinate_weight[num_dim];
-  real_t pointer_interpolated_point[num_dim];
-  real_t pointer_JT_row1[num_dim];
-  real_t pointer_JT_row2[num_dim];
-  real_t pointer_JT_row3[num_dim];
-  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
-  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
-  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  ViewCArray<real_t> JT_row1(pointer_JT_row1,num_dim);
-  ViewCArray<real_t> JT_row2(pointer_JT_row2,num_dim);
-  ViewCArray<real_t> JT_row3(pointer_JT_row3,num_dim);
-
-  real_t pointer_basis_values[elem->num_basis()];
-  real_t pointer_basis_derivative_s1[elem->num_basis()];
-  real_t pointer_basis_derivative_s2[elem->num_basis()];
-  real_t pointer_basis_derivative_s3[elem->num_basis()];
-  ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> initial_nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
-
-  //initialize weights
-  elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-  elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-
-  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 3;
-    convert_node_order(3) = 2;
-    if(num_dim == 3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 7;
-      convert_node_order(7) = 6;
+    if (inertia_component == 2)
+    {
+        Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_zz->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     }
-  }
-  else{
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 2;
-    convert_node_order(3) = 3;
-    if(num_dim==3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 6;
-      convert_node_order(7) = 7;
+    if (inertia_component == 3)
+    {
+        Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_xy->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     }
-  }
-
-  //loop over elements and use quadrature rule to compute volume from Jacobian determinant
-  for(int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++){
-    global_element_index = element_map->getGlobalElement(nonoverlapping_ielem);
-    ielem = all_element_map->getLocalElement(global_element_index);
-    //acquire set of nodes for this local element
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
-      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      if(use_initial_coords){
-        initial_nodal_positions(node_loop,0) = all_initial_node_coords(local_node_id,0);
-        initial_nodal_positions(node_loop,1) = all_initial_node_coords(local_node_id,1);
-        initial_nodal_positions(node_loop,2) = all_initial_node_coords(local_node_id,2);
-      }
-      if(nodal_density_flag) nodal_density(node_loop) = all_design_densities(local_node_id,0);
-      /*
-      if(myrank==1&&nodal_positions(node_loop,2)>10000000){
-        std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
-        std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
-        std::fflush(stdout);
-      }
-      */
-      //std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " "
-       //<< nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) << " " << nodal_density(node_loop) <<std::endl;
+    if (inertia_component == 4)
+    {
+        Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_xz->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     }
-    
-    //debug print of index
-    //std::cout << "nonoverlap element id on TASK " << myrank << " is " << nonoverlapping_ielem << std::endl;
-    //std::fflush(stdout);
-
-    //initialize element mass
-    Element_Moments_of_Inertia(nonoverlapping_ielem,0) = 0;
-    
-    if(Element_Types(ielem)==elements::elem_types::Hex8){
-      direct_product_count = std::pow(num_gauss_points,num_dim);
+    if (inertia_component == 5)
+    {
+        Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_yz->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     }
-  
-    //loop over quadrature points
-    for(int iquad=0; iquad < direct_product_count; iquad++){
 
-      //set current quadrature point
-      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-      x_quad = iquad % num_gauss_points;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(1) = legendre_nodes_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate(2) = legendre_nodes_1D(z_quad);
+    const_host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    // local variable for host view in the dual view
+    const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    const_host_vec_array all_initial_node_coords;
+    if (use_initial_coords)
+    {
+        all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    }
+    const_host_vec_array all_design_densities;
+    if (nodal_density_flag)
+    {
+        all_design_densities = all_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    }
+    const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    double                     inertia_center[3];
+    if (module_params->enable_inertia_center[0])
+    {
+        inertia_center[0] = module_params->moment_of_inertia_center[0];
+    }
+    else
+    {
+        inertia_center[0] = center_of_mass[0];
+    }
+    if (module_params->enable_inertia_center[1])
+    {
+        inertia_center[1] = module_params->moment_of_inertia_center[1];
+    }
+    else
+    {
+        inertia_center[1] = center_of_mass[1];
+    }
+    if (num_dim == 3)
+    {
+        if (module_params->enable_inertia_center[2])
+        {
+            inertia_center[2] = module_params->moment_of_inertia_center[2];
+        }
+        else
+        {
+            inertia_center[2] = center_of_mass[2];
+        }
+    }
+    int    nodes_per_elem = elem->num_basis();
+    int    z_quad, y_quad, x_quad, direct_product_count;
+    size_t local_node_id;
+    LO     ielem;
+    GO     global_element_index;
+    real_t delx1, delx2;
 
-      //set current quadrature weight
-      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-      else
-      quad_coordinate_weight(2) = 1;
-      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
+    real_t Jacobian, current_density, weight_multiply;
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+    CArray<real_t>     legendre_nodes_1D(num_gauss_points);
+    CArray<real_t>     legendre_weights_1D(num_gauss_points);
+    real_t             pointer_quad_coordinate[num_dim];
+    real_t             pointer_quad_coordinate_weight[num_dim];
+    real_t             pointer_interpolated_point[num_dim];
+    real_t             pointer_JT_row1[num_dim];
+    real_t             pointer_JT_row2[num_dim];
+    real_t             pointer_JT_row3[num_dim];
+    ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
+    ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
+    ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
+    ViewCArray<real_t> JT_row1(pointer_JT_row1, num_dim);
+    ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
+    ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
 
-      //compute shape functions at this point for the element type
-      elem->basis(basis_values,quad_coordinate);
+    real_t                                                         pointer_basis_values[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s1[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s2[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s3[elem->num_basis()];
+    ViewCArray<real_t>                                             basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> initial_nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
 
-      //compute all the necessary coordinates and derivatives at this point
+    // initialize weights
+    elements::legendre_nodes_1D(legendre_nodes_1D, num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D, num_gauss_points);
 
-      //compute shape function derivatives
-      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
+    Solver::node_ordering_convention                             active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 3;
+        convert_node_order(3) = 2;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 7;
+            convert_node_order(7) = 6;
+        }
+    }
+    else
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 2;
+        convert_node_order(3) = 3;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 6;
+            convert_node_order(7) = 7;
+        }
+    }
 
-      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-      //derivative of x,y,z w.r.t s
-      JT_row1(0) = 0;
-      JT_row1(1) = 0;
-      JT_row1(2) = 0;
-      if(use_initial_coords){
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row1(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-          JT_row1(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-          JT_row1(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+    // loop over elements and use quadrature rule to compute volume from Jacobian determinant
+    for (int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++)
+    {
+        global_element_index = element_map->getGlobalElement(nonoverlapping_ielem);
+        ielem = all_element_map->getLocalElement(global_element_index);
+        // acquire set of nodes for this local element
+        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+        {
+            local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
+            nodal_positions(node_loop, 0) = all_node_coords(local_node_id, 0);
+            nodal_positions(node_loop, 1) = all_node_coords(local_node_id, 1);
+            nodal_positions(node_loop, 2) = all_node_coords(local_node_id, 2);
+            if (use_initial_coords)
+            {
+                initial_nodal_positions(node_loop, 0) = all_initial_node_coords(local_node_id, 0);
+                initial_nodal_positions(node_loop, 1) = all_initial_node_coords(local_node_id, 1);
+                initial_nodal_positions(node_loop, 2) = all_initial_node_coords(local_node_id, 2);
+            }
+            if (nodal_density_flag)
+            {
+                nodal_density(node_loop) = all_design_densities(local_node_id, 0);
+            }
+            /*
+            if(myrank==1&&nodal_positions(node_loop,2)>10000000){
+              std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+              std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
+              std::fflush(stdout);
+            }
+            */
+            // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " "
+            // << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) << " " << nodal_density(node_loop) <<std::endl;
         }
 
-        //derivative of x,y,z w.r.t t
-        JT_row2(0) = 0;
-        JT_row2(1) = 0;
-        JT_row2(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row2(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-          JT_row2(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-          JT_row2(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+        // debug print of index
+        // std::cout << "nonoverlap element id on TASK " << myrank << " is " << nonoverlapping_ielem << std::endl;
+        // std::fflush(stdout);
+
+        // initialize element mass
+        Element_Moments_of_Inertia(nonoverlapping_ielem, 0) = 0;
+
+        if (Element_Types(ielem) == elements::elem_types::Hex8)
+        {
+            direct_product_count = std::pow(num_gauss_points, num_dim);
         }
 
-        //derivative of x,y,z w.r.t w
-        JT_row3(0) = 0;
-        JT_row3(1) = 0;
-        JT_row3(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row3(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-          JT_row3(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-          JT_row3(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+        // loop over quadrature points
+        for (int iquad = 0; iquad < direct_product_count; iquad++)
+        {
+            // set current quadrature point
+            if (num_dim == 3)
+            {
+                z_quad = iquad / (num_gauss_points * num_gauss_points);
+            }
+            y_quad = (iquad % (num_gauss_points * num_gauss_points)) / num_gauss_points;
+            x_quad = iquad % num_gauss_points;
+            quad_coordinate(0) = legendre_nodes_1D(x_quad);
+            quad_coordinate(1) = legendre_nodes_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate(2) = legendre_nodes_1D(z_quad);
+            }
+
+            // set current quadrature weight
+            quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+            quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+            }
+            else
+            {
+                quad_coordinate_weight(2) = 1;
+            }
+            weight_multiply = quad_coordinate_weight(0) * quad_coordinate_weight(1) * quad_coordinate_weight(2);
+
+            // compute shape functions at this point for the element type
+            elem->basis(basis_values, quad_coordinate);
+
+            // compute all the necessary coordinates and derivatives at this point
+
+            // compute shape function derivatives
+            elem->partial_xi_basis(basis_derivative_s1, quad_coordinate);
+            elem->partial_eta_basis(basis_derivative_s2, quad_coordinate);
+            elem->partial_mu_basis(basis_derivative_s3, quad_coordinate);
+
+            // compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+            // derivative of x,y,z w.r.t s
+            JT_row1(0) = 0;
+            JT_row1(1) = 0;
+            JT_row1(2) = 0;
+            if (use_initial_coords)
+            {
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row1(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                    JT_row1(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                    JT_row1(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t t
+                JT_row2(0) = 0;
+                JT_row2(1) = 0;
+                JT_row2(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row2(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                    JT_row2(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                    JT_row2(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t w
+                JT_row3(0) = 0;
+                JT_row3(1) = 0;
+                JT_row3(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row3(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                    JT_row3(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                    JT_row3(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                }
+            }
+            else
+            {
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row1(0) += nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                    JT_row1(1) += nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                    JT_row1(2) += nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t t
+                JT_row2(0) = 0;
+                JT_row2(1) = 0;
+                JT_row2(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row2(0) += nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                    JT_row2(1) += nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                    JT_row2(2) += nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t w
+                JT_row3(0) = 0;
+                JT_row3(1) = 0;
+                JT_row3(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row3(0) += nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                    JT_row3(1) += nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                    JT_row3(2) += nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                }
+            }
+
+            // compute the determinant of the Jacobian
+            Jacobian = JT_row1(0) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
+                       JT_row1(1) * (JT_row2(0) * JT_row3(2) - JT_row3(0) * JT_row2(2)) +
+                       JT_row1(2) * (JT_row2(0) * JT_row3(1) - JT_row3(0) * JT_row2(1));
+            if (Jacobian < 0)
+            {
+                Jacobian = -Jacobian;
+            }
+
+            // compute density
+            if (max_flag)
+            {
+                current_density = 1;
+            }
+            else
+            {
+                if (nodal_density_flag)
+                {
+                    current_density = 0;
+                    for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                    {
+                        current_density += nodal_density(node_loop) * basis_values(node_loop);
+                    }
+                } // if
+                else
+                {
+                    current_density = design_densities(nonoverlapping_ielem, 0);
+                }
+            }
+
+            // compute current position
+            current_position(0) = current_position(1) = current_position(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                current_position(0) += nodal_positions(node_loop, 0) * basis_values(node_loop);
+                current_position(1) += nodal_positions(node_loop, 1) * basis_values(node_loop);
+                current_position(2) += nodal_positions(node_loop, 2) * basis_values(node_loop);
+            }
+
+            if (inertia_component == 0)
+            {
+                delx1 = current_position(1) - inertia_center[1];
+                delx2 = current_position(2) - inertia_center[2];
+                Element_Moments_of_Inertia(nonoverlapping_ielem, 0) += current_density * (delx1 * delx1 + delx2 * delx2) * weight_multiply * Jacobian;
+            }
+            if (inertia_component == 1)
+            {
+                delx1 = current_position(0) - inertia_center[0];
+                delx2 = current_position(2) - inertia_center[2];
+                Element_Moments_of_Inertia(nonoverlapping_ielem, 0) += current_density * (delx1 * delx1 + delx2 * delx2) * weight_multiply * Jacobian;
+            }
+            if (inertia_component == 2)
+            {
+                delx1 = current_position(0) - inertia_center[0];
+                delx2 = current_position(1) - inertia_center[1];
+                Element_Moments_of_Inertia(nonoverlapping_ielem, 0) += current_density * (delx1 * delx1 + delx2 * delx2) * weight_multiply * Jacobian;
+            }
+            if (inertia_component == 3)
+            {
+                delx1 = current_position(0) - inertia_center[0];
+                delx2 = current_position(1) - inertia_center[1];
+                Element_Moments_of_Inertia(nonoverlapping_ielem, 0) -= current_density * (delx1 * delx2) * weight_multiply * Jacobian;
+            }
+            if (inertia_component == 4)
+            {
+                delx1 = current_position(0) - inertia_center[0];
+                delx2 = current_position(2) - inertia_center[2];
+                Element_Moments_of_Inertia(nonoverlapping_ielem, 0) -= current_density * (delx1 * delx2) * weight_multiply * Jacobian;
+            }
+            if (inertia_component == 5)
+            {
+                delx1 = current_position(1) - inertia_center[1];
+                delx2 = current_position(2) - inertia_center[2];
+                Element_Moments_of_Inertia(nonoverlapping_ielem, 0) -= current_density * (delx1 * delx2) * weight_multiply * Jacobian;
+            }
         }
-
-      }
-      else{
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-          JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-          JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-        }
-
-        //derivative of x,y,z w.r.t t
-        JT_row2(0) = 0;
-        JT_row2(1) = 0;
-        JT_row2(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-          JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-          JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-        }
-
-        //derivative of x,y,z w.r.t w
-        JT_row3(0) = 0;
-        JT_row3(1) = 0;
-        JT_row3(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-          JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-          JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-        }
-      }
-    
-    
-      //compute the determinant of the Jacobian
-      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-      if(Jacobian<0) Jacobian = -Jacobian;
-
-      //compute density
-      if(max_flag){
-        current_density = 1;
-      }
-      else{
-        if(nodal_density_flag){
-          current_density = 0;
-          for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-            current_density += nodal_density(node_loop)*basis_values(node_loop);
-          }
-        }// if
-        else{
-          current_density = design_densities(nonoverlapping_ielem,0);
-        }
-      }
-
-      //compute current position
-      current_position(0) = current_position(1) = current_position(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        current_position(0) += nodal_positions(node_loop,0)*basis_values(node_loop);
-        current_position(1) += nodal_positions(node_loop,1)*basis_values(node_loop);
-        current_position(2) += nodal_positions(node_loop,2)*basis_values(node_loop);
-      }
-
-      if(inertia_component==0){
-        delx1 = current_position(1) - inertia_center[1];
-        delx2 = current_position(2) - inertia_center[2];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*weight_multiply*Jacobian;
-      }
-      if(inertia_component==1){
-        delx1 = current_position(0) - inertia_center[0];
-        delx2 = current_position(2) - inertia_center[2];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*weight_multiply*Jacobian;
-      }
-      if(inertia_component==2){
-        delx1 = current_position(0) - inertia_center[0];
-        delx2 = current_position(1) - inertia_center[1];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*weight_multiply*Jacobian;
-      }
-      if(inertia_component==3){
-        delx1 = current_position(0) - inertia_center[0];
-        delx2 = current_position(1) - inertia_center[1];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*weight_multiply*Jacobian;
-      }
-      if(inertia_component==4){
-        delx1 = current_position(0) - inertia_center[0];
-        delx2 = current_position(2) - inertia_center[2];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*weight_multiply*Jacobian;
-      }
-      if(inertia_component==5){
-        delx1 = current_position(1) - inertia_center[1];
-        delx2 = current_position(2) - inertia_center[2];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*weight_multiply*Jacobian;
-      }
     }
-  }
 
-  //std::ostream &out = std::cout;
-  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  //if(myrank==0)
-  //*fos << "Global Element Masses:" << std::endl;
-  //Global_Element_Masses->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
+    // std::ostream &out = std::cout;
+    // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    // if(myrank==0)
+    // *fos << "Global Element Masses:" << std::endl;
+    // Global_Element_Masses->describe(*fos,Teuchos::VERB_EXTREME);
+    // *fos << std::endl;
 }
 
 /* ---------------------------------------------------------------------------------------------------
    Compute the gradients of the specified moment of inertia component with respect to design densities
 ------------------------------------------------------------------------------------------------------ */
 
-void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, int inertia_component, bool use_initial_coords){
-  //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getLocalNumElements();
-  //local variable for host view in the dual view
-  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_initial_node_coords;
-  if(use_initial_coords)
-    all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  double inertia_center[3];
-  
-  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 3;
-    convert_node_order(3) = 2;
-    if(num_dim == 3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 7;
-      convert_node_order(7) = 6;
+void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, int inertia_component, bool use_initial_coords)
+{
+    // local number of uniquely assigned elements
+    size_t nonoverlap_nelements = element_map->getLocalNumElements();
+    // local variable for host view in the dual view
+    const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    const_host_vec_array all_initial_node_coords;
+    if (use_initial_coords)
+    {
+        all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-  }
-  else{
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 2;
-    convert_node_order(3) = 3;
-    if(num_dim==3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 6;
-      convert_node_order(7) = 7;
+    const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    double                     inertia_center[3];
+
+    Solver::node_ordering_convention                             active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 3;
+        convert_node_order(3) = 2;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 7;
+            convert_node_order(7) = 6;
+        }
     }
-  }
-  
-  if(module_params->enable_inertia_center[0]){
-    inertia_center[0] = module_params->moment_of_inertia_center[0];
-  }
-  else{
-    inertia_center[0] = center_of_mass[0];
-  }
-  if(module_params->enable_inertia_center[1]){
-    inertia_center[1] = module_params->moment_of_inertia_center[1];
-  }
-  else{
-    inertia_center[1] = center_of_mass[1];
-  }
-  if(num_dim==3){
-    if(module_params->enable_inertia_center[2]){
-      inertia_center[2] = module_params->moment_of_inertia_center[2];
+    else
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 2;
+        convert_node_order(3) = 3;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 6;
+            convert_node_order(7) = 7;
+        }
     }
-    else{
-      inertia_center[2] = center_of_mass[2];
+
+    if (module_params->enable_inertia_center[0])
+    {
+        inertia_center[0] = module_params->moment_of_inertia_center[0];
     }
-  }
-  const_host_vec_array all_node_densities;
-  if(nodal_density_flag)
-  all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int nodes_per_elem = elem->num_basis();
-  int z_quad,y_quad,x_quad, direct_product_count;
-  size_t local_node_id;
-  LO ielem;
-  GO global_element_index;
-  real_t delx1, delx2;
-  
-  real_t Jacobian, weight_multiply;
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
-  real_t pointer_quad_coordinate[num_dim];
-  real_t pointer_quad_coordinate_weight[num_dim];
-  real_t pointer_interpolated_point[num_dim];
-  real_t pointer_JT_row1[num_dim];
-  real_t pointer_JT_row2[num_dim];
-  real_t pointer_JT_row3[num_dim];
-  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
-  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
-  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  ViewCArray<real_t> JT_row1(pointer_JT_row1,num_dim);
-  ViewCArray<real_t> JT_row2(pointer_JT_row2,num_dim);
-  ViewCArray<real_t> JT_row3(pointer_JT_row3,num_dim);
-
-  real_t pointer_basis_values[elem->num_basis()];
-  real_t pointer_basis_derivative_s1[elem->num_basis()];
-  real_t pointer_basis_derivative_s2[elem->num_basis()];
-  real_t pointer_basis_derivative_s3[elem->num_basis()];
-  ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> initial_nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
-
-  //initialize weights
-  elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-  elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-
-  //initialize design gradients to 0
-  for(int init = 0; init < nlocal_nodes; init++)
-    design_gradients(init,0) = 0;
-
-  //loop over elements and use quadrature rule to compute volume from Jacobian determinant
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    //acquire set of nodes for this local element
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
-      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      if(use_initial_coords){
-        initial_nodal_positions(node_loop,0) = all_initial_node_coords(local_node_id,0);
-        initial_nodal_positions(node_loop,1) = all_initial_node_coords(local_node_id,1);
-        initial_nodal_positions(node_loop,2) = all_initial_node_coords(local_node_id,2);
-      }
-      if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
-      /*
-      if(myrank==1&&nodal_positions(node_loop,2)>10000000){
-        std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
-        std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
-        std::fflush(stdout);
-      }
-      */
-      //std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
+    else
+    {
+        inertia_center[0] = center_of_mass[0];
     }
-    
-    if(Element_Types(ielem)==elements::elem_types::Hex8){
-      direct_product_count = std::pow(num_gauss_points,num_dim);
+    if (module_params->enable_inertia_center[1])
+    {
+        inertia_center[1] = module_params->moment_of_inertia_center[1];
     }
-  
-    //loop over quadrature points
-    for(int iquad=0; iquad < direct_product_count; iquad++){
-
-      //set current quadrature point
-      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-      x_quad = iquad % num_gauss_points;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(1) = legendre_nodes_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate(2) = legendre_nodes_1D(z_quad);
-
-      //set current quadrature weight
-      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-      else
-      quad_coordinate_weight(2) = 1;
-      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
-
-      //compute shape functions at this point for the element type
-      elem->basis(basis_values,quad_coordinate);
-
-      //compute all the necessary coordinates and derivatives at this point
-
-      //compute shape function derivatives
-      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
-
-      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-      //derivative of x,y,z w.r.t s
-      JT_row1(0) = 0;
-      JT_row1(1) = 0;
-      JT_row1(2) = 0;
-      if(use_initial_coords){
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row1(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-          JT_row1(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-          JT_row1(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+    else
+    {
+        inertia_center[1] = center_of_mass[1];
+    }
+    if (num_dim == 3)
+    {
+        if (module_params->enable_inertia_center[2])
+        {
+            inertia_center[2] = module_params->moment_of_inertia_center[2];
         }
-
-        //derivative of x,y,z w.r.t t
-        JT_row2(0) = 0;
-        JT_row2(1) = 0;
-        JT_row2(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row2(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-          JT_row2(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-          JT_row2(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+        else
+        {
+            inertia_center[2] = center_of_mass[2];
         }
+    }
+    const_host_vec_array all_node_densities;
+    if (nodal_density_flag)
+    {
+        all_node_densities = all_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    }
+    int    nodes_per_elem = elem->num_basis();
+    int    z_quad, y_quad, x_quad, direct_product_count;
+    size_t local_node_id;
+    LO     ielem;
+    GO     global_element_index;
+    real_t delx1, delx2;
 
-        //derivative of x,y,z w.r.t w
-        JT_row3(0) = 0;
-        JT_row3(1) = 0;
-        JT_row3(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row3(0) += initial_nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-          JT_row3(1) += initial_nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-          JT_row3(2) += initial_nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-        }
+    real_t Jacobian, weight_multiply;
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+    CArray<real_t>     legendre_nodes_1D(num_gauss_points);
+    CArray<real_t>     legendre_weights_1D(num_gauss_points);
+    real_t             pointer_quad_coordinate[num_dim];
+    real_t             pointer_quad_coordinate_weight[num_dim];
+    real_t             pointer_interpolated_point[num_dim];
+    real_t             pointer_JT_row1[num_dim];
+    real_t             pointer_JT_row2[num_dim];
+    real_t             pointer_JT_row3[num_dim];
+    ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
+    ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
+    ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
+    ViewCArray<real_t> JT_row1(pointer_JT_row1, num_dim);
+    ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
+    ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
 
-      }
-      else{
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-          JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-          JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-        }
+    real_t                                                         pointer_basis_values[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s1[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s2[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s3[elem->num_basis()];
+    ViewCArray<real_t>                                             basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> initial_nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
 
-        //derivative of x,y,z w.r.t t
-        JT_row2(0) = 0;
-        JT_row2(1) = 0;
-        JT_row2(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-          JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-          JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-        }
+    // initialize weights
+    elements::legendre_nodes_1D(legendre_nodes_1D, num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D, num_gauss_points);
 
-        //derivative of x,y,z w.r.t w
-        JT_row3(0) = 0;
-        JT_row3(1) = 0;
-        JT_row3(2) = 0;
-        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-          JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-          JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-          JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-        }
-      }
-    
-    
-      //compute the determinant of the Jacobian
-      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-      if(Jacobian<0) Jacobian = -Jacobian;
+    // initialize design gradients to 0
+    for (int init = 0; init < nlocal_nodes; init++)
+    {
+        design_gradients(init, 0) = 0;
+    }
 
-      //compute current position
-      current_position(0) = current_position(1) = current_position(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        current_position(0) += nodal_positions(node_loop,0)*basis_values(node_loop);
-        current_position(1) += nodal_positions(node_loop,1)*basis_values(node_loop);
-        current_position(2) += nodal_positions(node_loop,2)*basis_values(node_loop);
-      }
-      
-      //assign contribution to every local node this element has
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
-          local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
-            if(inertia_component==0){
-              delx1 = current_position(1) - inertia_center[1];
-              delx2 = current_position(2) - inertia_center[2];
-              design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
+    // loop over elements and use quadrature rule to compute volume from Jacobian determinant
+    for (int ielem = 0; ielem < rnum_elem; ielem++)
+    {
+        // acquire set of nodes for this local element
+        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+        {
+            local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
+            nodal_positions(node_loop, 0) = all_node_coords(local_node_id, 0);
+            nodal_positions(node_loop, 1) = all_node_coords(local_node_id, 1);
+            nodal_positions(node_loop, 2) = all_node_coords(local_node_id, 2);
+            if (use_initial_coords)
+            {
+                initial_nodal_positions(node_loop, 0) = all_initial_node_coords(local_node_id, 0);
+                initial_nodal_positions(node_loop, 1) = all_initial_node_coords(local_node_id, 1);
+                initial_nodal_positions(node_loop, 2) = all_initial_node_coords(local_node_id, 2);
             }
-            if(inertia_component==1){
-              delx1 = current_position(0) - inertia_center[0];
-              delx2 = current_position(2) - inertia_center[2];
-              design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
+            if (nodal_density_flag)
+            {
+                nodal_density(node_loop) = all_node_densities(local_node_id, 0);
             }
-            if(inertia_component==2){
-              delx1 = current_position(0) - inertia_center[0];
-              delx2 = current_position(1) - inertia_center[1];
-              design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
+            /*
+            if(myrank==1&&nodal_positions(node_loop,2)>10000000){
+              std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+              std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
+              std::fflush(stdout);
             }
-            if(inertia_component==3){
-              delx1 = current_position(0) - inertia_center[0];
-              delx2 = current_position(1) - inertia_center[1];
-              design_gradients(local_node_id,0)-=weight_multiply*basis_values(node_loop)*(delx1*delx2)*Jacobian;
+            */
+            // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
+        }
+
+        if (Element_Types(ielem) == elements::elem_types::Hex8)
+        {
+            direct_product_count = std::pow(num_gauss_points, num_dim);
+        }
+
+        // loop over quadrature points
+        for (int iquad = 0; iquad < direct_product_count; iquad++)
+        {
+            // set current quadrature point
+            if (num_dim == 3)
+            {
+                z_quad = iquad / (num_gauss_points * num_gauss_points);
             }
-            if(inertia_component==4){
-              delx1 = current_position(0) - inertia_center[0];
-              delx2 = current_position(2) - inertia_center[2];
-              design_gradients(local_node_id,0)-=weight_multiply*basis_values(node_loop)*(delx1*delx2)*Jacobian;
+            y_quad = (iquad % (num_gauss_points * num_gauss_points)) / num_gauss_points;
+            x_quad = iquad % num_gauss_points;
+            quad_coordinate(0) = legendre_nodes_1D(x_quad);
+            quad_coordinate(1) = legendre_nodes_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate(2) = legendre_nodes_1D(z_quad);
             }
-            if(inertia_component==5){
-              delx1 = current_position(1) - inertia_center[1];
-              delx2 = current_position(2) - inertia_center[2];
-              design_gradients(local_node_id,0)-=weight_multiply*basis_values(node_loop)*(delx1*delx2)*Jacobian;
+
+            // set current quadrature weight
+            quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+            quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+            }
+            else
+            {
+                quad_coordinate_weight(2) = 1;
+            }
+            weight_multiply = quad_coordinate_weight(0) * quad_coordinate_weight(1) * quad_coordinate_weight(2);
+
+            // compute shape functions at this point for the element type
+            elem->basis(basis_values, quad_coordinate);
+
+            // compute all the necessary coordinates and derivatives at this point
+
+            // compute shape function derivatives
+            elem->partial_xi_basis(basis_derivative_s1, quad_coordinate);
+            elem->partial_eta_basis(basis_derivative_s2, quad_coordinate);
+            elem->partial_mu_basis(basis_derivative_s3, quad_coordinate);
+
+            // compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+            // derivative of x,y,z w.r.t s
+            JT_row1(0) = 0;
+            JT_row1(1) = 0;
+            JT_row1(2) = 0;
+            if (use_initial_coords)
+            {
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row1(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                    JT_row1(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                    JT_row1(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t t
+                JT_row2(0) = 0;
+                JT_row2(1) = 0;
+                JT_row2(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row2(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                    JT_row2(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                    JT_row2(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t w
+                JT_row3(0) = 0;
+                JT_row3(1) = 0;
+                JT_row3(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row3(0) += initial_nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                    JT_row3(1) += initial_nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                    JT_row3(2) += initial_nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                }
+            }
+            else
+            {
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row1(0) += nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                    JT_row1(1) += nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                    JT_row1(2) += nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t t
+                JT_row2(0) = 0;
+                JT_row2(1) = 0;
+                JT_row2(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row2(0) += nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                    JT_row2(1) += nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                    JT_row2(2) += nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+                }
+
+                // derivative of x,y,z w.r.t w
+                JT_row3(0) = 0;
+                JT_row3(1) = 0;
+                JT_row3(2) = 0;
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    JT_row3(0) += nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                    JT_row3(1) += nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                    JT_row3(2) += nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                }
+            }
+
+            // compute the determinant of the Jacobian
+            Jacobian = JT_row1(0) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
+                       JT_row1(1) * (JT_row2(0) * JT_row3(2) - JT_row3(0) * JT_row2(2)) +
+                       JT_row1(2) * (JT_row2(0) * JT_row3(1) - JT_row3(0) * JT_row2(1));
+            if (Jacobian < 0)
+            {
+                Jacobian = -Jacobian;
+            }
+
+            // compute current position
+            current_position(0) = current_position(1) = current_position(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                current_position(0) += nodal_positions(node_loop, 0) * basis_values(node_loop);
+                current_position(1) += nodal_positions(node_loop, 1) * basis_values(node_loop);
+                current_position(2) += nodal_positions(node_loop, 2) * basis_values(node_loop);
+            }
+
+            // assign contribution to every local node this element has
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                if (map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop)))
+                {
+                    local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
+                    if (inertia_component == 0)
+                    {
+                        delx1 = current_position(1) - inertia_center[1];
+                        delx2 = current_position(2) - inertia_center[2];
+                        design_gradients(local_node_id, 0) += weight_multiply * basis_values(node_loop) * (delx1 * delx1 + delx2 * delx2) * Jacobian;
+                    }
+                    if (inertia_component == 1)
+                    {
+                        delx1 = current_position(0) - inertia_center[0];
+                        delx2 = current_position(2) - inertia_center[2];
+                        design_gradients(local_node_id, 0) += weight_multiply * basis_values(node_loop) * (delx1 * delx1 + delx2 * delx2) * Jacobian;
+                    }
+                    if (inertia_component == 2)
+                    {
+                        delx1 = current_position(0) - inertia_center[0];
+                        delx2 = current_position(1) - inertia_center[1];
+                        design_gradients(local_node_id, 0) += weight_multiply * basis_values(node_loop) * (delx1 * delx1 + delx2 * delx2) * Jacobian;
+                    }
+                    if (inertia_component == 3)
+                    {
+                        delx1 = current_position(0) - inertia_center[0];
+                        delx2 = current_position(1) - inertia_center[1];
+                        design_gradients(local_node_id, 0) -= weight_multiply * basis_values(node_loop) * (delx1 * delx2) * Jacobian;
+                    }
+                    if (inertia_component == 4)
+                    {
+                        delx1 = current_position(0) - inertia_center[0];
+                        delx2 = current_position(2) - inertia_center[2];
+                        design_gradients(local_node_id, 0) -= weight_multiply * basis_values(node_loop) * (delx1 * delx2) * Jacobian;
+                    }
+                    if (inertia_component == 5)
+                    {
+                        delx1 = current_position(1) - inertia_center[1];
+                        delx2 = current_position(2) - inertia_center[2];
+                        design_gradients(local_node_id, 0) -= weight_multiply * basis_values(node_loop) * (delx1 * delx2) * Jacobian;
+                    }
+                }
             }
         }
-      }
     }
-    
-  }
-
 }
 
 /* ----------------------------------------------------------------------
    Compute the volume of each element; estimated with quadrature
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_element_volumes(){
-  //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getLocalNumElements();
-  //local variable for host view in the dual view
-  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  int nodes_per_elem = elem->num_basis();
-  int z_quad,y_quad,x_quad, direct_product_count;
-  size_t local_node_id;
-  LO ielem;
-  GO global_element_index;
+void FEA_Module_Inertial::compute_element_volumes()
+{
+    // local number of uniquely assigned elements
+    size_t nonoverlap_nelements = element_map->getLocalNumElements();
+    // local variable for host view in the dual view
+    const_host_vec_array       all_node_coords = all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    const_host_elem_conn_array nodes_in_elem   = global_nodes_in_elem_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    host_vec_array             Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+    int                        nodes_per_elem  = elem->num_basis();
+    int                        z_quad, y_quad, x_quad, direct_product_count;
+    size_t                     local_node_id;
+    LO                         ielem;
+    GO                         global_element_index;
 
-  real_t Jacobian, weight_multiply;
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
-  real_t pointer_quad_coordinate[num_dim];
-  real_t pointer_quad_coordinate_weight[num_dim];
-  real_t pointer_interpolated_point[num_dim];
-  real_t pointer_JT_row1[num_dim];
-  real_t pointer_JT_row2[num_dim];
-  real_t pointer_JT_row3[num_dim];
-  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
-  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
-  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  ViewCArray<real_t> JT_row1(pointer_JT_row1,num_dim);
-  ViewCArray<real_t> JT_row2(pointer_JT_row2,num_dim);
-  ViewCArray<real_t> JT_row3(pointer_JT_row3,num_dim);
+    real_t Jacobian, weight_multiply;
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+    CArray<real_t>     legendre_nodes_1D(num_gauss_points);
+    CArray<real_t>     legendre_weights_1D(num_gauss_points);
+    real_t             pointer_quad_coordinate[num_dim];
+    real_t             pointer_quad_coordinate_weight[num_dim];
+    real_t             pointer_interpolated_point[num_dim];
+    real_t             pointer_JT_row1[num_dim];
+    real_t             pointer_JT_row2[num_dim];
+    real_t             pointer_JT_row3[num_dim];
+    ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
+    ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
+    ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
+    ViewCArray<real_t> JT_row1(pointer_JT_row1, num_dim);
+    ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
+    ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
 
-  real_t pointer_basis_values[elem->num_basis()];
-  real_t pointer_basis_derivative_s1[elem->num_basis()];
-  real_t pointer_basis_derivative_s2[elem->num_basis()];
-  real_t pointer_basis_derivative_s3[elem->num_basis()];
-  ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+    real_t                                                         pointer_basis_values[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s1[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s2[elem->num_basis()];
+    real_t                                                         pointer_basis_derivative_s3[elem->num_basis()];
+    ViewCArray<real_t>                                             basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t>                                             basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(), num_dim);
 
-  //initialize weights
-  elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-  elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-  
-  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 3;
-    convert_node_order(3) = 2;
-    if(num_dim == 3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 7;
-      convert_node_order(7) = 6;
+    // initialize weights
+    elements::legendre_nodes_1D(legendre_nodes_1D, num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D, num_gauss_points);
+
+    Solver::node_ordering_convention                             active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 3;
+        convert_node_order(3) = 2;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 7;
+            convert_node_order(7) = 6;
+        }
     }
-  }
-  else{
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 2;
-    convert_node_order(3) = 3;
-    if(num_dim==3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 6;
-      convert_node_order(7) = 7;
+    else
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 2;
+        convert_node_order(3) = 3;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 6;
+            convert_node_order(7) = 7;
+        }
     }
-  }
-  
 
-  //loop over elements and use quadrature rule to compute volume from Jacobian determinant
-  for(int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++){
-    global_element_index = element_map->getGlobalElement(nonoverlapping_ielem);
-    ielem = all_element_map->getLocalElement(global_element_index);
-    //debug print
-    //std::cout << "ELEMENT INDEX IS: " << ielem << " " <<global_element_index << std::endl;
+    // loop over elements and use quadrature rule to compute volume from Jacobian determinant
+    for (int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++)
+    {
+        global_element_index = element_map->getGlobalElement(nonoverlapping_ielem);
+        ielem = all_element_map->getLocalElement(global_element_index);
+        // debug print
+        // std::cout << "ELEMENT INDEX IS: " << ielem << " " <<global_element_index << std::endl;
 
-    //acquire set of nodes for this local element
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
-      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      /*
-      if(myrank==1&&nodal_positions(node_loop,2)>10000000){
-        std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
-        std::cout << node_loop+1 <<" " << local_node_id <<" "<< host_elem_conn_(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
-        std::fflush(stdout);
-      }
-      */
-      //std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
+        // acquire set of nodes for this local element
+        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+        {
+            local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
+            nodal_positions(node_loop, 0) = all_node_coords(local_node_id, 0);
+            nodal_positions(node_loop, 1) = all_node_coords(local_node_id, 1);
+            nodal_positions(node_loop, 2) = all_node_coords(local_node_id, 2);
+            /*
+            if(myrank==1&&nodal_positions(node_loop,2)>10000000){
+              std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+              std::cout << node_loop+1 <<" " << local_node_id <<" "<< host_elem_conn_(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
+              std::fflush(stdout);
+            }
+            */
+            // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
+        }
+
+        // initialize element volume
+        Element_Volumes(nonoverlapping_ielem, 0) = 0;
+
+        if (Element_Types(ielem) == elements::elem_types::Hex8)
+        {
+            direct_product_count = std::pow(num_gauss_points, num_dim);
+        }
+
+        // loop over quadrature points
+        for (int iquad = 0; iquad < direct_product_count; iquad++)
+        {
+            // set current quadrature point
+            if (num_dim == 3)
+            {
+                z_quad = iquad / (num_gauss_points * num_gauss_points);
+            }
+            y_quad = (iquad % (num_gauss_points * num_gauss_points)) / num_gauss_points;
+            x_quad = iquad % num_gauss_points;
+            quad_coordinate(0) = legendre_nodes_1D(x_quad);
+            quad_coordinate(1) = legendre_nodes_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate(2) = legendre_nodes_1D(z_quad);
+            }
+
+            // set current quadrature weight
+            quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+            quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+            }
+            else
+            {
+                quad_coordinate_weight(2) = 1;
+            }
+            weight_multiply = quad_coordinate_weight(0) * quad_coordinate_weight(1) * quad_coordinate_weight(2);
+
+            // compute shape functions at this point for the element type
+            elem->basis(basis_values, quad_coordinate);
+
+            // compute all the necessary coordinates and derivatives at this point
+
+            // compute shape function derivatives
+            elem->partial_xi_basis(basis_derivative_s1, quad_coordinate);
+            elem->partial_eta_basis(basis_derivative_s2, quad_coordinate);
+            elem->partial_mu_basis(basis_derivative_s3, quad_coordinate);
+
+            // compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+            // derivative of x,y,z w.r.t s
+            JT_row1(0) = 0;
+            JT_row1(1) = 0;
+            JT_row1(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                JT_row1(0) += nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                JT_row1(1) += nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                JT_row1(2) += nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+            }
+
+            // derivative of x,y,z w.r.t t
+            JT_row2(0) = 0;
+            JT_row2(1) = 0;
+            JT_row2(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                JT_row2(0) += nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                JT_row2(1) += nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                JT_row2(2) += nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+            }
+
+            // derivative of x,y,z w.r.t w
+            JT_row3(0) = 0;
+            JT_row3(1) = 0;
+            JT_row3(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                JT_row3(0) += nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                JT_row3(1) += nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                JT_row3(2) += nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                // debug print
+                /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
+                std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
+                std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
+                std::fflush(stdout);
+                }*/
+            }
+
+            // compute the determinant of the Jacobian
+            Jacobian = JT_row1(0) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
+                       JT_row1(1) * (JT_row2(0) * JT_row3(2) - JT_row3(0) * JT_row2(2)) +
+                       JT_row1(2) * (JT_row2(0) * JT_row3(1) - JT_row3(0) * JT_row2(1));
+            if (Jacobian < 0)
+            {
+                Jacobian = -Jacobian;
+            }
+
+            Element_Volumes(nonoverlapping_ielem, 0) += weight_multiply * Jacobian;
+        }
     }
-    
-    //initialize element volume
-    Element_Volumes(nonoverlapping_ielem,0) = 0;
-    
-    if(Element_Types(ielem)==elements::elem_types::Hex8){
-      direct_product_count = std::pow(num_gauss_points,num_dim);
-    }
-  
-    //loop over quadrature points
-    for(int iquad=0; iquad < direct_product_count; iquad++){
 
-      //set current quadrature point
-      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-      x_quad = iquad % num_gauss_points;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(1) = legendre_nodes_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate(2) = legendre_nodes_1D(z_quad);
-
-      //set current quadrature weight
-      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-      else
-      quad_coordinate_weight(2) = 1;
-      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
-
-      //compute shape functions at this point for the element type
-      elem->basis(basis_values,quad_coordinate);
-
-      //compute all the necessary coordinates and derivatives at this point
-
-      //compute shape function derivatives
-      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
-
-      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-      //derivative of x,y,z w.r.t s
-      JT_row1(0) = 0;
-      JT_row1(1) = 0;
-      JT_row1(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-      }
-
-      //derivative of x,y,z w.r.t t
-      JT_row2(0) = 0;
-      JT_row2(1) = 0;
-      JT_row2(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-      }
-
-      //derivative of x,y,z w.r.t w
-      JT_row3(0) = 0;
-      JT_row3(1) = 0;
-      JT_row3(2) = 0;
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-        //debug print
-        /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
-        std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
-        std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
-        std::fflush(stdout);
-        }*/
-      }
-    
-    
-    //compute the determinant of the Jacobian
-    Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-               JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-               JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-    if(Jacobian<0) Jacobian = -Jacobian;
-    
-    Element_Volumes(nonoverlapping_ielem,0) += weight_multiply*Jacobian;
-    }
-  }
-
-  std::ostream &out = std::cout;
-  Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  //if(myrank==0)
-  //*fos << "Global Element Volumes:" << std::endl;
-  //Global_Element_Volumes->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
+    std::ostream&                       out = std::cout;
+    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    // if(myrank==0)
+    // *fos << "Global Element Volumes:" << std::endl;
+    // Global_Element_Volumes->describe(*fos,Teuchos::VERB_EXTREME);
+    // *fos << std::endl;
 }
 
 /* -------------------------------------------------------------------------------------------
    Communicate ghosts using the current optimization design data
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::comm_variables(Teuchos::RCP<const MV> zp){
-  comm_densities(zp);
+void FEA_Module_Inertial::comm_variables(Teuchos::RCP<const MV> zp)
+{
+    comm_densities(zp);
 }

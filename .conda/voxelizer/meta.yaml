@@ -1,0 +1,32 @@
+{% set version = "1.0.0" %}
+{% set linux_compiler_version = "10.4.0" %}
+{% set macos_compiler_version = "12" %}
+
+package: 
+  name: fierro-voxelizer
+  version: 2
+
+source:
+  path: ../../
+  # - git_url: https://github.com/lanl/Fierro.git
+  #   depth: 1
+
+requirements:
+  build:
+    - cmake >=3.17.0
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - python={{ python }}
+    - pybind11
+    - setuptools
+  host:
+    - python={{ python }}
+    - elements
+    - llvm-openmp
+  run:
+    - python={{ python }}
+    - llvm-openmp
+
+test:
+  imports:
+    - fierro_voxelizer # [x86_64]

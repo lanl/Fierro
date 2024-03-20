@@ -2,6 +2,7 @@
 
 solver="${1}"
 heffte_build_type="${2}"
+kokkos_build_type="${3}"
 
 #inititialize submodules if they aren't downloaded
 [ -d "${libdir}/Elements/elements" ] && echo "Elements submodule exists"
@@ -56,12 +57,23 @@ elif [ "$solver" = "implicit" ]; then
         -D BUILD_PARALLEL_EXPLICIT_SOLVER=OFF
         -D BUILD_IMPLICIT_SOLVER=ON
     )
-elif [ "$solver" = "explicit-evpfft" ]; then
+elif [ "$solver" = "explicit-evpfft" ] || [ "$solver" = "explicit-ls-evpfft" ]; then
+    if [ "$solver" = "explicit-evpfft" ]; then
+        cmake_options+=(
+            -D BUILD_EVPFFT_FIERRO=ON
+        )
+    elif [ "$solver" = "explicit-ls-evpfft" ]; then
+        cmake_options+=(
+            -D BUILD_LS_EVPFFT_FIERRO=ON
+        )
+    fi
+
+    # below options work for both explicit-evpfft and explicit-ls-evpfft
     cmake_options+=(
         -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
         -D BUILD_IMPLICIT_SOLVER=OFF
-        -D BUILD_EVPFFT_FIERRO=ON
         -D CMAKE_PREFIX_PATH="$HEFFTE_INSTALL_DIR;$HDF5_INSTALL_DIR;$ELEMENTS_INSTALL_DIR"
+        -D ABSOLUTE_NO_OUTPUT=ON
     )
     if [ "$heffte_build_type" = "cufft" ]; then
         cmake_options+=(
@@ -76,16 +88,22 @@ elif [ "$solver" = "explicit-evpfft" ]; then
             -D USE_FFTW=ON
         )
     fi
-elif [ "$solver" = "explicit-evp" ]; then
-    cmake_options+=(
-        -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
-        -D BUILD_IMPLICIT_SOLVER=OFF
-        -D BUILD_EVP_FIERRO=ON
-    )
 else
     cmake_options+=(
         -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
         -D BUILD_IMPLICIT_SOLVER=OFF
+    )
+fi
+
+if [ "$kokkos_build_type" = "cuda" ]; then
+    export OMPI_CXX=${TRILINOS_SOURCE_DIR}/packages/kokkos/bin/nvcc_wrapper
+    cmake_options+=(
+        -D CMAKE_CXX_COMPILER=${TRILINOS_SOURCE_DIR}/packages/kokkos/bin/nvcc_wrapper
+    )
+elif [ "$kokkos_build_type" = "hip" ]; then
+    export OMPI_CXX=hipcc
+    cmake_options+=(
+        -D CMAKE_CXX_COMPILER=hipcc
     )
 fi
 

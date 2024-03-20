@@ -16,7 +16,7 @@
 The recommended way to use **Fierro** is through the provided Anaconda package and command line utility. To use the anaconda package, follow the steps for your platform to install [anaconda](https://docs.anaconda.com/free/anaconda/install/index.html)/[miniconda](https://docs.conda.io/en/latest/miniconda.html)/[mamba](https://mamba.readthedocs.io/en/latest/installation.html). Then run the following command in your desired Anaconda environment:
 
 ```
-conda install fierro-cpu -c kwelsh-lanl -c conda-forge
+conda install fierro-cpu -c fierromechanics -c conda-forge
 ```
 
 This will give you access to the **Fierro** command line interface. You can run the following to check that the package was installed correctly:
@@ -30,7 +30,7 @@ The classical ideal gas model is the only material model implemented in the code
 To include your own custom material models, you need to implement them under `Fierro/Parallel-Solvers/User-Material-Interface` and re-build the project.
 Steps:
 1. Create an anaconda environment for your build
-2. Install **Fierro** anaconda dependencies with `conda install elements fierro-trilinos-cpu elements -c kwelsh-lanl`
+2. Install **Fierro** anaconda dependencies with `conda install elements fierro-trilinos-cpu elements -c fierromechanics`
 3. [Clone the code](#cloning-the-code)
 4. [Build the code](#building-the-code)
 

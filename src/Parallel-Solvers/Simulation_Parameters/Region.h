@@ -25,6 +25,7 @@ struct mat_fill_t {
     double speed;
     double sie;
     double den;
+    bool extensive_energy_setting = false;
 };
 
 struct Region : Yaml::DerivedFields, Yaml::ValidatedYaml, mat_fill_t {
@@ -43,15 +44,18 @@ struct Region : Yaml::DerivedFields, Yaml::ValidatedYaml, mat_fill_t {
     }
 
     void derive() {
-      if (sie.has_value() == ie.has_value())
+      if (sie.has_value() == ie.has_value()){
         throw Yaml::ConfigurationException("Specify values for exactly one of: energy (ie) or specific energy (sie).");
-
+      }
+      
       mat_fill_t::u = u.value_or(0);
       mat_fill_t::v = v.value_or(0);
       mat_fill_t::w = w.value_or(0);
 
-      if (ie.has_value())
+      if (ie.has_value()){
+        mat_fill_t::extensive_energy_setting = true;
         sie = ie.value()  / (den * volume.get_volume());
+      }
 
       mat_fill_t::sie = sie.value_or(0);
       // Remove ie now that we have set sie.

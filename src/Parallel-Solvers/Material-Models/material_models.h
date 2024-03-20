@@ -7,114 +7,102 @@ using namespace mtr;
 struct eos_t;
 struct strength_t;
 
-/* EOSParent */
-class EOSParent {
-public:
-
-  KOKKOS_FUNCTION
-  EOSParent();
-
-  KOKKOS_FUNCTION
-  virtual ~EOSParent();
-
-  KOKKOS_FUNCTION
-  virtual int calc_sound_speed(
+struct eos_t {
+  void (*calc_sound_speed)(
     const DViewCArrayKokkos <double> &elem_pres,
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
-    const DCArrayKokkos <double> &state_vars,
-    const DCArrayKokkos <double> &global_vars,
+    const DCArrayKokkos <double> &eos_state_vars,
+    const DCArrayKokkos <double> &strength_state_vars,
+    const DCArrayKokkos <double> &eos_global_vars,
+    const DCArrayKokkos <double> &strength_global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
     const double den,
-    const double sie) = 0;
+    const double sie) = nullptr;
 
-  KOKKOS_FUNCTION
-  virtual double calc_sound_speed_gradient_density(
+  double (*calc_sound_speed_gradient_density)(
     const DViewCArrayKokkos <double> &elem_pres,
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
-    const DCArrayKokkos <double> &state_vars,
-    const DCArrayKokkos <double> &global_vars,
+    const DCArrayKokkos <double> &eos_state_vars,
+    const DCArrayKokkos <double> &strength_state_vars,
+    const DCArrayKokkos <double> &eos_global_vars,
+    const DCArrayKokkos <double> &strength_global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
     const double den,
-    const double sie){ return 0;}
+    const double sie) = nullptr;
 
-  KOKKOS_FUNCTION
-  virtual double calc_sound_speed_gradient_internal_energy(
+  double (*calc_sound_speed_gradient_internal_energy)(
     const DViewCArrayKokkos <double> &elem_pres,
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
-    const DCArrayKokkos <double> &state_vars,
-    const DCArrayKokkos <double> &global_vars,
+    const DCArrayKokkos <double> &eos_state_vars,
+    const DCArrayKokkos <double> &strength_state_vars,
+    const DCArrayKokkos <double> &eos_global_vars,
+    const DCArrayKokkos <double> &strength_global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
     const double den,
-    const double sie){ return 0;}
+    const double sie) = nullptr;
 
-  KOKKOS_FUNCTION
-  virtual int calc_pressure(
+  void (*calc_pressure)(
     const DViewCArrayKokkos <double> &elem_pres,
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
-    const DCArrayKokkos <double> &state_vars,
-    const DCArrayKokkos <double> &global_vars,
+    const DCArrayKokkos <double> &eos_state_vars,
+    const DCArrayKokkos <double> &strength_state_vars,
+    const DCArrayKokkos <double> &eos_global_vars,
+    const DCArrayKokkos <double> &strength_global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
     const double den,
-    const double sie) = 0;
+    const double sie) = nullptr;
 
-  KOKKOS_FUNCTION
-  virtual double calc_pressure_gradient_density(
+  double (*calc_pressure_gradient_density)(
     const DViewCArrayKokkos <double> &elem_pres,
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
-    const DCArrayKokkos <double> &state_vars,
-    const DCArrayKokkos <double> &global_vars,
+    const DCArrayKokkos <double> &eos_state_vars,
+    const DCArrayKokkos <double> &strength_state_vars,
+    const DCArrayKokkos <double> &eos_global_vars,
+    const DCArrayKokkos <double> &strength_global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
     const double den,
-    const double sie){ return 0;}
+    const double sie) = nullptr;
 
-  KOKKOS_FUNCTION
-  virtual double calc_pressure_gradient_internal_energy(
+  double (*calc_pressure_gradient_internal_energy)(
     const DViewCArrayKokkos <double> &elem_pres,
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
-    const DCArrayKokkos <double> &state_vars,
-    const DCArrayKokkos <double> &global_vars,
+    const DCArrayKokkos <double> &eos_state_vars,
+    const DCArrayKokkos <double> &strength_state_vars,
+    const DCArrayKokkos <double> &eos_global_vars,
+    const DCArrayKokkos <double> &strength_global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
     const double den,
-    const double sie){ return 0;}
+    const double sie) = nullptr;
 };
 
-
-/* sterngth_parent */
-class StrengthParent {
-public:
-
-  KOKKOS_FUNCTION
-  StrengthParent();
-
-  KOKKOS_FUNCTION
-  virtual ~StrengthParent();
-
-  KOKKOS_FUNCTION
-  virtual int calc_stress(
+struct strength_t {
+  void (*calc_stress) (
     const DViewCArrayKokkos <double> &elem_pres,
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
-    const DCArrayKokkos <double> &state_vars,
-    const DCArrayKokkos <double> &global_vars,
+    const DCArrayKokkos <double> &eos_state_vars,
+    const DCArrayKokkos <double> &strength_state_vars,
+    const DCArrayKokkos <double> &eos_global_vars,
+    const DCArrayKokkos <double> &strength_global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
     const double den,
@@ -127,24 +115,17 @@ public:
     const double dt,
     const double rk_alpha,
     const size_t cycle,
-    const size_t rk_level) = 0;
-  
-};
-
-
-struct eos_t {
-	EOSParent *model = nullptr;
-};
-
-struct strength_t {
-	StrengthParent *model = nullptr;
+    const size_t rk_level,
+    const double time) = nullptr;
 };
 
 void init_state_vars(
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &state_vars,
-  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &eos_state_vars,
+  const DCArrayKokkos <double> &strength_state_vars,
+  const DCArrayKokkos <double> &eos_global_vars,
+  const DCArrayKokkos <double> &strength_global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems);
 
@@ -152,8 +133,10 @@ void init_strength_model(
   DCArrayKokkos <strength_t> &elem_strength,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &state_vars,
-  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &eos_state_vars,
+  const DCArrayKokkos <double> &strength_state_vars,
+  const DCArrayKokkos <double> &eos_global_vars,
+  const DCArrayKokkos <double> &strength_global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems);
 
@@ -161,8 +144,10 @@ void init_eos_model(
   DCArrayKokkos <eos_t> &elem_eos,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &state_vars,
-  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &eos_state_vars,
+  const DCArrayKokkos <double> &strength_state_vars,
+  const DCArrayKokkos <double> &eos_global_vars,
+  const DCArrayKokkos <double> &strength_global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems);
 
@@ -170,17 +155,21 @@ void destroy_strength_model(
   DCArrayKokkos <strength_t> &elem_strength,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &state_vars,
-  const DCArrayKokkos <double> &global_vars,
-  const DCArrayKokkos <double> elem_user_output_vars,
+  const DCArrayKokkos <double> &eos_state_vars,
+  const DCArrayKokkos <double> &strength_state_vars,
+  const DCArrayKokkos <double> &eos_global_vars,
+  const DCArrayKokkos <double> &strength_global_vars,
+  const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems);
 
 void destroy_eos_model(
   DCArrayKokkos <eos_t> &elem_eos,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &state_vars,
-  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &eos_state_vars,
+  const DCArrayKokkos <double> &strength_state_vars,
+  const DCArrayKokkos <double> &eos_global_vars,
+  const DCArrayKokkos <double> &strength_global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems);
 

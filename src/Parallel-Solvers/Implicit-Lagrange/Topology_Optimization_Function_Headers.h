@@ -44,6 +44,7 @@
 #include "Moment_of_Inertia_Constraint.h"
 #include "Bounded_Strain_Constraint.h"
 #include "Strain_Energy_Constraint.h"
+#include "Displacement_Constraint.h"
 #include "Strain_Energy_Minimize.h"
 #include "Strain_Energy_Objective.h"
 #include "Heat_Capacity_Potential_Minimize.h"

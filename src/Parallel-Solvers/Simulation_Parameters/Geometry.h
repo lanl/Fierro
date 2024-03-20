@@ -226,6 +226,7 @@ struct Volume : Yaml::ValidatedYaml {
       }
     }
 };
+
 IMPL_YAML_SERIALIZABLE_FOR(Volume, type, radius1, radius2, x1, x2, y1, y2, z1, z2, stl_file_path, vtk_file_path, num_voxel_x, num_voxel_y, num_voxel_z, orig_x, orig_y, orig_z, length_x, length_y, length_z)
 
 // -------------------------------------------------------

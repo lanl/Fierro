@@ -75,13 +75,13 @@ materials:
     elastic_modulus: 10
     poisson_ratio: 0.3
     q1: 1.0
-    q2: 1.3333
+    q2: 1.33
     q1ex: 1.0
     q2ex: 0.0
-    global_vars:
-      - 1.666666666666667 #gamma
-      - 1.0E-14 #cmin
-      - 1.0 #c_v
+    eos_global_vars:
+      - 1.666666666666667
+      - 1.0E-14
+      - 1.0
 
 regions:
   - volume:

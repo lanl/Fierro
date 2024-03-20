@@ -41,10 +41,15 @@
 #define YAML_BASE_H
 
 #include "Yaml.hpp"
+#include <array>
 
 namespace Yaml {
     template<typename T> void serialize(const T& v, Yaml::Node& node);
     template<typename T> void deserialize(T& v, Yaml::Node& node, bool raw=false);
+    template<typename T, size_t N> void serialize(const T(&v)[N], Yaml::Node& node);
+    template<typename T, size_t N> void deserialize(T(&v)[N], Yaml::Node& node, bool raw=false);
+    template<typename T, size_t N> void serialize(const std::array<T, N>& v, Yaml::Node& node);
+    template<typename T, size_t N> void deserialize(std::array<T, N>& v, Yaml::Node& node, bool raw=false);
     
     template<>
     inline void deserialize<bool>(bool& v, Yaml::Node& node, bool raw) {
