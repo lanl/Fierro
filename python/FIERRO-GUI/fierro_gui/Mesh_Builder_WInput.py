@@ -63,7 +63,7 @@ def Mesh_Builder_WInput(self, GLOBAL_MESH, global_mesh_dir):
 #    fierro_mesh_builder.build_mesh_from_file(GLOBAL_MESH)
     
     # View Global Mesh in Paraview Window
-    mesh_dir = 'vtk/mesh.vtk'
+    mesh_dir = global_mesh_dir + '/mesh.vtk'
     self.mesh = pvsimple.LegacyVTKReader(FileNames = mesh_dir)
     pvsimple.SetDisplayProperties(Representation = "Wireframe")
     pvsimple.Show(self.mesh, self.render_view)

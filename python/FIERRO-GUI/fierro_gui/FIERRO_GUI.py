@@ -175,14 +175,15 @@ class FIERRO_GUI(Ui_MainWindow):
             else:
                 # Run voxelization executable
                 executable_path = "/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/build-fierro-serial/bin/fierro-voxelizer"
-                arguments = [b3_filename[0], self.VTK_OUTPUT, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INOriginX.text(), self.INOriginY.text(), self.INOriginZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
+                vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
+                arguments = [b3_filename[0], vtk_location, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INOriginX.text(), self.INOriginY.text(), self.INOriginZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
                 command = [executable_path] + arguments
                 process = subprocess.Popen(command)
                 process.wait()
                     
                 # Paraview window
                 pvsimple.Delete(self.stl)
-                self.voxel_reader = pvsimple.LegacyVTKReader(FileNames = self.VTK_OUTPUT)
+                self.voxel_reader = pvsimple.LegacyVTKReader(FileNames = vtk_location)
                 pvsimple.SetDisplayProperties(Representation = "Surface")
                 text = self.INPartName.text()
                 self.variable_name = f"threshold_{text}"
@@ -206,12 +207,23 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.TParts.setItem(row, 8, QTableWidgetItem(self.INNumberOfVoxelsY.text()))
                 self.TParts.setItem(row, 9, QTableWidgetItem(self.INNumberOfVoxelsZ.text()))
                 self.INPartName.clear()
+                self.INOriginX.clear()
+                self.INOriginY.clear()
+                self.INOriginZ.clear()
+                self.INLengthX.clear()
+                self.INLengthY.clear()
+                self.INLengthZ.clear()
+                self.INNumberOfVoxelsX.clear()
+                self.INNumberOfVoxelsY.clear()
+                self.INNumberOfVoxelsZ.clear()
                 
                 # Add part as an option for material assignment
                 self.INPartMaterial.clear()
                 self.INPartMaterial.addItem("global")
                 for i in range(self.TParts.rowCount()):
                     self.INPartMaterial.addItem(self.TParts.item(i,0).text())
+                for i in range(self.TBasicGeometries.rowCount()):
+                    self.INPartMaterial.addItem(self.TBasicGeometries.item(i,0).text())
                 
         self.BVoxelizeGeometry.clicked.connect(voxelize_geometry_click)
         
@@ -240,6 +252,8 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.INPartMaterial.addItem("global")
                 for i in range(self.TParts.rowCount()):
                     self.INPartMaterial.addItem(self.TParts.item(i,0).text())
+                for i in range(self.TBasicGeometries.rowCount()):
+                    self.INPartMaterial.addItem(self.TBasicGeometries.item(i,0).text())
         self.BDeleteGeometry.clicked.connect(delete_part)
             
         # Global Mesh Generation
@@ -402,9 +416,8 @@ class FIERRO_GUI(Ui_MainWindow):
         if dialog.exec() == QDialog.Accepted:
             self.directory = dialog.get_directory()
             # Create a temp file for the voxelization
-            voxelizer_dir = os.path.join(self.directory, 'voxelizer')
-            os.makedirs(voxelizer_dir, exist_ok=True)
-            self.VTK_OUTPUT = os.path.join(voxelizer_dir, 'VTK_Geometry.vtk')
+            self.voxelizer_dir = os.path.join(self.directory, 'voxelizer')
+            os.makedirs(self.voxelizer_dir, exist_ok=True)
             
             # Create temp files for evpfft
             evpfft_dir = os.path.join(self.directory, 'evpfft')

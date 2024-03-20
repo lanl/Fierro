@@ -53,9 +53,10 @@ def Explicit_SGH_WInput(self):
             type = f'  - volume:' + '\n' \
                    f'      type: global' + '\n'
         else:
+            vtk_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.Tassignmat.item(i,0).text()) + '.vtk'
             type = f'  - volume:' + '\n' \
                    f'      type: vtk' + '\n' \
-                   f'      stl_file_path: {self.VTK_OUTPUT}' + '\n'
+                   f'      stl_file_path: {vtk_path}' + '\n'
         InputFile.write(type)
         
         for j in range(self.TMaterialsSGH.rowCount()):
