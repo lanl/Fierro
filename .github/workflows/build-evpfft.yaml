@@ -1,7 +1,8 @@
 name: Ubuntu Build EVPFFT
 
 # Controls when the workflow will run. Currently manually ran
-on: workflow_dispatch
+on: 
+  workflow_dispatch:
     
 jobs:
   build:
