@@ -37,7 +37,7 @@ jobs:
       shell: bash
     - name: Install fftw-dev
       run:
-        sudo apt-get install -y fftw-dev
+         sudo apt-get -y install libfftw3-dev
       shell: bash
     # - name: Install HDF5-dev
     #   run:
