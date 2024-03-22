@@ -1,8 +1,10 @@
 name: Ubuntu Build EVPFFT
 
+# Controls when the workflow will run
 on:
-  branch_protection_rule:
-    types: [created, deleted]
+  # Triggers the workflow on push or pull request events but only for the master branch
+  pull_request:
+    types: [opened, reopened]
     
 jobs:
   build:
