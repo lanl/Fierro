@@ -41,7 +41,7 @@ jobs:
       shell: bash
     - name: Install HDF5-dev
       run:
-        sudo apt-get install libhdf5-openmpi-dev 
+        sudo apt-get install libhdf5-dev libhdf5-openmpi-dev 
       shell: bash
       
     - name: Run build script
