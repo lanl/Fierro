@@ -53,7 +53,7 @@ jobs:
     - name: Run build script
       run: |
          chmod +x ./scripts/build-scripts/build_evpfft.sh
-         ./scripts/build-scripts/build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=openmp  --machine=linux --num_jobs=4
+         ./scripts/build-scripts/build_evpfft.sh --heffte_build_type=fftw --build_fftw --build_hdf5 --kokkos_build_type=openmp  --machine=linux --num_jobs=4
       working-directory: ./src/EVPFFT
       shell: bash
 
