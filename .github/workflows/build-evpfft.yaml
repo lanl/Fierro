@@ -1,10 +1,7 @@
 name: Ubuntu Build EVPFFT
 
-# Controls when the workflow will run
-on:
-  # Triggers the workflow on push or pull request events but only for the master branch
-  pull_request:
-    types: [opened, reopened]
+# Controls when the workflow will run. Currently manually ran
+on: workflow_dispatch
     
 jobs:
   build:
@@ -23,10 +20,6 @@ jobs:
       run:
         sudo apt-get install build-essential
       shell: bash
-    # - name: Install LaPack
-    #   run:
-    #     sudo apt-get install libblas-dev liblapack-dev
-    #   shell: bash
     - name: Install MPI
       run: |
         sudo apt-get install libopenmpi-dev openmpi-bin
@@ -35,30 +28,9 @@ jobs:
       run:
         sudo apt-get -y install cmake
       shell: bash
-    # - name: Install fftw-dev
-    #   run:
-    #      sudo apt-get -y install libfftw3-dev
-    #   shell: bash
-    # - name: Install HDF5-dev
-    #   run:
-    #     # sudo apt-get install -y libhdf5-dev libhdf5-serial-dev libhdf5-openmpi-dev 
-    #     sudo apt-get install -y libhdf5-dev 
-    #   shell: bash
-    # - name: Install HDF5-dev openmpi
-    #   run:
-    #     # sudo apt-get install -y libhdf5-dev
-    #     sudo apt-get install -y libhdf5-openmpi-dev
-    #   shell: bash
-      
     - name: Run build script
       run: |
-         chmod +x ./scripts/build-scripts/build_evpfft.sh
+         chmod +x ./scripts/build-scripts/build_evpfft.sh # Make sure permission is correct
          ./scripts/build-scripts/build_evpfft.sh --heffte_build_type=fftw --build_fftw --build_hdf5 --kokkos_build_type=openmp  --machine=linux --num_jobs=4
       working-directory: ./src/EVPFFT
       shell: bash
-
-    # - name: Run tests
-    #   run: |
-    #      python3 test_fierro.py
-    #   working-directory: ./integrated-tests/Test-scripts
-    #   shell: bash
