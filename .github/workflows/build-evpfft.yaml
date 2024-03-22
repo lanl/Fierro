@@ -1,7 +1,10 @@
 name: Ubuntu Build
 
 on: workflow_dispatch
-
+on:
+  branch_protection_rule:
+    types: [created, deleted]
+    
 jobs:
   build:
 
