@@ -5,19 +5,41 @@ import os.path
 import sys
 import math
 
-executable = "./../../build-fierro-openmp/bin/fierro-parallel-explicit"
+
+solvers = ["fierro-parallel-explicit"]
+
+executables = []
+tests = []
+
+# Add paths to all tested executables
+for i in range(len(solvers)):
+    executables.append("./../../build-fierro-openmp/bin/"+solvers[i])
+
+# Check that each executable exists
+for i in range(len(solvers)):
+    if not os.path.exists(executables[i]):
+        raise ValueError(solvers[i]+" executable not found in build-fierro-openmp directory")
+\
+# Add names of each test
+parallel_explicit_tests = ["Noh", "Sedov", "Sod"]
+# parallel_implicit_tests = ["Beam"]
 
 inputs = []
 standard_results = []
 
-tests = ["Noh", "Sedov", "Sod"]
+tests.append(parallel_explicit_tests)
+# tests.append(parallel_implicit_tests)
 
 position_keyword = "POINTS"
 
-for i in range(len(tests)):
-    inputs.append("Solver-Inputs/SGH_"+tests[i]+"_simple.yaml")
-    standard_results.append("standard-results/SGH/"+tests[i]+"/vtk/data/VTK0.vtk")
-
+for i in range(len(solvers)):
+    tmp1 = []
+    tmp2 = []
+    for j in range(len(tests[i])):
+        tmp1.append("Solver-Inputs/"+solvers[i]+"/"+tests[i][j]+".yaml")
+        tmp2.append("standard-results/"+solvers[i]+"/"+tests[i][j]+"/vtk/data/VTK0.vtk")
+    inputs.append(tmp1)
+    standard_results.append(tmp2)
 
 # Extract vector valued data from vtk output file
 def extract_vector_data(filename, keyword):
@@ -100,24 +122,31 @@ def magnitude(array):
     return mag
 
 # Run each test
-for i in range(len(tests)):
-    
-    # Run simulation
-    print("Running "+tests[i])
-    os.system(executable + ' ' + inputs[i])
+for i in range(len(solvers)):
+    for j in range(len(tests[i])):
+        
+        # Run simulation
+        print("Running "+tests[i][j])
+        os.system(executables[i] + ' ' + inputs[i][j])
 
-    GT_positions = extract_vector_data(standard_results[i], position_keyword)
+        GT_positions = extract_vector_data(standard_results[i][j], position_keyword)
 
-    # Read simulation results
-    results_filename = "vtk/data/VTK0.vtk"
+        # Read simulation results
+        results_filename = "vtk/data/VTK0.vtk"
 
-    results_positions = extract_vector_data(results_filename, position_keyword)
-    position_diff = percent_difference_vectors(GT_positions, results_positions)
+        if os.path.exists(results_filename):
+            print("Simulation Finished")
+        else:
+            print("Simulation did not finish")
+            raise ValueError("Simulation did not finish")
+
+        results_positions = extract_vector_data(results_filename, position_keyword)
+        position_diff = percent_difference_vectors(GT_positions, results_positions)
 
 
-    for i in range(len(position_diff)):
-        if position_diff[i] >= 1.0e-6:
-            raise ValueError(" ****************** ERROR: Position difference out of range for "+tests[i]+" problem ****************** ")
+        for k in range(len(position_diff)):
+            if position_diff[k] >= 1.0e-6:
+                raise ValueError(" ****************** ERROR: Position difference out of range for "+tests[i][j]+" problem ****************** ")
 
-    print("Removing simulation outputs")
-    os.system('rm -rf  vtk' )
+        print("Removing simulation outputs")
+        os.system('rm -rf  vtk' )
