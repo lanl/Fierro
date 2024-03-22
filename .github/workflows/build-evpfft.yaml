@@ -23,10 +23,10 @@ jobs:
       run:
         sudo apt-get install build-essential
       shell: bash
-    - name: Install LaPack
-      run:
-        sudo apt-get install libblas-dev liblapack-dev
-      shell: bash
+    # - name: Install LaPack
+    #   run:
+    #     sudo apt-get install libblas-dev liblapack-dev
+    #   shell: bash
     - name: Install MPI
       run: |
         sudo apt-get install libopenmpi-dev openmpi-bin
@@ -35,10 +35,10 @@ jobs:
       run:
         sudo apt-get -y install cmake
       shell: bash
-    - name: Install fftw-dev
-      run:
-         sudo apt-get -y install libfftw3-dev
-      shell: bash
+    # - name: Install fftw-dev
+    #   run:
+    #      sudo apt-get -y install libfftw3-dev
+    #   shell: bash
     # - name: Install HDF5-dev
     #   run:
     #     # sudo apt-get install -y libhdf5-dev libhdf5-serial-dev libhdf5-openmpi-dev 
