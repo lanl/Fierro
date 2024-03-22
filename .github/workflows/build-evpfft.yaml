@@ -1,0 +1,54 @@
+name: Ubuntu Build
+
+on: workflow_dispatch
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: update the package list
+      run:
+        sudo apt-get update
+      shell: bash
+    - name: Install build tools
+      run:
+        sudo apt-get install build-essential
+      shell: bash
+    - name: Install LaPack
+      run:
+        sudo apt-get install libblas-dev liblapack-dev
+      shell: bash
+    - name: Install MPI
+      run: |
+        sudo apt-get install libopenmpi-dev openmpi-bin
+        echo "MPI_OPTS=--oversubscribe" >> $GITHUB_ENV
+    - name: Install cmake
+      run:
+        sudo apt-get -y install cmake
+      shell: bash
+    - name: Install fftw-dev
+      run:
+        sudo apt-get install -y fftw-dev
+      shell: bash
+    - name: Install HDF5-dev
+      run:
+        sudo apt install libhdf5-mpi-dev
+      shell: bash
+      
+    - name: Run build script
+      run: |
+         chmod +x ./scripts/build-scripts/build_evpfft.sh
+         ./scripts/build-scripts/build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=openmp  --machine=linux --num_jobs=4
+      working-directory: ./src/EVPFFT
+      shell: bash
+
+    # - name: Run tests
+    #   run: |
+    #      python3 test_fierro.py
+    #   working-directory: ./integrated-tests/Test-scripts
+    #   shell: bash
