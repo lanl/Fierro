@@ -1,4 +1,4 @@
-name: Ubuntu Build
+name: Ubuntu Build EVPFFT
 
 on:
   branch_protection_rule:
