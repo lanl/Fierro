@@ -35,14 +35,14 @@ jobs:
       run:
         sudo apt-get -y install cmake
       shell: bash
-    - name: Install fftw-dev
-      run:
-        sudo apt-get install -y fftw-dev
-      shell: bash
-    - name: Install HDF5-dev
-      run:
-        sudo apt install libhdf5-mpi-dev
-      shell: bash
+    # - name: Install fftw-dev
+    #   run:
+    #     sudo apt-get install libfftw3-dev
+    #   shell: bash
+    # - name: Install HDF5-dev
+    #   run:
+    #     sudo apt install libhdf5-mpi-dev
+    #   shell: bash
       
     - name: Run build script
       run: |
