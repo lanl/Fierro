@@ -95,16 +95,6 @@ struct Volume : Yaml::ValidatedYaml {
                   
           case VOLUME_TYPE::stl_to_voxel:
             fill_this = false;  // default is no, don't fill it
-              
-//            orig_x = x1;
-//            orig_y = y1;
-//            orig_z = z1;
-//            std::cout << "ORIGIN INFO: " << orig_x << "," << orig_y << "," << orig_z << std::endl;
-                
-//            voxel_dx = (x2-x1)/((double)num_voxel_x);
-//            voxel_dy = (y2-y1)/((double)num_voxel_y);
-//            voxel_dz = (z2-z1)/((double)num_voxel_z);
-//            std::cout << voxel_dx << voxel_dy << voxel_dz << std::endl;
             
             // find the closest element in the voxel mesh to this element
             i0_real = (elem_coords[0] - orig_x)/(voxel_dx);
@@ -131,25 +121,13 @@ struct Volume : Yaml::ValidatedYaml {
             } // end if
             
             // check for periodic
-            if (elem_coords[0] > num_voxel_x*voxel_dx || elem_coords[1] > num_voxel_y*voxel_dy || elem_coords[2] > num_voxel_z*voxel_dz) {
+            if (elem_coords[0] > num_voxel_x*voxel_dx+orig_x || elem_coords[1]> num_voxel_y*voxel_dy+orig_y || elem_coords[2] >num_voxel_z*voxel_dz+orig_z || elem_coords[0] < orig_x ||elem_coords[1] < orig_y || elem_coords[2] < orig_z) {
                 fill_this = false;
             }
             return fill_this;
               
           case VOLUME_TYPE::vtk:
             fill_this = false;  // default is no, don't fill it
-              
-            // Get variables from vtk file
-//              std::cout << "voxel dx: " << voxel_dx << std::endl;
-//              std::cout << "voxel dy: " << voxel_dy << std::endl;
-//              std::cout << "voxel dz: " << voxel_dz << std::endl;
-//              std::cout << "origin x: " << orig_x << std::endl;
-//              std::cout << "origin y: " << orig_y << std::endl;
-//              std::cout << "origin z: " << orig_z << std::endl;
-//              std::cout << "number of voxels x: " << num_voxel_x << std::endl;
-//              std::cout << "number of voxels y: " << num_voxel_y << std::endl;
-//              std::cout << "number of voxels z: " << num_voxel_z << std::endl;
-//            auto [voxel_elem_values, voxel_dx, voxel_dy, voxel_dz, orig_x, orig_y, orig_z, num_voxel_x, num_voxel_y, num_voxel_z] = user_voxel_init(stl_file_path);
             
             // find the closest element in the voxel mesh to this element
             i0_real = (elem_coords[0] - orig_x)/(voxel_dx);
@@ -176,7 +154,7 @@ struct Volume : Yaml::ValidatedYaml {
             } // end if
             
             // check for periodic
-            if (elem_coords[0] > num_voxel_x*voxel_dx || elem_coords[1] > num_voxel_y*voxel_dy || elem_coords[2] > num_voxel_z*voxel_dz) {
+            if (elem_coords[0] > num_voxel_x*voxel_dx+orig_x || elem_coords[1] > num_voxel_y*voxel_dy+orig_y || elem_coords[2] > num_voxel_z*voxel_dz+orig_z || elem_coords[0] < orig_x || elem_coords[1] < orig_y || elem_coords[2] < orig_z) {
                 fill_this = false;
             }
             return fill_this;
@@ -474,10 +452,9 @@ std::tuple<CArray<bool>, double, double, double, double, double, double, size_t,
     double dz = Lz/((double) num_elems_k);
     
     // element mesh origin
-    double orig_x = pt_coords_x(0);
-    double orig_y = pt_coords_y(0);
-    double orig_z = pt_coords_z(0);
-    
+    double orig_x = 0.5 * (pt_coords_x(0) + pt_coords_x(1));
+    double orig_y = 0.5 * (pt_coords_y(0) + pt_coords_y(1));
+    double orig_z = 0.5 * (pt_coords_z(0) + pt_coords_z(1));
     
     // look for CELLS
     i = 0;

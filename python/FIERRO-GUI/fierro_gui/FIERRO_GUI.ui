@@ -2044,7 +2044,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <enum>QFrame::NoFrame</enum>
           </property>
           <property name="currentIndex">
-           <number>3</number>
+           <number>9</number>
           </property>
           <widget class="QWidget" name="TitlePage">
            <property name="minimumSize">
@@ -3561,7 +3561,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
             <item alignment="Qt::AlignTop">
              <widget class="QStackedWidget" name="BasicGeometries">
               <property name="currentIndex">
-               <number>2</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="BoxProperties">
                <layout class="QVBoxLayout" name="verticalLayout_35">
