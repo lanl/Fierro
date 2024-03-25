@@ -27,7 +27,7 @@ requirements:
   host:
     - libblas
     - liblapack
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - boost-cpp
     - libnetcdf
     - libmatio

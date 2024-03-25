@@ -18,6 +18,7 @@ build:
 requirements:
   build:
     - cmake >=3.17.0
+    - make
     - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]

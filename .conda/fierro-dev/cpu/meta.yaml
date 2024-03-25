@@ -1,5 +1,6 @@
 {% set version = "1.0.0" %}
-{% set compiler_version = "10.4.0" %}
+{% set linux_compiler_version = "10.4.0" %}
+{% set macos_compiler_version = "12" %}
 
 package:
   name: fierro-dev
@@ -13,9 +14,23 @@ build:
     - PLATFORM={{ target_platform }}
 
 requirements:
-  run:
+  host:
     - cmake >=3.17
-    - {{ compiler('cxx') }}={{ compiler_version }}
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('fortran') }}
+    - fierro-trilinos-cpu
+    - mpi
+    - elements
+  run:
+    #- cmake >=3.17
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('fortran') }}
     - fierro-trilinos-cpu
     - mpi
     - elements
