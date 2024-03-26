@@ -257,12 +257,14 @@ class FIERRO_GUI(Ui_MainWindow):
         self.BDeleteGeometry.clicked.connect(delete_part)
             
         # Global Mesh Generation
+        # Deactivate 2D option for now
+        self.INDimension.model().item(1).setEnabled(False)
         def mesh_class():
             if str(self.INCoordinateSystem.currentText()) == 'Rectangular':
                 if str(self.INDimension.currentText()) == '2D':
-                    self.MeshInputs2.setCurrentIndex(0)
-                else:
                     self.MeshInputs2.setCurrentIndex(1)
+                else:
+                    self.MeshInputs2.setCurrentIndex(0)
             else:
                 if str(self.INDimension.currentText()) == '2D':
                     self.MeshInputs2.setCurrentIndex(2)

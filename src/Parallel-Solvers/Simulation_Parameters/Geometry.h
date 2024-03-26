@@ -38,9 +38,9 @@ struct Volume : Yaml::ValidatedYaml {
     size_t num_voxel_z;
     mtr::CArray<bool> voxel_elem_values;
     std::string vtk_file_path = "stl_to_vtk.vtk"; // Define this later on
-    double orig_x;
-    double orig_y;
-    double orig_z;
+    double orig_x = 0;
+    double orig_y = 0;
+    double orig_z = 0;
     double voxel_dx;
     double voxel_dy;
     double voxel_dz;
@@ -87,9 +87,10 @@ struct Volume : Yaml::ValidatedYaml {
                   && radius <= radius2 );
 
           case VOLUME_TYPE::sphere:
-            radius = sqrt( elem_coords[0]*elem_coords[0] +
-                            elem_coords[1]*elem_coords[1] +
-                            elem_coords[2]*elem_coords[2] );
+              std::cout << "sphere origin: " << orig_x << "," << orig_y << "," << orig_z << std::endl;
+            radius = sqrt( (elem_coords[0] - orig_x)*(elem_coords[0] - orig_x) +
+                             (elem_coords[1] - orig_y)*(elem_coords[1] - orig_y) +
+                             (elem_coords[2] - orig_z)*(elem_coords[2] - orig_z) );
             return ( radius >= radius1
                   && radius <= radius2 );
                   

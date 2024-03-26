@@ -53,10 +53,33 @@ def Explicit_SGH_WInput(self):
             type = f'  - volume:' + '\n' \
                    f'      type: global' + '\n'
         else:
-            vtk_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.Tassignmat.item(i,0).text()) + '.vtk'
-            type = f'  - volume:' + '\n' \
-                   f'      type: vtk' + '\n' \
-                   f'      stl_file_path: {vtk_path}' + '\n'
+            for k in range(self.TParts.rowCount()):
+                if self.Tassignmat.item(i,0).text() == self.TParts.item(k,0).text():
+                    vtk_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.Tassignmat.item(i,0).text()) + '.vtk'
+                    type = f'  - volume:' + '\n' \
+                           f'      type: vtk' + '\n' \
+                           f'      stl_file_path: {vtk_path}' + '\n'
+                    break
+            for kk in range(self.TBasicGeometries.rowCount()):
+                if self.Tassignmat.item(i,0).text() == self.TBasicGeometries.item(kk,0).text():
+                    if self.TBasicGeometries.item(kk,1).text() == 'box':
+                        type = f'  - volume:' + '\n' \
+                               f'      type: {self.TBasicGeometries.item(kk,1).text()}' + '\n' \
+                               f'      x1: {self.TBasicGeometries.item(kk,2).text()}' + '\n' \
+                               f'      x2: {self.TBasicGeometries.item(kk,3).text()}' + '\n' \
+                               f'      y1: {self.TBasicGeometries.item(kk,4).text()}' + '\n' \
+                               f'      y2: {self.TBasicGeometries.item(kk,5).text()}' + '\n' \
+                               f'      z1: {self.TBasicGeometries.item(kk,6).text()}' + '\n' \
+                               f'      z2: {self.TBasicGeometries.item(kk,7).text()}' + '\n'
+                        break
+                    if self.TBasicGeometries.item(kk,1).text() == 'sphere':
+                        type = f'  - volume:' + '\n' \
+                               f'      type: {self.TBasicGeometries.item(kk,1).text()}' + '\n' \
+                               f'      radius1: {self.TBasicGeometries.item(kk,8).text()}' + '\n' \
+                               f'      radius2: {self.TBasicGeometries.item(kk,9).text()}' + '\n' \
+                               f'      orig_x: {self.TBasicGeometries.item(kk,10).text()}' + '\n' \
+                               f'      orig_y: {self.TBasicGeometries.item(kk,11).text()}' + '\n' \
+                               f'      orig_z: {self.TBasicGeometries.item(kk,12).text()}' + '\n'
         InputFile.write(type)
         
         for j in range(self.TMaterialsSGH.rowCount()):

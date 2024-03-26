@@ -28,6 +28,8 @@ def Explicit_SGH(self):
     self.BCreateBasicPart.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(3))
     
     # Generate Basic Geometry
+    # Disable the cylinder option for now
+    self.INSelectBasicGeometry.model().item(2).setEnabled(False)
     def basic_geometry():
         if str(self.INSelectBasicGeometry.currentText()) == 'box':
             self.BasicGeometries.setCurrentIndex(0)
@@ -101,6 +103,42 @@ def Explicit_SGH(self):
                 self.TBasicGeometries.setItem(row, 1, QTableWidgetItem(str(self.INSelectBasicGeometry.currentText())))
                 self.TBasicGeometries.setItem(row, 8, QTableWidgetItem(self.INSphereri.text()))
                 self.TBasicGeometries.setItem(row, 9, QTableWidgetItem(self.INSpherero.text()))
+                self.TBasicGeometries.setItem(row, 10, QTableWidgetItem(self.INSphereox.text()))
+                self.TBasicGeometries.setItem(row, 11, QTableWidgetItem(self.INSphereoy.text()))
+                self.TBasicGeometries.setItem(row, 12, QTableWidgetItem(self.INSphereoz.text()))
+                
+                # Generate sphere in paraview
+                # Create a sphere source with defined parameters
+                self.sphere = vtk.vtkSphereSource()
+                self.sphere.SetCenter(float(self.INSphereox.text()), float(self.INSphereoy.text()), float(self.INSphereoz.text()))
+                self.sphere.SetRadius(float(self.INSpherero.text()))
+                
+                # Increase resolution
+                self.sphere.SetPhiResolution(100)  # Adjust the resolution along longitude
+                self.sphere.SetThetaResolution(100)  # Adjust the resolution along latitude
+
+                # Create a mapper
+                sphere_mapper = vtk.vtkPolyDataMapper()
+                sphere_mapper.SetInputConnection(self.sphere.GetOutputPort())
+
+                # Create an actor
+                self.sphere_actor = vtk.vtkActor()
+                self.sphere_actor.SetMapper(sphere_mapper)
+
+                # Add the actor to the render view
+                text = self.INBasicGeometryName.text()
+                self.variable_name = f"threshold_{text}"
+                setattr(self, self.variable_name, self.sphere_actor)
+                self.render_view.GetRenderer().AddActor(getattr(self, self.variable_name))
+
+                # Reset camera
+                self.render_view.ResetCamera()
+
+                # Get the render window from the render view
+                render_window = self.render_view.GetRenderWindow()
+
+                # Render the scene
+                render_window.Render()
                 
                 # Add part as an option for material assignment
                 self.INPartMaterial.clear()

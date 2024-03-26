@@ -104,7 +104,7 @@
       </widget>
       <widget class="QWidget" name="ExplicitSolver">
        <attribute name="title">
-        <string>Explicit</string>
+        <string>Dynamic</string>
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout_31">
         <property name="leftMargin">
@@ -1032,7 +1032,7 @@
       </widget>
       <widget class="QWidget" name="ImplicitSolver">
        <attribute name="title">
-        <string>Implicit</string>
+        <string>Quasi-Static</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_7">
         <item>
@@ -2044,7 +2044,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <enum>QFrame::NoFrame</enum>
           </property>
           <property name="currentIndex">
-           <number>9</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="TitlePage">
            <property name="minimumSize">
@@ -2339,12 +2339,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 <widget class="QComboBox" name="INDimension">
                  <item>
                   <property name="text">
-                   <string>2D</string>
+                   <string>3D</string>
                   </property>
                  </item>
                  <item>
                   <property name="text">
-                   <string>3D</string>
+                   <string>2D</string>
                   </property>
                  </item>
                 </widget>
@@ -2355,138 +2355,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
             <item alignment="Qt::AlignTop">
              <widget class="QStackedWidget" name="MeshInputs2">
               <property name="currentIndex">
-               <number>0</number>
+               <number>1</number>
               </property>
-              <widget class="QWidget" name="Rectangular2D">
-               <layout class="QGridLayout" name="gridLayout_3">
-                <item row="1" column="2">
-                 <widget class="QLineEdit" name="INLengthXR2D">
-                  <property name="placeholderText">
-                   <string>X</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QLabel" name="LLengthR2D">
-                  <property name="text">
-                   <string>Length:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="4">
-                 <widget class="QLineEdit" name="INElementsYR2D">
-                  <property name="placeholderText">
-                   <string>Y</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="5">
-                 <widget class="QLabel" name="label_14">
-                  <property name="text">
-                   <string>)</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="5">
-                 <widget class="QLabel" name="label_11">
-                  <property name="text">
-                   <string>)</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="3">
-                 <widget class="QLabel" name="label_10">
-                  <property name="text">
-                   <string>,</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="4">
-                 <widget class="QLineEdit" name="INLengthYR2D">
-                  <property name="placeholderText">
-                   <string>Y</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="0">
-                 <widget class="QLabel" name="LElementsR2D">
-                  <property name="text">
-                   <string>Elements:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="3">
-                 <widget class="QLabel" name="label_13">
-                  <property name="text">
-                   <string>,</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="2">
-                 <widget class="QLineEdit" name="INElementsXR2D">
-                  <property name="placeholderText">
-                   <string>X</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QLineEdit" name="INOriginXR2D">
-                  <property name="placeholderText">
-                   <string>X</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="4">
-                 <widget class="QLineEdit" name="INOriginYR2D">
-                  <property name="placeholderText">
-                   <string>Y</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="3">
-                 <widget class="QLabel" name="label_6">
-                  <property name="text">
-                   <string>,</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="5">
-                 <widget class="QLabel" name="label_8">
-                  <property name="text">
-                   <string>)</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QLabel" name="LOriginR2D">
-                  <property name="text">
-                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Origin:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QLabel" name="label_15">
-                  <property name="text">
-                   <string>(</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QLabel" name="label_16">
-                  <property name="text">
-                   <string>(</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="1">
-                 <widget class="QLabel" name="label_17">
-                  <property name="text">
-                   <string>(</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
               <widget class="QWidget" name="Rectangular3D">
                <layout class="QGridLayout" name="gridLayout_4">
                 <item row="1" column="0">
@@ -2654,6 +2524,136 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <widget class="QLineEdit" name="INElementsZR3D">
                   <property name="placeholderText">
                    <string>Z</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="Rectangular2D">
+               <layout class="QGridLayout" name="gridLayout_3">
+                <item row="1" column="2">
+                 <widget class="QLineEdit" name="INLengthXR2D">
+                  <property name="placeholderText">
+                   <string>X</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="LLengthR2D">
+                  <property name="text">
+                   <string>Length:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="4">
+                 <widget class="QLineEdit" name="INElementsYR2D">
+                  <property name="placeholderText">
+                   <string>Y</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="5">
+                 <widget class="QLabel" name="label_14">
+                  <property name="text">
+                   <string>)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="5">
+                 <widget class="QLabel" name="label_11">
+                  <property name="text">
+                   <string>)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="3">
+                 <widget class="QLabel" name="label_10">
+                  <property name="text">
+                   <string>,</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="4">
+                 <widget class="QLineEdit" name="INLengthYR2D">
+                  <property name="placeholderText">
+                   <string>Y</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QLabel" name="LElementsR2D">
+                  <property name="text">
+                   <string>Elements:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="3">
+                 <widget class="QLabel" name="label_13">
+                  <property name="text">
+                   <string>,</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="2">
+                 <widget class="QLineEdit" name="INElementsXR2D">
+                  <property name="placeholderText">
+                   <string>X</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QLineEdit" name="INOriginXR2D">
+                  <property name="placeholderText">
+                   <string>X</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="4">
+                 <widget class="QLineEdit" name="INOriginYR2D">
+                  <property name="placeholderText">
+                   <string>Y</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="3">
+                 <widget class="QLabel" name="label_6">
+                  <property name="text">
+                   <string>,</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="5">
+                 <widget class="QLabel" name="label_8">
+                  <property name="text">
+                   <string>)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="LOriginR2D">
+                  <property name="text">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Origin:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QLabel" name="label_15">
+                  <property name="text">
+                   <string>(</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLabel" name="label_16">
+                  <property name="text">
+                   <string>(</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QLabel" name="label_17">
+                  <property name="text">
+                   <string>(</string>
                   </property>
                  </widget>
                 </item>
@@ -3521,6 +3521,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                </property>
                <item row="0" column="1">
                 <widget class="QComboBox" name="INSelectBasicGeometry">
+                 <property name="enabled">
+                  <bool>true</bool>
+                 </property>
                  <item>
                   <property name="text">
                    <string>box</string>
@@ -3533,7 +3536,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </item>
                  <item>
                   <property name="text">
-                   <string>cylinder</string>
+                   <string notr="true">cylinder</string>
                   </property>
                  </item>
                 </widget>
@@ -3561,7 +3564,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
             <item alignment="Qt::AlignTop">
              <widget class="QStackedWidget" name="BasicGeometries">
               <property name="currentIndex">
-               <number>0</number>
+               <number>1</number>
               </property>
               <widget class="QWidget" name="BoxProperties">
                <layout class="QVBoxLayout" name="verticalLayout_35">
@@ -3711,6 +3714,36 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item row="1" column="1">
                     <widget class="QLineEdit" name="INSpherero"/>
                    </item>
+                   <item row="2" column="0">
+                    <widget class="QLabel" name="LSphereox">
+                     <property name="text">
+                      <string>Origin x:</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="1">
+                    <widget class="QLineEdit" name="INSphereox"/>
+                   </item>
+                   <item row="3" column="1">
+                    <widget class="QLineEdit" name="INSphereoy"/>
+                   </item>
+                   <item row="3" column="0">
+                    <widget class="QLabel" name="LSphereoy">
+                     <property name="text">
+                      <string>Origin y:</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="4" column="0">
+                    <widget class="QLabel" name="LSphereoz">
+                     <property name="text">
+                      <string>Origin z:</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="4" column="1">
+                    <widget class="QLineEdit" name="INSphereoz"/>
+                   </item>
                   </layout>
                  </widget>
                 </item>
@@ -3850,12 +3883,27 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </column>
               <column>
                <property name="text">
-                <string>ri</string>
+                <string>Inner Radius</string>
                </property>
               </column>
               <column>
                <property name="text">
-                <string>ro</string>
+                <string>Outer Radius</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Origin x</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Origin y</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Origin z</string>
                </property>
               </column>
              </widget>
