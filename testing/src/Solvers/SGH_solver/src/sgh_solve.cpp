@@ -284,6 +284,8 @@ void SGH::solve(CArrayKokkos<material_t>& material,
             // ---- apply force boundary conditions to the boundary patches----
             boundary_velocity(mesh, boundary, node_vel, time_value);
 
+            // mpi_coms();
+
             // ---- Update specific internal energy in the elements ----
             update_energy(rk_alpha,
                               dt,

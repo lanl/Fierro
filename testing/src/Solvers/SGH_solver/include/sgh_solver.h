@@ -308,9 +308,9 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void run()
+    void execute()
     {
-        std::cout << "In run function in sgh solver" << std::endl;
+        std::cout << "In execute function in sgh solver" << std::endl;
 
         solve(material,
                   boundary,

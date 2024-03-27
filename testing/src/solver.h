@@ -145,7 +145,7 @@ public:
     virtual void initialize() {}
     virtual void setup() {}
 
-    virtual void run() = 0;
+    virtual void execute() = 0;
 
     void solver_setup() {}
 

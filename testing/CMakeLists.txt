@@ -40,7 +40,6 @@ add_subdirectory(../lib/Elements/matar cbin)
 include_directories(src)
 include_directories(src/common)
 include_directories(src/Solvers/SGH_solver)
-include_directories(src/Solvers/SGH_solver)
 add_subdirectory(src/Solvers/SGH_solver)
 
 
