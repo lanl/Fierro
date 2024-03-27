@@ -36,6 +36,9 @@
 
 
 #include "io_utils.h"
+#include "material.h"
+#include "region.h"
+#include "parse_yaml.h"
 
 #include "solver.h"
 
@@ -48,30 +51,58 @@ class Driver
 public:
 
     char* mesh_file;
+    char* yaml_file;
 
     MeshReader mesh_reader;
 
-    Driver(char* MESH){
-        mesh_file = MESH;
+    Driver(char* YAML){
+        yaml_file = YAML;
     };//Simulation_Parameters& _simparam);
     ~Driver(){};
 
     // Initialize driver data.  Solver type, number of solvers 
     // Will be parsed from YAML input
-    void initialize(int solver_count){
+    void initialize(){
 
         std::cout<<"Inside driver initialize"<<std::endl;
-        std::cout<<"Num solvers = "<< solver_count <<std::endl;
-        num_solvers = solver_count;
+
+        Yaml::Node root;
+        try
+        {
+            Yaml::Parse(root, argv[1]);
+        }
+        catch (const Yaml::Exception e)
+        {
+            std::cout << "Exception " << e.Type() << ": " << e.what() << std::endl;
+            return 0;
+        }
 
 
-        mesh_reader.set_mesh_file(mesh_file);
+        std::cout<<"Printing YAML Input file:"<<std::endl;
+        // print the input file
+        print_yaml(root);
 
 
-        SGH *sgh_solver = new SGH(mesh_reader);
+        std::cout<<"Parsing YAML regions:"<<std::endl;
+        // parse the region yaml text into a vector of region_fills
+        std::vector <reg_fill_t> region_fills;
+        parse_regions(root, region_fills);
 
-        sgh_solver->initialize();
-        solvers.push_back(sgh_solver);
+            
+            
+        std::cout<<"Parsing YAML materials:"<<std::endl;
+        // parse the material yaml text into a vector of materials
+        std::vector <material_t> materials;
+        std::vector <std::vector <double>> eos_global_vars;
+        parse_materials(root, materials, eos_global_vars);
+
+
+        
+        std::cout << "Done " << std::endl;
+
+        // SGH *sgh_solver = new SGH(mesh_reader);
+        // sgh_solver->initialize();
+        // solvers.push_back(sgh_solver);
     }
     
     void setup() {
