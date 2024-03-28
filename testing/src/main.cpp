@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <Kokkos_Core.hpp>
+#include <sys/stat.h>
+
 
 #include "matar.h"
 #include "driver.h"

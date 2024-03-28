@@ -36,8 +36,7 @@
 
 
 #include "io_utils.h"
-#include "material.h"
-#include "region.h"
+
 #include "parse_yaml.h"
 
 #include "solver.h"
@@ -69,12 +68,12 @@ public:
         Yaml::Node root;
         try
         {
-            Yaml::Parse(root, argv[1]);
+            Yaml::Parse(root, yaml_file);
         }
         catch (const Yaml::Exception e)
         {
             std::cout << "Exception " << e.Type() << ": " << e.what() << std::endl;
-            return 0;
+            exit(0);
         }
 
 
@@ -115,7 +114,7 @@ public:
     void run(){
         std::cout<<"Inside driver run"<<std::endl;
         for (auto & solver : solvers) {
-            solver->run();
+            solver->execute();
         }
     }
 

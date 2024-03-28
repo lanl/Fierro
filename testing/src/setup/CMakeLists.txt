@@ -19,7 +19,8 @@ endif()
 include_directories(../common)
 
 set(SRC_Files 
-parse_yaml.cpp)
+parse_yaml.cpp
+Yaml.cpp)
 
 # set(SGH_Solver_SRC src/sgh_solver.cpp )
 

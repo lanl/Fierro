@@ -832,71 +832,71 @@ struct mesh_t
     } // end of init_bdy_sets method
 }; // end mesh_t
 
-namespace region
-{
-// for tagging boundary faces
-enum vol_tag
-{
-    global = 0,         // tag every elements in the mesh
-    box = 1,            // tag all elements inside a box
-    cylinder = 2,       // tag all elements inside a cylinder
-    sphere = 3,         // tag all elements inside a sphere
-    readVoxelFile = 4           // tag all elements in a voxel mesh input
-};
-} // end of namespace
+// namespace region
+// {
+// // for tagging boundary faces
+// enum vol_tag
+// {
+//     global = 0,         // tag every elements in the mesh
+//     box = 1,            // tag all elements inside a box
+//     cylinder = 2,       // tag all elements inside a cylinder
+//     sphere = 3,         // tag all elements inside a sphere
+//     readVoxelFile = 4           // tag all elements in a voxel mesh input
+// };
+// } // end of namespace
 
-namespace init_conds
-{
-// applying initial conditions
-enum init_velocity_conds
-{
-    // uniform
-    cartesian = 0,       // cart velocity
-    radial = 1,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
-    spherical = 2,       // spherical
+// namespace init_conds
+// {
+// // applying initial conditions
+// enum init_velocity_conds
+// {
+//     // uniform
+//     cartesian = 0,       // cart velocity
+//     radial = 1,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+//     spherical = 2,       // spherical
 
-    // linear variation
-    radial_linear = 3,         // linear variation from 0,0,0
-    spherical_linear = 4,       // linear variation from 0,0,0
+//     // linear variation
+//     radial_linear = 3,         // linear variation from 0,0,0
+//     spherical_linear = 4,       // linear variation from 0,0,0
 
-    // vortical initial conditions
-    tg_vortex = 5
-};
-} // end of initial conditions namespace
+//     // vortical initial conditions
+//     tg_vortex = 5
+// };
+// } // end of initial conditions namespace
 
-// fill instructions
-struct mat_fill_t
-{
-    // type
-    region::vol_tag volume; // 1 is global, 2 are planes, 3 is a sphere
+// // fill instructions
+// struct mat_fill_t
+// {
+//     // type
+//     region::vol_tag volume; // 1 is global, 2 are planes, 3 is a sphere
 
-    // material id
-    size_t mat_id;
+//     // material id
+//     size_t mat_id;
 
-    // planes
-    double x1;
-    double x2;
-    double y1;
-    double y2;
-    double z1;
-    double z2;
+//     // planes
+//     double x1;
+//     double x2;
+//     double y1;
+//     double y2;
+//     double z1;
+//     double z2;
 
-    // radius
-    double radius1;
-    double radius2;
+//     // radius
+//     double radius1;
+//     double radius2;
 
-    // initial conditions
-    init_conds::init_velocity_conds velocity;
+//     // initial conditions
+//     init_conds::init_velocity_conds velocity;
 
-    // velocity coefficients by component
-    double u, v, w;
+//     // velocity coefficients by component
+//     double u, v, w;
 
-    // velocity magnitude for radial velocity initialization
-    double speed;
+//     // velocity magnitude for radial velocity initialization
+//     double speed;
 
-    double sie;  // specific internal energy
-    double den;  // density
-};
+//     double sie;  // specific internal energy
+//     double den;  // density
+// };
 
 namespace bdy
 {

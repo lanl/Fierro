@@ -50,6 +50,8 @@
 
 #include "mesh.h"
 #include "state.h"
+#include "material.h"
+#include "region.h"
 
 class Solver
 {
@@ -69,7 +71,7 @@ public:
     //    mesh data type declarations
     // ---------------------------------------------------------------------
     mesh_t                   mesh;
-    CArrayKokkos<mat_fill_t> mat_fill;
+    CArrayKokkos<reg_fill_t> region_fill;
     CArrayKokkos<boundary_t> boundary;
 
     // Dual views for nodal data

@@ -37,8 +37,9 @@
 
 #include "matar.h"
 #include "solver.h"
-#include "mesh.h"
-#include "state.h"
+// #include "mesh.h"
+// #include "state.h"
+// #include "material.h"
 #include "geometry_new.h"
 #include "io_utils.h"
 
@@ -100,94 +101,94 @@ public:
 
         // --- number of fill regions ---
         num_fills = 2;  // =2 for Sedov
-        mat_fill  = CArrayKokkos<mat_fill_t>(num_fills);  // create fills
+        region_fill  = CArrayKokkos<reg_fill_t>(num_fills);  // create fills
 
         // --- number of boundary conditions ---
         num_bcs  = 6; // =6 for Sedov
         boundary = CArrayKokkos<boundary_t>(num_bcs);  // create boundaries
 
-        RUN({
-            // gamma law model
-            // statev(0) = gamma
-            // statev(1) = minimum sound speed
-            // statev(2) = specific heat
-            // statev(3) = ref temperature
-            // statev(4) = ref density
-            // statev(5) = ref specific internal energy
+        // RUN({
+        //     // gamma law model
+        //     // statev(0) = gamma
+        //     // statev(1) = minimum sound speed
+        //     // statev(2) = specific heat
+        //     // statev(3) = ref temperature
+        //     // statev(4) = ref density
+        //     // statev(5) = ref specific internal energy
 
-            material(0).eos_model = ideal_gas; // EOS model is required
+        //     material(0).eos_model = ideal_gas; // EOS model is required
 
-            material(0).strength_type  = model::none;
-            material(0).strength_setup = model_init::input; // not need, the input is the default
-            material(0).strength_model = NULL;  // not needed, but illistrates the syntax
+        //     material(0).strength_type  = model::none;
+        //     material(0).strength_setup = model_init::input; // not need, the input is the default
+        //     material(0).strength_model = NULL;  // not needed, but illistrates the syntax
 
-            material(0).q1   = 1.0;            // accoustic coefficient
-            material(0).q2   = 1.3333;         // linear slope of UsUp for Riemann solver
-            material(0).q1ex = 1.0;            // accoustic coefficient in expansion
-            material(0).q2ex = 0.0;            // linear slope of UsUp in expansion
+        //     material(0).q1   = 1.0;            // accoustic coefficient
+        //     material(0).q2   = 1.3333;         // linear slope of UsUp for Riemann solver
+        //     material(0).q1ex = 1.0;            // accoustic coefficient in expansion
+        //     material(0).q2ex = 0.0;            // linear slope of UsUp in expansion
 
-            material(0).num_state_vars = 3;  // actual num_state_vars
-            state_vars(0, 0) = 5.0 / 3.0; // gamma value
-            state_vars(0, 1) = 1.0E-14; // minimum sound speed
-            state_vars(0, 2) = 1.0;     // specific heat
+        //     material(0).num_state_vars = 3;  // actual num_state_vars
+        //     state_vars(0, 0) = 5.0 / 3.0; // gamma value
+        //     state_vars(0, 1) = 1.0E-14; // minimum sound speed
+        //     state_vars(0, 2) = 1.0;     // specific heat
 
-            // global initial conditions
-            mat_fill(0).volume = region::global; // fill everywhere
-            mat_fill(0).mat_id = 0;              // material id
-            mat_fill(0).den    = 1.0;            // intial density
-            mat_fill(0).sie    = 1.e-10;         // intial specific internal energy
+        //     // global initial conditions
+        //     region_fill(0).volume = region::global; // fill everywhere
+        //     region_fill(0).mat_id = 0;              // material id
+        //     region_fill(0).den    = 1.0;            // intial density
+        //     region_fill(0).sie    = 1.e-10;         // intial specific internal energy
 
-            mat_fill(0).velocity = init_conds::cartesian;
-            mat_fill(0).u = 0.0;   // initial x-dir velocity
-            mat_fill(0).v = 0.0;   // initial y-dir velocity
-            mat_fill(0).w = 0.0;   // initial z-dir velocity
+        //     region_fill(0).velocity = init_conds::cartesian;
+        //     region_fill(0).u = 0.0;   // initial x-dir velocity
+        //     region_fill(0).v = 0.0;   // initial y-dir velocity
+        //     region_fill(0).w = 0.0;   // initial z-dir velocity
 
-            // energy source initial conditions
-            mat_fill(1).volume  = region::sphere; // fill a sphere
-            mat_fill(1).mat_id  = 0;             // material id
-            mat_fill(1).radius1 = 0.0;           // inner radius of fill region
-            mat_fill(1).radius2 = 1.2 / 8.0;       // outer radius of fill region
-            mat_fill(1).den     = 1.0;           // initial density
-            mat_fill(1).sie     = (963.652344 *
-                                   pow((1.2 / 30.0), 3)) / pow((mat_fill(1).radius2), 3);
+        //     // energy source initial conditions
+        //     region_fill(1).volume  = region::sphere; // fill a sphere
+        //     region_fill(1).mat_id  = 0;             // material id
+        //     region_fill(1).radius1 = 0.0;           // inner radius of fill region
+        //     region_fill(1).radius2 = 1.2 / 8.0;       // outer radius of fill region
+        //     region_fill(1).den     = 1.0;           // initial density
+        //     region_fill(1).sie     = (963.652344 *
+        //                            pow((1.2 / 30.0), 3)) / pow((region_fill(1).radius2), 3);
 
-            mat_fill(1).velocity = init_conds::cartesian;
-            mat_fill(1).u = 0.0;   // initial x-dir velocity
-            mat_fill(1).v = 0.0;   // initial y-dir velocity
-            mat_fill(1).w = 0.0;   // initial z-dir velocity
+        //     region_fill(1).velocity = init_conds::cartesian;
+        //     region_fill(1).u = 0.0;   // initial x-dir velocity
+        //     region_fill(1).v = 0.0;   // initial y-dir velocity
+        //     region_fill(1).w = 0.0;   // initial z-dir velocity
 
-            // ---- boundary conditions ---- //
+        //     // ---- boundary conditions ---- //
 
-            // Tag X plane
-            boundary(0).surface  = bdy::x_plane; // planes, cylinder, spheres, or a files
-            boundary(0).value    = 0.0;
-            boundary(0).hydro_bc = bdy::reflected;
+        //     // Tag X plane
+        //     boundary(0).surface  = bdy::x_plane; // planes, cylinder, spheres, or a files
+        //     boundary(0).value    = 0.0;
+        //     boundary(0).hydro_bc = bdy::reflected;
 
-            // Tag Y plane
-            boundary(1).surface  = bdy::y_plane;
-            boundary(1).value    = 0.0;
-            boundary(1).hydro_bc = bdy::reflected;
+        //     // Tag Y plane
+        //     boundary(1).surface  = bdy::y_plane;
+        //     boundary(1).value    = 0.0;
+        //     boundary(1).hydro_bc = bdy::reflected;
 
-            // Tag Z plane
-            boundary(2).surface  = bdy::z_plane;
-            boundary(2).value    = 0.0;
-            boundary(2).hydro_bc = bdy::reflected;
+        //     // Tag Z plane
+        //     boundary(2).surface  = bdy::z_plane;
+        //     boundary(2).value    = 0.0;
+        //     boundary(2).hydro_bc = bdy::reflected;
 
-            // Tag X plane
-            boundary(3).surface  = bdy::x_plane; // planes, cylinder, spheres, or a files
-            boundary(3).value    = 1.2;
-            boundary(3).hydro_bc = bdy::reflected;
+        //     // Tag X plane
+        //     boundary(3).surface  = bdy::x_plane; // planes, cylinder, spheres, or a files
+        //     boundary(3).value    = 1.2;
+        //     boundary(3).hydro_bc = bdy::reflected;
 
-            // Tag Y plane
-            boundary(4).surface  = bdy::y_plane;
-            boundary(4).value    = 1.2;
-            boundary(4).hydro_bc = bdy::reflected;
+        //     // Tag Y plane
+        //     boundary(4).surface  = bdy::y_plane;
+        //     boundary(4).value    = 1.2;
+        //     boundary(4).hydro_bc = bdy::reflected;
 
-            // Tag Z plane
-            boundary(5).surface  = bdy::z_plane;
-            boundary(5).value    = 1.2;
-            boundary(5).hydro_bc = bdy::reflected;
-        });  // end RUN
+        //     // Tag Z plane
+        //     boundary(5).surface  = bdy::z_plane;
+        //     boundary(5).value    = 1.2;
+        //     boundary(5).hydro_bc = bdy::reflected;
+        // });  // end RUN
 
         // ---------------------------------------------------------------------
         //    read in supplied mesh
@@ -274,30 +275,31 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void setup()
     {
-        setup_sgh(
-            material,
-            mat_fill,
-            boundary,
-            mesh,
-            node_coords,
-            node_vel,
-            node_mass,
-            elem_den,
-            elem_pres,
-            elem_stress,
-            elem_sspd,
-            elem_sie,
-            elem_vol,
-            elem_mass,
-            elem_mat_id,
-            elem_statev,
-            state_vars,
-            corner_mass,
-            num_fills,
-            rk_num_bins,
-            num_bcs,
-            num_materials,
-            num_state_vars);
+        std::cout<<"INSIDE SETUP FOR SGH SOLVER"<<std::endl;
+        // setup_sgh(
+        //     material,
+        //     region_fill,
+        //     boundary,
+        //     mesh,
+        //     node_coords,
+        //     node_vel,
+        //     node_mass,
+        //     elem_den,
+        //     elem_pres,
+        //     elem_stress,
+        //     elem_sspd,
+        //     elem_sie,
+        //     elem_vol,
+        //     elem_mass,
+        //     elem_mat_id,
+        //     elem_statev,
+        //     state_vars,
+        //     corner_mass,
+        //     num_fills,
+        //     rk_num_bins,
+        //     num_bcs,
+        //     num_materials,
+        //     num_state_vars);
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -350,7 +352,7 @@ public:
 
     void setup_sgh(
         const CArrayKokkos<material_t>& material,
-        const CArrayKokkos<mat_fill_t>& mat_fill,
+        const CArrayKokkos<reg_fill_t>& region_fill,
         const CArrayKokkos<boundary_t>& boundary,
         mesh_t& mesh,
         const DViewCArrayKokkos<double>& node_coords,

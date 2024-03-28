@@ -116,32 +116,32 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
                         elem_gid);
 
             // --- call strength model ---
-            material(mat_id).strength_model(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            mat_id,
-                                            elem_statev,
-                                            elem_sspd,
-                                            elem_den(elem_gid),
-                                            elem_sie(elem_gid),
-                                            vel_grad,
-                                            elem_node_gids,
-                                            node_coords,
-                                            node_vel,
-                                            elem_vol(elem_gid),
-                                            dt,
-                                            rk_alpha);
+            // material(mat_id).strength_model(elem_pres,
+            //                                 elem_stress,
+            //                                 elem_gid,
+            //                                 mat_id,
+            //                                 elem_statev,
+            //                                 elem_sspd,
+            //                                 elem_den(elem_gid),
+            //                                 elem_sie(elem_gid),
+            //                                 vel_grad,
+            //                                 elem_node_gids,
+            //                                 node_coords,
+            //                                 node_vel,
+            //                                 elem_vol(elem_gid),
+            //                                 dt,
+            //                                 rk_alpha);
         } // end logical on hyper strength model
 
         // --- Pressure ---
-        material(mat_id).eos_model(elem_pres,
-                                   elem_stress,
-                                   elem_gid,
-                                   elem_mat_id(elem_gid),
-                                   elem_statev,
-                                   elem_sspd,
-                                   elem_den(elem_gid),
-                                   elem_sie(1, elem_gid));
+        // material(mat_id).eos_model(elem_pres,
+        //                            elem_stress,
+        //                            elem_gid,
+        //                            elem_mat_id(elem_gid),
+        //                            elem_statev,
+        //                            elem_sspd,
+        //                            elem_den(elem_gid),
+        //                            elem_sie(1, elem_gid));
     }); // end parallel for
     Kokkos::fence();
 
@@ -230,32 +230,32 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
                         elem_gid);
 
             // --- call strength model ---
-            material(mat_id).strength_model(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            mat_id,
-                                            elem_statev,
-                                            elem_sspd,
-                                            elem_den(elem_gid),
-                                            elem_sie(elem_gid),
-                                            vel_grad,
-                                            elem_node_gids,
-                                            node_coords,
-                                            node_vel,
-                                            elem_vol(elem_gid),
-                                            dt,
-                                            rk_alpha);
+            // material(mat_id).strength_model(elem_pres,
+            //                                 elem_stress,
+            //                                 elem_gid,
+            //                                 mat_id,
+            //                                 elem_statev,
+            //                                 elem_sspd,
+            //                                 elem_den(elem_gid),
+            //                                 elem_sie(elem_gid),
+            //                                 vel_grad,
+            //                                 elem_node_gids,
+            //                                 node_coords,
+            //                                 node_vel,
+            //                                 elem_vol(elem_gid),
+            //                                 dt,
+            //                                 rk_alpha);
         } // end logical on hyper strength model
 
         // --- Pressure ---
-        material(mat_id).eos_model(elem_pres,
-                                   elem_stress,
-                                   elem_gid,
-                                   elem_mat_id(elem_gid),
-                                   elem_statev,
-                                   elem_sspd,
-                                   elem_den(elem_gid),
-                                   elem_sie(1, elem_gid));
+        // material(mat_id).eos_model(elem_pres,
+        //                            elem_stress,
+        //                            elem_gid,
+        //                            elem_mat_id(elem_gid),
+        //                            elem_statev,
+        //                            elem_sspd,
+        //                            elem_den(elem_gid),
+        //                            elem_sie(1, elem_gid));
     }); // end parallel for
     Kokkos::fence();
 

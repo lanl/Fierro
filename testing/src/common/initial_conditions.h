@@ -2,6 +2,7 @@
 #ifndef FIERRO_IC_H
 #define FIERRO_IC_H
 
+#include <map>
 
 namespace init_conds
 {
@@ -24,7 +25,7 @@ namespace init_conds
     
 } // end of initial conditions namespace
 
-std::map <std::string, init_conds::init_velocity_conds> velocity_type_map
+static std::map <std::string, init_conds::init_velocity_conds> velocity_type_map
 {
     {"cartesian",        init_conds::cartesian},
     {"radial",           init_conds::radial},

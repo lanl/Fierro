@@ -3,6 +3,7 @@
 #ifndef FIERRO_REGION_H
 #define FIERRO_REGION_H
 
+#include <map>
 
 #include "initial_conditions.h"
 
@@ -28,6 +29,16 @@ namespace region
     };
 
 } // end of namespace
+
+
+static std::map <std::string, region::vol_tag> region_type_map
+{
+    {"global",   region::global},
+    {"sphere",   region::sphere},
+    {"planes",   region::planes},
+    {"cylinder", region::cylinder},
+    {"readVoxelFile", region::readVoxelFile}
+};
 
 
 // fill instructions (was called mat_fill_t)
@@ -66,13 +77,35 @@ struct reg_fill_t {
     double den;  // density
 };
 
-std::map <std::string, region::vol_tag> region_type_map
+
+
+// ----------------------------------
+// valid inputs for a material fill
+//
+//   fill_volume_text_inp["words"]
+//
+static std::vector <std::string> str_region_inps
 {
-    {"global",   region::global},
-    {"sphere",   region::sphere},
-    {"planes",   region::planes},
-    {"cylinder", region::cylinder},
-    {"readVoxelFile", region::readVoxelFile}
-};
+    "type",
+    "material_id",
+    "x1",
+    "x2",
+    "x1",
+    "x2",
+    "y1",
+    "y2",
+    "z1",
+    "z2",
+    "radius1",
+    "radius2",
+    "velocity",
+    "u",
+    "v",
+    "w",
+    "speed",
+    "sie",
+    "ie",
+    "den"
+}; //
 
 #endif // end Header Guard

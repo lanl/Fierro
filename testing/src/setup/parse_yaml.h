@@ -15,7 +15,7 @@
 #include "region.h"
 
 // checks to see if a path exists
-bool DoesPathExist(const std::string &s)
+static bool DoesPathExist(const std::string &s)
 {
     struct stat buffer;
     return (stat (s.c_str(), &buffer) == 0);

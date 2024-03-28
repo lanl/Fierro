@@ -3,9 +3,9 @@
 #ifndef FIERRO_MATERIAL_H
 #define FIERRO_MATERIAL_H
 
+#include <stdio.h>
+
 #include "matar.h"
-
-
 
 
 
@@ -74,47 +74,52 @@ struct material_t {
 }; // end material_t
 
 
+
 // ----------------------------------
 // valid inputs for a material fill
+// 
+//   materials_text_inp["words"]
 //
-//   fill_volume_text_inp["words"]
-//
-std::vector <std::string> str_region_inps
+static std::vector <std::string> str_material_inps
 {
-    "type",
-    "material_id",
-    "x1",
-    "x2",
-    "x1",
-    "x2",
-    "y1",
-    "y2",
-    "z1",
-    "z2",
-    "radius1",
-    "radius2",
-    "velocity",
-    "u",
-    "v",
-    "w",
-    "speed",
-    "sie",
-    "ie",
-    "den"
-}; //
+    "id",
+    "eos_model",
+    "strength_model",
+    "q1",
+    "q2",
+    "q1ex",
+    "q2ex",
+    "eos_global_vars"
+};
+
+
 
 
 
 //WARNING: placeholder
-void ideal_gas(double pres, double den, double sie){
+static void ideal_gas(double pres, double den, double sie){
     // do nothing
     std::cout << "hello from ideal_gas! Replace with actual EOS!" << std::endl;
 };
 
 //WARNING: placeholder
-void elastic_plastic(double stress, double strain){
+static void elastic_plastic(double stress, double strain){
     // do nothing
     std::cout << "hello from elastic_plastic! Replace with actual strength model!" << std::endl;
 }
+
+// add the eos models here
+typedef void (*eos_type)(double, double, double);
+static std::map <std::string, eos_type> eos_map
+{
+    {"ideal_gas", ideal_gas}
+};
+
+// add the strength models here
+typedef void (*strength_type)(double, double);
+static std::map <std::string, strength_type> strength_map
+{
+    {"elastic_plastic", elastic_plastic}
+};
 
 #endif // end Header Guard
