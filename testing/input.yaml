@@ -8,12 +8,13 @@
 #
 
 mesh_options:
-    source: build
-    type: Cube
-    file_path: test/test/test
-    origin: [0, 0, 0]
+    source: generate
+    type: Box
+    # file_path: test/test/test
+    origin: [0.1, 0.2, 0.3]
     length: [1.2, 1.2, 1.2]
     num_elems: [32, 32, 32]
+    polynomial_order: 1
 
 #
 

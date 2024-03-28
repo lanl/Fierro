@@ -48,7 +48,7 @@ struct mesh_input_t{
 
     mesh_input::source source;
 
-    std::string file_path;
+    std::string file_path = "";
 
     mesh_input::type type;
 
