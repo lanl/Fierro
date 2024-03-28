@@ -45,6 +45,13 @@
 #include "sgh_solver.h"
 
 
+#include "material.h"
+#include "region.h"
+#include "mesh_inputs.h"
+#include "solver_inputs.h"
+#include "output_options.h"
+
+
 class Driver
 {
 public:
@@ -53,6 +60,13 @@ public:
     char* yaml_file;
 
     MeshReader mesh_reader;
+
+
+    mesh_input_t mesh_input;
+    output_options_t output_options;
+
+    std::vector <solver_input_t> solver_inputs;
+
 
     Driver(char* YAML){
         yaml_file = YAML;
@@ -83,9 +97,14 @@ public:
 
 
         std::cout<<"Parsing YAML meshing options:"<<std::endl;
-        mesh_input_t mesh_input;
         parse_mesh_input(root, mesh_input);
 
+        std::cout<<"Parsing YAML output options:"<<std::endl;
+        parse_output_options(root, output_options);
+
+
+        std::cout<<"Parsing YAML solver options:"<<std::endl;
+        parse_solver_input(root, solver_inputs);
 
 
 

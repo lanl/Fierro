@@ -2,12 +2,8 @@
 
 #ifndef FIERRO_MESH_INPUT_OPTIONS_H
 #define FIERRO_MESH_INPUT_OPTIONS_H
-
 #include <stdio.h>
-
 #include "matar.h"
-
-
 
 namespace mesh_input
 {
@@ -29,7 +25,6 @@ namespace mesh_input
 
 } // end of namespace
 
-
 static std::map <std::string, mesh_input::source> mesh_input_source_map
 {
     {"generate",    mesh_input::generate},
@@ -42,34 +37,22 @@ static std::map <std::string, mesh_input::type> mesh_input_type_map
     {"Cylinder",    mesh_input::Cylinder}
 };
 
-
-// material model parameters
+// mmeshing input parameters
 struct mesh_input_t{
-
     mesh_input::source source;
-
     std::string file_path = "";
-
     mesh_input::type type;
 
     std::vector<double> origin {0.0, 0.0, 0.0};
     std::vector<double> length {1.0, 1.0, 1.0};
     std::vector<int> num_elems {2, 2, 2};
-
-
     size_t p_order = 1;
 
-
-
-}; // mesh_io_t
-
-
+}; // mesh_input_t
 
 // ----------------------------------
-// valid inputs for a mesh options
-// 
-//   materials_text_inp["words"]
-//
+// valid inputs for mesh options
+// ----------------------------------
 static std::vector <std::string> str_mesh_inps
 {
     "source",

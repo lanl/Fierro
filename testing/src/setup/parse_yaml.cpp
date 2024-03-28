@@ -14,7 +14,11 @@
 #include "matar.h"
 #include "parse_yaml.h"
 
-
+#include "material.h"
+#include "region.h"
+#include "mesh_inputs.h"
+#include "solver_inputs.h"
+#include "output_options.h"
 
 
 #define PI 3.141592653589793
@@ -23,8 +27,6 @@ using namespace mtr;
 
 
 bool VERBOSE = false;
-
-
 
 
 //==============================================================================
@@ -196,21 +198,88 @@ void print_yaml(Yaml::Node root){
 
 
 // =================================================================================
+//    Parse Solver options
+// =================================================================================
+void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_input){
+
+    Yaml::Node & solver_yaml = root["solver_options"];
+    
+    size_t num_solvers = solver_yaml.Size();
+
+    std::cout<<"Num solvers = "<<num_solvers<<std::endl;
+    
+    solver_input = std::vector <solver_input_t>(num_solvers);
+    
+    // loop over the fill regions specified
+    for(int solver_id = 0; solver_id < num_solvers; solver_id++){
+
+        // read the variables names
+        Yaml::Node & inps_yaml = root["solver_options"][solver_id]["solver"];
+
+        // get the solver variables names set by the user
+        std::vector <std::string> user_inputs;
+
+        // extract words from the input file and validate they are correct
+        for(auto item = inps_yaml.Begin(); item != inps_yaml.End(); item++)
+        {
+            
+            std::string var_name = (*item).first;
+            
+            // print the variable
+            std::cout << "This is var name = "<< var_name << "\n";
+            
+            user_inputs.push_back(var_name);
+            
+            // validate input: user_inputs match words in the str_solver_inps
+            if (std::find(str_solver_inps.begin(), str_solver_inps.end(), var_name) == str_solver_inps.end())
+            {
+                std::cout << "ERROR: invalid input: " << var_name << std::endl;
+            } // end if variable exists
+        } // end for item in this yaml input
+
+        // loop over the words in the input 
+        for(auto &a_word : user_inputs){
+        
+            std::cout << a_word << std::endl;
+            
+            // get solver method
+            if(a_word.compare("method") == 0){
+                
+                std::string method = root["solver_options"][solver_id]["solver"][a_word].As<std::string>();
+
+                auto map = solver_map;
+                
+                // set the method
+                if(map.find(method) != map.end()){
+                    
+                    solver_input[solver_id].method = map[method];
+                    std::cout << "\tmethod = " << method << std::endl;
+                }
+                else{
+                    std::cout << "ERROR: invalid mesh option input in YAML file: " << method << std::endl;
+                    std::cout << "Valid options are: "<< std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+                } // end if
+            } // method
+            else {
+                std::cout << "ERROR: invalid input: " << a_word << std::endl;
+            }
+        } // end loop over solver options
+    } // end loop over solvers
+} // end of parse solver options
+
+
+// =================================================================================
 //    Parse Mesh options
 // =================================================================================
 void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
 
     Yaml::Node & mesh_yaml = root["mesh_options"];
-    
-    // size_t num_meshes = mesh_yaml.Size();
 
-    // if(num_meshes != 1){
-
-    //     std::cout << "Num meshes =  "<< num_meshes<< std::endl;
-    //     std::cout << "Fierro only operates on a single mesh (it does not have to be connected) "<< std::endl;
-    //     exit(0);
-    // }
-    
     // get the mesh variables names set by the user
     std::vector <std::string> user_mesh_inputs;
     
@@ -376,14 +445,130 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
             mesh_input.p_order = p_order;
         
         } // polynomial order
-} // end of function to parse region
+        else {
+                std::cout << "ERROR: invalid input: " << a_word << std::endl;
+        }
+    } // end user_mesh_inputs
+} // end of parse mesh options
+
+
+// =================================================================================
+//    Parse Output options
+// =================================================================================
+void parse_output_options(Yaml::Node &root, output_options_t &output_options){
+
+    Yaml::Node & out_opts = root["output_options"];
+
+    // get the mesh variables names set by the user
+    std::vector <std::string> user_inputs;
+    
+    
+    // extract words from the input file and validate they are correct
+    for(auto item = out_opts.Begin(); item != out_opts.End(); item++)
+    {
+        
+        std::string var_name = (*item).first;
+        
+        // print the variable
+        std::cout << "This is var name = "<< var_name << "\n";
+        
+        user_inputs.push_back(var_name);
+        
+        // validate input: user_inputs match words in the str_output_options_inps
+        if (std::find(str_output_options_inps.begin(), str_output_options_inps.end(), var_name) == str_output_options_inps.end())
+        {
+            std::cout << "ERROR: invalid input: " << var_name << std::endl;
+        } // end if variable exists
+        
+    } // end for item in this out_opts input
+    
+
+    // loop over the output options
+    for(auto &a_word : user_inputs){
+        
+        std::cout << "Word : " << a_word << std::endl;
+
+        // get output format
+        if(a_word.compare("output_file_format") == 0){
+            
+            std::string format = root["output_options"][a_word].As<std::string>();
+
+            auto map = output_format_map;
+            
+            // set the output format
+            if(map.find(format) != map.end()){
+                
+                output_options.format = map[format];
+                std::cout << "\tformat = " << format << std::endl;
+            }
+            else{
+                std::cout << "ERROR: invalid mesh option input in YAML file: " << format << std::endl;
+                std::cout << "Valid options are: "<< std::endl;
+
+                for (const auto& pair : map) {
+                    std::cout << "\t" << pair.first << std::endl;
+                }
+            } // end if
+        } // output format
+
+        // get timer_output_level
+        else if(a_word.compare("timer_output_level") == 0){
+            
+            std::string timer_level = root["output_options"][a_word].As<std::string>();
+
+            auto map = timer_output_level_map;
+            
+            // set the timer_output_level
+            if(map.find(timer_level) != map.end()){
+                
+                output_options.timer_level = map[timer_level];
+                std::cout << "\ttimer_level = " << timer_level << std::endl;
+            }
+            else{
+                std::cout << "ERROR: invalid output option input in YAML file: " << timer_level << std::endl;
+                std::cout << "Valid options are: "<< std::endl;
+
+                for (const auto& pair : map) {
+                    std::cout << "\t" << pair.first << std::endl;
+                }
+
+            } // end if
+        } // timer_level
+        
+        // Graphics time step
+        else if(a_word.compare("graphics_time_step") == 0){
+            
+            real_t graphics_time_step = root["output_options"][a_word].As<real_t>();
+            std::cout << "\tgraphics_time_step = " << graphics_time_step << std::endl;
+            
+            output_options.graphics_time_step = graphics_time_step;
+        
+        } // graphics_time_step
+
+        // Graphics iteration step
+        else if(a_word.compare("graphics_iteration_step") == 0){
+            
+            int graphics_iteration_step = root["output_options"][a_word].As<int>();
+            std::cout << "\tgraphics_iteration_step = " << graphics_iteration_step << std::endl;
+            
+            output_options.graphics_iteration_step = graphics_iteration_step;
+        
+        } // graphics_iteration_step
+
+
+
+        else {
+                std::cout << "ERROR: invalid input: " << a_word << std::endl;
+        }
+    } // end user_inputs
+} // end of parse mesh options
+
 
 
 // =================================================================================
 //    Parse Fill regions
 // =================================================================================
-void parse_regions(Yaml::Node &root,
-                   std::vector <reg_fill_t> &region_fills){
+void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
 
     Yaml::Node & region_yaml = root["regions"];
     
@@ -660,8 +845,7 @@ void parse_regions(Yaml::Node &root,
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node &root,
-                     std::vector <material_t> &materials,
+void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
                      std::vector <std::vector <double>> &eos_global_vars){
 
 

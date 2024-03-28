@@ -11,9 +11,18 @@
 
 
 #include "Yaml.hpp"
-#include "material.h"
-#include "region.h"
-#include "mesh_inputs.h"
+// #include "material.h"
+// #include "region.h"
+// #include "mesh_inputs.h"
+// #include "solver_inputs.h"
+// #include "output_options.h"
+
+struct solver_input_t;
+struct mesh_input_t;
+struct reg_fill_t;
+struct material_t;
+struct output_options_t;
+
 
 // checks to see if a path exists
 static bool DoesPathExist(const std::string &s)
@@ -32,8 +41,14 @@ std::vector<double> extract_list(std::string str);
 // prints the contents of a parsed yaml file
 void print_yaml(Yaml::Node root);
 
+// Parse the solver related data
+void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_input);
+
 // Parse the mesh related data
 void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input);
+
+// Parse output options
+void parse_output_options(Yaml::Node &root, output_options_t &output_options);
 
 // parse the region text
 void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills);

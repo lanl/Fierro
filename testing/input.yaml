@@ -16,17 +16,15 @@ mesh_options:
     num_elems: [32, 32, 32]
     polynomial_order: 1
 
-#
+output_options:
+    timer_output_level: thorough
+    output_file_format: vtk
+    graphics_time_step: 0.25
+    graphics_iteration_step: 20000
 
-#output_options:
-#  timer_output_level: thorough
-#  output_file_format: vtk
-#  graphics_step: 0.25
-#
-
-physics_modules:
+solver_options:
   - solver:
-        type: SGH
+        method: SGH
         # solver_vars:
         #  - blah
         #  - blah
