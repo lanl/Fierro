@@ -196,6 +196,324 @@ void print_yaml(Yaml::Node root){
 
 
 // =================================================================================
+//    Parse Mesh options
+// =================================================================================
+void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
+
+    Yaml::Node & mesh_yaml = root["mesh_options"];
+    
+    // size_t num_meshes = mesh_yaml.Size();
+
+    // if(num_meshes != 1){
+
+    //     std::cout << "Num meshes =  "<< num_meshes<< std::endl;
+    //     std::cout << "Fierro only operates on a single mesh (it does not have to be connected) "<< std::endl;
+    //     exit(0);
+    // }
+    
+    // get the mesh variables names set by the user
+    std::vector <std::string> user_mesh_inputs;
+    
+    
+    // extract words from the input file and validate they are correct
+    for(auto item = mesh_yaml.Begin(); item != mesh_yaml.End(); item++)
+    {
+        
+        std::string var_name = (*item).first;
+        
+        // print the variable
+        std::cout << "This is var name = "<< var_name << "\n";
+        
+        user_mesh_inputs.push_back(var_name);
+        
+        // validate input: user_mesh_inputs match words in the str_mesh_inps
+        if (std::find(str_mesh_inps.begin(), str_mesh_inps.end(), var_name) == str_mesh_inps.end())
+        {
+            std::cout << "ERROR: invalid input: " << var_name << std::endl;
+        } // end if variable exists
+        
+    } // end for item in this yaml input
+    
+    
+    
+    // loop over the words in the material input definition
+    for(auto &a_word : user_mesh_inputs){
+        
+        std::cout << a_word << std::endl;
+    
+        Yaml::Node & material_inps_yaml = root["mesh_options"][a_word];
+        
+        // get mesh source [generate or from file]
+        if(a_word.compare("source") == 0){
+            
+            std::string source = root["mesh_options"][a_word].As<std::string>();
+            
+            std::cout << "\tsource = " << source << std::endl;
+
+            auto map = mesh_input_source_map;
+            
+            // set the mesh source
+            if(map.find(source) != map.end()){
+                
+                mesh_input.source = map[source];
+                std::cout << "\tsource = " << source << std::endl;
+                std::cout << mesh_input.source << std::endl;
+            }
+            else{
+                std::cout << "ERROR: invalid mesh option input in YAML file: " << source << std::endl;
+                std::cout << "Valid options are: "<< std::endl;
+
+                for (const auto& pair : map) {
+                    std::cout << "\t" << pair.first << std::endl;
+                }
+
+            } // end if
+        } // source 
+
+        // get mesh type for generation
+        if(a_word.compare("type") == 0){
+            
+            std::string type = root["mesh_options"][a_word].As<std::string>();
+            
+            std::cout << "\ttype = " << type << std::endl;
+
+            auto map = mesh_input_type_map;
+            
+            // set the mesh type
+            if(map.find(type) != map.end()){
+                
+                mesh_input.type = map[type];
+                std::cout << "\ttype = " << type << std::endl;
+                std::cout << mesh_input.type << std::endl;
+            }
+            else{
+                std::cout << "ERROR: invalid mesh option input in YAML file: " << type << std::endl;
+                std::cout << "Valid options are: "<< std::endl;
+
+                for (const auto& pair : map) {
+                    std::cout << "\t" << pair.first << std::endl;
+                }
+            } // end if
+        } // type 
+        
+        // Get file path 
+        else if(a_word.compare("file_path") == 0){
+            
+
+            std::string path = root["mesh_options"][a_word].As<std::string>();
+            
+            double sie = root["regions"][reg_id]["fill_volume"]["sie"].As<double>();
+            std::cout << "\tfile_path = " << sie << std::endl;
+            
+            mesh_input.sie = sie;
+        
+        } // sie
+
+
+        // else if(a_word.compare("sie") == 0){
+            
+        //     // specific internal energy
+
+        //     double sie = root["regions"][reg_id]["fill_volume"]["sie"].As<double>();
+        //     std::cout << "\tsie = " << sie << std::endl;
+            
+        //     mesh_input.sie = sie;
+        
+        // } // sie
+        // else if(a_word.compare("ie") == 0){
+            
+        //     // extensive internal energy
+
+        //     double ie = root["regions"][reg_id]["fill_volume"]["ie"].As<double>();
+        //     std::cout << "\tie = " << ie << std::endl;
+            
+        //     region_fills[reg_id].ie = ie;
+        
+        // } // ie
+        // else if(a_word.compare("speed") == 0){
+
+        //     double speed = root["regions"][reg_id]["fill_volume"]["speed"].As<double>();
+        //     std::cout << "\tspeed = " << speed << std::endl;
+            
+        //     region_fills[reg_id].speed = speed;
+        
+        // } // speed
+        // else if(a_word.compare("u") == 0){
+
+        //     // x-component of velocity
+            
+        //     double u = root["regions"][reg_id]["fill_volume"]["u"].As<double>();
+        //     std::cout << "\tu = " << u << std::endl;
+            
+        //     region_fills[reg_id].u = u;
+        
+        // } // u
+        // else if(a_word.compare("v") == 0){
+            
+        //     // y-component of velocity
+
+        //     double v = root["regions"][reg_id]["fill_volume"]["v"].As<double>();
+        //     std::cout << "\tie = " << v << std::endl;
+            
+        //     region_fills[reg_id].v = v;
+        
+        // } // v
+        // else if(a_word.compare("w") == 0){
+            
+        //     // z-component of velocity
+
+        //     double w = root["regions"][reg_id]["fill_volume"]["w"].As<double>();
+        //     std::cout << "\tw = " << w << std::endl;
+            
+        //     region_fills[reg_id].w = w;
+        
+        // } // w
+        // else if(a_word.compare("radius1") == 0){
+            
+        //     // inner radius of sphere/cylinder
+
+        //     double radius1 = root["regions"][reg_id]["fill_volume"]["radius1"].As<double>();
+        //     std::cout << "\tradius1 = " << radius1 << std::endl;
+            
+        //     region_fills[reg_id].radius1 = radius1;
+        
+        // } // radius1
+        // else if(a_word.compare("radius2") == 0){
+            
+        //     // outer radius of sphere/cylinder
+
+        //     double radius2 = root["regions"][reg_id]["fill_volume"]["radius2"].As<double>();
+        //     std::cout << "\tradius2 = " << radius2 << std::endl;
+            
+        //     region_fills[reg_id].radius2 = radius2;
+        
+        // } // radius2
+        // else if(a_word.compare("x1") == 0){
+            
+        //     // inner plane
+
+        //     double x1 = root["regions"][reg_id]["fill_volume"]["x1"].As<double>();
+        //     std::cout << "\tx1 = " << x1 << std::endl;
+            
+        //     region_fills[reg_id].x1 = x1;
+        
+        // } // x1
+        // else if(a_word.compare("x2") == 0){
+            
+        //     // outer plane
+
+        //     double x2 = root["regions"][reg_id]["fill_volume"]["x2"].As<double>();
+        //     std::cout << "\tx2 = " << x2 << std::endl;
+            
+        //     region_fills[reg_id].x2 = x2;
+        
+        // } // x2
+        // else if(a_word.compare("y1") == 0){
+            
+        //     // inner plane
+
+        //     double y1 = root["regions"][reg_id]["fill_volume"]["y1"].As<double>();
+        //     std::cout << "\ty1 = " << y1 << std::endl;
+            
+        //     region_fills[reg_id].y1 = y1;
+        
+        // } // y1
+        // else if(a_word.compare("y2") == 0){
+            
+        //     // outer plane
+
+        //     double y2 = root["regions"][reg_id]["fill_volume"]["y2"].As<double>();
+        //     std::cout << "\ty2 = " << y2 << std::endl;
+            
+        //     region_fills[reg_id].y2 = y2;
+        
+        // } // y2
+        // else if(a_word.compare("z1") == 0){
+            
+        //     // inner plane
+
+        //     double z1 = root["regions"][reg_id]["fill_volume"]["z1"].As<double>();
+        //     std::cout << "\tz1 = " << z1 << std::endl;
+            
+        //     region_fills[reg_id].z1 = z1;
+        
+        // } // z1
+        // else if(a_word.compare("z2") == 0){
+            
+        //     // outer plane
+
+        //     double z2 = root["regions"][reg_id]["fill_volume"]["z2"].As<double>();
+        //     std::cout << "\tz2 = " << z2 << std::endl;
+            
+        //     region_fills[reg_id].z2 = z2;
+        
+        // } // z2
+        // else if(a_word.compare("type") == 0){
+
+        //     std::string type = root["regions"][reg_id]["fill_volume"]["type"].As<std::string>();
+        //     std::cout << "\ttype = " << type << std::endl;
+            
+        //     // set the volume tag type
+        //     if(region_type_map.find(type) != region_type_map.end()){
+                
+        //         region_fills[reg_id].volume = region_type_map[type];
+        //         std::cout << "\tvolume_fill = " << type << std::endl;
+        //         std::cout << region_fills[reg_id].volume << std::endl;
+        //     }
+        //     else{
+        //         std::cout << "ERROR: invalid input: " << type << std::endl;
+        //     } // end if
+                
+        // } // end volume fill type
+        // else if(a_word.compare("velocity") == 0){
+
+        //     std::string type = root["regions"][reg_id]["fill_volume"]["velocity"].As<std::string>();
+        //     std::cout << "\tvelocity = " << type << std::endl;
+            
+            
+        //     // set the volume tag type
+        //     if(velocity_type_map.find(type) != velocity_type_map.end()){
+                
+        //         region_fills[reg_id].velocity = velocity_type_map[type];
+        //         std::cout << "\tvelocity_fill = " << type << std::endl;
+        //         std::cout << region_fills[reg_id].velocity << std::endl;
+        //     }
+        //     else{
+        //         std::cout << "ERROR: invalid input: " << type << std::endl;
+        //     } // end if
+                
+        // } // end velocity
+        // else if(a_word.compare("origin") == 0){
+
+        //     std::string origin = root["regions"][reg_id]["fill_volume"]["origin"].As<std::string>();
+        //     std::cout << "\torigin = " << origin << std::endl;
+            
+        //     // get the origin numbers, values are words
+        //     std::vector<std::string> numbers = exact_array_values(origin, ",");
+            
+        //     double x1 = std::stod(numbers[0]);
+        //     double y1 = std::stod(numbers[1]);
+        //     double z1 = std::stod(numbers[2]);
+            
+        //     std::cout << "\tx1 = " << x1 << std::endl;
+        //     std::cout << "\ty1 = " << y1 << std::endl;
+        //     std::cout << "\tz1 = " << z1 << std::endl;
+            
+        //     // storing the origin values as (x1,y1,z1)
+        //     region_fills[reg_id].x1 = x1;
+        //     region_fills[reg_id].y1 = y1;
+        //     region_fills[reg_id].z1 = z1;
+                
+        // } // origin
+        // else {
+        //     std::cout << "ERROR: invalid input: " << a_word << std::endl;
+        // }
+    } // end for words in user mesh inputs
+    
+} // end of function to parse region
+
+
+// =================================================================================
 //    Parse Fill regions
 // =================================================================================
 void parse_regions(Yaml::Node &root,
@@ -475,10 +793,6 @@ void parse_regions(Yaml::Node &root,
 
 // =================================================================================
 //    Parse Material Definitions
-// =================================================================================
-
-// =================================================================================
-//      material definitions
 // =================================================================================
 void parse_materials(Yaml::Node &root,
                      std::vector <material_t> &materials,

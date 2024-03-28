@@ -82,18 +82,25 @@ public:
         print_yaml(root);
 
 
-        std::cout<<"Parsing YAML regions:"<<std::endl;
-        // parse the region yaml text into a vector of region_fills
-        std::vector <reg_fill_t> region_fills;
-        parse_regions(root, region_fills);
+        std::cout<<"Parsing YAML meshing options:"<<std::endl;
+        mesh_input_t mesh_input;
+        parse_mesh_input(root, mesh_input);
+
+
+
+
+        // std::cout<<"Parsing YAML regions:"<<std::endl;
+        // // parse the region yaml text into a vector of region_fills
+        // std::vector <reg_fill_t> region_fills;
+        // parse_regions(root, region_fills);
 
             
             
-        std::cout<<"Parsing YAML materials:"<<std::endl;
-        // parse the material yaml text into a vector of materials
-        std::vector <material_t> materials;
-        std::vector <std::vector <double>> eos_global_vars;
-        parse_materials(root, materials, eos_global_vars);
+        // std::cout<<"Parsing YAML materials:"<<std::endl;
+        // // parse the material yaml text into a vector of materials
+        // std::vector <material_t> materials;
+        // std::vector <std::vector <double>> eos_global_vars;
+        // parse_materials(root, materials, eos_global_vars);
 
 
         
@@ -137,9 +144,8 @@ public:
     int num_solvers = 0;
 
 
-    // set of enabled FEA modules
+    // set of enabled solvers
     std::vector<Solver*> solvers;
 
-    int nfea_modules;
 
 };
