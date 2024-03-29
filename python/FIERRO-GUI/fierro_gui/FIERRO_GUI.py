@@ -46,22 +46,6 @@ from EVPFFT_Lattice import *
 from Mesh_Builder_WInput import *
 from Working_Directory import *
 
-#class LocalResource:
-#    FILE_PATH = os.path.abspath(
-#        os.path.join(*(os.path.split(os.path.expanduser(__file__))[:-1]))
-#    )
-#
-#    @staticmethod
-#    def get_resource_name(relpath: str) -> str:
-#        return os.path.join(LocalResource.FILE_PATH, relpath)
-
-#VTK_OUTPUT = os.path.join(self.directory, 'voxelizer/VTK_Geometry.vtk')
-#ELASTIC_PARAMETERS_0 = 'elastic_parameters_0.txt'
-#ELASTIC_PARAMETERS_1 = 'elastic_parameters_1.txt'
-#PLASTIC_PARAMETERS = LocalResource.get_resource_name('plastic_parameters.txt')
-#EVPFFT_INPUT = os.path.join(tempfile.gettempdir(), 'evpfft_lattice_input.txt')
-#GLOBAL_MESH = 'global_mesh.yaml'
-
 class FIERRO_GUI(Ui_MainWindow):
     def setupUi(self, MainWindow):
         super().setupUi(MainWindow)
@@ -91,7 +75,6 @@ class FIERRO_GUI(Ui_MainWindow):
                 global b3_filename
                 b3_filename = QFileDialog.getOpenFileName(
                     filter="Geometry File (*.stl *.vtk)",
-#                    filter="Geometry File (*.stl)",
                 )
                 # Paraview window
                 self.file_type = b3_filename[0][-4:-1]

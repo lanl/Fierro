@@ -189,6 +189,9 @@ def Explicit_SGH(self):
         self.INSpherero.clear()
         self.INCylinderri.clear()
         self.INCylinderro.clear()
+        self.INSphereox.clear()
+        self.INSphereoy.clear()
+        self.INSphereoz.clear()
 
     def delete_basic_part():
         current_row = self.TBasicGeometries.currentRow()
@@ -257,17 +260,34 @@ def Explicit_SGH(self):
             self.TMaterialsSGH.setItem(
                 row, 8, QTableWidgetItem(self.INSpecificHeat.text())
             )
-            self.TMaterialsSGH.setItem(
-                row, 9, QTableWidgetItem(str(self.INStrengthModel.currentText()))
-            )
             
             # Add material as an option for material assignment
             self.INMaterial.clear()
             for i in range(self.TMaterialsSGH.rowCount()):
                 self.INMaterial.addItem(self.TMaterialsSGH.item(i,0).text())
             
-            # Clear all inputs
-            reset_material_SGH()
+#            # Clear all inputs
+#            if str(self.INArtificialViscosity.currentText()) == "custom":
+#                reset_material_SGH()
+            
+    def artificial_viscosity():
+        if str(self.INArtificialViscosity.currentText()) == "default":
+            # Link to correct page
+            self.ArtificialViscosity.setCurrentIndex(0)
+            
+            # Set default values
+            self.INq1.setText("1")
+            self.INq2.setText("1.33333")
+            self.INq1ex.setText("1")
+            self.INq2ex.setText("0")
+            self.INGamma.setText("1.66667")
+            self.INMinSound.setText("1E-14")
+            self.INSpecificHeat.setText("1")
+        elif str(self.INArtificialViscosity.currentText()) == "custom":
+            # Link to correct page
+            self.ArtificialViscosity.setCurrentIndex(1)
+            
+    self.INArtificialViscosity.currentIndexChanged.connect(artificial_viscosity)
         
     def reset_material_SGH():
         self.INMaterialNameSGH.clear()
@@ -387,9 +407,36 @@ def Explicit_SGH(self):
         )
         if button == QMessageBox.StandardButton.Yes:
             self.Tassignmat.removeRow(current_row)
+    
+    # Move the material assignment up in the list
+    def moveup_assign_mat_SGH():
+        current_row = self.Tassignmat.currentRow()
+
+        if current_row > 0:
+            items = [self.Tassignmat.item(current_row, col).clone() for col in range(self.Tassignmat.columnCount())]
+            self.Tassignmat.removeRow(current_row)
+            self.Tassignmat.insertRow(current_row - 1)
+            for col, item in enumerate(items):
+                self.Tassignmat.setItem(current_row - 1, col, item)
+            self.Tassignmat.selectRow(current_row - 1)
+    
+    # Move the material assignment down in the list
+    def movedown_assign_mat_SGH():
+        current_row = self.Tassignmat.currentRow()
+        row_count = self.Tassignmat.rowCount()
+
+        if current_row < row_count - 1:
+            items = [self.Tassignmat.item(current_row, col).clone() for col in range(self.Tassignmat.columnCount())]
+            self.Tassignmat.removeRow(current_row)
+            self.Tassignmat.insertRow(current_row + 1)
+            for col, item in enumerate(items):
+                self.Tassignmat.setItem(current_row + 1, col, item)
+            self.Tassignmat.selectRow(current_row + 1)
         
     self.Baddmaterialassignment.clicked.connect(assign_material_SGH)
     self.Bdeletematerialassignment.clicked.connect(delete_assign_mat_SGH)
+    self.BUpMaterial.clicked.connect(moveup_assign_mat_SGH)
+    self.BDownMaterial.clicked.connect(movedown_assign_mat_SGH)
 
     # Boundary Condition Assignment
     def selected_bcs(text):
