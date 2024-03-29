@@ -18,10 +18,10 @@ def warning_message(msg):
 def EVPFFT_Lattice(self):
     # Connect tab buttons to settings windows
     self.BImportPart.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(2))
-    self.BDefineMaterial.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(3))
-    self.BApplyBC.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(4))
-    self.BSolverSettings.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(5))
-    self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(6))
+    self.BDefineMaterial.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(4))
+    self.BApplyBC.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(5))
+    self.BSolverSettings.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(6))
+    self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(7))
     self.BGlobalMesh.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(1))
     
     # Apply Material

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUISSGyFY.ui'
+## Form generated from reading UI file 'FIERRO_GUIoUAwwp.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QForm
     QMenuBar, QPlainTextEdit, QProgressBar, QPushButton,
     QRadioButton, QSizePolicy, QSpacerItem, QSplitter,
     QStackedWidget, QStatusBar, QTabWidget, QTableWidget,
-    QTableWidgetItem, QVBoxLayout, QWidget)
+    QTableWidgetItem, QToolButton, QVBoxLayout, QWidget)
 import IconResourceFile_rc
 import IconResourceFile_rc
 
@@ -32,7 +32,7 @@ class Ui_MainWindow(object):
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1156, 1012)
         icon = QIcon()
-        icon.addFile(u"../../../../../../../../.designer/backup/Icons/EVPFFT_logo_A2.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u"../../../../../../../../../../../../../../.designer/backup/Icons/EVPFFT_logo_A2.png", QSize(), QIcon.Normal, QIcon.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setAutoFillBackground(False)
         MainWindow.setToolButtonStyle(Qt.ToolButtonIconOnly)
@@ -3397,12 +3397,143 @@ class Ui_MainWindow(object):
 
         self.verticalSpacer_13 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-        self.formLayout_13.setItem(5, QFormLayout.FieldRole, self.verticalSpacer_13)
+        self.formLayout_13.setItem(6, QFormLayout.FieldRole, self.verticalSpacer_13)
+
+        self.INGraphicsOutput = QLineEdit(self.solversettings)
+        self.INGraphicsOutput.setObjectName(u"INGraphicsOutput")
+
+        self.formLayout_13.setWidget(5, QFormLayout.FieldRole, self.INGraphicsOutput)
+
+        self.LGraphicsOutput = QLabel(self.solversettings)
+        self.LGraphicsOutput.setObjectName(u"LGraphicsOutput")
+        self.LGraphicsOutput.setWordWrap(True)
+
+        self.formLayout_13.setWidget(5, QFormLayout.LabelRole, self.LGraphicsOutput)
 
 
         self.verticalLayout_28.addWidget(self.solversettings)
 
         self.ToolSettings.addWidget(self.page_4)
+        self.ResultsSGH = QWidget()
+        self.ResultsSGH.setObjectName(u"ResultsSGH")
+        self.verticalLayout_38 = QVBoxLayout(self.ResultsSGH)
+        self.verticalLayout_38.setObjectName(u"verticalLayout_38")
+        self.LResultsSGH = QLabel(self.ResultsSGH)
+        self.LResultsSGH.setObjectName(u"LResultsSGH")
+
+        self.verticalLayout_38.addWidget(self.LResultsSGH)
+
+        self.frame_15 = QFrame(self.ResultsSGH)
+        self.frame_15.setObjectName(u"frame_15")
+        self.frame_15.setFrameShape(QFrame.NoFrame)
+        self.frame_15.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_17 = QHBoxLayout(self.frame_15)
+        self.horizontalLayout_17.setObjectName(u"horizontalLayout_17")
+        self.horizontalLayout_17.setContentsMargins(0, 0, 0, 0)
+        self.INOuputVarSGH = QComboBox(self.frame_15)
+        self.INOuputVarSGH.addItem("")
+        self.INOuputVarSGH.setObjectName(u"INOuputVarSGH")
+
+        self.horizontalLayout_17.addWidget(self.INOuputVarSGH)
+
+        self.BPreviewResultsSGH = QPushButton(self.frame_15)
+        self.BPreviewResultsSGH.setObjectName(u"BPreviewResultsSGH")
+
+        self.horizontalLayout_17.addWidget(self.BPreviewResultsSGH)
+
+
+        self.verticalLayout_38.addWidget(self.frame_15, 0, Qt.AlignHCenter)
+
+        self.frame_13 = QFrame(self.ResultsSGH)
+        self.frame_13.setObjectName(u"frame_13")
+        self.frame_13.setFrameShape(QFrame.NoFrame)
+        self.frame_13.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_12 = QHBoxLayout(self.frame_13)
+        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
+        self.horizontalLayout_12.setContentsMargins(0, 0, 0, 0)
+        self.BFirstFrame = QToolButton(self.frame_13)
+        self.BFirstFrame.setObjectName(u"BFirstFrame")
+        icon11 = QIcon()
+        icon11.addFile(u":/Blue Icons/Blue Icons/FirstFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BFirstFrame.setIcon(icon11)
+        self.BFirstFrame.setIconSize(QSize(32, 32))
+        self.BFirstFrame.setPopupMode(QToolButton.DelayedPopup)
+        self.BFirstFrame.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.BFirstFrame.setAutoRaise(False)
+        self.BFirstFrame.setArrowType(Qt.NoArrow)
+
+        self.horizontalLayout_12.addWidget(self.BFirstFrame)
+
+        self.BPreviousFrame = QToolButton(self.frame_13)
+        self.BPreviousFrame.setObjectName(u"BPreviousFrame")
+        icon12 = QIcon()
+        icon12.addFile(u":/Blue Icons/Blue Icons/PreviousFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BPreviousFrame.setIcon(icon12)
+        self.BPreviousFrame.setIconSize(QSize(32, 32))
+
+        self.horizontalLayout_12.addWidget(self.BPreviousFrame)
+
+        self.BNextFrame = QToolButton(self.frame_13)
+        self.BNextFrame.setObjectName(u"BNextFrame")
+        icon13 = QIcon()
+        icon13.addFile(u":/Blue Icons/Blue Icons/NextFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BNextFrame.setIcon(icon13)
+        self.BNextFrame.setIconSize(QSize(32, 32))
+
+        self.horizontalLayout_12.addWidget(self.BNextFrame)
+
+        self.BLastFrame = QToolButton(self.frame_13)
+        self.BLastFrame.setObjectName(u"BLastFrame")
+        icon14 = QIcon()
+        icon14.addFile(u":/Blue Icons/Blue Icons/LastFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BLastFrame.setIcon(icon14)
+        self.BLastFrame.setIconSize(QSize(32, 32))
+
+        self.horizontalLayout_12.addWidget(self.BLastFrame)
+
+
+        self.verticalLayout_38.addWidget(self.frame_13, 0, Qt.AlignHCenter)
+
+        self.frame_14 = QFrame(self.ResultsSGH)
+        self.frame_14.setObjectName(u"frame_14")
+        self.frame_14.setFrameShape(QFrame.NoFrame)
+        self.frame_14.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_16 = QHBoxLayout(self.frame_14)
+        self.horizontalLayout_16.setObjectName(u"horizontalLayout_16")
+        self.horizontalLayout_16.setContentsMargins(0, 0, 0, 0)
+        self.LThreshold = QLabel(self.frame_14)
+        self.LThreshold.setObjectName(u"LThreshold")
+
+        self.horizontalLayout_16.addWidget(self.LThreshold)
+
+        self.INThreshold = QLineEdit(self.frame_14)
+        self.INThreshold.setObjectName(u"INThreshold")
+
+        self.horizontalLayout_16.addWidget(self.INThreshold)
+
+        self.BThreshold = QToolButton(self.frame_14)
+        self.BThreshold.setObjectName(u"BThreshold")
+        icon15 = QIcon()
+        icon15.addFile(u":/Blue Icons/Blue Icons/crop.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BThreshold.setIcon(icon15)
+        self.BThreshold.setIconSize(QSize(32, 32))
+        self.BThreshold.setToolButtonStyle(Qt.ToolButtonIconOnly)
+
+        self.horizontalLayout_16.addWidget(self.BThreshold)
+
+
+        self.verticalLayout_38.addWidget(self.frame_14, 0, Qt.AlignHCenter)
+
+        self.BOpenParaviewSGH = QPushButton(self.ResultsSGH)
+        self.BOpenParaviewSGH.setObjectName(u"BOpenParaviewSGH")
+
+        self.verticalLayout_38.addWidget(self.BOpenParaviewSGH)
+
+        self.verticalSpacer_17 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_38.addItem(self.verticalSpacer_17)
+
+        self.ToolSettings.addWidget(self.ResultsSGH)
         self.splitter.addWidget(self.ToolSettings)
         self.ParaviewFrame = QFrame(self.splitter)
         self.ParaviewFrame.setObjectName(u"ParaviewFrame")
@@ -3518,7 +3649,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"EVPFFT", None))
         self.actionManual.setText(QCoreApplication.translate("MainWindow", u"Manual", None))
         self.actionChange_Working_Directory.setText(QCoreApplication.translate("MainWindow", u"Change Working Directory", None))
-        self.label_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:700; color:#ff2600;\">\u2b06</span><span style=\" font-size:18pt; font-weight:700;\"> SELECT A TYPE OF SOLVER </span><span style=\" font-size:18pt; font-weight:700; color:#ff2600;\">\u2b06</span></p></body></html>", None))
+        self.label_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><br/></p></body></html>", None))
         self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.ChooseSolver), "")
         self.BGlobalMesh.setText("")
         self.LGlobalMesh.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Global        Mesh</span></p></body></html>", None))
@@ -3546,7 +3677,7 @@ class Ui_MainWindow(object):
         self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.ExplicitSolver), QCoreApplication.translate("MainWindow", u"Dynamic", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:700;\">COMING SOON </span><span style=\" font-size:18pt;\">\u203c\ufe0f</span></p></body></html>", None))
         self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.ImplicitSolver), QCoreApplication.translate("MainWindow", u"Quasi-Static", None))
-        self.label_3.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:700; color:#ff2600;\">\u2b06</span><span style=\" font-size:18pt; font-weight:700;\"> SELECT A PIPELINE </span><span style=\" font-size:18pt; font-weight:700; color:#ff2600;\">\u2b06</span></p></body></html>", None))
+        self.label_3.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><br/></p></body></html>", None))
         self.EVPFFTPipelines.setTabText(self.EVPFFTPipelines.indexOf(self.ChoosePipeline), "")
         self.BImportPart_5.setText("")
         self.LImportPart_5.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Import Part</span></p></body></html>", None))
@@ -3576,7 +3707,7 @@ class Ui_MainWindow(object):
         self.BViewResults.setText("")
         self.LViewResults.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">View Results</span></p></body></html>", None))
         self.LJobTools.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Simulation</span></p></body></html>", None))
-        self.EVPFFTPipelines.setTabText(self.EVPFFTPipelines.indexOf(self.EVPFFTHomogenization), QCoreApplication.translate("MainWindow", u"Lattice", None))
+        self.EVPFFTPipelines.setTabText(self.EVPFFTPipelines.indexOf(self.EVPFFTHomogenization), QCoreApplication.translate("MainWindow", u"Bulk Response", None))
         self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.EVPFFTSolver), QCoreApplication.translate("MainWindow", u"EVPFFT", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:700;\">COMING SOON </span><span style=\" font-size:18pt;\">\u203c\ufe0f</span></p></body></html>", None))
         self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.EVPFFTLSSolver), QCoreApplication.translate("MainWindow", u"EVPFFT-LS", None))
@@ -3606,22 +3737,31 @@ class Ui_MainWindow(object):
         self.label_30.setText(QCoreApplication.translate("MainWindow", u",", None))
         self.label_20.setText(QCoreApplication.translate("MainWindow", u")", None))
         self.label_22.setText(QCoreApplication.translate("MainWindow", u"(", None))
+        self.INLengthYR3D.setText("")
         self.INLengthYR3D.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Y", None))
+        self.INOriginYR3D.setText("")
         self.INOriginYR3D.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Y", None))
         self.LOriginR3D.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Origin:</p></body></html>", None))
+        self.INElementsYR3D.setText("")
         self.INElementsYR3D.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Y", None))
         self.label_26.setText(QCoreApplication.translate("MainWindow", u"(", None))
+        self.INLengthXR3D.setText("")
         self.INLengthXR3D.setPlaceholderText(QCoreApplication.translate("MainWindow", u"X", None))
         self.label_28.setText(QCoreApplication.translate("MainWindow", u",", None))
         self.label_18.setText(QCoreApplication.translate("MainWindow", u")", None))
+        self.INOriginXR3D.setText("")
         self.INOriginXR3D.setPlaceholderText(QCoreApplication.translate("MainWindow", u"X", None))
         self.label_21.setText(QCoreApplication.translate("MainWindow", u",", None))
+        self.INElementsXR3D.setText("")
         self.INElementsXR3D.setPlaceholderText(QCoreApplication.translate("MainWindow", u"X", None))
         self.label_19.setText(QCoreApplication.translate("MainWindow", u")", None))
+        self.INOriginZR3D.setText("")
         self.INOriginZR3D.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Z", None))
         self.label_31.setText(QCoreApplication.translate("MainWindow", u",", None))
+        self.INLengthZR3D.setText("")
         self.INLengthZR3D.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Z", None))
         self.label_32.setText(QCoreApplication.translate("MainWindow", u",", None))
+        self.INElementsZR3D.setText("")
         self.INElementsZR3D.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Z", None))
         self.INLengthXR2D.setPlaceholderText(QCoreApplication.translate("MainWindow", u"X", None))
         self.LLengthR2D.setText(QCoreApplication.translate("MainWindow", u"Length:", None))
@@ -3690,14 +3830,21 @@ class Ui_MainWindow(object):
         self.BGenerateGlobalMesh.setText(QCoreApplication.translate("MainWindow", u"Generate Global Mesh", None))
         self.LGeometryInformation.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">IMPORT PART</span></p></body></html>", None))
         self.LPartName.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>        Part Name: </p></body></html>", None))
+        self.INPartName.setText("")
         self.BUploadGeometryFile.setText(QCoreApplication.translate("MainWindow", u"Upload Geometry File", None))
         self.STLVoxelization.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">.STL VOXELIZATION</span></p></body></html>", None))
         self.LNumberOfVoxelsX.setText(QCoreApplication.translate("MainWindow", u"Number of voxels x: ", None))
+        self.INNumberOfVoxelsX.setText("")
         self.LNumberOfVoxelsY.setText(QCoreApplication.translate("MainWindow", u"Number of voxels y: ", None))
+        self.INNumberOfVoxelsY.setText("")
         self.LNumberOfVoxelsZ.setText(QCoreApplication.translate("MainWindow", u"Number of voxels z: ", None))
+        self.INNumberOfVoxelsZ.setText("")
         self.LOriginX.setText(QCoreApplication.translate("MainWindow", u"Origin x:", None))
+        self.INOriginX.setText("")
         self.LOriginY.setText(QCoreApplication.translate("MainWindow", u"Origin y:", None))
+        self.INOriginY.setText("")
         self.LOriginZ.setText(QCoreApplication.translate("MainWindow", u"Origin z:", None))
+        self.INOriginZ.setText("")
         self.BStlDimensions.setText(QCoreApplication.translate("MainWindow", u"stl dimensions", None))
         self.BCustomDimensions.setText(QCoreApplication.translate("MainWindow", u"custom dimensions", None))
         self.LLengthX.setText(QCoreApplication.translate("MainWindow", u"Length x:", None))
@@ -3937,16 +4084,24 @@ class Ui_MainWindow(object):
         self.LDefineMaterials_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">DEFINE MATERIALS</span></p></body></html>", None))
         self.LEOS.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Equation Of State Model:</p></body></html>", None))
         self.Lq2ex.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Linear Slope in Expansion (q2ex):</p></body></html>", None))
+        self.INMaterialNameSGH.setText("")
+        self.INMinSound.setText("")
+        self.INq2ex.setText("")
         self.LMinSound.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Minimum Sound Speed:</p></body></html>", None))
         self.LMaterialNameSGH.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Name:</p></body></html>", None))
+        self.INq2.setText("")
         self.LGamma.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Gamma:</p></body></html>", None))
         self.LSpecificHeat.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Specific Heat:</p></body></html>", None))
+        self.INGamma.setText("")
+        self.INq1.setText("")
         self.Lq1ex.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Accoustic Coefficient in Expansion (q1ex):</p></body></html>", None))
         self.INEOS.setItemText(0, QCoreApplication.translate("MainWindow", u"none", None))
         self.INEOS.setItemText(1, QCoreApplication.translate("MainWindow", u"ideal_gas", None))
 
         self.Lq1.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Accoustic Coefficient in Compression (q1):</p></body></html>", None))
+        self.INq1ex.setText("")
         self.Lq2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Linear Slope in Compression (q2):</p></body></html>", None))
+        self.INSpecificHeat.setText("")
         self.LStrengthModel.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Strength Model:</p></body></html>", None))
         self.INStrengthModel.setItemText(0, QCoreApplication.translate("MainWindow", u"none", None))
 
@@ -3975,11 +4130,16 @@ class Ui_MainWindow(object):
         self.LDefineMaterials_3.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">ASSIGN MATERIALS</span></p></body></html>", None))
         self.LVelx.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Velocity x:</p></body></html>", None))
         self.LRegion_3.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Material:</p></body></html>", None))
+        self.INVelocityZ.setText("")
         self.LMaterialName_3.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Part:</p></body></html>", None))
         self.LVelz.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Velocity z:</p></body></html>", None))
         self.LSIE.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Specific Internal Energy:</p></body></html>", None))
         self.LVely.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Velocity y:</p></body></html>", None))
+        self.INDensity.setText("")
+        self.INSIE.setText("")
         self.LDensity.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Density:</p></body></html>", None))
+        self.INVelocityX.setText("")
+        self.INVelocityY.setText("")
         self.Baddmaterialassignment.setText(QCoreApplication.translate("MainWindow", u"Add Material Assignment", None))
         ___qtablewidgetitem72 = self.Tassignmat.horizontalHeaderItem(0)
         ___qtablewidgetitem72.setText(QCoreApplication.translate("MainWindow", u"Part", None));
@@ -4003,6 +4163,7 @@ class Ui_MainWindow(object):
         self.INBoundary.setItemText(2, QCoreApplication.translate("MainWindow", u"z_plane", None))
 
         self.Lvalue.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Plane Position:</span></p></body></html>", None))
+        self.INPlanePosition.setText("")
         self.Ltype.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Type: </span></p></body></html>", None))
         self.INType.setItemText(0, QCoreApplication.translate("MainWindow", u"reflected", None))
         self.INType.setItemText(1, QCoreApplication.translate("MainWindow", u"fixed", None))
@@ -4038,7 +4199,21 @@ class Ui_MainWindow(object):
         self.Linitdt.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Initial dt: </span></p></body></html>", None))
         self.INInitialdt.setText(QCoreApplication.translate("MainWindow", u"1E-5", None))
         self.Lmaxcycle.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Maximum # of cycles: </span></p></body></html>", None))
-        self.INmaxcycles.setText(QCoreApplication.translate("MainWindow", u"100000", None))
+        self.INmaxcycles.setText(QCoreApplication.translate("MainWindow", u"2000000", None))
+        self.INGraphicsOutput.setText(QCoreApplication.translate("MainWindow", u"0.25", None))
+        self.LGraphicsOutput.setText(QCoreApplication.translate("MainWindow", u"Graphics output step:", None))
+        self.LResultsSGH.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline; color:#000000;\">RESULTS</span></p></body></html>", None))
+        self.INOuputVarSGH.setItemText(0, QCoreApplication.translate("MainWindow", u"SIE", None))
+
+        self.BPreviewResultsSGH.setText(QCoreApplication.translate("MainWindow", u"Preview Results", None))
+        self.BFirstFrame.setText(QCoreApplication.translate("MainWindow", u"...", None))
+        self.BPreviousFrame.setText(QCoreApplication.translate("MainWindow", u"...", None))
+        self.BNextFrame.setText(QCoreApplication.translate("MainWindow", u"...", None))
+        self.BLastFrame.setText(QCoreApplication.translate("MainWindow", u"...", None))
+        self.LThreshold.setText(QCoreApplication.translate("MainWindow", u"Threshold Value:", None))
+        self.INThreshold.setText(QCoreApplication.translate("MainWindow", u"0", None))
+        self.BThreshold.setText(QCoreApplication.translate("MainWindow", u"threshold", None))
+        self.BOpenParaviewSGH.setText(QCoreApplication.translate("MainWindow", u"Open Paraview", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
     # retranslateUi

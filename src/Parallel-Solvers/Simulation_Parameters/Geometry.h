@@ -87,7 +87,6 @@ struct Volume : Yaml::ValidatedYaml {
                   && radius <= radius2 );
 
           case VOLUME_TYPE::sphere:
-              std::cout << "sphere origin: " << orig_x << "," << orig_y << "," << orig_z << std::endl;
             radius = sqrt( (elem_coords[0] - orig_x)*(elem_coords[0] - orig_x) +
                              (elem_coords[1] - orig_y)*(elem_coords[1] - orig_y) +
                              (elem_coords[2] - orig_z)*(elem_coords[2] - orig_z) );
@@ -155,7 +154,7 @@ struct Volume : Yaml::ValidatedYaml {
             } // end if
             
             // check for periodic
-            if (elem_coords[0] > num_voxel_x*voxel_dx+orig_x || elem_coords[1] > num_voxel_y*voxel_dy+orig_y || elem_coords[2] > num_voxel_z*voxel_dz+orig_z || elem_coords[0] < orig_x || elem_coords[1] < orig_y || elem_coords[2] < orig_z) {
+            if (elem_coords[0] > num_voxel_x*voxel_dx+(orig_x-voxel_dx/2) || elem_coords[1] > num_voxel_y*voxel_dy+(orig_y-voxel_dy/2) || elem_coords[2] > num_voxel_z*voxel_dz+(orig_z-voxel_dz/2) || elem_coords[0] < (orig_x-voxel_dx/2) || elem_coords[1] < (orig_y-voxel_dy/2) || elem_coords[2] < (orig_z-voxel_dz/2)) {
                 fill_this = false;
             }
             return fill_this;

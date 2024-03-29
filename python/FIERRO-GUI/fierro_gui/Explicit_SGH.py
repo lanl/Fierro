@@ -4,7 +4,8 @@ from Explicit_SGH_WInput import *
 import subprocess
 import re
 import vtkmodules.all as vtk
-import paraview.simple as pvsimple
+#import paraview.simple as pvsimple
+from paraview.simple import *
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 # ============================================
@@ -26,6 +27,7 @@ def Explicit_SGH(self):
     self.BApplyBCSGH.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(10))
     self.BSolverSettingsSGH.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(11))
     self.BCreateBasicPart.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(3))
+    self.BViewResultsSGH.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(12))
     
     # Generate Basic Geometry
     # Disable the cylinder option for now
@@ -89,6 +91,8 @@ def Explicit_SGH(self):
                 self.INPartMaterial.addItem("global")
                 for i in range(self.TBasicGeometries.rowCount()):
                     self.INPartMaterial.addItem(self.TBasicGeometries.item(i,0).text())
+                for i in range(self.TParts.rowCount()):
+                    self.INPartMaterial.addItem(self.TParts.item(i,0).text())
                     
                 # Reset the input text boxes
                 reset_basic_part()
@@ -145,6 +149,8 @@ def Explicit_SGH(self):
                 self.INPartMaterial.addItem("global")
                 for i in range(self.TBasicGeometries.rowCount()):
                     self.INPartMaterial.addItem(self.TBasicGeometries.item(i,0).text())
+                for i in range(self.TParts.rowCount()):
+                    self.INPartMaterial.addItem(self.TParts.item(i,0).text())
                     
                 # Reset the input text boxes
                 reset_basic_part()
@@ -508,3 +514,90 @@ def Explicit_SGH(self):
         self.state_name = states[state]
         self.RunOutputWindow.appendPlainText(f"{self.state_name}")
     self.BRunSGH.clicked.connect(run_explicit_SGH)
+    
+    # Preview Results
+    def results_explicit_sgh():
+        # Remove all objects from window view
+        SetActiveView(self.render_view)
+        renderer = self.render_view.GetRenderer()
+        renderer.RemoveAllViewProps()
+        self.render_view.Update()
+        self.render_view.StillRender()
+        
+        # Display outputs.vtk.series data
+        self.series_reader = LegacyVTKReader(FileNames=[f'{self.directory}/outputs/outputs.vtk.series'])
+        self.display = Show(self.series_reader, self.render_view)
+        
+        # Initialize current frame index
+        self.current_frame = 0
+        
+        # Select the variable you want to visualize
+        paraview.simple.ColorBy(self.display,('CELLS',str(self.INOuputVarSGH.currentText())))
+        vmstressLUT = paraview.simple.GetColorTransferFunction(str(self.INOuputVarSGH.currentText()))
+        self.display.SetScalarBarVisibility(self.render_view, True)
+        paraview.simple.HideUnusedScalarBars(self.render_view)
+        self.render_view.ResetCamera()
+        self.render_view.StillRender()
+    self.BPreviewResultsSGH.clicked.connect(results_explicit_sgh)
+    
+    # View Results
+    def next_frame():
+        num_frames = len(self.series_reader.TimestepValues)
+        self.current_frame += 1
+        if self.current_frame >= num_frames:
+            self.current_frame = num_frames-1  # Stay on the last frame
+        self.series_reader.UpdatePipelineInformation()
+        times = self.series_reader.TimestepValues
+        self.render_view.ViewTime = times[self.current_frame]
+        Render()
+    self.BNextFrame.clicked.connect(next_frame)
+
+    def previous_frame():
+        num_frames = len(self.series_reader.TimestepValues)
+        self.current_frame -= 1
+        if self.current_frame <= 0:
+            self.current_frame = 0  # Stay on the first frame
+        self.series_reader.UpdatePipelineInformation()
+        times = self.series_reader.TimestepValues
+        self.render_view.ViewTime = times[self.current_frame]
+        Render()
+    self.BPreviousFrame.clicked.connect(previous_frame)
+    
+    def first_frame():
+        self.current_frame = 0
+        self.series_reader.UpdatePipelineInformation()
+        times = self.series_reader.TimestepValues
+        self.render_view.ViewTime = times[self.current_frame]
+        Render()
+    self.BFirstFrame.clicked.connect(first_frame)
+    
+    def last_frame():
+        num_frames = len(self.series_reader.TimestepValues)
+        self.current_frame = num_frames-1
+        self.series_reader.UpdatePipelineInformation()
+        times = self.series_reader.TimestepValues
+        self.render_view.ViewTime = times[self.current_frame]
+        Render()
+    self.BLastFrame.clicked.connect(last_frame)
+    
+    # Basic Threshold
+    def basic_threshold():
+        if hasattr(self, 'threshold'):
+            paraview.simple.Delete(self.threshold)
+        threshold_value = float(self.INThreshold.text())
+        self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.series_reader, Scalars = "SIE", ThresholdMethod = "Above Upper Threshold", UpperThreshold = threshold_value, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+        paraview.simple.Hide(self.series_reader, self.render_view)
+        paraview.simple.Show(self.threshold, self.render_view)
+        paraview.simple.ColorBy(self.display,('CELLS',str(self.INOuputVarSGH.currentText())))
+        vmstressLUT = paraview.simple.GetColorTransferFunction(str(self.INOuputVarSGH.currentText()))
+        self.display.SetScalarBarVisibility(self.render_view, True)
+        self.render_view.ResetCamera()
+        paraview.simple.Render()
+    self.BThreshold.clicked.connect(basic_threshold)
+    
+    # Open in Paraview
+    def open_paraview_click():
+        command = ["paraview", f'{self.directory}/outputs/outputs.vtk.series']
+        subprocess.Popen(command)
+    self.BOpenParaviewSGH.clicked.connect(open_paraview_click)
+        

@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>../../../../../../../../.designer/backup/Icons/EVPFFT_logo_A2.png</normaloff>../../../../../../../../.designer/backup/Icons/EVPFFT_logo_A2.png</iconset>
+    <normaloff>../../../../../../../../../../../../../../.designer/backup/Icons/EVPFFT_logo_A2.png</normaloff>../../../../../../../../../../../../../../.designer/backup/Icons/EVPFFT_logo_A2.png</iconset>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>
@@ -96,7 +96,7 @@
         <item>
          <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:18pt; font-weight:700; color:#ff2600;&quot;&gt;⬆&lt;/span&gt;&lt;span style=&quot; font-size:18pt; font-weight:700;&quot;&gt; SELECT A TYPE OF SOLVER &lt;/span&gt;&lt;span style=&quot; font-size:18pt; font-weight:700; color:#ff2600;&quot;&gt;⬆&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
@@ -1075,7 +1075,7 @@
            </font>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="ChoosePipeline">
            <attribute name="title">
@@ -1085,7 +1085,7 @@
             <item>
              <widget class="QLabel" name="label_3">
               <property name="text">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:18pt; font-weight:700; color:#ff2600;&quot;&gt;⬆&lt;/span&gt;&lt;span style=&quot; font-size:18pt; font-weight:700;&quot;&gt; SELECT A PIPELINE &lt;/span&gt;&lt;span style=&quot; font-size:18pt; font-weight:700; color:#ff2600;&quot;&gt;⬆&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
              </widget>
             </item>
@@ -1235,7 +1235,7 @@
           </widget>
           <widget class="QWidget" name="EVPFFTHomogenization">
            <attribute name="title">
-            <string>Lattice</string>
+            <string>Bulk Response</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <property name="spacing">
@@ -2044,7 +2044,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <enum>QFrame::NoFrame</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="TitlePage">
            <property name="minimumSize">
@@ -2355,7 +2355,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
             <item alignment="Qt::AlignTop">
              <widget class="QStackedWidget" name="MeshInputs2">
               <property name="currentIndex">
-               <number>1</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="Rectangular3D">
                <layout class="QGridLayout" name="gridLayout_4">
@@ -2410,6 +2410,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </item>
                 <item row="1" column="4">
                  <widget class="QLineEdit" name="INLengthYR3D">
+                  <property name="text">
+                   <string/>
+                  </property>
                   <property name="placeholderText">
                    <string>Y</string>
                   </property>
@@ -2417,6 +2420,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </item>
                 <item row="0" column="4">
                  <widget class="QLineEdit" name="INOriginYR3D">
+                  <property name="text">
+                   <string/>
+                  </property>
                   <property name="placeholderText">
                    <string>Y</string>
                   </property>
@@ -2431,6 +2437,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </item>
                 <item row="2" column="4">
                  <widget class="QLineEdit" name="INElementsYR3D">
+                  <property name="text">
+                   <string/>
+                  </property>
                   <property name="placeholderText">
                    <string>Y</string>
                   </property>
@@ -2445,6 +2454,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </item>
                 <item row="1" column="2">
                  <widget class="QLineEdit" name="INLengthXR3D">
+                  <property name="text">
+                   <string/>
+                  </property>
                   <property name="placeholderText">
                    <string>X</string>
                   </property>
@@ -2466,6 +2478,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </item>
                 <item row="0" column="2">
                  <widget class="QLineEdit" name="INOriginXR3D">
+                  <property name="text">
+                   <string/>
+                  </property>
                   <property name="placeholderText">
                    <string>X</string>
                   </property>
@@ -2480,6 +2495,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </item>
                 <item row="2" column="2">
                  <widget class="QLineEdit" name="INElementsXR3D">
+                  <property name="text">
+                   <string/>
+                  </property>
                   <property name="placeholderText">
                    <string>X</string>
                   </property>
@@ -2494,6 +2512,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </item>
                 <item row="0" column="6">
                  <widget class="QLineEdit" name="INOriginZR3D">
+                  <property name="text">
+                   <string/>
+                  </property>
                   <property name="placeholderText">
                    <string>Z</string>
                   </property>
@@ -2508,6 +2529,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </item>
                 <item row="1" column="6">
                  <widget class="QLineEdit" name="INLengthZR3D">
+                  <property name="text">
+                   <string/>
+                  </property>
                   <property name="placeholderText">
                    <string>Z</string>
                   </property>
@@ -2522,6 +2546,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </item>
                 <item row="2" column="6">
                  <widget class="QLineEdit" name="INElementsZR3D">
+                  <property name="text">
+                   <string/>
+                  </property>
                   <property name="placeholderText">
                    <string>Z</string>
                   </property>
@@ -3133,7 +3160,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </widget>
                </item>
                <item row="0" column="1">
-                <widget class="QLineEdit" name="INPartName"/>
+                <widget class="QLineEdit" name="INPartName">
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
                </item>
               </layout>
              </widget>
@@ -3185,6 +3216,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
+                 <property name="text">
+                  <string/>
+                 </property>
                 </widget>
                </item>
                <item row="1" column="0">
@@ -3201,6 +3235,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 <widget class="QLineEdit" name="INNumberOfVoxelsY">
                  <property name="enabled">
                   <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -3219,6 +3256,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
+                 <property name="text">
+                  <string/>
+                 </property>
                 </widget>
                </item>
                <item row="3" column="0">
@@ -3235,6 +3275,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 <widget class="QLineEdit" name="INOriginX">
                  <property name="enabled">
                   <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -3253,6 +3296,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
+                 <property name="text">
+                  <string/>
+                 </property>
                 </widget>
                </item>
                <item row="5" column="0">
@@ -3269,6 +3315,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 <widget class="QLineEdit" name="INOriginZ">
                  <property name="enabled">
                   <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -5450,6 +5499,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <height>0</height>
                   </size>
                  </property>
+                 <property name="text">
+                  <string/>
+                 </property>
                 </widget>
                </item>
                <item row="8" column="1">
@@ -5457,12 +5509,18 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
+                 <property name="text">
+                  <string/>
+                 </property>
                 </widget>
                </item>
                <item row="6" column="1">
                 <widget class="QLineEdit" name="INq2ex">
                  <property name="enabled">
                   <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -5487,6 +5545,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 <widget class="QLineEdit" name="INq2">
                  <property name="enabled">
                   <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -5515,12 +5576,18 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
+                 <property name="text">
+                  <string/>
+                 </property>
                 </widget>
                </item>
                <item row="3" column="1">
                 <widget class="QLineEdit" name="INq1">
                  <property name="enabled">
                   <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -5569,6 +5636,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
+                 <property name="text">
+                  <string/>
+                 </property>
                 </widget>
                </item>
                <item row="4" column="0">
@@ -5588,6 +5658,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 <widget class="QLineEdit" name="INSpecificHeat">
                  <property name="enabled">
                   <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -5757,6 +5830,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <property name="enabled">
                   <bool>true</bool>
                  </property>
+                 <property name="text">
+                  <string/>
+                 </property>
                 </widget>
                </item>
                <item row="1" column="0">
@@ -5801,12 +5877,18 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <property name="enabled">
                   <bool>true</bool>
                  </property>
+                 <property name="text">
+                  <string/>
+                 </property>
                 </widget>
                </item>
                <item row="4" column="1">
                 <widget class="QLineEdit" name="INSIE">
                  <property name="enabled">
                   <bool>true</bool>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -5822,12 +5904,18 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <property name="enabled">
                   <bool>true</bool>
                  </property>
+                 <property name="text">
+                  <string/>
+                 </property>
                 </widget>
                </item>
                <item row="6" column="1">
                 <widget class="QLineEdit" name="INVelocityY">
                  <property name="enabled">
                   <bool>true</bool>
+                 </property>
+                 <property name="text">
+                  <string/>
                  </property>
                 </widget>
                </item>
@@ -5966,7 +6054,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </widget>
                </item>
                <item row="1" column="1">
-                <widget class="QLineEdit" name="INPlanePosition"/>
+                <widget class="QLineEdit" name="INPlanePosition">
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
                </item>
                <item row="2" column="0">
                 <widget class="QLabel" name="Ltype">
@@ -6217,11 +6309,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item row="4" column="1">
                 <widget class="QLineEdit" name="INmaxcycles">
                  <property name="text">
-                  <string>100000</string>
+                  <string>2000000</string>
                  </property>
                 </widget>
                </item>
-               <item row="5" column="1">
+               <item row="6" column="1">
                 <spacer name="verticalSpacer_13">
                  <property name="orientation">
                   <enum>Qt::Vertical</enum>
@@ -6234,8 +6326,258 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </property>
                 </spacer>
                </item>
+               <item row="5" column="1">
+                <widget class="QLineEdit" name="INGraphicsOutput">
+                 <property name="text">
+                  <string>0.25</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="5" column="0">
+                <widget class="QLabel" name="LGraphicsOutput">
+                 <property name="text">
+                  <string>Graphics output step:</string>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="ResultsSGH">
+           <layout class="QVBoxLayout" name="verticalLayout_38">
+            <item>
+             <widget class="QLabel" name="LResultsSGH">
+              <property name="text">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:700; text-decoration: underline; color:#000000;&quot;&gt;RESULTS&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignHCenter">
+             <widget class="QFrame" name="frame_15">
+              <property name="frameShape">
+               <enum>QFrame::NoFrame</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayout_17">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QComboBox" name="INOuputVarSGH">
+                 <item>
+                  <property name="text">
+                   <string>SIE</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="BPreviewResultsSGH">
+                 <property name="text">
+                  <string>Preview Results</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignHCenter">
+             <widget class="QFrame" name="frame_13">
+              <property name="frameShape">
+               <enum>QFrame::NoFrame</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayout_12">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QToolButton" name="BFirstFrame">
+                 <property name="text">
+                  <string>...</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="Icons/IconResourceFile.qrc">
+                   <normaloff>:/Blue Icons/Blue Icons/FirstFrame.svg</normaloff>:/Blue Icons/Blue Icons/FirstFrame.svg</iconset>
+                 </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>32</width>
+                   <height>32</height>
+                  </size>
+                 </property>
+                 <property name="popupMode">
+                  <enum>QToolButton::DelayedPopup</enum>
+                 </property>
+                 <property name="toolButtonStyle">
+                  <enum>Qt::ToolButtonIconOnly</enum>
+                 </property>
+                 <property name="autoRaise">
+                  <bool>false</bool>
+                 </property>
+                 <property name="arrowType">
+                  <enum>Qt::NoArrow</enum>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QToolButton" name="BPreviousFrame">
+                 <property name="text">
+                  <string>...</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="Icons/IconResourceFile.qrc">
+                   <normaloff>:/Blue Icons/Blue Icons/PreviousFrame.svg</normaloff>:/Blue Icons/Blue Icons/PreviousFrame.svg</iconset>
+                 </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>32</width>
+                   <height>32</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QToolButton" name="BNextFrame">
+                 <property name="text">
+                  <string>...</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="Icons/IconResourceFile.qrc">
+                   <normaloff>:/Blue Icons/Blue Icons/NextFrame.svg</normaloff>:/Blue Icons/Blue Icons/NextFrame.svg</iconset>
+                 </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>32</width>
+                   <height>32</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QToolButton" name="BLastFrame">
+                 <property name="text">
+                  <string>...</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="Icons/IconResourceFile.qrc">
+                   <normaloff>:/Blue Icons/Blue Icons/LastFrame.svg</normaloff>:/Blue Icons/Blue Icons/LastFrame.svg</iconset>
+                 </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>32</width>
+                   <height>32</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignHCenter">
+             <widget class="QFrame" name="frame_14">
+              <property name="frameShape">
+               <enum>QFrame::NoFrame</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayout_16">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="LThreshold">
+                 <property name="text">
+                  <string>Threshold Value:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="INThreshold">
+                 <property name="text">
+                  <string>0</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QToolButton" name="BThreshold">
+                 <property name="text">
+                  <string>threshold</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="Icons/IconResourceFile.qrc">
+                   <normaloff>:/Blue Icons/Blue Icons/crop.svg</normaloff>:/Blue Icons/Blue Icons/crop.svg</iconset>
+                 </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>32</width>
+                   <height>32</height>
+                  </size>
+                 </property>
+                 <property name="toolButtonStyle">
+                  <enum>Qt::ToolButtonIconOnly</enum>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="BOpenParaviewSGH">
+              <property name="text">
+               <string>Open Paraview</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_17">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </widget>
@@ -6419,7 +6761,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <x>0</x>
      <y>0</y>
      <width>1156</width>
-     <height>24</height>
+     <height>37</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">

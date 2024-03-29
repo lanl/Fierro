@@ -9,12 +9,12 @@ def Explicit_SGH_WInput(self):
     dimensions = 'num_dims: 3\n'
     InputFile.write(dimensions)
     
-    dynamic_opts = 'dynamic_options:' + '\n' \
-                   '  time_final: 1.0' + '\n' \
-                   '  dt_min: 1.e-8' + '\n' \
-                   '  dt_max: 1.e-2' + '\n' \
-                   '  dt_start: 1.e-5' + '\n' \
-                   '  cycle_stop: 2000000' + '\n\n'
+    dynamic_opts = f'dynamic_options:' + '\n' \
+                   f'  time_final: {self.INTime.text()}' + '\n' \
+                   f'  dt_min: {self.INMindt.text()}' + '\n' \
+                   f'  dt_max: {self.INMaxdt.text()}' + '\n' \
+                   f'  dt_start: {self.INInitialdt.text()}' + '\n' \
+                   f'  cycle_stop: {self.INmaxcycles.text()}' + '\n\n'
     InputFile.write(dynamic_opts)
    
     mesh_gen_opts = f'input_options:' + '\n' \
@@ -24,10 +24,11 @@ def Explicit_SGH_WInput(self):
                     f'  zero_index_base: true' + '\n\n'
     InputFile.write(mesh_gen_opts)
     
-    ouput_opts = 'output_options:' + '\n' \
-                 '  timer_output_level: thorough' + '\n' \
-                 '  output_file_format: vtk' + '\n' \
-                 '  graphics_step: 0.25' + '\n\n'
+    ouput_opts = f'output_options:' + '\n' \
+                 f'  timer_output_level: thorough' + '\n' \
+                 f'  output_file_format: vtk' + '\n' \
+                 f'  output_file_location: {self.directory}/outputs/' + '\n' \
+                 f'  graphics_step: {self.INGraphicsOutput.text()}' + '\n\n'
     InputFile.write(ouput_opts)
     
     materials_label = 'materials:' + '\n'
