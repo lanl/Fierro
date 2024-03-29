@@ -268,7 +268,7 @@ void FEA_Module_SGH::setup()
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++) {
         // if volume is defined by an stl file, voxelize it
-        if (mat_fill(f_id).volume.type == VOLUME_TYPE::stl_to_voxel) {
+        if (mat_fill(f_id).volume.type == VOLUME_TYPE::stl) {
             mat_fill(f_id).volume.stl_to_voxel();
         }
         

@@ -2044,7 +2044,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <enum>QFrame::NoFrame</enum>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>12</number>
           </property>
           <widget class="QWidget" name="TitlePage">
            <property name="minimumSize">
@@ -6532,7 +6532,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QLineEdit" name="INThreshold">
                  <property name="text">
-                  <string>0</string>
+                  <string>1</string>
                  </property>
                 </widget>
                </item>
@@ -6761,7 +6761,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <x>0</x>
      <y>0</y>
      <width>1156</width>
-     <height>37</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">

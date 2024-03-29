@@ -90,13 +90,18 @@ class FIERRO_GUI(Ui_MainWindow):
             else:
                 global b3_filename
                 b3_filename = QFileDialog.getOpenFileName(
-#                    filter="Geometry File (*.stl *.vtk)",
-                    filter="Geometry File (*.stl)",
+                    filter="Geometry File (*.stl *.vtk)",
+#                    filter="Geometry File (*.stl)",
                 )
                 # Paraview window
                 self.file_type = b3_filename[0][-4:-1]
                 if self.file_type == '.st':
+                    # Show the stl part
                     self.stl = pvsimple.STLReader(FileNames = b3_filename)
+                    pvsimple.Show(self.stl, self.render_view)
+                    pvsimple.ResetCamera(view=None)
+                    
+                    # Turn on settings
                     self.STLVoxelization.setEnabled(True)
                     self.LNumberOfVoxelsX.setEnabled(True)
                     self.INNumberOfVoxelsX.setEnabled(True)
@@ -125,9 +130,16 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.INLengthZ.setText(str(self.stlLz))
                     
                 elif self.file_type == '.vt':
-                    self.stl = pvsimple.LegacyVTKReader(FileNames = b3_filename)
+                    # Show the vtk part
+                    self.vtk = pvsimple.LegacyVTKReader(FileNames = b3_filename)
                     pvsimple.SetDisplayProperties(Representation = "Surface")
-                    shutil.copy(b3_filename[0], self.VTK_OUTPUT)
+                    self.threshold = paraview.simple.Threshold(registrationName='input_threshold', Input = self.vtk, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+                    pvsimple.Show(self.threshold, self.render_view)
+                    pvsimple.Hide(self.vtk, self.render_view)
+                    self.render_view.ResetCamera()
+                    pvsimple.Render()
+                    
+                    # Turn off settings
                     self.INNumberOfVoxelsX.setText(QCoreApplication.translate("MainWindow", u"32", None))
                     self.INNumberOfVoxelsY.setText(QCoreApplication.translate("MainWindow", u"32", None))
                     self.INNumberOfVoxelsZ.setText(QCoreApplication.translate("MainWindow", u"32", None))
@@ -139,11 +151,26 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.LNumberOfVoxelsZ.setEnabled(False)
                     self.INNumberOfVoxelsZ.setEnabled(False)
                     self.BVoxelizeGeometry.setEnabled(False)
+                    
+                    # Rename the file and save it to directory location
+                    new_file_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
+                    shutil.copy(b3_filename[0], new_file_path)
+                    
+                    # Add part to the table
+                    row = self.TParts.rowCount()
+                    self.TParts.insertRow(row)
+                    self.TParts.setItem(row, 0, QTableWidgetItem(self.INPartName.text()))
+                    self.INPartName.clear()
+                    
+                    # Add part as an option for material assignment
+                    self.INPartMaterial.clear()
+                    self.INPartMaterial.addItem("global")
+                    for i in range(self.TParts.rowCount()):
+                        self.INPartMaterial.addItem(self.TParts.item(i,0).text())
+                    for i in range(self.TBasicGeometries.rowCount()):
+                        self.INPartMaterial.addItem(self.TBasicGeometries.item(i,0).text())
                 else:
                     warning_message('ERROR: Incorrect file type')
-                    
-                pvsimple.Show(self.stl, self.render_view)
-                pvsimple.ResetCamera(view=None)
         self.BUploadGeometryFile.clicked.connect(geometry_upload_click)
         
         # Allow for custom dimensions of stl files

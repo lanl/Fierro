@@ -21,7 +21,7 @@ SERIALIZABLE_ENUM(VOLUME_TYPE,
     box,      // tag all cells inside a box
     cylinder, // tag all cells inside a cylinder
     sphere,    // tag all cells inside a sphere
-    stl_to_voxel,
+    stl,
     vtk
 )
 
@@ -37,7 +37,7 @@ struct Volume : Yaml::ValidatedYaml {
     size_t num_voxel_y;
     size_t num_voxel_z;
     mtr::CArray<bool> voxel_elem_values;
-    std::string vtk_file_path = "stl_to_vtk.vtk"; // Define this later on
+    std::string vtk_file_path;
     double orig_x = 0;
     double orig_y = 0;
     double orig_z = 0;
@@ -64,7 +64,7 @@ struct Volume : Yaml::ValidatedYaml {
     
     // Run scheme on vtk file
     void vtk() {
-        std::tie(voxel_elem_values, voxel_dx, voxel_dy, voxel_dz, orig_x, orig_y, orig_z, num_voxel_x, num_voxel_y, num_voxel_z) = user_voxel_init(stl_file_path);
+        std::tie(voxel_elem_values, voxel_dx, voxel_dy, voxel_dz, orig_x, orig_y, orig_z, num_voxel_x, num_voxel_y, num_voxel_z) = user_voxel_init(vtk_file_path);
     }
     
     KOKKOS_FUNCTION
@@ -93,7 +93,7 @@ struct Volume : Yaml::ValidatedYaml {
             return ( radius >= radius1
                   && radius <= radius2 );
                   
-          case VOLUME_TYPE::stl_to_voxel:
+          case VOLUME_TYPE::stl:
             fill_this = false;  // default is no, don't fill it
             
             // find the closest element in the voxel mesh to this element

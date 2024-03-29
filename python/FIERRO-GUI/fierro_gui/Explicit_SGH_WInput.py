@@ -59,7 +59,7 @@ def Explicit_SGH_WInput(self):
                     vtk_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.Tassignmat.item(i,0).text()) + '.vtk'
                     type = f'  - volume:' + '\n' \
                            f'      type: vtk' + '\n' \
-                           f'      stl_file_path: {vtk_path}' + '\n'
+                           f'      vtk_file_path: {vtk_path}' + '\n'
                     break
             for kk in range(self.TBasicGeometries.rowCount()):
                 if self.Tassignmat.item(i,0).text() == self.TBasicGeometries.item(kk,0).text():
