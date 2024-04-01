@@ -22,6 +22,7 @@ struct mesh_input_t;
 struct reg_fill_t;
 struct material_t;
 struct output_options_t;
+struct boundary_condition_t;
 
 
 // checks to see if a path exists
@@ -60,5 +61,7 @@ void parse_materials(Yaml::Node &root,
                      std::vector <std::vector <double>> &eos_global_vars);
 
 
+// parse the boundary condition text
+void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_conditions);
 
 #endif // end Header Guard

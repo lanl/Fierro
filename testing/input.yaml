@@ -33,28 +33,57 @@ solver_options:
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
-        type: reflected
         solver: SGH
-        surface:
-            type: x_plane
-            value: 0.0
+        geometry: x_plane
+        value: 0.0
+        u: 0.0
+        v: 0.0
+        w: 1.0
+        type: reflected
+
+            
     # Tag Y plane
     - boundary_condition:
-        type: reflected
         solver: SGH
-        surface:
-            type: y_plane
-            value: 0.0
+        geometry: x_plane
+        value: 0.0
+        type: reflected
 
   
     # Reflected sphere
     - boundary_condition:
-        type: reflected
         solver: SGH
-        surface:
-            type: sphere
-            value: 2
-            origin: [0, 0, 0]
+        geometry: sphere
+        origin: [0, 0, 0]
+        value: 2.0
+        type: reflected
+            
+
+# boundary_conditions:
+#     # Tag X plane
+#     - boundary_condition:
+#         type: reflected
+#         solver: SGH
+#         surface:
+#             type: x_plane
+#             value: 0.0
+#     # Tag Y plane
+#     - boundary_condition:
+#         type: reflected
+#         solver: SGH
+#         surface:
+#             type: y_plane
+#             value: 0.0
+
+  
+#     # Reflected sphere
+#     - boundary_condition:
+#         type: reflected
+#         solver: SGH
+#         surface:
+#             type: sphere
+#             value: 2
+#             origin: [0, 0, 0]
 
             
 

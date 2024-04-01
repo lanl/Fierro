@@ -19,6 +19,7 @@
 #include "mesh_inputs.h"
 #include "solver_inputs.h"
 #include "output_options.h"
+#include "boundary_conditions.h"
 
 
 #define PI 3.141592653589793
@@ -56,7 +57,9 @@ std::vector<std::string> exact_array_values (std::string s, std::string delimite
     
 } // end of extract_array_values
 
-// a function to print a yaml file to 6 levels
+// =================================================================================
+//    Print a yaml file to 6 levels
+// =================================================================================
 void print_yaml(Yaml::Node root){
 
     Yaml::Node & layer0_items = root;
@@ -193,9 +196,7 @@ void print_yaml(Yaml::Node root){
 
         } // end loop over layer 0
     } // end if layer0 exists
-
 } // end print yaml function
-
 
 // =================================================================================
 //    Parse Solver options
@@ -267,11 +268,16 @@ void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_i
             } // method
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
+
+                std::cout << "Valid options are: "<< std::endl;
+
+                for (const auto& element : str_solver_inps) {
+                    std::cout << element << std::endl;
+                }
             }
         } // end loop over solver options
     } // end loop over solvers
 } // end of parse solver options
-
 
 // =================================================================================
 //    Parse Mesh options
@@ -341,7 +347,7 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
         } // source 
 
         // get mesh type for generation
-        if(a_word.compare("type") == 0){
+        else if(a_word.compare("type") == 0){
             
             std::string type = root["mesh_options"][a_word].As<std::string>();
 
@@ -447,10 +453,15 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
         } // polynomial order
         else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
+                std::cout << "Valid options are: "<< std::endl;
+
+                for (const auto& element : str_mesh_inps) {
+                    std::cout << element << std::endl;
+                }
+
         }
     } // end user_mesh_inputs
 } // end of parse mesh options
-
 
 // =================================================================================
 //    Parse Output options
@@ -559,11 +570,13 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
 
         else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
+                std::cout << "Valid options are: "<< std::endl;
+                for (const auto& element : str_output_options_inps) {
+                    std::cout << element << std::endl;
+                }
         }
     } // end user_inputs
 } // end of parse mesh options
-
-
 
 // =================================================================================
 //    Parse Fill regions
@@ -832,15 +845,17 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
             } // origin
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
+                std::cout << "Valid options are: "<< std::endl;
+                for (const auto& element : str_region_inps) {
+                    std::cout << element << std::endl;
+                }
             }
             
             
         } // end for words in material
     
     } // end loop over regions
-    
 } // end of function to parse region
-
 
 // =================================================================================
 //    Parse Material Definitions
@@ -985,11 +1000,198 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
             } // "eos_global_vars"
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
+                std::cout << "Valid options are: "<< std::endl;
+                for (const auto& element : str_material_inps) {
+                    std::cout << element << std::endl;
+                }
             }
             
             
         } // end for words in material
         
     } // end loop over materials
-
 } // end of function to parse material information
+
+// =================================================================================
+//    Parse Boundary Conditions
+// =================================================================================
+void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_conditions){
+
+    Yaml::Node & bc_yaml = root["boundary_conditions"];
+    
+    size_t num_bcs = bc_yaml.Size();
+    
+    boundary_conditions = std::vector <boundary_condition_t>(num_bcs);
+    
+    // loop over the fill regions specified
+    for(int bc_id = 0; bc_id < num_bcs; bc_id++){
+        
+        
+        // read the variables names
+        Yaml::Node & inps_yaml = bc_yaml[bc_id]["boundary_condition"];
+        
+        
+        // get the material variables names set by the user
+        std::vector <std::string> user_str_bc_inps;
+        
+        
+        // extract words from the input file and validate they are correct
+        for(auto item = inps_yaml.Begin(); item != inps_yaml.End(); item++)
+        {
+            
+            std::string var_name = (*item).first;
+            
+            // print the variable
+            std::cout << "this is var name = "<< var_name << "\n";
+            
+            user_str_bc_inps.push_back(var_name);
+            
+            // validate input: user_str_bc_inps match words in the str_bc_inps
+            if (std::find(str_bc_inps.begin(), str_bc_inps.end(), var_name) == str_bc_inps.end())
+            {
+                std::cout << "ERROR: invalid input: " << var_name << std::endl;
+            } // end if variable exists
+            
+        } // end for item in this yaml input
+        
+        
+        
+        // loop over the words in the material input definition
+        for(auto &a_word : user_str_bc_inps){
+            
+            std::cout << a_word << std::endl;
+        
+            Yaml::Node & inps_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+            
+            // get solver for this boundary condition
+            if(a_word.compare("solver") == 0){
+                
+                std::string solver = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = solver_map;
+                
+                // set the solver
+                if(map.find(solver) != map.end()){
+                    
+                    boundary_conditions[bc_id].solver = map[solver];
+                    std::cout << "\tsolver = " << solver << std::endl;
+                }
+                else{
+                    std::cout << "ERROR: invalid mesh option input in YAML file: " << solver << std::endl;
+                    std::cout << "Valid options are: "<< std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+                } // end if
+            } // solver
+
+            // get boundary condition type
+            else if(a_word.compare("type") == 0){
+                
+                std::string type = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_type_map;
+                
+                // set the type
+                if(map.find(type) != map.end()){
+                    
+                    boundary_conditions[bc_id].type = map[type];
+                    std::cout << "\ttype = " << type << std::endl;
+                }
+                else{
+                    std::cout << "ERROR: invalid mesh option input in YAML file: " << type << std::endl;
+                    std::cout << "Valid options are: "<< std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+                } // end if
+            } // type
+
+            // get boundary condition geometry
+            else if(a_word.compare("geometry") == 0){
+                
+                std::string geometry = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_geometry_map;
+                
+                // set the geometry
+                if(map.find(geometry) != map.end()){
+                    
+                    boundary_conditions[bc_id].geometry = map[geometry];
+                    std::cout << "\tgeometry = " << geometry << std::endl;
+                }
+                else{
+                    std::cout << "ERROR: invalid mesh option input in YAML file: " << geometry << std::endl;
+                    std::cout << "Valid options are: "<< std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+                } // end if
+            } // geometry
+
+            // set the value
+            else if(a_word.compare("value") == 0){
+                boundary_conditions[bc_id].value = 
+                    bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+            } // value
+
+            // set the u
+            else if(a_word.compare("u") == 0){
+                boundary_conditions[bc_id].u = 
+                    bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+            
+            } // u
+
+            // set the v
+            else if(a_word.compare("v") == 0){
+                boundary_conditions[bc_id].v = 
+                    bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+            } // v
+
+            // set the w
+            else if(a_word.compare("w") == 0){
+                boundary_conditions[bc_id].w = 
+                    bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+            } // w
+            
+            else if(a_word.compare("origin") == 0){
+
+                std::string origin = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+                std::cout << "\torigin = " << origin << std::endl;
+                
+                // get the origin numbers, values are words
+                std::vector<std::string> numbers = exact_array_values(origin, ",");
+                
+                double x1 = std::stod(numbers[0]);
+                double y1 = std::stod(numbers[1]);
+                double z1 = std::stod(numbers[2]);
+                
+                std::cout << "\tx1 = " << x1 << std::endl;
+                std::cout << "\ty1 = " << y1 << std::endl;
+                std::cout << "\tz1 = " << z1 << std::endl;
+                
+                // storing the origin values as (x1,y1,z1)
+                boundary_conditions[bc_id].origin[0]  = x1;
+                boundary_conditions[bc_id].origin[1]  = y1;
+                boundary_conditions[bc_id].origin[2]  = z1;
+                    
+            } // origin
+            else {
+                std::cout << "ERROR: invalid input: " << a_word << std::endl;
+                std::cout << "Valid options are: "<< std::endl;
+                for (const auto& element : str_bc_inps) {
+                    std::cout << element << std::endl;
+                }
+            }
+            
+            
+        } // end for words in material
+    
+    } // end loop over regions
+} // end of function to parse region

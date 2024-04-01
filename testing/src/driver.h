@@ -50,6 +50,7 @@
 #include "mesh_inputs.h"
 #include "solver_inputs.h"
 #include "output_options.h"
+#include "boundary_conditions.h"
 
 
 class Driver
@@ -66,6 +67,8 @@ public:
     output_options_t output_options;
 
     std::vector <solver_input_t> solver_inputs;
+
+    std::vector <boundary_condition_t> boundary_conditions;
 
 
     Driver(char* YAML){
@@ -105,6 +108,9 @@ public:
 
         std::cout<<"Parsing YAML solver options:"<<std::endl;
         parse_solver_input(root, solver_inputs);
+
+        std::cout<<"Parsing YAML boundary condition options:"<<std::endl;
+        parse_bcs(root, boundary_conditions);
 
 
 

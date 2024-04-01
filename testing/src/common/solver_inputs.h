@@ -11,7 +11,8 @@ namespace solver_input
     // solver method
     enum method
     {
-        SGH = 0,        
+        NONE = 0,
+        SGH = 1,        
     };
 } // end of namespace
 
@@ -24,7 +25,7 @@ static std::map <std::string, solver_input::method> solver_map
 // solver input parameters
 struct solver_input_t{
 
-    solver_input::method method;
+    solver_input::method method = solver_input::NONE;
 
 }; // solver_input_t
 
