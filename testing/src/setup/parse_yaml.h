@@ -23,7 +23,7 @@ struct reg_fill_t;
 struct material_t;
 struct output_options_t;
 struct boundary_condition_t;
-
+struct dynamic_options_t;
 
 // checks to see if a path exists
 static bool DoesPathExist(const std::string &s)
@@ -42,8 +42,22 @@ std::vector<double> extract_list(std::string str);
 // prints the contents of a parsed yaml file
 void print_yaml(Yaml::Node root);
 
+// utility function for parsing YAML file
+void parse_yaml(Yaml::Node &root, 
+    std::vector <solver_input_t> &solver_input,
+    mesh_input_t &mesh_input,
+    dynamic_options_t &dynamic_options,
+    output_options_t &output_options,
+    std::vector <reg_fill_t> &region_fills,
+    std::vector <material_t> &materials,
+    std::vector <std::vector <double>> &eos_global_vars,
+    std::vector <boundary_condition_t> &boundary_conditions);
+
 // Parse the solver related data
 void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_input);
+
+// Parse dynamic time related options
+void parse_dynamic_options(Yaml::Node &root, dynamic_options_t& dynamic_options);
 
 // Parse the mesh related data
 void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input);

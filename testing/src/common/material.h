@@ -54,23 +54,27 @@ struct material_t {
     void (*eos_model)(double, double, double); // WARNING: a placeholder
     
     // strength fcn pointer
-    void (*strength_model)(double, double, double); // WARNING: a placeholder
+    void (*strength_model)(double, double); // WARNING: a placeholder
     
     // hypo or hyper elastic plastic model
     model::strength_tag strength_type;
     
     // setup the strength model via the input file for via a user_setup
-    model_init::strength_setup_tag strength_setup=model_init::input;
+    model_init::strength_setup_tag strength_setup = model_init::input;
     
     size_t num_eos_state_vars;
     size_t num_strength_state_vars;
     size_t num_eos_global_vars;
     size_t num_strength_global_vars;
     
-    double q1;    // acoustic coefficient in Riemann solver for compresion
-    double q1ex;  // acoustic coefficient in Riemann solver for expansion
-    double q2;    // linear coefficient in Riemann solver for compression
-    double q2ex;  // linear coefficient in Riemann solver for expansion
+    double q1   = 1.0;    // acoustic coefficient in Riemann solver for compresion
+    double q1ex = 1.3333;  // acoustic coefficient in Riemann solver for expansion
+    double q2   = 1.0;    // linear coefficient in Riemann solver for compression
+    double q2ex = 1.3333;  // linear coefficient in Riemann solver for expansion
+
+    double elastic_modulus; 
+    double poisson_ratio;
+
 }; // end material_t
 
 
@@ -89,7 +93,9 @@ static std::vector <std::string> str_material_inps
     "q2",
     "q1ex",
     "q2ex",
-    "eos_global_vars"
+    "eos_global_vars",
+    "elastic_modulus",
+    "poisson_ratio"
 };
 
 
@@ -119,7 +125,7 @@ static std::map <std::string, eos_type> eos_map
 typedef void (*strength_type)(double, double);
 static std::map <std::string, strength_type> strength_map
 {
-    {"elastic_plastic", elastic_plastic}
+    {"", elastic_plastic}
 };
 
 #endif // end Header Guard

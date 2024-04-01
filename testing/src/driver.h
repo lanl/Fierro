@@ -51,6 +51,7 @@
 #include "solver_inputs.h"
 #include "output_options.h"
 #include "boundary_conditions.h"
+#include "dynamic_options.h"
 
 
 class Driver
@@ -65,10 +66,17 @@ public:
 
     mesh_input_t mesh_input;
     output_options_t output_options;
+    dynamic_options_t dynamic_options;
 
     std::vector <solver_input_t> solver_inputs;
 
     std::vector <boundary_condition_t> boundary_conditions;
+
+    std::vector <reg_fill_t> region_fills;
+    std::vector <material_t> materials;
+    std::vector <std::vector <double>> eos_global_vars;
+
+
 
 
     Driver(char* YAML){
@@ -94,41 +102,8 @@ public:
         }
 
 
-        std::cout<<"Printing YAML Input file:"<<std::endl;
-        // print the input file
-        print_yaml(root);
+        parse_yaml(root, solver_inputs, mesh_input, dynamic_options, output_options, region_fills, materials, eos_global_vars, boundary_conditions);
 
-
-        std::cout<<"Parsing YAML meshing options:"<<std::endl;
-        parse_mesh_input(root, mesh_input);
-
-        std::cout<<"Parsing YAML output options:"<<std::endl;
-        parse_output_options(root, output_options);
-
-
-        std::cout<<"Parsing YAML solver options:"<<std::endl;
-        parse_solver_input(root, solver_inputs);
-
-        std::cout<<"Parsing YAML boundary condition options:"<<std::endl;
-        parse_bcs(root, boundary_conditions);
-
-
-
-        // std::cout<<"Parsing YAML regions:"<<std::endl;
-        // // parse the region yaml text into a vector of region_fills
-        // std::vector <reg_fill_t> region_fills;
-        // parse_regions(root, region_fills);
-
-            
-            
-        // std::cout<<"Parsing YAML materials:"<<std::endl;
-        // // parse the material yaml text into a vector of materials
-        // std::vector <material_t> materials;
-        // std::vector <std::vector <double>> eos_global_vars;
-        // parse_materials(root, materials, eos_global_vars);
-
-
-        
         std::cout << "Done " << std::endl;
 
         // SGH *sgh_solver = new SGH(mesh_reader);

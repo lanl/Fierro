@@ -20,6 +20,7 @@
 #include "solver_inputs.h"
 #include "output_options.h"
 #include "boundary_conditions.h"
+#include "dynamic_options.h"
 
 
 #define PI 3.141592653589793
@@ -61,6 +62,8 @@ std::vector<std::string> exact_array_values (std::string s, std::string delimite
 //    Print a yaml file to 6 levels
 // =================================================================================
 void print_yaml(Yaml::Node root){
+
+    if(!VERBOSE) return;
 
     Yaml::Node & layer0_items = root;
 
@@ -198,6 +201,52 @@ void print_yaml(Yaml::Node root){
     } // end if layer0 exists
 } // end print yaml function
 
+
+
+// =================================================================================
+//    Parse YAML file
+// =================================================================================
+
+
+void parse_yaml(Yaml::Node &root, 
+    std::vector <solver_input_t> &solver_inputs,
+    mesh_input_t &mesh_input,
+    dynamic_options_t &dynamic_options,
+    output_options_t &output_options,
+    std::vector <reg_fill_t> &region_fills,
+    std::vector <material_t> &materials,
+    std::vector <std::vector <double>> &eos_global_vars,
+    std::vector <boundary_condition_t> &boundary_conditions){
+
+
+        std::cout<<"Printing YAML Input file:"<<std::endl;
+        // print the input file
+        print_yaml(root);
+
+        std::cout<<"Parsing YAML meshing options:"<<std::endl;
+        parse_mesh_input(root, mesh_input);
+
+        std::cout<<"Parsing YAML dynamic options:"<<std::endl;
+        parse_dynamic_options(root, dynamic_options);
+
+        std::cout<<"Parsing YAML output options:"<<std::endl;
+        parse_output_options(root, output_options);
+
+        std::cout<<"Parsing YAML solver options:"<<std::endl;
+        parse_solver_input(root, solver_inputs);
+
+        std::cout<<"Parsing YAML boundary condition options:"<<std::endl;
+        parse_bcs(root, boundary_conditions);
+
+        std::cout<<"Parsing YAML regions:"<<std::endl;
+        // parse the region yaml text into a vector of region_fills
+        parse_regions(root, region_fills);
+
+        std::cout<<"Parsing YAML materials:"<<std::endl;
+        // parse the material yaml text into a vector of materials
+        parse_materials(root, materials, eos_global_vars);
+}
+
 // =================================================================================
 //    Parse Solver options
 // =================================================================================
@@ -207,7 +256,7 @@ void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_i
     
     size_t num_solvers = solver_yaml.Size();
 
-    std::cout<<"Num solvers = "<<num_solvers<<std::endl;
+    if(VERBOSE) std::cout<<"Num solvers = "<<num_solvers<<std::endl;
     
     solver_input = std::vector <solver_input_t>(num_solvers);
     
@@ -227,7 +276,7 @@ void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_i
             std::string var_name = (*item).first;
             
             // print the variable
-            std::cout << "This is var name = "<< var_name << "\n";
+            if(VERBOSE) std::cout << "This is var name = "<< var_name << "\n";
             
             user_inputs.push_back(var_name);
             
@@ -241,7 +290,7 @@ void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_i
         // loop over the words in the input 
         for(auto &a_word : user_inputs){
         
-            std::cout << a_word << std::endl;
+            if(VERBOSE) std::cout << a_word << std::endl;
             
             // get solver method
             if(a_word.compare("method") == 0){
@@ -254,7 +303,7 @@ void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_i
                 if(map.find(method) != map.end()){
                     
                     solver_input[solver_id].method = map[method];
-                    std::cout << "\tmethod = " << method << std::endl;
+                    if(VERBOSE) std::cout << "\tmethod = " << method << std::endl;
                 }
                 else{
                     std::cout << "ERROR: invalid mesh option input in YAML file: " << method << std::endl;
@@ -280,6 +329,133 @@ void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_i
 } // end of parse solver options
 
 // =================================================================================
+//    Parse Dynamic Options regions
+// =================================================================================
+void parse_dynamic_options(Yaml::Node &root, dynamic_options_t& dynamic_options){
+
+    Yaml::Node & yaml = root["dynamic_options"];
+
+    // get the material variables names set by the user
+    std::vector <std::string> user_dynamic_inps;
+    
+    
+    // extract words from the input file and validate they are correct
+    for(auto item = yaml.Begin(); item != yaml.End(); item++)
+    {
+        
+        std::string var_name = (*item).first;
+        
+        // print the variable
+        if(VERBOSE) std::cout << "this is var name = "<< var_name << "\n";
+        
+        user_dynamic_inps.push_back(var_name);
+        
+        // validate input: user_dynamic_inps match words in the str_dyn_opts_inps
+        if (std::find(str_dyn_opts_inps.begin(), str_dyn_opts_inps.end(), var_name) == str_dyn_opts_inps.end())
+        {
+            std::cout << "ERROR: invalid input: " << var_name << std::endl;
+        } // end if variable exists
+        
+    } // end for item in this yaml input
+    
+    
+    
+    // loop over the words in the material input definition
+    for(auto &a_word : user_dynamic_inps){
+        
+        if(VERBOSE) std::cout << a_word << std::endl;
+
+        // Start time
+        if(a_word.compare("time_initial") == 0){
+            double time_initial = yaml[a_word].As<double>();
+            dynamic_options.time_initial = time_initial;
+
+        } // start time
+
+        // End time
+        else if(a_word.compare("time_final") == 0){
+            double time_final = yaml[a_word].As<double>();
+            dynamic_options.time_final = time_final;
+
+        } // end time
+
+        // Minimum time step
+        else if(a_word.compare("dt_min") == 0){
+
+            double dt_min = yaml[a_word].As<double>();
+            dynamic_options.dt_min = dt_min;
+        }
+
+        // Maximum time step
+        else if(a_word.compare("dt_max") == 0){
+
+            double dt_max = yaml[a_word].As<double>();
+            dynamic_options.dt_max = dt_max;
+        }
+
+        // Initial time step
+        else if(a_word.compare("dt_start") == 0){
+            double dt_start = yaml[a_word].As<double>();
+            dynamic_options.dt_start = dt_start;
+        }
+        
+        // CFL valid timestep
+        else if(a_word.compare("dt_cfl") == 0){
+            double dt_cfl = yaml[a_word].As<double>();
+            dynamic_options.dt_cfl = dt_cfl;
+        }
+
+        // End cycle count
+        else if(a_word.compare("cycle_stop") == 0){
+            int cycle_stop = yaml[a_word].As<int>();
+            dynamic_options.cycle_stop = cycle_stop;
+        }
+
+        // Machine precision small value
+        else if(a_word.compare("fuzz") == 0){
+            double fuzz = yaml[a_word].As<double>();
+            dynamic_options.fuzz = fuzz;
+        }
+
+        // Very small value
+        else if(a_word.compare("tiny") == 0){
+            double tiny = yaml[a_word].As<double>();
+            dynamic_options.tiny = tiny;
+        }
+
+        // Single precision value
+        else if(a_word.compare("small") == 0){
+            double small = yaml[a_word].As<double>();
+            dynamic_options.small = small;
+        }
+
+        //  Number of RK stages
+        else if(a_word.compare("rk_num_stages") == 0){
+            int rk_num_stages = yaml[a_word].As<int>();
+            dynamic_options.rk_num_stages = rk_num_stages;
+        }
+
+        //  Number of RK bins
+        else if(a_word.compare("rk_num_bins") == 0){
+            int rk_num_bins = yaml[a_word].As<int>();
+            dynamic_options.rk_num_bins = rk_num_bins;
+        }
+
+        else {
+            std::cout << "ERROR: invalid input: " << a_word << std::endl;
+            std::cout << "Valid options are: "<< std::endl;
+            for (const auto& element : str_dyn_opts_inps) {
+                std::cout << element << std::endl;
+            }
+        }
+        
+        
+    } // end for words in dynamic options
+
+} // end of function to parse region
+
+
+// =================================================================================
 //    Parse Mesh options
 // =================================================================================
 void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
@@ -297,7 +473,7 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
         std::string var_name = (*item).first;
         
         // print the variable
-        std::cout << "This is var name = "<< var_name << "\n";
+        if(VERBOSE) std::cout << "This is var name = "<< var_name << "\n";
         
         user_mesh_inputs.push_back(var_name);
         
@@ -313,7 +489,7 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
     // loop over the words in the material input definition
     for(auto &a_word : user_mesh_inputs){
         
-        std::cout << a_word << std::endl;
+        if(VERBOSE) std::cout << a_word << std::endl;
     
         Yaml::Node & material_inps_yaml = root["mesh_options"][a_word];
         
@@ -328,7 +504,7 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
             if(map.find(source) != map.end()){
                 
                 mesh_input.source = map[source];
-                std::cout << "\tsource = " << source << std::endl;
+                if(VERBOSE) std::cout << "\tsource = " << source << std::endl;
 
                 if(mesh_input.source == mesh_input::generate && !mesh_input.file_path.empty()){
                     std::cout << "ERROR: When the mesh source is set to generate, a mesh file cannot be passed in" << std::endl;
@@ -357,7 +533,7 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
             if(map.find(type) != map.end()){
                 
                 mesh_input.type = map[type];
-                std::cout << "\ttype = " << type << std::endl;
+                if(VERBOSE) std::cout << "\ttype = " << type << std::endl;
             }
             else{
                 std::cout << "ERROR: invalid mesh option input in YAML file: " << type << std::endl;
@@ -372,7 +548,7 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
         // Get mesh file path 
         else if(a_word.compare("file_path") == 0){
             std::string path = root["mesh_options"][a_word].As<std::string>();
-            std::cout << "\tfile_path = " << path << std::endl;
+            if(VERBOSE) std::cout << "\tfile_path = " << path << std::endl;
             
             mesh_input.file_path = path;
 
@@ -392,7 +568,7 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
         else if(a_word.compare("origin") == 0){
 
             std::string origin = root["mesh_options"][a_word].As<std::string>();
-            std::cout << "\torigin = " << origin << std::endl;
+            if(VERBOSE) std::cout << "\torigin = " << origin << std::endl;
             
             // get the origin numbers, values are words
             std::vector<std::string> numbers = exact_array_values(origin, ",");
@@ -410,11 +586,10 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
         else if(a_word.compare("length") == 0){
 
             std::string origin = root["mesh_options"][a_word].As<std::string>();
-            std::cout << "\tlength = " << origin << std::endl;
+            if(VERBOSE) std::cout << "\tlength = " << origin << std::endl;
             
             // get the origin numbers, values are words
             std::vector<std::string> numbers = exact_array_values(origin, ",");
-
 
             std::vector<double> val;
             for(int i = 0; i < 3; i++){
@@ -428,7 +603,7 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
         else if(a_word.compare("num_elems") == 0){
 
             std::string origin = root["mesh_options"][a_word].As<std::string>();
-            std::cout << "\tnum_elems = " << origin << std::endl;
+            if(VERBOSE) std::cout << "\tnum_elems = " << origin << std::endl;
             
             // get the origin numbers, values are words
             std::vector<std::string> numbers = exact_array_values(origin, ",");
@@ -446,7 +621,7 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
         else if(a_word.compare("polynomial_order") == 0){
             
             double p_order = root["mesh_options"][a_word].As<int>();
-            std::cout << "\tPoly order = " << p_order << std::endl;
+            if(VERBOSE) std::cout << "\tPoly order = " << p_order << std::endl;
             
             mesh_input.p_order = p_order;
         
@@ -481,7 +656,7 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
         std::string var_name = (*item).first;
         
         // print the variable
-        std::cout << "This is var name = "<< var_name << "\n";
+        if(VERBOSE) std::cout << "This is var name = "<< var_name << "\n";
         
         user_inputs.push_back(var_name);
         
@@ -497,7 +672,7 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
     // loop over the output options
     for(auto &a_word : user_inputs){
         
-        std::cout << "Word : " << a_word << std::endl;
+        if(VERBOSE) std::cout << "Word : " << a_word << std::endl;
 
         // get output format
         if(a_word.compare("output_file_format") == 0){
@@ -510,7 +685,7 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
             if(map.find(format) != map.end()){
                 
                 output_options.format = map[format];
-                std::cout << "\tformat = " << format << std::endl;
+                if(VERBOSE) std::cout << "\tformat = " << format << std::endl;
             }
             else{
                 std::cout << "ERROR: invalid mesh option input in YAML file: " << format << std::endl;
@@ -533,7 +708,7 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
             if(map.find(timer_level) != map.end()){
                 
                 output_options.timer_level = map[timer_level];
-                std::cout << "\ttimer_level = " << timer_level << std::endl;
+                if(VERBOSE) std::cout << "\ttimer_level = " << timer_level << std::endl;
             }
             else{
                 std::cout << "ERROR: invalid output option input in YAML file: " << timer_level << std::endl;
@@ -550,7 +725,7 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
         else if(a_word.compare("graphics_time_step") == 0){
             
             real_t graphics_time_step = root["output_options"][a_word].As<real_t>();
-            std::cout << "\tgraphics_time_step = " << graphics_time_step << std::endl;
+            if(VERBOSE) std::cout << "\tgraphics_time_step = " << graphics_time_step << std::endl;
             
             output_options.graphics_time_step = graphics_time_step;
         
@@ -560,7 +735,7 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
         else if(a_word.compare("graphics_iteration_step") == 0){
             
             int graphics_iteration_step = root["output_options"][a_word].As<int>();
-            std::cout << "\tgraphics_iteration_step = " << graphics_iteration_step << std::endl;
+            if(VERBOSE) std::cout << "\tgraphics_iteration_step = " << graphics_iteration_step << std::endl;
             
             output_options.graphics_iteration_step = graphics_iteration_step;
         
@@ -608,7 +783,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
             std::string var_name = (*item).first;
             
             // print the variable
-            std::cout << "this is var name = "<< var_name << "\n";
+            if(VERBOSE) std::cout << "this is var name = "<< var_name << "\n";
             
             user_str_region_inps.push_back(var_name);
             
@@ -625,7 +800,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
         // loop over the words in the material input definition
         for(auto &a_word : user_str_region_inps){
             
-            std::cout << a_word << std::endl;
+            if(VERBOSE) std::cout << a_word << std::endl;
         
             Yaml::Node & material_inps_yaml = root["regions"][reg_id]["fill_volume"][a_word];
             
@@ -653,7 +828,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // specific internal energy
 
                 double sie = root["regions"][reg_id]["fill_volume"]["sie"].As<double>();
-                std::cout << "\tsie = " << sie << std::endl;
+                if(VERBOSE) std::cout << "\tsie = " << sie << std::endl;
                 
                 region_fills[reg_id].sie = sie;
             
@@ -663,7 +838,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // extensive internal energy
 
                 double ie = root["regions"][reg_id]["fill_volume"]["ie"].As<double>();
-                std::cout << "\tie = " << ie << std::endl;
+                if(VERBOSE) std::cout << "\tie = " << ie << std::endl;
                 
                 region_fills[reg_id].ie = ie;
             
@@ -671,7 +846,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
             else if(a_word.compare("speed") == 0){
 
                 double speed = root["regions"][reg_id]["fill_volume"]["speed"].As<double>();
-                std::cout << "\tspeed = " << speed << std::endl;
+                if(VERBOSE) std::cout << "\tspeed = " << speed << std::endl;
                 
                 region_fills[reg_id].speed = speed;
             
@@ -681,7 +856,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // x-component of velocity
                 
                 double u = root["regions"][reg_id]["fill_volume"]["u"].As<double>();
-                std::cout << "\tu = " << u << std::endl;
+                if(VERBOSE) std::cout << "\tu = " << u << std::endl;
                 
                 region_fills[reg_id].u = u;
             
@@ -691,7 +866,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // y-component of velocity
 
                 double v = root["regions"][reg_id]["fill_volume"]["v"].As<double>();
-                std::cout << "\tie = " << v << std::endl;
+                if(VERBOSE) std::cout << "\tie = " << v << std::endl;
                 
                 region_fills[reg_id].v = v;
             
@@ -701,7 +876,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // z-component of velocity
 
                 double w = root["regions"][reg_id]["fill_volume"]["w"].As<double>();
-                std::cout << "\tw = " << w << std::endl;
+                if(VERBOSE) std::cout << "\tw = " << w << std::endl;
                 
                 region_fills[reg_id].w = w;
             
@@ -711,7 +886,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // inner radius of sphere/cylinder
 
                 double radius1 = root["regions"][reg_id]["fill_volume"]["radius1"].As<double>();
-                std::cout << "\tradius1 = " << radius1 << std::endl;
+                if(VERBOSE) std::cout << "\tradius1 = " << radius1 << std::endl;
                 
                 region_fills[reg_id].radius1 = radius1;
             
@@ -721,7 +896,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // outer radius of sphere/cylinder
 
                 double radius2 = root["regions"][reg_id]["fill_volume"]["radius2"].As<double>();
-                std::cout << "\tradius2 = " << radius2 << std::endl;
+                if(VERBOSE) std::cout << "\tradius2 = " << radius2 << std::endl;
                 
                 region_fills[reg_id].radius2 = radius2;
             
@@ -731,7 +906,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // inner plane
 
                 double x1 = root["regions"][reg_id]["fill_volume"]["x1"].As<double>();
-                std::cout << "\tx1 = " << x1 << std::endl;
+                if(VERBOSE) std::cout << "\tx1 = " << x1 << std::endl;
                 
                 region_fills[reg_id].x1 = x1;
             
@@ -741,7 +916,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // outer plane
 
                 double x2 = root["regions"][reg_id]["fill_volume"]["x2"].As<double>();
-                std::cout << "\tx2 = " << x2 << std::endl;
+                if(VERBOSE) std::cout << "\tx2 = " << x2 << std::endl;
                 
                 region_fills[reg_id].x2 = x2;
             
@@ -751,7 +926,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // inner plane
 
                 double y1 = root["regions"][reg_id]["fill_volume"]["y1"].As<double>();
-                std::cout << "\ty1 = " << y1 << std::endl;
+                if(VERBOSE) std::cout << "\ty1 = " << y1 << std::endl;
                 
                 region_fills[reg_id].y1 = y1;
             
@@ -761,7 +936,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // outer plane
 
                 double y2 = root["regions"][reg_id]["fill_volume"]["y2"].As<double>();
-                std::cout << "\ty2 = " << y2 << std::endl;
+                if(VERBOSE) std::cout << "\ty2 = " << y2 << std::endl;
                 
                 region_fills[reg_id].y2 = y2;
             
@@ -771,7 +946,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // inner plane
 
                 double z1 = root["regions"][reg_id]["fill_volume"]["z1"].As<double>();
-                std::cout << "\tz1 = " << z1 << std::endl;
+                if(VERBOSE) std::cout << "\tz1 = " << z1 << std::endl;
                 
                 region_fills[reg_id].z1 = z1;
             
@@ -781,7 +956,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // outer plane
 
                 double z2 = root["regions"][reg_id]["fill_volume"]["z2"].As<double>();
-                std::cout << "\tz2 = " << z2 << std::endl;
+                if(VERBOSE) std::cout << "\tz2 = " << z2 << std::endl;
                 
                 region_fills[reg_id].z2 = z2;
             
@@ -789,14 +964,14 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
             else if(a_word.compare("type") == 0){
 
                 std::string type = root["regions"][reg_id]["fill_volume"]["type"].As<std::string>();
-                std::cout << "\ttype = " << type << std::endl;
+                if(VERBOSE) std::cout << "\ttype = " << type << std::endl;
                 
                 // set the volume tag type
                 if(region_type_map.find(type) != region_type_map.end()){
                     
                     region_fills[reg_id].volume = region_type_map[type];
-                    std::cout << "\tvolume_fill = " << type << std::endl;
-                    std::cout << region_fills[reg_id].volume << std::endl;
+                    if(VERBOSE) std::cout << "\tvolume_fill = " << type << std::endl;
+                    if(VERBOSE) std::cout << region_fills[reg_id].volume << std::endl;
                 }
                 else{
                     std::cout << "ERROR: invalid input: " << type << std::endl;
@@ -806,15 +981,17 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
             else if(a_word.compare("velocity") == 0){
 
                 std::string type = root["regions"][reg_id]["fill_volume"]["velocity"].As<std::string>();
-                std::cout << "\tvelocity = " << type << std::endl;
+                if(VERBOSE) std::cout << "\tvelocity = " << type << std::endl;
                 
                 
                 // set the volume tag type
                 if(velocity_type_map.find(type) != velocity_type_map.end()){
                     
                     region_fills[reg_id].velocity = velocity_type_map[type];
-                    std::cout << "\tvelocity_fill = " << type << std::endl;
-                    std::cout << region_fills[reg_id].velocity << std::endl;
+                    if(VERBOSE) {
+                        std::cout << "\tvelocity_fill = " << type << std::endl;
+                        std::cout << region_fills[reg_id].velocity << std::endl;
+                    }
                 }
                 else{
                     std::cout << "ERROR: invalid input: " << type << std::endl;
@@ -824,7 +1001,7 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
             else if(a_word.compare("origin") == 0){
 
                 std::string origin = root["regions"][reg_id]["fill_volume"]["origin"].As<std::string>();
-                std::cout << "\torigin = " << origin << std::endl;
+                if(VERBOSE) std::cout << "\torigin = " << origin << std::endl;
                 
                 // get the origin numbers, values are words
                 std::vector<std::string> numbers = exact_array_values(origin, ",");
@@ -833,9 +1010,11 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double y1 = std::stod(numbers[1]);
                 double z1 = std::stod(numbers[2]);
                 
-                std::cout << "\tx1 = " << x1 << std::endl;
-                std::cout << "\ty1 = " << y1 << std::endl;
-                std::cout << "\tz1 = " << z1 << std::endl;
+                if(VERBOSE){
+                    std::cout << "\tx1 = " << x1 << std::endl;
+                    std::cout << "\ty1 = " << y1 << std::endl;
+                    std::cout << "\tz1 = " << z1 << std::endl;
+                }
                 
                 // storing the origin values as (x1,y1,z1)
                 region_fills[reg_id].x1 = x1;
@@ -874,7 +1053,7 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
     eos_global_vars = std::vector <std::vector <double>>(num_materials);
 
     // loop over the materials specified
-    for(int mat_id=0; mat_id<num_materials; mat_id++){
+    for(int mat_id = 0; mat_id < num_materials; mat_id++){
         
         
         // read the variables names
@@ -893,7 +1072,7 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
             std::string var_name = (*item).first;
             
             // print the variable
-            std::cout << "this is var name = "<< var_name << "\n";
+            if(VERBOSE) std::cout << "this is var name = "<< var_name << "\n";
             
             user_str_material_inps.push_back(var_name);
             
@@ -909,7 +1088,7 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
         // loop over the words in the material input definition
         for(auto &a_word : user_str_material_inps){
             
-            std::cout << a_word << std::endl;
+            if(VERBOSE) std::cout << a_word << std::endl;
         
             Yaml::Node & material_inps_yaml = root["materials"][mat_id]["material"][a_word];
             
@@ -923,7 +1102,7 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
                 // outer plane
 
                 double q1 = root["materials"][mat_id]["material"]["q1"].As<double>();
-                std::cout << "\tq1 = " << q1 << std::endl;
+                if(VERBOSE) std::cout << "\tq1 = " << q1 << std::endl;
                 
                 materials[mat_id].q1 = q1;
             
@@ -933,7 +1112,7 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
                 // outer plane
 
                 double q1ex = root["materials"][mat_id]["material"]["q1ex"].As<double>();
-                std::cout << "\tq1ex = " << q1ex << std::endl;
+                if(VERBOSE) std::cout << "\tq1ex = " << q1ex << std::endl;
                 
                 materials[mat_id].q1ex = q1ex;
             
@@ -943,7 +1122,7 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
                 // outer plane
 
                 double q2 = root["materials"][mat_id]["material"]["q2"].As<double>();
-                std::cout << "\tq2 = " << q2 << std::endl;
+                if(VERBOSE) std::cout << "\tq2 = " << q2 << std::endl;
                 
                 materials[mat_id].q2 = q2;
             
@@ -953,7 +1132,7 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
                 // outer plane
 
                 double q2ex = root["materials"][mat_id]["material"]["q2ex"].As<double>();
-                std::cout << "\tq2ex = " << q2ex << std::endl;
+                if(VERBOSE) std::cout << "\tq2ex = " << q2ex << std::endl;
                 
                 materials[mat_id].q2ex = q2ex;
             
@@ -961,11 +1140,28 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
             else if(a_word.compare("id") == 0){
                   
                 int m_id = root["materials"][mat_id]["material"]["id"].As<int>();
-                std::cout << "\tid = " << m_id << std::endl;
+                if(VERBOSE) std::cout << "\tid = " << m_id << std::endl;
             
                 materials[mat_id].id = m_id;
             
             } // id
+            else if(a_word.compare("elastic_modulus") == 0){
+                  
+                int elastic_modulus = root["materials"][mat_id]["material"]["elastic_modulus"].As<double>();
+                if(VERBOSE) std::cout << "\telastic_modulus = " << elastic_modulus << std::endl;
+            
+                materials[mat_id].elastic_modulus = elastic_modulus;
+            
+            } // elastic_modulus
+            else if(a_word.compare("poisson_ratio") == 0){
+                  
+                int poisson_ratio = root["materials"][mat_id]["material"]["poisson_ratio"].As<double>();
+                if(VERBOSE) std::cout << "\tpoisson_ratio = " << poisson_ratio << std::endl;
+            
+                materials[mat_id].poisson_ratio = poisson_ratio;
+            
+            } // poisson_ratio
+
             else if(a_word.compare("eos_model") == 0){
                   
                 std::string eos = root["materials"][mat_id]["material"]["eos_model"].As<std::string>();
@@ -973,20 +1169,37 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
                 // set the EOS
                 if(eos_map.find(eos) != eos_map.end()){
                     materials[mat_id].eos_model = eos_map[eos];
-                    std::cout << "\teos_model = " << eos << std::endl;
-                    materials[mat_id].eos_model(0.,1.,2.);
+                    if(VERBOSE) std::cout << "\teos_model = " << eos << std::endl;
+                    materials[mat_id].eos_model(0.,1.,2.); // WARNING BUG HERE
                 }
                 else{
                     std::cout << "ERROR: invalid input: " << eos << std::endl;
                 } // end if
             
-            } // id
+            } // EOS model
+
+            else if(a_word.compare("strength_model") == 0){
+                  
+                std::string strength_model = root["materials"][mat_id]["material"]["strength_model"].As<std::string>();
+                
+                // set the strength_model
+                if(strength_map.find(strength_model) != strength_map.end()){
+                    materials[mat_id].strength_model = strength_map[strength_model];
+                    if(VERBOSE) std::cout << "\tstrength_model = " << strength_model << std::endl;
+                    materials[mat_id].strength_model(0.,1.); // WARNING BUG HERE
+                }
+                else{
+                    std::cout << "ERROR: invalid input: " << strength_model << std::endl;
+                } // end if
+            
+            } // EOS model
+
             // exact the eos_global_vars
             else if(a_word.compare("eos_global_vars") == 0){
                 
                 size_t num_global_vars = material_inps_yaml.Size();
                 
-                std::cout << "num global eos vars = " << num_global_vars << std::endl;
+                if(VERBOSE) std::cout << "num global eos vars = " << num_global_vars << std::endl;
                 
                 for(int global_var_id=0; global_var_id<num_global_vars; global_var_id++){
                     
@@ -994,7 +1207,7 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
                     
                     eos_global_vars[mat_id].push_back(eos_var);
                     
-                    std::cout << "\t var = " << eos_var<< std::endl;
+                    if(VERBOSE) std::cout << "\t var = " << eos_var<< std::endl;
                 } // end loop over global vars
                 
             } // "eos_global_vars"
@@ -1042,7 +1255,7 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
             std::string var_name = (*item).first;
             
             // print the variable
-            std::cout << "this is var name = "<< var_name << "\n";
+            if(VERBOSE) std::cout << "this is var name = "<< var_name << "\n";
             
             user_str_bc_inps.push_back(var_name);
             
@@ -1059,7 +1272,7 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
         // loop over the words in the material input definition
         for(auto &a_word : user_str_bc_inps){
             
-            std::cout << a_word << std::endl;
+            if(VERBOSE) std::cout << a_word << std::endl;
         
             Yaml::Node & inps_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
             
@@ -1074,7 +1287,7 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
                 if(map.find(solver) != map.end()){
                     
                     boundary_conditions[bc_id].solver = map[solver];
-                    std::cout << "\tsolver = " << solver << std::endl;
+                    if(VERBOSE) std::cout << "\tsolver = " << solver << std::endl;
                 }
                 else{
                     std::cout << "ERROR: invalid mesh option input in YAML file: " << solver << std::endl;
@@ -1098,7 +1311,7 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
                 if(map.find(type) != map.end()){
                     
                     boundary_conditions[bc_id].type = map[type];
-                    std::cout << "\ttype = " << type << std::endl;
+                    if(VERBOSE) std::cout << "\ttype = " << type << std::endl;
                 }
                 else{
                     std::cout << "ERROR: invalid mesh option input in YAML file: " << type << std::endl;
@@ -1122,7 +1335,7 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
                 if(map.find(geometry) != map.end()){
                     
                     boundary_conditions[bc_id].geometry = map[geometry];
-                    std::cout << "\tgeometry = " << geometry << std::endl;
+                    if(VERBOSE) std::cout << "\tgeometry = " << geometry << std::endl;
                 }
                 else{
                     std::cout << "ERROR: invalid mesh option input in YAML file: " << geometry << std::endl;
@@ -1163,7 +1376,7 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
             else if(a_word.compare("origin") == 0){
 
                 std::string origin = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
-                std::cout << "\torigin = " << origin << std::endl;
+                if(VERBOSE) std::cout << "\torigin = " << origin << std::endl;
                 
                 // get the origin numbers, values are words
                 std::vector<std::string> numbers = exact_array_values(origin, ",");
@@ -1171,11 +1384,11 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
                 double x1 = std::stod(numbers[0]);
                 double y1 = std::stod(numbers[1]);
                 double z1 = std::stod(numbers[2]);
-                
-                std::cout << "\tx1 = " << x1 << std::endl;
-                std::cout << "\ty1 = " << y1 << std::endl;
-                std::cout << "\tz1 = " << z1 << std::endl;
-                
+                if(VERBOSE) {
+                    std::cout << "\tx1 = " << x1 << std::endl;
+                    std::cout << "\ty1 = " << y1 << std::endl;
+                    std::cout << "\tz1 = " << z1 << std::endl;
+                }
                 // storing the origin values as (x1,y1,z1)
                 boundary_conditions[bc_id].origin[0]  = x1;
                 boundary_conditions[bc_id].origin[1]  = y1;

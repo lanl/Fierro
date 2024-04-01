@@ -75,6 +75,8 @@ struct reg_fill_t {
     double ie;   // exstenive internal energy
     double sie;  // specific internal energy
     double den;  // density
+
+    std::vector<double> origin = {0.0, 0.0, 0.0};
 };
 
 
@@ -105,7 +107,8 @@ static std::vector <std::string> str_region_inps
     "speed",
     "sie",
     "ie",
-    "den"
+    "den",
+    "origin"
 }; //
 
 #endif // end Header Guard
