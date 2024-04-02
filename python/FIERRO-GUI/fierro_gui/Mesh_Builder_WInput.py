@@ -1,6 +1,8 @@
 import fierro_mesh_builder
 import paraview.simple as pvsimple
 from PySide6.QtCore import (QProcess)
+import subprocess
+from DeveloperInputs import *
 
 # =============================================
 # ======= MESH BUILDER WRITE INPUT FILE =======
@@ -50,13 +52,13 @@ def Mesh_Builder_WInput(self, GLOBAL_MESH, global_mesh_dir):
     global_mesh_input.close()
     
     # Run Mesh Builder Tool
-    import subprocess
-    executable_path = "/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/build-fierro-serial/bin/fierro-mesh-builder"
+    executable_path = fierro_mesh_builder_exe
     arguments = [self.GLOBAL_MESH]
     command = [executable_path] + arguments
     process = subprocess.Popen(command)
     process.wait()
     self.mesh_builder = QProcess()
+    
 #    self.mesh_builder.start("fierro-mesh-builder","/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/python/FIERRO-GUI/global_mesh.yaml")
 #            self.p.start("evpfft",["-f", EVPFFT_INPUT, "-m", "2"])
 

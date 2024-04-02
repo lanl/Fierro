@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="Blue Icons">
+    <file>Blue Icons/File.svg</file>
+    <file>Blue Icons/UserProfile.svg</file>
     <file>Blue Icons/FirstFrame.svg</file>
     <file>Blue Icons/crop.svg</file>
     <file>Blue Icons/LastFrame.svg</file>

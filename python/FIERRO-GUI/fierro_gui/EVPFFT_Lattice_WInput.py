@@ -5,21 +5,6 @@ import tempfile
 # ======= EVPFFT/LATTICE WRITE INPUT FILE =======
 # ===============================================
 
-#class LocalResource:
-#    FILE_PATH = os.path.abspath(
-#        os.path.join(*(os.path.split(os.path.expanduser(__file__))[:-1]))
-#    )
-#
-#    @staticmethod
-#    def get_resource_name(relpath: str) -> str:
-#        return os.path.join(LocalResource.FILE_PATH, relpath)
-#
-#VTK_OUTPUT = os.path.join(tempfile.gettempdir(), 'VTK_Geometry.vtk')
-#ELASTIC_PARAMETERS_0 = 'elastic_parameters_0.txt'
-#ELASTIC_PARAMETERS_1 = 'elastic_parameters_1.txt'
-#PLASTIC_PARAMETERS = LocalResource.get_resource_name('plastic_parameters.txt')
-#EVPFFT_INPUT = os.path.join(tempfile.gettempdir(), 'evpfft_lattice_input.txt')
-
 def EVPFFT_Lattice_WInput(self, BC_index):
 
     # Plastic Input File

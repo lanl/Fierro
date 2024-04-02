@@ -7,6 +7,7 @@ import vtkmodules.all as vtk
 #import paraview.simple as pvsimple
 from paraview.simple import *
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
+from DeveloperInputs import *
 
 # ============================================
 # ======= EXPLICIT SOLVER SGH PIPELINE =======
@@ -522,7 +523,7 @@ def Explicit_SGH(self):
     def run_explicit_SGH():
         if self.explicit_sgh == None:
             Explicit_SGH_WInput(self)
-            executable_path = "/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/build-fierro-serial/bin/fierro-parallel-explicit"
+            executable_path = fierro_parallel_explicit_exe
             arguments = [self.EXPLICIT_SGH_INPUT]
             self.explicit_sgh = QProcess()
             self.explicit_sgh.readyReadStandardOutput.connect(handle_stdout)

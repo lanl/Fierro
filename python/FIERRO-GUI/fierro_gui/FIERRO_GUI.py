@@ -44,7 +44,8 @@ import subprocess
 from Explicit_SGH import *
 from EVPFFT_Lattice import *
 from Mesh_Builder_WInput import *
-from Working_Directory import *
+from FIERRO_Setup import *
+from DeveloperInputs import *
 
 class FIERRO_GUI(Ui_MainWindow):
     def setupUi(self, MainWindow):
@@ -65,12 +66,12 @@ class FIERRO_GUI(Ui_MainWindow):
         self.actionManual.triggered.connect(openUrl)
         
         # Working Directory Menu
-        self.actionChange_Working_Directory.triggered.connect(self.open_working_directory_dialog)
+        self.actionChange_Working_Directory.triggered.connect(self.open_fierro_setup_dialog)
         
         # Upload Geometry
         def geometry_upload_click():
             if not self.INPartName.text():
-                warning_message("Please name the part")
+                self.warning_message("Please name the part")
             else:
                 global b3_filename
                 b3_filename = QFileDialog.getOpenFileName(
@@ -137,7 +138,8 @@ class FIERRO_GUI(Ui_MainWindow):
                     
                     # Rename the file and save it to directory location
                     new_file_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
-                    shutil.copy(b3_filename[0], new_file_path)
+                    if b3_filename[0] != new_file_path:
+                        shutil.copy(b3_filename[0], new_file_path)
                     
                     # Add part to the table
                     row = self.TParts.rowCount()
@@ -153,7 +155,7 @@ class FIERRO_GUI(Ui_MainWindow):
                     for i in range(self.TBasicGeometries.rowCount()):
                         self.INPartMaterial.addItem(self.TBasicGeometries.item(i,0).text())
                 else:
-                    warning_message('ERROR: Incorrect file type')
+                    self.warning_message('ERROR: Incorrect file type')
         self.BUploadGeometryFile.clicked.connect(geometry_upload_click)
         
         # Allow for custom dimensions of stl files
@@ -181,10 +183,10 @@ class FIERRO_GUI(Ui_MainWindow):
         # Voxelize Geometry
         def voxelize_geometry_click():
             if not self.INNumberOfVoxelsX.text() or not self.INNumberOfVoxelsY.text() or not self.INNumberOfVoxelsZ.text() or not self.INLengthX.text() or not self.INLengthY.text() or not self.INLengthZ.text() or not self.INOriginX.text() or not self.INOriginY.text() or not self.INOriginZ.text():
-                warning_message('ERROR: Number of voxels NOT defined')
+                self.warning_message('ERROR: Number of voxels NOT defined')
             else:
                 # Run voxelization executable
-                executable_path = "/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/build-fierro-serial/bin/fierro-voxelizer"
+                executable_path = fierro_voxelizer_exe
                 vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
                 arguments = [b3_filename[0], vtk_location, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INOriginX.text(), self.INOriginY.text(), self.INOriginZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
                 command = [executable_path] + arguments
@@ -403,12 +405,6 @@ class FIERRO_GUI(Ui_MainWindow):
         def open_paraview_click():
             os.system("open " + "micro_state_timestep_10.xdmf")
         self.BOpenParaview.clicked.connect(open_paraview_click)
-        
-        # Warning Message Popup
-        def warning_message(msg):
-            message = QMessageBox()
-            message.setText(msg)
-            message.exec()
             
         # Write input file for mesh builder
         def global_mesh_click():
@@ -421,9 +417,15 @@ class FIERRO_GUI(Ui_MainWindow):
         # ======= EXPLICIT SOLVER SGH PIPELINE =======
         Explicit_SGH(self)
         
-    # ========== SET WORKING DIRECTORY ============
-    def open_working_directory_dialog(self, gself):
-        dialog = WorkingDirectoryDialog(gself)
+    # ========== WARNING MESSAGE ============
+    def warning_message(self, msg):
+        message = QMessageBox()
+        message.setText(msg)
+        message.exec()
+        
+    # ========== FIERRO SETUP ============
+    def open_fierro_setup_dialog(self, gself):
+        dialog = FierroSetup(gself)
         dialog.setWindowModality(Qt.WindowModal)
         if dialog.exec() == QDialog.Accepted:
             self.directory = dialog.get_directory()
@@ -449,6 +451,17 @@ class FIERRO_GUI(Ui_MainWindow):
             sgh_dir = os.path.join(self.directory, 'sgh')
             os.makedirs(sgh_dir, exist_ok=True)
             self.EXPLICIT_SGH_INPUT = os.path.join(sgh_dir, 'explicit_sgh_input.yaml')
+        
         else:
-            warning_message("ERROR: Working directory was not defined")
+            self.warning_message("ERROR: Working directory was not defined")
+    
+    # ========== CHECK FOR BUILD PACKAGES ============
+    def check_build_packages(self, executable_path, arguments):
+        try:
+            process = subprocess.Popen([executable_path] + arguments)
+            process.wait()
+            return True
+        except Exception as e:
+            print("Error occurred while running the process:", e)
+            return False
 

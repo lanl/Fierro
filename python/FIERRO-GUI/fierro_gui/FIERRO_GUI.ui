@@ -6781,7 +6781,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="actionChange_Working_Directory">
    <property name="text">
-    <string>Change Working Directory</string>
+    <string>Change Fierro Setup</string>
    </property>
   </action>
  </widget>

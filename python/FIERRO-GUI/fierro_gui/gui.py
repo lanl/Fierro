@@ -5,7 +5,7 @@ def main():
     sys.path.append(os.path.dirname(__file__))
     from fierro_gui.FIERRO_GUI import FIERRO_GUI
     from PySide6.QtWidgets import QMainWindow, QApplication
-    from Working_Directory import WorkingDirectoryDialog
+    from FIERRO_Setup import FierroSetup
     # MAIN WINDOW CLASS
     class MainWindow(QMainWindow):
         def __init__(self):
@@ -17,8 +17,8 @@ def main():
             # SHOW MAIN WINDOW
             self.show()
             
-            # SHOW WORKING DIRECTORY WINDOW
-            self.ui.open_working_directory_dialog(self)
+            # SHOW FIERRO SETUP WINDOW
+            self.ui.open_fierro_setup_dialog(self)
 #            self.dialog = WorkingDirectoryDialog(self)
 #            self.dialog.exec()
             

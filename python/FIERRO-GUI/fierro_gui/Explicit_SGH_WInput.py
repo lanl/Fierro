@@ -43,8 +43,8 @@ def Explicit_SGH_WInput(self):
                      '    eos_global_vars:' + '\n' \
                     f'      - {self.TMaterialsSGH.item(i,6).text()}' + '\n' \
                     f'      - {self.TMaterialsSGH.item(i,7).text()}' + '\n' \
-                    f'      - {self.TMaterialsSGH.item(i,8).text()}' + '\n' \
-                    f'    strength_model: {self.TMaterialsSGH.item(i,9).text()}' + '\n\n'
+                    f'      - {self.TMaterialsSGH.item(i,8).text()}' + '\n\n'
+#                    f'    strength_model: {self.TMaterialsSGH.item(i,9).text()}' + '\n\n'
         InputFile.write(materials)
     
     regions_label = 'regions:' + '\n'
