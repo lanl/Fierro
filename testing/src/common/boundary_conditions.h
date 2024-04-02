@@ -10,19 +10,14 @@ namespace boundary_conds
 {
     
     // types of boundary conditions
-    enum bc_geometry
+    enum bdy_tag
     {
-        // surfaces
-        x_plane = 0,
-        y_plane = 1,
-        z_plane = 2,
-    
-        // cylinder
-        cylinder = 3,   
-        sphere   = 4,  
-    
-        // BCs from file
-        read_file = 5
+        x_plane = 0,        // tag an x-plane
+        y_plane = 1,        // tag an y-plane
+        z_plane = 2,        // tag an z-plane
+        cylinder = 3,       // tag an cylindrical surface
+        sphere = 4,         // tag a spherical surface
+        read_file = 5        // read from a file
     };
 
     enum bc_type
@@ -38,7 +33,7 @@ namespace boundary_conds
     
 } // end of boundary conditions namespace
 
-static std::map <std::string, boundary_conds::bc_geometry> bc_geometry_map
+static std::map <std::string, boundary_conds::bdy_tag> bc_geometry_map
 {
     {"x_plane",        boundary_conds::x_plane},
     {"y_plane",        boundary_conds::y_plane},
@@ -63,7 +58,7 @@ struct boundary_condition_t {
 
     solver_input::method solver = solver_input::NONE;
     boundary_conds::bc_type type; 
-    boundary_conds::bc_geometry geometry;
+    boundary_conds::bdy_tag geometry;
 
     double value = 0.0;
     double u = 0.0; 

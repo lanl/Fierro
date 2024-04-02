@@ -9,6 +9,7 @@
 #include <string>
 #include <stdio.h>
 
+#include "matar.h"
 
 #include "Yaml.hpp"
 
@@ -20,6 +21,8 @@ struct material_t;
 struct output_options_t;
 struct boundary_condition_t;
 struct dynamic_options_t;
+
+using namespace mtr;
 
 // checks to see if a path exists
 static bool DoesPathExist(const std::string &s)
@@ -65,7 +68,7 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input);
 void parse_output_options(Yaml::Node &root, output_options_t &output_options);
 
 // parse the region text
-void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills);
+void parse_regions(Yaml::Node &root, CArrayKokkos<reg_fill_t> &region_fills);
 
 
 // parse the region text

@@ -130,19 +130,6 @@ public:
         // std::cout << "Building node-node connectivity: " << std::endl;
         mesh.build_node_node_connectivity();
 
-        // Setup boundary conditions on mesh
-
-        int num_bcs = sim_param.boundary_conditions.size();
-
-        mesh.init_bdy_sets(num_bcs);
-        printf("Num BC's = %lu\n", num_bcs);
-
-        // tag boundary patches in the set
-        tag_bdys(boundary, mesh, node.coords);
-
-        build_boundry_node_sets(boundary, mesh);
-
-
 
 
         // // Create solvers

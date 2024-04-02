@@ -18,7 +18,7 @@
 
 #define PI 3.141592653589793
 
-using namespace mtr;
+// using namespace mtr;
 
 
 bool VERBOSE = false;
@@ -197,18 +197,6 @@ void print_yaml(Yaml::Node root){
 // =================================================================================
 //    Parse YAML file
 // =================================================================================
-
-
-// void parse_yaml(Yaml::Node &root, 
-//     std::vector <solver_input_t> &solver_inputs,
-//     mesh_input_t &mesh_input,
-//     dynamic_options_t &dynamic_options,
-//     output_options_t &output_options,
-//     std::vector <reg_fill_t> &region_fills,
-//     std::vector <material_t> &materials,
-//     std::vector <std::vector <double>> &eos_global_vars,
-//     std::vector <boundary_condition_t> &boundary_conditions){
-
 void parse_yaml(Yaml::Node &root, simulation_parameters_t& sim_param){
 
 
@@ -771,13 +759,13 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
 // =================================================================================
 //    Parse Fill regions
 // =================================================================================
-void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
+void parse_regions(Yaml::Node &root, CArrayKokkos<reg_fill_t> &region_fills){
 
     Yaml::Node & region_yaml = root["regions"];
     
     size_t num_regions = region_yaml.Size();
     
-    region_fills = std::vector <reg_fill_t>(num_regions);
+    region_fills = CArrayKokkos<reg_fill_t>(num_regions);
     
     // loop over the fill regions specified
     for(int reg_id=0; reg_id<num_regions; reg_id++){
@@ -819,12 +807,15 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
         
             Yaml::Node & material_inps_yaml = root["regions"][reg_id]["fill_volume"][a_word];
             
-
             // set the values
             if(a_word.compare("material_id") == 0){
-                region_fills[reg_id].material_id = 
-                    root["regions"][reg_id]["fill_volume"][a_word].As<int>();
-            
+
+                int id = root["regions"][reg_id]["fill_volume"][a_word].As<int>();
+
+                RUN({
+                    region_fills(reg_id).material_id;
+                });
+                
             } // mat_id
             else if(a_word.compare("den") == 0){
 
@@ -834,7 +825,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 if(den < 0.0){
                     std::cout << "ERROR: density is negative: " << den << std::endl;
                 } else {
-                    region_fills[reg_id].den = den;  // NOTE: GPUs will require a RUN({})
+                    RUN({
+                        region_fills(reg_id).den = den;  // NOTE: GPUs will require a RUN({})
+                    });
                 }
             
             } // den
@@ -845,7 +838,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double sie = root["regions"][reg_id]["fill_volume"]["sie"].As<double>();
                 if(VERBOSE) std::cout << "\tsie = " << sie << std::endl;
                 
-                region_fills[reg_id].sie = sie;
+                RUN({
+                    region_fills(reg_id).sie = sie; 
+                });
             
             } // sie
             else if(a_word.compare("ie") == 0){
@@ -855,35 +850,38 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double ie = root["regions"][reg_id]["fill_volume"]["ie"].As<double>();
                 if(VERBOSE) std::cout << "\tie = " << ie << std::endl;
                 
-                region_fills[reg_id].ie = ie;
+                RUN({
+                    region_fills(reg_id).ie = ie;
+                });
             
             } // ie
             else if(a_word.compare("speed") == 0){
 
                 double speed = root["regions"][reg_id]["fill_volume"]["speed"].As<double>();
                 if(VERBOSE) std::cout << "\tspeed = " << speed << std::endl;
-                
-                region_fills[reg_id].speed = speed;
+                RUN({
+                    region_fills(reg_id).speed = speed;
+                });
             
             } // speed
             else if(a_word.compare("u") == 0){
 
                 // x-component of velocity
-                
                 double u = root["regions"][reg_id]["fill_volume"]["u"].As<double>();
                 if(VERBOSE) std::cout << "\tu = " << u << std::endl;
-                
-                region_fills[reg_id].u = u;
-            
+                RUN({
+                    region_fills(reg_id).u = u;
+                });
             } // u
             else if(a_word.compare("v") == 0){
                 
                 // y-component of velocity
-
                 double v = root["regions"][reg_id]["fill_volume"]["v"].As<double>();
                 if(VERBOSE) std::cout << "\tie = " << v << std::endl;
                 
-                region_fills[reg_id].v = v;
+                RUN({
+                    region_fills(reg_id).v = v;
+                });
             
             } // v
             else if(a_word.compare("w") == 0){
@@ -893,7 +891,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double w = root["regions"][reg_id]["fill_volume"]["w"].As<double>();
                 if(VERBOSE) std::cout << "\tw = " << w << std::endl;
                 
-                region_fills[reg_id].w = w;
+                RUN({
+                    region_fills(reg_id).w = w;
+                });
             
             } // w
             else if(a_word.compare("radius1") == 0){
@@ -903,7 +903,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double radius1 = root["regions"][reg_id]["fill_volume"]["radius1"].As<double>();
                 if(VERBOSE) std::cout << "\tradius1 = " << radius1 << std::endl;
                 
-                region_fills[reg_id].radius1 = radius1;
+                RUN({
+                    region_fills(reg_id).radius1 = radius1;
+                });
             
             } // radius1
             else if(a_word.compare("radius2") == 0){
@@ -913,7 +915,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double radius2 = root["regions"][reg_id]["fill_volume"]["radius2"].As<double>();
                 if(VERBOSE) std::cout << "\tradius2 = " << radius2 << std::endl;
                 
-                region_fills[reg_id].radius2 = radius2;
+                RUN({
+                    region_fills(reg_id).radius2 = radius2;
+                });
             
             } // radius2
             else if(a_word.compare("x1") == 0){
@@ -923,7 +927,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double x1 = root["regions"][reg_id]["fill_volume"]["x1"].As<double>();
                 if(VERBOSE) std::cout << "\tx1 = " << x1 << std::endl;
                 
-                region_fills[reg_id].x1 = x1;
+                RUN({
+                    region_fills(reg_id).x1 = x1;
+                });
             
             } // x1
             else if(a_word.compare("x2") == 0){
@@ -933,7 +939,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double x2 = root["regions"][reg_id]["fill_volume"]["x2"].As<double>();
                 if(VERBOSE) std::cout << "\tx2 = " << x2 << std::endl;
                 
-                region_fills[reg_id].x2 = x2;
+                RUN({
+                    region_fills(reg_id).x2 = x2;
+                });
             
             } // x2
             else if(a_word.compare("y1") == 0){
@@ -943,7 +951,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double y1 = root["regions"][reg_id]["fill_volume"]["y1"].As<double>();
                 if(VERBOSE) std::cout << "\ty1 = " << y1 << std::endl;
                 
-                region_fills[reg_id].y1 = y1;
+                RUN({
+                    region_fills(reg_id).y1 = y1;
+                });
             
             } // y1
             else if(a_word.compare("y2") == 0){
@@ -953,7 +963,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double y2 = root["regions"][reg_id]["fill_volume"]["y2"].As<double>();
                 if(VERBOSE) std::cout << "\ty2 = " << y2 << std::endl;
                 
-                region_fills[reg_id].y2 = y2;
+                RUN({
+                    region_fills(reg_id).y2 = y2;
+                });
             
             } // y2
             else if(a_word.compare("z1") == 0){
@@ -963,7 +975,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double z1 = root["regions"][reg_id]["fill_volume"]["z1"].As<double>();
                 if(VERBOSE) std::cout << "\tz1 = " << z1 << std::endl;
                 
-                region_fills[reg_id].z1 = z1;
+                RUN({
+                    region_fills(reg_id).z1 = z1;
+                });
             
             } // z1
             else if(a_word.compare("z2") == 0){
@@ -973,7 +987,9 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 double z2 = root["regions"][reg_id]["fill_volume"]["z2"].As<double>();
                 if(VERBOSE) std::cout << "\tz2 = " << z2 << std::endl;
                 
-                region_fills[reg_id].z2 = z2;
+                RUN({
+                    region_fills(reg_id).z2 = z2;
+                });
             
             } // z2
             else if(a_word.compare("type") == 0){
@@ -984,9 +1000,13 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // set the volume tag type
                 if(region_type_map.find(type) != region_type_map.end()){
                     
-                    region_fills[reg_id].volume = region_type_map[type];
+                    auto vol = region_type_map[type];
+
+                    RUN({
+                        region_fills(reg_id).volume = vol;
+                    });
                     if(VERBOSE) std::cout << "\tvolume_fill = " << type << std::endl;
-                    if(VERBOSE) std::cout << region_fills[reg_id].volume << std::endl;
+                    if(VERBOSE) std::cout << vol << std::endl;
                 }
                 else{
                     std::cout << "ERROR: invalid input: " << type << std::endl;
@@ -1002,10 +1022,15 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 // set the volume tag type
                 if(velocity_type_map.find(type) != velocity_type_map.end()){
                     
-                    region_fills[reg_id].velocity = velocity_type_map[type];
+                    auto vel = velocity_type_map[type];
+                    
+                    RUN({
+                        region_fills(reg_id).velocity = vel;
+                    });
+
                     if(VERBOSE) {
                         std::cout << "\tvelocity_fill = " << type << std::endl;
-                        std::cout << region_fills[reg_id].velocity << std::endl;
+                        std::cout << vel << std::endl;
                     }
                 }
                 else{
@@ -1032,10 +1057,11 @@ void parse_regions(Yaml::Node &root, std::vector <reg_fill_t> &region_fills){
                 }
                 
                 // storing the origin values as (x1,y1,z1)
-                region_fills[reg_id].x1 = x1;
-                region_fills[reg_id].y1 = y1;
-                region_fills[reg_id].z1 = z1;
-                    
+                RUN({
+                    region_fills(reg_id).x1 = x1;
+                    region_fills(reg_id).y1 = y1;
+                    region_fills(reg_id).z1 = z1;
+                });
             } // origin
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;

@@ -32,7 +32,10 @@ struct simulation_parameters_t{
     std::vector <boundary_condition_t> boundary_conditions;
 
     // Region data for simulation mesh
-    std::vector <reg_fill_t> region_fills;
+    //std::vector <reg_fill_t> region_fills;
+    CArrayKokkos<reg_fill_t> region_fills;
+    // CArrayKokkos<reg_fill_t>(num_fills);
+
 
     // Material data for simulation
     std::vector <material_t> materials;
