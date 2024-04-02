@@ -50,9 +50,9 @@
 void SGH::update_velocity(double rk_alpha,
     double dt,
     const mesh_t& mesh,
-    DViewCArrayKokkos<double>& node_vel,
-    const DViewCArrayKokkos<double>& node_mass,
-    const DViewCArrayKokkos<double>& corner_force
+    DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_mass,
+    const DCArrayKokkos<double>& corner_force
     )
 {
     const size_t num_dims = mesh.num_dims;
@@ -102,7 +102,7 @@ void SGH::update_velocity(double rk_alpha,
 KOKKOS_FUNCTION
 void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>&  elem_node_gids,
-    const DViewCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_vel,
     const ViewCArrayKokkos<double>&  b_matrix,
     const double elem_vol,
     const size_t elem_gid
@@ -198,7 +198,7 @@ void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
 KOKKOS_FUNCTION
 void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>&  elem_node_gids,
-    const DViewCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_vel,
     const ViewCArrayKokkos<double>&  b_matrix,
     const double elem_vol,
     const double elem_area,
@@ -266,11 +266,11 @@ void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
 /// \param View of the volumes of each element
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_divergence(DViewCArrayKokkos<double>& elem_div,
+void SGH::get_divergence(DCArrayKokkos<double>& elem_div,
     const mesh_t mesh,
-    const DViewCArrayKokkos<double>& node_coords,
-    const DViewCArrayKokkos<double>& node_vel,
-    const DViewCArrayKokkos<double>& elem_vol
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& elem_vol
     )
 {
     // --- calculate the forces acting on the nodes from the element ---
@@ -343,11 +343,11 @@ void SGH::get_divergence(DViewCArrayKokkos<double>& elem_div,
 /// \param View of the volumes of each element
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_divergence2D(DViewCArrayKokkos<double>& elem_div,
+void SGH::get_divergence2D(DCArrayKokkos<double>& elem_div,
     const mesh_t mesh,
-    const DViewCArrayKokkos<double>& node_coords,
-    const DViewCArrayKokkos<double>& node_vel,
-    const DViewCArrayKokkos<double>& elem_vol
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& elem_vol
     )
 {
     // --- calculate the forces acting on the nodes from the element ---
@@ -437,8 +437,8 @@ void SGH::decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
     const ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>& elem_node_gids,
     const size_t elem_gid,
-    const DViewCArrayKokkos<double>& node_coords,
-    const DViewCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel,
     const double vol
     )
 {

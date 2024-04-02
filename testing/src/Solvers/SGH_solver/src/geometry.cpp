@@ -23,8 +23,8 @@ void SGH::update_position(double rk_alpha,
     double dt,
     const size_t num_dims,
     const size_t num_nodes,
-    DViewCArrayKokkos<double>& node_coords,
-    const DViewCArrayKokkos<double>& node_vel)
+    DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel)
 {
     // loop over all the nodes in the mesh
     FOR_ALL(node_gid, 0, num_nodes, {
@@ -57,7 +57,7 @@ void SGH::update_position(double rk_alpha,
 // KOKKOS_FUNCTION
 // void SGH::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
 //     const size_t elem_gid,
-//     const DViewCArrayKokkos<double>& node_coords,
+//     const DCArrayKokkos<double>& node_coords,
 //     const ViewCArrayKokkos<size_t>&  elem_node_gids)
 // {
 //     const size_t num_nodes = 8;
@@ -256,8 +256,8 @@ void SGH::update_position(double rk_alpha,
 // /// \brief Compute Volume of each finite element
 // ///
 // /////////////////////////////////////////////////////////////////////////////
-// void SGH::get_vol(const DViewCArrayKokkos<double>& elem_vol,
-//     const DViewCArrayKokkos<double>& node_coords,
+// void SGH::get_vol(const DCArrayKokkos<double>& elem_vol,
+//     const DCArrayKokkos<double>& node_coords,
 //     const mesh_t& mesh)
 // {
 //     const size_t num_dims = mesh.num_dims;
@@ -295,9 +295,9 @@ void SGH::update_position(double rk_alpha,
 // ///
 // /////////////////////////////////////////////////////////////////////////////
 // KOKKOS_FUNCTION
-// void SGH::get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
+// void SGH::get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 //     const size_t elem_gid,
-//     const DViewCArrayKokkos<double>& node_coords,
+//     const DCArrayKokkos<double>& node_coords,
 //     const ViewCArrayKokkos<size_t>&  elem_node_gids)
 // {
 //     const size_t num_nodes = 8;
@@ -351,7 +351,7 @@ void SGH::update_position(double rk_alpha,
 // KOKKOS_FUNCTION
 // void SGH::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
 //     const size_t elem_gid,
-//     const DViewCArrayKokkos<double>& node_coords,
+//     const DCArrayKokkos<double>& node_coords,
 //     const ViewCArrayKokkos<size_t>&  elem_node_gids)
 // {
 //     const size_t num_nodes = 4;
@@ -423,9 +423,9 @@ void SGH::update_position(double rk_alpha,
 // ///
 // /////////////////////////////////////////////////////////////////////////////
 // KOKKOS_FUNCTION
-// void SGH::get_vol_quad(const DViewCArrayKokkos<double>& elem_vol,
+// void SGH::get_vol_quad(const DCArrayKokkos<double>& elem_vol,
 //     const size_t elem_gid,
-//     const DViewCArrayKokkos<double>& node_coords,
+//     const DCArrayKokkos<double>& node_coords,
 //     const ViewCArrayKokkos<size_t>&  elem_node_gids)
 // {
 //     // --- testing here ---
@@ -491,7 +491,7 @@ void SGH::update_position(double rk_alpha,
 // /////////////////////////////////////////////////////////////////////////////
 // KOKKOS_FUNCTION
 // double SGH::get_area_quad(const size_t elem_gid,
-//     const DViewCArrayKokkos<double>&   node_coords,
+//     const DCArrayKokkos<double>&   node_coords,
 //     const ViewCArrayKokkos<size_t>&    elem_node_gids)
 // {
 //     double elem_area = 0.0;
@@ -576,7 +576,7 @@ void SGH::update_position(double rk_alpha,
 // KOKKOS_FUNCTION
 // void SGH::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 //     const size_t elem_gid,
-//     const DViewCArrayKokkos<double>& node_coords,
+//     const DCArrayKokkos<double>& node_coords,
 //     const ViewCArrayKokkos<size_t>&  elem_node_gids)
 // {
 //     const size_t num_nodes = 4;

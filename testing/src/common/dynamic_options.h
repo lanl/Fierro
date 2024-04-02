@@ -8,8 +8,9 @@
 
 
 
-// mmeshing input parameters
-struct dynamic_options_t{
+// Time and cycle options
+struct dynamic_options_t
+{
 
     unsigned long cycle_stop = 2000000;
     

@@ -48,7 +48,7 @@
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_velocity(const mesh_t& mesh,
     const CArrayKokkos<boundary_t>& boundary,
-    DViewCArrayKokkos<double>&      node_vel,
+    DCArrayKokkos<double>&      node_vel,
     const double time_value)
 {
     // Loop over boundary sets

@@ -45,6 +45,7 @@
 
 #include "matar.h"
 #include "solver.h"
+#include "simulation_parameters.h"
 // debug and performance includes
 #include <sys/time.h>
 #include <sys/resource.h>

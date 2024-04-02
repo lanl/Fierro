@@ -832,71 +832,7 @@ struct mesh_t
     } // end of init_bdy_sets method
 }; // end mesh_t
 
-// namespace region
-// {
-// // for tagging boundary faces
-// enum vol_tag
-// {
-//     global = 0,         // tag every elements in the mesh
-//     box = 1,            // tag all elements inside a box
-//     cylinder = 2,       // tag all elements inside a cylinder
-//     sphere = 3,         // tag all elements inside a sphere
-//     readVoxelFile = 4           // tag all elements in a voxel mesh input
-// };
-// } // end of namespace
 
-// namespace init_conds
-// {
-// // applying initial conditions
-// enum init_velocity_conds
-// {
-//     // uniform
-//     cartesian = 0,       // cart velocity
-//     radial = 1,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
-//     spherical = 2,       // spherical
-
-//     // linear variation
-//     radial_linear = 3,         // linear variation from 0,0,0
-//     spherical_linear = 4,       // linear variation from 0,0,0
-
-//     // vortical initial conditions
-//     tg_vortex = 5
-// };
-// } // end of initial conditions namespace
-
-// // fill instructions
-// struct mat_fill_t
-// {
-//     // type
-//     region::vol_tag volume; // 1 is global, 2 are planes, 3 is a sphere
-
-//     // material id
-//     size_t mat_id;
-
-//     // planes
-//     double x1;
-//     double x2;
-//     double y1;
-//     double y2;
-//     double z1;
-//     double z2;
-
-//     // radius
-//     double radius1;
-//     double radius2;
-
-//     // initial conditions
-//     init_conds::init_velocity_conds velocity;
-
-//     // velocity coefficients by component
-//     double u, v, w;
-
-//     // velocity magnitude for radial velocity initialization
-//     double speed;
-
-//     double sie;  // specific internal energy
-//     double den;  // density
-// };
 
 namespace bdy
 {
@@ -945,61 +881,61 @@ struct boundary_t
 };
 
 void ensight(const mesh_t& mesh,
-             const DViewCArrayKokkos<double>& node_coords,
-             const DViewCArrayKokkos<double>& node_vel,
-             const DViewCArrayKokkos<double>& node_mass,
-             const DViewCArrayKokkos<double>& elem_den,
-             const DViewCArrayKokkos<double>& elem_pres,
-             const DViewCArrayKokkos<double>& elem_stress,
-             const DViewCArrayKokkos<double>& elem_sspd,
-             const DViewCArrayKokkos<double>& elem_sie,
-             const DViewCArrayKokkos<double>& elem_vol,
-             const DViewCArrayKokkos<double>& elem_mass,
-             const DViewCArrayKokkos<size_t>& elem_mat_id,
+             const DCArrayKokkos<double>& node_coords,
+             const DCArrayKokkos<double>& node_vel,
+             const DCArrayKokkos<double>& node_mass,
+             const DCArrayKokkos<double>& elem_den,
+             const DCArrayKokkos<double>& elem_pres,
+             const DCArrayKokkos<double>& elem_stress,
+             const DCArrayKokkos<double>& elem_sspd,
+             const DCArrayKokkos<double>& elem_sie,
+             const DCArrayKokkos<double>& elem_vol,
+             const DCArrayKokkos<double>& elem_mass,
+             const DCArrayKokkos<size_t>& elem_mat_id,
              CArray<double>& graphics_times,
              size_t&      graphics_id,
              const double time_value);
 
 void state_file(const mesh_t& mesh,
-                const DViewCArrayKokkos<double>& node_coords,
-                const DViewCArrayKokkos<double>& node_vel,
-                const DViewCArrayKokkos<double>& node_mass,
-                const DViewCArrayKokkos<double>& elem_den,
-                const DViewCArrayKokkos<double>& elem_pres,
-                const DViewCArrayKokkos<double>& elem_stress,
-                const DViewCArrayKokkos<double>& elem_sspd,
-                const DViewCArrayKokkos<double>& elem_sie,
-                const DViewCArrayKokkos<double>& elem_vol,
-                const DViewCArrayKokkos<double>& elem_mass,
-                const DViewCArrayKokkos<size_t>& elem_mat_id,
+                const DCArrayKokkos<double>& node_coords,
+                const DCArrayKokkos<double>& node_vel,
+                const DCArrayKokkos<double>& node_mass,
+                const DCArrayKokkos<double>& elem_den,
+                const DCArrayKokkos<double>& elem_pres,
+                const DCArrayKokkos<double>& elem_stress,
+                const DCArrayKokkos<double>& elem_sspd,
+                const DCArrayKokkos<double>& elem_sie,
+                const DCArrayKokkos<double>& elem_vol,
+                const DCArrayKokkos<double>& elem_mass,
+                const DCArrayKokkos<size_t>& elem_mat_id,
                 const double time_value);
 
 void tag_bdys(const CArrayKokkos<boundary_t>& boundary,
               mesh_t& mesh,
-              const DViewCArrayKokkos<double>& node_coords);
+              const DCArrayKokkos<double>& node_coords);
 
 KOKKOS_FUNCTION
 size_t check_bdy(const size_t  patch_gid,
                  const int     this_bc_tag,
                  const double  val,
                  const mesh_t& mesh,
-                 const DViewCArrayKokkos<double>& node_coords);
+                 const DCArrayKokkos<double>& node_coords);
 
 void build_boundry_node_sets(const CArrayKokkos<boundary_t>& boundary,
                              mesh_t& mesh);
 
 // void boundary_velocity(const mesh_t& mesh,
 //                        const CArrayKokkos<boundary_t>& boundary,
-//                        DViewCArrayKokkos<double>&      node_vel,
+//                        DCArrayKokkos<double>&      node_vel,
 //                        const double time_value);
 
 KOKKOS_FUNCTION
-void ideal_gas(const DViewCArrayKokkos<double>& elem_pres,
-               const DViewCArrayKokkos<double>& elem_stress,
+void ideal_gas(const DCArrayKokkos<double>& elem_pres,
+               const DCArrayKokkos<double>& elem_stress,
                const size_t elem_gid,
                const size_t mat_id,
-               const DViewCArrayKokkos<double>& elem_state_vars,
-               const DViewCArrayKokkos<double>& elem_sspd,
+               const DCArrayKokkos<double>& elem_state_vars,
+               const DCArrayKokkos<double>& elem_sspd,
                const double den,
                const double sie);
 
@@ -1014,8 +950,8 @@ void decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
                         const ViewCArrayKokkos<double>& vel_grad,
                         const ViewCArrayKokkos<size_t>& elem_node_gids,
                         const size_t elem_gid,
-                        const DViewCArrayKokkos<double>& node_coords,
-                        const DViewCArrayKokkos<double>& node_vel,
+                        const DCArrayKokkos<double>& node_coords,
+                        const DCArrayKokkos<double>& node_vel,
                         const double vol);
 
 #endif

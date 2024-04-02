@@ -11,12 +11,8 @@
 
 
 #include "Yaml.hpp"
-// #include "material.h"
-// #include "region.h"
-// #include "mesh_inputs.h"
-// #include "solver_inputs.h"
-// #include "output_options.h"
 
+struct simulation_parameters_t;
 struct solver_input_t;
 struct mesh_input_t;
 struct reg_fill_t;
@@ -43,15 +39,18 @@ std::vector<double> extract_list(std::string str);
 void print_yaml(Yaml::Node root);
 
 // utility function for parsing YAML file
-void parse_yaml(Yaml::Node &root, 
-    std::vector <solver_input_t> &solver_input,
-    mesh_input_t &mesh_input,
-    dynamic_options_t &dynamic_options,
-    output_options_t &output_options,
-    std::vector <reg_fill_t> &region_fills,
-    std::vector <material_t> &materials,
-    std::vector <std::vector <double>> &eos_global_vars,
-    std::vector <boundary_condition_t> &boundary_conditions);
+// void parse_yaml(Yaml::Node &root, 
+//     std::vector <solver_input_t> &solver_input,
+//     mesh_input_t &mesh_input,
+//     dynamic_options_t &dynamic_options,
+//     output_options_t &output_options,
+//     std::vector <reg_fill_t> &region_fills,
+//     std::vector <material_t> &materials,
+//     std::vector <std::vector <double>> &eos_global_vars,
+//     std::vector <boundary_condition_t> &boundary_conditions);
+
+// utility function for parsing YAML file
+void parse_yaml(Yaml::Node &root, simulation_parameters_t& sim_param);
 
 // Parse the solver related data
 void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_input);

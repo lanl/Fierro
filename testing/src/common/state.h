@@ -42,20 +42,20 @@ using namespace mtr;
 struct node_t
 {
     // Position
-    CArray<double> coords;
+    DCArrayKokkos<double> coords;
 
     // velocity
-    CArray<double> vel;
+    DCArrayKokkos<double> vel;
 
     // mass at nodes
-    CArray<double> mass;
+    DCArrayKokkos<double> mass;
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
     {
-        this->coords = CArray<double>(num_rk, num_nodes, num_dims);
-        this->vel    = CArray<double>(num_rk, num_nodes, num_dims);
-        this->mass   = CArray<double>(num_nodes);
+        this->coords = DCArrayKokkos<double>(num_rk, num_nodes, num_dims);
+        this->vel    = DCArrayKokkos<double>(num_rk, num_nodes, num_dims);
+        this->mass   = DCArrayKokkos<double>(num_nodes);
     }; // end method
 }; // end node_t
 
@@ -63,47 +63,47 @@ struct node_t
 struct elem_t
 {
     // den
-    CArray<double> den;
+    DCArrayKokkos<double> den;
 
     // pres
-    CArray<double> pres;
+    DCArrayKokkos<double> pres;
 
     // stress
-    CArray<double> stress;
+    DCArrayKokkos<double> stress;
 
     // sspd
-    CArray<double> sspd;
+    DCArrayKokkos<double> sspd;
 
     // sie
-    CArray<double> sie;
+    DCArrayKokkos<double> sie;
 
     // vol
-    CArray<double> vol;
+    DCArrayKokkos<double> vol;
 
     // divergence of velocity
-    CArray<double> div;
+    DCArrayKokkos<double> div;
 
     // mass of elem
-    CArray<double> mass;
+    DCArrayKokkos<double> mass;
 
     // mat ids
-    CArray<size_t> mat_id;
+    DCArrayKokkos<size_t> mat_id;
 
     // state variables
-    CArray<double> statev;
+    DCArrayKokkos<double> statev;
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
     {
-        this->den    = CArray<double>(num_elems);
-        this->pres   = CArray<double>(num_elems);
-        this->stress = CArray<double>(num_rk, num_elems, num_dims, num_dims);
-        this->sspd   = CArray<double>(num_elems);
-        this->sie    = CArray<double>(num_rk, num_elems);
-        this->vol    = CArray<double>(num_elems);
-        this->div    = CArray<double>(num_elems);
-        this->mass   = CArray<double>(num_elems);
-        this->mat_id = CArray<size_t>(num_elems);
+        this->den    = DCArrayKokkos<double>(num_elems);
+        this->pres   = DCArrayKokkos<double>(num_elems);
+        this->stress = DCArrayKokkos<double>(num_rk, num_elems, num_dims, num_dims);
+        this->sspd   = DCArrayKokkos<double>(num_elems);
+        this->sie    = DCArrayKokkos<double>(num_rk, num_elems);
+        this->vol    = DCArrayKokkos<double>(num_elems);
+        this->div    = DCArrayKokkos<double>(num_elems);
+        this->mass   = DCArrayKokkos<double>(num_elems);
+        this->mat_id = DCArrayKokkos<size_t>(num_elems);
     }; // end method
 }; // end elem_t
 
@@ -111,16 +111,16 @@ struct elem_t
 struct corner_t
 {
     // force
-    CArray<double> force;
+    DCArrayKokkos<double> force;
 
     // mass of corner
-    CArray<double> mass;
+    DCArrayKokkos<double> mass;
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims)
     {
-        this->force = CArray<double>(num_corners, num_dims);
-        this->mass  = CArray<double>(num_corners);
+        this->force = DCArrayKokkos<double>(num_corners, num_dims);
+        this->mass  = DCArrayKokkos<double>(num_corners);
     }; // end method
 }; // end corner_t
 

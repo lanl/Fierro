@@ -87,20 +87,20 @@ void SGH::setup_sgh(const CArrayKokkos<material_t>& material,
     const CArrayKokkos<reg_fill_t>& region_fill,
     const CArrayKokkos<boundary_t>& boundary,
     mesh_t& mesh,
-    const DViewCArrayKokkos<double>& node_coords,
-    DViewCArrayKokkos<double>& node_vel,
-    DViewCArrayKokkos<double>& node_mass,
-    const DViewCArrayKokkos<double>& elem_den,
-    const DViewCArrayKokkos<double>& elem_pres,
-    const DViewCArrayKokkos<double>& elem_stress,
-    const DViewCArrayKokkos<double>& elem_sspd,
-    const DViewCArrayKokkos<double>& elem_sie,
-    const DViewCArrayKokkos<double>& elem_vol,
-    const DViewCArrayKokkos<double>& elem_mass,
-    const DViewCArrayKokkos<size_t>& elem_mat_id,
-    const DViewCArrayKokkos<double>& elem_statev,
+    const DCArrayKokkos<double>& node_coords,
+    DCArrayKokkos<double>& node_vel,
+    DCArrayKokkos<double>& node_mass,
+    const DCArrayKokkos<double>& elem_den,
+    const DCArrayKokkos<double>& elem_pres,
+    const DCArrayKokkos<double>& elem_stress,
+    const DCArrayKokkos<double>& elem_sspd,
+    const DCArrayKokkos<double>& elem_sie,
+    const DCArrayKokkos<double>& elem_vol,
+    const DCArrayKokkos<double>& elem_mass,
+    const DCArrayKokkos<size_t>& elem_mat_id,
+    const DCArrayKokkos<double>& elem_statev,
     const CArrayKokkos<double>&      state_vars,
-    const DViewCArrayKokkos<double>& corner_mass,
+    const DCArrayKokkos<double>& corner_mass,
     const size_t num_fills,
     const size_t rk_num_bins,
     const size_t num_bcs,
@@ -511,7 +511,7 @@ void SGH::setup_sgh(const CArrayKokkos<material_t>& material,
 // val = plane value, cyl radius, sphere radius
 void tag_bdys(const CArrayKokkos<boundary_t>& boundary,
     mesh_t& mesh,
-    const DViewCArrayKokkos<double>& node_coords)
+    const DCArrayKokkos<double>& node_coords)
 {
     size_t num_dims = mesh.num_dims;
 
@@ -560,7 +560,7 @@ size_t check_bdy(const size_t patch_gid,
     const int     this_bc_tag,
     const double  val,
     const mesh_t& mesh,
-    const DViewCArrayKokkos<double>& node_coords)
+    const DCArrayKokkos<double>& node_coords)
 {
     size_t num_dims = mesh.num_dims;
 

@@ -56,16 +56,9 @@ public:
     ///
     /// \fn set_mesh_file
     ///
-    /// \brief <insert brief description>
+    /// \brief Sets the mesh file path for reading in a mesh
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \param Path to mesh file
     ///
     /////////////////////////////////////////////////////////////////////////////
     void set_mesh_file(char* MESH)
@@ -74,6 +67,21 @@ public:
     }
 
     // Reads and initializes the mesh and geometric state entities
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn read_mesh
+    ///
+    /// \brief Read mesh from file
+    ///
+    /// \param Simulation mesh
+    /// \param Element state struct
+    /// \param Node state struct
+    /// \param Corner state struct
+    /// \param Number of dimensions
+    /// \param Number of RK bins
+    ///
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void read_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, int num_dims, int rk_num_bins)
     {
         if (mesh_file_ == NULL) {
@@ -90,16 +98,14 @@ public:
     ///
     /// \fn read_ensight_mesh
     ///
-    /// \brief <insert brief description>
+    /// \brief Read .geo mesh file
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \param Simulation mesh
+    /// \param Element state struct
+    /// \param Node state struct
+    /// \param Corner state struct
+    /// \param Number of dimensions
+    /// \param Number of RK bins
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_ensight_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, int num_dims, int rk_num_bins)

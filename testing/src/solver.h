@@ -35,16 +35,6 @@
 #ifndef FIERRO_SOLVER_H
 #define FIERRO_SOLVER_H
 
-// #include "utilities.h"
-// #include "matar.h"
-// #include "elements.h"
-// #include "node_combination.h"
-// #include "Simulation_Parameters/Simulation_Parameters.h"
-// #include "FEA_Module.h"
-
-
-// #include "MeshBuilder.h"
-
 #include <map>
 #include <memory>
 
@@ -52,6 +42,8 @@
 #include "state.h"
 #include "material.h"
 #include "region.h"
+
+struct simulation_parameters_t;
 
 class Solver
 {
@@ -75,25 +67,25 @@ public:
     CArrayKokkos<boundary_t> boundary;
 
     // Dual views for nodal data
-    DViewCArrayKokkos<double> node_coords;
-    DViewCArrayKokkos<double> node_vel;
-    DViewCArrayKokkos<double> node_mass;
+    DCArrayKokkos<double> node_coords;
+    DCArrayKokkos<double> node_vel;
+    DCArrayKokkos<double> node_mass;
 
     // Dual views for element data
-    DViewCArrayKokkos<double> elem_den;
-    DViewCArrayKokkos<double> elem_pres;
-    DViewCArrayKokkos<double> elem_stress;
-    DViewCArrayKokkos<double> elem_sspd;
-    DViewCArrayKokkos<double> elem_sie;
-    DViewCArrayKokkos<double> elem_vol;
-    DViewCArrayKokkos<double> elem_div;
-    DViewCArrayKokkos<double> elem_mass;
-    DViewCArrayKokkos<size_t> elem_mat_id;
-    DViewCArrayKokkos<double> elem_statev;
+    DCArrayKokkos<double> elem_den;
+    DCArrayKokkos<double> elem_pres;
+    DCArrayKokkos<double> elem_stress;
+    DCArrayKokkos<double> elem_sspd;
+    DCArrayKokkos<double> elem_sie;
+    DCArrayKokkos<double> elem_vol;
+    DCArrayKokkos<double> elem_div;
+    DCArrayKokkos<double> elem_mass;
+    DCArrayKokkos<size_t> elem_mat_id;
+    DCArrayKokkos<double> elem_statev;
 
     // Dual Views of the corner struct variables
-    DViewCArrayKokkos<double> corner_force;
-    DViewCArrayKokkos<double> corner_mass;
+    DCArrayKokkos<double> corner_force;
+    DCArrayKokkos<double> corner_mass;
 
 
     // ==============================================================================

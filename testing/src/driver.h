@@ -44,14 +44,10 @@
 // Headers for solver classes
 #include "sgh_solver.h"
 
+#include "simulation_parameters.h"
 
-#include "material.h"
-#include "region.h"
-#include "mesh_inputs.h"
-#include "solver_inputs.h"
-#include "output_options.h"
-#include "boundary_conditions.h"
-#include "dynamic_options.h"
+#include "state.h"
+
 
 
 class Driver
@@ -61,22 +57,31 @@ public:
     char* mesh_file;
     char* yaml_file;
 
-    MeshReader mesh_reader;
+    MeshReader reader;
+    simulation_parameters_t sim_param;
+
+    int num_dims = 3;
+
+    // ---------------------------------------------------------------------
+    //    mesh data type declarations
+    // ---------------------------------------------------------------------
+    mesh_t                   mesh;
+    CArrayKokkos<reg_fill_t> mat_fill;
+    CArrayKokkos<boundary_t> boundary;
+
+    // ---------------------------------------------------------------------
+    //    state data type declarations
+    // ---------------------------------------------------------------------
+    node_t                   node;
+    elem_t                   elem;
+    corner_t                 corner;
+    CArrayKokkos<material_t> material;
+    CArrayKokkos<double>     state_vars; // array to hold init model variables
 
 
-    mesh_input_t mesh_input;
-    output_options_t output_options;
-    dynamic_options_t dynamic_options;
-
-    std::vector <solver_input_t> solver_inputs;
-
-    std::vector <boundary_condition_t> boundary_conditions;
-
-    std::vector <reg_fill_t> region_fills;
-    std::vector <material_t> materials;
-    std::vector <std::vector <double>> eos_global_vars;
-
-
+    // ---------------------------------------------------------------------
+    //    GPU compatable types
+    // ---------------------------------------------------------------------
 
 
     Driver(char* YAML){
@@ -89,7 +94,6 @@ public:
     void initialize(){
 
         std::cout<<"Inside driver initialize"<<std::endl;
-
         Yaml::Node root;
         try
         {
@@ -101,14 +105,55 @@ public:
             exit(0);
         }
 
+        parse_yaml(root, sim_param);
+        std::cout << "Finished  parsing YAML file" << std::endl;
 
-        parse_yaml(root, solver_inputs, mesh_input, dynamic_options, output_options, region_fills, materials, eos_global_vars, boundary_conditions);
 
-        std::cout << "Done " << std::endl;
+        // Create and/or read mesh
+        std::cout<<"Mesh file path: "<<sim_param.mesh_input.file_path<<std::endl;
+        reader.set_mesh_file(sim_param.mesh_input.file_path.data());
 
-        // SGH *sgh_solver = new SGH(mesh_reader);
-        // sgh_solver->initialize();
-        // solvers.push_back(sgh_solver);
+        reader.read_mesh(mesh, elem, node, corner, num_dims, sim_param.dynamic_options.rk_num_bins);
+
+        std::cout << "Num elements = " << mesh.num_elems << std::endl;
+        std::cout << "Num nodes = " << mesh.num_nodes << std::endl;
+
+        // std::cout << "Building corners: " << std::endl;
+        mesh.build_corner_connectivity();
+
+        // std::cout << "Building elem elem connectivity: " << std::endl;
+        mesh.build_elem_elem_connectivity();
+
+        // std::cout << "Building patches: " << std::endl;
+        mesh.build_patch_connectivity();
+
+        // std::cout << "Building node-node connectivity: " << std::endl;
+        mesh.build_node_node_connectivity();
+
+        // Setup boundary conditions on mesh
+
+        int num_bcs = sim_param.boundary_conditions.size();
+
+        mesh.init_bdy_sets(num_bcs);
+        printf("Num BC's = %lu\n", num_bcs);
+
+        // tag boundary patches in the set
+        tag_bdys(boundary, mesh, node.coords);
+
+        build_boundry_node_sets(boundary, mesh);
+
+
+
+
+        // // Create solvers
+        // for(int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++){
+
+        //     if(sim_param.solver_inputs[solver_id].method == solver_input::SGH){
+        //         // SGH *sgh_solver = new SGH(sim_param);
+        //         // sgh_solver->initialize();
+        //         // solvers.push_back(sgh_solver);
+        //     }
+        // }
     }
     
     void setup() {
@@ -127,17 +172,17 @@ public:
 
     void finalize(){
         std::cout<<"Inside driver finalize"<<std::endl;
-        for (auto & solver : solvers) {
-            if (solver->finalize_flag){
-                solver->solver_finalize();
-            }
-        }
-        // destroy FEA modules
-        for (auto & solver : solvers)
-        {
-            std::cout<<"Deleting solver"<<std::endl;
-            delete solver;
-        }
+        // for (auto & solver : solvers) {
+        //     if (solver->finalize_flag){
+        //         solver->solver_finalize();
+        //     }
+        // }
+        // // destroy FEA modules
+        // for (auto & solver : solvers)
+        // {
+        //     std::cout<<"Deleting solver"<<std::endl;
+        //     delete solver;
+        // }
     }
 
 

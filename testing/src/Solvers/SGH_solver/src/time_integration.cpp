@@ -49,10 +49,10 @@
 /// \param Number of nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::rk_init(DViewCArrayKokkos<double>& node_coords,
-    DViewCArrayKokkos<double>& node_vel,
-    DViewCArrayKokkos<double>& elem_sie,
-    DViewCArrayKokkos<double>& elem_stress,
+void SGH::rk_init(DCArrayKokkos<double>& node_coords,
+    DCArrayKokkos<double>& node_vel,
+    DCArrayKokkos<double>& elem_sie,
+    DCArrayKokkos<double>& elem_stress,
     const size_t num_dims,
     const size_t num_elems,
     const size_t num_nodes)
@@ -100,10 +100,10 @@ void SGH::rk_init(DViewCArrayKokkos<double>& node_coords,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep(mesh_t& mesh,
-    DViewCArrayKokkos<double>& node_coords,
-    DViewCArrayKokkos<double>& node_vel,
-    DViewCArrayKokkos<double>& elem_sspd,
-    DViewCArrayKokkos<double>& elem_vol,
+    DCArrayKokkos<double>& node_coords,
+    DCArrayKokkos<double>& node_vel,
+    DCArrayKokkos<double>& elem_sspd,
+    DCArrayKokkos<double>& elem_vol,
     double time_value,
     const double graphics_time,
     const double time_final,
@@ -213,10 +213,10 @@ void SGH::get_timestep(mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep2D(mesh_t& mesh,
-    DViewCArrayKokkos<double>&   node_coords,
-    DViewCArrayKokkos<double>&   node_vel,
-    DViewCArrayKokkos<double>&   elem_sspd,
-    DViewCArrayKokkos<double>&   elem_vol,
+    DCArrayKokkos<double>&   node_coords,
+    DCArrayKokkos<double>&   node_vel,
+    DCArrayKokkos<double>&   elem_sspd,
+    DCArrayKokkos<double>&   elem_vol,
     double time_value,
     const double graphics_time,
     const double time_final,

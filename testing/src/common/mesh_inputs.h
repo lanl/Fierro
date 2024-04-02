@@ -10,9 +10,10 @@ namespace mesh_input
 
     // source of the mesh
     enum source
-    {
-        generate = 0,   // Create the mesh using the mesh builder
-        file = 1,       // Read in the mesh from a file
+    {   
+        none = 0,
+        generate = 1,   // Create the mesh using the mesh builder
+        file = 2,       // Read in the mesh from a file
     };
 
 
@@ -39,7 +40,7 @@ static std::map <std::string, mesh_input::type> mesh_input_type_map
 
 // mmeshing input parameters
 struct mesh_input_t{
-    mesh_input::source source;
+    mesh_input::source source = mesh_input::none;
     std::string file_path = "";
     mesh_input::type type;
 

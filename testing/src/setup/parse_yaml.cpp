@@ -13,14 +13,7 @@
 
 #include "matar.h"
 #include "parse_yaml.h"
-
-#include "material.h"
-#include "region.h"
-#include "mesh_inputs.h"
-#include "solver_inputs.h"
-#include "output_options.h"
-#include "boundary_conditions.h"
-#include "dynamic_options.h"
+#include "simulation_parameters.h"
 
 
 #define PI 3.141592653589793
@@ -34,8 +27,6 @@ bool VERBOSE = false;
 //==============================================================================
 //   Function Definitions
 //==============================================================================
-
-
 // modified code from stackover flow for string delimiter parsing
 std::vector<std::string> exact_array_values (std::string s, std::string delimiter) {
     size_t pos_start = 0, pos_end, delim_len = delimiter.length();
@@ -208,43 +199,69 @@ void print_yaml(Yaml::Node root){
 // =================================================================================
 
 
-void parse_yaml(Yaml::Node &root, 
-    std::vector <solver_input_t> &solver_inputs,
-    mesh_input_t &mesh_input,
-    dynamic_options_t &dynamic_options,
-    output_options_t &output_options,
-    std::vector <reg_fill_t> &region_fills,
-    std::vector <material_t> &materials,
-    std::vector <std::vector <double>> &eos_global_vars,
-    std::vector <boundary_condition_t> &boundary_conditions){
+// void parse_yaml(Yaml::Node &root, 
+//     std::vector <solver_input_t> &solver_inputs,
+//     mesh_input_t &mesh_input,
+//     dynamic_options_t &dynamic_options,
+//     output_options_t &output_options,
+//     std::vector <reg_fill_t> &region_fills,
+//     std::vector <material_t> &materials,
+//     std::vector <std::vector <double>> &eos_global_vars,
+//     std::vector <boundary_condition_t> &boundary_conditions){
+
+void parse_yaml(Yaml::Node &root, simulation_parameters_t& sim_param){
 
 
-        std::cout<<"Printing YAML Input file:"<<std::endl;
+        if(VERBOSE){
+            printf("\n");
+            std::cout<<"Printing YAML Input file:"<<std::endl;
+        }
         // print the input file
         print_yaml(root);
 
-        std::cout<<"Parsing YAML meshing options:"<<std::endl;
-        parse_mesh_input(root, mesh_input);
+        if(VERBOSE){
+            printf("\n");
+            std::cout<<"Parsing YAML meshing options:"<<std::endl;
+        }
+        parse_mesh_input(root, sim_param.mesh_input);
 
-        std::cout<<"Parsing YAML dynamic options:"<<std::endl;
-        parse_dynamic_options(root, dynamic_options);
+        if(VERBOSE){
+            printf("\n");
+            std::cout<<"Parsing YAML dynamic options:"<<std::endl;
+        }
+        parse_dynamic_options(root, sim_param.dynamic_options);
 
-        std::cout<<"Parsing YAML output options:"<<std::endl;
-        parse_output_options(root, output_options);
+        if(VERBOSE){
+            printf("\n");
+            std::cout<<"Parsing YAML output options:"<<std::endl;
+        }
+        parse_output_options(root, sim_param.output_options);
 
-        std::cout<<"Parsing YAML solver options:"<<std::endl;
-        parse_solver_input(root, solver_inputs);
+        if(VERBOSE){
+            printf("\n");
+            std::cout<<"Parsing YAML solver options:"<<std::endl;
+        }
+        parse_solver_input(root, sim_param.solver_inputs);
 
-        std::cout<<"Parsing YAML boundary condition options:"<<std::endl;
-        parse_bcs(root, boundary_conditions);
+        if(VERBOSE){
+            printf("\n");
+            std::cout<<"Parsing YAML boundary condition options:"<<std::endl;
+        }
+        parse_bcs(root, sim_param.boundary_conditions);
 
-        std::cout<<"Parsing YAML regions:"<<std::endl;
+        if(VERBOSE){
+            printf("\n");
+            std::cout<<"Parsing YAML regions:"<<std::endl;
+        }
         // parse the region yaml text into a vector of region_fills
-        parse_regions(root, region_fills);
+        parse_regions(root, sim_param.region_fills);
 
-        std::cout<<"Parsing YAML materials:"<<std::endl;
+        if(VERBOSE){
+            printf("\n");
+            std::cout<<"Parsing YAML materials:"<<std::endl;
+        }
         // parse the material yaml text into a vector of materials
-        parse_materials(root, materials, eos_global_vars);
+        parse_materials(root, sim_param.materials, sim_param.eos_global_vars);
 }
 
 // =================================================================================
@@ -260,7 +277,7 @@ void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_i
     
     solver_input = std::vector <solver_input_t>(num_solvers);
     
-    // loop over the fill regions specified
+    // loop over the solvers specified in the YAML file
     for(int solver_id = 0; solver_id < num_solvers; solver_id++){
 
         // read the variables names
@@ -306,7 +323,7 @@ void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_i
                     if(VERBOSE) std::cout << "\tmethod = " << method << std::endl;
                 }
                 else{
-                    std::cout << "ERROR: invalid mesh option input in YAML file: " << method << std::endl;
+                    std::cout << "ERROR: invalid method option input in YAML file: " << method << std::endl;
                     std::cout << "Valid options are: "<< std::endl;
 
                     for (const auto& pair : map) {
@@ -451,7 +468,6 @@ void parse_dynamic_options(Yaml::Node &root, dynamic_options_t& dynamic_options)
         
         
     } // end for words in dynamic options
-
 } // end of function to parse region
 
 
@@ -572,7 +588,6 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
             
             // get the origin numbers, values are words
             std::vector<std::string> numbers = exact_array_values(origin, ",");
-
 
             std::vector<double> val;
             for(int i = 0; i < 3; i++){
@@ -744,11 +759,11 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
 
 
         else {
-                std::cout << "ERROR: invalid input: " << a_word << std::endl;
-                std::cout << "Valid options are: "<< std::endl;
-                for (const auto& element : str_output_options_inps) {
-                    std::cout << element << std::endl;
-                }
+            std::cout << "ERROR: invalid input: " << a_word << std::endl;
+            std::cout << "Valid options are: "<< std::endl;
+            for (const auto& element : str_output_options_inps) {
+                std::cout << element << std::endl;
+            }
         }
     } // end user_inputs
 } // end of parse mesh options
