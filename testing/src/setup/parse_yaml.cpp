@@ -1080,7 +1080,7 @@ void parse_regions(Yaml::Node &root, CArrayKokkos<reg_fill_t> &region_fills){
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
+void parse_materials(Yaml::Node &root, CArrayKokkos<material_t> &materials,
                      std::vector <std::vector <double>> &eos_global_vars){
 
 
@@ -1088,7 +1088,7 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
 
     size_t num_materials = material_yaml.Size();
     
-    materials = std::vector <material_t>(num_materials);
+    materials = CArrayKokkos<material_t>(num_materials);
     
     // allocate room for each material to store eos_global_vars
     eos_global_vars = std::vector <std::vector <double>>(num_materials);
@@ -1140,22 +1140,22 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
             // set the values
             if(a_word.compare("q1") == 0){
                 
-                // outer plane
-
                 double q1 = root["materials"][mat_id]["material"]["q1"].As<double>();
                 if(VERBOSE) std::cout << "\tq1 = " << q1 << std::endl;
+
+                RUN({
+                    materials(mat_id).q1 = q1;
+                });
                 
-                materials[mat_id].q1 = q1;
-            
             } // q1
             else if(a_word.compare("q1ex") == 0){
-                
-                // outer plane
 
                 double q1ex = root["materials"][mat_id]["material"]["q1ex"].As<double>();
                 if(VERBOSE) std::cout << "\tq1ex = " << q1ex << std::endl;
+                RUN({
+                    materials(mat_id).q1ex = q1ex;
+                });
                 
-                materials[mat_id].q1ex = q1ex;
             
             } // q1ex
             else if(a_word.compare("q2") == 0){
@@ -1165,41 +1165,47 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
                 double q2 = root["materials"][mat_id]["material"]["q2"].As<double>();
                 if(VERBOSE) std::cout << "\tq2 = " << q2 << std::endl;
                 
-                materials[mat_id].q2 = q2;
-            
-            } // q1
+                RUN({
+                    materials(mat_id).q2 = q2;
+                });
+            } // q2
             else if(a_word.compare("q2ex") == 0){
                 
                 // outer plane
 
                 double q2ex = root["materials"][mat_id]["material"]["q2ex"].As<double>();
                 if(VERBOSE) std::cout << "\tq2ex = " << q2ex << std::endl;
-                
-                materials[mat_id].q2ex = q2ex;
+
+                RUN({
+                    materials(mat_id).q2ex = q2ex;
+                });
             
             } // q1ex
             else if(a_word.compare("id") == 0){
                   
                 int m_id = root["materials"][mat_id]["material"]["id"].As<int>();
                 if(VERBOSE) std::cout << "\tid = " << m_id << std::endl;
-            
-                materials[mat_id].id = m_id;
+                RUN({
+                    materials(mat_id).id = m_id;
+                });
             
             } // id
             else if(a_word.compare("elastic_modulus") == 0){
                   
-                int elastic_modulus = root["materials"][mat_id]["material"]["elastic_modulus"].As<double>();
+                double elastic_modulus = root["materials"][mat_id]["material"]["elastic_modulus"].As<double>();
                 if(VERBOSE) std::cout << "\telastic_modulus = " << elastic_modulus << std::endl;
-            
-                materials[mat_id].elastic_modulus = elastic_modulus;
+                RUN({
+                    materials(mat_id).elastic_modulus = elastic_modulus;
+                });
             
             } // elastic_modulus
             else if(a_word.compare("poisson_ratio") == 0){
                   
-                int poisson_ratio = root["materials"][mat_id]["material"]["poisson_ratio"].As<double>();
+                double poisson_ratio = root["materials"][mat_id]["material"]["poisson_ratio"].As<double>();
                 if(VERBOSE) std::cout << "\tpoisson_ratio = " << poisson_ratio << std::endl;
-            
-                materials[mat_id].poisson_ratio = poisson_ratio;
+                RUN({
+                    materials(mat_id).poisson_ratio = poisson_ratio;
+                });
             
             } // poisson_ratio
 
@@ -1209,9 +1215,15 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
                 
                 // set the EOS
                 if(eos_map.find(eos) != eos_map.end()){
-                    materials[mat_id].eos_model = eos_map[eos];
+                    auto eos_model = eos_map[eos];
+
+                    RUN({
+                        materials(mat_id).eos_model = eos_model;
+                        materials(mat_id).eos_model(0.,1.,2.); // WARNING BUG HERE, replace with real EOS model
+                    });
+
                     if(VERBOSE) std::cout << "\teos_model = " << eos << std::endl;
-                    materials[mat_id].eos_model(0.,1.,2.); // WARNING BUG HERE
+                    
                 }
                 else{
                     std::cout << "ERROR: invalid input: " << eos << std::endl;
@@ -1225,9 +1237,14 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
                 
                 // set the strength_model
                 if(strength_map.find(strength_model) != strength_map.end()){
-                    materials[mat_id].strength_model = strength_map[strength_model];
+                    auto strength = strength_map[strength_model];
+
+                    RUN({
+                        materials(mat_id).strength_model = strength;
+                        materials(mat_id).strength_model(0.,1.); // WARNING BUG HERE, replace with real strength model
+                    });
+
                     if(VERBOSE) std::cout << "\tstrength_model = " << strength_model << std::endl;
-                    materials[mat_id].strength_model(0.,1.); // WARNING BUG HERE
                 }
                 else{
                     std::cout << "ERROR: invalid input: " << strength_model << std::endl;

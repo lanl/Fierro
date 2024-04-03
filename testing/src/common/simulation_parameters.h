@@ -39,7 +39,8 @@ struct simulation_parameters_t{
 
 
     // Material data for simulation
-    std::vector <material_t> materials;
+    CArrayKokkos<material_t> materials;
+    // std::vector <material_t> materials;
 
     // EOS data for simulation
     std::vector <std::vector <double>> eos_global_vars;

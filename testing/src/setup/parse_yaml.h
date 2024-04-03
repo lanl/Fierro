@@ -73,7 +73,7 @@ void parse_regions(Yaml::Node &root, CArrayKokkos<reg_fill_t> &region_fills);
 
 // parse the region text
 void parse_materials(Yaml::Node &root,
-                     std::vector <material_t> &materials,
+                     CArrayKokkos<material_t> &materials,
                      std::vector <std::vector <double>> &eos_global_vars);
 
 
