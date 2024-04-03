@@ -74,6 +74,8 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
     const double rk_alpha
     )
 {
+
+    std::cout<<"Num elems in mesh  = " <<mesh.num_elems<<std::endl;
     // loop over all the elements in the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
         const size_t num_dims = mesh.num_dims;
@@ -134,14 +136,14 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
         } // end logical on hyper strength model
 
         // --- Pressure ---
-        // material(mat_id).eos_model(elem_pres,
-        //                            elem_stress,
-        //                            elem_gid,
-        //                            elem_mat_id(elem_gid),
-        //                            elem_statev,
-        //                            elem_sspd,
-        //                            elem_den(elem_gid),
-        //                            elem_sie(1, elem_gid));
+        material(mat_id).eos_model(elem_pres,
+                                   elem_stress,
+                                   elem_gid,
+                                   elem_mat_id(elem_gid),
+                                   elem_statev,
+                                   elem_sspd,
+                                   elem_den(elem_gid),
+                                   elem_sie(1, elem_gid));
     }); // end parallel for
     Kokkos::fence();
 

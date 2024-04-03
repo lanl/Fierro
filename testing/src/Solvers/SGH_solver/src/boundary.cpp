@@ -51,6 +51,9 @@ void SGH::boundary_velocity(const mesh_t& mesh,
     DCArrayKokkos<double>&      node_vel,
     const double time_value)
 {
+
+    std::cout<<"Num boundary sets = " <<mesh.num_bdy_sets<<std::endl;
+    
     // Loop over boundary sets
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         // Loop over boundary nodes in a boundary set

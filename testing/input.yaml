@@ -47,14 +47,21 @@ boundary_conditions:
         value: 0.0
         type: reflected
 
-  
-    # Reflected sphere
+    # Tag z plane
     - boundary_condition:
         solver: SGH
-        geometry: sphere
-        origin: [0, 0, 0]
-        value: 2.0
+        geometry: z_plane
+        direction: z_dir
+        value: 0.0
         type: reflected
+  
+    # Reflected sphere
+    # - boundary_condition:
+    #     solver: SGH
+    #     geometry: sphere
+    #     origin: [0, 0, 0]
+    #     value: 2.0
+    #     type: reflected
             
 
 # boundary_conditions:

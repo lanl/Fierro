@@ -66,6 +66,9 @@ public:
     //    mesh data type declarations
     // ---------------------------------------------------------------------
     mesh_t                   mesh;
+
+
+
     CArrayKokkos<reg_fill_t> mat_fill;
 
     // ---------------------------------------------------------------------
@@ -128,6 +131,12 @@ public:
 
         // std::cout << "Building node-node connectivity: " << std::endl;
         mesh.build_node_node_connectivity();
+
+
+        // SGH *sgh_solver = new SGH(sim_param, mesh, node, elem, corner);
+        // sgh_solver->initialize();
+        
+        // solvers.push_back(sgh_solver);
 
 
 

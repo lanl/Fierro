@@ -53,40 +53,40 @@ public:
     // ---------------------------------------------------------------------
     //    state data type declarations
     // ---------------------------------------------------------------------
-    node_t                   node;
-    elem_t                   elem;
-    corner_t                 corner;
-    CArrayKokkos<material_t> material;
+    // node_t                   node;
+    // elem_t                   elem;
+    // corner_t                 corner;
+    // CArrayKokkos<material_t> material;
     int max_num_state_vars = 6;
     CArrayKokkos<double>     state_vars; // array to hold init model variables
 
     // ---------------------------------------------------------------------
     //    mesh data type declarations
     // ---------------------------------------------------------------------
-    mesh_t                   mesh;
-    CArrayKokkos<reg_fill_t> region_fill;
-    CArrayKokkos<boundary_condition_t> boundary;
+    // mesh_t                   mesh;
+    // CArrayKokkos<reg_fill_t> region_fill;
+    // CArrayKokkos<boundary_condition_t> boundary;
 
     // Dual views for nodal data
-    DCArrayKokkos<double> node_coords;
-    DCArrayKokkos<double> node_vel;
-    DCArrayKokkos<double> node_mass;
+    // DCArrayKokkos<double> node_coords;
+    // DCArrayKokkos<double> node_vel;
+    // DCArrayKokkos<double> node_mass;
 
-    // Dual views for element data
-    DCArrayKokkos<double> elem_den;
-    DCArrayKokkos<double> elem_pres;
-    DCArrayKokkos<double> elem_stress;
-    DCArrayKokkos<double> elem_sspd;
-    DCArrayKokkos<double> elem_sie;
-    DCArrayKokkos<double> elem_vol;
-    DCArrayKokkos<double> elem_div;
-    DCArrayKokkos<double> elem_mass;
-    DCArrayKokkos<size_t> elem_mat_id;
-    DCArrayKokkos<double> elem_statev;
+    // // Dual views for element data
+    // DCArrayKokkos<double> elem_den;
+    // DCArrayKokkos<double> elem_pres;
+    // DCArrayKokkos<double> elem_stress;
+    // DCArrayKokkos<double> elem_sspd;
+    // DCArrayKokkos<double> elem_sie;
+    // DCArrayKokkos<double> elem_vol;
+    // DCArrayKokkos<double> elem_div;
+    // DCArrayKokkos<double> elem_mass;
+    // DCArrayKokkos<size_t> elem_mat_id;
+    // DCArrayKokkos<double> elem_statev;
 
-    // Dual Views of the corner struct variables
-    DCArrayKokkos<double> corner_force;
-    DCArrayKokkos<double> corner_mass;
+    // // Dual Views of the corner struct variables
+    // DCArrayKokkos<double> corner_force;
+    // DCArrayKokkos<double> corner_mass;
 
 
     // ==============================================================================

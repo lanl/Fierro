@@ -66,11 +66,21 @@ public:
 
     MeshReader* reader;
 
-    simulation_parameters_t* sim_param;
+    simulation_parameters_t sim_param;
+    mesh_t mesh;
+    node_t node;
+    elem_t elem;
+    corner_t corner;
 
-    SGH(simulation_parameters_t& io)  : Solver() // SGH_Parameters& params, Solver* Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
+
+    SGH(simulation_parameters_t& io, mesh_t &mesh_in, node_t &node_in, elem_t &elem_in, corner_t &corner_in)  : Solver()
     {
-        sim_param = &io;
+        sim_param = io;
+        mesh = mesh_in;
+
+        node = node_in;
+        elem = elem_in;
+        corner = corner_in;
     }
 
     ~SGH() = default;
@@ -84,32 +94,34 @@ public:
         // Dimensions
         num_dims = 3;
 
-        // ---- time varaibles and cycle info ----
-        time_final = 1.0;  // 1.0 for Sedov
-        dt_min     = 1.e-8;
-        dt_max     = 1.e-2;
-        dt_start   = 1.e-5;
-        cycle_stop = 100000;
-
-        // ---- graphics information ----
         graphics_times    = CArray<double>(20000);
-        graphics_cyc_ival = 1000000;
-        graphics_dt_ival  = 0.25;
 
-        // --- number of material regions ---
-        num_materials = 1;
-        material = CArrayKokkos<material_t>(num_materials);      // create material
+        // // ---- time varaibles and cycle info ----
+        // time_final = 1.0;  // 1.0 for Sedov
+        // dt_min     = 1.e-8;
+        // dt_max     = 1.e-2;
+        // dt_start   = 1.e-5;
+        // cycle_stop = 100000;
 
-        // --- declare model state variable array size ---
-        state_vars = CArrayKokkos<double>(num_materials, max_num_state_vars); // init values
+        // // ---- graphics information ----
+        // graphics_times    = CArray<double>(20000);
+        // graphics_cyc_ival = 1000000;
+        // graphics_dt_ival  = 0.25;
 
-        // --- number of fill regions ---
-        num_fills = 2;  // =2 for Sedov
-        region_fill  = CArrayKokkos<reg_fill_t>(num_fills);  // create fills
+        // // --- number of material regions ---
+        // num_materials = 1;
+        // material = CArrayKokkos<material_t>(num_materials);      // create material
 
-        // --- number of boundary conditions ---
-        num_bcs  = 6; // =6 for Sedov
-        boundary = CArrayKokkos<boundary_condition_t>(num_bcs);  // create boundaries
+        // // --- declare model state variable array size ---
+        // state_vars = CArrayKokkos<double>(num_materials, max_num_state_vars); // init values
+
+        // // --- number of fill regions ---
+        // num_fills = 2;  // =2 for Sedov
+        // region_fill  = CArrayKokkos<reg_fill_t>(num_fills);  // create fills
+
+        // // --- number of boundary conditions ---
+        // num_bcs  = 6; // =6 for Sedov
+        // boundary = CArrayKokkos<boundary_condition_t>(num_bcs);  // create boundaries
 
         // RUN({
         //     // gamma law model
@@ -194,43 +206,34 @@ public:
         //     boundary(5).hydro_bc = bdy::reflected;
         // });  // end RUN
 
-        // ---------------------------------------------------------------------
-        //    read in supplied mesh
-        // ---------------------------------------------------------------------
-        // read_mesh_ensight(mesh_file, mesh, node, elem, corner, num_dims, rk_num_bins);
 
-        reader->read_mesh(mesh, elem, node, corner, num_dims, rk_num_bins);
-
-        std::cout << "Num elements = " << mesh.num_elems << std::endl;
-        std::cout << "Num nodes = " << mesh.num_nodes << std::endl;
-
-        mesh.build_corner_connectivity();
-        mesh.build_elem_elem_connectivity();
-        mesh.build_patch_connectivity();
-        mesh.build_node_node_connectivity();
 
         // ---------------------------------------------------------------------
         //    allocate memory
         // ---------------------------------------------------------------------
 
-        // shorthand names
-        const size_t num_nodes   = mesh.num_nodes;
-        const size_t num_elems   = mesh.num_elems;
-        const size_t num_corners = mesh.num_corners;
+        std::cout << "Num elements = " << mesh.num_elems << std::endl;
+        std::cout << "Num nodes = " << mesh.num_nodes << std::endl;
+
 
         // ---------------------------------------------------------------------
         //   calculate geometry
         // ---------------------------------------------------------------------
+
+        std::cout << "Before update device call"  << std::endl;
         node.coords.update_device();
-        
+        std::cout << "After update device call"  << std::endl;
 
         Kokkos::fence();
 
-        geometry::get_vol(elem_vol, node_coords, mesh);
+        std::cout << "Before get volume call"  << std::endl;
+        geometry::get_vol(elem.vol, node.coords, mesh);
 
+
+        std::cout << "After get volume call"  << std::endl;
         // intialize time, time_step, and cycles
         time_value = 0.0;
-        dt = dt_start;
+        dt = 0.005;
         graphics_id = 0;
         graphics_times(0) = 0.0;
         graphics_time     = graphics_dt_ival; // the times for writing graphics dump
@@ -246,30 +249,30 @@ public:
     void setup()
     {
         std::cout<<"INSIDE SETUP FOR SGH SOLVER"<<std::endl;
-        // setup_sgh(
-        //     material,
-        //     region_fill,
-        //     boundary,
-        //     mesh,
-        //     node_coords,
-        //     node_vel,
-        //     node_mass,
-        //     elem_den,
-        //     elem_pres,
-        //     elem_stress,
-        //     elem_sspd,
-        //     elem_sie,
-        //     elem_vol,
-        //     elem_mass,
-        //     elem_mat_id,
-        //     elem_statev,
-        //     state_vars,
-        //     corner_mass,
-        //     num_fills,
-        //     rk_num_bins,
-        //     num_bcs,
-        //     num_materials,
-        //     num_state_vars);
+        setup_sgh(
+            sim_param.materials,
+            sim_param.region_fills,
+            sim_param.boundary_conditions,
+            mesh,
+            node.coords,
+            node.vel,
+            node.mass,
+            elem.den,
+            elem.pres,
+            elem.stress,
+            elem.sspd,
+            elem.sie,
+            elem.vol,
+            elem.mass,
+            elem.mat_id,
+            elem.statev,
+            state_vars,
+            corner.mass,
+            num_fills,
+            rk_num_bins,
+            num_bcs,
+            num_materials,
+            2); // num_state_vars
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -284,40 +287,43 @@ public:
     {
         std::cout << "In execute function in sgh solver" << std::endl;
 
-        solve(material,
-                  boundary,
-                  mesh,
-                  node.coords,
-                  node.vel,
-                  node.mass,
-                  elem.den,
-                  elem.pres,
-                  elem.stress,
-                  elem.sspd,
-                  elem.sie,
-                  elem.vol,
-                  elem.div,
-                  elem.mass,
-                  elem.mat_id,
-                  elem.statev,
-                  corner.force,
-                  corner.mass,
-                  time_value,
-                  time_final,
-                  dt_max,
-                  dt_min,
-                  dt_cfl,
-                  graphics_time,
-                  graphics_cyc_ival,
-                  graphics_dt_ival,
-                  cycle_stop,
-                  rk_num_stages,
-                  dt,
-                  fuzz,
-                  tiny,
-                  small,
-                  graphics_times,
-                  graphics_id);
+        std::cout << "Num elements = " << mesh.num_elems << std::endl;
+        std::cout << "Num nodes = " << mesh.num_nodes << std::endl;
+
+        solve(sim_param.materials,
+              sim_param.boundary_conditions,
+              mesh,
+              node.coords,
+              node.vel,
+              node.mass,
+              elem.den,
+              elem.pres,
+              elem.stress,
+              elem.sspd,
+              elem.sie,
+              elem.vol,
+              elem.div,
+              elem.mass,
+              elem.mat_id,
+              elem.statev,
+              corner.force,
+              corner.mass,
+              time_value,
+              time_final,
+              dt_max,
+              dt_min,
+              dt_cfl,
+              graphics_time,
+              graphics_cyc_ival,
+              graphics_dt_ival,
+              cycle_stop,
+              rk_num_stages,
+              dt,
+              fuzz,
+              tiny,
+              small,
+              graphics_times,
+              graphics_id);
     }
 
     void setup_sgh(

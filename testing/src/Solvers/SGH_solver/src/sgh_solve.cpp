@@ -96,7 +96,7 @@ void SGH::solve(CArrayKokkos<material_t>& material,
                   graphics_times,
                   graphics_id,
                   time_value);
-
+    return;
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
     // extensive energy tallies over the entire mesh
@@ -470,7 +470,7 @@ void SGH::solve(CArrayKokkos<material_t>& material,
     printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
     printf("total energy conservation error = %e \n\n", TE_tend - TE_t0);
 
-    return;
+    // return;
 } // end of SGH solve
 
 /////////////////////////////////////////////////////////////////////////////

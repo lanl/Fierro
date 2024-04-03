@@ -931,15 +931,15 @@ void build_boundry_node_sets(const CArrayKokkos<boundary_condition_t>& boundary,
 //                        DCArrayKokkos<double>&      node_vel,
 //                        const double time_value);
 
-KOKKOS_FUNCTION
-void ideal_gas(const DCArrayKokkos<double>& elem_pres,
-               const DCArrayKokkos<double>& elem_stress,
-               const size_t elem_gid,
-               const size_t mat_id,
-               const DCArrayKokkos<double>& elem_state_vars,
-               const DCArrayKokkos<double>& elem_sspd,
-               const double den,
-               const double sie);
+// KOKKOS_FUNCTION
+// void ideal_gas(const DCArrayKokkos<double>& elem_pres,
+//                const DCArrayKokkos<double>& elem_stress,
+//                const size_t elem_gid,
+//                const size_t mat_id,
+//                const DCArrayKokkos<double>& elem_state_vars,
+//                const DCArrayKokkos<double>& elem_sspd,
+//                const double den,
+//                const double sie);
 
 void user_model_init(const DCArrayKokkos<double>& file_state_vars,
                      const size_t num_state_vars,

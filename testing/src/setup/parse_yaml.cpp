@@ -1219,7 +1219,7 @@ void parse_materials(Yaml::Node &root, CArrayKokkos<material_t> &materials,
 
                     RUN({
                         materials(mat_id).eos_model = eos_model;
-                        materials(mat_id).eos_model(0.,1.,2.); // WARNING BUG HERE, replace with real EOS model
+                        // materials(mat_id).eos_model(0.,1.,2.); // WARNING BUG HERE, replace with real EOS model
                     });
 
                     if(VERBOSE) std::cout << "\teos_model = " << eos << std::endl;
