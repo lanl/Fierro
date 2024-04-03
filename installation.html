@@ -125,7 +125,7 @@
 
                 <h2>Backend Applications</h2>
                 <p>
-                    To drive the different simulation software in <em>Fierro</em>, we have several backend applications. In general, the collection of backend applications provides a superset of the graphical user interface functionality and it may be necessary to use these applications directly depending on your workflows. Typically, these are bundled together and made available via the <em>Fierro</em> command line interface.
+                    To drive the different simulation software in <em>Fierro</em>, we have several backend applications. In general, the collection of backend applications provides a superset of the graphical user interface functionality and it may be necessary to use these applications directly depending on your workflows.
                 </p>
                 <h5><a id="evpfft-anchor">EVPFFT</a></h5>
                 <p>
@@ -164,18 +164,13 @@ source build-fierro.sh
                 <p>Which will provide you with instructions on how to select which hardware you would like to compile <em>Fierro</em> for.</p>
                 <h2>Tools</h2>
                 <p>
-                    In addition to the end to end tooling provided in the main backend application, some miscellaneous tools are available should you want to use them directly for your applications. All standalone tools listed here are available under the Fierro command line interface. While these tools do not depend on <a href="https://github.com/trilinos/Trilinos">Trilinos</a>, like some of the solvers, they do depend on <a href="https://github.com/lanl/ELEMENTS">Elements</a>. So to build them from source, ensure that the Elements submodule under <code>Fierro/lib</code> is checked out recursively.
-                </p>
-                <p>
-                    To build just the fierro command line interface and the extra tools, run (from the Fierro root):
+                    In addition to the end to end tooling provided in the main backend application, some miscellaneous tools are available should you want to use them directly for your applications. While these tools do not depend on <a href="https://github.com/trilinos/Trilinos">Trilinos</a>, like some of the solvers, they do depend on <a href="https://github.com/lanl/ELEMENTS">Elements</a>. So to build them from source, ensure that the Elements submodule under <code>Fierro/lib</code> is checked out recursively.
                 </p>
 <pre><code>mkdir build
 cd build
 cmake .. -DBUILD_PARALLEL_EXPLICIT_SOLVER=OFF -DBUILD_IMPLICIT_SOLVER=OFF
 make
 </code></pre>
-                <p>
-                    This will make the command line interface and extra tools available under <code>.../Fierro/build/bin</code>.
                 </p>
                 <h5>Mesh Generator</h5>
                 <p>
