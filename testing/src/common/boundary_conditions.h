@@ -20,7 +20,7 @@ namespace boundary_conds
         read_file = 5        // read from a file
     };
 
-    enum bc_type
+    enum bdy_hydro_conds
     {
         displacement = 0,
         velocity     = 1,
@@ -29,6 +29,13 @@ namespace boundary_conds
         fixed        = 4,
         pressure     = 5,
         temperature  = 6
+    };
+
+    enum bdy_direction
+    {
+        x_dir = 0, 
+        y_dir = 1,
+        z_dir = 2
     };
     
 } // end of boundary conditions namespace
@@ -43,7 +50,7 @@ static std::map <std::string, boundary_conds::bdy_tag> bc_geometry_map
     {"read_file",      boundary_conds::read_file}
 };
 
-static std::map <std::string, boundary_conds::bc_type> bc_type_map
+static std::map <std::string, boundary_conds::bdy_hydro_conds> bc_type_map
 {
     {"displacement",    boundary_conds::displacement},
     {"velocity",        boundary_conds::velocity},
@@ -54,11 +61,20 @@ static std::map <std::string, boundary_conds::bc_type> bc_type_map
     {"temperature",     boundary_conds::pressure}
 };
 
+static std::map <std::string, boundary_conds::bdy_direction> bc_direction_map
+{
+    {"x_dir",    boundary_conds::x_dir},
+    {"y_dir",    boundary_conds::y_dir},
+    {"z_dir",    boundary_conds::z_dir}
+};
+
 struct boundary_condition_t {
 
     solver_input::method solver = solver_input::NONE;
-    boundary_conds::bc_type type; 
+    boundary_conds::bdy_hydro_conds type; 
     boundary_conds::bdy_tag geometry;
+
+    boundary_conds::bdy_direction direction;
 
     double value = 0.0;
     double u = 0.0; 
@@ -66,6 +82,13 @@ struct boundary_condition_t {
     double w = 0.0;
 
     std::vector<double> origin = {0.0, 0.0, 0.0};
+
+
+    // WARNING: CURRENTLY NOT PARSED
+    double hydro_bc_vel_0 = 0.0;
+    double hydro_bc_vel_1 = 0.0;
+    double hydro_bc_vel_t_start = 0.0;
+    double hydro_bc_vel_t_end = 0.0;
 
 }; // end boundary conditions
 
@@ -77,6 +100,7 @@ static std::vector <std::string> str_bc_inps
     "solver",
     "type",
     "geometry",
+    "direction",
     "value",
     "u",
     "v",

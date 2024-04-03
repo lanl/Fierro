@@ -29,7 +29,8 @@ struct simulation_parameters_t{
     std::vector <solver_input_t> solver_inputs;
 
     // Simulation boundary conditions
-    std::vector <boundary_condition_t> boundary_conditions;
+    CArrayKokkos<boundary_condition_t> boundary_conditions;
+    //std::vector <boundary_condition_t> boundary_conditions;
 
     // Region data for simulation mesh
     //std::vector <reg_fill_t> region_fills;

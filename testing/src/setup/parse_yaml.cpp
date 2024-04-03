@@ -691,7 +691,7 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
                 if(VERBOSE) std::cout << "\tformat = " << format << std::endl;
             }
             else{
-                std::cout << "ERROR: invalid mesh option input in YAML file: " << format << std::endl;
+                std::cout << "ERROR: invalid output option input in YAML file: " << format << std::endl;
                 std::cout << "Valid options are: "<< std::endl;
 
                 for (const auto& pair : map) {
@@ -813,7 +813,7 @@ void parse_regions(Yaml::Node &root, CArrayKokkos<reg_fill_t> &region_fills){
                 int id = root["regions"][reg_id]["fill_volume"][a_word].As<int>();
 
                 RUN({
-                    region_fills(reg_id).material_id;
+                    region_fills(reg_id).material_id = id;
                 });
                 
             } // mat_id
@@ -1269,13 +1269,13 @@ void parse_materials(Yaml::Node &root, std::vector <material_t> &materials,
 // =================================================================================
 //    Parse Boundary Conditions
 // =================================================================================
-void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_conditions){
+void parse_bcs(Yaml::Node &root, CArrayKokkos<boundary_condition_t> &boundary_conditions){
 
     Yaml::Node & bc_yaml = root["boundary_conditions"];
     
     size_t num_bcs = bc_yaml.Size();
     
-    boundary_conditions = std::vector <boundary_condition_t>(num_bcs);
+    boundary_conditions = CArrayKokkos<boundary_condition_t>(num_bcs);
     
     // loop over the fill regions specified
     for(int bc_id = 0; bc_id < num_bcs; bc_id++){
@@ -1327,11 +1327,16 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
                 // set the solver
                 if(map.find(solver) != map.end()){
                     
-                    boundary_conditions[bc_id].solver = map[solver];
+                    auto bc_solver = map[solver];
+
+                    RUN({
+                        boundary_conditions(bc_id).solver = bc_solver;
+                    });
+
                     if(VERBOSE) std::cout << "\tsolver = " << solver << std::endl;
                 }
                 else{
-                    std::cout << "ERROR: invalid mesh option input in YAML file: " << solver << std::endl;
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << solver << std::endl;
                     std::cout << "Valid options are: "<< std::endl;
 
                     for (const auto& pair : map) {
@@ -1351,11 +1356,16 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
                 // set the type
                 if(map.find(type) != map.end()){
                     
-                    boundary_conditions[bc_id].type = map[type];
+                    auto bc_type = map[type];
+                    RUN({
+                        boundary_conditions(bc_id).type = bc_type;
+                    });
+
+                    
                     if(VERBOSE) std::cout << "\ttype = " << type << std::endl;
                 }
                 else{
-                    std::cout << "ERROR: invalid mesh option input in YAML file: " << type << std::endl;
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << type << std::endl;
                     std::cout << "Valid options are: "<< std::endl;
 
                     for (const auto& pair : map) {
@@ -1364,6 +1374,33 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
 
                 } // end if
             } // type
+
+            // get boundary condition direction
+            else if(a_word.compare("direction") == 0){
+                
+                std::string direction = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_direction_map;
+                
+                // set the direction
+                if(map.find(direction) != map.end()){
+                    
+                    auto bc_direction = map[direction];
+                    RUN({
+                        boundary_conditions(bc_id).direction = bc_direction;
+                    });
+                    if(VERBOSE) std::cout << "\tdirection = " << direction << std::endl;
+                }
+                else{
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << direction << std::endl;
+                    std::cout << "Valid options are: "<< std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+                } // end if
+            } // direction
 
             // get boundary condition geometry
             else if(a_word.compare("geometry") == 0){
@@ -1375,11 +1412,15 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
                 // set the geometry
                 if(map.find(geometry) != map.end()){
                     
-                    boundary_conditions[bc_id].geometry = map[geometry];
+                    auto bc_geometry = map[geometry];
+                    RUN({
+                        boundary_conditions(bc_id).geometry = bc_geometry;
+                    });
+
                     if(VERBOSE) std::cout << "\tgeometry = " << geometry << std::endl;
                 }
                 else{
-                    std::cout << "ERROR: invalid mesh option input in YAML file: " << geometry << std::endl;
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << geometry << std::endl;
                     std::cout << "Valid options are: "<< std::endl;
 
                     for (const auto& pair : map) {
@@ -1391,27 +1432,36 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
 
             // set the value
             else if(a_word.compare("value") == 0){
-                boundary_conditions[bc_id].value = 
-                    bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+
+                double value = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    boundary_conditions(bc_id).value = value;
+                });
+                    
             } // value
 
             // set the u
             else if(a_word.compare("u") == 0){
-                boundary_conditions[bc_id].u = 
-                    bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-            
+                double u = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    boundary_conditions(bc_id).u = u;
+                });
             } // u
 
             // set the v
             else if(a_word.compare("v") == 0){
-                boundary_conditions[bc_id].v = 
-                    bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                double v = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    boundary_conditions(bc_id).v = v;
+                });
             } // v
 
             // set the w
             else if(a_word.compare("w") == 0){
-                boundary_conditions[bc_id].w = 
-                    bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                double w = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    boundary_conditions(bc_id).w = w;
+                });
             } // w
             
             else if(a_word.compare("origin") == 0){
@@ -1431,9 +1481,12 @@ void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_co
                     std::cout << "\tz1 = " << z1 << std::endl;
                 }
                 // storing the origin values as (x1,y1,z1)
-                boundary_conditions[bc_id].origin[0]  = x1;
-                boundary_conditions[bc_id].origin[1]  = y1;
-                boundary_conditions[bc_id].origin[2]  = z1;
+
+                RUN({
+                    boundary_conditions(bc_id).origin[0]  = x1;
+                    boundary_conditions(bc_id).origin[1]  = y1;
+                    boundary_conditions(bc_id).origin[2]  = z1;
+                });
                     
             } // origin
             else {

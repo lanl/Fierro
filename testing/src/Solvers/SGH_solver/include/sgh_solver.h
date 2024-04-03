@@ -66,9 +66,11 @@ public:
 
     MeshReader* reader;
 
-    SGH(MeshReader& io)  : Solver() // SGH_Parameters& params, Solver* Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
+    simulation_parameters_t* sim_param;
+
+    SGH(simulation_parameters_t& io)  : Solver() // SGH_Parameters& params, Solver* Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
     {
-        reader = &io;
+        sim_param = &io;
     }
 
     ~SGH() = default;
@@ -107,7 +109,7 @@ public:
 
         // --- number of boundary conditions ---
         num_bcs  = 6; // =6 for Sedov
-        boundary = CArrayKokkos<boundary_t>(num_bcs);  // create boundaries
+        boundary = CArrayKokkos<boundary_condition_t>(num_bcs);  // create boundaries
 
         // RUN({
         //     // gamma law model
@@ -321,7 +323,7 @@ public:
     void setup_sgh(
         const CArrayKokkos<material_t>& material,
         const CArrayKokkos<reg_fill_t>& region_fill,
-        const CArrayKokkos<boundary_t>& boundary,
+        const CArrayKokkos<boundary_condition_t>& boundary,
         mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
@@ -361,7 +363,7 @@ public:
         const double time_value);
 
     void solve(CArrayKokkos<material_t>& material,
-               CArrayKokkos<boundary_t>& boundary,
+               CArrayKokkos<boundary_condition_t>& boundary,
                mesh_t& mesh,
                DCArrayKokkos<double>& node_coords,
                DCArrayKokkos<double>& node_vel,
@@ -398,7 +400,7 @@ public:
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(
         const mesh_t& mesh,
-        const CArrayKokkos<boundary_t>& boundary,
+        const CArrayKokkos<boundary_condition_t>& boundary,
         DCArrayKokkos<double>&      node_vel,
         const double time_value);
 

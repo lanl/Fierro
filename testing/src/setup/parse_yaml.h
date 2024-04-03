@@ -78,6 +78,6 @@ void parse_materials(Yaml::Node &root,
 
 
 // parse the boundary condition text
-void parse_bcs(Yaml::Node &root, std::vector <boundary_condition_t> &boundary_conditions);
+void parse_bcs(Yaml::Node &root, CArrayKokkos<boundary_condition_t> &boundary_conditions);
 
 #endif // end Header Guard

@@ -46,7 +46,7 @@
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::solve(CArrayKokkos<material_t>& material,
-    CArrayKokkos<boundary_t>& boundary,
+    CArrayKokkos<boundary_condition_t>& boundary,
     mesh_t& mesh,
     DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& node_vel,

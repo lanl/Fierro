@@ -41,13 +41,13 @@
 /// \brief Evolves the boundary according to a give velocity
 ///
 /// \param The simulation mesh
-/// \param An array of boundary_t that contain information about BCs
+/// \param An array of boundary_condition_t that contain information about BCs
 /// \param A view into the nodal velocity array
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_velocity(const mesh_t& mesh,
-    const CArrayKokkos<boundary_t>& boundary,
+    const CArrayKokkos<boundary_condition_t>& boundary,
     DCArrayKokkos<double>&      node_vel,
     const double time_value)
 {
@@ -56,19 +56,19 @@ void SGH::boundary_velocity(const mesh_t& mesh,
         // Loop over boundary nodes in a boundary set
         FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
             // reflected (boundary array is on the device)
-            if (boundary(bdy_set).hydro_bc == bdy::reflected) {
-                // directions with hydro_bc:
+            if (boundary(bdy_set).type == boundary_conds::reflected) {
+                // directions with type:
                 // x_plane  = 0,
                 // y_plane  = 1,
                 // z_plane  = 2,
-                size_t direction = boundary(bdy_set).surface;
+                size_t direction = boundary(bdy_set).direction;
 
                 size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
                 // Set velocity to zero in that directdion
                 node_vel(1, bdy_node_gid, direction) = 0.0;
             }
-            else if (boundary(bdy_set).hydro_bc == bdy::fixed) {
+            else if (boundary(bdy_set).type == boundary_conds::fixed) {
                 size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
                 for (size_t dim = 0; dim < mesh.num_dims; dim++) {
@@ -76,14 +76,14 @@ void SGH::boundary_velocity(const mesh_t& mesh,
                     node_vel(1, bdy_node_gid, dim) = 0.0;
                 }
             } // end if
-            else if (boundary(bdy_set).hydro_bc == bdy::velocity) {
+            else if (boundary(bdy_set).type == boundary_conds::velocity) {
                 size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
-                // directions with hydro_bc:
+                // directions with type:
                 // x_plane  = 0,
                 // y_plane  = 1,
                 // z_plane  = 2,
-                size_t direction = boundary(bdy_set).surface;
+                size_t direction = boundary(bdy_set).direction;
 
                 // Set velocity to that directdion to specified value
                 // if t_end > time > t_start

@@ -67,7 +67,6 @@ public:
     // ---------------------------------------------------------------------
     mesh_t                   mesh;
     CArrayKokkos<reg_fill_t> mat_fill;
-    CArrayKokkos<boundary_t> boundary;
 
     // ---------------------------------------------------------------------
     //    state data type declarations

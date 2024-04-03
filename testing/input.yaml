@@ -31,6 +31,7 @@ boundary_conditions:
     - boundary_condition:
         solver: SGH
         geometry: x_plane
+        direction: x_dir
         value: 0.0
         u: 0.0
         v: 0.0
@@ -41,7 +42,8 @@ boundary_conditions:
     # Tag Y plane
     - boundary_condition:
         solver: SGH
-        geometry: x_plane
+        geometry: y_plane
+        direction: y_dir
         value: 0.0
         type: reflected
 

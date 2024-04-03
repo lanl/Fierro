@@ -42,6 +42,7 @@
 #include "state.h"
 #include "material.h"
 #include "region.h"
+#include "boundary_conditions.h"
 
 struct simulation_parameters_t;
 
@@ -64,7 +65,7 @@ public:
     // ---------------------------------------------------------------------
     mesh_t                   mesh;
     CArrayKokkos<reg_fill_t> region_fill;
-    CArrayKokkos<boundary_t> boundary;
+    CArrayKokkos<boundary_condition_t> boundary;
 
     // Dual views for nodal data
     DCArrayKokkos<double> node_coords;

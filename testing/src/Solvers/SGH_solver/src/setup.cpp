@@ -85,7 +85,7 @@ int get_id(int i, int j, int k, int num_i, int num_j);
 /////////////////////////////////////////////////////////////////////////////
 void SGH::setup_sgh(const CArrayKokkos<material_t>& material,
     const CArrayKokkos<reg_fill_t>& region_fill,
-    const CArrayKokkos<boundary_t>& boundary,
+    const CArrayKokkos<boundary_condition_t>& boundary,
     mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& node_vel,
@@ -509,7 +509,7 @@ void SGH::setup_sgh(const CArrayKokkos<material_t>& material,
 // set planes for tagging sub sets of boundary patches
 // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
 // val = plane value, cyl radius, sphere radius
-void tag_bdys(const CArrayKokkos<boundary_t>& boundary,
+void tag_bdys(const CArrayKokkos<boundary_condition_t>& boundary,
     mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords)
 {
@@ -523,7 +523,7 @@ void tag_bdys(const CArrayKokkos<boundary_t>& boundary,
 
     FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
         // tag boundaries
-        int bc_tag_id = boundary(bdy_set).surface;
+        int bc_tag_id = boundary(bdy_set).geometry;
         double val    = boundary(bdy_set).value;
 
         // save the boundary patches to this set that are on the plane, spheres, etc.
@@ -618,7 +618,7 @@ size_t check_bdy(const size_t patch_gid,
         } // end if on type
     } // end for nodes in the patch
 
-    // if all nodes in the patch are on the surface
+    // if all nodes in the patch are on the geometry
     if (is_on_bdy == mesh.num_nodes_in_patch) {
         is_on_bdy = 1;
     }
@@ -636,7 +636,7 @@ size_t check_bdy(const size_t patch_gid,
 /// REMOVE TO SETUP
 ///
 /////////////////////////////////////////////////////////////////////////////
-void build_boundry_node_sets(const CArrayKokkos<boundary_t>& boundary,
+void build_boundry_node_sets(const CArrayKokkos<boundary_condition_t>& boundary,
     mesh_t& mesh)
 {
     // build boundary nodes in each boundary set
