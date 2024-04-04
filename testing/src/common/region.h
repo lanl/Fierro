@@ -51,30 +51,32 @@ struct reg_fill_t {
     size_t material_id;
     
     // planes
-    double x1;
-    double x2;
-    double y1;
-    double y2;
-    double z1;
-    double z2;
+    double x1 = 0.0;
+    double x2 = 0.0;
+    double y1 = 0.0;
+    double y2 = 0.0;
+    double z1 = 0.0;
+    double z2 = 0.0;
     
     // radius
-    double radius1;
-    double radius2;
+    double radius1 = 0.0;
+    double radius2 = 0.0;
 
     
     // initial conditions
     init_conds::init_velocity_conds velocity;
     
     // velocity coefficients by component
-    double u,v,w;
+    double u = 0.0;
+    double v = 0.0;
+    double w = 0.0;
     
     // velocity magnitude for radial velocity initialization
-    double speed;
+    double speed = 0.0;
     
-    double ie;   // exstenive internal energy
-    double sie;  // specific internal energy
-    double den;  // density
+    double ie = 0.0;   // exstenive internal energy
+    double sie = 0.0;  // specific internal energy
+    double den = 0.0;  // density
 
     std::vector<double> origin = {0.0, 0.0, 0.0};
 };

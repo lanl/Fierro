@@ -73,6 +73,9 @@ struct material_t {
     size_t num_strength_state_vars = 0;
     size_t num_eos_global_vars = 0;
     size_t num_strength_global_vars = 0;
+
+
+    DCArrayKokkos<double> eos_global_vars;
     
     double q1   = 1.0;    // acoustic coefficient in Riemann solver for compresion
     double q1ex = 1.3333;  // acoustic coefficient in Riemann solver for expansion
@@ -145,8 +148,17 @@ static void ideal_gas(const DCArrayKokkos<double>& elem_pres,
     double gamma = elem_state_vars(elem_gid, 0);
     double csmin = elem_state_vars(elem_gid, 1);
 
+    if(elem_gid == 0){
+        std::cout <<  std::endl;
+        std::cout << "Gamma = " << gamma << std::endl;
+        std::cout << "csmin = " << csmin << std::endl;
+        std::cout << "SIE = " << sie << std::endl;
+    }
+
     // pressure
     elem_pres(elem_gid) = (gamma - 1.0) * sie * den;
+
+    
 
     // sound speed
     elem_sspd(elem_gid) = sqrt(gamma * (gamma - 1.0) * sie);

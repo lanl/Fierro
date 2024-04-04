@@ -96,7 +96,7 @@ void SGH::solve(CArrayKokkos<material_t>& material,
                   graphics_times,
                   graphics_id,
                   time_value);
-    return;
+    // return;
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
     // extensive energy tallies over the entire mesh

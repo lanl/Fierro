@@ -5,7 +5,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 2000000
+    cycle_stop: 5
 
 
 mesh_options:
@@ -16,7 +16,7 @@ output_options:
     timer_output_level: thorough
     output_file_format: vtk
     graphics_time_step: 0.25
-    graphics_iteration_step: 20000
+    graphics_iteration_step: 1
 
 solver_options:
   - solver:
@@ -55,69 +55,6 @@ boundary_conditions:
         value: 0.0
         type: reflected
   
-    # Reflected sphere
-    # - boundary_condition:
-    #     solver: SGH
-    #     geometry: sphere
-    #     origin: [0, 0, 0]
-    #     value: 2.0
-    #     type: reflected
-            
-
-# boundary_conditions:
-#     # Tag X plane
-#     - boundary_condition:
-#         type: reflected
-#         solver: SGH
-#         surface:
-#             type: x_plane
-#             value: 0.0
-#     # Tag Y plane
-#     - boundary_condition:
-#         type: reflected
-#         solver: SGH
-#         surface:
-#             type: y_plane
-#             value: 0.0
-
-  
-#     # Reflected sphere
-#     - boundary_condition:
-#         type: reflected
-#         solver: SGH
-#         surface:
-#             type: sphere
-#             value: 2
-#             origin: [0, 0, 0]
-
-            
-
-            
-
-#        # Tag Z plane
-#      - surface:
-#          type: z_plane
-#          plane_position: 0.0
-#        type: reflected
-#
-#        # Tag X plane
-#      - surface:
-#          type: x_plane
-#          plane_position: 1.2
-#        type: reflected
-#
-#        # Tag Y plane
-#      - surface:
-#          type: y_plane
-#          plane_position: 1.2
-#        type: reflected
-#
-#        # Tag Z plane
-#      - surface:
-#          type: z_plane
-#          plane_position: 1.2
-#        type: reflected
-#
 materials:
     - material:
         id: 0
@@ -126,9 +63,9 @@ materials:
         elastic_modulus: 10
         poisson_ratio: 0.3
         q1: 1.0
-        q2: 0
+        q2: 1.333
         q1ex: 1.0
-        q2ex: 0.0
+        q2ex: 1.333
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14
@@ -150,12 +87,13 @@ regions:
     # energy source initial conditions
     - fill_volume:
         type: sphere
-        origin: [0.1, -0.3, 0.7]
+        origin: [0.0, 0.0, 0.0]
         radius1: 0.0
-        radius2: 0.0375
+        radius2: 0.15
         material_id: 0
         den: 1.0
         ie: 0.25833839995946534
+        sie: 0.25833839995946534
         velocity: cartesian
         u: 0.0
         v: 0.0

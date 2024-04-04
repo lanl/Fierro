@@ -1255,15 +1255,25 @@ void parse_materials(Yaml::Node &root, CArrayKokkos<material_t> &materials,
             // exact the eos_global_vars
             else if(a_word.compare("eos_global_vars") == 0){
                 
+                // Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+                
                 size_t num_global_vars = material_inps_yaml.Size();
+                
+                std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
+                materials(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars);
                 
                 if(VERBOSE) std::cout << "num global eos vars = " << num_global_vars << std::endl;
                 
-                for(int global_var_id=0; global_var_id<num_global_vars; global_var_id++){
+                for(int global_var_id=0; global_var_id < num_global_vars; global_var_id++){
                     
                     double eos_var = root["materials"][mat_id]["material"]["eos_global_vars"][global_var_id].As<double>();
                     
+                    std::cout << "*** EOS VAR  = " << eos_var << std::endl;
                     eos_global_vars[mat_id].push_back(eos_var);
+
+                    RUN({
+                        materials(mat_id).eos_global_vars(global_var_id) = eos_var;
+                    });
                     
                     if(VERBOSE) std::cout << "\t var = " << eos_var<< std::endl;
                 } // end loop over global vars

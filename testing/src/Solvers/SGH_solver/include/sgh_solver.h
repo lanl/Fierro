@@ -249,30 +249,49 @@ public:
     void setup()
     {
         std::cout<<"INSIDE SETUP FOR SGH SOLVER"<<std::endl;
-        setup_sgh(
-            sim_param.materials,
-            sim_param.region_fills,
-            sim_param.boundary_conditions,
-            mesh,
-            node.coords,
-            node.vel,
-            node.mass,
-            elem.den,
-            elem.pres,
-            elem.stress,
-            elem.sspd,
-            elem.sie,
-            elem.vol,
-            elem.mass,
-            elem.mat_id,
-            elem.statev,
-            state_vars,
-            corner.mass,
-            num_fills,
-            rk_num_bins,
-            num_bcs,
-            num_materials,
-            2); // num_state_vars
+
+
+        printf("Writing outputs to file at %f \n", time_value);
+        write_outputs(mesh,
+                      node.coords,
+                      node.vel,
+                      node.mass,
+                      elem.den,
+                      elem.pres,
+                      elem.stress,
+                      elem.sspd,
+                      elem.sie,
+                      elem.vol,
+                      elem.mass,
+                      elem.mat_id,
+                      graphics_times,
+                      graphics_id,
+                      time_value);
+
+        // setup_sgh(
+        //     sim_param.materials,
+        //     sim_param.region_fills,
+        //     sim_param.boundary_conditions,
+        //     mesh,
+        //     node.coords,
+        //     node.vel,
+        //     node.mass,
+        //     elem.den,
+        //     elem.pres,
+        //     elem.stress,
+        //     elem.sspd,
+        //     elem.sie,
+        //     elem.vol,
+        //     elem.mass,
+        //     elem.mat_id,
+        //     elem.statev,
+        //     state_vars,
+        //     corner.mass,
+        //     num_fills,
+        //     rk_num_bins,
+        //     num_bcs,
+        //     num_materials,
+        //     2); // num_state_vars
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -289,6 +308,10 @@ public:
 
         std::cout << "Num elements = " << mesh.num_elems << std::endl;
         std::cout << "Num nodes = " << mesh.num_nodes << std::endl;
+
+        std::cout << "Elem 0 pressure =  = " << elem.pres(0) << std::endl;
+        std::cout << "Elem 0 sie rk0  = " << elem.sie(0,0) << std::endl;
+        std::cout << "Elem 0 sie rk1  = " << elem.sie(1,0) << std::endl;
 
         solve(sim_param.materials,
               sim_param.boundary_conditions,
@@ -316,7 +339,7 @@ public:
               graphics_time,
               graphics_cyc_ival,
               graphics_dt_ival,
-              cycle_stop,
+              5, //sim_param.dynamic_options.cycle_stop,
               rk_num_stages,
               dt,
               fuzz,
