@@ -30,17 +30,12 @@ struct simulation_parameters_t{
 
     // Simulation boundary conditions
     CArrayKokkos<boundary_condition_t> boundary_conditions;
-    //std::vector <boundary_condition_t> boundary_conditions;
 
     // Region data for simulation mesh
-    //std::vector <reg_fill_t> region_fills;
     CArrayKokkos<reg_fill_t> region_fills;
-    // CArrayKokkos<reg_fill_t>(num_fills);
-
 
     // Material data for simulation
     CArrayKokkos<material_t> materials;
-    // std::vector <material_t> materials;
 
     // EOS data for simulation
     std::vector <std::vector <double>> eos_global_vars;

@@ -834,54 +834,6 @@ struct mesh_t
     } // end of init_bdy_sets method
 }; // end mesh_t
 
-
-
-// namespace bdy
-// {
-// // for tagging boundary faces
-// enum bdy_tag
-// {
-//     x_plane = 0,        // tag an x-plane
-//     y_plane = 1,        // tag an y-plane
-//     z_plane = 2,        // tag an z-plane
-//     cylinder = 3,       // tag an cylindrical surface
-//     sphere = 4,         // tag a spherical surface
-//     readFile = 5        // read from a file
-// };
-
-// // for enforcing boundary conditions
-// enum bdy_hydro_conds
-// {
-//     fixed = 0,              // zero velocity
-//     reflected = 1,          // reflected or wall condition
-//     velocity = 2,           // constant velocity
-//     pressure = 3,           // constant pressure
-//     acceleration = 4,       // constant acceleration
-//     contact = 5             // contact surface
-// };
-// } // end of bdy namespace
-
-// // tag mesh points on bdy's and set the BC type
-// struct boundary_t
-// {
-//     // tag surface type
-//     bdy::bdy_tag surface;    // 0=xplane, 1=yplane, 2=zplane, 3=cylinder, 4=sphere, 5=read file
-
-//     // tag surface value or radius
-//     real_t value;
-
-//     // BC type
-//     bdy::bdy_hydro_conds hydro_bc;
-
-//     // velocity
-//     // if t_end > time > t_start
-//     // v(t) = v0 exp(-v1*(time - time_start) )
-//     double hydro_bc_vel_0;
-//     double hydro_bc_vel_1;
-//     double hydro_bc_vel_t_start;
-//     double hydro_bc_vel_t_end;
-// };
-
 void ensight(const mesh_t& mesh,
              const DCArrayKokkos<double>& node_coords,
              const DCArrayKokkos<double>& node_vel,
@@ -925,21 +877,6 @@ size_t check_bdy(const size_t  patch_gid,
 
 void build_boundry_node_sets(const CArrayKokkos<boundary_condition_t>& boundary,
                              mesh_t& mesh);
-
-// void boundary_velocity(const mesh_t& mesh,
-//                        const CArrayKokkos<boundary_condition_t>& boundary,
-//                        DCArrayKokkos<double>&      node_vel,
-//                        const double time_value);
-
-// KOKKOS_FUNCTION
-// void ideal_gas(const DCArrayKokkos<double>& elem_pres,
-//                const DCArrayKokkos<double>& elem_stress,
-//                const size_t elem_gid,
-//                const size_t mat_id,
-//                const DCArrayKokkos<double>& elem_state_vars,
-//                const DCArrayKokkos<double>& elem_sspd,
-//                const double den,
-//                const double sie);
 
 void user_model_init(const DCArrayKokkos<double>& file_state_vars,
                      const size_t num_state_vars,

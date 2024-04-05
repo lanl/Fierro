@@ -53,85 +53,24 @@ public:
     // ---------------------------------------------------------------------
     //    state data type declarations
     // ---------------------------------------------------------------------
-    // node_t                   node;
-    // elem_t                   elem;
-    // corner_t                 corner;
-    // CArrayKokkos<material_t> material;
+
     int max_num_state_vars = 6;
     CArrayKokkos<double>     state_vars; // array to hold init model variables
 
-    // ---------------------------------------------------------------------
-    //    mesh data type declarations
-    // ---------------------------------------------------------------------
-    // mesh_t                   mesh;
-    // CArrayKokkos<reg_fill_t> region_fill;
-    // CArrayKokkos<boundary_condition_t> boundary;
-
-    // Dual views for nodal data
-    // DCArrayKokkos<double> node_coords;
-    // DCArrayKokkos<double> node_vel;
-    // DCArrayKokkos<double> node_mass;
-
-    // // Dual views for element data
-    // DCArrayKokkos<double> elem_den;
-    // DCArrayKokkos<double> elem_pres;
-    // DCArrayKokkos<double> elem_stress;
-    // DCArrayKokkos<double> elem_sspd;
-    // DCArrayKokkos<double> elem_sie;
-    // DCArrayKokkos<double> elem_vol;
-    // DCArrayKokkos<double> elem_div;
-    // DCArrayKokkos<double> elem_mass;
-    // DCArrayKokkos<size_t> elem_mat_id;
-    // DCArrayKokkos<double> elem_statev;
-
-    // // Dual Views of the corner struct variables
-    // DCArrayKokkos<double> corner_force;
-    // DCArrayKokkos<double> corner_mass;
-
-
+   
     // ==============================================================================
     //   Variables, setting default inputs
     // ==============================================================================
 
     // --- num vars ----
     size_t num_dims = 3;
+    // double dt       = 1.e-8;
 
-    size_t num_materials;
-    size_t num_state_vars;
-
-    size_t num_fills;
-    size_t num_bcs;
-
-    // --- Graphics output variables ---
-    size_t graphics_id       = 0;
-    size_t graphics_cyc_ival = 50;
+    // double time_value = 0.0;
 
     CArray<double> graphics_times;
-    double         graphics_dt_ival = 1.0e8;
-    double         graphics_time    = graphics_dt_ival; // the times for writing graphics dump
-
-    // --- Time and cycling variables ---
-    double time_value = 0.0;
-    double time_final = 1.e16;
-    double dt       = 1.e-8;
-    double dt_max   = 1.0e-2;
-    double dt_min   = 1.0e-8;
-    double dt_cfl   = 0.4;
-    double dt_start = 1.0e-8;
-
-    size_t rk_num_stages = 2;
-    size_t rk_num_bins   = 2;
-
-    size_t cycle      = 0;
-    size_t cycle_stop = 1000000000;
-
-    // --- Precision variables ---
-    double fuzz  = 1.0e-16; // machine precision
-    double tiny  = 1.0e-12; // very very small (between real_t and single)
-    double small = 1.0e-8;   // single precision
-
-
-
+    size_t graphics_id       = 0;
+    double         graphics_time;
 
     Solver();//Simulation_Parameters& _simparam);
     
@@ -156,7 +95,6 @@ public:
 
     // class Simulation_Parameters *simparam;
     // Simulation_Parameters simparam;
-
 
     bool finalize_flag = false;
 

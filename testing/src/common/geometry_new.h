@@ -271,28 +271,6 @@ void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
     const DCArrayKokkos<double>& node_coords,
     const ViewCArrayKokkos<size_t>&  elem_node_gids)
 {
-    // --- testing here ---
-    /*
-    double test_vol = 0.0;
-    // getting the corner facial area
-    double corner_areas_array[4];
-    ViewCArrayKokkos <double> corner_areas(&corner_areas_array[0],4);
-
-    get_area_weights2D(corner_areas,
-                       elem_gid,
-                       node_coords,
-                       elem_node_gids);
-
-
-    for(size_t node_lid=0; node_lid<4; node_lid++){
-        double y = node_coords(1, elem_node_gids(node_lid), 1);  // node radius
-        test_vol += corner_areas(node_lid)*y;
-    } // end for
-
-     test_vol matches the Barlow volume formula
-    */
-    // -------------------
-
     elem_vol(elem_gid) = 0.0;
 
     const size_t num_nodes = 4;

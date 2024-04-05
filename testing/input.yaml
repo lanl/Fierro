@@ -5,7 +5,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 5
+    cycle_stop: 300000
 
 
 mesh_options:
@@ -15,8 +15,8 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     output_file_format: vtk
-    graphics_time_step: 0.25
-    graphics_iteration_step: 1
+    graphics_time_step: 0.1
+    # graphics_iteration_step: 10
 
 solver_options:
   - solver:
@@ -92,8 +92,8 @@ regions:
         radius2: 0.15
         material_id: 0
         den: 1.0
-        ie: 0.25833839995946534
-        sie: 0.25833839995946534
+        # ie: 0.25833839995946534
+        sie: 18.27 # 0.25833839995946534
         velocity: cartesian
         u: 0.0
         v: 0.0

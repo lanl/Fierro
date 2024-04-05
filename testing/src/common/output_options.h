@@ -36,7 +36,7 @@ static std::map <std::string, output_options::timer_output_level> timer_output_l
 };
 
 // mmeshing input parameters
-struct output_options_t{
+struct output_options_t {
 
     output_options::format format;
     output_options::timer_output_level timer_level;

@@ -7,12 +7,8 @@
 
 #include "initial_conditions.h"
 
-
-
-
-
 //==============================================================================
-//   Fierro enums and structs to populate
+//   Fierro material regions
 //==============================================================================
 namespace region
 {

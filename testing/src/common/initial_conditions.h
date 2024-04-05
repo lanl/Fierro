@@ -22,7 +22,6 @@ namespace init_conds
         // vortical initial conditions
         tg_vortex = 5
     };
-    
 } // end of initial conditions namespace
 
 static std::map <std::string, init_conds::init_velocity_conds> velocity_type_map

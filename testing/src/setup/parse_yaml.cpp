@@ -15,11 +15,7 @@
 #include "parse_yaml.h"
 #include "simulation_parameters.h"
 
-
 #define PI 3.141592653589793
-
-// using namespace mtr;
-
 
 bool VERBOSE = false;
 
@@ -252,6 +248,31 @@ void parse_yaml(Yaml::Node &root, simulation_parameters_t& sim_param){
         parse_materials(root, sim_param.materials, sim_param.eos_global_vars);
 }
 
+
+// =================================================================================
+//    Extract words from the input file and validate they are correct
+// =================================================================================
+void validate_inputs(Yaml::Node &yaml, std::vector <std::string>& user_inputs, std::vector <std::string>& str_valid_inputs){
+    
+    for(auto item = yaml.Begin(); item != yaml.End(); item++){
+
+        std::string var_name = (*item).first;
+        
+        // print the variable
+        if(VERBOSE) std::cout << "This is var name = "<< var_name << "\n";
+        
+        user_inputs.push_back(var_name);
+        
+        // validate input: user_inputs match words in the str_valid_inputs
+        if (std::find(str_valid_inputs.begin(), str_valid_inputs.end(), var_name) == str_valid_inputs.end())
+        {
+            std::cout << "ERROR: invalid input: " << var_name << std::endl;
+        } // end if variable exists
+    } // end for item in this yaml input
+
+} // end validate inputs
+
+
 // =================================================================================
 //    Parse Solver options
 // =================================================================================
@@ -275,22 +296,7 @@ void parse_solver_input(Yaml::Node &root, std::vector <solver_input_t> &solver_i
         std::vector <std::string> user_inputs;
 
         // extract words from the input file and validate they are correct
-        for(auto item = inps_yaml.Begin(); item != inps_yaml.End(); item++)
-        {
-            
-            std::string var_name = (*item).first;
-            
-            // print the variable
-            if(VERBOSE) std::cout << "This is var name = "<< var_name << "\n";
-            
-            user_inputs.push_back(var_name);
-            
-            // validate input: user_inputs match words in the str_solver_inps
-            if (std::find(str_solver_inps.begin(), str_solver_inps.end(), var_name) == str_solver_inps.end())
-            {
-                std::cout << "ERROR: invalid input: " << var_name << std::endl;
-            } // end if variable exists
-        } // end for item in this yaml input
+        validate_inputs(inps_yaml, user_inputs, str_solver_inps);
 
         // loop over the words in the input 
         for(auto &a_word : user_inputs){
@@ -343,28 +349,9 @@ void parse_dynamic_options(Yaml::Node &root, dynamic_options_t& dynamic_options)
     // get the material variables names set by the user
     std::vector <std::string> user_dynamic_inps;
     
-    
     // extract words from the input file and validate they are correct
-    for(auto item = yaml.Begin(); item != yaml.End(); item++)
-    {
-        
-        std::string var_name = (*item).first;
-        
-        // print the variable
-        if(VERBOSE) std::cout << "this is var name = "<< var_name << "\n";
-        
-        user_dynamic_inps.push_back(var_name);
-        
-        // validate input: user_dynamic_inps match words in the str_dyn_opts_inps
-        if (std::find(str_dyn_opts_inps.begin(), str_dyn_opts_inps.end(), var_name) == str_dyn_opts_inps.end())
-        {
-            std::cout << "ERROR: invalid input: " << var_name << std::endl;
-        } // end if variable exists
-        
-    } // end for item in this yaml input
-    
-    
-    
+    validate_inputs(yaml, user_dynamic_inps, str_dyn_opts_inps);
+
     // loop over the words in the material input definition
     for(auto &a_word : user_dynamic_inps){
         
@@ -458,7 +445,6 @@ void parse_dynamic_options(Yaml::Node &root, dynamic_options_t& dynamic_options)
     } // end for words in dynamic options
 } // end of function to parse region
 
-
 // =================================================================================
 //    Parse Mesh options
 // =================================================================================
@@ -469,27 +455,9 @@ void parse_mesh_input(Yaml::Node &root, mesh_input_t &mesh_input){
     // get the mesh variables names set by the user
     std::vector <std::string> user_mesh_inputs;
     
-    
     // extract words from the input file and validate they are correct
-    for(auto item = mesh_yaml.Begin(); item != mesh_yaml.End(); item++)
-    {
-        
-        std::string var_name = (*item).first;
-        
-        // print the variable
-        if(VERBOSE) std::cout << "This is var name = "<< var_name << "\n";
-        
-        user_mesh_inputs.push_back(var_name);
-        
-        // validate input: user_mesh_inputs match words in the str_mesh_inps
-        if (std::find(str_mesh_inps.begin(), str_mesh_inps.end(), var_name) == str_mesh_inps.end())
-        {
-            std::cout << "ERROR: invalid input: " << var_name << std::endl;
-        } // end if variable exists
-        
-    } // end for item in this yaml input
-    
-
+    validate_inputs(mesh_yaml, user_mesh_inputs, str_mesh_inps);
+  
     // loop over the words in the material input definition
     for(auto &a_word : user_mesh_inputs){
         
@@ -651,26 +619,8 @@ void parse_output_options(Yaml::Node &root, output_options_t &output_options){
     // get the mesh variables names set by the user
     std::vector <std::string> user_inputs;
     
-    
     // extract words from the input file and validate they are correct
-    for(auto item = out_opts.Begin(); item != out_opts.End(); item++)
-    {
-        
-        std::string var_name = (*item).first;
-        
-        // print the variable
-        if(VERBOSE) std::cout << "This is var name = "<< var_name << "\n";
-        
-        user_inputs.push_back(var_name);
-        
-        // validate input: user_inputs match words in the str_output_options_inps
-        if (std::find(str_output_options_inps.begin(), str_output_options_inps.end(), var_name) == str_output_options_inps.end())
-        {
-            std::cout << "ERROR: invalid input: " << var_name << std::endl;
-        } // end if variable exists
-        
-    } // end for item in this out_opts input
-    
+    validate_inputs(out_opts, user_inputs, str_output_options_inps);
 
     // loop over the output options
     for(auto &a_word : user_inputs){
@@ -778,28 +728,9 @@ void parse_regions(Yaml::Node &root, CArrayKokkos<reg_fill_t> &region_fills){
         // get the material variables names set by the user
         std::vector <std::string> user_str_region_inps;
         
-        
         // extract words from the input file and validate they are correct
-        for(auto item = inps_yaml.Begin(); item != inps_yaml.End(); item++)
-        {
-            
-            std::string var_name = (*item).first;
-            
-            // print the variable
-            if(VERBOSE) std::cout << "this is var name = "<< var_name << "\n";
-            
-            user_str_region_inps.push_back(var_name);
-            
-            // validate input: user_str_region_inps match words in the str_region_inps
-            if (std::find(str_region_inps.begin(), str_region_inps.end(), var_name) == str_region_inps.end())
-            {
-                std::cout << "ERROR: invalid input: " << var_name << std::endl;
-            } // end if variable exists
-            
-        } // end for item in this yaml input
-        
-        
-        
+        validate_inputs(inps_yaml, user_str_region_inps, str_region_inps);
+
         // loop over the words in the material input definition
         for(auto &a_word : user_str_region_inps){
             
@@ -1105,27 +1036,9 @@ void parse_materials(Yaml::Node &root, CArrayKokkos<material_t> &materials,
         // get the material variables names set by the user
         std::vector <std::string> user_str_material_inps;
         
-        
         // extract words from the input file and validate they are correct
-        for(auto item = inps_yaml.Begin(); item != inps_yaml.End(); item++)
-        {
-            
-            std::string var_name = (*item).first;
-            
-            // print the variable
-            if(VERBOSE) std::cout << "this is var name = "<< var_name << "\n";
-            
-            user_str_material_inps.push_back(var_name);
-            
-            // validate input: user_str_material_inps match words in the str_material_inps
-            if (std::find(str_material_inps.begin(), str_material_inps.end(), var_name) == str_material_inps.end())
-            {
-                std::cout << "ERROR: invalid input: " << var_name << std::endl;
-            }
-            
-        } // end for item in this yaml input
-        
-        
+        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps);
+
         // loop over the words in the material input definition
         for(auto &a_word : user_str_material_inps){
             
@@ -1286,10 +1199,7 @@ void parse_materials(Yaml::Node &root, CArrayKokkos<material_t> &materials,
                     std::cout << element << std::endl;
                 }
             }
-            
-            
         } // end for words in material
-        
     } // end loop over materials
 } // end of function to parse material information
 
@@ -1315,28 +1225,9 @@ void parse_bcs(Yaml::Node &root, CArrayKokkos<boundary_condition_t> &boundary_co
         // get the material variables names set by the user
         std::vector <std::string> user_str_bc_inps;
         
-        
         // extract words from the input file and validate they are correct
-        for(auto item = inps_yaml.Begin(); item != inps_yaml.End(); item++)
-        {
-            
-            std::string var_name = (*item).first;
-            
-            // print the variable
-            if(VERBOSE) std::cout << "this is var name = "<< var_name << "\n";
-            
-            user_str_bc_inps.push_back(var_name);
-            
-            // validate input: user_str_bc_inps match words in the str_bc_inps
-            if (std::find(str_bc_inps.begin(), str_bc_inps.end(), var_name) == str_bc_inps.end())
-            {
-                std::cout << "ERROR: invalid input: " << var_name << std::endl;
-            } // end if variable exists
-            
-        } // end for item in this yaml input
-        
-        
-        
+        validate_inputs(inps_yaml, user_str_bc_inps, str_bc_inps);
+
         // loop over the words in the material input definition
         for(auto &a_word : user_str_bc_inps){
             

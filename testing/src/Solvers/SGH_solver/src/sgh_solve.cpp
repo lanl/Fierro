@@ -326,6 +326,19 @@ void SGH::solve(CArrayKokkos<material_t>& material,
                                rk_alpha);
             }
             else{
+
+                // std::cout<<"Before update state " << std::endl;
+
+                // int elem_gid = 1;
+                // double gamma = elem_statev(elem_gid, 0);
+                // double csmin = elem_statev(elem_gid, 1);
+
+                // if(elem_gid == 1){
+                //     std::cout <<  std::endl;
+                //     std::cout << "Gamma = " << gamma << std::endl;
+                //     std::cout << "csmin = " << csmin << std::endl;
+                //     std::cout << "SIE = " << elem_sie(1, elem_gid) << std::endl;
+                // }
                 update_state(material,
                              mesh,
                              node_coords,
@@ -399,6 +412,10 @@ void SGH::solve(CArrayKokkos<material_t>& material,
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
+            // printf("Time value =  %f \n", time_value);
+            // printf("Graphics dt ival =  %f \n", graphics_dt_ival);
+            // std::cout << "dt in solve = "<< dt  << std::endl;
+
             write_outputs(mesh,
                           node_coords,
                           node_vel,

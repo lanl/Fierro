@@ -31,7 +31,6 @@ static bool DoesPathExist(const std::string &s)
     return (stat (s.c_str(), &buffer) == 0);
 }
 
-
 // for string delimiter parsing
 std::vector<std::string> exact_array_values (std::string s, std::string delimiter);
 
@@ -41,16 +40,8 @@ std::vector<double> extract_list(std::string str);
 // prints the contents of a parsed yaml file
 void print_yaml(Yaml::Node root);
 
-// utility function for parsing YAML file
-// void parse_yaml(Yaml::Node &root, 
-//     std::vector <solver_input_t> &solver_input,
-//     mesh_input_t &mesh_input,
-//     dynamic_options_t &dynamic_options,
-//     output_options_t &output_options,
-//     std::vector <reg_fill_t> &region_fills,
-//     std::vector <material_t> &materials,
-//     std::vector <std::vector <double>> &eos_global_vars,
-//     std::vector <boundary_condition_t> &boundary_conditions);
+// Read and validate user inputs
+void validate_inputs(Yaml::Node &yaml, std::vector <std::string>& user_inputs, std::vector <std::string>& str_valid_inputs);
 
 // utility function for parsing YAML file
 void parse_yaml(Yaml::Node &root, simulation_parameters_t& sim_param);

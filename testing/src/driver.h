@@ -32,20 +32,17 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-// #include "matar.h"
-
-
 #include "io_utils.h"
-
 #include "parse_yaml.h"
-
 #include "solver.h"
+#include "simulation_parameters.h"
+
 
 // Headers for solver classes
 #include "sgh_solver.h"
 
-#include "simulation_parameters.h"
 
+// Physical state data
 #include "state.h"
 
 
@@ -67,28 +64,16 @@ public:
     // ---------------------------------------------------------------------
     mesh_t                   mesh;
 
-
-
-    CArrayKokkos<reg_fill_t> mat_fill;
-
     // ---------------------------------------------------------------------
     //    state data type declarations
     // ---------------------------------------------------------------------
     node_t                   node;
     elem_t                   elem;
     corner_t                 corner;
-    // CArrayKokkos<material_t> material;
-    // CArrayKokkos<double>     state_vars; // array to hold init model variables
-
-
-    // ---------------------------------------------------------------------
-    //    GPU compatable types
-    // ---------------------------------------------------------------------
-
 
     Driver(char* YAML){
         yaml_file = YAML;
-    };//Simulation_Parameters& _simparam);
+    };
     ~Driver(){};
 
     // Initialize driver data.  Solver type, number of solvers 
@@ -159,7 +144,8 @@ public:
 
         geometry::get_vol(elem.vol, node.coords, mesh);
 
-
+        printf("Num State variables per element = %lu\n", sim_param.materials(0).eos_global_vars.size());
+        elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials(0).eos_global_vars.size()); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
 
@@ -183,13 +169,12 @@ public:
             // } // endif
 
             int num_elems = mesh.num_elems;
-
-            elem.statev = DCArrayKokkos<double>(num_elems, sim_param.materials(0).eos_global_vars.size()); // WARNING: HACK
+            
 
             // parallel loop over elements in mesh
-            //FOR_ALL(elem_gid, 0,  num_elems, {
+            FOR_ALL(elem_gid, 0,  num_elems, {
 
-            for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+            // for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
                 for(int rk_level = 0; rk_level < 2; rk_level++){
                 // const size_t rk_level = 1;
 
@@ -314,12 +299,15 @@ public:
                             int num_eos_global_vars = sim_param.materials(mat_id).eos_global_vars.size();
                             
                             if(elem_gid == 0) printf("num_eos_global_vars = %lu\n", sim_param.materials(mat_id).eos_global_vars.size());
-
+                            
+                            // std::cout <<  std::endl;
+                            // std::cout << "elem gid = "<< elem_gid <<" RK level = "<< rk_level << std::endl;
                             for (size_t var = 0; var < sim_param.materials(mat_id).eos_global_vars.size(); var++) {
+                                
                                 elem.statev(elem_gid, var) = sim_param.materials(mat_id).eos_global_vars(var); //state_vars(mat_id, var);
 
-                                if(elem_gid == 0){
-                                    std::cout <<  std::endl;
+                                if(elem_gid == 1){
+                                    // std::cout <<  std::endl;
                                     std::cout << "Element state Variable id "<< var << " = " << elem.statev(elem_gid, var)<< std::endl;
 
                                 }
@@ -452,17 +440,39 @@ public:
 
                             // p = rho*ie*(gamma - 1)
                             size_t mat_id = f_id;
-                            double gamma  = elem.statev(elem_gid, 4); // gamma value
+                            double gamma  = elem.statev(elem_gid, 4); // gamma value WARNING: BUG HERE
                             elem.sie(rk_level, elem_gid) =
                                 elem.pres(elem_gid) / (sim_param.region_fills(f_id).den * (gamma - 1.0));
                         } // end if
                     } // end if fill
                 } // end RK loop
-            }
-            // }); // end FOR_ALL element loop
+            // }
+            }); // end FOR_ALL element loop
             Kokkos::fence();
-        
         } // end for loop over fills
+
+        // // apply BC's to velocity
+        // boundary_velocity(mesh, boundary, node_vel, 0.0);
+
+        // // calculate the corner massess if 2D
+        // if (mesh.num_dims == 2) {
+        //     FOR_ALL(elem_gid, 0, mesh.num_elems, {
+        //         // facial area of the corners
+        //         double corner_areas_array[4];
+
+        //         ViewCArrayKokkos<double> corner_areas(&corner_areas_array[0], 4);
+        //         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+
+        //         geometry::get_area_weights2D(corner_areas, elem_gid, node_coords, elem_node_gids);
+
+        //         // loop over the corners of the element and calculate the mass
+        //         for (size_t corner_lid = 0; corner_lid < 4; corner_lid++) {
+        //             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+        //             corner_mass(corner_gid) = corner_areas(corner_lid) * elem_den(elem_gid); // node radius is added later
+        //         } // end for over corners
+        //     });
+        // } // end of
+
 
         // calculate the nodal mass
         FOR_ALL(node_gid, 0, mesh.num_nodes, {
@@ -486,24 +496,14 @@ public:
         }); // end FOR_ALL
         Kokkos::fence();
 
-
-
-
-
-        SGH *sgh_solver = new SGH(sim_param, mesh, node, elem, corner);
-        sgh_solver->initialize();
-        solvers.push_back(sgh_solver);
-
-
-        // // Create solvers
-        // for(int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++){
-
-        //     if(sim_param.solver_inputs[solver_id].method == solver_input::SGH){
-        //         // SGH *sgh_solver = new SGH(sim_param);
-        //         // sgh_solver->initialize();
-        //         // solvers.push_back(sgh_solver);
-        //     }
-        // }
+        // Create solvers
+        for(int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++){
+            if(sim_param.solver_inputs[solver_id].method == solver_input::SGH){
+                SGH *sgh_solver = new SGH(sim_param, mesh, node, elem, corner);
+                sgh_solver->initialize();
+                solvers.push_back(sgh_solver);
+            }
+        }
     }
     
     void setup() {

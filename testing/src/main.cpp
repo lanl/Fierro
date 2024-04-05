@@ -12,8 +12,6 @@
 
 int main(int argc, char* argv[])
 {
-
-
     // check to see of an input file was supplied when running the code
     if (argc == 1) {
         std::cout << "\n\n**********************************\n\n";
@@ -23,9 +21,6 @@ int main(int argc, char* argv[])
         std::cout << "**********************************\n\n" << std::endl;
         return 0;
     } // end if
-
-    // Driver driver(argv[1]);
-
 
     Kokkos::initialize();
 

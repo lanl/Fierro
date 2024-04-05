@@ -24,7 +24,6 @@ include_directories(src)
 set(SRC_Files 
 src/boundary.cpp 
 src/energy_sgh.cpp
-src/eos.cpp
 src/force_sgh.cpp
 src/geometry.cpp
 src/momentum.cpp

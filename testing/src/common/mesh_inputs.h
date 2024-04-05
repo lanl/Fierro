@@ -65,6 +65,4 @@ static std::vector <std::string> str_mesh_inps
     "polynomial_order"
 };
 
-
-
 #endif // end Header Guard

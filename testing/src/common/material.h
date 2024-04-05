@@ -77,10 +77,10 @@ struct material_t {
 
     DCArrayKokkos<double> eos_global_vars;
     
-    double q1   = 1.0;    // acoustic coefficient in Riemann solver for compresion
-    double q1ex = 1.3333;  // acoustic coefficient in Riemann solver for expansion
-    double q2   = 1.0;    // linear coefficient in Riemann solver for compression
-    double q2ex = 1.3333;  // linear coefficient in Riemann solver for expansion
+    double q1   = 1.0;      // acoustic coefficient in Riemann solver for compresion
+    double q1ex = 1.3333;   // acoustic coefficient in Riemann solver for expansion
+    double q2   = 1.0;      // linear coefficient in Riemann solver for compression
+    double q2ex = 1.3333;   // linear coefficient in Riemann solver for expansion
 
     double elastic_modulus; 
     double poisson_ratio;
@@ -148,17 +148,8 @@ static void ideal_gas(const DCArrayKokkos<double>& elem_pres,
     double gamma = elem_state_vars(elem_gid, 0);
     double csmin = elem_state_vars(elem_gid, 1);
 
-    if(elem_gid == 0){
-        std::cout <<  std::endl;
-        std::cout << "Gamma = " << gamma << std::endl;
-        std::cout << "csmin = " << csmin << std::endl;
-        std::cout << "SIE = " << sie << std::endl;
-    }
-
     // pressure
     elem_pres(elem_gid) = (gamma - 1.0) * sie * den;
-
-    
 
     // sound speed
     elem_sspd(elem_gid) = sqrt(gamma * (gamma - 1.0) * sie);
@@ -171,12 +162,6 @@ static void ideal_gas(const DCArrayKokkos<double>& elem_pres,
     return;
 } // end of ideal_gas
 
-
-//WARNING: placeholder
-// static void ideal_gas(double pres, double den, double sie){
-//     // do nothing
-//     std::cout << "hello from ideal_gas! Replace with actual EOS!" << std::endl;
-// };
 
 //WARNING: placeholder
 static void elastic_plastic(double stress, double strain){
