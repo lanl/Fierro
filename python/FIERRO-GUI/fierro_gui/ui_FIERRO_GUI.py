@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIjJlJQr.ui'
+## Form generated from reading UI file 'FIERRO_GUIHQzYlF.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -2748,19 +2748,6 @@ class Ui_MainWindow(object):
 
         self.formLayout_5.setWidget(0, QFormLayout.FieldRole, self.BPreviewResults)
 
-        self.BPlotSS = QPushButton(self.PreviewResults)
-        self.BPlotSS.setObjectName(u"BPlotSS")
-
-        self.formLayout_5.setWidget(1, QFormLayout.FieldRole, self.BPlotSS)
-
-        self.INPlotSS = QComboBox(self.PreviewResults)
-        self.INPlotSS.addItem("")
-        self.INPlotSS.addItem("")
-        self.INPlotSS.addItem("")
-        self.INPlotSS.setObjectName(u"INPlotSS")
-
-        self.formLayout_5.setWidget(1, QFormLayout.LabelRole, self.INPlotSS)
-
 
         self.verticalLayout_18.addWidget(self.PreviewResults)
 
@@ -3654,7 +3641,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Fierro", None))
         self.actionManual.setText(QCoreApplication.translate("MainWindow", u"Manual", None))
-        self.actionChange_Working_Directory.setText(QCoreApplication.translate("MainWindow", u"Change Working Directory", None))
+        self.actionChange_Working_Directory.setText(QCoreApplication.translate("MainWindow", u"Change Fierro Setup", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><br/></p></body></html>", None))
         self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.ChooseSolver), "")
         self.BGlobalMesh.setText("")
@@ -4051,11 +4038,6 @@ class Ui_MainWindow(object):
         self.INPreviewResults.setItemText(1, QCoreApplication.translate("MainWindow", u"vm-strain", None))
 
         self.BPreviewResults.setText(QCoreApplication.translate("MainWindow", u"Preview Results", None))
-        self.BPlotSS.setText(QCoreApplication.translate("MainWindow", u"Plot Stress vs Strain", None))
-        self.INPlotSS.setItemText(0, QCoreApplication.translate("MainWindow", u"S11 vs E11", None))
-        self.INPlotSS.setItemText(1, QCoreApplication.translate("MainWindow", u"S22 vs E22", None))
-        self.INPlotSS.setItemText(2, QCoreApplication.translate("MainWindow", u"S33 vs E33", None))
-
         self.BOpenParaview.setText(QCoreApplication.translate("MainWindow", u"Open Paraview", None))
         ___qtablewidgetitem49 = self.THomogenization.horizontalHeaderItem(0)
         ___qtablewidgetitem49.setText(QCoreApplication.translate("MainWindow", u"Homogenized Elastic Constants", None));

@@ -27,14 +27,17 @@ class FierroSetup(QDialog, Ui_Dialog):
         self.INFierroMeshBuilder.setText(f"{fierro_mesh_builder_exe}")
         self.INFierroVoxelizer.setText(f"{fierro_voxelizer_exe}")
         self.INFierroParallelExplicit.setText(f"{fierro_parallel_explicit_exe}")
+        self.INFierroEvpfft.setText(f"{fierro_evpfft_exe}")
         self.INFierroMeshBuilder.setStyleSheet("color: blue")
         self.INFierroVoxelizer.setStyleSheet("color: blue")
         self.INFierroParallelExplicit.setStyleSheet("color: blue")
+        self.INFierroEvpfft.setStyleSheet("color: blue")
         
         # Select build executables
         self.BFierroMeshBuilder.clicked.connect(lambda: self.developer_executable("fierro-mesh-builder", self.INFierroMeshBuilder))
         self.BFierroVoxelizer.clicked.connect(lambda: self.developer_executable("fierro-voxelizer", self.INFierroVoxelizer))
         self.BFierroParallelExplicit.clicked.connect(lambda: self.developer_executable("fierro-parallel-explicit", self.INFierroParallelExplicit))
+        self.BFierroEvpfft.clicked.connect(lambda: self.developer_executable("evpfft", self.INFierroEvpfft))
         
     def create_temp_directory(self):
         temp_dir = os.path.join(tempfile.gettempdir(), "fierro_temp_directory")
@@ -61,13 +64,12 @@ class FierroSetup(QDialog, Ui_Dialog):
         # Check that all executables have been defined
         if "fierro-mesh-builder" not in self.INFierroMeshBuilder.text():
             self.warning_message("ERROR: invalid link to fierro-mesh-builder executable")
-            return
         if "fierro-voxelizer" not in self.INFierroVoxelizer.text():
             self.warning_message("ERROR: invalid link to fierro-voxelizer executable")
-            return
         if "fierro-parallel-explicit" not in self.INFierroParallelExplicit.text():
             self.warning_message("ERROR: invalid link to fierro-parallel-explicit executable")
-            return
+        if "evpfft" not in self.INFierroEvpfft.text():
+            self.warning_message("ERROR: invalid link to evpfft executable")
         
         # Write executable locations to file for future use
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -76,6 +78,7 @@ class FierroSetup(QDialog, Ui_Dialog):
             file.write(f"fierro_mesh_builder_exe = '{self.INFierroMeshBuilder.text()}'\n")
             file.write(f"fierro_voxelizer_exe = '{self.INFierroVoxelizer.text()}'\n")
             file.write(f"fierro_parallel_explicit_exe = '{self.INFierroParallelExplicit.text()}'\n")
+            file.write(f"fierro_evpfft_exe = '{self.INFierroEvpfft.text()}'\n")
         
         # Re-enable the main window
         if hasattr(self, 'MainWindow') and hasattr(self.MainWindow, 'setEnabled'):

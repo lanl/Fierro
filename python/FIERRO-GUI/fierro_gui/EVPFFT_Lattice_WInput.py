@@ -21,10 +21,8 @@ def EVPFFT_Lattice_WInput(self, BC_index):
     for i in range(self.TMaterials.rowCount()):
         if self.TMaterials.item(i,2).text() == 'Isotropic' or 'Transversely Isotropic' in self.TMaterials.item(i,2).text() or self.TMaterials.item(i,2).text() == 'Orthotropic':
             if i == 0:
-                print("generating EP0")
                 elastic_parameters = open(self.ELASTIC_PARAMETERS_0,"w")
             else:
-                print("generating EP1")
                 elastic_parameters = open(self.ELASTIC_PARAMETERS_1,"w")
             iso = '0\n'
             elastic_parameters.write(iso)
@@ -63,7 +61,8 @@ def EVPFFT_Lattice_WInput(self, BC_index):
     dz = float(self.TParts.item(0,6).text())/float(self.TParts.item(0,9).text())
     nph_delt = '2                      number of phases (nph)\n' + f'{dx:.4f} {dy:.4f} {dz:.4f}             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
     evpfft_lattice_input.write(nph_delt)
-    vtkfile = f'{self.VTK_OUTPUT}\n'
+    vtkfile = self.voxelizer_dir + '/VTK_Geometry_' + str(self.TParts.item(0,0).text()) + '.vtk\n'
+#    vtkfile = f'{self.VTK_OUTPUT}\n'
     evpfft_lattice_input.write(vtkfile)
     for i in range(2):
         if not self.TMaterials.item(i,2) or self.TMaterials.item(i,2).text() == 'Ideal Gas':

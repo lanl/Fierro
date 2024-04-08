@@ -114,14 +114,16 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.INLengthZ.setText(str(self.stlLz))
                     
                 elif self.file_type == '.vt':
-                    # Show the vtk part
-                    self.vtk = pvsimple.LegacyVTKReader(FileNames = b3_filename)
+                    # Paraview window
+                    self.vtk_reader = pvsimple.LegacyVTKReader(FileNames = b3_filename)
                     pvsimple.SetDisplayProperties(Representation = "Surface")
-                    self.threshold = paraview.simple.Threshold(registrationName='input_threshold', Input = self.vtk, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-                    pvsimple.Show(self.threshold, self.render_view)
-                    pvsimple.Hide(self.vtk, self.render_view)
+                    text = self.INPartName.text()
+                    self.variable_name = f"part_{text}"
+                    setattr(self, self.variable_name, pvsimple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0))
+                    pvsimple.Show(getattr(self, self.variable_name), self.render_view)
+                    pvsimple.Hide(self.vtk_reader)
                     self.render_view.ResetCamera()
-                    pvsimple.Render()
+                    self.render_view.StillRender()
                     
                     # Turn off settings
                     self.INNumberOfVoxelsX.setText(QCoreApplication.translate("MainWindow", u"32", None))
@@ -136,6 +138,30 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.INNumberOfVoxelsZ.setEnabled(False)
                     self.BVoxelizeGeometry.setEnabled(False)
                     
+                    # Get the length of the vtk
+                    self.vtk_reader.UpdatePipeline()
+                    self.bounds = self.vtk_reader.GetDataInformation().GetBounds()
+                    self.vtkLx = round(self.bounds[1] - self.bounds[0],4)
+                    self.vtkLy = round(self.bounds[3] - self.bounds[2],4)
+                    self.vtkLz = round(self.bounds[5] - self.bounds[4],4)
+                    self.INLengthX.setText(str(self.vtkLx))
+                    self.INLengthY.setText(str(self.vtkLy))
+                    self.INLengthZ.setText(str(self.vtkLz))
+                    
+                    # Get the voxels in the vtk
+                    self.extents = self.vtk_reader.GetDataInformation().GetExtent()
+                    self.vtkNx = int(self.extents[1] - self.extents[0])
+                    self.vtkNy = int(self.extents[3] - self.extents[2])
+                    self.vtkNz = int(self.extents[5] - self.extents[4])
+                    self.INNumberOfVoxelsX.setText(str(self.vtkNx))
+                    self.INNumberOfVoxelsY.setText(str(self.vtkNy))
+                    self.INNumberOfVoxelsZ.setText(str(self.vtkNz))
+                    
+                    # Get the origin of the vtk
+                    self.INOriginX.setText(str(self.bounds[0]))
+                    self.INOriginY.setText(str(self.bounds[2]))
+                    self.INOriginZ.setText(str(self.bounds[4]))
+                    
                     # Rename the file and save it to directory location
                     new_file_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
                     if b3_filename[0] != new_file_path:
@@ -145,7 +171,25 @@ class FIERRO_GUI(Ui_MainWindow):
                     row = self.TParts.rowCount()
                     self.TParts.insertRow(row)
                     self.TParts.setItem(row, 0, QTableWidgetItem(self.INPartName.text()))
+                    self.TParts.setItem(row, 1, QTableWidgetItem(self.INOriginX.text()))
+                    self.TParts.setItem(row, 2, QTableWidgetItem(self.INOriginY.text()))
+                    self.TParts.setItem(row, 3, QTableWidgetItem(self.INOriginZ.text()))
+                    self.TParts.setItem(row, 4, QTableWidgetItem(self.INLengthX.text()))
+                    self.TParts.setItem(row, 5, QTableWidgetItem(self.INLengthY.text()))
+                    self.TParts.setItem(row, 6, QTableWidgetItem(self.INLengthZ.text()))
+                    self.TParts.setItem(row, 7, QTableWidgetItem(self.INNumberOfVoxelsX.text()))
+                    self.TParts.setItem(row, 8, QTableWidgetItem(self.INNumberOfVoxelsY.text()))
+                    self.TParts.setItem(row, 9, QTableWidgetItem(self.INNumberOfVoxelsZ.text()))
                     self.INPartName.clear()
+                    self.INOriginX.clear()
+                    self.INOriginY.clear()
+                    self.INOriginZ.clear()
+                    self.INLengthX.clear()
+                    self.INLengthY.clear()
+                    self.INLengthZ.clear()
+                    self.INNumberOfVoxelsX.clear()
+                    self.INNumberOfVoxelsY.clear()
+                    self.INNumberOfVoxelsZ.clear()
                     
                     # Add part as an option for material assignment
                     self.INPartMaterial.clear()
@@ -195,13 +239,13 @@ class FIERRO_GUI(Ui_MainWindow):
                     
                 # Paraview window
                 pvsimple.Delete(self.stl)
-                self.voxel_reader = pvsimple.LegacyVTKReader(FileNames = vtk_location)
+                self.vtk_reader = pvsimple.LegacyVTKReader(FileNames = vtk_location)
                 pvsimple.SetDisplayProperties(Representation = "Surface")
                 text = self.INPartName.text()
-                self.variable_name = f"threshold_{text}"
-                setattr(self, self.variable_name, pvsimple.Threshold(Input = self.voxel_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0))
+                self.variable_name = f"part_{text}"
+                setattr(self, self.variable_name, pvsimple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0))
                 pvsimple.Show(getattr(self, self.variable_name), self.render_view)
-                pvsimple.Hide(self.voxel_reader)
+                pvsimple.Hide(self.vtk_reader)
                 self.render_view.ResetCamera()
                 self.render_view.StillRender()
                 
@@ -253,7 +297,7 @@ class FIERRO_GUI(Ui_MainWindow):
                 QMessageBox.No
             )
             if button == QMessageBox.StandardButton.Yes:
-                self.newvar = "threshold_" + self.TParts.item(current_row,0).text()
+                self.newvar = "part_" + self.TParts.item(current_row,0).text()
                 pvsimple.Delete(getattr(self, self.newvar))
                 self.render_view.ResetCamera()
                 self.render_view.StillRender()
@@ -284,127 +328,6 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.MeshInputs2.setCurrentIndex(3)
         self.INCoordinateSystem.currentIndexChanged.connect(mesh_class)
         self.INDimension.currentIndexChanged.connect(mesh_class)
-        
-        # Preview Results
-        def preview_results_click():
-            # Delete previous views
-            try:
-                self.stl
-            except:
-                print('')
-            else:
-                pvsimple.Delete(self.stl)
-            try:
-                self.threshold
-            except:
-                print('')
-            else:
-                pvsimple.Delete(self.threshold)
-            try:
-                self.threshold2
-            except:
-                print('')
-            else:
-                pvsimple.Delete(self.threshold2)
-            # Render new view
-            self.results_reader = pvsimple.XDMFReader(FileNames = "micro_state_timestep_10.xdmf")
-            pvsimple.SetDisplayProperties(Representation = "Surface")
-            self.threshold2 = pvsimple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 2, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-            display = pvsimple.Show(self.threshold2, self.render_view)
-            # Select what variable you want to display
-            pvsimple.GetAnimationScene().GoToLast()
-            pvsimple.ColorBy(display,('CELLS',str(self.INPreviewResults.currentText())))
-            vmstressLUT = pvsimple.GetColorTransferFunction(str(self.INPreviewResults.currentText()))
-            r = self.results_reader.CellData.GetArray(str(self.INPreviewResults.currentText())).GetRange()
-            vmstressLUT.RescaleTransferFunction(r[0], r[1]/2)
-            display.SetScalarBarVisibility(self.render_view, True)
-            pvsimple.HideUnusedScalarBars(self.render_view)
-            # Add time filter
-            threshold1 = pvsimple.FindSource('results_threshold')
-            annotateTimeFilter1 = pvsimple.AnnotateTimeFilter(registrationName='AnnotateTimeFilter1', Input=threshold1)
-            annotateTimeFilter1Display = pvsimple.Show(annotateTimeFilter1, self.render_view, 'TextSourceRepresentation')
-            # Remove old view / reset cameras
-            pvsimple.Hide(self.results_reader)
-            self.render_view.ResetCamera()
-            self.render_view.StillRender()
-        self.BPreviewResults.clicked.connect(preview_results_click)
-        self.BPreviewResults.clicked.connect(lambda: self.OutputWindows.setCurrentIndex(0))
-        
-        # Stress vs Strain Plot
-        def plot_ss_click():
-            # Get the stress-strain data
-            try:
-                self.Plot.figure
-            except:
-                with open("str_str.out", newline='') as f:
-                    reader = csv.reader(f)
-                    self.ss_data = list(reader)
-                x = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                y = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                for i in range(int(self.INNumberOfSteps.text())):
-                    if str(self.INPlotSS.currentText()) == 'S11 vs E11':
-                        xcol = 0
-                        ycol = 6
-                    elif str(self.INPlotSS.currentText()) == 'S22 vs E22':
-                        xcol = 1
-                        ycol = 7
-                    elif str(self.INPlotSS.currentText()) == 'S33 vs E33':
-                        xcol = 2
-                        ycol = 8
-                    x[i] = float(self.ss_data[i+1][xcol])
-                    y[i] = float(self.ss_data[i+1][ycol])
-                # Plot data
-                self.Plot.figure = Figure()
-                self.Plot.ax = self.Plot.figure.add_subplot()
-                self.Plot.ax.plot(x,y)
-                self.Plot.ax.set_xlabel('STRAIN')
-                self.Plot.ax.set_ylabel('STRESS')
-                self.Plot.figure.tight_layout()
-                # Display plot and toolbar
-                layout = QVBoxLayout()
-                self.Plot.setLayout(layout)
-                self.Plot.canvas = FigureCanvasQTAgg(self.Plot.figure)
-                layout.addWidget(self.Plot.canvas)
-                self.toolbar = NavigationToolbar2QT(self.Plot.canvas,self.Plot)
-                layout.addWidget(self.toolbar)
-            else:
-                self.timer = QTimer()
-                self.timer.setInterval(100)
-                self.timer.timeout.connect(update_plot)
-                self.timer.start()
-        def update_plot():
-            if self.run_cnt > 1:
-                with open("str_str.out", newline='') as f:
-                    reader = csv.reader(f)
-                    self.ss_data = list(reader)
-            x = [0 for i in range(int(self.INNumberOfSteps.text()))]
-            y = [0 for i in range(int(self.INNumberOfSteps.text()))]
-            for i in range(int(self.INNumberOfSteps.text())):
-                if str(self.INPlotSS.currentText()) == 'S11 vs E11':
-                    xcol = 0
-                    ycol = 6
-                elif str(self.INPlotSS.currentText()) == 'S22 vs E22':
-                    xcol = 1
-                    ycol = 7
-                elif str(self.INPlotSS.currentText()) == 'S33 vs E33':
-                    xcol = 2
-                    ycol = 8
-                x[i] = float(self.ss_data[i+1][xcol])
-                y[i] = float(self.ss_data[i+1][ycol])
-            self.Plot.ax.cla()
-            self.Plot.ax.plot(x,y)
-            self.Plot.ax.set_xlabel('STRAIN')
-            self.Plot.ax.set_ylabel('STRESS')
-            self.Plot.figure.tight_layout()
-            self.Plot.canvas.draw()
-            self.timer.stop()
-        self.BPlotSS.clicked.connect(plot_ss_click)
-        self.BPlotSS.clicked.connect(lambda: self.OutputWindows.setCurrentIndex(1))
-        
-        # Open Paraview
-        def open_paraview_click():
-            os.system("open " + "micro_state_timestep_10.xdmf")
-        self.BOpenParaview.clicked.connect(open_paraview_click)
             
         # Write input file for mesh builder
         def global_mesh_click():

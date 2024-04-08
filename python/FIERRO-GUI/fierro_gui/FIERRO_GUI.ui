@@ -1922,7 +1922,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <enum>QFrame::NoFrame</enum>
           </property>
           <property name="currentIndex">
-           <number>9</number>
+           <number>7</number>
           </property>
           <widget class="QWidget" name="TitlePage">
            <property name="minimumSize">
@@ -5169,32 +5169,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <property name="text">
                   <string>Preview Results</string>
                  </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QPushButton" name="BPlotSS">
-                 <property name="text">
-                  <string>Plot Stress vs Strain</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QComboBox" name="INPlotSS">
-                 <item>
-                  <property name="text">
-                   <string>S11 vs E11</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>S22 vs E22</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>S33 vs E33</string>
-                  </property>
-                 </item>
                 </widget>
                </item>
               </layout>

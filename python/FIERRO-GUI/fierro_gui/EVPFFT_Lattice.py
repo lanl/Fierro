@@ -3,7 +3,11 @@ from PySide6.QtCore import (QCoreApplication, QProcess)
 import re
 import csv
 import numpy as np
+import subprocess
+#import paraview.simple as paraview.simple
+from paraview.simple import *
 from EVPFFT_Lattice_WInput import *
+from DeveloperInputs import *
 
 # ==============================================
 # ======= EVPFFT SOLVER LATTICE PIPELINE =======
@@ -41,15 +45,29 @@ def EVPFFT_Lattice(self):
     
     def material_region():
         if str(self.INRegion.currentText()) == 'Void':
-            pvsimple.Hide(self.threshold)
-            self.threshold = pvsimple.Threshold(Input = self.voxel_reader, Scalars = "density", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-            pvsimple.Show(self.threshold, self.render_view)
+            # Remove all objects from window view
+            SetActiveView(self.render_view)
+            renderer = self.render_view.GetRenderer()
+            renderer.RemoveAllViewProps()
+            self.render_view.Update()
+            self.render_view.StillRender()
+            
+            # Show void region only
+            self.threshold = paraview.simple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+            paraview.simple.Show(self.threshold, self.render_view)
             self.render_view.ResetCamera()
             self.render_view.StillRender()
         else:
-            pvsimple.Hide(self.threshold)
-            self.threshold = pvsimple.Threshold(Input = self.voxel_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-            pvsimple.Show(self.threshold, self.render_view)
+            # Remove all objects from window view
+            SetActiveView(self.render_view)
+            renderer = self.render_view.GetRenderer()
+            renderer.RemoveAllViewProps()
+            self.render_view.Update()
+            self.render_view.StillRender()
+            
+            # Show material region only
+            self.threshold = paraview.simple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+            paraview.simple.Show(self.threshold, self.render_view)
             self.render_view.ResetCamera()
             self.render_view.StillRender()
     self.INRegion.currentIndexChanged.connect(material_region)
@@ -553,14 +571,17 @@ def EVPFFT_Lattice(self):
     def single_EVPFFT(BC_index):
         if self.p == None:
             EVPFFT_Lattice_WInput(self,BC_index)
+            executable_path = fierro_evpfft_exe
+            arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
             self.p = QProcess()
             self.p.readyReadStandardOutput.connect(handle_stdout)
             self.p.readyReadStandardError.connect(handle_stderr)
             self.p.stateChanged.connect(handle_state)
             self.p.finished.connect(process_finished)
-            self.p.start("evpfft",["-f", self.EVPFFT_INPUT, "-m", "2"])
+            self.p.start(executable_path, arguments)
             self.progress_re = re.compile("       Current  Time  STEP = (\\d+)")
-            self.run_cnt += 1
+            self.run_cnt += 1            
+            
     def simple_percent_parser(output):
         m = self.progress_re.search(output)
         if m:
@@ -584,8 +605,8 @@ def EVPFFT_Lattice(self):
     def handle_state(state):
         states = {
             QProcess.NotRunning: 'Finished',
-            QProcess.Starting: 'Starting EVPFFT',
-            QProcess.Running: 'Running EVPFFT',
+            QProcess.Starting: 'Starting Fierro',
+            QProcess.Running: 'Running Fierro',
         }
         self.state_name = states[state]
         self.RunOutputWindow.appendPlainText(f"{self.state_name}")
@@ -673,5 +694,113 @@ def EVPFFT_Lattice(self):
         self.THomogenization.setItem(10,0,QTableWidgetItem(str(self.HG13[0])))
         self.THomogenization.setItem(11,0,QTableWidgetItem(str(self.HG23[0])))
     self.BHomogenization.clicked.connect(homogenization_click)
+    
+    # Preview Results
+    def preview_results_click():
+        # Remove all objects from window view
+        SetActiveView(self.render_view)
+        renderer = self.render_view.GetRenderer()
+        renderer.RemoveAllViewProps()
+        self.render_view.Update()
+        self.render_view.StillRender()
+        try:
+            self.display
+        except:
+            False
+        else:
+            self.display.SetScalarBarVisibility(self.render_view, False)
+
+        # Display .xdmf data
+        self.results_reader = paraview.simple.XDMFReader(FileNames="micro_state_timestep_10.xdmf")
+        paraview.simple.SetDisplayProperties(Representation="Surface")
+        self.display = Show(self.results_reader, self.render_view)
+        
+        # Color by the selected variable
+        selected_variable = str(self.INPreviewResults.currentText())
+        paraview.simple.ColorBy(self.display, ('CELLS', selected_variable))
+        vmstressLUT = paraview.simple.GetColorTransferFunction(selected_variable)
+        self.display.SetScalarBarVisibility(self.render_view, True)
+        self.render_view.ResetCamera()
+        self.render_view.StillRender()
+    self.BPreviewResults.clicked.connect(preview_results_click)
+    self.BPreviewResults.clicked.connect(lambda: self.OutputWindows.setCurrentIndex(0))
+    
+    # Open Paraview
+    def open_paraview_click():
+        command = ["paraview", "micro_state_timestep_10.xdmf"]
+        subprocess.Popen(command)
+    self.BOpenParaview.clicked.connect(open_paraview_click)
+    
+#    # Stress vs Strain Plot
+#    def plot_ss_click():
+#        # Get the stress-strain data
+#        try:
+#            self.Plot.figure
+#        except:
+#            with open("str_str.out", newline='') as f:
+#                reader = csv.reader(f)
+#                self.ss_data = list(reader)
+#            x = [0 for i in range(int(self.INNumberOfSteps.text()))]
+#            y = [0 for i in range(int(self.INNumberOfSteps.text()))]
+#            for i in range(int(self.INNumberOfSteps.text())):
+#                if str(self.INPlotSS.currentText()) == 'S11 vs E11':
+#                    xcol = 0
+#                    ycol = 6
+#                elif str(self.INPlotSS.currentText()) == 'S22 vs E22':
+#                    xcol = 1
+#                    ycol = 7
+#                elif str(self.INPlotSS.currentText()) == 'S33 vs E33':
+#                    xcol = 2
+#                    ycol = 8
+#                x[i] = float(self.ss_data[i+1][xcol])
+#                y[i] = float(self.ss_data[i+1][ycol])
+#            # Plot data
+#            self.Plot.figure = Figure()
+#            self.Plot.ax = self.Plot.figure.add_subplot()
+#            print("(",x[1],",",y[1],")")
+#            self.Plot.ax.plot(x,y)
+#            self.Plot.ax.set_xlabel('STRAIN')
+#            self.Plot.ax.set_ylabel('STRESS')
+#            self.Plot.figure.tight_layout()
+#            # Display plot and toolbar
+#            layout = QVBoxLayout()
+#            self.Plot.setLayout(layout)
+#            self.Plot.canvas = FigureCanvasQTAgg(self.Plot.figure)
+#            layout.addWidget(self.Plot.canvas)
+#            self.toolbar = NavigationToolbar2QT(self.Plot.canvas,self.Plot)
+#            layout.addWidget(self.toolbar)
+#        else:
+#            self.timer = QTimer()
+#            self.timer.setInterval(100)
+#            self.timer.timeout.connect(update_plot)
+#            self.timer.start()
+#    def update_plot():
+#        if self.run_cnt > 1:
+#            with open("str_str.out", newline='') as f:
+#                reader = csv.reader(f)
+#                self.ss_data = list(reader)
+#        x = [0 for i in range(int(self.INNumberOfSteps.text()))]
+#        y = [0 for i in range(int(self.INNumberOfSteps.text()))]
+#        for i in range(int(self.INNumberOfSteps.text())):
+#            if str(self.INPlotSS.currentText()) == 'S11 vs E11':
+#                xcol = 0
+#                ycol = 6
+#            elif str(self.INPlotSS.currentText()) == 'S22 vs E22':
+#                xcol = 1
+#                ycol = 7
+#            elif str(self.INPlotSS.currentText()) == 'S33 vs E33':
+#                xcol = 2
+#                ycol = 8
+#            x[i] = float(self.ss_data[i+1][xcol])
+#            y[i] = float(self.ss_data[i+1][ycol])
+#        self.Plot.ax.cla()
+#        self.Plot.ax.plot(x,y)
+#        self.Plot.ax.set_xlabel('STRAIN')
+#        self.Plot.ax.set_ylabel('STRESS')
+#        self.Plot.figure.tight_layout()
+#        self.Plot.canvas.draw()
+#        self.timer.stop()
+#    self.BPlotSS.clicked.connect(plot_ss_click)
+#    self.BPlotSS.clicked.connect(lambda: self.OutputWindows.setCurrentIndex(1))
 
 

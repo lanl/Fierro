@@ -556,8 +556,8 @@ def Explicit_SGH(self):
     def handle_state(state):
         states = {
             QProcess.NotRunning: 'Finished',
-            QProcess.Starting: 'Starting EVPFFT',
-            QProcess.Running: 'Running EVPFFT',
+            QProcess.Starting: 'Starting Fierro',
+            QProcess.Running: 'Running Fierro',
         }
         self.state_name = states[state]
         self.RunOutputWindow.appendPlainText(f"{self.state_name}")

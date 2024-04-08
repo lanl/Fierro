@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_SetupKwDGvF.ui'
+## Form generated from reading UI file 'FIERRO_SetupmYwMLz.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -24,8 +24,8 @@ class Ui_Dialog(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(627, 400)
-        Dialog.setMinimumSize(QSize(0, 400))
+        Dialog.resize(627, 450)
+        Dialog.setMinimumSize(QSize(0, 450))
         self.verticalLayout = QVBoxLayout(Dialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.frame_3 = QFrame(Dialog)
@@ -164,20 +164,30 @@ class Ui_Dialog(object):
         self.gridLayout_3 = QGridLayout(self.frame_7)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setContentsMargins(0, 0, -1, 0)
-        self.LFierroParallelExplicit = QLabel(self.frame_7)
-        self.LFierroParallelExplicit.setObjectName(u"LFierroParallelExplicit")
+        self.INFierroMeshBuilder = QLabel(self.frame_7)
+        self.INFierroMeshBuilder.setObjectName(u"INFierroMeshBuilder")
+        sizePolicy.setHeightForWidth(self.INFierroMeshBuilder.sizePolicy().hasHeightForWidth())
+        self.INFierroMeshBuilder.setSizePolicy(sizePolicy)
+        self.INFierroMeshBuilder.setMinimumSize(QSize(252, 0))
+        self.INFierroMeshBuilder.setWordWrap(True)
 
-        self.gridLayout_3.addWidget(self.LFierroParallelExplicit, 3, 0, 1, 1)
-
-        self.LExecutables = QLabel(self.frame_7)
-        self.LExecutables.setObjectName(u"LExecutables")
-
-        self.gridLayout_3.addWidget(self.LExecutables, 0, 2, 1, 1)
+        self.gridLayout_3.addWidget(self.INFierroMeshBuilder, 1, 2, 1, 1)
 
         self.LFierroMeshBuilder = QLabel(self.frame_7)
         self.LFierroMeshBuilder.setObjectName(u"LFierroMeshBuilder")
 
         self.gridLayout_3.addWidget(self.LFierroMeshBuilder, 1, 0, 1, 1)
+
+        self.BFierroParallelExplicit = QPushButton(self.frame_7)
+        self.BFierroParallelExplicit.setObjectName(u"BFierroParallelExplicit")
+        self.BFierroParallelExplicit.setAutoDefault(False)
+
+        self.gridLayout_3.addWidget(self.BFierroParallelExplicit, 3, 3, 1, 1)
+
+        self.LExecutables = QLabel(self.frame_7)
+        self.LExecutables.setObjectName(u"LExecutables")
+
+        self.gridLayout_3.addWidget(self.LExecutables, 0, 2, 1, 1)
 
         self.INFierroVoxelizer = QLabel(self.frame_7)
         self.INFierroVoxelizer.setObjectName(u"INFierroVoxelizer")
@@ -188,6 +198,12 @@ class Ui_Dialog(object):
 
         self.gridLayout_3.addWidget(self.INFierroVoxelizer, 2, 2, 1, 1)
 
+        self.BFierroMeshBuilder = QPushButton(self.frame_7)
+        self.BFierroMeshBuilder.setObjectName(u"BFierroMeshBuilder")
+        self.BFierroMeshBuilder.setAutoDefault(False)
+
+        self.gridLayout_3.addWidget(self.BFierroMeshBuilder, 1, 3, 1, 1)
+
         self.INFierroParallelExplicit = QLabel(self.frame_7)
         self.INFierroParallelExplicit.setObjectName(u"INFierroParallelExplicit")
         sizePolicy.setHeightForWidth(self.INFierroParallelExplicit.sizePolicy().hasHeightForWidth())
@@ -197,37 +213,40 @@ class Ui_Dialog(object):
 
         self.gridLayout_3.addWidget(self.INFierroParallelExplicit, 3, 2, 1, 1)
 
-        self.INFierroMeshBuilder = QLabel(self.frame_7)
-        self.INFierroMeshBuilder.setObjectName(u"INFierroMeshBuilder")
-        sizePolicy.setHeightForWidth(self.INFierroMeshBuilder.sizePolicy().hasHeightForWidth())
-        self.INFierroMeshBuilder.setSizePolicy(sizePolicy)
-        self.INFierroMeshBuilder.setMinimumSize(QSize(252, 0))
-        self.INFierroMeshBuilder.setWordWrap(True)
-
-        self.gridLayout_3.addWidget(self.INFierroMeshBuilder, 1, 2, 1, 1)
-
-        self.LFierroVoxelizer = QLabel(self.frame_7)
-        self.LFierroVoxelizer.setObjectName(u"LFierroVoxelizer")
-
-        self.gridLayout_3.addWidget(self.LFierroVoxelizer, 2, 0, 1, 1)
-
-        self.BFierroMeshBuilder = QPushButton(self.frame_7)
-        self.BFierroMeshBuilder.setObjectName(u"BFierroMeshBuilder")
-        self.BFierroMeshBuilder.setAutoDefault(False)
-
-        self.gridLayout_3.addWidget(self.BFierroMeshBuilder, 1, 3, 1, 1)
-
         self.BFierroVoxelizer = QPushButton(self.frame_7)
         self.BFierroVoxelizer.setObjectName(u"BFierroVoxelizer")
         self.BFierroVoxelizer.setAutoDefault(False)
 
         self.gridLayout_3.addWidget(self.BFierroVoxelizer, 2, 3, 1, 1)
 
-        self.BFierroParallelExplicit = QPushButton(self.frame_7)
-        self.BFierroParallelExplicit.setObjectName(u"BFierroParallelExplicit")
-        self.BFierroParallelExplicit.setAutoDefault(False)
+        self.LFierroParallelExplicit = QLabel(self.frame_7)
+        self.LFierroParallelExplicit.setObjectName(u"LFierroParallelExplicit")
 
-        self.gridLayout_3.addWidget(self.BFierroParallelExplicit, 3, 3, 1, 1)
+        self.gridLayout_3.addWidget(self.LFierroParallelExplicit, 3, 0, 1, 1)
+
+        self.LFierroVoxelizer = QLabel(self.frame_7)
+        self.LFierroVoxelizer.setObjectName(u"LFierroVoxelizer")
+
+        self.gridLayout_3.addWidget(self.LFierroVoxelizer, 2, 0, 1, 1)
+
+        self.Levpfft = QLabel(self.frame_7)
+        self.Levpfft.setObjectName(u"Levpfft")
+
+        self.gridLayout_3.addWidget(self.Levpfft, 4, 0, 1, 1)
+
+        self.BFierroEvpfft = QPushButton(self.frame_7)
+        self.BFierroEvpfft.setObjectName(u"BFierroEvpfft")
+
+        self.gridLayout_3.addWidget(self.BFierroEvpfft, 4, 3, 1, 1)
+
+        self.INFierroEvpfft = QLabel(self.frame_7)
+        self.INFierroEvpfft.setObjectName(u"INFierroEvpfft")
+        sizePolicy.setHeightForWidth(self.INFierroEvpfft.sizePolicy().hasHeightForWidth())
+        self.INFierroEvpfft.setSizePolicy(sizePolicy)
+        self.INFierroEvpfft.setMinimumSize(QSize(252, 0))
+        self.INFierroEvpfft.setWordWrap(True)
+
+        self.gridLayout_3.addWidget(self.INFierroEvpfft, 4, 2, 1, 1)
 
 
         self.verticalLayout_4.addWidget(self.frame_7)
@@ -269,16 +288,19 @@ class Ui_Dialog(object):
         self.label.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p align=\"center\"><span style=\" font-style:italic;\">Select profile configuration:</span></p></body></html>", None))
         self.radioButton.setText(QCoreApplication.translate("Dialog", u"User", None))
         self.radioButton_2.setText(QCoreApplication.translate("Dialog", u"Developer", None))
-        self.LFierroParallelExplicit.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>fierro-parallel-explicit:</p></body></html>", None))
-        self.LExecutables.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p align=\"center\"><span style=\" font-style:italic;\">Specifiy the path to the build executables:</span></p></body></html>", None))
-        self.LFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>fierro-mesh-builder:</p></body></html>", None))
-        self.INFierroVoxelizer.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/</span></p></body></html>", None))
-        self.INFierroParallelExplicit.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/</span></p></body></html>", None))
         self.INFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/</span></p></body></html>", None))
-        self.LFierroVoxelizer.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>fierro-voxelizer:</p></body></html>", None))
-        self.BFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"Select", None))
-        self.BFierroVoxelizer.setText(QCoreApplication.translate("Dialog", u"Select", None))
+        self.LFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>fierro-mesh-builder:</p></body></html>", None))
         self.BFierroParallelExplicit.setText(QCoreApplication.translate("Dialog", u"Select", None))
+        self.LExecutables.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p align=\"center\"><span style=\" font-style:italic;\">Specifiy the path to the build executables:</span></p></body></html>", None))
+        self.INFierroVoxelizer.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/</span></p></body></html>", None))
+        self.BFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"Select", None))
+        self.INFierroParallelExplicit.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/</span></p></body></html>", None))
+        self.BFierroVoxelizer.setText(QCoreApplication.translate("Dialog", u"Select", None))
+        self.LFierroParallelExplicit.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>fierro-parallel-explicit:</p></body></html>", None))
+        self.LFierroVoxelizer.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>fierro-voxelizer:</p></body></html>", None))
+        self.Levpfft.setText(QCoreApplication.translate("Dialog", u"evpfft:", None))
+        self.BFierroEvpfft.setText(QCoreApplication.translate("Dialog", u"Select", None))
+        self.INFierroEvpfft.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/</span></p></body></html>", None))
         self.BConfirm.setText(QCoreApplication.translate("Dialog", u"Confirm", None))
     # retranslateUi
 
