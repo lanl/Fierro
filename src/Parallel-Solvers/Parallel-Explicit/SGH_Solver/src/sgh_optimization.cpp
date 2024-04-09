@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -785,31 +785,72 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
             vec_array psi_midpoint_adjoint_vector =  psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
 
             // half step update for RK2 scheme; EQUATION 1
-            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                real_t rate_of_change;
-                real_t matrix_contribution;
-                size_t dof_id;
-                size_t elem_id;
-                for (int idim = 0; idim < num_dim; idim++) {
-                    // EQUATION 1
-                    matrix_contribution = 0;
-                    // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
-                        dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
-                        matrix_contribution += previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
+            if(simparam->optimization_options.optimization_objective_regions.size()){
+                int nobj_volumes = simparam->optimization_options.optimization_objective_regions.size();
+                const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    real_t rate_of_change;
+                    real_t matrix_contribution;
+                    size_t dof_id;
+                    size_t elem_id;
+                    double current_node_coords[3];
+                    int contained = 0;
+                    current_node_coords[0] = all_initial_node_coords(node_gid, 0);
+                    current_node_coords[1] = all_initial_node_coords(node_gid, 1);
+                    current_node_coords[2] = all_initial_node_coords(node_gid, 2);
+                    for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                        if(simparam->optimization_options.optimization_objective_regions(ivolume).contains(current_node_coords)){
+                            contained = 1;
+                        }
                     }
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        // EQUATION 1
+                        matrix_contribution = 0;
+                        // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
+                        for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
+                            dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
+                            matrix_contribution += previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
+                        }
 
-                    // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
-                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
-                        elem_id = elems_in_node(node_gid, ielem);
-                        matrix_contribution += psi_previous_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
+                        // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
+                        for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
+                            elem_id = elems_in_node(node_gid, ielem);
+                            matrix_contribution += psi_previous_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
+                        }
+                        rate_of_change = contained*previous_velocity_vector(node_gid, idim) -
+                                        matrix_contribution / node_mass(node_gid) -
+                                        phi_previous_adjoint_vector(node_gid, idim) / node_mass(node_gid);
+                        midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / 2 + previous_adjoint_vector(node_gid, idim);
                     }
-                    rate_of_change = previous_velocity_vector(node_gid, idim) -
-                                     matrix_contribution / node_mass(node_gid) -
-                                     phi_previous_adjoint_vector(node_gid, idim) / node_mass(node_gid);
-                    midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / 2 + previous_adjoint_vector(node_gid, idim);
-                }
-            }); // end parallel for
+                }); // end parallel for
+            }
+            else{
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    real_t rate_of_change;
+                    real_t matrix_contribution;
+                    size_t dof_id;
+                    size_t elem_id;
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        // EQUATION 1
+                        matrix_contribution = 0;
+                        // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
+                        for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
+                            dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
+                            matrix_contribution += previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
+                        }
+
+                        // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
+                        for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
+                            elem_id = elems_in_node(node_gid, ielem);
+                            matrix_contribution += psi_previous_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
+                        }
+                        rate_of_change = previous_velocity_vector(node_gid, idim) -
+                                        matrix_contribution / node_mass(node_gid) -
+                                        phi_previous_adjoint_vector(node_gid, idim) / node_mass(node_gid);
+                        midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / 2 + previous_adjoint_vector(node_gid, idim);
+                    }
+                }); // end parallel for
+            }
             Kokkos::fence();
 
             // half step update for RK2 scheme; EQUATION 2
@@ -1049,33 +1090,76 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                               corner_force);
 
             // full step update with midpoint gradient for RK2 scheme; EQUATION 1
-            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                real_t rate_of_change;
-                real_t matrix_contribution;
-                size_t dof_id;
-                size_t elem_id;
-                for (int idim = 0; idim < num_dim; idim++) {
-                    // EQUATION 1
-                    matrix_contribution = 0;
-                    // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-
-                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
-                        dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
-                        matrix_contribution += midpoint_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
+            if(simparam->optimization_options.optimization_objective_regions.size()){
+                int nobj_volumes = simparam->optimization_options.optimization_objective_regions.size();
+                const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    real_t rate_of_change;
+                    real_t matrix_contribution;
+                    size_t dof_id;
+                    size_t elem_id;
+                    double current_node_coords[3];
+                    int contained = 0;
+                    current_node_coords[0] = all_initial_node_coords(node_gid, 0);
+                    current_node_coords[1] = all_initial_node_coords(node_gid, 1);
+                    current_node_coords[2] = all_initial_node_coords(node_gid, 2);
+                    for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                        if(simparam->optimization_options.optimization_objective_regions(ivolume).contains(current_node_coords)){
+                            contained = 1;
+                        }
                     }
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        // EQUATION 1
+                        matrix_contribution = 0;
+                        // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
 
-                    // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
-                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
-                        elem_id = elems_in_node(node_gid, ielem);
-                        matrix_contribution += psi_midpoint_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
+                        for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
+                            dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
+                            matrix_contribution += midpoint_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
+                        }
+
+                        // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
+                        for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
+                            elem_id = elems_in_node(node_gid, ielem);
+                            matrix_contribution += psi_midpoint_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
+                        }
+
+                        rate_of_change =  0.5*contained*(previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim)) -
+                                        matrix_contribution / node_mass(node_gid) -
+                                        phi_midpoint_adjoint_vector(node_gid, idim) / node_mass(node_gid);
+                        current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt + previous_adjoint_vector(node_gid, idim);
                     }
+                }); // end parallel for
+            }
+            else{
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    real_t rate_of_change;
+                    real_t matrix_contribution;
+                    size_t dof_id;
+                    size_t elem_id;
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        // EQUATION 1
+                        matrix_contribution = 0;
+                        // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
 
-                    rate_of_change =  (previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim)) / 2 -
-                                     matrix_contribution / node_mass(node_gid) -
-                                     phi_midpoint_adjoint_vector(node_gid, idim) / node_mass(node_gid);
-                    current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt + previous_adjoint_vector(node_gid, idim);
-                }
-            }); // end parallel for
+                        for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
+                            dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
+                            matrix_contribution += midpoint_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
+                        }
+
+                        // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
+                        for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
+                            elem_id = elems_in_node(node_gid, ielem);
+                            matrix_contribution += psi_midpoint_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
+                        }
+
+                        rate_of_change =  0.5*(previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim)) -
+                                        matrix_contribution / node_mass(node_gid) -
+                                        phi_midpoint_adjoint_vector(node_gid, idim) / node_mass(node_gid);
+                        current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt + previous_adjoint_vector(node_gid, idim);
+                    }
+                }); // end parallel for
+            }
             Kokkos::fence();
 
             // full step update with midpoint gradient for RK2 scheme; EQUATION 2
@@ -1204,41 +1288,89 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
             {
                 const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array next_velocity_vector    = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                if(simparam->optimization_options.optimization_objective_regions.size()){
+                    int nobj_volumes = simparam->optimization_options.optimization_objective_regions.size();
+                    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                        size_t node_id;
+                        size_t corner_id;
+                        real_t inner_product;
+                        // std::cout << elem_mass(elem_id) <<std::endl;
 
-                FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
-                    size_t node_id;
-                    size_t corner_id;
-                    real_t inner_product;
-                    // std::cout << elem_mass(elem_id) <<std::endl;
-
-                    // current_nodal_velocities
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
-                        node_id = nodes_in_elem(elem_id, inode);
-                        // midpoint rule for integration being used; add velocities and divide by 2
-                        current_element_velocities(inode, 0) = (current_velocity_vector(node_id, 0) + next_velocity_vector(node_id, 0)) / 2;
-                        current_element_velocities(inode, 1) = (current_velocity_vector(node_id, 1) + next_velocity_vector(node_id, 1)) / 2;
-                        if (num_dim == 3) {
-                            current_element_velocities(inode, 2) = (current_velocity_vector(node_id, 2) + next_velocity_vector(node_id, 2)) / 2;
+                        // current_nodal_velocities
+                        for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                            node_id = nodes_in_elem(elem_id, inode);
+                            // midpoint rule for integration being used; add velocities and divide by 2
+                            current_element_velocities(inode, 0) = (current_velocity_vector(node_id, 0) + next_velocity_vector(node_id, 0)) / 2;
+                            current_element_velocities(inode, 1) = (current_velocity_vector(node_id, 1) + next_velocity_vector(node_id, 1)) / 2;
+                            if (num_dim == 3) {
+                                current_element_velocities(inode, 2) = (current_velocity_vector(node_id, 2) + next_velocity_vector(node_id, 2)) / 2;
+                            }
                         }
-                    }
 
-                    inner_product = 0;
-                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
-                        node_id = nodes_in_elem(elem_id, ifill);
-                        for (int idim = 0; idim < num_dim; idim++) {
-                            inner_product += elem_mass(elem_id) * current_element_velocities(ifill, idim) * current_element_velocities(ifill, idim);
+                        inner_product = 0;
+                        for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                            double current_node_coords[3];
+                            bool contained = false;
+                            node_id = nodes_in_elem(elem_id, ifill);
+                            current_node_coords[0] = all_initial_node_coords(node_id, 0);
+                            current_node_coords[1] = all_initial_node_coords(node_id, 1);
+                            current_node_coords[2] = all_initial_node_coords(node_id, 2);
+                            for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                                if(simparam->optimization_options.optimization_objective_regions(ivolume).contains(current_node_coords)){
+                                    contained = true;
+                                }
+                            }
+                            if(contained){
+                                for (int idim = 0; idim < num_dim; idim++) {
+                                    inner_product += elem_mass(elem_id) * current_element_velocities(ifill, idim) * current_element_velocities(ifill, idim);
+                                }
+                            }
                         }
-                    }
 
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
-                        // compute gradient of local element contribution to v^t*M*v product
-                        corner_id = elem_id * num_nodes_in_elem + inode;
-                        // division by design ratio recovers nominal element mass used in the gradient operator
-                        corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
-                    }
-                }); // end parallel for
-                Kokkos::fence();
+                        for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                            // compute gradient of local element contribution to v^t*M*v product
+                            corner_id = elem_id * num_nodes_in_elem + inode;
+                            // division by design ratio recovers nominal element mass used in the gradient operator
+                            corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                        }
+                    }); // end parallel for
+                    Kokkos::fence();
+                }
+                else{
+                    FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                        size_t node_id;
+                        size_t corner_id;
+                        real_t inner_product;
+                        // std::cout << elem_mass(elem_id) <<std::endl;
 
+                        // current_nodal_velocities
+                        for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                            node_id = nodes_in_elem(elem_id, inode);
+                            // midpoint rule for integration being used; add velocities and divide by 2
+                            current_element_velocities(inode, 0) = (current_velocity_vector(node_id, 0) + next_velocity_vector(node_id, 0)) / 2;
+                            current_element_velocities(inode, 1) = (current_velocity_vector(node_id, 1) + next_velocity_vector(node_id, 1)) / 2;
+                            if (num_dim == 3) {
+                                current_element_velocities(inode, 2) = (current_velocity_vector(node_id, 2) + next_velocity_vector(node_id, 2)) / 2;
+                            }
+                        }
+
+                        inner_product = 0;
+                        for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                            for (int idim = 0; idim < num_dim; idim++) {
+                                inner_product += elem_mass(elem_id) * current_element_velocities(ifill, idim) * current_element_velocities(ifill, idim);
+                            }
+                        }
+
+                        for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                            // compute gradient of local element contribution to v^t*M*v product
+                            corner_id = elem_id * num_nodes_in_elem + inode;
+                            // division by design ratio recovers nominal element mass used in the gradient operator
+                            corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                        }
+                    }); // end parallel for
+                    Kokkos::fence();
+                }
                 // accumulate node values from corner storage
                 // multiply
                 FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
@@ -1247,7 +1379,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                         corner_id = corners_in_node(node_id, icorner);
                         design_gradients(node_id, 0) += corner_value_storage(corner_id);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
             } // end view scope
         }
