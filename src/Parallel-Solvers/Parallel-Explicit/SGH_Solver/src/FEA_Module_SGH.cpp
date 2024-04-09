@@ -1586,13 +1586,14 @@ void FEA_Module_SGH::sgh_solve()
                 // extensive KE
                 if(simparam->optimization_options.optimization_objective_regions.size()){
                     int nobj_volumes = simparam->optimization_options.optimization_objective_regions.size();
+                    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                     REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
                         double ke = 0;
                         double current_node_coords[3];
                         bool contained = false;
-                        current_node_coords[0] = node_coords(rk_level, node_gid, 0);
-                        current_node_coords[1] = node_coords(rk_level, node_gid, 1);
-                        current_node_coords[2] = node_coords(rk_level, node_gid, 2);
+                        current_node_coords[0] = all_initial_node_coords(node_gid, 0);
+                        current_node_coords[1] = all_initial_node_coords(node_gid, 1);
+                        current_node_coords[2] = all_initial_node_coords(node_gid, 2);
                         for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
                             if(simparam->optimization_options.optimization_objective_regions(ivolume).contains(current_node_coords)){
                                 contained = true;
