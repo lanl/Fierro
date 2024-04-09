@@ -32,7 +32,6 @@ requirements:
   run:
     - openmpi
     - fierro-heffte-cuda
-    - fftw=*=mpi_openmpi_*
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
     - elements

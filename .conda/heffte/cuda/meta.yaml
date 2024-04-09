@@ -21,7 +21,7 @@ build:
 
 requirements:
   build:
-    - cmake=3.24
+    - cmake >=3.17.0
     - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
@@ -37,12 +37,12 @@ requirements:
     - libcufft-dev
     - libcublas-dev
     - libcusparse-dev
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
   run:
     - cuda-cudart
     - libcufft
     - libcublas
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
 
 about:
   home: https://github.com/lanl/Fierro
