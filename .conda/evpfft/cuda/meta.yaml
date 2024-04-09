@@ -26,13 +26,15 @@ requirements:
     - cuda-toolkit
     - openmpi
     - fierro-heffte-cuda
-    - hdf5=*=mpi_openmpi_h457a7a6_3
-    - fierro-trilinos-cuda # Statically linked against Kokkos CUDA kernels from here.
+    - hdf5=*=mpi_openmpi_*
+    - kokkos=4.1
     - elements
   run:
     - openmpi
     - fierro-heffte-cuda
-    - hdf5=*=mpi_openmpi_h457a7a6_3
+    - fftw=*=mpi_openmpi_*
+    - kokkos=4.1
+    - hdf5=*=mpi_openmpi_*
     - elements
 
 about:
