@@ -1584,21 +1584,53 @@ void FEA_Module_SGH::sgh_solve()
                 KE_loc_sum = 0.0;
                 KE_sum     = 0.0;
                 // extensive KE
-                REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
-                    double ke = 0;
-                    for (size_t dim = 0; dim < num_dim; dim++) {
-                        // midpoint integration approximation
-                        ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * (node_velocities_interface(node_gid,
-                        dim) + previous_node_velocities_interface(node_gid, dim)) / 4;                                                                                                                     // 1/2 at end
-                    } // end for
+                if(simparam->optimization_options.optimization_objective_regions.size()){
+                    int nobj_volumes = simparam->optimization_options.optimization_objective_regions.size();
+                    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+                        double ke = 0;
+                        double current_node_coords[3];
+                        bool contained = false;
+                        current_node_coords[0] = node_coords(rk_level, node_gid, 0);
+                        current_node_coords[1] = node_coords(rk_level, node_gid, 1);
+                        current_node_coords[2] = node_coords(rk_level, node_gid, 2);
+                        for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                            if(simparam->optimization_options.optimization_objective_regions(ivolume).contains(current_node_coords)){
+                                contained = true;
+                            }
+                        }
+                        if(contained){
+                            for (size_t dim = 0; dim < num_dim; dim++) {
+                                // midpoint integration approximation
+                                ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
+                                      (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
+                            } // end for
+                        }
 
-                    if (num_dim == 2) {
-                        KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
-                    }
-                    else{
-                        KE_loc_sum += node_mass(node_gid) * ke;
-                    }
-                }, KE_sum);
+                        if (num_dim == 2) {
+                            KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+                        }
+                        else{
+                            KE_loc_sum += node_mass(node_gid) * ke;
+                        }
+                    }, KE_sum);
+                }
+                else{
+                    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+                        double ke = 0;
+                        for (size_t dim = 0; dim < num_dim; dim++) {
+                            // midpoint integration approximation
+                            ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
+                                (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
+                        } // end for
+
+                        if (num_dim == 2) {
+                            KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+                        }
+                        else{
+                            KE_loc_sum += node_mass(node_gid) * ke;
+                        }
+                    }, KE_sum);
+                }
                 Kokkos::fence();
                 KE_sum = 0.5 * KE_sum;
                 objective_accumulation += KE_sum * dt;
