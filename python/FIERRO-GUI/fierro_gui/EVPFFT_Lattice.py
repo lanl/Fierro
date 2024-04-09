@@ -4,6 +4,7 @@ import re
 import csv
 import numpy as np
 import subprocess
+import os
 #import paraview.simple as paraview.simple
 from paraview.simple import *
 from EVPFFT_Lattice_WInput import *
@@ -489,14 +490,14 @@ def EVPFFT_Lattice(self):
     def BC_direction():
         if self.INBoundaryCondition.currentText() == "Tension" or self.INBoundaryCondition.currentText() == "Compression":
             self.INBCDirection.clear()
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"x-direction", None))
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"y-direction", None))
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"z-direction", None))
+            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"x", None))
+            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"y", None))
+            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"z", None))
         elif self.INBoundaryCondition.currentText() == "Shear":
             self.INBCDirection.clear()
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"xy-direction", None))
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"xz-direction", None))
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"yz-direction", None))
+            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"xy", None))
+            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"xz", None))
+            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"yz", None))
         elif self.INBoundaryCondition.currentText() == "Homogenization":
             self.INBCDirection.clear()
             self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"6 RVE BCs", None))
@@ -507,28 +508,28 @@ def EVPFFT_Lattice(self):
         if self.INBoundaryCondition.currentText() == 'Homogenization':
             # Tension x-direction
             self.TBCs.insertRow(row)
-            self.TBCs.setItem(row, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Tension")))
-            self.TBCs.setItem(row, 1, QTableWidgetItem(str("x-direction")))
+            self.TBCs.setItem(row, 0, QTableWidgetItem("Tension"))
+            self.TBCs.setItem(row, 1, QTableWidgetItem("x"))
             # Tension y-direction
             self.TBCs.insertRow(row+1)
-            self.TBCs.setItem(row+1, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Tension")))
-            self.TBCs.setItem(row+1, 1, QTableWidgetItem(str("y-direction")))
+            self.TBCs.setItem(row+1, 0, QTableWidgetItem("Tension"))
+            self.TBCs.setItem(row+1, 1, QTableWidgetItem("y"))
             # Tension z-direction
             self.TBCs.insertRow(row+2)
-            self.TBCs.setItem(row+2, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Tension")))
-            self.TBCs.setItem(row+2, 1, QTableWidgetItem(str("z-direction")))
+            self.TBCs.setItem(row+2, 0, QTableWidgetItem("Tension"))
+            self.TBCs.setItem(row+2, 1, QTableWidgetItem("z"))
             # Shear xy-direction
             self.TBCs.insertRow(row+3)
-            self.TBCs.setItem(row+3, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Shear")))
-            self.TBCs.setItem(row+3, 1, QTableWidgetItem(str("xy-direction")))
+            self.TBCs.setItem(row+3, 0, QTableWidgetItem("Shear"))
+            self.TBCs.setItem(row+3, 1, QTableWidgetItem("xy"))
             # Shear xz-direction
             self.TBCs.insertRow(row+4)
-            self.TBCs.setItem(row+4, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Shear")))
-            self.TBCs.setItem(row+4, 1, QTableWidgetItem(str("xz-direction")))
+            self.TBCs.setItem(row+4, 0, QTableWidgetItem("Shear"))
+            self.TBCs.setItem(row+4, 1, QTableWidgetItem("xz"))
             # Shear yz-direction
             self.TBCs.insertRow(row+5)
-            self.TBCs.setItem(row+5, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Shear")))
-            self.TBCs.setItem(row+5, 1, QTableWidgetItem(str("yz-direction")))
+            self.TBCs.setItem(row+5, 0, QTableWidgetItem("Shear"))
+            self.TBCs.setItem(row+5, 1, QTableWidgetItem("yz"))
         else:
             self.TBCs.insertRow(row)
             self.TBCs.setItem(row, 0, QTableWidgetItem(str(
@@ -573,7 +574,14 @@ def EVPFFT_Lattice(self):
             EVPFFT_Lattice_WInput(self,BC_index)
             executable_path = fierro_evpfft_exe
             arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
+            
+            # Make a new directory to store all of the outputs
+            working_directory = os.path.join(self.evpfft_dir, 'outputs', self.TBCs.item(BC_index,0).text(), self.TBCs.item(BC_index,1).text())
+            if not os.path.exists(working_directory):
+                os.makedirs(working_directory)
+            
             self.p = QProcess()
+            self.p.setWorkingDirectory(working_directory)
             self.p.readyReadStandardOutput.connect(handle_stdout)
             self.p.readyReadStandardError.connect(handle_stderr)
             self.p.stateChanged.connect(handle_state)
@@ -618,10 +626,7 @@ def EVPFFT_Lattice(self):
             self.p.waitForStarted()
             while self.p != None:
                 QApplication.processEvents()
-                
-            # Save Output Files
-            
-                
+
             # Generate Homogenized Elastic Constants
             if "Homogenization" in self.TBCs.item(BC_index,0).text():
                 self.BHomogenization.setEnabled(True)
@@ -654,23 +659,23 @@ def EVPFFT_Lattice(self):
                     e12[i] = float(self.ss_data[i+1][5])
                     e13[i] = float(self.ss_data[i+1][4])
                     e23[i] = float(self.ss_data[i+1][3])
-                if self.TBCs.item(BC_index,1).text() == "x-direction":
+                if self.TBCs.item(BC_index,1).text() == "x":
                     self.HE11 = np.polyfit(e11,s11,1)
                     self.HNU12 = np.polyfit(e11,e22,1)
                     self.HNU13 = np.polyfit(e11,e33,1)
-                if self.TBCs.item(BC_index,1).text() == "y-direction":
+                if self.TBCs.item(BC_index,1).text() == "y":
                     self.HE22 = np.polyfit(e22,s22,1)
                     self.HNU21 = np.polyfit(e22,e11,1)
                     self.HNU23 = np.polyfit(e22,e33,1)
-                if self.TBCs.item(BC_index,1).text() == "z-direction":
+                if self.TBCs.item(BC_index,1).text() == "z":
                     self.HE33 = np.polyfit(e33,s33,1)
                     self.HNU31 = np.polyfit(e33,e11,1)
                     self.HNU32 = np.polyfit(e33,e22,1)
-                if self.TBCs.item(BC_index,1).text() == "xy-direction":
+                if self.TBCs.item(BC_index,1).text() == "xy":
                     self.HG12 = np.polyfit(np.multiply(e12,2.),s12,1)
-                if self.TBCs.item(BC_index,1).text() == "xz-direction":
+                if self.TBCs.item(BC_index,1).text() == "xz":
                     self.HG13 = np.polyfit(np.multiply(e13,2.),s13,1)
-                if self.TBCs.item(BC_index,1).text() == "yz-direction":
+                if self.TBCs.item(BC_index,1).text() == "yz":
                     self.HG23 = np.polyfit(np.multiply(e23,2.),s23,1)
     
     # Connect run button to indiviual or batch run
@@ -711,15 +716,31 @@ def EVPFFT_Lattice(self):
             self.display.SetScalarBarVisibility(self.render_view, False)
 
         # Display .xdmf data
-        self.results_reader = paraview.simple.XDMFReader(FileNames="micro_state_timestep_10.xdmf")
-        paraview.simple.SetDisplayProperties(Representation="Surface")
-        self.display = Show(self.results_reader, self.render_view)
+        output_name = str(self.INBCFile.currentText())
+        output_parts = output_name.split()
+        output_directory = os.path.join(self.evpfft_dir, 'outputs', output_parts[0], output_parts[1], "micro_state_timestep_10.xdmf")
+        self.results_reader = paraview.simple.XDMFReader(FileNames=output_directory)
+        
+        # Apply threshold to view certain phase id's
+        if hasattr(self, 'threshold'):
+            paraview.simple.Hide(self.threshold)
+        if str(self.INResultRegion.currentText()) == "Part + Void":
+            paraview.simple.SetDisplayProperties(Representation="Surface")
+            self.display = Show(self.results_reader, self.render_view)
+        elif str(self.INResultRegion.currentText()) == "Part":
+            self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 2, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+            self.display = Show(self.threshold, self.render_view)
+        elif str(self.INResultRegion.currentText()) == "Void":
+            self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 1, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+            self.display = Show(self.threshold, self.render_view)
         
         # Color by the selected variable
         selected_variable = str(self.INPreviewResults.currentText())
         paraview.simple.ColorBy(self.display, ('CELLS', selected_variable))
         vmstressLUT = paraview.simple.GetColorTransferFunction(selected_variable)
         self.display.SetScalarBarVisibility(self.render_view, True)
+
+        # View Results
         self.render_view.ResetCamera()
         self.render_view.StillRender()
     self.BPreviewResults.clicked.connect(preview_results_click)

@@ -98,7 +98,7 @@ def EVPFFT_Lattice_WInput(self, BC_index):
                          efile + '\n'
     evpfft_lattice_input.write(phase1)
     evpfft_lattice_input.write(phase2)
-    if self.TBCs.item(BC_index,1).text() == "x-direction":
+    if self.TBCs.item(BC_index,1).text() == "x":
         if "Tension" in self.TBCs.item(BC_index,0).text():
             test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
                               '* boundary conditions\n' + \
@@ -137,7 +137,7 @@ def EVPFFT_Lattice_WInput(self, BC_index):
                               '                    0.                    @\n'
         else:
             print("INVALID BOUNDARY CONDITION")
-    elif self.TBCs.item(BC_index,1).text() == "y-direction":
+    elif self.TBCs.item(BC_index,1).text() == "y":
         if "Tension" in self.TBCs.item(BC_index,0).text():
             test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
                               '* boundary conditions\n' + \
@@ -176,7 +176,7 @@ def EVPFFT_Lattice_WInput(self, BC_index):
                               '                    0.                    @\n'
         else:
             print("INVALID BOUNDARY CONDITION")
-    elif self.TBCs.item(BC_index,1).text() == "z-direction":
+    elif self.TBCs.item(BC_index,1).text() == "z":
         if "Tension" in self.TBCs.item(BC_index,0).text():
             test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
                               '* boundary conditions\n' + \
@@ -216,7 +216,7 @@ def EVPFFT_Lattice_WInput(self, BC_index):
         else:
             print("INVALID BOUNDARY CONDITION")
     elif "Shear" in self.TBCs.item(BC_index,0).text():
-        if "xy-direction" in self.TBCs.item(BC_index,1).text():
+        if "xy" in self.TBCs.item(BC_index,1).text():
             test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
                               '* boundary conditions\n' + \
                               '    1       1       1           iudot     |    flag for vel.grad.\n' + \
@@ -234,7 +234,7 @@ def EVPFFT_Lattice_WInput(self, BC_index):
                               '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
                               '            0.      0.                    |\n' + \
                               '                    0.                    @\n'
-        elif "xz-direction" in self.TBCs.item(BC_index,1).text():
+        elif "xz" in self.TBCs.item(BC_index,1).text():
             test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
                               '* boundary conditions\n' + \
                               '    1       1       1           iudot     |    flag for vel.grad.\n' + \
@@ -252,7 +252,7 @@ def EVPFFT_Lattice_WInput(self, BC_index):
                               '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
                               '            0.      0.                    |\n' + \
                               '                    0.                    @\n'
-        elif "yz-direction" in self.TBCs.item(BC_index,1).text():
+        elif "yz" in self.TBCs.item(BC_index,1).text():
             test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
                               '* boundary conditions\n' + \
                               '    1       1       1           iudot     |    flag for vel.grad.\n' + \

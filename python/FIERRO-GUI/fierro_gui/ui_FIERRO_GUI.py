@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIHQzYlF.ui'
+## Form generated from reading UI file 'FIERRO_GUIafqfHc.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -2731,25 +2731,45 @@ class Ui_MainWindow(object):
         self.PreviewResults.setObjectName(u"PreviewResults")
         self.PreviewResults.setFrameShape(QFrame.NoFrame)
         self.PreviewResults.setFrameShadow(QFrame.Raised)
-        self.formLayout_5 = QFormLayout(self.PreviewResults)
-        self.formLayout_5.setObjectName(u"formLayout_5")
-        self.formLayout_5.setContentsMargins(-1, 12, -1, 12)
+        self.horizontalLayout_19 = QHBoxLayout(self.PreviewResults)
+        self.horizontalLayout_19.setObjectName(u"horizontalLayout_19")
+        self.horizontalLayout_19.setContentsMargins(0, 0, 0, 0)
+        self.INBCFile = QComboBox(self.PreviewResults)
+        self.INBCFile.addItem("")
+        self.INBCFile.addItem("")
+        self.INBCFile.addItem("")
+        self.INBCFile.addItem("")
+        self.INBCFile.addItem("")
+        self.INBCFile.addItem("")
+        self.INBCFile.setObjectName(u"INBCFile")
+
+        self.horizontalLayout_19.addWidget(self.INBCFile)
+
         self.INPreviewResults = QComboBox(self.PreviewResults)
         self.INPreviewResults.addItem("")
         self.INPreviewResults.addItem("")
         self.INPreviewResults.setObjectName(u"INPreviewResults")
         self.INPreviewResults.setFrame(True)
 
-        self.formLayout_5.setWidget(0, QFormLayout.LabelRole, self.INPreviewResults)
+        self.horizontalLayout_19.addWidget(self.INPreviewResults)
 
-        self.BPreviewResults = QPushButton(self.PreviewResults)
-        self.BPreviewResults.setObjectName(u"BPreviewResults")
-        self.BPreviewResults.setMinimumSize(QSize(140, 0))
+        self.INResultRegion = QComboBox(self.PreviewResults)
+        self.INResultRegion.addItem("")
+        self.INResultRegion.addItem("")
+        self.INResultRegion.addItem("")
+        self.INResultRegion.setObjectName(u"INResultRegion")
 
-        self.formLayout_5.setWidget(0, QFormLayout.FieldRole, self.BPreviewResults)
+        self.horizontalLayout_19.addWidget(self.INResultRegion)
 
 
         self.verticalLayout_18.addWidget(self.PreviewResults)
+
+        self.BPreviewResults = QPushButton(self.ResultsTool)
+        self.BPreviewResults.setObjectName(u"BPreviewResults")
+        self.BPreviewResults.setMinimumSize(QSize(140, 0))
+        self.BPreviewResults.setMaximumSize(QSize(16777215, 16777215))
+
+        self.verticalLayout_18.addWidget(self.BPreviewResults)
 
         self.BOpenParaview = QPushButton(self.ResultsTool)
         self.BOpenParaview.setObjectName(u"BOpenParaview")
@@ -4034,8 +4054,19 @@ class Ui_MainWindow(object):
         self.INNumberOfSteps.setText(QCoreApplication.translate("MainWindow", u"10", None))
         self.INNumberOfSteps.setPlaceholderText("")
         self.LResults.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">RESULTS</span></p></body></html>", None))
+        self.INBCFile.setItemText(0, QCoreApplication.translate("MainWindow", u"Tension x", None))
+        self.INBCFile.setItemText(1, QCoreApplication.translate("MainWindow", u"Tension y", None))
+        self.INBCFile.setItemText(2, QCoreApplication.translate("MainWindow", u"Tension z", None))
+        self.INBCFile.setItemText(3, QCoreApplication.translate("MainWindow", u"Shear xy", None))
+        self.INBCFile.setItemText(4, QCoreApplication.translate("MainWindow", u"Shear xz", None))
+        self.INBCFile.setItemText(5, QCoreApplication.translate("MainWindow", u"Shear yz", None))
+
         self.INPreviewResults.setItemText(0, QCoreApplication.translate("MainWindow", u"vm-stress", None))
         self.INPreviewResults.setItemText(1, QCoreApplication.translate("MainWindow", u"vm-strain", None))
+
+        self.INResultRegion.setItemText(0, QCoreApplication.translate("MainWindow", u"Part", None))
+        self.INResultRegion.setItemText(1, QCoreApplication.translate("MainWindow", u"Void", None))
+        self.INResultRegion.setItemText(2, QCoreApplication.translate("MainWindow", u"Part + Void", None))
 
         self.BPreviewResults.setText(QCoreApplication.translate("MainWindow", u"Preview Results", None))
         self.BOpenParaview.setText(QCoreApplication.translate("MainWindow", u"Open Paraview", None))

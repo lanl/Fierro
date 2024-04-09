@@ -71,7 +71,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="ChooseSolver">
        <property name="enabled">
@@ -5134,14 +5134,54 @@ li.checked::marker { content: &quot;\2612&quot;; }
               <property name="frameShadow">
                <enum>QFrame::Raised</enum>
               </property>
-              <layout class="QFormLayout" name="formLayout_5">
+              <layout class="QHBoxLayout" name="horizontalLayout_19">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
                <property name="topMargin">
-                <number>12</number>
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
                </property>
                <property name="bottomMargin">
-                <number>12</number>
+                <number>0</number>
                </property>
-               <item row="0" column="0">
+               <item>
+                <widget class="QComboBox" name="INBCFile">
+                 <item>
+                  <property name="text">
+                   <string>Tension x</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Tension y</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Tension z</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Shear xy</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Shear xz</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Shear yz</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+               <item>
                 <widget class="QComboBox" name="INPreviewResults">
                  <property name="frame">
                   <bool>true</bool>
@@ -5158,20 +5198,45 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </item>
                 </widget>
                </item>
-               <item row="0" column="1">
-                <widget class="QPushButton" name="BPreviewResults">
-                 <property name="minimumSize">
-                  <size>
-                   <width>140</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>Preview Results</string>
-                 </property>
+               <item>
+                <widget class="QComboBox" name="INResultRegion">
+                 <item>
+                  <property name="text">
+                   <string>Part</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Void</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Part + Void</string>
+                  </property>
+                 </item>
                 </widget>
                </item>
               </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="BPreviewResults">
+              <property name="minimumSize">
+               <size>
+                <width>140</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Preview Results</string>
+              </property>
              </widget>
             </item>
             <item>

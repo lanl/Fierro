@@ -357,12 +357,12 @@ class FIERRO_GUI(Ui_MainWindow):
             os.makedirs(self.voxelizer_dir, exist_ok=True)
             
             # Create temp files for evpfft
-            evpfft_dir = os.path.join(self.directory, 'evpfft')
-            os.makedirs(evpfft_dir, exist_ok=True)
-            self.ELASTIC_PARAMETERS_0 = os.path.join(evpfft_dir, 'elastic_parameters_0.txt')
-            self.ELASTIC_PARAMETERS_1 = os.path.join(evpfft_dir, 'elastic_parameters_1.txt')
-            self.PLASTIC_PARAMETERS = os.path.join(evpfft_dir, 'plastic_parameters.txt')
-            self.EVPFFT_INPUT = os.path.join(evpfft_dir, 'evpfft_lattice_input.txt')
+            self.evpfft_dir = os.path.join(self.directory, 'evpfft')
+            os.makedirs(self.evpfft_dir, exist_ok=True)
+            self.ELASTIC_PARAMETERS_0 = os.path.join(self.evpfft_dir, 'elastic_parameters_0.txt')
+            self.ELASTIC_PARAMETERS_1 = os.path.join(self.evpfft_dir, 'elastic_parameters_1.txt')
+            self.PLASTIC_PARAMETERS = os.path.join(self.evpfft_dir, 'plastic_parameters.txt')
+            self.EVPFFT_INPUT = os.path.join(self.evpfft_dir, 'evpfft_lattice_input.txt')
             
             # Create a temp file for the global mesh
             self.global_mesh_dir = os.path.join(self.directory, 'global_mesh')
