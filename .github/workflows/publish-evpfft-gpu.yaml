@@ -12,5 +12,5 @@ jobs:
   publish:
     uses: ./.github/workflows/build-conda-package.yaml
     with:
-      recipe_dir: .conda/evpfft/gpu
+      recipe_dir: .conda/evpfft/cuda
     secrets: inherit
