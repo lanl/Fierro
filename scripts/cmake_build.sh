@@ -3,6 +3,7 @@
 solver="${1}"
 heffte_build_type="${2}"
 kokkos_build_type="${3}"
+fierro_build_type="${4}"
 
 #inititialize submodules if they aren't downloaded
 [ -d "${libdir}/Elements/elements" ] && echo "Elements submodule exists"
@@ -22,7 +23,8 @@ else
 fi
 
 # Install Elements
-if [ ! -d "${ELEMENTS_INSTALL_DIR}/lib" ]; then
+if { [ ! -d "${ELEMENTS_INSTALL_DIR}/lib" ] && [ "$fierro_build_type" = "source" ] ;}
+then
     echo "Installing Elements..."
     cmake -D CMAKE_INSTALL_PREFIX="$ELEMENTS_INSTALL_DIR" -D Trilinos_DIR="${Trilinos_DIR}" -D Matar_ENABLE_KOKKOS=ON -D Matar_KOKKOS_PACKAGE=Trilinos -B "${ELEMENTS_BUILD_DIR}" -S "${ELEMENTS_SOURCE_DIR}"
     make -C "${ELEMENTS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}

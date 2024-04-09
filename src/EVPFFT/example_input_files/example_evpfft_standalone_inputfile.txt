@@ -3,12 +3,12 @@
 1                      number of phases (nph)                         
 1.  1.  1.             RVE dimensions (delt)
 * name and path of microstructure file (filetext)                                
-/absolute/path/to/random_microstructure_8x8x8.txt
+random_microstructure_8x8x8.txt
 *INFORMATION ABOUT PHASE #1
 0                          igas(iph)
 * name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)  
-/absolute/path/to/example_plastic_parameters.txt
-/absolute/path/to/example_elastic_parameters.txt
+example_plastic_parameters.txt
+example_elastic_parameters.txt
 *INFORMATION ABOUT TEST CONDITIONS                                                            
 * boundary conditions                                                     
     0       1       1           iudot     |    flag for vel.grad. 

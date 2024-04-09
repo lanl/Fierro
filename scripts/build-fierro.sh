@@ -6,8 +6,9 @@ show_help() {
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>. Default is 'serial'"
     echo "  --build_action=<full-app|set-env|install-trilinos|install-hdf5|install-heffte|fierro>. Default is 'full-app'"
     echo "  --machine=<darwin|chicoma|linux|mac>. Default is 'linux'"
-    echo "  --build_cores=<Integers greater than 0>. Default is set 1"
-    echo "  --heffte_build_type=<fftw|cufft|rocfft>. Default is set 'fftw'"
+    echo "  --build_cores=<Integers greater than 0>. Default is 1"
+    echo "  --build_type=<source|anaconda>. Default is 'source'"
+    echo "  --heffte_build_type=<fftw|cufft|rocfft>. Default is 'fftw'"
     echo "  --help: Display this help message"
     echo " "
     echo " "
@@ -21,6 +22,11 @@ show_help() {
     echo "          install-heffte              builds and installs heffte. Always rebuilds to avoid stale builds. If this action is being done, --heffte_build_type is necessary"        
     echo "          install-uncrustify          builds and installs uncrustify. Only necessary for developers"
     echo "          fierro                      Generates CMake files and builds Fierro only (none of the dependencies)."
+    echo " "
+    echo "      --build_type                    The build type of the applications. Specifies whether we're building from source or using pre-built anaconda libraries" 
+    echo " "
+    echo "          source                      builds Fierro and libraries from source codes."
+    echo "          anaconda                    builds Fierro using anaconda pre-built libraries."
     echo " "
     echo "      --solver                        Builds the desired solver to run. The default action is 'explicit'"
     echo " "
@@ -63,12 +69,14 @@ machine="linux"
 kokkos_build_type="serial"
 heffte_build_type="fftw"
 build_cores="1"
+fierro_build_type="source"
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-trilinos" "install-hdf5" "install-heffte" "install-uncrustify" "fierro")
 valid_solver=("all" "explicit" "explicit-evpfft" "explicit-ls-evpfft" "implicit")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
+valid_fierro_build_types=("source" "anaconda")
 valid_machines=("darwin" "chicoma" "linux" "mac" "msu")
 
 # Parse command line arguments
@@ -134,6 +142,16 @@ for arg in "$@"; do
                 return 1
             fi
             ;;
+        --build_type=*)
+            option="${arg#*=}"
+            if [[ " ${valid_fierro_build_types[*]} " == *" $option "* ]]; then
+                fierro_build_type="$option"
+            else
+                echo "Error: Invalid --build_type specified."
+                show_help
+                return 1
+            fi
+            ;;
         --help)
             show_help
             return 1
@@ -184,12 +202,14 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
     source uncrustify-install.sh
-    source trilinos-install.sh ${kokkos_build_type} ${machine}
-    if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
-        source hdf5-install.sh
-        source heffte-install.sh ${heffte_build_type} ${machine}
+    if [ "$fierro_build_type" = "source" ]; then 
+        source trilinos-install.sh ${kokkos_build_type} ${machine}
+        if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
+            source hdf5-install.sh
+            source heffte-install.sh ${heffte_build_type} ${machine}
+        fi
     fi
-    source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type}
+    source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type} ${fierro_build_type}
 elif [ "$build_action" = "install-trilinos" ]; then
     source trilinos-install.sh ${kokkos_build_type} ${machine}
 elif [ "$build_action" = "install-hdf5" ]; then
@@ -199,7 +219,7 @@ elif [ "$build_action" = "install-heffte" ]; then
 elif [ "$build_action" = "install-uncrustify" ]; then
     source uncrustify-install.sh
 elif [ "$build_action" = "fierro" ]; then
-    source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type}
+    source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type} ${fierro_build_type}
 else
     echo "No build action, only setup the environment."
 fi
