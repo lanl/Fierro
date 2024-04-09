@@ -61,8 +61,8 @@ namespace geometry
 KOKKOS_INLINE_FUNCTION
 void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
-    const DCArrayKokkos<double>& node_coords,
-    const ViewCArrayKokkos<size_t>&  elem_node_gids)
+    const DCArrayKokkos<double>&    node_coords,
+    const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 8;
 
@@ -268,8 +268,8 @@ void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
 KOKKOS_INLINE_FUNCTION
 void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
-    const DCArrayKokkos<double>& node_coords,
-    const ViewCArrayKokkos<size_t>&  elem_node_gids)
+    const DCArrayKokkos<double>&    node_coords,
+    const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     elem_vol(elem_gid) = 0.0;
 
@@ -313,8 +313,8 @@ void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
 KOKKOS_INLINE_FUNCTION
 void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
-    const DCArrayKokkos<double>& node_coords,
-    const ViewCArrayKokkos<size_t>&  elem_node_gids)
+    const DCArrayKokkos<double>&    node_coords,
+    const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 8;
 
@@ -400,8 +400,8 @@ inline void get_vol(const DCArrayKokkos<double>& elem_vol,
 KOKKOS_INLINE_FUNCTION
 void get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
-    const DCArrayKokkos<double>& node_coords,
-    const ViewCArrayKokkos<size_t>&  elem_node_gids)
+    const DCArrayKokkos<double>&    node_coords,
+    const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 4;
 
@@ -473,9 +473,9 @@ void get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
-double get_area_quad(const size_t    elem_gid,
-    const DCArrayKokkos<double>& node_coords,
-    const ViewCArrayKokkos<size_t>&  elem_node_gids)
+double get_area_quad(const size_t   elem_gid,
+    const DCArrayKokkos<double>&    node_coords,
+    const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     double elem_area = 0.0;
 
@@ -559,8 +559,8 @@ double heron(const double x1,
 KOKKOS_INLINE_FUNCTION
 void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     const size_t elem_gid,
-    const DCArrayKokkos<double>& node_coords,
-    const ViewCArrayKokkos<size_t>&  elem_node_gids)
+    const DCArrayKokkos<double>&    node_coords,
+    const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 4;
 

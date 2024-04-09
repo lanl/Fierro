@@ -74,7 +74,6 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
     const double rk_alpha
     )
 {
-
     // std::cout<<"Num elems in mesh  = " <<mesh.num_elems<<std::endl;
     // loop over all the elements in the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems, {

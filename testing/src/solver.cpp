@@ -51,11 +51,8 @@
 #include <sys/resource.h>
 #include <ctime>
 
-
-
 Solver::Solver() // Simulation_Parameters& _simparam) : simparam(_simparam)
 {
-    
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -81,8 +78,6 @@ Solver::~Solver()
     //     delete fea_modules[imodule];
     // }
 }
-
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///

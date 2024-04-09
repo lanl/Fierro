@@ -101,9 +101,9 @@ void SGH::update_velocity(double rk_alpha,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
-    const ViewCArrayKokkos<size_t>&  elem_node_gids,
-    const DCArrayKokkos<double>& node_vel,
-    const ViewCArrayKokkos<double>&  b_matrix,
+    const ViewCArrayKokkos<size_t>& elem_node_gids,
+    const DCArrayKokkos<double>&    node_vel,
+    const ViewCArrayKokkos<double>& b_matrix,
     const double elem_vol,
     const size_t elem_gid
     )
@@ -197,9 +197,9 @@ void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
-    const ViewCArrayKokkos<size_t>&  elem_node_gids,
-    const DCArrayKokkos<double>& node_vel,
-    const ViewCArrayKokkos<double>&  b_matrix,
+    const ViewCArrayKokkos<size_t>& elem_node_gids,
+    const DCArrayKokkos<double>&    node_vel,
+    const ViewCArrayKokkos<double>& b_matrix,
     const double elem_vol,
     const double elem_area,
     const size_t elem_gid

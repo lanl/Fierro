@@ -124,5 +124,4 @@ struct corner_t
     }; // end method
 }; // end corner_t
 
-
 #endif

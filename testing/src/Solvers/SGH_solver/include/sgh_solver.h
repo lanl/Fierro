@@ -64,21 +64,21 @@ public:
     MeshReader* reader;
 
     simulation_parameters_t sim_param;
-    mesh_t mesh;
-    node_t node;
-    elem_t elem;
+    mesh_t   mesh;
+    node_t   node;
+    elem_t   elem;
     corner_t corner;
 
     double dt = 0.0;
     double time_value = 0.0;
 
-    SGH(simulation_parameters_t& io, mesh_t &mesh_in, node_t &node_in, elem_t &elem_in, corner_t &corner_in)  : Solver()
+    SGH(simulation_parameters_t& io, mesh_t& mesh_in, node_t& node_in, elem_t& elem_in, corner_t& corner_in)  : Solver()
     {
         sim_param = io;
         mesh = mesh_in;
 
-        node = node_in;
-        elem = elem_in;
+        node   = node_in;
+        elem   = elem_in;
         corner = corner_in;
     }
 
@@ -88,40 +88,35 @@ public:
     // This will be where we take in parsed data from YAML
     void initialize()
     {
-
         // Dimensions
         num_dims = 3;
 
-        graphics_times    = CArray<double>(20000);
+        graphics_times = CArray<double>(20000);
 
         // ---------------------------------------------------------------------
         //    allocate memory
         // ---------------------------------------------------------------------
 
-        
-
-
         // ---------------------------------------------------------------------
         //   calculate geometry
         // ---------------------------------------------------------------------
 
-        std::cout << "Before update device call"  << std::endl;
+        std::cout << "Before update device call" << std::endl;
         node.coords.update_device();
-        std::cout << "After update device call"  << std::endl;
+        std::cout << "After update device call" << std::endl;
 
         Kokkos::fence();
 
-        std::cout << "Before get volume call"  << std::endl;
+        std::cout << "Before get volume call" << std::endl;
         geometry::get_vol(elem.vol, node.coords, mesh);
 
-
-        std::cout << "After get volume call"  << std::endl;
+        std::cout << "After get volume call" << std::endl;
         // intialize time, time_step, and cycles
         time_value = 0.0;
 
         dt = sim_param.dynamic_options.dt_start;
 
-        std::cout << "dt in initialize = "<< dt  << std::endl;
+        std::cout << "dt in initialize = " << dt << std::endl;
 
         graphics_id = 0;
         graphics_times(0) = 0.0;
@@ -137,7 +132,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void setup()
     {
-        std::cout<<"INSIDE SETUP FOR SGH SOLVER"<<std::endl;
+        std::cout << "INSIDE SETUP FOR SGH SOLVER" << std::endl;
         // setup_sgh(
         //     sim_param.materials,
         //     sim_param.region_fills,
@@ -202,7 +197,7 @@ public:
               graphics_time,
               sim_param.output_options.graphics_iteration_step,
               sim_param.output_options.graphics_time_step,
-              sim_param.dynamic_options.cycle_stop, //sim_param.dynamic_options.cycle_stop,
+              sim_param.dynamic_options.cycle_stop, // sim_param.dynamic_options.cycle_stop,
               sim_param.dynamic_options.rk_num_stages,
               dt,
               sim_param.dynamic_options.fuzz,
@@ -229,7 +224,7 @@ public:
         const DCArrayKokkos<double>& elem_mass,
         const DCArrayKokkos<size_t>& elem_mat_id,
         const DCArrayKokkos<double>& elem_statev,
-        const CArrayKokkos<double>&      state_vars,
+        const CArrayKokkos<double>&  state_vars,
         const DCArrayKokkos<double>& corner_mass,
         const size_t num_fills,
         const size_t rk_num_bins,
@@ -294,7 +289,7 @@ public:
     void boundary_velocity(
         const mesh_t& mesh,
         const CArrayKokkos<boundary_condition_t>& boundary,
-        DCArrayKokkos<double>&      node_vel,
+        DCArrayKokkos<double>& node_vel,
         const double time_value);
 
     // **** Functions defined in energy_sgh.cpp **** //
@@ -370,18 +365,18 @@ public:
     KOKKOS_FUNCTION
     void get_velgrad(
         ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>&  elem_node_gids,
-        const DCArrayKokkos<double>& node_vel,
-        const ViewCArrayKokkos<double>&  b_matrix,
+        const ViewCArrayKokkos<size_t>& elem_node_gids,
+        const DCArrayKokkos<double>&    node_vel,
+        const ViewCArrayKokkos<double>& b_matrix,
         const double elem_vol,
         const size_t elem_gid);
 
     KOKKOS_FUNCTION
     void get_velgrad2D(
         ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>&  elem_node_gids,
-        const DCArrayKokkos<double>& node_vel,
-        const ViewCArrayKokkos<double>&  b_matrix,
+        const ViewCArrayKokkos<size_t>& elem_node_gids,
+        const DCArrayKokkos<double>&    node_vel,
+        const ViewCArrayKokkos<double>& b_matrix,
         const double elem_vol,
         const double elem_area,
         const size_t elem_gid);
@@ -510,10 +505,10 @@ public:
         const DCArrayKokkos<double>& elem_sspd,
         const double den,
         const double sie,
-        const ViewCArrayKokkos<double>&  vel_grad,
-        const ViewCArrayKokkos<size_t>&  elem_node_gids,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const ViewCArrayKokkos<double>& vel_grad,
+        const ViewCArrayKokkos<size_t>& elem_node_gids,
+        const DCArrayKokkos<double>&    node_coords,
+        const DCArrayKokkos<double>&    node_vel,
         const double vol,
         const double dt,
         const double rk_alpha);

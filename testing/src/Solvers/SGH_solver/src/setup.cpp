@@ -99,7 +99,7 @@ void SGH::setup_sgh(const CArrayKokkos<material_t>& material,
     const DCArrayKokkos<double>& elem_mass,
     const DCArrayKokkos<size_t>& elem_mat_id,
     const DCArrayKokkos<double>& elem_statev,
-    const CArrayKokkos<double>&      state_vars,
+    const CArrayKokkos<double>&  state_vars,
     const DCArrayKokkos<double>& corner_mass,
     const size_t num_fills,
     const size_t rk_num_bins,
@@ -108,9 +108,6 @@ void SGH::setup_sgh(const CArrayKokkos<material_t>& material,
     const size_t num_state_vars
     )
 {
-    
-  
-
     // // ---- Read model values from a file ----
     // // check to see if state_vars come from an external file
     // DCArrayKokkos<size_t> read_from_file(num_materials);
@@ -170,7 +167,6 @@ void SGH::setup_sgh(const CArrayKokkos<material_t>& material,
     // }); // end parallel for
     // read_voxel_file.update_host(); // copy to CPU if code is to read from a file
     // Kokkos::fence();
-
 
     return;
 } // end of setup

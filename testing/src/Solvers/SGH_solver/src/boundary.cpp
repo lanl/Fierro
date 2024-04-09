@@ -46,9 +46,9 @@
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_velocity(const mesh_t& mesh,
+void SGH::boundary_velocity(const mesh_t&     mesh,
     const CArrayKokkos<boundary_condition_t>& boundary,
-    DCArrayKokkos<double>&      node_vel,
+    DCArrayKokkos<double>& node_vel,
     const double time_value)
 {
     // Loop over boundary sets

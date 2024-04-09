@@ -100,10 +100,10 @@ void SGH::rk_init(DCArrayKokkos<double>& node_coords,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep(mesh_t& mesh,
-    DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& elem_sspd,
-    DCArrayKokkos<double>& elem_vol,
+    DCArrayKokkos<double>&     node_coords,
+    DCArrayKokkos<double>&     node_vel,
+    DCArrayKokkos<double>&     elem_sspd,
+    DCArrayKokkos<double>&     elem_vol,
     double time_value,
     const double graphics_time,
     const double time_final,
@@ -117,7 +117,6 @@ void SGH::get_timestep(mesh_t& mesh,
     dt = dt * 1.1;
 
     // std::cout << "dt in get timestep top = "<< dt  << std::endl;
-
 
     double dt_lcl;
     double min_dt_calc;
@@ -218,10 +217,10 @@ void SGH::get_timestep(mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep2D(mesh_t& mesh,
-    DCArrayKokkos<double>&   node_coords,
-    DCArrayKokkos<double>&   node_vel,
-    DCArrayKokkos<double>&   elem_sspd,
-    DCArrayKokkos<double>&   elem_vol,
+    DCArrayKokkos<double>& node_coords,
+    DCArrayKokkos<double>& node_vel,
+    DCArrayKokkos<double>& elem_sspd,
+    DCArrayKokkos<double>& elem_vol,
     double time_value,
     const double graphics_time,
     const double time_final,

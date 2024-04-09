@@ -37,15 +37,11 @@
 #include "solver.h"
 #include "simulation_parameters.h"
 
-
 // Headers for solver classes
 #include "sgh_solver.h"
 
-
 // Physical state data
 #include "state.h"
-
-
 
 class Driver
 {
@@ -62,25 +58,26 @@ public:
     // ---------------------------------------------------------------------
     //    mesh data type declarations
     // ---------------------------------------------------------------------
-    mesh_t                   mesh;
+    mesh_t mesh;
 
     // ---------------------------------------------------------------------
     //    state data type declarations
     // ---------------------------------------------------------------------
-    node_t                   node;
-    elem_t                   elem;
-    corner_t                 corner;
+    node_t   node;
+    elem_t   elem;
+    corner_t corner;
 
-    Driver(char* YAML){
+    Driver(char* YAML)
+    {
         yaml_file = YAML;
     };
-    ~Driver(){};
+    ~Driver() {};
 
-    // Initialize driver data.  Solver type, number of solvers 
+    // Initialize driver data.  Solver type, number of solvers
     // Will be parsed from YAML input
-    void initialize(){
-
-        std::cout<<"Inside driver initialize"<<std::endl;
+    void initialize()
+    {
+        std::cout << "Inside driver initialize" << std::endl;
         Yaml::Node root;
         try
         {
@@ -95,9 +92,8 @@ public:
         parse_yaml(root, sim_param);
         std::cout << "Finished  parsing YAML file" << std::endl;
 
-
         // Create and/or read mesh
-        std::cout<<"Mesh file path: "<<sim_param.mesh_input.file_path<<std::endl;
+        std::cout << "Mesh file path: " << sim_param.mesh_input.file_path << std::endl;
         reader.set_mesh_file(sim_param.mesh_input.file_path.data());
 
         reader.read_mesh(mesh, elem, node, corner, num_dims, sim_param.dynamic_options.rk_num_bins);
@@ -117,7 +113,6 @@ public:
         // std::cout << "Building node-node connectivity: " << std::endl;
         mesh.build_node_node_connectivity();
 
-
         // Build boundary conditions
         int num_bcs = sim_param.boundary_conditions.size();
 
@@ -130,7 +125,6 @@ public:
 
         build_boundry_node_sets(sim_param.boundary_conditions, mesh);
 
-
         // loop over BCs
         for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++) {
             RUN({
@@ -140,7 +134,6 @@ public:
             });
             Kokkos::fence();
         } // end for
-
 
         geometry::get_vol(elem.vol, node.coords, mesh);
 
@@ -169,14 +162,12 @@ public:
             // } // endif
 
             int num_elems = mesh.num_elems;
-            
 
             // parallel loop over elements in mesh
-            FOR_ALL(elem_gid, 0,  num_elems, {
-
-            // for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
-                for(int rk_level = 0; rk_level < 2; rk_level++){
-                // const size_t rk_level = 1;
+            FOR_ALL(elem_gid, 0, num_elems, {
+                // for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+                for (int rk_level = 0; rk_level < 2; rk_level++) {
+                    // const size_t rk_level = 1;
 
                     // calculate the coordinates and radius of the element
                     double elem_coords[3]; // note:initialization with a list won't work
@@ -279,14 +270,13 @@ public:
                         elem.sie(rk_level, elem_gid) = sim_param.region_fills(f_id).sie;
 
                         elem.mat_id(elem_gid) = sim_param.region_fills(f_id).material_id;
-                        
 
                         size_t mat_id = elem.mat_id(elem_gid); // short name
 
                         // printf("mat_id = %lu\n", mat_id);
 
                         // get state_vars from the input file or read them in
-                        if (false) { //sim_param.materials(mat_id).strength_setup == model_init::user_init) {
+                        if (false) { // sim_param.materials(mat_id).strength_setup == model_init::user_init) {
                             // use the values read from a file to get elem state vars
                             // for (size_t var = 0; var < sim_param.materials(mat_id).num_eos_state_vars; var++) {
                             //     elem.statev(elem_gid, var) = file_state_vars(mat_id, elem_gid, var);
@@ -295,25 +285,21 @@ public:
                         else{
                             // use the values in the input file
                             // set state vars for the region where mat_id resides
-                            
+
                             int num_eos_global_vars = sim_param.materials(mat_id).eos_global_vars.size();
-                            
-                            if(elem_gid == 0) printf("num_eos_global_vars = %lu\n", sim_param.materials(mat_id).eos_global_vars.size());
-                            
+
+                            if (elem_gid == 0) { printf("num_eos_global_vars = %lu\n", sim_param.materials(mat_id).eos_global_vars.size()); }
+
                             // std::cout <<  std::endl;
                             // std::cout << "elem gid = "<< elem_gid <<" RK level = "<< rk_level << std::endl;
                             for (size_t var = 0; var < sim_param.materials(mat_id).eos_global_vars.size(); var++) {
-                                
-                                elem.statev(elem_gid, var) = sim_param.materials(mat_id).eos_global_vars(var); //state_vars(mat_id, var);
+                                elem.statev(elem_gid, var) = sim_param.materials(mat_id).eos_global_vars(var); // state_vars(mat_id, var);
 
-                                if(elem_gid == 1){
+                                if (elem_gid == 1) {
                                     // std::cout <<  std::endl;
-                                    std::cout << "Element state Variable id "<< var << " = " << elem.statev(elem_gid, var)<< std::endl;
-
+                                    std::cout << "Element state Variable id " << var << " = " << elem.statev(elem_gid, var) << std::endl;
                                 }
                             } // end for
-                        
-
                         } // end logical on type
 
                         // --- stress tensor ---
@@ -446,7 +432,7 @@ public:
                         } // end if
                     } // end if fill
                 } // end RK loop
-            // }
+                // }
             }); // end FOR_ALL element loop
             Kokkos::fence();
         } // end for loop over fills
@@ -473,7 +459,6 @@ public:
         //     });
         // } // end of
 
-
         // calculate the nodal mass
         FOR_ALL(node_gid, 0, mesh.num_nodes, {
             node.mass(node_gid) = 0.0;
@@ -497,31 +482,82 @@ public:
         Kokkos::fence();
 
         // Create solvers
-        for(int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++){
-            if(sim_param.solver_inputs[solver_id].method == solver_input::SGH){
-                SGH *sgh_solver = new SGH(sim_param, mesh, node, elem, corner);
+        for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
+            if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
+                SGH* sgh_solver = new SGH(sim_param, mesh, node, elem, corner);
                 sgh_solver->initialize();
                 solvers.push_back(sgh_solver);
             }
         }
     }
-    
-    void setup() {
-        std::cout<<"Inside driver setup"<<std::endl;
-        for (auto & solver : solvers) {
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn setup
+    ///
+    /// \brief <insert brief description>
+    ///
+    /// <Insert longer more detailed description which
+    /// can span multiple lines if needed>
+    ///
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    ///
+    /// \return <return type and definition description if not void>
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void setup()
+    {
+        std::cout << "Inside driver setup" << std::endl;
+        for (auto& solver : solvers) {
             solver->setup();
         }
     }
 
-    void run(){
-        std::cout<<"Inside driver run"<<std::endl;
-        for (auto & solver : solvers) {
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn run
+    ///
+    /// \brief <insert brief description>
+    ///
+    /// <Insert longer more detailed description which
+    /// can span multiple lines if needed>
+    ///
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    ///
+    /// \return <return type and definition description if not void>
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void run()
+    {
+        std::cout << "Inside driver run" << std::endl;
+        for (auto& solver : solvers) {
             solver->execute();
         }
     }
 
-    void finalize(){
-        std::cout<<"Inside driver finalize"<<std::endl;
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn finalize
+    ///
+    /// \brief <insert brief description>
+    ///
+    /// <Insert longer more detailed description which
+    /// can span multiple lines if needed>
+    ///
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    ///
+    /// \return <return type and definition description if not void>
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void finalize()
+    {
+        std::cout << "Inside driver finalize" << std::endl;
         // for (auto & solver : solvers) {
         //     if (solver->finalize_flag){
         //         solver->solver_finalize();
@@ -535,12 +571,8 @@ public:
         // }
     }
 
-
     int num_solvers = 0;
-
 
     // set of enabled solvers
     std::vector<Solver*> solvers;
-
-
 };

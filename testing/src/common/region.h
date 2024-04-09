@@ -1,4 +1,36 @@
-
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 
 #ifndef FIERRO_REGION_H
 #define FIERRO_REGION_H
@@ -7,45 +39,41 @@
 
 #include "initial_conditions.h"
 
-//==============================================================================
+// ==============================================================================
 //   Fierro material regions
-//==============================================================================
+// ==============================================================================
 namespace region
 {
-
-    // for tagging boundary faces
-    enum vol_tag
-    {
-        global = 0,     // tag every elements in the mesh
-        box = 1,        // tag all elements inside a box
-        cylinder = 2,   // tag all elements inside a cylinder
-        sphere = 3,     // tag all elements inside a sphere
-        readVoxelFile = 4,       // tag all elements in a voxel mesh input
-        planes = 5,     // tag all elements between two planes
-    };
-
+// for tagging boundary faces
+enum vol_tag
+{
+    global = 0,         // tag every elements in the mesh
+    box = 1,            // tag all elements inside a box
+    cylinder = 2,       // tag all elements inside a cylinder
+    sphere = 3,         // tag all elements inside a sphere
+    readVoxelFile = 4,           // tag all elements in a voxel mesh input
+    planes = 5,         // tag all elements between two planes
+};
 } // end of namespace
 
-
-static std::map <std::string, region::vol_tag> region_type_map
+static std::map<std::string, region::vol_tag> region_type_map
 {
-    {"global",   region::global},
-    {"sphere",   region::sphere},
-    {"planes",   region::planes},
-    {"cylinder", region::cylinder},
-    {"readVoxelFile", region::readVoxelFile}
+    { "global", region::global },
+    { "sphere", region::sphere },
+    { "planes", region::planes },
+    { "cylinder", region::cylinder },
+    { "readVoxelFile", region::readVoxelFile }
 };
 
-
 // fill instructions (was called mat_fill_t)
-struct reg_fill_t {
-    
+struct reg_fill_t
+{
     // type
     region::vol_tag volume; // global, box, sphere, planes, etc.
-    
+
     // material id
     size_t material_id;
-    
+
     // planes
     double x1 = 0.0;
     double x2 = 0.0;
@@ -53,38 +81,35 @@ struct reg_fill_t {
     double y2 = 0.0;
     double z1 = 0.0;
     double z2 = 0.0;
-    
+
     // radius
     double radius1 = 0.0;
     double radius2 = 0.0;
 
-    
     // initial conditions
     init_conds::init_velocity_conds velocity;
-    
+
     // velocity coefficients by component
     double u = 0.0;
     double v = 0.0;
     double w = 0.0;
-    
+
     // velocity magnitude for radial velocity initialization
     double speed = 0.0;
-    
-    double ie = 0.0;   // exstenive internal energy
+
+    double ie  = 0.0;  // exstenive internal energy
     double sie = 0.0;  // specific internal energy
     double den = 0.0;  // density
 
-    std::vector<double> origin = {0.0, 0.0, 0.0};
+    std::vector<double> origin = { 0.0, 0.0, 0.0 };
 };
-
-
 
 // ----------------------------------
 // valid inputs for a material fill
 //
 //   fill_volume_text_inp["words"]
 //
-static std::vector <std::string> str_region_inps
+static std::vector<std::string> str_region_inps
 {
     "type",
     "material_id",

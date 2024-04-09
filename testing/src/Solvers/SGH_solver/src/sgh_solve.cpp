@@ -46,7 +46,7 @@
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::solve(CArrayKokkos<material_t>& material,
-    CArrayKokkos<boundary_condition_t>& boundary,
+    CArrayKokkos<boundary_condition_t>&   boundary,
     mesh_t& mesh,
     DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& node_vel,
@@ -326,7 +326,6 @@ void SGH::solve(CArrayKokkos<material_t>& material,
                                rk_alpha);
             }
             else{
-
                 // std::cout<<"Before update state " << std::endl;
 
                 // int elem_gid = 1;

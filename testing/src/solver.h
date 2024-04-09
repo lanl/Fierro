@@ -55,9 +55,8 @@ public:
     // ---------------------------------------------------------------------
 
     int max_num_state_vars = 6;
-    CArrayKokkos<double>     state_vars; // array to hold init model variables
+    CArrayKokkos<double> state_vars; // array to hold init model variables
 
-   
     // ==============================================================================
     //   Variables, setting default inputs
     // ==============================================================================
@@ -69,11 +68,11 @@ public:
     // double time_value = 0.0;
 
     CArray<double> graphics_times;
-    size_t graphics_id       = 0;
-    double         graphics_time;
+    size_t graphics_id = 0;
+    double graphics_time;
 
-    Solver();//Simulation_Parameters& _simparam);
-    
+    Solver(); // Simulation_Parameters& _simparam);
+
     virtual ~Solver();
 
     virtual void initialize() {}
@@ -97,7 +96,6 @@ public:
     // Simulation_Parameters simparam;
 
     bool finalize_flag = false;
-
 };
 
 #endif // end Header Guard

@@ -429,7 +429,7 @@ void ensight(const mesh_t& mesh,
 /// REMOVE: Move to mesh writer
 ///
 /////////////////////////////////////////////////////////////////////////////
-void state_file(const mesh_t& mesh,
+void state_file(const mesh_t&    mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_mass,
