@@ -42,61 +42,31 @@
 ///
 /// \fn solve
 ///
-/// REMOVE CLEANUP INPUT
+/// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::solve(CArrayKokkos<material_t>& material,
-    CArrayKokkos<boundary_condition_t>&   boundary,
-    mesh_t& mesh,
-    DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& node_mass,
-    DCArrayKokkos<double>& elem_den,
-    DCArrayKokkos<double>& elem_pres,
-    DCArrayKokkos<double>& elem_stress,
-    DCArrayKokkos<double>& elem_sspd,
-    DCArrayKokkos<double>& elem_sie,
-    DCArrayKokkos<double>& elem_vol,
-    DCArrayKokkos<double>& elem_div,
-    DCArrayKokkos<double>& elem_mass,
-    DCArrayKokkos<size_t>& elem_mat_id,
-    DCArrayKokkos<double>& elem_statev,
-    DCArrayKokkos<double>& corner_force,
-    DCArrayKokkos<double>& corner_mass,
-    double&      time_value,
-    const double time_final,
-    const double dt_max,
-    const double dt_min,
-    const double dt_cfl,
-    double&      graphics_time,
-    size_t graphics_cyc_ival,
-    double graphics_dt_ival,
-    const size_t cycle_stop,
-    const size_t rk_num_stages,
-    double dt,
-    const double    fuzz,
-    const double    tiny,
-    const double    small,
-    CArray<double>& graphics_times,
-    size_t& graphics_id)
+void SGH::execute()
 {
+    std::cout << "In execute function in sgh solver" << std::endl;
+
+
     printf("Writing outputs to file at %f \n", time_value);
     write_outputs(mesh,
-                  node_coords,
-                  node_vel,
-                  node_mass,
-                  elem_den,
-                  elem_pres,
-                  elem_stress,
-                  elem_sspd,
-                  elem_sie,
-                  elem_vol,
-                  elem_mass,
-                  elem_mat_id,
+                  node.coords,
+                  node.vel,
+                  node.mass,
+                  elem.den,
+                  elem.pres,
+                  elem.stress,
+                  elem.sspd,
+                  elem.sie,
+                  elem.vol,
+                  elem.mass,
+                  elem.mat_id,
                   graphics_times,
                   graphics_id,
                   time_value);
-    // return;
+
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
     // extensive energy tallies over the entire mesh
@@ -110,9 +80,19 @@ void SGH::solve(CArrayKokkos<material_t>& material,
     double IE_loc_sum = 0.0;
     double KE_loc_sum = 0.0;
 
+    // save the nodal mass
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        double radius = 1.0;
+        if (mesh.num_dims == 2) {
+            radius = node.coords(1, node_gid, 1);
+        }
+        node_extensive_mass(node_gid) = node.mass(node_gid) * radius;
+    }); // end parallel for
+
+
     // extensive IE
     REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
-        IE_loc_sum += elem_mass(elem_gid) * elem_sie(1, elem_gid);
+        IE_loc_sum += elem.mass(elem_gid) * elem.sie(1, elem_gid);
     }, IE_sum);
     IE_t0 = IE_sum;
 
@@ -120,14 +100,14 @@ void SGH::solve(CArrayKokkos<material_t>& material,
     REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
         double ke = 0;
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node_vel(1, node_gid, dim) * node_vel(1, node_gid, dim); // 1/2 at end
+            ke += node.vel(1, node_gid, dim) * node.vel(1, node_gid, dim); // 1/2 at end
         } // end for
 
         if (mesh.num_dims == 2) {
-            KE_loc_sum += node_mass(node_gid) * node_coords(1, node_gid, 1) * ke;
+            KE_loc_sum += node.mass(node_gid) * node.coords(1, node_gid, 1) * ke;
         }
         else{
-            KE_loc_sum += node_mass(node_gid) * ke;
+            KE_loc_sum += node.mass(node_gid) * ke;
         }
     }, KE_sum);
     Kokkos::fence();
@@ -135,15 +115,6 @@ void SGH::solve(CArrayKokkos<material_t>& material,
 
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
-
-    // save the nodal mass
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        double radius = 1.0;
-        if (mesh.num_dims == 2) {
-            radius = node_coords(1, node_gid, 1);
-        }
-        node_extensive_mass(node_gid) = node_mass(node_gid) * radius;
-    }); // end parallel for
 
     // a flag to exit the calculation
     size_t stop_calc = 0;
@@ -160,10 +131,10 @@ void SGH::solve(CArrayKokkos<material_t>& material,
         // get the step
         if (mesh.num_dims == 2) {
             get_timestep2D(mesh,
-                           node_coords,
-                           node_vel,
-                           elem_sspd,
-                           elem_vol,
+                           node.coords,
+                           node.vel,
+                           elem.sspd,
+                           elem.vol,
                            time_value,
                            graphics_time,
                            time_final,
@@ -175,10 +146,10 @@ void SGH::solve(CArrayKokkos<material_t>& material,
         }
         else{
             get_timestep(mesh,
-                         node_coords,
-                         node_vel,
-                         elem_sspd,
-                         elem_vol,
+                         node.coords,
+                         node.vel,
+                         elem.sspd,
+                         elem.vol,
                          time_value,
                          graphics_time,
                          time_final,
@@ -202,10 +173,10 @@ void SGH::solve(CArrayKokkos<material_t>& material,
         // ---------------------------------------------------------------------
 
         // save the values at t_n
-        rk_init(node_coords,
-                node_vel,
-                elem_sie,
-                elem_stress,
+        rk_init(node.coords,
+                node.vel,
+                elem.sie,
+                elem.stress,
                 mesh.num_dims,
                 mesh.num_elems,
                 mesh.num_nodes);
@@ -217,140 +188,128 @@ void SGH::solve(CArrayKokkos<material_t>& material,
 
             // ---- Calculate velocity diveregence for the element ----
             if (mesh.num_dims == 2) {
-                get_divergence2D(elem_div,
+                get_divergence2D(elem.div,
                                  mesh,
-                                 node_coords,
-                                 node_vel,
-                                 elem_vol);
+                                 node.coords,
+                                 node.vel,
+                                 elem.vol);
             }
             else{
-                get_divergence(elem_div,
+                get_divergence(elem.div,
                                mesh,
-                               node_coords,
-                               node_vel,
-                               elem_vol);
+                               node.coords,
+                               node.vel,
+                               elem.vol);
             } // end if 2D
 
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             if (mesh.num_dims == 2) {
-                get_force_2D(material,
-                                mesh,
-                                node_coords,
-                                node_vel,
-                                elem_den,
-                                elem_sie,
-                                elem_pres,
-                                elem_stress,
-                                elem_sspd,
-                                elem_vol,
-                                elem_div,
-                                elem_mat_id,
-                                corner_force,
-                                fuzz,
-                                small,
-                                elem_statev,
-                                dt,
-                                rk_alpha);
+                get_force_2D(sim_param.materials,
+                             mesh,
+                             node.coords,
+                             node.vel,
+                             elem.den,
+                             elem.sie,
+                             elem.pres,
+                             elem.stress,
+                             elem.sspd,
+                             elem.vol,
+                             elem.div,
+                             elem.mat_id,
+                             corner.force,
+                             fuzz,
+                             small,
+                             elem.statev,
+                             dt,
+                             rk_alpha);
             }
             else{
-                get_force(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              fuzz,
-                              small,
-                              elem_statev,
-                              dt,
-                              rk_alpha);
+                get_force(sim_param.materials,
+                          mesh,
+                          node.coords,
+                          node.vel,
+                          elem.den,
+                          elem.sie,
+                          elem.pres,
+                          elem.stress,
+                          elem.sspd,
+                          elem.vol,
+                          elem.div,
+                          elem.mat_id,
+                          corner.force,
+                          fuzz,
+                          small,
+                          elem.statev,
+                          dt,
+                          rk_alpha);
             }
 
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
-                                dt,
-                                mesh,
-                                node_vel,
-                                node_mass,
-                                corner_force);
+                            dt,
+                            mesh,
+                            node.vel,
+                            node.mass,
+                            corner.force);
 
             // ---- apply force boundary conditions to the boundary patches----
-            boundary_velocity(mesh, boundary, node_vel, time_value);
+            boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
 
             // mpi_coms();
 
             // ---- Update specific internal energy in the elements ----
             update_energy(rk_alpha,
-                              dt,
-                              mesh,
-                              node_vel,
-                              node_coords,
-                              elem_sie,
-                              elem_mass,
-                              corner_force);
+                          dt,
+                          mesh,
+                          node.vel,
+                          node.coords,
+                          elem.sie,
+                          elem.mass,
+                          corner.force);
 
             // ---- Update nodal positions ----
             update_position(rk_alpha,
-                                dt,
-                                mesh.num_dims,
-                                mesh.num_nodes,
-                                node_coords,
-                                node_vel);
+                            dt,
+                            mesh.num_dims,
+                            mesh.num_nodes,
+                            node.coords,
+                            node.vel);
 
             // ---- Calculate cell volume for next time step ----
-            geometry::get_vol(elem_vol, node_coords, mesh);
+            geometry::get_vol(elem.vol, node.coords, mesh);
 
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
             if (mesh.num_dims == 2) {
-                update_state2D(material,
+                update_state2D(sim_param.materials,
                                mesh,
-                               node_coords,
-                               node_vel,
-                               elem_den,
-                               elem_pres,
-                               elem_stress,
-                               elem_sspd,
-                               elem_sie,
-                               elem_vol,
-                               elem_mass,
-                               elem_mat_id,
-                               elem_statev,
+                               node.coords,
+                               node.vel,
+                               elem.den,
+                               elem.pres,
+                               elem.stress,
+                               elem.sspd,
+                               elem.sie,
+                               elem.vol,
+                               elem.mass,
+                               elem.mat_id,
+                               elem.statev,
                                dt,
                                rk_alpha);
             }
             else{
-                // std::cout<<"Before update state " << std::endl;
-
-                // int elem_gid = 1;
-                // double gamma = elem_statev(elem_gid, 0);
-                // double csmin = elem_statev(elem_gid, 1);
-
-                // if(elem_gid == 1){
-                //     std::cout <<  std::endl;
-                //     std::cout << "Gamma = " << gamma << std::endl;
-                //     std::cout << "csmin = " << csmin << std::endl;
-                //     std::cout << "SIE = " << elem_sie(1, elem_gid) << std::endl;
-                // }
-                update_state(material,
+                update_state(sim_param.materials,
                              mesh,
-                             node_coords,
-                             node_vel,
-                             elem_den,
-                             elem_pres,
-                             elem_stress,
-                             elem_sspd,
-                             elem_sie,
-                             elem_vol,
-                             elem_mass,
-                             elem_mat_id,
-                             elem_statev,
+                             node.coords,
+                             node.vel,
+                             elem.den,
+                             elem.pres,
+                             elem.stress,
+                             elem.sspd,
+                             elem.sie,
+                             elem.vol,
+                             elem.mass,
+                             elem.mat_id,
+                             elem.statev,
                              dt,
                              rk_alpha);
             }
@@ -364,10 +323,10 @@ void SGH::solve(CArrayKokkos<material_t>& material,
             if (mesh.num_dims == 2) {
                 // calculate the nodal areal mass
                 FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                    node_mass(node_gid) = 0.0;
+                    node.mass(node_gid) = 0.0;
 
-                    if (node_coords(1, node_gid, 1) > tiny) {
-                        node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(1, node_gid, 1);
+                    if (node.coords(1, node_gid, 1) > tiny) {
+                        node.mass(node_gid) = node_extensive_mass(node_gid) / node.coords(1, node_gid, 1);
                     }
                 }); // end parallel for over node_gid
                 Kokkos::fence();
@@ -375,15 +334,15 @@ void SGH::solve(CArrayKokkos<material_t>& material,
                 FOR_ALL(node_bdy_gid, 0, mesh.num_bdy_nodes, {
                     size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
 
-                    if (node_coords(1, node_gid, 1) < tiny) {
+                    if (node.coords(1, node_gid, 1) < tiny) {
                         // node is on the axis
 
                         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_node(node_gid); node_lid++) {
                             size_t node_neighbor_gid = mesh.nodes_in_node(node_gid, node_lid);
 
                             // if the node is off the axis, use it's areal mass on the boundary
-                            if (node_coords(1, node_neighbor_gid, 1) > tiny) {
-                                node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid) / 2.0);
+                            if (node.coords(1, node_neighbor_gid, 1) > tiny) {
+                                node.mass(node_gid) = fmax(node.mass(node_gid), node.mass(node_neighbor_gid) / 2.0);
                             }
                         } // end for over neighboring nodes
                     } // end if
@@ -416,17 +375,17 @@ void SGH::solve(CArrayKokkos<material_t>& material,
             // std::cout << "dt in solve = "<< dt  << std::endl;
 
             write_outputs(mesh,
-                          node_coords,
-                          node_vel,
-                          node_mass,
-                          elem_den,
-                          elem_pres,
-                          elem_stress,
-                          elem_sspd,
-                          elem_sie,
-                          elem_vol,
-                          elem_mass,
-                          elem_mat_id,
+                          node.coords,
+                          node.vel,
+                          node.mass,
+                          elem.den,
+                          elem.pres,
+                          elem.stress,
+                          elem.sspd,
+                          elem.sie,
+                          elem.vol,
+                          elem.mass,
+                          elem.mat_id,
                           graphics_times,
                           graphics_id,
                           time_value);
@@ -458,7 +417,7 @@ void SGH::solve(CArrayKokkos<material_t>& material,
 
     // extensive IE
     REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
-        IE_loc_sum += elem_mass(elem_gid) * elem_sie(1, elem_gid);
+        IE_loc_sum += elem.mass(elem_gid) * elem.sie(1, elem_gid);
     }, IE_sum);
     IE_tend = IE_sum;
 
@@ -466,14 +425,14 @@ void SGH::solve(CArrayKokkos<material_t>& material,
     REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
         double ke = 0;
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node_vel(1, node_gid, dim) * node_vel(1, node_gid, dim); // 1/2 at end
+            ke += node.vel(1, node_gid, dim) * node.vel(1, node_gid, dim); // 1/2 at end
         } // end for
 
         if (mesh.num_dims == 2) {
-            KE_loc_sum += node_mass(node_gid) * node_coords(1, node_gid, 1) * ke;
+            KE_loc_sum += node.mass(node_gid) * node.coords(1, node_gid, 1) * ke;
         }
         else{
-            KE_loc_sum += node_mass(node_gid) * ke;
+            KE_loc_sum += node.mass(node_gid) * ke;
         }
     }, KE_sum);
     Kokkos::fence();
@@ -485,8 +444,6 @@ void SGH::solve(CArrayKokkos<material_t>& material,
     printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
     printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
     printf("total energy conservation error = %e \n\n", TE_tend - TE_t0);
-
-    // return;
 } // end of SGH solve
 
 /////////////////////////////////////////////////////////////////////////////

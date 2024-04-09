@@ -72,6 +72,21 @@ public:
     double dt = 0.0;
     double time_value = 0.0;
 
+    double time_initial = 0.0;  // Starting time
+    double time_final   = 1.0;  // Final simulation time
+    double dt_min   = 1e-8;     // Minimum time step
+    double dt_max   = 1e-2;     // Maximum time step
+    double dt_start = 1e-5;     // Starting time step
+    double dt_cfl   = 0.4;      // CFL multiplier for time step calculation
+
+
+    double graphics_dt_ival = 1.0; // time increment for graphics output
+    int graphics_cyc_ival = 2000000; // Cycle count for graphics output
+
+    int rk_num_stages = 2;
+    int cycle_stop = 1000000000;
+
+
     SGH(simulation_parameters_t& io, mesh_t& mesh_in, node_t& node_in, elem_t& elem_in, corner_t& corner_in)  : Solver()
     {
         sim_param = io;
@@ -84,8 +99,7 @@ public:
 
     ~SGH() = default;
 
-    // Initialize data for the SGH solver
-    // This will be where we take in parsed data from YAML
+    // Initialize data specific to the SGH solver
     void initialize()
     {
         // Dimensions
@@ -93,24 +107,26 @@ public:
 
         graphics_times = CArray<double>(20000);
 
-        // ---------------------------------------------------------------------
-        //    allocate memory
-        // ---------------------------------------------------------------------
+        // NOTE: Possible remove this and pass directly
+        fuzz = sim_param.dynamic_options.fuzz;
+        tiny = sim_param.dynamic_options.tiny;
+        small = sim_param.dynamic_options.small;
 
-        // ---------------------------------------------------------------------
-        //   calculate geometry
-        // ---------------------------------------------------------------------
+        time_initial = sim_param.dynamic_options.time_initial;
+        time_final   = sim_param.dynamic_options.time_final;
+        dt_min   = sim_param.dynamic_options.dt_min;
+        dt_max   = sim_param.dynamic_options.dt_max; 
+        dt_start = sim_param.dynamic_options.dt_start;
+        dt_cfl   = sim_param.dynamic_options.dt_cfl;
 
-        std::cout << "Before update device call" << std::endl;
-        node.coords.update_device();
-        std::cout << "After update device call" << std::endl;
+        graphics_dt_ival = sim_param.output_options.graphics_time_step;
+        graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
 
-        Kokkos::fence();
+        rk_num_stages = sim_param.dynamic_options.rk_num_stages;
 
-        std::cout << "Before get volume call" << std::endl;
-        geometry::get_vol(elem.vol, node.coords, mesh);
+        cycle_stop = sim_param.dynamic_options.cycle_stop;
 
-        std::cout << "After get volume call" << std::endl;
+
         // intialize time, time_step, and cycles
         time_value = 0.0;
 
@@ -120,43 +136,23 @@ public:
 
         graphics_id = 0;
         graphics_times(0) = 0.0;
-        graphics_time     = sim_param.output_options.graphics_time_step; // the times for writing graphics dump
+        graphics_time     = 0.0; // the times for writing graphics dump
     }
 
     /////////////////////////////////////////////////////////////////////////////
     ///
     /// \fn setup
     ///
-    /// \brief Calls setup_sgh, which initializes mesh, state, and material data
+    /// \brief Calls setup_sgh, which initializes state, and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
     void setup()
     {
         std::cout << "INSIDE SETUP FOR SGH SOLVER" << std::endl;
-        // setup_sgh(
-        //     sim_param.materials,
-        //     sim_param.region_fills,
-        //     sim_param.boundary_conditions,
-        //     mesh,
-        //     node.coords,
-        //     node.vel,
-        //     node.mass,
-        //     elem.den,
-        //     elem.pres,
-        //     elem.stress,
-        //     elem.sspd,
-        //     elem.sie,
-        //     elem.vol,
-        //     elem.mass,
-        //     elem.mat_id,
-        //     elem.statev,
-        //     state_vars,
-        //     corner.mass,
-        //     num_fills,
-        //     rk_num_bins,
-        //     num_bcs,
-        //     num_materials,
-        //     2); // num_state_vars
+
+        std::cout << "Applying initial boundary conditions" << std::endl;
+        boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
+
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -167,70 +163,8 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void execute()
-    {
-        std::cout << "In execute function in sgh solver" << std::endl;
+    void execute();
 
-        solve(sim_param.materials,
-              sim_param.boundary_conditions,
-              mesh,
-              node.coords,
-              node.vel,
-              node.mass,
-              elem.den,
-              elem.pres,
-              elem.stress,
-              elem.sspd,
-              elem.sie,
-              elem.vol,
-              elem.div,
-              elem.mass,
-              elem.mat_id,
-              elem.statev,
-              corner.force,
-              corner.mass,
-              time_value,
-              sim_param.dynamic_options.time_final,
-              sim_param.dynamic_options.dt_max,
-              sim_param.dynamic_options.dt_min,
-              sim_param.dynamic_options.dt_cfl,
-              graphics_time,
-              sim_param.output_options.graphics_iteration_step,
-              sim_param.output_options.graphics_time_step,
-              sim_param.dynamic_options.cycle_stop, // sim_param.dynamic_options.cycle_stop,
-              sim_param.dynamic_options.rk_num_stages,
-              dt,
-              sim_param.dynamic_options.fuzz,
-              sim_param.dynamic_options.tiny,
-              sim_param.dynamic_options.small,
-              graphics_times,
-              graphics_id);
-    }
-
-    void setup_sgh(
-        const CArrayKokkos<material_t>& material,
-        const CArrayKokkos<reg_fill_t>& region_fill,
-        const CArrayKokkos<boundary_condition_t>& boundary,
-        mesh_t& mesh,
-        const DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& elem_den,
-        const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const DCArrayKokkos<double>& elem_sspd,
-        const DCArrayKokkos<double>& elem_sie,
-        const DCArrayKokkos<double>& elem_vol,
-        const DCArrayKokkos<double>& elem_mass,
-        const DCArrayKokkos<size_t>& elem_mat_id,
-        const DCArrayKokkos<double>& elem_statev,
-        const CArrayKokkos<double>&  state_vars,
-        const DCArrayKokkos<double>& corner_mass,
-        const size_t num_fills,
-        const size_t rk_num_bins,
-        const size_t num_bcs,
-        const size_t num_materials,
-        const size_t num_state_vars);
 
     void write_outputs(
         const mesh_t& mesh,

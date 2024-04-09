@@ -70,7 +70,7 @@ struct output_options_t
     output_options::format format;
     output_options::timer_output_level timer_level;
 
-    real_t graphics_time_step   = 1.0;
+    double graphics_time_step   = 1.0;
     int graphics_iteration_step = 2000000;
 }; // output_options_t
 

@@ -42,7 +42,7 @@ struct dynamic_options_t
 {
     unsigned long cycle_stop = 2000000;
 
-    double time_initial = 0.0;  // Starting time
+    double time_initial = 1e-10;  // Starting time
     double time_final   = 1.0;  // Final simulation time
     double dt_min   = 1e-8;     // Minimum time step
     double dt_max   = 1e-2;     // Maximum time step

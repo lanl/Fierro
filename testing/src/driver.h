@@ -67,6 +67,11 @@ public:
     elem_t   elem;
     corner_t corner;
 
+    int num_solvers = 0;
+
+    // set of enabled solvers
+    std::vector<Solver*> solvers;
+
     Driver(char* YAML)
     {
         yaml_file = YAML;
@@ -98,54 +103,123 @@ public:
 
         reader.read_mesh(mesh, elem, node, corner, num_dims, sim_param.dynamic_options.rk_num_bins);
 
-        std::cout << "Num elements = " << mesh.num_elems << std::endl;
-        std::cout << "Num nodes = " << mesh.num_nodes << std::endl;
-
-        // std::cout << "Building corners: " << std::endl;
-        mesh.build_corner_connectivity();
-
-        // std::cout << "Building elem elem connectivity: " << std::endl;
-        mesh.build_elem_elem_connectivity();
-
-        // std::cout << "Building patches: " << std::endl;
-        mesh.build_patch_connectivity();
-
-        // std::cout << "Building node-node connectivity: " << std::endl;
-        mesh.build_node_node_connectivity();
+        // Build connectivity
+        mesh.build_connectivity();
 
         // Build boundary conditions
         int num_bcs = sim_param.boundary_conditions.size();
-
         printf("Num BC's = %lu\n", num_bcs);
 
         // --- calculate bdy sets ---//
         mesh.init_bdy_sets(num_bcs);
-
         tag_bdys(sim_param.boundary_conditions, mesh, node.coords);
+        mesh.build_boundry_node_sets(sim_param.boundary_conditions, mesh);
 
-        build_boundry_node_sets(sim_param.boundary_conditions, mesh);
-
-        // loop over BCs
-        for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++) {
-            RUN({
-                printf("Boundary Condition number %lu \n", this_bdy);
-                printf("  Num bdy patches in this set = %lu \n", mesh.bdy_patches_in_set.stride(this_bdy));
-                printf("  Num bdy nodes in this set = %lu \n", mesh.bdy_nodes_in_set.stride(this_bdy));
-            });
-            Kokkos::fence();
-        } // end for
-
+        // Calculate element volume
         geometry::get_vol(elem.vol, node.coords, mesh);
 
+        // Create memory for state variables
         printf("Num State variables per element = %lu\n", sim_param.materials(0).eos_global_vars.size());
         elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials(0).eos_global_vars.size()); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
+        fill_regions();
 
-        // loop over the fill instructures
+        // Create solvers
+        for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
+            if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
+                SGH* sgh_solver = new SGH(sim_param, mesh, node, elem, corner);
+                sgh_solver->initialize();
+                solvers.push_back(sgh_solver);
+            }
+        }
+    }
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn setup
+    ///
+    /// \brief <insert brief description>
+    ///
+    /// <Insert longer more detailed description which
+    /// can span multiple lines if needed>
+    ///
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    ///
+    /// \return <return type and definition description if not void>
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void setup()
+    {
+        std::cout << "Inside driver setup" << std::endl;
+        for (auto& solver : solvers) {
+            solver->setup();
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn run
+    ///
+    /// \brief <insert brief description>
+    ///
+    /// <Insert longer more detailed description which
+    /// can span multiple lines if needed>
+    ///
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    ///
+    /// \return <return type and definition description if not void>
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void run()
+    {
+        std::cout << "Inside driver run" << std::endl;
+        for (auto& solver : solvers) {
+            solver->execute();
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn finalize
+    ///
+    /// \brief <insert brief description>
+    ///
+    /// <Insert longer more detailed description which
+    /// can span multiple lines if needed>
+    ///
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    ///
+    /// \return <return type and definition description if not void>
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void finalize()
+    {
+        std::cout << "Inside driver finalize" << std::endl;
+        for (auto & solver : solvers) {
+            if (solver->finalize_flag){
+                solver->solver_finalize();
+            }
+        }
+        // destroy FEA modules
+        for (auto & solver : solvers)
+        {
+            std::cout<<"Deleting solver"<<std::endl;
+            delete solver;
+        }
+    }
+
+    void fill_regions()
+    {
+        
         int num_fills = sim_param.region_fills.size();
-        printf("Num Fills's = %lu\n", num_bcs);
+        printf("Num Fills's = %lu\n", num_fills);
 
         for (int f_id = 0; f_id < num_fills; f_id++) {
             // // voxel mesh setup
@@ -288,17 +362,10 @@ public:
 
                             int num_eos_global_vars = sim_param.materials(mat_id).eos_global_vars.size();
 
-                            if (elem_gid == 0) { printf("num_eos_global_vars = %lu\n", sim_param.materials(mat_id).eos_global_vars.size()); }
-
                             // std::cout <<  std::endl;
                             // std::cout << "elem gid = "<< elem_gid <<" RK level = "<< rk_level << std::endl;
                             for (size_t var = 0; var < sim_param.materials(mat_id).eos_global_vars.size(); var++) {
                                 elem.statev(elem_gid, var) = sim_param.materials(mat_id).eos_global_vars(var); // state_vars(mat_id, var);
-
-                                if (elem_gid == 1) {
-                                    // std::cout <<  std::endl;
-                                    std::cout << "Element state Variable id " << var << " = " << elem.statev(elem_gid, var) << std::endl;
-                                }
                             } // end for
                         } // end logical on type
 
@@ -437,8 +504,6 @@ public:
             Kokkos::fence();
         } // end for loop over fills
 
-        // // apply BC's to velocity
-        // boundary_velocity(mesh, boundary, node_vel, 0.0);
 
         // // calculate the corner massess if 2D
         // if (mesh.num_dims == 2) {
@@ -481,98 +546,5 @@ public:
         }); // end FOR_ALL
         Kokkos::fence();
 
-        // Create solvers
-        for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
-            if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
-                SGH* sgh_solver = new SGH(sim_param, mesh, node, elem, corner);
-                sgh_solver->initialize();
-                solvers.push_back(sgh_solver);
-            }
-        }
-    }
-
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn setup
-    ///
-    /// \brief <insert brief description>
-    ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
-    ///
-    /////////////////////////////////////////////////////////////////////////////
-    void setup()
-    {
-        std::cout << "Inside driver setup" << std::endl;
-        for (auto& solver : solvers) {
-            solver->setup();
-        }
-    }
-
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn run
-    ///
-    /// \brief <insert brief description>
-    ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
-    ///
-    /////////////////////////////////////////////////////////////////////////////
-    void run()
-    {
-        std::cout << "Inside driver run" << std::endl;
-        for (auto& solver : solvers) {
-            solver->execute();
-        }
-    }
-
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn finalize
-    ///
-    /// \brief <insert brief description>
-    ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
-    ///
-    /////////////////////////////////////////////////////////////////////////////
-    void finalize()
-    {
-        std::cout << "Inside driver finalize" << std::endl;
-        // for (auto & solver : solvers) {
-        //     if (solver->finalize_flag){
-        //         solver->solver_finalize();
-        //     }
-        // }
-        // // destroy FEA modules
-        // for (auto & solver : solvers)
-        // {
-        //     std::cout<<"Deleting solver"<<std::endl;
-        //     delete solver;
-        // }
-    }
-
-    int num_solvers = 0;
-
-    // set of enabled solvers
-    std::vector<Solver*> solvers;
+    } // end fill regions
 };

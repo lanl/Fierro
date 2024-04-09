@@ -63,13 +63,15 @@ public:
 
     // --- num vars ----
     size_t num_dims = 3;
-    // double dt       = 1.e-8;
-
-    // double time_value = 0.0;
 
     CArray<double> graphics_times;
     size_t graphics_id = 0;
     double graphics_time;
+
+
+    double fuzz     = 1e-16;    // machine precision
+    double tiny     = 1e-12;    // very very small (between real_t and single)
+    double small    = 1e-8;     // single precision
 
     Solver(); // Simulation_Parameters& _simparam);
 
@@ -91,9 +93,6 @@ public:
     void init_clock();
 
     double initial_CPU_time, communication_time, dev2host_time, host2dev_time, output_time;
-
-    // class Simulation_Parameters *simparam;
-    // Simulation_Parameters simparam;
 
     bool finalize_flag = false;
 };
