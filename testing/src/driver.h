@@ -37,6 +37,8 @@
 #include "solver.h"
 #include "simulation_parameters.h"
 
+#include "linear_algebra.h"
+
 // Headers for solver classes
 #include "sgh_solver.h"
 
