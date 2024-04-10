@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIafqfHc.ui'
+## Form generated from reading UI file 'FIERRO_GUIujJSZS.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -662,56 +662,6 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_11.addWidget(self.MaterialTools)
 
-        self.BCTools = QFrame(self.frame_8)
-        self.BCTools.setObjectName(u"BCTools")
-        self.BCTools.setFrameShape(QFrame.NoFrame)
-        self.BCTools.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_51 = QVBoxLayout(self.BCTools)
-        self.verticalLayout_51.setSpacing(0)
-        self.verticalLayout_51.setObjectName(u"verticalLayout_51")
-        self.verticalLayout_51.setContentsMargins(0, 0, 0, 0)
-        self.ApplyBC = QFrame(self.BCTools)
-        self.ApplyBC.setObjectName(u"ApplyBC")
-        self.ApplyBC.setMinimumSize(QSize(65, 80))
-        self.ApplyBC.setMaximumSize(QSize(70, 80))
-        self.ApplyBC.setFrameShape(QFrame.NoFrame)
-        self.ApplyBC.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_52 = QVBoxLayout(self.ApplyBC)
-        self.verticalLayout_52.setSpacing(0)
-        self.verticalLayout_52.setObjectName(u"verticalLayout_52")
-        self.verticalLayout_52.setContentsMargins(0, 0, 0, 5)
-        self.BApplyBC = QPushButton(self.ApplyBC)
-        self.BApplyBC.setObjectName(u"BApplyBC")
-        self.BApplyBC.setIcon(icon6)
-        self.BApplyBC.setIconSize(QSize(50, 50))
-        self.BApplyBC.setFlat(True)
-
-        self.verticalLayout_52.addWidget(self.BApplyBC)
-
-        self.LApplyBC = QLabel(self.ApplyBC)
-        self.LApplyBC.setObjectName(u"LApplyBC")
-        self.LApplyBC.setWordWrap(True)
-
-        self.verticalLayout_52.addWidget(self.LApplyBC)
-
-
-        self.verticalLayout_51.addWidget(self.ApplyBC, 0, Qt.AlignLeft)
-
-        self.LineBCTools = QFrame(self.BCTools)
-        self.LineBCTools.setObjectName(u"LineBCTools")
-        self.LineBCTools.setFrameShape(QFrame.HLine)
-        self.LineBCTools.setFrameShadow(QFrame.Sunken)
-
-        self.verticalLayout_51.addWidget(self.LineBCTools)
-
-        self.LBCTools = QLabel(self.BCTools)
-        self.LBCTools.setObjectName(u"LBCTools")
-
-        self.verticalLayout_51.addWidget(self.LBCTools)
-
-
-        self.horizontalLayout_11.addWidget(self.BCTools)
-
         self.JobTools = QFrame(self.frame_8)
         self.JobTools.setObjectName(u"JobTools")
         self.JobTools.setFrameShape(QFrame.NoFrame)
@@ -730,33 +680,6 @@ class Ui_MainWindow(object):
         self.horizontalLayout_4.setSpacing(0)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.SolverSettings = QFrame(self.JobToolsBtns)
-        self.SolverSettings.setObjectName(u"SolverSettings")
-        self.SolverSettings.setMinimumSize(QSize(80, 80))
-        self.SolverSettings.setMaximumSize(QSize(80, 80))
-        self.SolverSettings.setFrameShape(QFrame.NoFrame)
-        self.SolverSettings.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_8 = QVBoxLayout(self.SolverSettings)
-        self.verticalLayout_8.setSpacing(0)
-        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
-        self.verticalLayout_8.setContentsMargins(0, 0, 0, 5)
-        self.BSolverSettings = QPushButton(self.SolverSettings)
-        self.BSolverSettings.setObjectName(u"BSolverSettings")
-        self.BSolverSettings.setIcon(icon7)
-        self.BSolverSettings.setIconSize(QSize(50, 50))
-        self.BSolverSettings.setFlat(True)
-
-        self.verticalLayout_8.addWidget(self.BSolverSettings)
-
-        self.LSolverSettings = QLabel(self.SolverSettings)
-        self.LSolverSettings.setObjectName(u"LSolverSettings")
-        self.LSolverSettings.setWordWrap(True)
-
-        self.verticalLayout_8.addWidget(self.LSolverSettings)
-
-
-        self.horizontalLayout_4.addWidget(self.SolverSettings, 0, Qt.AlignLeft)
-
         self.RunEVPFFT = QFrame(self.JobToolsBtns)
         self.RunEVPFFT.setObjectName(u"RunEVPFFT")
         self.RunEVPFFT.setMinimumSize(QSize(75, 80))
@@ -782,7 +705,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_67.addWidget(self.LRunEVPFFT)
 
 
-        self.horizontalLayout_4.addWidget(self.RunEVPFFT)
+        self.horizontalLayout_4.addWidget(self.RunEVPFFT, 0, Qt.AlignLeft)
 
         self.ViewResults = QFrame(self.JobToolsBtns)
         self.ViewResults.setObjectName(u"ViewResults")
@@ -809,10 +732,10 @@ class Ui_MainWindow(object):
         self.verticalLayout_14.addWidget(self.LViewResults)
 
 
-        self.horizontalLayout_4.addWidget(self.ViewResults)
+        self.horizontalLayout_4.addWidget(self.ViewResults, 0, Qt.AlignLeft)
 
 
-        self.verticalLayout_30.addWidget(self.JobToolsBtns)
+        self.verticalLayout_30.addWidget(self.JobToolsBtns, 0, Qt.AlignLeft)
 
         self.LineJobTools = QFrame(self.JobTools)
         self.LineJobTools.setObjectName(u"LineJobTools")
@@ -2817,12 +2740,6 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_18.addWidget(self.THomogenization)
 
-        self.BHomogenization = QPushButton(self.ResultsTool)
-        self.BHomogenization.setObjectName(u"BHomogenization")
-        self.BHomogenization.setEnabled(False)
-
-        self.verticalLayout_18.addWidget(self.BHomogenization)
-
         self.verticalSpacer_5 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout_18.addItem(self.verticalSpacer_5)
@@ -3670,7 +3587,7 @@ class Ui_MainWindow(object):
         self.LImportPart_7.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Import Part</span></p></body></html>", None))
         self.BCreateBasicPart.setText("")
         self.LImportPart_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Basic Fill Region</span></p></body></html>", None))
-        self.LPartTools_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Geometry</span></p></body></html>", None))
+        self.LPartTools_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Region</span></p></body></html>", None))
         self.BDefineMaterialSGH.setText("")
         self.LDefineMaterial_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Define Materials</span></p></body></html>", None))
         self.BAssignMaterialSGH.setText("")
@@ -3700,11 +3617,6 @@ class Ui_MainWindow(object):
         self.BDefineMaterial.setText("")
         self.LDefineMaterial.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Define Material</span></p></body></html>", None))
         self.LMaterialTools.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Material</span></p></body></html>", None))
-        self.BApplyBC.setText("")
-        self.LApplyBC.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Apply BCs</span></p></body></html>", None))
-        self.LBCTools.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Boundary Conditions</span></p></body></html>", None))
-        self.BSolverSettings.setText("")
-        self.LSolverSettings.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Solver Settings</span></p></body></html>", None))
         self.BRunEVPFFT.setText("")
         self.LRunEVPFFT.setText(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
@@ -4073,30 +3985,29 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem49 = self.THomogenization.horizontalHeaderItem(0)
         ___qtablewidgetitem49.setText(QCoreApplication.translate("MainWindow", u"Homogenized Elastic Constants", None));
         ___qtablewidgetitem50 = self.THomogenization.verticalHeaderItem(0)
-        ___qtablewidgetitem50.setText(QCoreApplication.translate("MainWindow", u"E11", None));
+        ___qtablewidgetitem50.setText(QCoreApplication.translate("MainWindow", u"Exx", None));
         ___qtablewidgetitem51 = self.THomogenization.verticalHeaderItem(1)
-        ___qtablewidgetitem51.setText(QCoreApplication.translate("MainWindow", u"E22", None));
+        ___qtablewidgetitem51.setText(QCoreApplication.translate("MainWindow", u"Eyy", None));
         ___qtablewidgetitem52 = self.THomogenization.verticalHeaderItem(2)
-        ___qtablewidgetitem52.setText(QCoreApplication.translate("MainWindow", u"E33", None));
+        ___qtablewidgetitem52.setText(QCoreApplication.translate("MainWindow", u"Ezz", None));
         ___qtablewidgetitem53 = self.THomogenization.verticalHeaderItem(3)
-        ___qtablewidgetitem53.setText(QCoreApplication.translate("MainWindow", u"NU12", None));
+        ___qtablewidgetitem53.setText(QCoreApplication.translate("MainWindow", u"NUxy", None));
         ___qtablewidgetitem54 = self.THomogenization.verticalHeaderItem(4)
-        ___qtablewidgetitem54.setText(QCoreApplication.translate("MainWindow", u"NU21", None));
+        ___qtablewidgetitem54.setText(QCoreApplication.translate("MainWindow", u"NUyx", None));
         ___qtablewidgetitem55 = self.THomogenization.verticalHeaderItem(5)
-        ___qtablewidgetitem55.setText(QCoreApplication.translate("MainWindow", u"NU13", None));
+        ___qtablewidgetitem55.setText(QCoreApplication.translate("MainWindow", u"NUxz", None));
         ___qtablewidgetitem56 = self.THomogenization.verticalHeaderItem(6)
-        ___qtablewidgetitem56.setText(QCoreApplication.translate("MainWindow", u"NU31", None));
+        ___qtablewidgetitem56.setText(QCoreApplication.translate("MainWindow", u"NUzx", None));
         ___qtablewidgetitem57 = self.THomogenization.verticalHeaderItem(7)
-        ___qtablewidgetitem57.setText(QCoreApplication.translate("MainWindow", u"NU23", None));
+        ___qtablewidgetitem57.setText(QCoreApplication.translate("MainWindow", u"NUyz", None));
         ___qtablewidgetitem58 = self.THomogenization.verticalHeaderItem(8)
-        ___qtablewidgetitem58.setText(QCoreApplication.translate("MainWindow", u"NU32", None));
+        ___qtablewidgetitem58.setText(QCoreApplication.translate("MainWindow", u"NUzy", None));
         ___qtablewidgetitem59 = self.THomogenization.verticalHeaderItem(9)
-        ___qtablewidgetitem59.setText(QCoreApplication.translate("MainWindow", u"G12", None));
+        ___qtablewidgetitem59.setText(QCoreApplication.translate("MainWindow", u"Gxy", None));
         ___qtablewidgetitem60 = self.THomogenization.verticalHeaderItem(10)
-        ___qtablewidgetitem60.setText(QCoreApplication.translate("MainWindow", u"G13", None));
+        ___qtablewidgetitem60.setText(QCoreApplication.translate("MainWindow", u"Gxz", None));
         ___qtablewidgetitem61 = self.THomogenization.verticalHeaderItem(11)
-        ___qtablewidgetitem61.setText(QCoreApplication.translate("MainWindow", u"G23", None));
-        self.BHomogenization.setText(QCoreApplication.translate("MainWindow", u"Generate Homogenized Elastic Constants", None))
+        ___qtablewidgetitem61.setText(QCoreApplication.translate("MainWindow", u"Gyz", None));
         self.LDefineMaterials_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">DEFINE MATERIALS</span></p></body></html>", None))
         self.LEOS.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Equation Of State Model:</p></body></html>", None))
         self.LMaterialNameSGH.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Name:</p></body></html>", None))

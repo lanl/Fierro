@@ -334,7 +334,8 @@ class FIERRO_GUI(Ui_MainWindow):
             Mesh_Builder_WInput(self, self.GLOBAL_MESH, self.global_mesh_dir)
         self.BGenerateGlobalMesh.clicked.connect(global_mesh_click)
             
-        # ======= EVPFFT SOLVER LATTICE PIPELINE =======
+        # ======= EVPFFT SOLVER BULK RESPONSE PIPELINE =======
+        self.EVPFFTSteps = 3 # Define the number of steps for evpfft
         EVPFFT_Lattice(self)
             
         # ======= EXPLICIT SOLVER SGH PIPELINE =======

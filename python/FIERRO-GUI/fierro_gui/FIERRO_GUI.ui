@@ -417,7 +417,7 @@
                <item>
                 <widget class="QLabel" name="LPartTools_4">
                  <property name="text">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:700; color:#a9a9a9;&quot;&gt;Geometry&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:700; color:#a9a9a9;&quot;&gt;Region&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                 </widget>
                </item>
@@ -1075,7 +1075,7 @@
            </font>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>2</number>
           </property>
           <widget class="QWidget" name="ChoosePipeline">
            <attribute name="title">
@@ -1403,116 +1403,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QFrame" name="BCTools">
-                 <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
-                 </property>
-                 <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
-                 </property>
-                 <layout class="QVBoxLayout" name="verticalLayout_51">
-                  <property name="spacing">
-                   <number>0</number>
-                  </property>
-                  <property name="leftMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="topMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>0</number>
-                  </property>
-                  <item alignment="Qt::AlignLeft">
-                   <widget class="QFrame" name="ApplyBC">
-                    <property name="minimumSize">
-                     <size>
-                      <width>65</width>
-                      <height>80</height>
-                     </size>
-                    </property>
-                    <property name="maximumSize">
-                     <size>
-                      <width>70</width>
-                      <height>80</height>
-                     </size>
-                    </property>
-                    <property name="frameShape">
-                     <enum>QFrame::NoFrame</enum>
-                    </property>
-                    <property name="frameShadow">
-                     <enum>QFrame::Raised</enum>
-                    </property>
-                    <layout class="QVBoxLayout" name="verticalLayout_52">
-                     <property name="spacing">
-                      <number>0</number>
-                     </property>
-                     <property name="leftMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="topMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="rightMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="bottomMargin">
-                      <number>5</number>
-                     </property>
-                     <item>
-                      <widget class="QPushButton" name="BApplyBC">
-                       <property name="text">
-                        <string/>
-                       </property>
-                       <property name="icon">
-                        <iconset resource="Icons/IconResourceFile.qrc">
-                         <normaloff>:/Blue Icons/Blue Icons/brick.svg</normaloff>:/Blue Icons/Blue Icons/brick.svg</iconset>
-                       </property>
-                       <property name="iconSize">
-                        <size>
-                         <width>50</width>
-                         <height>50</height>
-                        </size>
-                       </property>
-                       <property name="flat">
-                        <bool>true</bool>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="LApplyBC">
-                       <property name="text">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Apply BCs&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="wordWrap">
-                        <bool>true</bool>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="Line" name="LineBCTools">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QLabel" name="LBCTools">
-                    <property name="text">
-                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:700; color:#a9a9a9;&quot;&gt;Boundary Conditions&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
-               </item>
-               <item>
                 <widget class="QFrame" name="JobTools">
                  <property name="frameShape">
                   <enum>QFrame::NoFrame</enum>
@@ -1536,7 +1426,7 @@
                   <property name="bottomMargin">
                    <number>0</number>
                   </property>
-                  <item>
+                  <item alignment="Qt::AlignLeft">
                    <widget class="QFrame" name="JobToolsBtns">
                     <property name="minimumSize">
                      <size>
@@ -1573,75 +1463,6 @@
                       <number>0</number>
                      </property>
                      <item alignment="Qt::AlignLeft">
-                      <widget class="QFrame" name="SolverSettings">
-                       <property name="minimumSize">
-                        <size>
-                         <width>80</width>
-                         <height>80</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>80</width>
-                         <height>80</height>
-                        </size>
-                       </property>
-                       <property name="frameShape">
-                        <enum>QFrame::NoFrame</enum>
-                       </property>
-                       <property name="frameShadow">
-                        <enum>QFrame::Raised</enum>
-                       </property>
-                       <layout class="QVBoxLayout" name="verticalLayout_8">
-                        <property name="spacing">
-                         <number>0</number>
-                        </property>
-                        <property name="leftMargin">
-                         <number>0</number>
-                        </property>
-                        <property name="topMargin">
-                         <number>0</number>
-                        </property>
-                        <property name="rightMargin">
-                         <number>0</number>
-                        </property>
-                        <property name="bottomMargin">
-                         <number>5</number>
-                        </property>
-                        <item>
-                         <widget class="QPushButton" name="BSolverSettings">
-                          <property name="text">
-                           <string/>
-                          </property>
-                          <property name="icon">
-                           <iconset resource="Icons/IconResourceFile.qrc">
-                            <normaloff>:/Blue Icons/Blue Icons/gear.svg</normaloff>:/Blue Icons/Blue Icons/gear.svg</iconset>
-                          </property>
-                          <property name="iconSize">
-                           <size>
-                            <width>50</width>
-                            <height>50</height>
-                           </size>
-                          </property>
-                          <property name="flat">
-                           <bool>true</bool>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLabel" name="LSolverSettings">
-                          <property name="text">
-                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Solver Settings&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                          </property>
-                          <property name="wordWrap">
-                           <bool>true</bool>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </widget>
-                     </item>
-                     <item>
                       <widget class="QFrame" name="RunEVPFFT">
                        <property name="minimumSize">
                         <size>
@@ -1717,7 +1538,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        </layout>
                       </widget>
                      </item>
-                     <item>
+                     <item alignment="Qt::AlignLeft">
                       <widget class="QFrame" name="ViewResults">
                        <property name="minimumSize">
                         <size>
@@ -5268,62 +5089,62 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </attribute>
               <row>
                <property name="text">
-                <string>E11</string>
+                <string>Exx</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>E22</string>
+                <string>Eyy</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>E33</string>
+                <string>Ezz</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>NU12</string>
+                <string>NUxy</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>NU21</string>
+                <string>NUyx</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>NU13</string>
+                <string>NUxz</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>NU31</string>
+                <string>NUzx</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>NU23</string>
+                <string>NUyz</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>NU32</string>
+                <string>NUzy</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>G12</string>
+                <string>Gxy</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>G13</string>
+                <string>Gxz</string>
                </property>
               </row>
               <row>
                <property name="text">
-                <string>G23</string>
+                <string>Gyz</string>
                </property>
               </row>
               <column>
@@ -5331,16 +5152,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 <string>Homogenized Elastic Constants</string>
                </property>
               </column>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="BHomogenization">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="text">
-               <string>Generate Homogenized Elastic Constants</string>
-              </property>
              </widget>
             </item>
             <item>

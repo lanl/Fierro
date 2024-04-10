@@ -98,196 +98,137 @@ def EVPFFT_Lattice_WInput(self, BC_index):
                          efile + '\n'
     evpfft_lattice_input.write(phase1)
     evpfft_lattice_input.write(phase2)
-    if self.TBCs.item(BC_index,1).text() == "x":
-        if "Tension" in self.TBCs.item(BC_index,0).text():
-            test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
-                              '* boundary conditions\n' + \
-                              '    1       1       1           iudot     |    flag for vel.grad.\n' + \
-                              '    1       0       1                     |    (0:unknown-1:known)\n' + \
-                              '    1       1       0                     |\n' + \
-                              '                                          |\n' + \
-                              '    1.0     0.      0.          udot      |    vel.grad\n' + \
-                              '    0.      0.      0.                    |\n' + \
-                              '    0.      0.      0.                    |\n' + \
-                              '                                          |\n' + \
-                              '    0       0       0           iscau     |    flag for Cauchy\n' + \
-                              '            1       0                     |\n' + \
-                              '                    1                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
-                              '            0.      0.                    |\n' + \
-                              '                    0.                    @\n'
-        elif "Compression" in self.TBCs.item(BC_index,0).text():
-            test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
-                              '* boundary conditions\n' + \
-                              '    1       1       1           iudot     |    flag for vel.grad.\n' + \
-                              '    1       0       1                     |    (0:unknown-1:known)\n' + \
-                              '    1       1       0                     |\n' + \
-                              '                                          |\n' + \
-                              '    -1.0    0.      0.          udot      |    vel.grad\n' + \
-                              '    0.      0.      0.                    |\n' + \
-                              '    0.      0.      0.                    |\n' + \
-                              '                                          |\n' + \
-                              '    0       0       0           iscau     |    flag for Cauchy\n' + \
-                              '            1       0                     |\n' + \
-                              '                    1                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
-                              '            0.      0.                    |\n' + \
-                              '                    0.                    @\n'
-        else:
-            print("INVALID BOUNDARY CONDITION")
-    elif self.TBCs.item(BC_index,1).text() == "y":
-        if "Tension" in self.TBCs.item(BC_index,0).text():
-            test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
-                              '* boundary conditions\n' + \
-                              '    0       1       1           iudot     |    flag for vel.grad.\n' + \
-                              '    1       1       1                     |    (0:unknown-1:known)\n' + \
-                              '    1       1       0                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          udot      |    vel.grad\n' + \
-                              '    0.      1.0     0.                    |\n' + \
-                              '    0.      0.      0.                    |\n' + \
-                              '                                          |\n' + \
-                              '    1       0       0           iscau     |    flag for Cauchy\n' + \
-                              '            0       0                     |\n' + \
-                              '                    1                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
-                              '            0.      0.                    |\n' + \
-                              '                    0.                    @\n'
-        elif "Compression" in self.TBCs.item(BC_index,0).text():
-            test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
-                              '* boundary conditions\n' + \
-                              '    0       1       1           iudot     |    flag for vel.grad.\n' + \
-                              '    1       1       1                     |    (0:unknown-1:known)\n' + \
-                              '    1       1       0                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          udot      |    vel.grad\n' + \
-                              '    0.      -1.0    0.                    |\n' + \
-                              '    0.      0.      0.                    |\n' + \
-                              '                                          |\n' + \
-                              '    1       0       0           iscau     |    flag for Cauchy\n' + \
-                              '            0       0                     |\n' + \
-                              '                    1                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
-                              '            0.      0.                    |\n' + \
-                              '                    0.                    @\n'
-        else:
-            print("INVALID BOUNDARY CONDITION")
-    elif self.TBCs.item(BC_index,1).text() == "z":
-        if "Tension" in self.TBCs.item(BC_index,0).text():
-            test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
-                              '* boundary conditions\n' + \
-                              '    0       1       1           iudot     |    flag for vel.grad.\n' + \
-                              '    1       0       1                     |    (0:unknown-1:known)\n' + \
-                              '    1       1       1                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          udot      |    vel.grad\n' + \
-                              '    0.      0.      0.                    |\n' + \
-                              '    0.      0.      1.0                   |\n' + \
-                              '                                          |\n' + \
-                              '    1       0       0           iscau     |    flag for Cauchy\n' + \
-                              '            1       0                     |\n' + \
-                              '                    0                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
-                              '            0.      0.                    |\n' + \
-                              '                    0.                    @\n'
-        elif "Compression" in self.TBCs.item(BC_index,0).text():
-            test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
-                              '* boundary conditions\n' + \
-                              '    0       1       1           iudot     |    flag for vel.grad.\n' + \
-                              '    1       0       1                     |    (0:unknown-1:known)\n' + \
-                              '    1       1       1                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          udot      |    vel.grad\n' + \
-                              '    0.      0.      0.                    |\n' + \
-                              '    0.      0.      -1.0                  |\n' + \
-                              '                                          |\n' + \
-                              '    1       0       0           iscau     |    flag for Cauchy\n' + \
-                              '            1       0                     |\n' + \
-                              '                    0                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
-                              '            0.      0.                    |\n' + \
-                              '                    0.                    @\n'
-        else:
-            print("INVALID BOUNDARY CONDITION")
-    elif "Shear" in self.TBCs.item(BC_index,0).text():
-        if "xy" in self.TBCs.item(BC_index,1).text():
-            test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
-                              '* boundary conditions\n' + \
-                              '    1       1       1           iudot     |    flag for vel.grad.\n' + \
-                              '    1       1       1                     |    (0:unknown-1:known)\n' + \
-                              '    1       1       1                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      1.0     0.          udot      |    vel.grad\n' + \
-                              '    1.0     0.      0.                    |\n' + \
-                              '    0.      0.      0.                    |\n' + \
-                              '                                          |\n' + \
-                              '    0       0       0           iscau     |    flag for Cauchy\n' + \
-                              '            0       0                     |\n' + \
-                              '                    0                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
-                              '            0.      0.                    |\n' + \
-                              '                    0.                    @\n'
-        elif "xz" in self.TBCs.item(BC_index,1).text():
-            test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
-                              '* boundary conditions\n' + \
-                              '    1       1       1           iudot     |    flag for vel.grad.\n' + \
-                              '    1       1       1                     |    (0:unknown-1:known)\n' + \
-                              '    1       1       1                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      1.0          udot     |    vel.grad\n' + \
-                              '    0.      0.      0.                    |\n' + \
-                              '    1.0     0.      0.                    |\n' + \
-                              '                                          |\n' + \
-                              '    0       0       0           iscau     |    flag for Cauchy\n' + \
-                              '            0       0                     |\n' + \
-                              '                    0                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
-                              '            0.      0.                    |\n' + \
-                              '                    0.                    @\n'
-        elif "yz" in self.TBCs.item(BC_index,1).text():
-            test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
-                              '* boundary conditions\n' + \
-                              '    1       1       1           iudot     |    flag for vel.grad.\n' + \
-                              '    1       1       1                     |    (0:unknown-1:known)\n' + \
-                              '    1       1       1                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          udot      |    vel.grad\n' + \
-                              '    0.      0.      1.0                   |\n' + \
-                              '    0.      1.0     0.                    |\n' + \
-                              '                                          |\n' + \
-                              '    0       0       0           iscau     |    flag for Cauchy\n' + \
-                              '            0       0                     |\n' + \
-                              '                    0                     |\n' + \
-                              '                                          |\n' + \
-                              '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
-                              '            0.      0.                    |\n' + \
-                              '                    0.                    @\n'
-    else:
-        print("INVALID BOUNDARY CONDITION")
+    # Tension x-direction
+    if BC_index == 0:
+        test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
+                          '* boundary conditions\n' + \
+                          '    1       1       1           iudot     |    flag for vel.grad.\n' + \
+                          '    1       0       1                     |    (0:unknown-1:known)\n' + \
+                          '    1       1       0                     |\n' + \
+                          '                                          |\n' + \
+                          '    1.0     0.      0.          udot      |    vel.grad\n' + \
+                          '    0.      0.      0.                    |\n' + \
+                          '    0.      0.      0.                    |\n' + \
+                          '                                          |\n' + \
+                          '    0       0       0           iscau     |    flag for Cauchy\n' + \
+                          '            1       0                     |\n' + \
+                          '                    1                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
+                          '            0.      0.                    |\n' + \
+                          '                    0.                    @\n'
+    # Tension y-direction
+    if BC_index == 1:
+        test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
+                          '* boundary conditions\n' + \
+                          '    0       1       1           iudot     |    flag for vel.grad.\n' + \
+                          '    1       1       1                     |    (0:unknown-1:known)\n' + \
+                          '    1       1       0                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      0.      0.          udot      |    vel.grad\n' + \
+                          '    0.      1.0     0.                    |\n' + \
+                          '    0.      0.      0.                    |\n' + \
+                          '                                          |\n' + \
+                          '    1       0       0           iscau     |    flag for Cauchy\n' + \
+                          '            0       0                     |\n' + \
+                          '                    1                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
+                          '            0.      0.                    |\n' + \
+                          '                    0.                    @\n'
+    # Tension z-direction
+    if BC_index == 2:
+        test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
+                          '* boundary conditions\n' + \
+                          '    0       1       1           iudot     |    flag for vel.grad.\n' + \
+                          '    1       0       1                     |    (0:unknown-1:known)\n' + \
+                          '    1       1       1                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      0.      0.          udot      |    vel.grad\n' + \
+                          '    0.      0.      0.                    |\n' + \
+                          '    0.      0.      1.0                   |\n' + \
+                          '                                          |\n' + \
+                          '    1       0       0           iscau     |    flag for Cauchy\n' + \
+                          '            1       0                     |\n' + \
+                          '                    0                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
+                          '            0.      0.                    |\n' + \
+                          '                    0.                    @\n'
+    # Shear xy-direction
+    if BC_index == 3:
+        test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
+                          '* boundary conditions\n' + \
+                          '    1       1       1           iudot     |    flag for vel.grad.\n' + \
+                          '    1       1       1                     |    (0:unknown-1:known)\n' + \
+                          '    1       1       1                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      1.0     0.          udot      |    vel.grad\n' + \
+                          '    1.0     0.      0.                    |\n' + \
+                          '    0.      0.      0.                    |\n' + \
+                          '                                          |\n' + \
+                          '    0       0       0           iscau     |    flag for Cauchy\n' + \
+                          '            0       0                     |\n' + \
+                          '                    0                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
+                          '            0.      0.                    |\n' + \
+                          '                    0.                    @\n'
+    # Shear xz-direction
+    if BC_index == 4:
+        test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
+                          '* boundary conditions\n' + \
+                          '    1       1       1           iudot     |    flag for vel.grad.\n' + \
+                          '    1       1       1                     |    (0:unknown-1:known)\n' + \
+                          '    1       1       1                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      0.      1.0          udot     |    vel.grad\n' + \
+                          '    0.      0.      0.                    |\n' + \
+                          '    1.0     0.      0.                    |\n' + \
+                          '                                          |\n' + \
+                          '    0       0       0           iscau     |    flag for Cauchy\n' + \
+                          '            0       0                     |\n' + \
+                          '                    0                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
+                          '            0.      0.                    |\n' + \
+                          '                    0.                    @\n'
+    # Shear yz-direction
+    if BC_index == 5:
+        test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \
+                          '* boundary conditions\n' + \
+                          '    1       1       1           iudot     |    flag for vel.grad.\n' + \
+                          '    1       1       1                     |    (0:unknown-1:known)\n' + \
+                          '    1       1       1                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      0.      0.          udot      |    vel.grad\n' + \
+                          '    0.      0.      1.0                   |\n' + \
+                          '    0.      1.0     0.                    |\n' + \
+                          '                                          |\n' + \
+                          '    0       0       0           iscau     |    flag for Cauchy\n' + \
+                          '            0       0                     |\n' + \
+                          '                    0                     |\n' + \
+                          '                                          |\n' + \
+                          '    0.      0.      0.          scauchy   |    Cauchy stress\n' + \
+                          '            0.      0.                    |\n' + \
+                          '                    0.                    @\n'
     evpfft_lattice_input.write(test_conditions)
     other = '* other\n' + \
             '0.0001         eqincr (if ictrl>=0) or tdot (if ictrl=-1)\n' + \
             '-1              ictrl (1-6: strain comp, 0: VM eq, -1: tdot)\n'
     evpfft_lattice_input.write(other)
-    run_conditions = '*INFORMATION ABOUT RUN CONDITIONS\n' + \
-                     self.INNumberOfSteps.text() + '              nsteps\n' + \
-                     '0.00001         err\n' + \
-                     '50              itmax\n' + \
-                     '0               IRECOVER read grain states from STRESS.IN  (1) or not (0)?\n' + \
-                     '0               ISAVE write grain states in STRESS.OUT (1) or not (0)?\n' + \
-                     '1               IUPDATE update tex & RVE dim (1) or not (0)?\n' + \
-                     '0               IUPHARD\n' + \
-                     '1               IWTEX\n' + \
-                     '1 10            IWFIELDS,IWSTEP\n' + \
-                     '0               ITHERMO (if ithermo=1, next line is filethermo)\n' + \
-                     'dummy\n'
+    n = self.EVPFFTSteps
+    run_conditions = f'*INFORMATION ABOUT RUN CONDITIONS\n' + \
+                     f'{n}             nsteps\n' + \
+                     f'0.00001         err\n' + \
+                     f'50              itmax\n' + \
+                     f'0               IRECOVER read grain states from STRESS.IN  (1) or not (0)?\n' + \
+                     f'0               ISAVE write grain states in STRESS.OUT (1) or not (0)?\n' + \
+                     f'1               IUPDATE update tex & RVE dim (1) or not (0)?\n' + \
+                     f'0               IUPHARD\n' + \
+                     f'1               IWTEX\n' + \
+                     f'1 {n}           IWFIELDS,IWSTEP\n' + \
+                     f'0               ITHERMO (if ithermo=1, next line is filethermo)\n' + \
+                     f'dummy\n'
     evpfft_lattice_input.write(run_conditions)
     evpfft_lattice_input.close()

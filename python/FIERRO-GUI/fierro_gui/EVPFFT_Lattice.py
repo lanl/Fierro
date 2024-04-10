@@ -24,8 +24,6 @@ def EVPFFT_Lattice(self):
     # Connect tab buttons to settings windows
     self.BImportPart.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(2))
     self.BDefineMaterial.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(4))
-    self.BApplyBC.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(5))
-    self.BSolverSettings.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(6))
     self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(7))
     self.BGlobalMesh.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(1))
     
@@ -576,16 +574,35 @@ def EVPFFT_Lattice(self):
             arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
             
             # Make a new directory to store all of the outputs
-            working_directory = os.path.join(self.evpfft_dir, 'outputs', self.TBCs.item(BC_index,0).text(), self.TBCs.item(BC_index,1).text())
-            if not os.path.exists(working_directory):
-                os.makedirs(working_directory)
+            if BC_index == 0:
+                folder1 = "Tension"
+                folder2 = "x"
+            if BC_index == 1:
+                folder1 = "Tension"
+                folder2 = "y"
+            if BC_index == 2:
+                folder1 = "Tension"
+                folder2 = "z"
+            if BC_index == 3:
+                folder1 = "Shear"
+                folder2 = "xy"
+            if BC_index == 4:
+                folder1 = "Shear"
+                folder2 = "xz"
+            if BC_index == 5:
+                folder1 = "Shear"
+                folder2 = "yz"
+            self.working_directory = os.path.join(self.evpfft_dir, 'outputs', folder1, folder2)
+            if not os.path.exists(self.working_directory):
+                os.makedirs(self.working_directory)
             
             self.p = QProcess()
-            self.p.setWorkingDirectory(working_directory)
+            self.p.setWorkingDirectory(self.working_directory)
             self.p.readyReadStandardOutput.connect(handle_stdout)
             self.p.readyReadStandardError.connect(handle_stderr)
             self.p.stateChanged.connect(handle_state)
-            self.p.finished.connect(process_finished)
+            self.p.finished.connect(lambda: process_finished(BC_index))
+#            self.p.start("evpfft",["-f", self.EVPFFT_INPUT, "-m", "2"])
             self.p.start(executable_path, arguments)
             self.progress_re = re.compile("       Current  Time  STEP = (\\d+)")
             self.run_cnt += 1            
@@ -595,16 +612,16 @@ def EVPFFT_Lattice(self):
         if m:
             pc_complete = m.group(1)
             return int(pc_complete)
-    def process_finished():
-        self.RunOutputProgress.setValue(100)
+    def process_finished(num):
+        self.RunOutputProgress.setValue(((num+1)/6)*100)
         self.p.close()
         self.p = None
     def handle_stdout():
         data = self.p.readAllStandardOutput()
         stdout = bytes(data).decode("utf8")
-        progress = simple_percent_parser(stdout)
-        if progress:
-            self.RunOutputProgress.setValue((progress/int(self.INNumberOfSteps.text()))*100)
+#        progress = simple_percent_parser(stdout)
+#        if progress:
+#            self.RunOutputProgress.setValue((progress/int(self.INNumberOfSteps.text()))*100)
         self.RunOutputWindow.appendPlainText(stdout)
     def handle_stderr():
         data = self.p.readAllStandardError()
@@ -621,84 +638,84 @@ def EVPFFT_Lattice(self):
     
     # Batch Run of EVPFFT
     def batch_EVPFFT():
-        for BC_index in range(self.TBCs.rowCount()):
+        for BC_index in range(6):
             self.BRunEVPFFT.clicked.connect(single_EVPFFT(BC_index))
             self.p.waitForStarted()
             while self.p != None:
                 QApplication.processEvents()
 
             # Generate Homogenized Elastic Constants
-            if "Homogenization" in self.TBCs.item(BC_index,0).text():
-                self.BHomogenization.setEnabled(True)
-                self.THomogenization.setEnabled(True)
-                with open("str_str.out", newline='') as f:
-                    reader = csv.reader(f)
-                    self.ss_data = list(reader)
-                s11 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                s22 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                s33 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                s12 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                s13 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                s23 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                e11 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                e22 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                e33 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                e12 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                e13 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                e23 = [0 for i in range(int(self.INNumberOfSteps.text()))]
-                for i in range(int(self.INNumberOfSteps.text())):
-                    s11[i] = float(self.ss_data[i+1][6])
-                    s22[i] = float(self.ss_data[i+1][7])
-                    s33[i] = float(self.ss_data[i+1][8])
-                    s12[i] = float(self.ss_data[i+1][11])
-                    s13[i] = float(self.ss_data[i+1][10])
-                    s23[i] = float(self.ss_data[i+1][9])
-                    e11[i] = float(self.ss_data[i+1][0])
-                    e22[i] = float(self.ss_data[i+1][1])
-                    e33[i] = float(self.ss_data[i+1][2])
-                    e12[i] = float(self.ss_data[i+1][5])
-                    e13[i] = float(self.ss_data[i+1][4])
-                    e23[i] = float(self.ss_data[i+1][3])
-                if self.TBCs.item(BC_index,1).text() == "x":
-                    self.HE11 = np.polyfit(e11,s11,1)
-                    self.HNU12 = np.polyfit(e11,e22,1)
-                    self.HNU13 = np.polyfit(e11,e33,1)
-                if self.TBCs.item(BC_index,1).text() == "y":
-                    self.HE22 = np.polyfit(e22,s22,1)
-                    self.HNU21 = np.polyfit(e22,e11,1)
-                    self.HNU23 = np.polyfit(e22,e33,1)
-                if self.TBCs.item(BC_index,1).text() == "z":
-                    self.HE33 = np.polyfit(e33,s33,1)
-                    self.HNU31 = np.polyfit(e33,e11,1)
-                    self.HNU32 = np.polyfit(e33,e22,1)
-                if self.TBCs.item(BC_index,1).text() == "xy":
-                    self.HG12 = np.polyfit(np.multiply(e12,2.),s12,1)
-                if self.TBCs.item(BC_index,1).text() == "xz":
-                    self.HG13 = np.polyfit(np.multiply(e13,2.),s13,1)
-                if self.TBCs.item(BC_index,1).text() == "yz":
-                    self.HG23 = np.polyfit(np.multiply(e23,2.),s23,1)
+            self.THomogenization.setEnabled(True)
+            with open(os.path.join(self.working_directory, 'str_str.out'), newline='') as f:
+                reader = csv.reader(f)
+                self.ss_data = list(reader)
+            s11 = [0 for i in range(self.EVPFFTSteps-1)]
+            s22 = [0 for i in range(self.EVPFFTSteps-1)]
+            s33 = [0 for i in range(self.EVPFFTSteps-1)]
+            s12 = [0 for i in range(self.EVPFFTSteps-1)]
+            s13 = [0 for i in range(self.EVPFFTSteps-1)]
+            s23 = [0 for i in range(self.EVPFFTSteps-1)]
+            e11 = [0 for i in range(self.EVPFFTSteps-1)]
+            e22 = [0 for i in range(self.EVPFFTSteps-1)]
+            e33 = [0 for i in range(self.EVPFFTSteps-1)]
+            e12 = [0 for i in range(self.EVPFFTSteps-1)]
+            e13 = [0 for i in range(self.EVPFFTSteps-1)]
+            e23 = [0 for i in range(self.EVPFFTSteps-1)]
+            for i in range(self.EVPFFTSteps-1):
+                s11[i] = float(self.ss_data[i+2][6])
+                s22[i] = float(self.ss_data[i+2][7])
+                s33[i] = float(self.ss_data[i+2][8])
+                s12[i] = float(self.ss_data[i+2][11])
+                s13[i] = float(self.ss_data[i+2][10])
+                s23[i] = float(self.ss_data[i+2][9])
+                e11[i] = float(self.ss_data[i+2][0])
+                e22[i] = float(self.ss_data[i+2][1])
+                e33[i] = float(self.ss_data[i+2][2])
+                e12[i] = float(self.ss_data[i+2][5])
+                e13[i] = float(self.ss_data[i+2][4])
+                e23[i] = float(self.ss_data[i+2][3])
+            # Tension in the x-direction
+            if BC_index == 0:
+                self.HE11 = np.polyfit(e11,s11,1)
+                self.HNU12 = np.polyfit(e11,e22,1)
+                self.HNU13 = np.polyfit(e11,e33,1)
+                self.THomogenization.setItem(0,0,QTableWidgetItem(str(self.HE11[0])))
+                self.THomogenization.setItem(3,0,QTableWidgetItem(str(-self.HNU12[0])))
+                self.THomogenization.setItem(5,0,QTableWidgetItem(str(-self.HNU13[0])))
+            # Tension in the y-direction
+            if BC_index == 1:
+                self.HE22 = np.polyfit(e22,s22,1)
+                self.HNU21 = np.polyfit(e22,e11,1)
+                self.HNU23 = np.polyfit(e22,e33,1)
+                self.THomogenization.setItem(1,0,QTableWidgetItem(str(self.HE22[0])))
+                self.THomogenization.setItem(4,0,QTableWidgetItem(str(-self.HNU21[0])))
+                self.THomogenization.setItem(7,0,QTableWidgetItem(str(-self.HNU23[0])))
+            # Tension in the z-direction
+            if BC_index == 2:
+                self.HE33 = np.polyfit(e33,s33,1)
+                self.HNU31 = np.polyfit(e33,e11,1)
+                self.HNU32 = np.polyfit(e33,e22,1)
+                self.THomogenization.setItem(2,0,QTableWidgetItem(str(self.HE33[0])))
+                self.THomogenization.setItem(6,0,QTableWidgetItem(str(-self.HNU31[0])))
+                self.THomogenization.setItem(8,0,QTableWidgetItem(str(-self.HNU32[0])))
+            # Shear in the xy-direction
+            if BC_index == 3:
+                self.HG12 = np.polyfit(np.multiply(e12,2.),s12,1)
+                self.THomogenization.setItem(9,0,QTableWidgetItem(str(self.HG12[0])))
+            # Shear in the xz-direction
+            if BC_index == 4:
+                self.HG13 = np.polyfit(np.multiply(e13,2.),s13,1)
+                self.THomogenization.setItem(10,0,QTableWidgetItem(str(self.HG13[0])))
+            # Shear in the yz-direction
+            if BC_index == 5:
+                self.HG23 = np.polyfit(np.multiply(e23,2.),s23,1)
+                self.THomogenization.setItem(11,0,QTableWidgetItem(str(self.HG23[0])))
     
     # Connect run button to indiviual or batch run
     self.p = None
     def run_click():
         batch_EVPFFT()
     self.BRunEVPFFT.clicked.connect(run_click)
-    
-    # Generate Homogenized Elastic Constants
-    def homogenization_click():
-        self.THomogenization.setItem(0,0,QTableWidgetItem(str(self.HE11[0])))
-        self.THomogenization.setItem(1,0,QTableWidgetItem(str(self.HE22[0])))
-        self.THomogenization.setItem(2,0,QTableWidgetItem(str(self.HE33[0])))
-        self.THomogenization.setItem(3,0,QTableWidgetItem(str(-self.HNU12[0])))
-        self.THomogenization.setItem(4,0,QTableWidgetItem(str(-self.HNU21[0])))
-        self.THomogenization.setItem(5,0,QTableWidgetItem(str(-self.HNU13[0])))
-        self.THomogenization.setItem(6,0,QTableWidgetItem(str(-self.HNU31[0])))
-        self.THomogenization.setItem(7,0,QTableWidgetItem(str(-self.HNU23[0])))
-        self.THomogenization.setItem(8,0,QTableWidgetItem(str(-self.HNU32[0])))
-        self.THomogenization.setItem(9,0,QTableWidgetItem(str(self.HG12[0])))
-        self.THomogenization.setItem(10,0,QTableWidgetItem(str(self.HG13[0])))
-        self.THomogenization.setItem(11,0,QTableWidgetItem(str(self.HG23[0])))
-    self.BHomogenization.clicked.connect(homogenization_click)
     
     # Preview Results
     def preview_results_click():
@@ -718,8 +735,9 @@ def EVPFFT_Lattice(self):
         # Display .xdmf data
         output_name = str(self.INBCFile.currentText())
         output_parts = output_name.split()
-        output_directory = os.path.join(self.evpfft_dir, 'outputs', output_parts[0], output_parts[1], "micro_state_timestep_10.xdmf")
-        self.results_reader = paraview.simple.XDMFReader(FileNames=output_directory)
+        file_name = "micro_state_timestep_" + str(self.EVPFFTSteps) + ".xdmf"
+        self.output_directory = os.path.join(self.evpfft_dir, 'outputs', output_parts[0], output_parts[1], file_name)
+        self.results_reader = paraview.simple.XDMFReader(FileNames=self.output_directory)
         
         # Apply threshold to view certain phase id's
         if hasattr(self, 'threshold'):
@@ -748,7 +766,7 @@ def EVPFFT_Lattice(self):
     
     # Open Paraview
     def open_paraview_click():
-        command = ["paraview", "micro_state_timestep_10.xdmf"]
+        command = ["paraview", self.output_directory]
         subprocess.Popen(command)
     self.BOpenParaview.clicked.connect(open_paraview_click)
     
