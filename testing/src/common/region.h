@@ -132,6 +132,6 @@ static std::vector<std::string> str_region_inps
     "ie",
     "den",
     "origin"
-}; //
+};
 
 #endif // end Header Guard

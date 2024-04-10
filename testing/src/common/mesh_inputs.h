@@ -70,6 +70,7 @@ static std::map<std::string, mesh_input::type> mesh_input_type_map
 // mmeshing input parameters
 struct mesh_input_t
 {
+    int num_dims = 3;
     mesh_input::source source = mesh_input::none;
     std::string file_path     = "";
     mesh_input::type type;
@@ -78,6 +79,15 @@ struct mesh_input_t
     std::vector<double> length { 1.0, 1.0, 1.0 };
     std::vector<int> num_elems { 2, 2, 2 };
     size_t p_order = 1;
+
+    // WARNING, NOT YET PARSED
+    double inner_radius   = 0.0;
+    double outer_radius   = 1.0;
+    double starting_angle = 0.0; // in degrees
+    double ending_angle   = 90; // in degrees
+
+    int num_radial_elems  = 10;
+    int num_angular_elems = 10;
 }; // mesh_input_t
 
 // ----------------------------------
@@ -85,13 +95,20 @@ struct mesh_input_t
 // ----------------------------------
 static std::vector<std::string> str_mesh_inps
 {
+    "num_dims",
     "source",
     "file_path",
     "type",
     "origin",
     "length",
     "num_elems",
-    "polynomial_order"
+    "polynomial_order",
+    "inner_radius",
+    "outer_radius",
+    "starting_angle",
+    "ending_angle",
+    "num_radial_elems",
+    "num_angular_elems"
 };
 
 #endif // end Header Guard

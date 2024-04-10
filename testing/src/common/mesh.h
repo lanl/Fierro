@@ -805,7 +805,24 @@ struct mesh_t
         }); // end parallel for over nodes
     } // end of node node connectivity
 
-    void build_connectivity(){
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn build_connectivity
+    ///
+    /// \brief <insert brief description>
+    ///
+    /// <Insert longer more detailed description which
+    /// can span multiple lines if needed>
+    ///
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    ///
+    /// \return <return type and definition description if not void>
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void build_connectivity()
+    {
         build_corner_connectivity();
         build_elem_elem_connectivity();
         build_patch_connectivity();
@@ -916,15 +933,7 @@ struct mesh_t
 
         return;
     } // end method to build boundary nodes
-
-
 }; // end mesh_t
-
-
-
-
-
-
 
 void ensight(const mesh_t& mesh,
              const DCArrayKokkos<double>& node_coords,
@@ -966,8 +975,6 @@ size_t check_bdy(const size_t  patch_gid,
                  const double  val,
                  const mesh_t& mesh,
                  const DCArrayKokkos<double>& node_coords);
-
-
 
 void user_model_init(const DCArrayKokkos<double>& file_state_vars,
                      const size_t num_state_vars,

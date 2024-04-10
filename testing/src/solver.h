@@ -68,10 +68,9 @@ public:
     size_t graphics_id = 0;
     double graphics_time;
 
-
-    double fuzz     = 1e-16;    // machine precision
-    double tiny     = 1e-12;    // very very small (between real_t and single)
-    double small    = 1e-8;     // single precision
+    double fuzz  = 1e-16;       // machine precision
+    double tiny  = 1e-12;       // very very small (between real_t and single)
+    double small = 1e-8;        // single precision
 
     Solver(); // Simulation_Parameters& _simparam);
 

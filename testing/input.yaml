@@ -8,9 +8,18 @@ dynamic_options:
     cycle_stop: 300000
 
 
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
 mesh_options:
-    source: file
-    file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+    source: generate
+    num_dims: 3
+    type: Box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.2, 1.2, 1.2]
+    num_elems: [8, 8, 8]
+
 
 output_options:
     timer_output_level: thorough

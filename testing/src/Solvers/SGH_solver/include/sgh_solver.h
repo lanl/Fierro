@@ -38,7 +38,7 @@
 #include "matar.h"
 #include "solver.h"
 #include "geometry_new.h"
-#include "io_utils.h"
+// #include "io_utils.h"
 
 #include "simulation_parameters.h"
 
@@ -59,10 +59,6 @@ class SGH : public Solver
 {
 public:
 
-    char* mesh_file;
-
-    MeshReader* reader;
-
     simulation_parameters_t sim_param;
     mesh_t   mesh;
     node_t   node;
@@ -79,13 +75,11 @@ public:
     double dt_start = 1e-5;     // Starting time step
     double dt_cfl   = 0.4;      // CFL multiplier for time step calculation
 
-
-    double graphics_dt_ival = 1.0; // time increment for graphics output
-    int graphics_cyc_ival = 2000000; // Cycle count for graphics output
+    double graphics_dt_ival  = 1.0; // time increment for graphics output
+    int    graphics_cyc_ival = 2000000; // Cycle count for graphics output
 
     int rk_num_stages = 2;
-    int cycle_stop = 1000000000;
-
+    int cycle_stop    = 1000000000;
 
     SGH(simulation_parameters_t& io, mesh_t& mesh_in, node_t& node_in, elem_t& elem_in, corner_t& corner_in)  : Solver()
     {
@@ -108,24 +102,23 @@ public:
         graphics_times = CArray<double>(20000);
 
         // NOTE: Possible remove this and pass directly
-        fuzz = sim_param.dynamic_options.fuzz;
-        tiny = sim_param.dynamic_options.tiny;
+        fuzz  = sim_param.dynamic_options.fuzz;
+        tiny  = sim_param.dynamic_options.tiny;
         small = sim_param.dynamic_options.small;
 
         time_initial = sim_param.dynamic_options.time_initial;
         time_final   = sim_param.dynamic_options.time_final;
         dt_min   = sim_param.dynamic_options.dt_min;
-        dt_max   = sim_param.dynamic_options.dt_max; 
+        dt_max   = sim_param.dynamic_options.dt_max;
         dt_start = sim_param.dynamic_options.dt_start;
         dt_cfl   = sim_param.dynamic_options.dt_cfl;
 
-        graphics_dt_ival = sim_param.output_options.graphics_time_step;
+        graphics_dt_ival  = sim_param.output_options.graphics_time_step;
         graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
 
         rk_num_stages = sim_param.dynamic_options.rk_num_stages;
 
         cycle_stop = sim_param.dynamic_options.cycle_stop;
-
 
         // intialize time, time_step, and cycles
         time_value = 0.0;
@@ -152,7 +145,6 @@ public:
 
         std::cout << "Applying initial boundary conditions" << std::endl;
         boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
-
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -164,7 +156,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void execute();
-
 
     void write_outputs(
         const mesh_t& mesh,

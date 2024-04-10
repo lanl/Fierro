@@ -520,6 +520,16 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
                 }
             } // end if
         } // source
+        // Number of dimensions for the mesh
+        else if (a_word.compare("num_dims") == 0) {
+            int num_dim = root["mesh_options"][a_word].As<int>();
+            std::cout << "\tNTEST TEST TEST NUM DIM = " << num_dim << std::endl;
+            if (VERBOSE) {
+                std::cout << "\tNum dimensions = " << num_dim << std::endl;
+            }
+
+            mesh_input.num_dims = num_dim;
+        } // Number of dimensions
         // get mesh type for generation
         else if (a_word.compare("type") == 0) {
             std::string type = root["mesh_options"][a_word].As<std::string>();
@@ -614,13 +624,67 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
         }
         // Polynomial order for the mesh
         else if (a_word.compare("polynomial_order") == 0) {
-            double p_order = root["mesh_options"][a_word].As<int>();
+            int p_order = root["mesh_options"][a_word].As<int>();
             if (VERBOSE) {
                 std::cout << "\tPoly order = " << p_order << std::endl;
             }
 
             mesh_input.p_order = p_order;
         } // polynomial order
+        // inner radius for 2D RZ meshes
+        else if (a_word.compare("inner_radius") == 0) {
+            double inner_radius = root["mesh_options"][a_word].As<double>();
+            if (VERBOSE) {
+                std::cout << "\tInner Radius = " << inner_radius << std::endl;
+            }
+
+            mesh_input.inner_radius = inner_radius;
+        } // inner radius for 2D RZ meshes
+        // outer radius for 2D RZ meshes
+        else if (a_word.compare("outer_radius") == 0) {
+            double outer_radius = root["mesh_options"][a_word].As<double>();
+            if (VERBOSE) {
+                std::cout << "\tOuter Radius = " << outer_radius << std::endl;
+            }
+
+            mesh_input.outer_radius = outer_radius;
+        } // outer radius for 2D RZ meshes
+        // starting angle for 2D RZ meshes
+        else if (a_word.compare("starting_angle") == 0) {
+            double starting_angle = root["mesh_options"][a_word].As<double>();
+            if (VERBOSE) {
+                std::cout << "\tStarting angle = " << starting_angle << std::endl;
+            }
+
+            mesh_input.starting_angle = starting_angle;
+        } // starting angle for 2D RZ meshes
+        // ending angle for 2D RZ meshes
+        else if (a_word.compare("ending_angle") == 0) {
+            double ending_angle = root["mesh_options"][a_word].As<double>();
+            if (VERBOSE) {
+                std::cout << "\tEnding angle = " << ending_angle << std::endl;
+            }
+
+            mesh_input.ending_angle = ending_angle;
+        } // ending angle for 2D RZ meshes
+        // Number of radial elements for 2D RZ meshes
+        else if (a_word.compare("num_radial_elems") == 0) {
+            int num_radial_elems = root["mesh_options"][a_word].As<int>();
+            if (VERBOSE) {
+                std::cout << "\tNumber of radial elements = " << num_radial_elems << std::endl;
+            }
+
+            mesh_input.num_radial_elems = num_radial_elems;
+        } // Number of radial elements for 2D RZ meshes
+        // Number of angular elements for 2D RZ meshes
+        else if (a_word.compare("num_angular_elems") == 0) {
+            int num_angular_elems = root["mesh_options"][a_word].As<int>();
+            if (VERBOSE) {
+                std::cout << "\tNumber of angular elements = " << num_angular_elems << std::endl;
+            }
+
+            mesh_input.num_angular_elems = num_angular_elems;
+        } // Number of angular elements for 2D RZ meshes
         else {
             std::cout << "ERROR: invalid input: " << a_word << std::endl;
             std::cout << "Valid options are: " << std::endl;
@@ -1184,8 +1248,6 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
 
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double eos_var = root["materials"][mat_id]["material"]["eos_global_vars"][global_var_id].As<double>();
-
-                    std::cout << "*** EOS VAR  = " << eos_var << std::endl;
                     eos_global_vars[mat_id].push_back(eos_var);
 
                     RUN({

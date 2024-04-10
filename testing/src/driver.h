@@ -50,7 +50,8 @@ public:
     char* mesh_file;
     char* yaml_file;
 
-    MeshReader reader;
+    MeshReader  mesh_reader;
+    MeshBuilder mesh_builder;
     simulation_parameters_t sim_param;
 
     int num_dims = 3;
@@ -97,14 +98,21 @@ public:
         parse_yaml(root, sim_param);
         std::cout << "Finished  parsing YAML file" << std::endl;
 
-        // Create and/or read mesh
-        std::cout << "Mesh file path: " << sim_param.mesh_input.file_path << std::endl;
-        reader.set_mesh_file(sim_param.mesh_input.file_path.data());
+        if (sim_param.mesh_input.source == mesh_input::file) {
+            // Create and/or read mesh
+            std::cout << "Mesh file path: " << sim_param.mesh_input.file_path << std::endl;
+            mesh_reader.set_mesh_file(sim_param.mesh_input.file_path.data());
+            mesh_reader.read_mesh(mesh, elem, node, corner, num_dims, sim_param.dynamic_options.rk_num_bins);
+        }
+        else if (sim_param.mesh_input.source == mesh_input::generate) {
+            mesh_builder.build_mesh(mesh, elem, node, corner, sim_param);
+        }
+        else{
+            throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
+            return;
+        }
 
-        reader.read_mesh(mesh, elem, node, corner, num_dims, sim_param.dynamic_options.rk_num_bins);
-
-        // Build connectivity
-        mesh.build_connectivity();
+        // mesh_builder.build_mesh(mesh, elem, node, corner, sim_param);
 
         // Build boundary conditions
         int num_bcs = sim_param.boundary_conditions.size();
@@ -202,22 +210,36 @@ public:
     void finalize()
     {
         std::cout << "Inside driver finalize" << std::endl;
-        for (auto & solver : solvers) {
-            if (solver->finalize_flag){
+        for (auto& solver : solvers) {
+            if (solver->finalize_flag) {
                 solver->solver_finalize();
             }
         }
         // destroy FEA modules
-        for (auto & solver : solvers)
-        {
-            std::cout<<"Deleting solver"<<std::endl;
+        for (auto& solver : solvers) {
+            std::cout << "Deleting solver" << std::endl;
             delete solver;
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn fill_regions
+    ///
+    /// \brief <insert brief description>
+    ///
+    /// <Insert longer more detailed description which
+    /// can span multiple lines if needed>
+    ///
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    ///
+    /// \return <return type and definition description if not void>
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void fill_regions()
     {
-        
         int num_fills = sim_param.region_fills.size();
         printf("Num Fills's = %lu\n", num_fills);
 
@@ -499,11 +521,10 @@ public:
                         } // end if
                     } // end if fill
                 } // end RK loop
-                // }
+                  // }
             }); // end FOR_ALL element loop
             Kokkos::fence();
         } // end for loop over fills
-
 
         // // calculate the corner massess if 2D
         // if (mesh.num_dims == 2) {
@@ -545,6 +566,5 @@ public:
             } // end else
         }); // end FOR_ALL
         Kokkos::fence();
-
     } // end fill regions
 };

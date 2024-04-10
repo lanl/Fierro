@@ -49,7 +49,6 @@ void SGH::execute()
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
-
     printf("Writing outputs to file at %f \n", time_value);
     write_outputs(mesh,
                   node.coords,
@@ -88,7 +87,6 @@ void SGH::execute()
         }
         node_extensive_mass(node_gid) = node.mass(node_gid) * radius;
     }); // end parallel for
-
 
     // extensive IE
     REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {

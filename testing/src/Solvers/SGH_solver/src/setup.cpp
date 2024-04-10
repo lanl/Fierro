@@ -67,7 +67,6 @@ std::string trim(const std::string& s);
 KOKKOS_FUNCTION
 int get_id(int i, int j, int k, int num_i, int num_j);
 
-
 // set planes for tagging sub sets of boundary patches
 // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
 // val = plane value, cyl radius, sphere radius
@@ -190,7 +189,6 @@ size_t check_bdy(const size_t patch_gid,
 
     return is_on_bdy;
 } // end method to check bdy
-
 
 // Code from stackover flow for string delimiter parsing
 std::vector<std::string> split(std::string s, std::string delimiter)
