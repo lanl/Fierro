@@ -18,9 +18,9 @@ The recommended way to use **Fierro** is through the provided Anaconda package. 
 Open a terminal on your machine and go to a folder where you want to run the **Fierro** code.  Then create and activate an Anaconda environment by typing:  
 ```
 conda create -n FierroCode
-source activate FierroCode  
+conda activate FierroCode  
 ```
-In this example, the enviroment is called FierroCode, but any name can be used.  On some distributions of Anaconda, the text to activate an enviroment is `conda activate FierroCode`.  Likewise, if an enviroment already exists, then just activate the desired environment.  
+In this example, the enviroment is called FierroCode, but any name can be used.  In some cases, the text to activate an enviroment is `source activate FierroCode`.  Likewise, if an enviroment already exists, then just activate the desired environment.  
 
 To install the finite element physics solvers in **Fierro**, please type within the activated Anaconda environment:
 ```
