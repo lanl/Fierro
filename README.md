@@ -46,10 +46,8 @@ The GUI can be run in the anaconda enviroment by typing:
 ```
 evpfft-gui
 ```
-The anaconda distributions of Fierro are located in 
-```
-https://anaconda.org/FierroMechanics
-```
+The anaconda distributions of Fierro are located [here](https://anaconda.org/FierroMechanics).
+
 
 
 ## Material models
