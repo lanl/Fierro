@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIujJSZS.ui'
+## Form generated from reading UI file 'FIERRO_GUIPohmWU.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -35,6 +35,7 @@ class Ui_MainWindow(object):
         icon.addFile(u":/Logos/Logos/FIERRO.png", QSize(), QIcon.Normal, QIcon.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setAutoFillBackground(False)
+        MainWindow.setStyleSheet(u"")
         MainWindow.setToolButtonStyle(Qt.ToolButtonIconOnly)
         MainWindow.setDockNestingEnabled(False)
         self.actionManual = QAction(MainWindow)
@@ -43,10 +44,7 @@ class Ui_MainWindow(object):
         self.actionChange_Working_Directory.setObjectName(u"actionChange_Working_Directory")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        self.centralwidget.setStyleSheet(u"#TitlePage, #GeometryInformationTool, #DefineMaterialTool, #BoundaryConditionsTool, #SolverSettingsTool, #ResultsTool, #Tools, #RunOutputs, #RunOutputWindow, #Main{\n"
-"    background-color: rgb(235, 235, 235);\n"
-"}\n"
-"#ParaviewFrame{\n"
+        self.centralwidget.setStyleSheet(u"#OutputWindows{\n"
 "    background-color: rgb(91, 97, 120);\n"
 "}\n"
 "#BImportPart:hover, #BDefineMaterial:hover, #BApplyBC:hover, #BSolverSettings:hover, #BRunEVPFFT:hover, #BViewResults:hover, #BGlobalMesh:hover, #BImportPartSGH:hover, #BDefineMaterialSGH:hover, #BAssignMaterialSGH:hover, #BApplyBCSGH:hover, #BSolverSettingsSGH:hover, #BViewResultsSGH:hover, #BRunSGH:hover, #BCreateBasicPart:hover{\n"
@@ -55,12 +53,7 @@ class Ui_MainWindow(object):
 "}\n"
 "#BImportPart, #BDefineMaterial, #BApplyBC, #BSolverSettings, #BRunEVPFFT, #BViewResults, #BGlobalMesh{\n"
 "    border-style: flat;\n"
-"}\n"
-"#centralwidget{\n"
-"    background-color: rgb(255, 255, 255);\n"
-"}\n"
-"\n"
-"")
+"}")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -72,6 +65,8 @@ class Ui_MainWindow(object):
         font.setBold(True)
         self.SolverTypeMenu.setFont(font)
         self.SolverTypeMenu.setContextMenuPolicy(Qt.DefaultContextMenu)
+        self.SolverTypeMenu.setAutoFillBackground(False)
+        self.SolverTypeMenu.setStyleSheet(u"")
         self.SolverTypeMenu.setTabShape(QTabWidget.Rounded)
         self.ChooseSolver = QWidget()
         self.ChooseSolver.setObjectName(u"ChooseSolver")
@@ -81,6 +76,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.setContentsMargins(0, 0, 0, 5)
         self.label_2 = QLabel(self.ChooseSolver)
         self.label_2.setObjectName(u"label_2")
+        self.label_2.setFrameShape(QFrame.NoFrame)
 
         self.verticalLayout_3.addWidget(self.label_2)
 
@@ -776,7 +772,7 @@ class Ui_MainWindow(object):
         self.Main = QFrame(self.centralwidget)
         self.Main.setObjectName(u"Main")
         self.Main.setMinimumSize(QSize(0, 0))
-        self.Main.setFrameShape(QFrame.Box)
+        self.Main.setFrameShape(QFrame.NoFrame)
         self.Main.setFrameShadow(QFrame.Plain)
         self.Main.setLineWidth(1)
         self.horizontalLayout = QHBoxLayout(self.Main)
@@ -794,7 +790,7 @@ class Ui_MainWindow(object):
         self.splitter.setFrameShadow(QFrame.Plain)
         self.splitter.setOrientation(Qt.Horizontal)
         self.splitter.setOpaqueResize(True)
-        self.splitter.setHandleWidth(7)
+        self.splitter.setHandleWidth(0)
         self.ToolSettings = QStackedWidget(self.splitter)
         self.ToolSettings.setObjectName(u"ToolSettings")
         sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
@@ -806,7 +802,10 @@ class Ui_MainWindow(object):
         self.ToolSettings.setMaximumSize(QSize(360, 16777215))
         self.ToolSettings.setSizeIncrement(QSize(0, 0))
         self.ToolSettings.setBaseSize(QSize(300, 0))
-        self.ToolSettings.setFrameShape(QFrame.NoFrame)
+        self.ToolSettings.setAutoFillBackground(False)
+        self.ToolSettings.setFrameShape(QFrame.Panel)
+        self.ToolSettings.setFrameShadow(QFrame.Plain)
+        self.ToolSettings.setMidLineWidth(0)
         self.TitlePage = QWidget()
         self.TitlePage.setObjectName(u"TitlePage")
         self.TitlePage.setMinimumSize(QSize(0, 0))
@@ -3468,16 +3467,20 @@ class Ui_MainWindow(object):
         self.ParaviewFrame.setObjectName(u"ParaviewFrame")
         self.ParaviewFrame.setFocusPolicy(Qt.TabFocus)
         self.ParaviewFrame.setContextMenuPolicy(Qt.DefaultContextMenu)
-        self.ParaviewFrame.setFrameShape(QFrame.Box)
+        self.ParaviewFrame.setFrameShape(QFrame.NoFrame)
         self.ParaviewFrame.setFrameShadow(QFrame.Plain)
         self.ParaviewFrame.setLineWidth(1)
         self.verticalLayout_19 = QVBoxLayout(self.ParaviewFrame)
-        self.verticalLayout_19.setSpacing(0)
+#ifndef Q_OS_MAC
+        self.verticalLayout_19.setSpacing(-1)
+#endif
         self.verticalLayout_19.setObjectName(u"verticalLayout_19")
         self.verticalLayout_19.setContentsMargins(0, 0, 0, 0)
         self.splitter_2 = QSplitter(self.ParaviewFrame)
         self.splitter_2.setObjectName(u"splitter_2")
+        self.splitter_2.setFrameShape(QFrame.Box)
         self.splitter_2.setOrientation(Qt.Vertical)
+        self.splitter_2.setHandleWidth(0)
         self.OutputWindows = QStackedWidget(self.splitter_2)
         self.OutputWindows.setObjectName(u"OutputWindows")
         self.OutputWindows.setFrameShape(QFrame.NoFrame)
@@ -4084,15 +4087,15 @@ class Ui_MainWindow(object):
         self.BUpMaterial.setText(QCoreApplication.translate("MainWindow", u"...", None))
         self.BDownMaterial.setText(QCoreApplication.translate("MainWindow", u"...", None))
         self.Bdeletematerialassignment.setText(QCoreApplication.translate("MainWindow", u"Delete Material Assignment", None))
-        self.Lbcs.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline; color:#000000;\">BOUNDARY CONDITIONS</span></p></body></html>", None))
-        self.Lbndry.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Boundary: </span></p></body></html>", None))
+        self.Lbcs.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">BOUNDARY CONDITIONS</span></p></body></html>", None))
+        self.Lbndry.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Boundary:</p></body></html>", None))
         self.INBoundary.setItemText(0, QCoreApplication.translate("MainWindow", u"x_plane", None))
         self.INBoundary.setItemText(1, QCoreApplication.translate("MainWindow", u"y_plane", None))
         self.INBoundary.setItemText(2, QCoreApplication.translate("MainWindow", u"z_plane", None))
 
-        self.Lvalue.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Plane Position:</span></p></body></html>", None))
+        self.Lvalue.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Plane Position:</p></body></html>", None))
         self.INPlanePosition.setText("")
-        self.Ltype.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Type: </span></p></body></html>", None))
+        self.Ltype.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Type:</p></body></html>", None))
         self.INType.setItemText(0, QCoreApplication.translate("MainWindow", u"reflected", None))
         self.INType.setItemText(1, QCoreApplication.translate("MainWindow", u"fixed", None))
         self.INType.setItemText(2, QCoreApplication.translate("MainWindow", u"velocity", None))
@@ -4117,20 +4120,20 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem84 = self.TBoundaryConditions.horizontalHeaderItem(6)
         ___qtablewidgetitem84.setText(QCoreApplication.translate("MainWindow", u"vel_t_end", None));
         self.BdeleteBC.setText(QCoreApplication.translate("MainWindow", u"Delete Boundary Condition", None))
-        self.label_45.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline; color:#000000;\">SOLVER SETTINGS</span></p></body></html>", None))
-        self.Ltime.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Time T: </span></p></body></html>", None))
+        self.label_45.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">SOLVER SETTINGS</span></p></body></html>", None))
+        self.Ltime.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Time T:</p></body></html>", None))
         self.INTime.setText(QCoreApplication.translate("MainWindow", u"1", None))
-        self.Lmindt.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Minimum dt: </span></p></body></html>", None))
+        self.Lmindt.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Minimum dt:</p></body></html>", None))
         self.INMindt.setText(QCoreApplication.translate("MainWindow", u"1E-8", None))
-        self.Lmaxdt.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Maximum dt: </span></p></body></html>", None))
+        self.Lmaxdt.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Maximum dt:</p></body></html>", None))
         self.INMaxdt.setText(QCoreApplication.translate("MainWindow", u"1E-2", None))
-        self.Linitdt.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Initial dt: </span></p></body></html>", None))
+        self.Linitdt.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Initial dt:</p></body></html>", None))
         self.INInitialdt.setText(QCoreApplication.translate("MainWindow", u"1E-5", None))
-        self.Lmaxcycle.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" color:#000000;\">Maximum # of cycles: </span></p></body></html>", None))
+        self.Lmaxcycle.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Maximum # of cycles:</p></body></html>", None))
         self.INmaxcycles.setText(QCoreApplication.translate("MainWindow", u"2000000", None))
         self.INGraphicsOutput.setText(QCoreApplication.translate("MainWindow", u"0.25", None))
         self.LGraphicsOutput.setText(QCoreApplication.translate("MainWindow", u"Graphics output step:", None))
-        self.LResultsSGH.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline; color:#000000;\">RESULTS</span></p></body></html>", None))
+        self.LResultsSGH.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">RESULTS</span></p></body></html>", None))
         self.INOuputVarSGH.setItemText(0, QCoreApplication.translate("MainWindow", u"SIE", None))
 
         self.BPreviewResultsSGH.setText(QCoreApplication.translate("MainWindow", u"Preview Results", None))
