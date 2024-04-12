@@ -13,15 +13,15 @@
 
 # Usage
 ## Anaconda
-The recommended way to use **Fierro** is through the provided Anaconda package and command line utility. To use the anaconda package, follow the steps for your platform to install [anaconda](https://docs.anaconda.com/free/anaconda/install/index.html)/[miniconda](https://docs.conda.io/en/latest/miniconda.html)/[mamba](https://mamba.readthedocs.io/en/latest/installation.html). Then run the following command in your desired Anaconda environment:
+The recommended way to use **Fierro** is through the provided Anaconda package. To use the anaconda package, follow the steps for your platform to install [anaconda](https://docs.anaconda.com/free/anaconda/install/index.html)/[miniconda](https://docs.conda.io/en/latest/miniconda.html)/[mamba](https://mamba.readthedocs.io/en/latest/installation.html). Then run the following command in your desired Anaconda environment:
 
 ```
 conda install fierro-cpu -c fierromechanics -c conda-forge
 ```
 
-This will give you access to the **Fierro** command line interface. You can run the following to check that the package was installed correctly:
+This will give you access to the **Fierro** tool suite. This includes the `fierro-mesh-builder`,`fierro-parallel-explicit`,`fierro-parallel-implicit`, and the `fierro-voxelizer` executables. These can be ran by calling the appropriate executable with the desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
 ```
-fierro -h
+./fierro-parallel-explicit input.yaml
 ```
 
 ## Material models  
