@@ -46,6 +46,43 @@
                     Anaconda will automatically select the right build for your OS and CPU architecture, however, you must select the correct build based on which GPU hardware is present.
                     This can be seen in the package prefix (-cpu, -cuda, -hip).
                 </p>
+                <p>
+                    To use Anaconda, follow the steps for your platform to install 
+                    <a href="https://docs.anaconda.com/free/anaconda/install/index.html">Anaconda</a> /
+                    <a href="https://docs.conda.io/en/latest/miniconda.html">miniconda</a> /
+                    <a href="https://mamba.readthedocs.io/en/latest/installation.html">mamba</a>.
+                    
+                    After installing Anaconda, open a terminal on your machine and go to a folder where you want to run the <em>Fierro</em> code.  Then create and activate an Anaconda environment by typing:  
+                    <pre><code> conda create -n FierroCode </code></pre>
+                    <pre><code> source activate FierroCode </code></pre>
+                    
+                    In this example, the enviroment is called FierroCode, but any name can be used.  On some distributions of Anaconda, the text to activate an enviroment is <code>conda activate FierroCode</code>.  Likewise, if an enviroment already exists, then just activate the desired environment.  
+
+                    To install the finite element physics solvers in <em>Fierro</em>, please type within the activated Anaconda environment:
+                    
+                    <pre><code> conda install -c conda-forge -c fierromechanics fierro-cpu </code></pre>
+
+                    The EVPFFT physics solver in  <em>Fierro</em> can be installed by typing:
+
+                    <pre><code> conda install -c conda-forge -c fierromechanics evpfft </code></pre>
+
+                    A GUI is offered, it can be installed by typing:    
+
+                    <pre><code> conda install -c conda-forge -c fierromechanics evpfft_gui </code></pre>
+
+                    After installing the finite element solvers, it gives you access to <code>fierro-mesh-builder</code>, <code>fierro-parallel-explicit</code>, <code>fierro-parallel-implicit</code>, and the <code>fierro-voxelizer</code> executables. These can be run by calling the appropriate executable with the desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
+                    
+                    <pre><code> fierro-parallel-explicit input.yaml </code></pre>
+
+                    A sample input file for the explicit finite element solver is here:
+                    <pre><code>./src/Parallel-Solvers/Parallel-Explicit/example_simple.yaml</code></pre>
+
+                    The GUI can be run in the anaconda enviroment by typing:
+                    <pre><code>evpfft-gui </code></pre>
+
+
+
+                </p>
 
                 <h2>Supported Systems</h2>
                 <p>
@@ -113,7 +150,7 @@
                 <p>
                     Our standalone EVPFFT-GUI software can be installed with:
                 </p>
-<pre><code>conda install evpfft_gui -c fierromechanics -c conda-forge</code></pre>
+                <pre><code>conda install -c conda-forge -c fierromechanics evpfft_gui</code></pre>
                 <p>
                     This will give you access to both the <code>evpfft</code> and <code>evpfft-gui</code> commands to launch the comamnd line EVPFFT backend or the associated graphical user interface, respectively.
                 </p>
