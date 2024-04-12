@@ -13,18 +13,18 @@
 
 # Usage
 ## Anaconda
-The recommended way to use **Fierro** is through the provided Anaconda package and command line utility. To use the anaconda package, follow the steps for your platform to install [anaconda](https://docs.anaconda.com/free/anaconda/install/index.html)/[miniconda](https://docs.conda.io/en/latest/miniconda.html)/[mamba](https://mamba.readthedocs.io/en/latest/installation.html). Then run the following command in your desired Anaconda environment:
+The recommended way to use **Fierro** is through the provided Anaconda package. To use the anaconda package, follow the steps for your platform to install [anaconda](https://docs.anaconda.com/free/anaconda/install/index.html)/[miniconda](https://docs.conda.io/en/latest/miniconda.html)/[mamba](https://mamba.readthedocs.io/en/latest/installation.html). Then run the following command in your desired Anaconda environment:
 
 ```
 conda install fierro-cpu -c fierromechanics -c conda-forge
 ```
 
-This will give you access to the **Fierro** command line interface. You can run the following to check that the package was installed correctly:
+This will give you access to the **Fierro** tool suite. This includes the `fierro-mesh-builder`,`fierro-parallel-explicit`,`fierro-parallel-implicit`, and the `fierro-voxelizer` executables. These can be ran by calling the appropriate executable with the desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
 ```
-fierro -h
+./fierro-parallel-explicit input.yaml
 ```
 
-## Material models  
+## Material models
 The classical ideal gas model is the only material model implemented in the code, and it is useful for verification tests of the software and simple gas dynamic simulations. The linear Lagrangian finite element methods for explicit material dynamics have an interface to user developed material models. The interface is to enable **Fierro** to be used for model research and development that has historically been done with commercial explicit finite element codes. 
 
 To include your own custom material models, you need to implement them under `Fierro/Parallel-Solvers/User-Material-Interface` and re-build the project.
@@ -51,7 +51,7 @@ Building the code from source allows you to compile with more targeted hardware 
 To build it yourself, run the following from the root directory. The native CPU architecture will automatically be taken into account. 
 
 GPU hardware will be leveraged according to the distribution of Trilinos that **Fierro** is built against.
-You are welcome to only compile one solver or the other, and the one(s) that you did compile will be available through the CLI.
+You are welcome to only compile the desired solver, or all of the currently available ones. 
 
 ## Building dependencies
 **Fierro** depends on both ELEMENTS and Trilinos. If you are building **Fierro** for hardware optimizations, you should also build ELEMENTS from source. ELEMENTS is included in the **Fierro** source distribution and building ELEMENTS is enabled by default when building **Fierro**.
