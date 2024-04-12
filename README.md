@@ -13,16 +13,44 @@
 
 # Usage
 ## Anaconda
-The recommended way to use **Fierro** is through the provided Anaconda package. To use the anaconda package, follow the steps for your platform to install [anaconda](https://docs.anaconda.com/free/anaconda/install/index.html)/[miniconda](https://docs.conda.io/en/latest/miniconda.html)/[mamba](https://mamba.readthedocs.io/en/latest/installation.html). Then run the following command in your desired Anaconda environment:
+The recommended way to use **Fierro** is through the provided Anaconda package. To use the anaconda package, follow the steps for your platform to install [anaconda](https://docs.anaconda.com/free/anaconda/install/index.html)/[miniconda](https://docs.conda.io/en/latest/miniconda.html)/[mamba](https://mamba.readthedocs.io/en/latest/installation.html). 
 
+Open a terminal on your machine and go to a folder where you want to run the **Fierro** code.  Then create and activate an Anaconda environment by typing:  
 ```
-conda install fierro-cpu -c fierromechanics -c conda-forge
+conda create -n FierroCode
+source activate FierroCode  
+```
+In this example, the enviroment is called FierroCode, but any name can be used.  On some distributions of Anaconda, the text to activate an enviroment is `conda activate FierroCode`.  Likewise, if an enviroment already exists, then just activate the desired environment.  
+
+To install the finite element physics solvers in **Fierro**, please type within the activated Anaconda environment:
+```
+conda install -c conda-forge -c fierromechanics fierro-cpu
+```
+The EVPFFT physics solver in **Fierro** can be installed by typing:
+```
+conda install -c conda-forge -c fierromechanics evpfft
+```
+A GUI is offered, it can be installed by typing:
+```
+conda install -c conda-forge -c fierromechanics evpfft_gui
 ```
 
-This will give you access to the **Fierro** tool suite. This includes the `fierro-mesh-builder`,`fierro-parallel-explicit`,`fierro-parallel-implicit`, and the `fierro-voxelizer` executables. These can be ran by calling the appropriate executable with the desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
+After installing the finite element solvers, it gives you access to `fierro-mesh-builder`,`fierro-parallel-explicit`,`fierro-parallel-implicit`, and the `fierro-voxelizer` executables. These can be run by calling the appropriate executable with the desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
 ```
-./fierro-parallel-explicit input.yaml
+fierro-parallel-explicit input.yaml
 ```
+A sample input file for the explicit finite element solver is here:
+`./src/Parallel-Solvers/Parallel-Explicit/example_simple.yaml`
+
+The GUI can be run in the anaconda enviroment by typing:
+```
+evpfft-gui
+```
+The anaconda distributions of Fierro are located in 
+```
+https://anaconda.org/FierroMechanics
+```
+
 
 ## Material models
 The classical ideal gas model is the only material model implemented in the code, and it is useful for verification tests of the software and simple gas dynamic simulations. The linear Lagrangian finite element methods for explicit material dynamics have an interface to user developed material models. The interface is to enable **Fierro** to be used for model research and development that has historically been done with commercial explicit finite element codes. 
