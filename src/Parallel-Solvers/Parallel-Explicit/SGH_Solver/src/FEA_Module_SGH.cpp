@@ -900,6 +900,8 @@ void FEA_Module_SGH::sgh_solve()
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
+    bool topology_optimization_on = simparam->topology_optimization_on;
+    bool shape_optimization_on    = simparam->shape_optimization_on;
 
     // reset time accumulating objective and constraints
     /*
@@ -912,7 +914,7 @@ void FEA_Module_SGH::sgh_solve()
     }
     */
     // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
-    if (simparam->topology_optimization_on) {
+    if (topology_optimization_on) {
         obj_pointer = problem->getObjective();
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
         kinetic_energy_minimize_function.objective_accumulation = 0;
@@ -939,7 +941,7 @@ void FEA_Module_SGH::sgh_solve()
         }
     }
 
-    if (simparam->topology_optimization_on) {
+    if (topology_optimization_on) {
         nTO_modules = simparam->TO_Module_List.size();
     }
 
@@ -1032,7 +1034,7 @@ void FEA_Module_SGH::sgh_solve()
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     // save initial data
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+    if (topology_optimization_on || shape_optimization_on) {
         time_data[0] = 0;
         // assign current velocity data to multivector
         // view scope
@@ -1479,7 +1481,7 @@ void FEA_Module_SGH::sgh_solve()
         // increment the time
         Explicit_Solver_Pointer_->time_value = simparam->dynamic_options.time_value = time_value += dt;
 
-        if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+        if (topology_optimization_on || shape_optimization_on) {
             if (cycle >= max_time_steps) {
                 max_time_steps = cycle + 1;
             }
@@ -1687,7 +1689,7 @@ void FEA_Module_SGH::sgh_solve()
     last_time_step = cycle;
 
     // simple setup to just calculate KE minimize objective for now
-    if (simparam->topology_optimization_on) {
+    if (topology_optimization_on) {
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
 
         // collect local objective values
