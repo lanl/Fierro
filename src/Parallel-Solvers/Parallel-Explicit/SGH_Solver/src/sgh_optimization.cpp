@@ -109,6 +109,9 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
+    
+    bool topology_optimization_on = simparam->topology_optimization_on;
+    bool shape_optimization_on    = simparam->shape_optimization_on;
 
     // compute element averaged density ratios corresponding to nodal density design variables
     { // view scope
@@ -265,7 +268,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                     // specific internal energy
                     elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 
-                    if (simparam->topology_optimization_on && mat_fill(f_id).extensive_energy_setting) {
+                    if (topology_optimization_on && mat_fill(f_id).extensive_energy_setting) {
                         elem_sie(rk_level, elem_gid) = elem_sie(rk_level, elem_gid) / relative_element_densities(elem_gid);
                     }
 
@@ -496,7 +499,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     Kokkos::fence();
 
     // update stiffness matrix
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+    if (topology_optimization_on || shape_optimization_on) {
         // assemble_matrix();
     }
 
