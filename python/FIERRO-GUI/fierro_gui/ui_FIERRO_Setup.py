@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_SetupmYwMLz.ui'
+## Form generated from reading UI file 'FIERRO_SetupSHAWYc.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -283,24 +283,24 @@ class Ui_Dialog(object):
         self.LDirections.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p align=\"center\"><span style=\" font-style:italic;\">Specify the directory path for saving input and output files:</span></p></body></html>", None))
         self.BSelectWD.setText(QCoreApplication.translate("Dialog", u"Select Working Directory", None))
         self.label_4.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" font-weight:700;\">Current Working Directory:</span></p></body></html>", None))
-        self.INCurrentWD.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/temporary</span></p></body></html>", None))
+        self.INCurrentWD.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>/temporary</p></body></html>", None))
         self.label_3.setText("")
         self.label.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p align=\"center\"><span style=\" font-style:italic;\">Select profile configuration:</span></p></body></html>", None))
         self.radioButton.setText(QCoreApplication.translate("Dialog", u"User", None))
         self.radioButton_2.setText(QCoreApplication.translate("Dialog", u"Developer", None))
-        self.INFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/</span></p></body></html>", None))
+        self.INFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>/</p></body></html>", None))
         self.LFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>fierro-mesh-builder:</p></body></html>", None))
         self.BFierroParallelExplicit.setText(QCoreApplication.translate("Dialog", u"Select", None))
         self.LExecutables.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p align=\"center\"><span style=\" font-style:italic;\">Specifiy the path to the build executables:</span></p></body></html>", None))
-        self.INFierroVoxelizer.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/</span></p></body></html>", None))
+        self.INFierroVoxelizer.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>/</p></body></html>", None))
         self.BFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"Select", None))
-        self.INFierroParallelExplicit.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/</span></p></body></html>", None))
+        self.INFierroParallelExplicit.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>/</body></html>", None))
         self.BFierroVoxelizer.setText(QCoreApplication.translate("Dialog", u"Select", None))
         self.LFierroParallelExplicit.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>fierro-parallel-explicit:</p></body></html>", None))
         self.LFierroVoxelizer.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>fierro-voxelizer:</p></body></html>", None))
         self.Levpfft.setText(QCoreApplication.translate("Dialog", u"evpfft:", None))
         self.BFierroEvpfft.setText(QCoreApplication.translate("Dialog", u"Select", None))
-        self.INFierroEvpfft.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p><span style=\" color:#0433ff;\">/</span></p></body></html>", None))
+        self.INFierroEvpfft.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>/</p></body></html>", None))
         self.BConfirm.setText(QCoreApplication.translate("Dialog", u"Confirm", None))
     # retranslateUi
 

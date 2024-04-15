@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIPohmWU.ui'
+## Form generated from reading UI file 'FIERRO_GUIZkYHfx.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -44,7 +44,7 @@ class Ui_MainWindow(object):
         self.actionChange_Working_Directory.setObjectName(u"actionChange_Working_Directory")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        self.centralwidget.setStyleSheet(u"#OutputWindows{\n"
+        self.centralwidget.setStyleSheet(u"#ParaviewWindow{\n"
 "    background-color: rgb(91, 97, 120);\n"
 "}\n"
 "#BImportPart:hover, #BDefineMaterial:hover, #BApplyBC:hover, #BSolverSettings:hover, #BRunEVPFFT:hover, #BViewResults:hover, #BGlobalMesh:hover, #BImportPartSGH:hover, #BDefineMaterialSGH:hover, #BAssignMaterialSGH:hover, #BApplyBCSGH:hover, #BSolverSettingsSGH:hover, #BViewResultsSGH:hover, #BRunSGH:hover, #BCreateBasicPart:hover{\n"

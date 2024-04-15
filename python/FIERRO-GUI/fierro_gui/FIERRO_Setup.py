@@ -28,10 +28,10 @@ class FierroSetup(QDialog, Ui_Dialog):
         self.INFierroVoxelizer.setText(f"{fierro_voxelizer_exe}")
         self.INFierroParallelExplicit.setText(f"{fierro_parallel_explicit_exe}")
         self.INFierroEvpfft.setText(f"{fierro_evpfft_exe}")
-        self.INFierroMeshBuilder.setStyleSheet("color: blue")
-        self.INFierroVoxelizer.setStyleSheet("color: blue")
-        self.INFierroParallelExplicit.setStyleSheet("color: blue")
-        self.INFierroEvpfft.setStyleSheet("color: blue")
+#        self.INFierroMeshBuilder.setStyleSheet("color: blue")
+#        self.INFierroVoxelizer.setStyleSheet("color: blue")
+#        self.INFierroParallelExplicit.setStyleSheet("color: blue")
+#        self.INFierroEvpfft.setStyleSheet("color: blue")
         
         # Select build executables
         self.BFierroMeshBuilder.clicked.connect(lambda: self.developer_executable("fierro-mesh-builder", self.INFierroMeshBuilder))
@@ -49,7 +49,7 @@ class FierroSetup(QDialog, Ui_Dialog):
         if directory:
             self.directory = directory
             self.INCurrentWD.setText(f"{self.directory}")
-            self.INCurrentWD.setStyleSheet("color: blue")
+#            self.INCurrentWD.setStyleSheet("color: blue")
     
     def get_directory(self):
         return self.directory
@@ -111,11 +111,11 @@ class FierroSetup(QDialog, Ui_Dialog):
                     file_name = os.path.basename(selected_file)
                     if file_name == executable_name:
                         input_var.setText(f"{selected_file}")
-                        input_var.setStyleSheet("color: blue")
+#                        input_var.setStyleSheet("color: blue")
                     else:
                         self.warning_message(f"WARNING: The executable file selected does not match the expected naming convention. \n\nExpected: {executable_name}   \n\nInput: {file_name}")
                         input_var.setText(f"{selected_file}")
-                        input_var.setStyleSheet("color: red")
+#                        input_var.setStyleSheet("color: red")
 
 
     def warning_message(self, msg):
