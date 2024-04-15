@@ -49,10 +49,10 @@ materials:
     strength_model: none
     elastic_modulus: 10
     poisson_ratio: 0.3
-    q1: 0.06
-    q2: 1.2
-    q1ex: 0.06
-    q2ex: 1.2
+    q1: 1.0
+    q2: 1.333
+    q1ex: 1.0
+    q2ex: 0.0
     eos_global_vars:
       - 1.666666666666667
       - 1.0E-14

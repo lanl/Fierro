@@ -1,0 +1,51 @@
+# input file
+num_dims: 3
+
+mesh_generation_options:
+    type: Box
+    origin: [0, 0, 0]
+    length: [10, 10, 100]
+    num_elems: [10, 10, 100]
+
+output_options:
+  timer_output_level: thorough
+  output_file_format: vtk
+  write_initial: false
+  write_final: true
+
+materials:
+  - id: 0
+    elastic_modulus: 20000000
+    poisson_ratio: 0.3
+    density: 7850
+    thermal_conductivity: 10
+    specific_internal_energy_rate: 1.0
+    initial_temperature: 293
+
+fea_module_parameters:
+  - type: Inertial
+    material_id: 0
+    inertia_center_x: 0
+    inertia_center_y: 0
+    inertia_center_z: 0
+    
+  - type: Elasticity
+    material_id: 0
+    # Dirichlet conditions
+    boundary_conditions:
+      - surface: 
+          type: z_plane
+          plane_position: 0.0
+        type: displacement
+        value: 0.0
+            
+    # Loading/Neumann Conditions
+    loading_conditions:
+      - surface: 
+          type: z_plane
+          plane_position: 100.0
+        type: surface_traction
+        component_x: 0.0
+        component_y: -5000.0
+        component_z: 0.0
+  
