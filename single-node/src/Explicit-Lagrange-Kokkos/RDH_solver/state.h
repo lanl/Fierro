@@ -21,6 +21,8 @@ struct node_t {
     // mass at nodes
     CArray <double> mass;
 
+    CArrayKokkos <double> M_V;
+    CArrayKokkos <double> lumped_mass;
     
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
@@ -29,6 +31,8 @@ struct node_t {
         this->vel    = CArray <double> (num_rk, num_nodes, num_dims);
 	    this->div    = CArray <double> (num_rk, num_nodes);
         this->mass   = CArray <double> (num_nodes);
+        this->M_V    = CArrayKokkos <double> (num_nodes, num_nodes, "M_V");
+        this->lumped_mass = CArrayKokkos <double> (num_nodes, "lumped_mass");
     }; // end method
 
 }; // end node_t
@@ -54,7 +58,16 @@ struct corner_t {
 
 struct zone_t {
     
+    // specific internal energy dofs //
     CArray <double> sie;
+
+    // mass matrix //
+    CArrayKokkos <double> M_e;
+
+    // lumped mass //
+    CArrayKokkos <double> zonal_mass;
+
+    CArrayKokkos <double> source;
     
     size_t num_zones;
 
@@ -65,8 +78,10 @@ struct zone_t {
 
         //thermodynamic variables are internal to the element and located at the zone centers
         num_zones = num_elems*num_zones_in_elem; // to keep things global.
-
         this->sie = CArray <double> (num_rk, num_zones);
+        this->M_e = CArrayKokkos <double> (num_zones, num_zones, "M_e");
+        this->zonal_mass = CArrayKokkos <double> (num_zones, "zonal_mass");
+        this->source = CArrayKokkos <double> (num_rk, num_zones, "source");
     
     }
 };

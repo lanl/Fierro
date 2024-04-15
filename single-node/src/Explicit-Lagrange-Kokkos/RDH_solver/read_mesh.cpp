@@ -234,8 +234,9 @@ void readVTKPn(char* MESH,
     
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
+    printf("here-node initialize\n");
     node.initialize(rk_num_bins, num_nodes, num_dims);
-    
+    printf("here-node finish initialize\n");
 
     
     // read the point coordinates

@@ -13,12 +13,17 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                zone_t &zone,
                DViewCArrayKokkos <double> &node_coords,
                DViewCArrayKokkos <double> &node_vel,
+               CArrayKokkos <double> &M_V,
+               CArrayKokkos <double> &lumped_mass,
                DViewCArrayKokkos <double> &node_mass,
                DViewCArrayKokkos <double> &mat_pt_den,
                DViewCArrayKokkos <double> &mat_pt_pres,
                DViewCArrayKokkos <double> &mat_pt_stress,
                DViewCArrayKokkos <double> &mat_pt_sspd,
                DViewCArrayKokkos <double> &zone_sie,
+               CArrayKokkos <double> &M_e,
+               CArrayKokkos <double> &zonal_lumped_mass,
+               CArrayKokkos <double> &source,
                DViewCArrayKokkos <double> &elem_vol,
                DViewCArrayKokkos <double> &mat_pt_div,
                DViewCArrayKokkos <double> &mat_pt_mass,
@@ -44,7 +49,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
     
     printf("Writing outputs to file at %f \n", time_value);
 
-    
+    //printf("VTKHexN being called \n");
     VTKHexN(mesh,
             node_coords,
             node_vel,
@@ -60,125 +65,14 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             graphics_times,
             graphics_id,
             time_value);
+    //printf("VTKHexN being called \n");
     
     // a flag to exit the calculation
     size_t stop_calc=0;
     
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-    CArrayKokkos <double> M_V(mesh.num_nodes, mesh.num_nodes, "M_V");
-    CArrayKokkos <double> lumped_mass(mesh.num_nodes, "lumped_mass");
-
-    for (int i = 0; i < mesh.num_nodes; i++){
-        for (int j = 0; j < mesh.num_nodes; j++){
-            M_V(i,j) = 0.0;
-        }
-        lumped_mass(i) = 0.0;
-    }
-
-    // for (int i = 0; i < mesh.num_elems; i++){
-    //     for (int j = 0; j < mesh.num_nodes_in_elem; j++){
-    //         for (int k = 0; k < mesh.num_nodes_in_elem; k++){
-    //             M_V(i,j,k) = 0.0;
-    //         }
-    //         lumped_mass(i,j) = 0.0;
-    //     }
-    // }
-
-    // for (int i = 0; i < mesh.num_nodes; i++){
-    //     lumped_mass(i) = 0.0;
-    // }
-
-    assemble_kinematic_mass_matrix(M_V,
-                                    lumped_mass,
-                                    mesh,
-                                    ref_elem.gauss_leg_basis,
-                                    ref_elem.gauss_leg_weights,
-                                    mat_pt.gauss_legendre_det_j,
-                                    mat_pt_den);
     
-    // for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
-        
-    //     for (int i = 0; i < mesh.num_leg_gauss_in_elem; i++){
-            
-    //         for (int dim = 0; dim < mesh.num_dims; dim++){
-    //             double sum = 0.0;
-    //             for (int j = 0; j < mesh.num_nodes_in_elem; j++){
-    //             sum += ref_elem.gauss_leg_grad_basis(i,j,dim);
-    //             }
-    //             printf("basis sum = %f \n", sum);
-    //         }
-            
-    //     }  
-    // }
-
-    // CArrayKokkos <double> VanderMtx(mat_pt.num_leg_pts, mesh.num_nodes, mesh.num_dims, "VanderMtx");
-    // for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
-    //     for (int leg_lid = 0; leg_lid < ref_elem.num_gauss_leg_in_elem; leg_lid++){
-    //         int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
-    //         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-    //             int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-    //             for (int dim = 0; dim < mesh.num_dims; dim++){
-    //                 VanderMtx(leg_gid, node_gid, dim) = ref_elem.gauss_leg_grad_basis(leg_lid, node_lid, dim); 
-    //             }
-    //         }
-    //     }
-    // }
-
-    // for (int leg_gid = 0; leg_gid < mat_pt.num_leg_pts; leg_gid++){
-
-    //     for (int dim = 0; dim < mesh.num_dims; dim++){
-    //         double sum = 0.0;
-    //         for (int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
-    //             sum += VanderMtx(leg_gid, node_gid, dim);
-    //         }
-    //         printf("VanderMtx sum = %f \n", sum);
-    //     }
-    // }
-
-    // compute_lumped_mass(lumped_mass,
-    //                     mesh,
-    //                     ref_elem.gauss_leg_basis,
-    //                     ref_elem.gauss_leg_weights,
-    //                     mat_pt.gauss_legendre_det_j,
-    //                     mat_pt_den);
-
-    // printf("Kinematic mass matrix assembled \n");
-    // for (int i = 0; i < mesh.num_elems; i++){
-    //     for (int j = 0; j < mesh.num_nodes_in_elem; j++){
-    //         for (int k = 0; k < mesh.num_nodes_in_elem; k++){
-    //             printf("M_V(%d, %d, %d) = %f ", i, j, k, M_V(i,j,k));
-    //         }
-    //         printf("\n");
-    //     }
-    //     printf("\n");
-    // }
-
-    // for (int i = 0; i < mesh.num_nodes; i++){
-    //     for (int j = 0; j < mesh.num_nodes; j++){
-    //         printf("M_V(%d, %d) = %f ", i, j, M_V(i,j));
-    //     }
-    //     printf("\n");
-    // }
-    // printf("\n");
-
-    // printf("Lumped mass assembled \n");
-    // for (int i = 0; i < mesh.num_elems; i++){
-    //     for (int j = 0; j < mesh.num_nodes_in_elem; j++){
-    //         if (lumped_mass(i,j) <= 0.0){
-    //             printf("NEGATIVE lumped mass at node %d and val = %f ", i, lumped_mass(i,j));
-    //             stop_calc = 1;
-    //         }
-    //     }
-    // }
-
-    for (int i = 0; i < mesh.num_nodes; i++){
-        if (lumped_mass(i) <= 0.0){
-            printf("NEGATIVE lumped mass at node %d and val = %f \n", i, lumped_mass(i));
-            stop_calc = 1;
-        }
-    }
-    printf("\n");
 
     if (mesh.num_nodes_in_elem != ref_elem.num_basis){
         printf("Number of nodes in mesh and basis functions do not match \n");
@@ -190,10 +84,12 @@ void rdh_solve(CArrayKokkos <material_t> &material,
         stop_calc = 1;
     }
 
+
     CArrayKokkos <double> rho0_detJ0(mat_pt.num_leg_pts, "rho0_detJ0");
-    for (int i = 0; i < mat_pt.num_leg_pts; i++){
+    FOR_ALL( i, 0, mat_pt.num_leg_pts,{
         rho0_detJ0(i) = mat_pt_den(i)*mat_pt.gauss_legendre_det_j(i);
-    }
+    });
+    Kokkos::fence();
 
 	// loop over the max number of time integration cycles
 	for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -236,23 +132,22 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                 node_vel,
                 zone_sie,
                 mat_pt_stress,
+                zone.source,
                 mesh.num_dims,
                 mesh.num_elems,
                 mesh.num_nodes);
         //printf("Values at t_n initialized \n");
 	    
         
-        CArrayKokkos <double> force_tensor(rk_num_stages, mesh.num_nodes, mesh.num_zones, mesh.num_dims);
+        CArrayKokkos <double> force_tensor(rk_num_stages, mesh.num_nodes, mesh.num_zones, mesh.num_dims, "F");
 
-        for (int i = 0; i < rk_num_stages; i++){
-            for (int k = 0; k < mesh.num_nodes; k++){
-                for (int l = 0; l < mesh.num_zones; l++){
-                    for (int m = 0; m < mesh.num_dims; m++){
-                        force_tensor(i,k,l,m) = 0.0;
-                    }
-                }
-            }
-        }
+        // FOR_ALL( i, 0, rk_num_stages,
+        //          j, 0, mesh.num_nodes,
+        //          k, 0, mesh.num_zones, 
+        //          l, 0, mesh.num_dims, {
+                    
+        //             force_tensor(i,j,k,l) = 0.0;
+        // });
 
         // integrate solution forward in time
         //printf("Integrating solution forward in time \n");
@@ -283,28 +178,28 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             //     printf("\n");
             // }
 
-            CArrayKokkos <double> A1(mesh.num_nodes, mesh.num_dims);
-            CArrayKokkos <double> F_dot_ones(mesh.num_nodes, mesh.num_dims);
-            CArrayKokkos <double> M_dot_u(mesh.num_nodes, mesh.num_dims);
-            CArrayKokkos <double> residual_in_elem(mesh.num_elems, mesh.num_nodes, mesh.num_dims);
-            for (int i = 0; i < mesh.num_nodes; i++){
-                for (int j = 0; j < mesh.num_dims; j++){
+            CArrayKokkos <double> A1(mesh.num_nodes, mesh.num_dims,"A1");
+            CArrayKokkos <double> F_dot_ones(mesh.num_nodes, mesh.num_dims, "F_dot_ones");
+            CArrayKokkos <double> M_dot_u(mesh.num_nodes, mesh.num_dims, "M_dot_u");
+            CArrayKokkos <double> residual_in_elem(mesh.num_elems, mesh.num_nodes, mesh.num_dims, "res_in_elem");
+
+            FOR_ALL(i, 0, mesh.num_nodes,
+                    j, 0, mesh.num_dims, {
                     A1(i,j) = 0.0;
                     F_dot_ones(i,j) = 0.0;
                     M_dot_u(i,j) = 0.0;
-                }
-            }
+            });
             
-            for (int i = 0; i < mesh.num_elems; i++){
-                for (int j = 0; j < mesh.num_nodes; j++){
-                    for (int k = 0; k < mesh.num_dims; k++){
+            
+            FOR_ALL( i, 0, mesh.num_elems,
+                     j, 0, mesh.num_nodes,
+                     k, 0, mesh.num_dims, {
                         residual_in_elem(i,j,k) = 0.0;
-                    }
-                }
-            }
+            });
 
             // Compute A1 operator = \sum_{E \ni i} \Phi^E_i(u^k)
-            //printf("Computing A1 operator at stage %lu in cycle %lu \n", rk_stage, cycle);
+            // printf("Computing A1 operator at stage %lu in cycle %lu \n", rk_stage, cycle);
+            // printf("here\n");
             assemble_A1(A1, residual_in_elem, rk_stage, dt, mesh, M_dot_u, F_dot_ones, force_tensor, M_V, node_vel);
             //printf("A1 operator computed \n");
 
@@ -316,7 +211,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
 
           
             // update the momentum DOFs. u^k+1 = u^k - dt*A1
-            //printf("Updating momentum DOFs at stage %lu in cycle %lu \n", rk_stage, cycle);
+            //printf("Updating momentum\n");// DOFs at stage %lu in cycle %lu \n", rk_stage, cycle);
             update_momentum(node_vel, rk_stage, mesh, A1, lumped_mass);
             //printf("Momentum DOFs updated \n");
 
@@ -331,57 +226,34 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             boundary_velocity(mesh, boundary, node_vel, time_value);
             //printf("Boundary conditions applied \n");
 
+            CArrayKokkos <double> T_A1(mesh.num_zones,"T_A1");
+            CArrayKokkos <double> F_dot_u(mesh.num_zones, "F_dot_ones");
+            CArrayKokkos <double> M_dot_e(mesh.num_zones, "M_dot_u");
+            CArrayKokkos <double> T_residual_in_elem(mesh.num_elems, mesh.num_zones, "res_in_elem");
+
+            FOR_ALL(i, 0, mesh.num_zones,{
+                    T_A1(i) = 0.0;
+                    F_dot_u(i) = 0.0;
+                    M_dot_e(i) = 0.0;
+            });
             
             
+            FOR_ALL( i, 0, mesh.num_elems,
+                     j, 0, mesh.num_zones, {
+                        T_residual_in_elem(i,j) = 0.0;
+            });
+            
+            // internal energy update //
+            assemble_T_A1(T_A1, T_residual_in_elem, rk_stage, dt, mesh, M_dot_e, F_dot_u, force_tensor, source, M_e, zone_sie, node_vel);
+            
+            update_internal_energy(zone_sie, rk_stage, mesh, T_A1, zone.zonal_mass);
+
+
             // update the position
             //printf("Updating position at stage %lu in cycle %lu \n", rk_stage, cycle);
             update_position_rdh(rk_stage, dt, mesh, node_coords, node_vel);   
             //printf("Position updated \n");
 
-            // Use known TG vortex solutions
-            //printf("Using TG vortex solutions at stage %lu in cycle %lu \n", rk_stage, cycle);
-            for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
-                
-                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
-                        
-                    int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
-                    //printf("zone_gid is %d \n", zone_gid);
-
-                    // zonal coords for initializations that depend on functions of x
-                    // calculate the coordinates and radius of the element
-                    double zone_coords[3]; 
-                    zone_coords[0] = 0.0;
-                    zone_coords[1] = 0.0;
-                    zone_coords[2] = 0.0;
-
-                    // get the coordinates of the zone center
-                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
-                        zone_coords[0] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 0);
-                        zone_coords[1] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 1);
-                        if (mesh.num_dims == 3){
-                            zone_coords[2] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 2);
-                        } else
-                        {
-                            zone_coords[2] = 0.0;
-                        }
-                    } // end loop over nodes in element
-                    zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
-                    zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
-                    zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
-                    
-                    // double gamma = 5.0/3.0;
-
-                    // double temp_pres = 0.0;
-                    // temp_pres = 0.25*( cos(2.0*PI*zone_coords[0]) + cos(2.0*PI*zone_coords[1]) ) + 1.0;
-                    
-
-                    zone_sie(1, zone_gid) = zone_sie(0, zone_gid) + dt*(3.0/8.0)*PI*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
-                    // zone_sie(0, zone_gid) = temp_pres/((gamma - 1.0));
-                    // zone_sie(1, zone_gid) = temp_pres/((gamma - 1.0));
-                    //printf("elem_sie in zone %d is %f \n", zone_gid, elem_sie(1, zone_gid));
-
-                }// end loop over zones
-            }// end loop over elems
             //printf("Updating Jacobian at stage %lu in cycle %lu \n", rk_stage, cycle);
             get_gauss_leg_pt_jacobian(mesh,
                                   elem,
@@ -395,7 +267,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             //printf("Updating elem_vol at stage %lu in cycle %lu \n", rk_stage, cycle);
             get_vol(elem_vol, node_coords, ref_elem.gauss_leg_weights, mat_pt.gauss_legendre_det_j, mesh, elem, ref_elem);
             //printf("elem_vol updated \n");
-            for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
+            FOR_ALL(elem_gid,  0, mesh.num_elems, {
                 size_t mat_id = elem_mat_id(elem_gid);
                 for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
                     int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
@@ -421,7 +293,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                                             mat_pt_den(leg_gid),
                                             interp_sie);
                 } // end loop over legendre points
-            }// end loop over elems
+            });// end loop over elems
             //printf("TG vortex solutions used for pres and stress\n");
 
             
@@ -573,3 +445,49 @@ void rdh_solve(CArrayKokkos <material_t> &material,
         //   }
         //   std::cout << " ######################## " << std::endl;
         // }
+
+// // Use known TG vortex solutions
+            // //printf("Using TG vortex solutions at stage %lu in cycle %lu \n", rk_stage, cycle);
+            // FOR_ALL(elem_gid,  0, mesh.num_elems, {
+                
+            //     for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+                        
+            //         int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+            //         //printf("zone_gid is %d \n", zone_gid);
+
+            //         // zonal coords for initializations that depend on functions of x
+            //         // calculate the coordinates and radius of the element
+            //         double zone_coords[3]; 
+            //         zone_coords[0] = 0.0;
+            //         zone_coords[1] = 0.0;
+            //         zone_coords[2] = 0.0;
+
+            //         // get the coordinates of the zone center
+            //         for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
+            //             zone_coords[0] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 0);
+            //             zone_coords[1] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 1);
+            //             if (mesh.num_dims == 3){
+            //                 zone_coords[2] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 2);
+            //             } else
+            //             {
+            //                 zone_coords[2] = 0.0;
+            //             }
+            //         } // end loop over nodes in element
+
+            //         zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
+            //         zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
+            //         zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
+                    
+            //         // double gamma = 5.0/3.0;
+
+            //         // double temp_pres = 0.0;
+            //         // temp_pres = 0.25*( cos(2.0*PI*zone_coords[0]) + cos(2.0*PI*zone_coords[1]) ) + 1.0;
+                    
+
+            //         zone_sie(1, zone_gid) = zone_sie(0, zone_gid) + dt*(3.0/8.0)*PI*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
+            //         // zone_sie(0, zone_gid) = temp_pres/((gamma - 1.0));
+            //         // zone_sie(1, zone_gid) = temp_pres/((gamma - 1.0));
+            //         //printf("elem_sie in zone %d is %f \n", zone_gid, elem_sie(1, zone_gid));
+
+            //     }// end loop over zones
+            // });// end loop over elems

@@ -33,6 +33,8 @@ if(NOT CMAKE_BUILD_TYPE)
  # set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
 
+find_package(Trilinos REQUIRED)
+
 include_directories(../lib/Elements/matar)
 add_subdirectory(../lib/Elements/matar cbin)
 include_directories(src)

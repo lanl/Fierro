@@ -160,7 +160,7 @@ int main(int argc, char *argv[]){
         //printf("writing VTK file \n");
         //VTKHexN(mesh, node);
         
-	      printf("building corners \n");
+	    printf("building corners \n");
         mesh.build_corner_connectivity();
         printf("building elem_elem \n");
         mesh.build_elem_elem_connectivity();
@@ -256,31 +256,6 @@ int main(int argc, char *argv[]){
                                                num_elems,
                                                num_state_vars);
         
-	      // DViewCArrayKokkos <double> lobatto_jacobian(&mat_pt.gauss_lobatto_jacobian(0,0,0),
-        //                                             num_lob_pts,
-        //                                             num_dims,
-        //                                             num_dims);
-	
-	      // DViewCArrayKokkos <double> legendre_jacobian(&mat_pt.gauss_legendre_jacobian(0,0,0),
-        //                                             num_leg_pts,
-        //                                             num_dims,
-        //                                             num_dims);
-
-        // DViewCArrayKokkos <double> lobatto_jacobian_inverse(&mat_pt.gauss_lobatto_jacobian_inverse(0,0,0),
-        //                                                           num_lob_pts,
-        //                                                           num_dims,
-        //                                                           num_dims);
-        
-        // DViewCArrayKokkos <double> legendre_jacobian_inverse(&mat_pt.gauss_legendre_jacobian_inverse(0,0,0),
-        //                                                           num_leg_pts,
-        //                                                           num_dims,
-        //                                                           num_dims);
-        
-        // DViewCArrayKokkos <double> lobatto_det(&mat_pt.gauss_lobatto_det_j(0),
-        //                                               num_lob_pts);
-
-        // DViewCArrayKokkos <double> legendre_det(&mat_pt.gauss_legendre_det_j(0),
-        //                                               num_leg_pts);
 
         // create Dual Views of the corner struct variables
         DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
@@ -306,7 +281,6 @@ int main(int argc, char *argv[]){
                                   mat_pt.gauss_legendre_jacobian_inverse);
         
         get_vol(elem_vol, node_coords, ref_elem.gauss_leg_weights, mat_pt.gauss_legendre_det_j, mesh, elem, ref_elem);
-        
         
         // // double vol_check = 0.0;
         // for (int i = 0; i < mesh.num_elems; i++){
@@ -372,6 +346,7 @@ int main(int argc, char *argv[]){
               mat_pt_stress,
               mat_pt_sspd,
               zone_sie,
+              zone.source,
               elem_vol,
               mat_pt_mass,
               elem_mat_id,
@@ -391,6 +366,47 @@ int main(int argc, char *argv[]){
         graphics_times(0) = 0.0;
         graphics_time = graphics_dt_ival;  // the times for writing graphics dump
         
+        //printf("here\n");
+        assemble_kinematic_mass_matrix(node.M_V, 
+                                       node.lumped_mass, 
+                                       mesh, 
+                                       ref_elem.gauss_leg_basis,
+                                       ref_elem.gauss_leg_weights,
+                                       mat_pt.gauss_legendre_det_j, 
+                                       mat_pt_den);
+        //printf("here\n");
+        assemble_thermodynamic_mass_matrix(zone.M_e,
+                                          zone.zonal_mass,
+                                          mesh,
+                                          ref_elem.gauss_leg_elem_basis,
+                                          ref_elem.gauss_leg_weights,
+                                          mat_pt.gauss_legendre_det_j, 
+                                          mat_pt_den);
+        // printf( " ############### \n");
+        // printf(" thermo mass matrix \n");
+        // printf( " ############### \n");
+        
+        
+        // RUN({
+        //     for (int i =  0; i <  mesh.num_zones; i++){ 
+        //         for( int j = 0; j < mesh.num_zones; j++) {
+                
+        //             printf("%f", zone.M_e(i, j));
+        //         }
+        //         printf("\n");
+        //     }
+        // });
+
+        // RUN({
+        //     for (int i =  0; i <  mesh.num_zones; i++){ 
+                
+        //         printf("%f", zone.zonal_mass(i));
+                
+        //     }
+        //     printf("\n");
+        // });
+        
+
         // ---------------------------------------------------------------------
         //   Calculate the RDH solution
         // ---------------------------------------------------------------------
@@ -403,14 +419,19 @@ int main(int argc, char *argv[]){
                   zone,
                   node_coords,
                   node_vel,
+                  node.M_V,
+                  node.lumped_mass,
                   node_mass,
                   mat_pt_den,
                   mat_pt_pressure,
                   mat_pt_stress,
                   mat_pt_sspd,
                   zone_sie,
+                  zone.M_e,
+                  zone.source,
+                  zone.zonal_mass,
                   elem_vol,
-		              mat_pt_div,
+		          mat_pt_div,
                   mat_pt_mass,
                   elem_mat_id,
                   elem_statev,

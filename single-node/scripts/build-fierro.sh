@@ -15,6 +15,7 @@ show_help() {
     echo " "
     echo "          full-app                    builds Fierro from scratch, installing dependencies where necessary."
     echo "          set-env                     set appropriate environment variables and loads software modules (if necessary)"
+    echo "          install-trilinos            builds and installs Trilinos if not already installed. Clones from github if necessary"
     echo "          install-Kokkos              builds and installs Kokkos if not already installed. Clones from github if necessary"
     echo "          fierro                      Generates CMake files and builds Fierro only (none of the dependencies)."
     echo " "
@@ -45,13 +46,13 @@ show_help() {
 # Initialize variables with default values
 build_action="full-app"
 solver="RDH"
-machine="mac"
-kokkos_build_type="serial"
-build_corer="16"
+machine="darwin"
+kokkos_build_type="cuda"
+build_corer="32"
 
 
 # Define arrays of valid options
-valid_build_action=("full-app" "set-env" "install-kokkos" "fierro")
+valid_build_action=("full-app" "set-env" "install-trilinos" "install-kokkos" "fierro")
 valid_solver=("1DSGH" "SGH" "RDH")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_machines=("darwin" "chicoma" "linux" "mac")
@@ -153,7 +154,8 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
-    source kokkos-install.sh ${kokkos_build_type}
+    source trilinos-install.sh ${kokkos_build_type}
+    #source kokkos-install.sh ${kokkos_build_type}
     source cmake_build.sh ${solver}
 elif [ "$build_action" = "install-kokkos" ]; then
     source kokkos-install.sh ${kokkos_build_type}

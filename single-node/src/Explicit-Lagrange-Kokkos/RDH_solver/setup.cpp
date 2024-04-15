@@ -70,6 +70,7 @@ void setup(const CArrayKokkos <material_t> &material,
            const DViewCArrayKokkos <double> &mat_pt_stress,
            const DViewCArrayKokkos <double> &mat_pt_sspd,
            const DViewCArrayKokkos <double> &zone_sie,
+           CArrayKokkos <double> &source,
            const DViewCArrayKokkos <double> &elem_vol,
            const DViewCArrayKokkos <double> &mat_pt_mass,
            const DViewCArrayKokkos <size_t> &elem_mat_id,
@@ -498,6 +499,8 @@ void setup(const CArrayKokkos <material_t> &material,
                         zone_sie(0, zone_gid) = temp_pres/(mat_fill(f_id).den*(gamma - 1.0));
                         zone_sie(1, zone_gid) = temp_pres/(mat_fill(f_id).den*(gamma - 1.0));
                         //printf("elem_sie in zone %d is %f \n", zone_gid, elem_sie(1, zone_gid));
+                        source(0, zone_gid) = (3.0*PI/8.0)*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
+                        source(1, zone_gid) = (3.0*PI/8.0)*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
 
                     } // end if
                 }// end loop over zones

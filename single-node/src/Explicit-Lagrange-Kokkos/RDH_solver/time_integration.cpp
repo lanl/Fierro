@@ -367,6 +367,7 @@ void init_tn(mesh_t &mesh,
              DViewCArrayKokkos <double> &node_vel,
              DViewCArrayKokkos <double> &zone_sie,
              DViewCArrayKokkos <double> &mat_pt_stress,
+             CArrayKokkos <double> &source,
              const size_t num_dims,
              const size_t num_elems,
              const size_t num_nodes){
@@ -377,6 +378,7 @@ void init_tn(mesh_t &mesh,
         for (int zone_lid = 0; zone_lid < mesh.num_zones; zone_lid++){
             int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
             zone_sie(0,zone_gid) = zone_sie(1,zone_gid);
+            source(0,zone_gid) = source(1,zone_gid);
         }
         for (int legendre_lid = 0; legendre_lid < mesh.num_leg_gauss_in_elem; legendre_lid++){
             int legendre_gid = mesh.legendre_in_elem(elem_gid, legendre_lid);

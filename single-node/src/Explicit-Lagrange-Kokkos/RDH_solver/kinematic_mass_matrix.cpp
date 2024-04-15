@@ -10,6 +10,19 @@ void assemble_kinematic_mass_matrix(CArrayKokkos <double> &M_V,
                                     const CArrayKokkos <double> &legendre_jacobian_det,
                                     const DViewCArrayKokkos <double> &density){
 
+    
+    FOR_ALL(i, 0, mesh.num_nodes, 
+            j, 0, mesh.num_nodes,{
+                
+                M_V(i,j) = 0.0;
+    });
+    Kokkos::fence();
+
+    FOR_ALL(i, 0, mesh.num_nodes, {
+        lumped_mass(i) = 0.0;
+    });
+    Kokkos::fence();
+
     FOR_ALL(elem_gid, 0, mesh.num_elems,{
         for (int i = 0; i < mesh.num_nodes_in_elem; i++){
             int global_i = mesh.nodes_in_elem(elem_gid, i);
@@ -33,7 +46,16 @@ void assemble_kinematic_mass_matrix(CArrayKokkos <double> &M_V,
             }// end loop over j
         }// end loop over i
     });// end FOR_ALL
-     Kokkos::fence();
+    Kokkos::fence();
+
+    FOR_ALL( i, 0, mesh.num_nodes,{
+        if (lumped_mass(i) <= 0.0){
+            printf("NEGATIVE lumped mass at node %d and val = %f \n", i, lumped_mass(i));
+            //stop_calc = 1;
+        }
+    });
+    printf("\n");
+    Kokkos::fence();
 
     // check partition of unity
     // for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
