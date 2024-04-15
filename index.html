@@ -63,6 +63,12 @@ https://www.tooplate.com/view/2125-artxibition
     </div>
     <!-- ***** Main Banner Area End ***** -->
 
+    <p>
+        <br>
+        <br>
+        <br>
+    </p>
+
     <!-- *** Owl Carousel Items ***-->
     <div class="show-events-carousel">
         <div class="container">
@@ -91,6 +97,18 @@ https://www.tooplate.com/view/2125-artxibition
                         </div>
                         <div class="owl-centered">
                             <img src="assets/images/grains.png" alt=""> 
+                        </div>
+                        <div class="owl-centered">
+                            <img src="assets/images/512_cubed_VonMises.png" alt=""> 
+                        </div>
+                        <div class="owl-centered">
+                            <img src="assets/images/TG-MF-FEH_t0p8_3x3x1_Q3Q2.png" alt=""> 
+                        </div> 
+                        <div class="fadein" class="owl-centered">
+                            <img id="f1" src="assets/images/shock-dynamics_1.png">
+                            <img id="f2" src="assets/images/shock-dynamics_2.png">
+                            <img id="f3" src="assets/images/shock-dynamics_3.png">
+                            <img id="f4" src="assets/images/shock-dynamics_4.png">
                         </div>
                     </div>
                 </div>
@@ -129,7 +147,7 @@ https://www.tooplate.com/view/2125-artxibition
                             Fierro uniquely offers several compact-stencil, arbitrary-order Lagrangian finite element method for more efficient simulations.  These schemes use meshes that edges that can bend to accurately track large deformations in material dynamics.
                         </p>
                         <p>
-                            The implicit solver in Fierro is for simulating static or quasistatic thermal and mechanical applications.  Higher-order optimization methods work in concert with the thermal-mechanical implicit solvers for multiphysics topology optimization that satisfies multiple constraints.
+                            A physics solver is supported in Fierro for simulating static or quasistatic thermal and mechanical applications.  Higher-order optimization methods work in concert with the thermal-mechanical solvers for multiphysics topology optimization that satisfies multiple constraints.
                         </p>
                     </div>
                 </div>
@@ -147,18 +165,18 @@ https://www.tooplate.com/view/2125-artxibition
                 
                 <h2>Applications</h2>
                 <p>The <em>Fierro</em> collection of software includes several separate tools for different physical simulations. Some of which have Graphical User Interfaces for ease of use.</p>
-                <h4>EVPFFT</h4>
+                <h4>Micro-mechanical solvers</h4>
                 <p>
-                    Our Elasto-Viscoplastic FFT method predicts the micro-mechanical response and microstructure evolution of polycrystalline materials. This tool can be used
-                    to simulate the bulk response of a polycrystalline material under desired loading conditions.
+                    Our small strain and large strain Elasto-Viscoplastic Fast Fourier Transform (EVPFFT) solvers predict the micro-mechanical response and microstructure evolution of polycrystalline materials. This tool can be used
+                    to simulate the bulk response of a polycrystalline material under desired loading conditions.  The EVPFFT solvers can also be used to calculate the bulk-scale properties of 3D printed lattices. 
                 </p>
-                <h4>Implicit Physics Solver</h4>
+                <h4>Static and Quasi-Static Physics Solver</h4>
                 <p>
-                    Our implicit physics solver can solve boundary value problems over a meshed geometry with provided boundary conditions (Neumann or Dirichlet).
+                    Our static and quasi-static finite element physics solvers can solve boundary value problems over a meshed geometry with provided boundary conditions (Neumann or Dirichlet).
                 </p>
-                <h4>Explicit Physics Solver</h4>
+                <h4>Material Dynamics Physics Solver</h4>
                 <p>
-                    Our explicit physics solver can simulate high resolution dynamic evolution on a mesh given a range of boundary conditions, external forces, and initial conditions.
+                    Our finite element material dynamics physics solver can simulate elastic structural dynamics to shock-driven flows given a range of boundary conditions, external forces, and initial conditions.
                 </p>
             </div>
         </div>
