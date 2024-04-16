@@ -56,8 +56,8 @@ struct Volume : Yaml::ValidatedYaml {
     int elem_id0;
     bool fill_this;
     
-    KOKKOS_FUNCTION
     // Run voxelization scheme on stl file
+    KOKKOS_FUNCTION
     void stl_to_voxel() {
       std::tie(voxel_elem_values, voxel_dx, voxel_dy, voxel_dz) = Voxelizer::create_voxel_vtk(stl_file_path, vtk_file_path, num_voxel_x, num_voxel_y, num_voxel_z, length_x, length_y, length_z);
     }
@@ -120,7 +120,7 @@ struct Volume : Yaml::ValidatedYaml {
                 
             } // end if
             
-            // check for periodic
+            // check for periodic repetition of imported region and prevent it from happening when painting onto global mesh.
             if (elem_coords[0] > num_voxel_x*voxel_dx+orig_x || elem_coords[1]> num_voxel_y*voxel_dy+orig_y || elem_coords[2] >num_voxel_z*voxel_dz+orig_z || elem_coords[0] < orig_x ||elem_coords[1] < orig_y || elem_coords[2] < orig_z) {
                 fill_this = false;
             }
