@@ -52,7 +52,7 @@ https://www.tooplate.com/view/2125-artxibition
                 <div class="col-lg-12">
                     <div class="main-content">
                         <h2><em>Fierro</em></h2>
-                        <h3>Parallel Multiscale Multiphysics Computational Mechanics Software for Assessment and Optimal Design </h3>
+                        <h3> Computational Mechanics and Material Science Software </h3>
                         <div class="main-button">
                             <a href="installation.html">Install</a>
                         </div>
@@ -125,7 +125,7 @@ https://www.tooplate.com/view/2125-artxibition
                     <div class="left-content">
                         <h4>Project Description</h4>
                         <p>
-                        Fierro (LANL code number O4659) mechanics is a modern C++ code that offers novel capabilities to simulate multiscale multiphysics engineering problems and for autonomous multiphysics design optimization.  Fierro contains a suite of novel solvers for quasi-static solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, which have meshes with constant mass elements that move with the material. Multiscale material models are coupled to world-leading numerical methods inside Fierro to simulate the performance of parts accounting for the underlying microstructure in the part. Fierro supports hybrid parallelism, using MPI for coarse-grained parallelism plus a range of hardware-specific languages for fine-grained parallelism to leverage diverse GPUs for efficient simulation runtimes. The combined capabilities in the Fierro code are key to realizing the full-potential of diverse manufacturing processes by leveraging modern high-performance computing machines to: (1) simulate large-deformation, high-shear manufacturing processes; (2) assess the performance of parts across physical regimes accounting for the manufacturing processes, and (3) design optimal parts autonomously that are additively manufactured.  The parallel performance of Fierro also enables assessments of applications that require meshes with millions to billions of elements, as well as, quantification of uncertainty and margins, or sensitivity studies, that may require 100's to 1000's of simulations.
+                        Fierro (LANL code number O4659) is a modern C++ code that offers novel capabilities to simulate multiscale multiphysics engineering and material science applications and for autonomous multiphysics design optimization.  Fierro contains a suite of novel solvers for quasi-static solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, which have meshes with constant mass elements that move with the material. Multiscale material models are coupled to world-leading numerical methods inside Fierro to simulate the performance of parts accounting for the underlying microstructure in the part. Fierro supports hybrid parallelism, using MPI for coarse-grained parallelism plus a range of hardware-specific languages for fine-grained parallelism to leverage diverse GPUs for efficient simulation runtimes. The combined capabilities in the Fierro code are key to realizing the full-potential of diverse manufacturing processes by leveraging modern high-performance computing machines to: (1) simulate large-deformation, high-shear manufacturing processes; (2) assess the performance of parts across physical regimes accounting for the manufacturing processes, and (3) design optimal parts autonomously that are additively manufactured.  The parallel performance of Fierro also enables assessments of applications that require meshes with millions to billions of elements, as well as, quantification of uncertainty and margins, or sensitivity studies, that may require 100's to 1000's of simulations.
                         </p>
                         <br/>
                         Fierro is advantageous for:
@@ -141,13 +141,13 @@ https://www.tooplate.com/view/2125-artxibition
                         <p>
                             Fierro is built on the ELEMENTS library that supports a diverse suite of element types, including high-order elements, and quadrature rules. The mesh class within the ELEMENTS library is designed for efficient calculations on unstructured meshes and to minimize memory usage. Fierro is designed to readily accommodate a range of numerical methods including continuous finite element, finite volume, and discontinuous Galerkin methods. Fierro is designed to support explicit and implicit time integration methods as well as optimization methods.
                         <p>
-                            The linear Lagrangian finite element method for material dynamics in Fierro supports user developed material models and multiscale models for microstructure-aware simulations.  These multiscale models can also be run in a stand-alone manner to establish structure-property relationships.
+                            The linear Lagrangian finite element method for material dynamics in Fierro supports user developed material models and multiscale models for microstructure-aware simulations.  These multiscale models can also be run in a stand-alone manner to establish structure-property relationships.  This linear Lagrangian finite element method is coupled to optimization solvers for 3D transient multi-physics topology optimzation.
                         </p>
                         <p>
                             Fierro uniquely offers several compact-stencil, arbitrary-order Lagrangian finite element method for more efficient simulations.  These schemes use meshes that edges that can bend to accurately track large deformations in material dynamics.
                         </p>
                         <p>
-                            A physics solver is supported in Fierro for simulating static or quasistatic thermal and mechanical applications.  Higher-order optimization methods work in concert with the thermal-mechanical solvers for multiphysics topology optimization that satisfies multiple constraints.
+                            A physics solver is supported in Fierro for simulating static or quasistatic thermal and mechanical applications.  Higher-order optimization methods work in concert with the thermal-mechanical solvers for 3D multiphysics static topology optimization that satisfies multiple constraints.
                         </p>
                     </div>
                 </div>
@@ -164,7 +164,7 @@ https://www.tooplate.com/view/2125-artxibition
 
                 
                 <h2>Applications</h2>
-                <p>The <em>Fierro</em> collection of software includes several separate tools for different physical simulations. Some of which have Graphical User Interfaces for ease of use.</p>
+                <p>The <em>Fierro</em> collection of solvers includes separate tools to help users setup diverse simulations. Some solvers and work flows have Graphical User Interfaces for ease of use.</p>
                 <h4>Micro-mechanical solvers</h4>
                 <p>
                     Our small strain and large strain Elasto-Viscoplastic Fast Fourier Transform (EVPFFT) solvers predict the micro-mechanical response and microstructure evolution of polycrystalline materials. This tool can be used
@@ -172,9 +172,9 @@ https://www.tooplate.com/view/2125-artxibition
                 </p>
                 <h4>Static and Quasi-Static Physics Solver</h4>
                 <p>
-                    Our static and quasi-static finite element physics solvers can solve boundary value problems over a meshed geometry with provided boundary conditions (Neumann or Dirichlet).
+                    Our static and quasi-static finite element physics solver can solve boundary value problems over a meshed geometry with provided boundary conditions (Neumann or Dirichlet).
                 </p>
-                <h4>Material Dynamics Physics Solver</h4>
+                <h4>Material Dynamics Physics Solvers</h4>
                 <p>
                     Our finite element material dynamics physics solver can simulate elastic structural dynamics to shock-driven flows given a range of boundary conditions, external forces, and initial conditions.
                 </p>
