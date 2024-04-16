@@ -2,7 +2,8 @@ import fierro_mesh_builder
 import paraview.simple as pvsimple
 from PySide6.QtCore import (QProcess)
 import subprocess
-from DeveloperInputs import *
+import DeveloperInputs
+from importlib import reload
 
 # =============================================
 # ======= MESH BUILDER WRITE INPUT FILE =======
@@ -52,7 +53,8 @@ def Mesh_Builder_WInput(self, GLOBAL_MESH, global_mesh_dir):
     global_mesh_input.close()
     
     # Run Mesh Builder Tool
-    executable_path = fierro_mesh_builder_exe
+    reload(DeveloperInputs)
+    executable_path = DeveloperInputs.fierro_mesh_builder_exe
     arguments = [self.GLOBAL_MESH]
     command = [executable_path] + arguments
     process = subprocess.Popen(command)

@@ -40,12 +40,13 @@ import fierro_mesh_builder
 import tempfile
 import time
 import subprocess
+from importlib import reload
 
 from Explicit_SGH import *
 from EVPFFT_Lattice import *
 from Mesh_Builder_WInput import *
 from FIERRO_Setup import *
-from DeveloperInputs import *
+import DeveloperInputs
 
 class FIERRO_GUI(Ui_MainWindow):
     def setupUi(self, MainWindow):
@@ -230,7 +231,8 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.warning_message('ERROR: Number of voxels NOT defined')
             else:
                 # Run voxelization executable
-                executable_path = fierro_voxelizer_exe
+                reload(DeveloperInputs)
+                executable_path = DeveloperInputs.fierro_voxelizer_exe
                 vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
                 arguments = [b3_filename[0], vtk_location, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INOriginX.text(), self.INOriginY.text(), self.INOriginZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
                 command = [executable_path] + arguments

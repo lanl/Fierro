@@ -8,7 +8,8 @@ import os
 #import paraview.simple as paraview.simple
 from paraview.simple import *
 from EVPFFT_Lattice_WInput import *
-from DeveloperInputs import *
+import DeveloperInputs
+from importlib import reload
 
 # ==============================================
 # ======= EVPFFT SOLVER LATTICE PIPELINE =======
@@ -570,7 +571,8 @@ def EVPFFT_Lattice(self):
     def single_EVPFFT(BC_index):
         if self.p == None:
             EVPFFT_Lattice_WInput(self,BC_index)
-            executable_path = fierro_evpfft_exe
+            reload(DeveloperInputs)
+            executable_path = DeveloperInputs.fierro_evpfft_exe
             arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
             
             # Make a new directory to store all of the outputs
