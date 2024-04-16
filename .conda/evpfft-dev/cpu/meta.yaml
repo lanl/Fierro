@@ -14,11 +14,22 @@ build:
     - PLATFORM={{ target_platform }}
 
 requirements:
-  run:
-    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
-    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+  host:
+    #    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    #    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - openmpi
+    - fierro-heffte
+    - fftw=*=mpi_openmpi_*
+    - kokkos=4.1
+    - hdf5=*=mpi_openmpi_*
+    - elements
+  run:
+    #    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    #    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+    #    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    #    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - openmpi
     - fierro-heffte
     - fftw=*=mpi_openmpi_*
