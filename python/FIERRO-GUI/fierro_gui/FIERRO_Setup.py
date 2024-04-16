@@ -1,8 +1,8 @@
 import sys
 import os
 import tempfile
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QDialog, QFileDialog, QDialogButtonBox, QMessageBox
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QDialog, QFileDialog, QDialogButtonBox, QMessageBox, QRadioButton
+from PySide6.QtCore import Qt, Signal
 from ui_FIERRO_Setup import Ui_Dialog
 from DeveloperInputs import *
 
@@ -11,10 +11,16 @@ from DeveloperInputs import *
 # ===============================================
 
 class FierroSetup(QDialog, Ui_Dialog):
+    settingChanged = Signal(str)
+
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
         self.setupUi(self)
         self.MainWindow = main_window
+        
+        # Connect to user or development menu
+        self.BUser.clicked.connect(lambda: self.Configuration.setCurrentIndex(0))
+        self.BDeveloper.clicked.connect(lambda: self.Configuration.setCurrentIndex(1))
         
         # Set initial directory to temporary directory
         self.directory = self.create_temp_directory()
@@ -61,24 +67,21 @@ class FierroSetup(QDialog, Ui_Dialog):
         event.ignore()
         
     def confirm(self):
-        # Check that all executables have been defined
-        if "fierro-mesh-builder" not in self.INFierroMeshBuilder.text():
-            self.warning_message("ERROR: invalid link to fierro-mesh-builder executable")
-        if "fierro-voxelizer" not in self.INFierroVoxelizer.text():
-            self.warning_message("ERROR: invalid link to fierro-voxelizer executable")
-        if "fierro-parallel-explicit" not in self.INFierroParallelExplicit.text():
-            self.warning_message("ERROR: invalid link to fierro-parallel-explicit executable")
-        if "evpfft" not in self.INFierroEvpfft.text():
-            self.warning_message("ERROR: invalid link to evpfft executable")
-        
-        # Write executable locations to file for future use
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        executable_paths_file = os.path.join(current_dir, "DeveloperInputs.py")
-        with open(executable_paths_file, "w") as file:
-            file.write(f"fierro_mesh_builder_exe = '{self.INFierroMeshBuilder.text()}'\n")
-            file.write(f"fierro_voxelizer_exe = '{self.INFierroVoxelizer.text()}'\n")
-            file.write(f"fierro_parallel_explicit_exe = '{self.INFierroParallelExplicit.text()}'\n")
-            file.write(f"fierro_evpfft_exe = '{self.INFierroEvpfft.text()}'\n")
+        if self.BDeveloper.isChecked():
+            # Write executable locations to file for future use
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            executable_paths_file = os.path.join(current_dir, "DeveloperInputs.py")
+            with open(executable_paths_file, "w") as file:
+                file.write(f"fierro_mesh_builder_exe = '{self.INFierroMeshBuilder.text()}'\n")
+                file.write(f"fierro_voxelizer_exe = '{self.INFierroVoxelizer.text()}'\n")
+                file.write(f"fierro_parallel_explicit_exe = '{self.INFierroParallelExplicit.text()}'\n")
+                file.write(f"fierro_evpfft_exe = '{self.INFierroEvpfft.text()}'\n")
+                
+        # Emit which type of user configuration is selected back to the main window
+        if self.BUser.isChecked():
+            self.settingChanged.emit("User")
+        elif self.BDeveloper.isChecked():
+            self.settingChanged.emit("Developer")
         
         # Re-enable the main window
         if hasattr(self, 'MainWindow') and hasattr(self.MainWindow, 'setEnabled'):
@@ -122,4 +125,5 @@ class FierroSetup(QDialog, Ui_Dialog):
         message = QMessageBox()
         message.setText(msg)
         message.exec()
+
         

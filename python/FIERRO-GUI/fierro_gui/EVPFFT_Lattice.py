@@ -572,7 +572,10 @@ def EVPFFT_Lattice(self):
         if self.p == None:
             EVPFFT_Lattice_WInput(self,BC_index)
             reload(DeveloperInputs)
-            executable_path = DeveloperInputs.fierro_evpfft_exe
+            if self.UserConfig == "Developer":
+                executable_path = DeveloperInputs.fierro_evpfft_exe
+            elif self.UserConfig == "User":
+                executable_path = "evpfft"
             arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
             
             # Make a new directory to store all of the outputs
@@ -604,8 +607,11 @@ def EVPFFT_Lattice(self):
             self.p.readyReadStandardError.connect(handle_stderr)
             self.p.stateChanged.connect(handle_state)
             self.p.finished.connect(lambda: process_finished(BC_index))
-#            self.p.start("evpfft",["-f", self.EVPFFT_INPUT, "-m", "2"])
-            self.p.start(executable_path, arguments)
+            try:
+                self.p.start(executable_path, arguments)
+            except Exception as e:
+                self.warning_message("ERROR: evpfft executable")
+                return
             self.progress_re = re.compile("       Current  Time  STEP = (\\d+)")
             self.run_cnt += 1            
             

@@ -1,4 +1,4 @@
-import fierro_mesh_builder
+#import fierro_mesh_builder
 import paraview.simple as pvsimple
 from PySide6.QtCore import (QProcess)
 import subprocess
@@ -54,17 +54,19 @@ def Mesh_Builder_WInput(self, GLOBAL_MESH, global_mesh_dir):
     
     # Run Mesh Builder Tool
     reload(DeveloperInputs)
-    executable_path = DeveloperInputs.fierro_mesh_builder_exe
+    if self.UserConfig == "Developer":
+        executable_path = DeveloperInputs.fierro_mesh_builder_exe
+    elif self.UserConfig == "User":
+        executable_path = "fierro-mesh-builder"
     arguments = [self.GLOBAL_MESH]
     command = [executable_path] + arguments
-    process = subprocess.Popen(command)
-    process.wait()
+    try:
+        process = subprocess.Popen(command)
+        process.wait()
+    except Exception as e:
+        self.warning_message("ERROR: fierro-mesh-builder executable")
+        return
     self.mesh_builder = QProcess()
-    
-#    self.mesh_builder.start("fierro-mesh-builder","/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/python/FIERRO-GUI/global_mesh.yaml")
-#            self.p.start("evpfft",["-f", EVPFFT_INPUT, "-m", "2"])
-
-#    fierro_mesh_builder.build_mesh_from_file(GLOBAL_MESH)
     
     # View Global Mesh in Paraview Window
     mesh_dir = global_mesh_dir + '/mesh.vtk'

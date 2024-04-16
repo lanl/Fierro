@@ -525,14 +525,21 @@ def Explicit_SGH(self):
         if self.explicit_sgh == None:
             Explicit_SGH_WInput(self)
             reload(DeveloperInputs)
-            executable_path = DeveloperInputs.fierro_parallel_explicit_exe
+            if self.UserConfig == "Developer":
+                executable_path = DeveloperInputs.fierro_parallel_explicit_exe
+            elif self.UserConfig == "User":
+                executable_path = "fierro-parallel-explicit"
             arguments = [self.EXPLICIT_SGH_INPUT]
             self.explicit_sgh = QProcess()
             self.explicit_sgh.readyReadStandardOutput.connect(handle_stdout)
             self.explicit_sgh.readyReadStandardError.connect(handle_stderr)
             self.explicit_sgh.stateChanged.connect(handle_state)
             self.explicit_sgh.finished.connect(process_finished)
-            self.explicit_sgh.start(executable_path, arguments)
+            try:
+                self.explicit_sgh.start(executable_path, arguments)
+            except Exception as e:
+                self.warning_message("ERROR: fierro-parallel-explicit executable")
+                return
             self.progress_re = re.compile("Writing outputs to file at (\\d+)")
             self.run_cnt += 1
     def simple_percent_parser(output):

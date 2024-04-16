@@ -36,7 +36,7 @@ from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 #import fierro_voxelizer
-import fierro_mesh_builder
+#import fierro_mesh_builder
 import tempfile
 import time
 import subprocess
@@ -66,7 +66,7 @@ class FIERRO_GUI(Ui_MainWindow):
         # Help menu
         self.actionManual.triggered.connect(openUrl)
         
-        # Working Directory Menu
+        # Fierro Setup Menu
         self.actionChange_Working_Directory.triggered.connect(self.open_fierro_setup_dialog)
         
         # Upload Geometry
@@ -232,12 +232,19 @@ class FIERRO_GUI(Ui_MainWindow):
             else:
                 # Run voxelization executable
                 reload(DeveloperInputs)
-                executable_path = DeveloperInputs.fierro_voxelizer_exe
+                if self.UserConfig == "Developer":
+                    executable_path = DeveloperInputs.fierro_voxelizer_exe
+                elif self.UserConfig == "User":
+                    executable_path = "fierro-voxelizer"
                 vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
                 arguments = [b3_filename[0], vtk_location, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INOriginX.text(), self.INOriginY.text(), self.INOriginZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
                 command = [executable_path] + arguments
-                process = subprocess.Popen(command)
-                process.wait()
+                try:
+                    process = subprocess.Popen(command)
+                    process.wait()
+                except Exception as e:
+                    self.warning_message("ERROR: fierro-voxelizer executable")
+                    return
                     
                 # Paraview window
                 pvsimple.Delete(self.stl)
@@ -352,6 +359,7 @@ class FIERRO_GUI(Ui_MainWindow):
     # ========== FIERRO SETUP ============
     def open_fierro_setup_dialog(self, gself):
         dialog = FierroSetup(gself)
+        dialog.settingChanged.connect(self.handleSettingChanged)
         dialog.setWindowModality(Qt.WindowModal)
         if dialog.exec() == QDialog.Accepted:
             self.directory = dialog.get_directory()
@@ -381,13 +389,10 @@ class FIERRO_GUI(Ui_MainWindow):
         else:
             self.warning_message("ERROR: Working directory was not defined")
     
-    # ========== CHECK FOR BUILD PACKAGES ============
-    def check_build_packages(self, executable_path, arguments):
-        try:
-            process = subprocess.Popen([executable_path] + arguments)
-            process.wait()
-            return True
-        except Exception as e:
-            print("Error occurred while running the process:", e)
-            return False
+    # Output which user profile the user selected
+    def handleSettingChanged(self, setting):
+        if setting == "User":
+            self.UserConfig = "User"
+        elif setting == "Developer":
+            self.UserConfig = "Developer"
 
