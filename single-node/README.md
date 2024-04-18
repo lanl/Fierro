@@ -64,11 +64,12 @@ Valid options:
   --help: Display this help message
 ```
 
-The build-it.sh script sources the other scripts in the folder.  A range of options are provided for computer architectures and machines; however, they might not be correctly configured for the user's hardware or computing environment. If the scripts fail to build the Lagrangian code, then carefully review the modules, environment variables used, and the computer architecture settings.  Taking the defaults as the example, the executable will be located in 
+The build-it.sh script sources the other scripts in the folder.  Taking the defaults as the example, the executable will be located in 
 ```
 Fierro/single-node/build-SGH-serial/bin
 ```
-
+## Building Fierro without Anaconda
+To build the code, the user must load modules on a HPC machine or install a compiler, cmake, etc. using 'brew install' on a Mac or 'sudo apt-get install' on a linux machine.  Several scripts are provided to setup the environement variables for machines (they are located in the /scripts/machines folder).  However, the supplied scripts might not be correctly configured for the user's hardware or computing environment. If the scripts fail to build the Lagrangian code, then carefully review the modules, environment variables used, and the computer architecture settings.  
 
 ### Updating submodules
 The ELEMENTS library and MATAR library can be updated to the newest release using
