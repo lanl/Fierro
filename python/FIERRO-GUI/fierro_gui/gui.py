@@ -5,7 +5,7 @@ def main():
     sys.path.append(os.path.dirname(__file__))
     from fierro_gui.FIERRO_GUI import FIERRO_GUI
     from PySide6.QtWidgets import QMainWindow, QApplication
-    from FIERRO_Setup import FierroSetup
+    from fierro_gui.FIERRO_Setup import FierroSetup
     # MAIN WINDOW CLASS
     class MainWindow(QMainWindow):
         def __init__(self):
