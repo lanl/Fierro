@@ -26,17 +26,48 @@ git clone --recursive https://github.com/lanl/Fierro.git
 ```
 
 # Building the code
-Building the code from source allows you to compile with more targeted hardware optimizations that could offer a potentially faster executable. 
-
-Explicit Lagrangian codes are being added to the repository that are written using MATAR+Kokkos and run with fine-grained parallellism on multi-core CPUs and GPUs.  Build scripts are provided, and those scripts follow those used in the [MATAR](https://github.com/lanl/MATAR/) GitHub repository. The scripts to build the Lagrangian code are in the scripts folder.  
+Building the code from source allows you to compile with more targeted hardware optimizations that could offer a potentially faster executable. Explicit Lagrangian codes are being added to the repository that are written using MATAR+Kokkos and run with fine-grained parallellism on multi-core CPUs and GPUs.  Build scripts are provided in,  
 ```
 Fierro/single-node/scripts/
 ```
-To run the build scripts, type:
+
+## Building Fierro with Anaconda
+It is advised to use Anaconda package manager to build Fierro as follows:
+
+1. Create an environment and activate:
 ```
-source build-it.sh <environment type> <parallelism> <build directory name (optional)>
+conda create --name fierroEnv
+conda activate fierroEnv
 ```
-The environment type has two options: 'hpc' or 'macos' and parallelism has four options: 'cuda', 'hip', 'openmp', 'none'. The build-it.sh script sources the other scripts in the folder.  A range of options are provided for computer architectures and machines; however, they might not be correctly configured for the user's hardware or computing environment. If the scripts fail to build the Lagrangian code, then carefully review the modules, environment variables used, and the computer architecture settings.  
+
+2. Install needed packages:
+```
+conda install cxx-compiler -c conda-forge
+conda install cmake
+```
+
+3. Run the build script as:
+```
+source build-it.sh --help
+```
+
+Which outputs:
+
+```
+Usage: source build_evpfft.sh [OPTION]
+Valid options:
+  --solver=<1DSGH|SGH>. Default is 'SGH'
+  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>. Default is 'serial'
+  --build_action=<full-app|set-env|install-kokkos|fierro>. Default is 'full-app'
+  --machine=<darwin|chicoma|linux|mac>. Default is 'linux'
+  --build_cores=<Integers greater than 0>. Default is set 1
+  --help: Display this help message
+```
+
+The build-it.sh script sources the other scripts in the folder.  A range of options are provided for computer architectures and machines; however, they might not be correctly configured for the user's hardware or computing environment. If the scripts fail to build the Lagrangian code, then carefully review the modules, environment variables used, and the computer architecture settings.  Taking the defaults as the example, the executable will be located in 
+```
+Fierro/single-node/build-SGH-serial/bin
+```
 
 
 ### Updating submodules
