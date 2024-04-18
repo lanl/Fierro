@@ -70,7 +70,7 @@
 
                     A GUI is offered, it can be installed by typing:    
 
-                    <pre><code> conda install -c conda-forge -c fierromechanics evpfft_gui </code></pre>
+                    <pre><code> conda install -c conda-forge -c fierromechanics fierro_gui </code></pre>
 
                     After installing the finite element solvers, it gives you access to <code>fierro-mesh-builder</code>, <code>fierro-parallel-explicit</code>, <code>fierro-parallel-implicit</code>, and the <code>fierro-voxelizer</code> executables. These can be run by calling the appropriate executable with the desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
                     
@@ -80,7 +80,7 @@
                     <pre><code>./src/Parallel-Solvers/Parallel-Explicit/example_simple.yaml</code></pre>
 
                     The GUI can be run in the anaconda enviroment by typing:
-                    <pre><code>evpfft-gui </code></pre>
+                    <pre><code>fierro-gui </code></pre>
 
 
 
@@ -148,16 +148,16 @@
                 <p>
                     The <em>Fierro</em> GUI applications run on Python and areis available for all systems that the <em>Feirro</em> back-end can run on. They can either be installed from the Anaconda distributions, or built from source.
                 </p>
-                <h5><a id="evpfft-gui-anchor">EVPFFT-GUI</a></h5>
+                <h5><a id="fierro-gui-anchor">FIERRO-GUI</a></h5>
                 <p>
-                    Our standalone EVPFFT-GUI software can be installed with:
+                    Our standalone FIERRO-GUI software can be installed with:
                 </p>
-                <pre><code>conda install -c conda-forge -c fierromechanics evpfft_gui</code></pre>
+                <pre><code>conda install -c conda-forge -c fierromechanics fierro_gui</code></pre>
                 <p>
-                    This will give you access to both the <code>evpfft</code> and <code>evpfft-gui</code> commands to launch the comamnd line EVPFFT backend or the associated graphical user interface, respectively.
+                    This will give you access to both the <code>evpfft</code> and <code>fierro-gui</code> commands to launch the comamnd line EVPFFT backend or the associated graphical user interface, respectively.
                 </p>
                 <p>
-                    Additionally, EVPFFT-GUI can be built from source by navigating to <code>Fierro/python/EVPFFT-GUI</code> and running <code>pip install .</code> or <code>python setup.py install</code>. This application depends on:
+                    Additionally, FIERRO-GUI can be built from source by navigating to <code>Fierro/python/FIERRO-GUI</code> and running <code>pip install .</code> or <code>python setup.py install</code>. This application depends on:
                     <li>EVPFFT</li>
                     <li>Voxelizer</li>
                 </p>
@@ -214,10 +214,6 @@ make
                 <h5>Mesh Generator</h5>
                 <p>
                     If you want to run a test problem, or just generate a simple mesh, our mesh generator can help. It accepts desired mesh configuration via a Yaml input file and can generate both low order and high order mesh structures in either a cylindrical or rectangular configuration at your desired resolutions. 
-                </p>
-                <h5>Voxelizer</h5>
-                <p>
-                    Our backend voxelizer was designed for use in the EVPFFT-GUI but can be run standalone as well. It requires a binary STL mesh file as an input and will produce a voxel VTK mesh file as an output.
                 </p>
             </div>
         </div>
