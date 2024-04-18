@@ -8,13 +8,18 @@ if os.path.isfile(requirement_path):
         install_requires = f.read().splitlines()
 
 setup(
-    name='evpfft_gui',
+    name='fierro_gui',
     python_requires='>=3.8',
     author='Sarah Hankins',
     author_email='shankins@lanl.gov',
-    version='0.1',
-    description='Package for running LANL\'s EVPFFT software with a graphical front end.',
+    version='1.0',
+    description='Package for running LANL\'s Fierro software with a graphical front end.',
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     include_package_data=True,
-    install_requires=install_requires
+    install_requires=install_requires,
+    entry_points={
+        'console_scripts' : [
+            'fierro-gui = fierro_gui.gui:main'
+        ]
+    }
 )
