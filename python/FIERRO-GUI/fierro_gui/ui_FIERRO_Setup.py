@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_SetupSsEGmM.ui'
+## Form generated from reading UI file 'FIERRO_Setupohqvrm.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -17,8 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QDialog, QFrame, QGridLayout,
     QHBoxLayout, QLabel, QPushButton, QRadioButton,
-    QSizePolicy, QSpacerItem, QStackedWidget, QVBoxLayout,
-    QWidget)
+    QSizePolicy, QStackedWidget, QVBoxLayout, QWidget)
 import IconResourceFile_rc
 
 class Ui_Dialog(object):
@@ -155,16 +154,6 @@ class Ui_Dialog(object):
         self.verticalLayout_5 = QVBoxLayout(self.page)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
         self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
-        self.BCheckConda = QPushButton(self.page)
-        self.BCheckConda.setObjectName(u"BCheckConda")
-        self.BCheckConda.setMaximumSize(QSize(250, 16777215))
-
-        self.verticalLayout_5.addWidget(self.BCheckConda, 0, Qt.AlignHCenter|Qt.AlignTop)
-
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.verticalLayout_5.addItem(self.verticalSpacer)
-
         self.Configuration.addWidget(self.page)
         self.page_2 = QWidget()
         self.page_2.setObjectName(u"page_2")
@@ -302,7 +291,6 @@ class Ui_Dialog(object):
         self.label.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p align=\"center\"><span style=\" font-style:italic;\">Select profile configuration:</span></p></body></html>", None))
         self.BUser.setText(QCoreApplication.translate("Dialog", u"User", None))
         self.BDeveloper.setText(QCoreApplication.translate("Dialog", u"Developer", None))
-        self.BCheckConda.setText(QCoreApplication.translate("Dialog", u"Check Anaconda Environment", None))
         self.INFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>/</p></body></html>", None))
         self.LFierroMeshBuilder.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p>fierro-mesh-builder:</p></body></html>", None))
         self.BFierroParallelExplicit.setText(QCoreApplication.translate("Dialog", u"Select", None))
