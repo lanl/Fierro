@@ -267,6 +267,16 @@ void FEA_Module_SGH::setup()
 
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++) {
+        // if volume is defined by an stl file, voxelize it
+        if (mat_fill(f_id).volume.type == VOLUME_TYPE::stl) {
+            mat_fill(f_id).volume.stl_to_voxel();
+        }
+        
+        // if volume is defined by a vtk file, parse it
+        if (mat_fill(f_id).volume.type == VOLUME_TYPE::vtk) {
+            mat_fill(f_id).volume.vtk();
+        }
+        
         // parallel loop over elements in mesh
         // for (size_t elem_gid = 0; elem_gid <= rnum_elem; elem_gid++) {
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {

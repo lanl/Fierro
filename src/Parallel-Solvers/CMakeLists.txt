@@ -62,6 +62,7 @@ target_link_libraries (
     ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS}
     yaml_serializable
     mesh_builder
+    voxelizer
 )
 
 # Material Models

@@ -250,3 +250,19 @@ Mesh MeshBuilder::build_mesh(std::shared_ptr<MeshBuilderInput> input) {
 
     return mesh;
 }
+
+void MeshBuilder::build_mesh_from_file(std::string mesh_file){
+    MeshBuilderConfig config;
+    Yaml::from_file_strict(mesh_file, config);
+    
+    Mesh mesh = MeshBuilder::build_mesh(config.input);
+    
+    switch (config.output.file_type) {
+        case FileType::Ensight:
+            MeshIO::write_ensight(config.output.name, mesh, true);
+            break;
+        case FileType::VTK:
+            MeshIO::write_vtk(config.output.name, config.output.file_location, mesh, true);
+            break;
+    }
+}

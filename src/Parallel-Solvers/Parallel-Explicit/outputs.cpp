@@ -766,7 +766,7 @@ void Explicit_Solver::parallel_vtk_writer_new()
     MPI_File          myfile_parallel;
     bool              displace_geometry = false;
 
-    std::string vtk_dir      = "vtk/";
+    std::string vtk_dir      = simparam.output_options.output_file_location;
     std::string vtk_data_dir = vtk_dir + "data/";
 
     // mkdir if needed
