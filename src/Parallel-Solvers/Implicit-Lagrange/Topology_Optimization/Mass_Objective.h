@@ -123,9 +123,17 @@ public:
     std::cout << "INITIAL SYSTEM MASS: " << initial_mass << std::endl;
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     current_step++;
   }
+
+  /* --------------------------------------------------------------------------------------
+   Update objective value with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol ) {
     ROL::Ptr<const MV> zp = getVector(z);
@@ -159,9 +167,9 @@ public:
     return c/initial_mass;
   }
 
-  //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //g.zero();
-  //}
+  /* --------------------------------------------------------------------------------------
+   Update gradient vector (g) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
   
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
     //get Tpetra multivector pointer from the ROL vector
@@ -206,6 +214,11 @@ public:
     //std::fflush(stdout);
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update Hessian vector product (hv) using the differential design vector (v) and
+   the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+  
   void hessVec(ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol) {
     
     // Unwrap hv

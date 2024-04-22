@@ -111,11 +111,19 @@ public:
     derivative_allocated = false;
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     for(int iobjective = 0; iobjective < nobjectives; iobjective++){
       Multi_Objective_Terms_[iobjective]->update(z, type, iter);
     }
   }
+
+  /* --------------------------------------------------------------------------------------
+   Update objective value with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
     //std::cout << "Started obj value on task " <<FEM_->myrank  << std::endl;
@@ -128,9 +136,9 @@ public:
     return c;
   }
 
-  //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //g.zero();
-  //}
+  /* --------------------------------------------------------------------------------------
+   Update gradient vector (g) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
   
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
     //get Tpetra multivector pointer from the ROL vector
@@ -153,7 +161,11 @@ public:
     Tpetra::deep_copy(*gp, *multi_derivative);
   }
   
-  
+  /* --------------------------------------------------------------------------------------
+   Update Hessian vector product (hv) using the differential design vector (v) and
+   the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
     // Unwrap hv
     ROL::Ptr<MV> hvp = getVector(hv);
