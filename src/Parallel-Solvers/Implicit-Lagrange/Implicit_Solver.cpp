@@ -219,10 +219,26 @@ void Implicit_Solver::run(){
 
       //update set options for next FEA module in loop with synchronized set options in solver's simparam class
       FEA_MODULE_TYPE m_type = simparam.fea_module_parameters[imodule]->type;
-      if(fea_module_must_read.find(m_type) != fea_module_must_read.end()){
-        fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);
+      bool yaml_supplied_bcs = (bool)(simparam.fea_module_parameters[imodule]->boundary_conditions.size());
+      bool yaml_supplied_lcs = (bool)(simparam.fea_module_parameters[imodule]->loading_conditions.size());
+      bool yaml_supplied_no_conditions = !yaml_supplied_bcs && !yaml_supplied_lcs;
+      if(fea_module_must_read.find(m_type) != fea_module_must_read.end() && yaml_supplied_no_conditions){
+        if (simparam.input_options.has_value()) {
+          const Input_Options& input_options = simparam.input_options.value();
+          switch (input_options.mesh_file_format) {
+          case MESH_FORMAT::ansys_dat:
+            fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);
+            break;
+          case MESH_FORMAT::abaqus_inp:
+            fea_modules[imodule]->read_conditions_abaqus_inp(in, before_condition_header);
+            break;
+          default:
+            *fos << "ERROR: MESH FILE FORMAT DOESN'T SUPPORT CONDITION READ" << std::endl;
+            exit_solver(0);
+          }
+        }
       }
-      else{
+      else if(yaml_supplied_bcs&&yaml_supplied_lcs){
         fea_modules[imodule]->init_boundaries();
 
         //set boundary conditions for FEA modules
@@ -230,6 +246,10 @@ void Implicit_Solver::run(){
 
         //set applied loading conditions for FEA modules
         fea_modules[imodule]->generate_applied_loads();
+      }
+      else if(simparam.fea_module_parameters[imodule]->requires_conditions){
+        *fos << "ERROR: FEA MODULE " << imodule << " WAS NOT ASSIGNED EITHER LOADING OR BOUNDARY CONDTIONS" << std::endl;
+            exit_solver(0);
       }
     }
 

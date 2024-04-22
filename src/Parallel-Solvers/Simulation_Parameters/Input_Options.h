@@ -56,8 +56,20 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
         case ELEMENT_TYPE::hex8:
           elem_words_per_line = 8;
           break;
+        case ELEMENT_TYPE::hex20:
+          elem_words_per_line = 20;
+          break;
+        case ELEMENT_TYPE::hex32:
+          elem_words_per_line = 32;
+          break;
         case ELEMENT_TYPE::quad4:
           elem_words_per_line = 4;
+          break;
+        case ELEMENT_TYPE::quad8:
+          elem_words_per_line = 8;
+          break;
+        case ELEMENT_TYPE::quad12:
+          elem_words_per_line = 12;
           break;
         // TODO: Implement handling for other element types
         default:
