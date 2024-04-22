@@ -60,10 +60,10 @@ class SGH : public Solver
 public:
 
     simulation_parameters_t sim_param;
-    mesh_t   mesh;
-    node_t   node;
-    elem_t   elem;
-    corner_t corner;
+    // mesh_t   mesh;
+    // node_t   node;
+    // elem_t   elem;
+    // corner_t corner;
 
     double dt = 0.0;
     double time_value = 0.0;
@@ -81,20 +81,20 @@ public:
     int rk_num_stages = 2;
     int cycle_stop    = 1000000000;
 
-    SGH(simulation_parameters_t& io, mesh_t& mesh_in, node_t& node_in, elem_t& elem_in, corner_t& corner_in)  : Solver()
+    SGH()  : Solver() //simulation_parameters_t& io, mesh_t& mesh_in, node_t& node_in, elem_t& elem_in, corner_t& corner_in
     {
-        sim_param = io;
-        mesh = mesh_in;
+        // sim_param = io;
+        // mesh = mesh_in;
 
-        node   = node_in;
-        elem   = elem_in;
-        corner = corner_in;
+        // node   = node_in;
+        // elem   = elem_in;
+        // corner = corner_in;
     }
 
     ~SGH() = default;
 
     // Initialize data specific to the SGH solver
-    void initialize()
+    void initialize(simulation_parameters_t& sim_param)
     {
         // Dimensions
         num_dims = 3;
@@ -139,7 +139,7 @@ public:
     /// \brief Calls setup_sgh, which initializes state, and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void setup()
+    void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
     {
         std::cout << "INSIDE SETUP FOR SGH SOLVER" << std::endl;
 
@@ -155,24 +155,24 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void execute();
+    void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner);
 
-    void write_outputs(
-        const mesh_t& mesh,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_mass,
-        DCArrayKokkos<double>& elem_den,
-        DCArrayKokkos<double>& elem_pres,
-        DCArrayKokkos<double>& elem_stress,
-        DCArrayKokkos<double>& elem_sspd,
-        DCArrayKokkos<double>& elem_sie,
-        DCArrayKokkos<double>& elem_vol,
-        DCArrayKokkos<double>& elem_mass,
-        DCArrayKokkos<size_t>& elem_mat_id,
-        CArray<double>& graphics_times,
-        size_t&      graphics_id,
-        const double time_value);
+    // void write_outputs(
+    //     const mesh_t& mesh,
+    //     DCArrayKokkos<double>& node_coords,
+    //     DCArrayKokkos<double>& node_vel,
+    //     DCArrayKokkos<double>& node_mass,
+    //     DCArrayKokkos<double>& elem_den,
+    //     DCArrayKokkos<double>& elem_pres,
+    //     DCArrayKokkos<double>& elem_stress,
+    //     DCArrayKokkos<double>& elem_sspd,
+    //     DCArrayKokkos<double>& elem_sie,
+    //     DCArrayKokkos<double>& elem_vol,
+    //     DCArrayKokkos<double>& elem_mass,
+    //     DCArrayKokkos<size_t>& elem_mat_id,
+    //     CArray<double>& graphics_times,
+    //     size_t&      graphics_id,
+    //     const double time_value);
 
     void solve(
         CArrayKokkos<material_t>& material,

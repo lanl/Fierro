@@ -118,7 +118,7 @@ public:
 
         // Build boundary conditions
         int num_bcs = sim_param.boundary_conditions.size();
-        printf("Num BC's = %lu\n", num_bcs);
+        printf("Num BC's = %d\n", num_bcs);
 
         // --- calculate bdy sets ---//
         mesh.init_bdy_sets(num_bcs);
@@ -138,8 +138,8 @@ public:
         // Create solvers
         for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
             if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
-                SGH* sgh_solver = new SGH(sim_param, mesh, node, elem, corner);
-                sgh_solver->initialize();
+                SGH* sgh_solver = new SGH(); //, mesh, node, elem, corner
+                sgh_solver->initialize(sim_param);
                 solvers.push_back(sgh_solver);
             }
         }
@@ -165,7 +165,7 @@ public:
     {
         std::cout << "Inside driver setup" << std::endl;
         for (auto& solver : solvers) {
-            solver->setup();
+            solver->setup(sim_param, mesh, node, elem, corner);
         }
     }
 
@@ -189,7 +189,7 @@ public:
     {
         std::cout << "Inside driver run" << std::endl;
         for (auto& solver : solvers) {
-            solver->execute();
+            solver->execute(sim_param, mesh, node, elem, corner);
         }
     }
 
@@ -243,7 +243,7 @@ public:
     void fill_regions()
     {
         int num_fills = sim_param.region_fills.size();
-        printf("Num Fills's = %lu\n", num_fills);
+        printf("Num Fills's = %d\n", num_fills);
 
         for (int f_id = 0; f_id < num_fills; f_id++) {
             // // voxel mesh setup

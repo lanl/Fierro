@@ -45,27 +45,13 @@
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::execute()
+void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
     printf("Writing outputs to file at %f \n", time_value);
-    write_outputs(mesh,
-                  node.coords,
-                  node.vel,
-                  node.mass,
-                  elem.den,
-                  elem.pres,
-                  elem.stress,
-                  elem.sspd,
-                  elem.sie,
-                  elem.vol,
-                  elem.mass,
-                  elem.mat_id,
-                  graphics_times,
-                  graphics_id,
-                  time_value);
-
+    mesh_writer.write_mesh(mesh, elem, node, corner,sim_param, time_value, graphics_times);
+    
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
     // extensive energy tallies over the entire mesh
@@ -368,25 +354,7 @@ void SGH::execute()
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
-            // printf("Time value =  %f \n", time_value);
-            // printf("Graphics dt ival =  %f \n", graphics_dt_ival);
-            // std::cout << "dt in solve = "<< dt  << std::endl;
-
-            write_outputs(mesh,
-                          node.coords,
-                          node.vel,
-                          node.mass,
-                          elem.den,
-                          elem.pres,
-                          elem.stress,
-                          elem.sspd,
-                          elem.sie,
-                          elem.vol,
-                          elem.mass,
-                          elem.mat_id,
-                          graphics_times,
-                          graphics_id,
-                          time_value);
+            mesh_writer.write_mesh(mesh, elem, node, corner,sim_param, time_value, graphics_times);
 
             graphics_time = time_value + graphics_dt_ival;
         } // end if

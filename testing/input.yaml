@@ -18,12 +18,12 @@ mesh_options:
     type: Box
     origin: [0.0, 0.0, 0.0]
     length: [1.2, 1.2, 1.2]
-    num_elems: [8, 8, 8]
+    num_elems: [30, 30, 30]
 
 
 output_options:
     timer_output_level: thorough
-    output_file_format: vtk
+    output_file_format: ensight
     graphics_time_step: 0.1
     # graphics_iteration_step: 10
 
@@ -98,11 +98,11 @@ regions:
         type: sphere
         origin: [0.0, 0.0, 0.0]
         radius1: 0.0
-        radius2: 0.15
+        radius2: 0.04
         material_id: 0
         den: 1.0
         # ie: 0.25833839995946534
-        sie: 18.27 # 0.25833839995946534
+        sie: 963.652344
         velocity: cartesian
         u: 0.0
         v: 0.0

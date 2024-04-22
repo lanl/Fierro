@@ -43,12 +43,17 @@
 #include "material.h"
 #include "region.h"
 #include "boundary_conditions.h"
+#include "io_utils.h"
 
 struct simulation_parameters_t;
 
 class Solver
 {
+
+
 public:
+
+    MeshWriter mesh_writer;
 
     // ---------------------------------------------------------------------
     //    state data type declarations
@@ -77,9 +82,9 @@ public:
     virtual ~Solver();
 
     virtual void initialize() {}
-    virtual void setup() {}
+    virtual void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) {}
 
-    virtual void execute() = 0;
+    virtual void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) = 0;
 
     void solver_setup() {}
 

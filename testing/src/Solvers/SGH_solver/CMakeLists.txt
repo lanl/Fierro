@@ -32,7 +32,6 @@ src/sgh_solve.cpp
 src/time_integration.cpp
 src/user_mat.cpp
 src/user_mat_init.cpp
-src/outputs.cpp
 src/setup.cpp)
 
 # set(SGH_Solver_SRC src/sgh_solver.cpp )

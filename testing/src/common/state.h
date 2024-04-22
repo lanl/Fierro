@@ -53,9 +53,9 @@ struct node_t
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
     {
-        this->coords = DCArrayKokkos<double>(num_rk, num_nodes, num_dims);
-        this->vel    = DCArrayKokkos<double>(num_rk, num_nodes, num_dims);
-        this->mass   = DCArrayKokkos<double>(num_nodes);
+        this->coords = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_coordinates");
+        this->vel    = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
+        this->mass   = DCArrayKokkos<double>(num_nodes, "node_mass");
     }; // end method
 }; // end node_t
 
@@ -95,15 +95,15 @@ struct elem_t
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
     {
-        this->den    = DCArrayKokkos<double>(num_elems);
-        this->pres   = DCArrayKokkos<double>(num_elems);
-        this->stress = DCArrayKokkos<double>(num_rk, num_elems, num_dims, num_dims);
-        this->sspd   = DCArrayKokkos<double>(num_elems);
-        this->sie    = DCArrayKokkos<double>(num_rk, num_elems);
-        this->vol    = DCArrayKokkos<double>(num_elems);
-        this->div    = DCArrayKokkos<double>(num_elems);
-        this->mass   = DCArrayKokkos<double>(num_elems);
-        this->mat_id = DCArrayKokkos<size_t>(num_elems);
+        this->den    = DCArrayKokkos<double>(num_elems, "element_density");
+        this->pres   = DCArrayKokkos<double>(num_elems, "element_pressure");
+        this->stress = DCArrayKokkos<double>(num_rk, num_elems, num_dims, num_dims, "element_stress");
+        this->sspd   = DCArrayKokkos<double>(num_elems, "element_sspd");
+        this->sie    = DCArrayKokkos<double>(num_rk, num_elems, "element_sie");
+        this->vol    = DCArrayKokkos<double>(num_elems, "element_volume");
+        this->div    = DCArrayKokkos<double>(num_elems, "element_div");
+        this->mass   = DCArrayKokkos<double>(num_elems, "element_mass");
+        this->mat_id = DCArrayKokkos<size_t>(num_elems, "element_mat_id");
     }; // end method
 }; // end elem_t
 
@@ -119,8 +119,8 @@ struct corner_t
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims)
     {
-        this->force = DCArrayKokkos<double>(num_corners, num_dims);
-        this->mass  = DCArrayKokkos<double>(num_corners);
+        this->force = DCArrayKokkos<double>(num_corners, num_dims, "corner_force");
+        this->mass  = DCArrayKokkos<double>(num_corners, "corner_mass");
     }; // end method
 }; // end corner_t
 
