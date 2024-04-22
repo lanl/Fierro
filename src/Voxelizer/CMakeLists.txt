@@ -4,6 +4,8 @@ project(stl-voxelizer)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 
+#find_package(Kokkos REQUIRED)
+#find_package(Matar REQUIRED)
 find_package(Elements REQUIRED)
 find_package(MPI REQUIRED)
 
@@ -20,16 +22,19 @@ if(NOT DISTRIBUTION)
   set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
 endif()
 
+#add_definitions(-DHAVE_KOKKOS=1)
+
 add_library(voxelizer src/stl-to-voxelvtk.cpp)
 target_include_directories(voxelizer PUBLIC include)
-target_link_libraries(voxelizer PUBLIC Elements)
+#target_link_libraries(voxelizer matar Kokkos::kokkos)
+target_link_libraries(voxelizer Elements)
 
 include_directories(${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
 add_executable(fierro-voxelizer src/main.cpp)
 target_link_libraries(fierro-voxelizer voxelizer)
-target_compile_options(fierro-voxelizer PRIVATE "-fopenmp")
-target_link_options(fierro-voxelizer PRIVATE "-fopenmp")
+#target_compile_options(fierro-voxelizer PRIVATE "-fopenmp")
+#target_link_options(fierro-voxelizer PRIVATE "-fopenmp")
 
 INSTALL(TARGETS fierro-voxelizer)

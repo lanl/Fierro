@@ -444,6 +444,9 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex20){
         nodes_per_patch = 8;
       }
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex32){
+        nodes_per_patch = 12;
+      }
 
       //calculate buffer iterations to read number of lines
       buffer_iterations = num_patches/buffer_lines;
@@ -863,6 +866,9 @@ void FEA_Module_Elasticity::read_conditions_abaqus_inp(std::ifstream *in, std::s
       }
       if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex20){
         nodes_per_patch = 8;
+      }
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex32){
+        nodes_per_patch = 12;
       }
 
       //calculate buffer iterations to read number of lines
@@ -1961,7 +1967,8 @@ void FEA_Module_Elasticity::assemble_vector(){
   int nodes_per_elem = max_nodes_per_element;
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign;
+  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign, num_nodes_in_patch;
+  bool is_hex;
   int patch_node_count;
   CArray<int> patch_local_node_ids;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
@@ -1991,9 +1998,6 @@ void FEA_Module_Elasticity::assemble_vector(){
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(nodes_per_elem,num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(nodes_per_elem,num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s3(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
 
    //force vector initialization
@@ -2058,10 +2062,15 @@ void FEA_Module_Elasticity::assemble_vector(){
 
     //loop over quadrature points if this is a distributed force
     for(int iquad=0; iquad < direct_product_count; iquad++){
-      
-      if(Element_Types(current_element_index)==elements::elem_types::Hex8){
 
-      int local_nodes[4];
+      is_hex = Element_Types(current_element_index)==elements::elem_types::Hex8||
+               Element_Types(current_element_index)==elements::elem_types::Hex20||
+               Element_Types(current_element_index)==elements::elem_types::Hex32;
+      num_nodes_in_patch = elem->surface_to_dof_lid.stride(local_surface_id);
+
+      if(is_hex){
+
+      CArray<int> local_nodes(num_nodes_in_patch);
       //set current quadrature point
       y_quad = iquad / num_gauss_points;
       x_quad = iquad % num_gauss_points;
@@ -2117,10 +2126,9 @@ void FEA_Module_Elasticity::assemble_vector(){
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
 
       //find local dof set for this surface
-      local_nodes[0] = elem->surface_to_dof_lid(local_surface_id,0);
-      local_nodes[1] = elem->surface_to_dof_lid(local_surface_id,1);
-      local_nodes[2] = elem->surface_to_dof_lid(local_surface_id,2);
-      local_nodes[3] = elem->surface_to_dof_lid(local_surface_id,3);
+      for(int node_loop=0; node_loop < num_nodes_in_patch; node_loop++){
+        local_nodes(node_loop) = elem->surface_to_dof_lid(local_surface_id, node_loop);
+      }
 
       //acquire set of nodes for this face
       for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
@@ -2149,12 +2157,6 @@ void FEA_Module_Elasticity::assemble_vector(){
         elem->partial_eta_basis(basis_derivative_s1,quad_coordinate);
         elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
         elem->partial_xi_basis(basis_derivative_s3,quad_coordinate);
-      }
-
-      //set values relevant to this surface
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        surf_basis_derivative_s1(node_loop) = basis_derivative_s1(local_nodes[node_loop]);
-        surf_basis_derivative_s2(node_loop) = basis_derivative_s2(local_nodes[node_loop]);
       }
 
       //compute derivatives of x,y,z w.r.t the s,t coordinates of this surface; needed to compute dA in surface integral
@@ -2230,9 +2232,9 @@ void FEA_Module_Elasticity::assemble_vector(){
       elem->basis(basis_values,quad_coordinate);
 
       // loop over nodes of this face and 
-      for(int node_count = 0; node_count < 4; node_count++){
+      for(int node_count = 0; node_count < num_nodes_in_patch; node_count++){
             
-        node_id = nodes_in_elem(current_element_index, local_nodes[node_count]);
+        node_id = nodes_in_elem(current_element_index, local_nodes(node_count));
         //check if node is local to alter Nodal Forces vector
         if(!map->isNodeGlobalElement(node_id)) continue;
         node_id = map->getLocalElement(node_id);
@@ -2254,7 +2256,7 @@ void FEA_Module_Elasticity::assemble_vector(){
         for(int idim = 0; idim < num_dim; idim++){
           if(force_density[idim]!=0)
           //Nodal_RHS(num_dim*node_gid + idim) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
-          Nodal_RHS(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
+          Nodal_RHS(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes(node_count));
         }
       }
       }

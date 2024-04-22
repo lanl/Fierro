@@ -1,0 +1,33 @@
+<RCC>
+  <qresource prefix="Blue Icons">
+    <file>Blue Icons/File.svg</file>
+    <file>Blue Icons/UserProfile.svg</file>
+    <file>Blue Icons/FirstFrame.svg</file>
+    <file>Blue Icons/crop.svg</file>
+    <file>Blue Icons/LastFrame.svg</file>
+    <file>Blue Icons/NextFrame.svg</file>
+    <file>Blue Icons/PreviousFrame.svg</file>
+    <file>Blue Icons/Shapes.svg</file>
+    <file>Blue Icons/DownloadCube.svg</file>
+    <file>Blue Icons/Clipboard.svg</file>
+    <file>Blue Icons/mesh.svg</file>
+    <file>Blue Icons/brick.svg</file>
+    <file>Blue Icons/Cube.svg</file>
+    <file>Blue Icons/gear.svg</file>
+    <file>Blue Icons/lens.svg</file>
+    <file>Blue Icons/magnify.svg</file>
+    <file>Blue Icons/mine.svg</file>
+    <file>Blue Icons/Play.svg</file>
+  </qresource>
+  <qresource prefix="Locks">
+    <file>Locks/GreenUnlock.svg</file>
+    <file>Locks/RedLock.svg</file>
+  </qresource>
+  <qresource prefix="Logos">
+    <file>Logos/EVPFFT_logo_horse_ppt.png</file>
+    <file>Logos/FIERRO.png</file>
+    <file>Logos/LANL Logo Ultramarine.png</file>
+    <file>Logos/MATAR_logo2.png</file>
+    <file>Logos/ParaView_logo.png</file>
+  </qresource>
+</RCC>
