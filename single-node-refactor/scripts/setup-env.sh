@@ -11,7 +11,7 @@ export scriptdir=`pwd`
 
 cd ../..
 export topdir=`pwd`
-export basedir=${topdir}/testing
+export basedir=${topdir}/single-node-refactor
 export srcdir=${basedir}/src
 export libdir=${topdir}/lib
 export builddir=${basedir}/${my_build}
