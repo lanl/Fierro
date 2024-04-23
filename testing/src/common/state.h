@@ -38,17 +38,18 @@
 
 using namespace mtr;
 
-// node_state
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct node_t
+///
+/// \brief Stores state information associated with a node
+///
+/////////////////////////////////////////////////////////////////////////////
 struct node_t
 {
-    // Position
-    DCArrayKokkos<double> coords;
-
-    // velocity
-    DCArrayKokkos<double> vel;
-
-    // mass at nodes
-    DCArrayKokkos<double> mass;
+    DCArrayKokkos<double> coords; ///< Nodal coordinates
+    DCArrayKokkos<double> vel;  ///< Nodal velocity
+    DCArrayKokkos<double> mass; ///< Nodal mass
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
@@ -59,38 +60,25 @@ struct node_t
     }; // end method
 }; // end node_t
 
-// elem_state
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct elem_t
+///
+/// \brief Stores state information associated with an element
+///
+/////////////////////////////////////////////////////////////////////////////
 struct elem_t
 {
-    // den
-    DCArrayKokkos<double> den;
-
-    // pres
-    DCArrayKokkos<double> pres;
-
-    // stress
-    DCArrayKokkos<double> stress;
-
-    // sspd
-    DCArrayKokkos<double> sspd;
-
-    // sie
-    DCArrayKokkos<double> sie;
-
-    // vol
-    DCArrayKokkos<double> vol;
-
-    // divergence of velocity
-    DCArrayKokkos<double> div;
-
-    // mass of elem
-    DCArrayKokkos<double> mass;
-
-    // mat ids
-    DCArrayKokkos<size_t> mat_id;
-
-    // state variables
-    DCArrayKokkos<double> statev;
+    DCArrayKokkos<double> den;  ///< Element density
+    DCArrayKokkos<double> pres; ///< Element pressure
+    DCArrayKokkos<double> stress; ///< Element stress
+    DCArrayKokkos<double> sspd; ///< Element sound speed
+    DCArrayKokkos<double> sie;  ///< Element specific internal energy
+    DCArrayKokkos<double> vol;  ///< Element volume
+    DCArrayKokkos<double> div;  ///< Element divergence of velocity
+    DCArrayKokkos<double> mass; ///< Element mass
+    DCArrayKokkos<size_t> mat_id; ///< Element material index
+    DCArrayKokkos<double> statev; ///< Element state variable
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
@@ -107,14 +95,17 @@ struct elem_t
     }; // end method
 }; // end elem_t
 
-// corner_state
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct corner_t
+///
+/// \brief Stores state information associated with a corner
+///
+/////////////////////////////////////////////////////////////////////////////
 struct corner_t
 {
-    // force
-    DCArrayKokkos<double> force;
-
-    // mass of corner
-    DCArrayKokkos<double> mass;
+    DCArrayKokkos<double> force;///< Corner force
+    DCArrayKokkos<double> mass; ///< Corner mass
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims)

@@ -67,27 +67,33 @@ static std::map<std::string, mesh_input::type> mesh_input_type_map
     { "Cylinder", mesh_input::Cylinder }
 };
 
-// mmeshing input parameters
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct mesh_input_t
+///
+/// \brief Meshing related input parameters
+///
+/////////////////////////////////////////////////////////////////////////////
 struct mesh_input_t
 {
-    int num_dims = 3;
-    mesh_input::source source = mesh_input::none;
-    std::string file_path     = "";
-    mesh_input::type type;
+    int num_dims = 3;   ///< Number of dimensions for the mesh
+    mesh_input::source source = mesh_input::none;   ///< Source of mesh, file or generate
+    std::string file_path     = ""; ///< Absolute path of mesh file
+    mesh_input::type type;  ///< Type of mesh to generate if generating
 
-    std::vector<double> origin { 0.0, 0.0, 0.0 };
-    std::vector<double> length { 1.0, 1.0, 1.0 };
-    std::vector<int> num_elems { 2, 2, 2 };
+    std::vector<double> origin { 0.0, 0.0, 0.0 };   ///< Mesh origin for generating a mesh
+    std::vector<double> length { 1.0, 1.0, 1.0 };   ///< x,y,z length of generated mesh
+    std::vector<int> num_elems { 2, 2, 2 };         ///< Number of elements along x,y, z for generating a mesh.
     size_t p_order = 1;
 
     // WARNING, NOT YET PARSED
-    double inner_radius   = 0.0;
-    double outer_radius   = 1.0;
-    double starting_angle = 0.0; // in degrees
-    double ending_angle   = 90; // in degrees
+    double inner_radius   = 0.0;     ///< Inner radius for generating 2D RZ mesh
+    double outer_radius   = 1.0;     ///< Outer radius for generating 2D RZ mesh
+    double starting_angle = 0.0;     ///< Starting angle in degrees for 2D RZ mesh
+    double ending_angle   = 90;      ///< Ending angle in degrees for 2D RZ mesh
 
-    int num_radial_elems  = 10;
-    int num_angular_elems = 10;
+    int num_radial_elems  = 10; ///< Number of elements in the radial direction for 2DRZ mesh
+    int num_angular_elems = 10; ///< Number of elements in the radial direction for 2DRZ mesh
 }; // mesh_input_t
 
 // ----------------------------------

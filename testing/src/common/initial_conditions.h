@@ -48,7 +48,7 @@ enum init_velocity_conds
 
     // linear variation
     radial_linear = 3,         // linear variation from 0,0,0
-    spherical_linear = 4,       // linear variation from 0,0,0
+    spherical_linear = 4,      // linear variation from 0,0,0
 
     // vortical initial conditions
     tg_vortex = 5

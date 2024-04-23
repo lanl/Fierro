@@ -45,32 +45,31 @@
 #include "boundary_conditions.h"
 #include "dynamic_options.h"
 
-// Simulation metadata
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct simulation_parameters_t
+///
+/// \brief Struct for holding simulation metadata
+///
+/////////////////////////////////////////////////////////////////////////////
 struct simulation_parameters_t
 {
-    // Mesh input information
-    mesh_input_t mesh_input;
+    mesh_input_t mesh_input;    ///< Mesh input information
 
-    // Simulation output information
-    output_options_t output_options;
+    output_options_t output_options; ///< Simulation output information
 
-    // Simulation timing and dynamic options
-    dynamic_options_t dynamic_options;
+    dynamic_options_t dynamic_options;  ///< Simulation timing and dynamic options
 
-    // Solvers to use during the simulation
-    std::vector<solver_input_t> solver_inputs;
+    std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
 
-    // Simulation boundary conditions
-    CArrayKokkos<boundary_condition_t> boundary_conditions;
+    CArrayKokkos<boundary_condition_t> boundary_conditions; ///< Simulation boundary conditions
 
-    // Region data for simulation mesh
-    CArrayKokkos<reg_fill_t> region_fills;
+    CArrayKokkos<reg_fill_t> region_fills;  ///< Region data for simulation mesh
 
-    // Material data for simulation
-    CArrayKokkos<material_t> materials;
+    CArrayKokkos<material_t> materials; ///< Material data for simulation
 
-    // EOS data for simulation
-    std::vector<std::vector<double>> eos_global_vars;
+    std::vector<std::vector<double>> eos_global_vars;   ///< EOS data for simulation
+
 }; // simulation_parameters_t
 
 #endif // end Header Guard

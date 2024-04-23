@@ -39,9 +39,19 @@
 
 #include "state.h"
 
-// Simulation State
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct simulation_state_t
+///
+/// \brief Struct for holding state entities for Fierro, currently unused...
+///
+/////////////////////////////////////////////////////////////////////////////
 struct simulation_state_t
 {
-}; // simulation_parameters_t
+	// elem_t elem;
+	// node_t node;
+	// corner_t corner; 
+	// zone_t zone; 
+}; // simulation_state_t
 
 #endif // end Header Guard

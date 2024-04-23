@@ -965,17 +965,6 @@ void state_file(const mesh_t& mesh,
                 const DCArrayKokkos<size_t>& elem_mat_id,
                 const double time_value);
 
-void tag_bdys(const CArrayKokkos<boundary_condition_t>& boundary,
-              mesh_t& mesh,
-              const DCArrayKokkos<double>& node_coords);
-
-KOKKOS_FUNCTION
-size_t check_bdy(const size_t  patch_gid,
-                 const int     this_bc_tag,
-                 const double  val,
-                 const mesh_t& mesh,
-                 const DCArrayKokkos<double>& node_coords);
-
 void user_model_init(const DCArrayKokkos<double>& file_state_vars,
                      const size_t num_state_vars,
                      const size_t mat_id,

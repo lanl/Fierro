@@ -31,11 +31,17 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
+
+/////////////////////////////////////////////////////////////////////////////////////
+// ********** WARNING WARNING WARNING: TO BE REPLACED BY ELEMENTS ****************///
+/////////////////////////////////////////////////////////////////////////////////////
+
 #ifndef GEOMETRY_NEW_H
 #define GEOMETRY_NEW_H
 
 #include "matar.h"
 #include "mesh.h"
+#include "boundary_conditions.h"
 
 namespace geometry
 {
@@ -43,13 +49,13 @@ namespace geometry
 ///
 /// \fn get_bmatrix
 ///
-/// \brief Theis function calculate the finite element B matrix:
+/// \brief This function calculate the finite element B matrix:
 ///
 ///  B_p =  J^{-T} \cdot (\nabla_{xi} \phi_p w,   where:
 ///  \phi_p is the basis function for vertex p
-///  w is the 1 gauss point for the cell (everything is evaluted at this point)
+///  w is the 1 gauss point for the cell (everything is evaluated at this point)
 ///  J^{-T} is the inverse transpose of the Jacobi matrix
-///  \nabla_{xi} is the gradient opperator in the reference coordinates
+///  \nabla_{xi} is the gradient operator in the reference coordinates
 ///  B_p is the OUTWARD corner area normal at node p
 ///
 /// \param B matrix
@@ -600,5 +606,150 @@ void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     return;
 }     // end subroutine
 } // end namespace
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn check_bdy
+///
+/// \brief routine for checking to see if a vertex is on a boundary
+///
+/// \param Global id of a patch
+/// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
+/// \param Plane value
+/// \param Simulation mesh
+/// \param Nodal coordinates
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_INLINE_FUNCTION
+size_t check_bdy(const size_t patch_gid,
+    const int     this_bc_tag,
+    const double  val,
+    const mesh_t& mesh,
+    const DCArrayKokkos<double>& node_coords)
+{
+    size_t num_dims = mesh.num_dims;
+
+    // default bool is not on the boundary
+    size_t is_on_bdy = 0;
+
+    // the patch coordinates
+    double these_patch_coords[3];  // Note: cannot allocated array with num_dims
+
+    // loop over the nodes on the patch
+    for (size_t patch_node_lid = 0; patch_node_lid < mesh.num_nodes_in_patch; patch_node_lid++) {
+        // get the nodal_gid for this node in the patch
+        size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
+
+        for (size_t dim = 0; dim < num_dims; dim++) {
+            these_patch_coords[dim] = node_coords(1, node_gid, dim);  // (rk, node_gid, dim)
+        } // end for dim
+
+        // a x-plane
+        if (this_bc_tag == 0) {
+            if (fabs(these_patch_coords[0] - val) <= 1.0e-7) {
+                is_on_bdy += 1;
+            }
+        } // end if on type
+        // a y-plane
+        else if (this_bc_tag == 1) {
+            if (fabs(these_patch_coords[1] - val) <= 1.0e-7) {
+                is_on_bdy += 1;
+            }
+        } // end if on type
+        // a z-plane
+        else if (this_bc_tag == 2) {
+            if (fabs(these_patch_coords[2] - val) <= 1.0e-7) {
+                is_on_bdy += 1;
+            }
+        } // end if on type
+        // cylinderical shell where radius = sqrt(x^2 + y^2)
+        else if (this_bc_tag == 3) {
+            real_t R = sqrt(these_patch_coords[0] * these_patch_coords[0] +
+                            these_patch_coords[1] * these_patch_coords[1]);
+
+            if (fabs(R - val) <= 1.0e-7) {
+                is_on_bdy += 1;
+            }
+        } // end if on type
+        // spherical shell where radius = sqrt(x^2 + y^2 + z^2)
+        else if (this_bc_tag == 4) {
+            real_t R = sqrt(these_patch_coords[0] * these_patch_coords[0] +
+                            these_patch_coords[1] * these_patch_coords[1] +
+                            these_patch_coords[2] * these_patch_coords[2]);
+
+            if (fabs(R - val) <= 1.0e-7) {
+                is_on_bdy += 1;
+            }
+        } // end if on type
+    } // end for nodes in the patch
+
+    // if all nodes in the patch are on the geometry
+    if (is_on_bdy == mesh.num_nodes_in_patch) {
+        is_on_bdy = 1;
+    }
+    else{
+        is_on_bdy = 0;
+    }
+
+    return is_on_bdy;
+} // end method to check bdy
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn tag_bdys
+///
+/// \brief set planes for tagging sub sets of boundary patches
+///
+/// \param Boundary condition 
+/// \param Simulation mesh
+/// \param Nodal coordinates
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_INLINE_FUNCTION
+void tag_bdys(const CArrayKokkos<boundary_condition_t>& boundary,
+    mesh_t& mesh,
+    const DCArrayKokkos<double>& node_coords)
+{
+    size_t num_dims = mesh.num_dims;
+
+    // if (bdy_set == mesh.num_bdy_sets){
+    //    printf(" ERROR: number of boundary sets must be increased by %zu",
+    //              bdy_set-mesh.num_bdy_sets+1);
+    //    exit(0);
+    // } // end if
+
+    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
+        // tag boundaries
+        int bc_tag_id = boundary(bdy_set).geometry;
+        double val    = boundary(bdy_set).value;
+
+        // save the boundary patches to this set that are on the plane, spheres, etc.
+        for (size_t bdy_patch_lid = 0; bdy_patch_lid < mesh.num_bdy_patches; bdy_patch_lid++) {
+            // save the patch index
+            size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
+
+            // check to see if this patch is on the specified plane
+            size_t is_on_bdy = check_bdy(bdy_patch_gid,
+                                         bc_tag_id,
+                                         val,
+                                         mesh,
+                                         node_coords); // no=0, yes=1
+
+            if (is_on_bdy == 1) {
+                size_t index = mesh.bdy_patches_in_set.stride(bdy_set);
+
+                // increment the number of boundary patches saved
+                mesh.bdy_patches_in_set.stride(bdy_set)++;
+
+                mesh.bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
+            } // end if
+        } // end for bdy_patch
+    });  // end FOR_ALL bdy_sets
+
+    return;
+} // end tag
+
 
 #endif

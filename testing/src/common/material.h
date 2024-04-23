@@ -60,7 +60,14 @@ enum strength_setup_tag
 };
 } // end of namespace
 
-// material model parameters
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct material_t
+///
+/// \brief  Material model parameters
+///
+/////////////////////////////////////////////////////////////////////////////
 struct material_t
 {
     size_t id;
@@ -72,7 +79,7 @@ struct material_t
     // statev(4) = ref density
     // statev(5) = ref specific internal energy
 
-    // eos fcn pointer
+    // Equation of state (EOS) function pointer
     void (*eos_model)(const DCArrayKokkos<double>& elem_pres,
                       const DCArrayKokkos<double>& elem_stress,
                       const size_t elem_gid,
@@ -82,7 +89,7 @@ struct material_t
                       const double den,
                       const double sie);
 
-    // strength fcn pointer
+    // Strength model (EOS) function pointer
     void (*strength_model)(double, double); // WARNING: a placeholder
 
     // hypo or hyper elastic plastic model
@@ -98,13 +105,13 @@ struct material_t
 
     DCArrayKokkos<double> eos_global_vars;
 
-    double q1   = 1.0;      // acoustic coefficient in Riemann solver for compresion
-    double q1ex = 1.3333;   // acoustic coefficient in Riemann solver for expansion
-    double q2   = 1.0;      // linear coefficient in Riemann solver for compression
-    double q2ex = 1.3333;   // linear coefficient in Riemann solver for expansion
+    double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression
+    double q1ex = 1.3333;   ///< acoustic coefficient in Riemann solver for expansion
+    double q2   = 1.0;      ///< linear coefficient in Riemann solver for compression
+    double q2ex = 1.3333;   ///< linear coefficient in Riemann solver for expansion
 
-    double elastic_modulus;
-    double poisson_ratio;
+    double elastic_modulus; ///< Young's modulus
+    double poisson_ratio;   ///< Poisson ratio
 }; // end material_t
 
 // ----------------------------------
@@ -131,9 +138,6 @@ static std::vector<std::string> str_material_inps
 /// \fn ideal_gas
 ///
 /// \brief Ideal gas model, gamma law
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
 ///
 /// \param Element pressure
 /// \param Element stress
@@ -186,7 +190,7 @@ static void elastic_plastic(double stress, double strain)
     std::cout << "hello from elastic_plastic! Replace with actual strength model!" << std::endl;
 }
 
-// add the eos models here
+// EOS function pointer
 typedef void (*eos_type)(const DCArrayKokkos<double>& elem_pres,
                          const DCArrayKokkos<double>& elem_stress,
                          const size_t elem_gid,
@@ -203,9 +207,10 @@ static std::map<std::string, eos_type> eos_map
 
 // add the strength models here
 typedef void (*strength_type)(double, double);
+
 static std::map<std::string, strength_type> strength_map
 {
-    { "", elastic_plastic }
+    { "elastic_plastic", elastic_plastic }
 };
 
 #endif // end Header Guard

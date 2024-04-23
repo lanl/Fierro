@@ -64,14 +64,20 @@ static std::map<std::string, output_options::timer_output_level> timer_output_le
     { "thorough", output_options::thorough }
 };
 
-// mmeshing input parameters
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct output_options_t
+///
+/// \brief Output related options for a Fierro simulation
+///
+/////////////////////////////////////////////////////////////////////////////
 struct output_options_t
 {
-    output_options::format format;
-    output_options::timer_output_level timer_level;
+    output_options::format format;  ///< Format for the output files
+    output_options::timer_output_level timer_level; ///< How often to output mesh WARNING: CURRENTLY UNUSED
 
-    double graphics_time_step   = 1.0;
-    int graphics_iteration_step = 2000000;
+    double graphics_time_step   = 1.0;  ///< How often to write a graphics dump in time
+    int graphics_iteration_step = 2000000;  ///< How often to write a graphics dump by iteration count
 }; // output_options_t
 
 // ----------------------------------

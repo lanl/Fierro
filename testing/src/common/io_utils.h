@@ -44,7 +44,18 @@
 #include <cstring>
 #include <sys/stat.h>
 
-// Reads in mesh connectivity data
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \class MeshReader
+///
+/// \brief Class for simplifying reading meshes
+///
+/// This class contains the requisite functions required to read different 
+/// mesh formats. The idea is to set the mesh file name, and parse the 
+/// extension to decide which reader to use. Currently, only ensight .geo
+/// files are supported.
+///
+/////////////////////////////////////////////////////////////////////////////
 class MeshReader
 {
 public:
@@ -131,9 +142,7 @@ public:
             int i = 0;
             while ((ch = (char)fgetc(in)) != '\n') {
                 i++;
-                // printf("%c",ch);
             }
-            // printf("\n");
         }
 
         // --- Read in the nodes in the mesh ---
@@ -141,9 +150,9 @@ public:
         size_t num_nodes = 0;
 
         fscanf(in, "%lu", &num_nodes);
-        printf("Num nodes read in %lu\n", num_nodes);
+        printf("Number if nodes read in %lu\n", num_nodes);
 
-        // intialize node variables
+        // initialize node variables
         mesh.initialize_nodes(num_nodes);
         node.initialize(rk_num_bins, num_nodes, num_dims);
 
@@ -167,30 +176,27 @@ public:
                 double dummy;
                 fscanf(in, "%le", &dummy);
 
-                // printf("dummy = %le\n", dummy);
+
             }
         } // end for
 
         ch = (char)fgetc(in);
-        // printf("%c",ch);
 
         // skip 1 line
         for (int j = 1; j <= 1; j++) {
             int i = 0;
             while ((ch = (char)fgetc(in)) != '\n') {
                 i++;
-                // printf("%c",ch);
             }
-            // printf("\n");
         }
 
         // --- read in the elements in the mesh ---
         size_t num_elem = 0;
 
         fscanf(in, "%lu", &num_elem);
-        printf("Num elements read in %lu\n", num_elem);
+        printf("Number of elements read in %lu\n", num_elem);
 
-        // intialize elem variables
+        // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
         elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
 
@@ -206,7 +212,7 @@ public:
         // update device side
         mesh.nodes_in_elem.update_device();
 
-        // intialize corner variables
+        // initialize corner variables
         int num_corners = num_elem * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
         corner.initialize(num_corners, num_dims);
@@ -230,32 +236,38 @@ public:
     }
 };
 
-// Builds a mesh
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \class MeshBuilder
+///
+/// \brief Class for building simple meshes
+///
+/// This class contains the requisite functions required to build simple
+/// 2D and 3D Box meshes as well as 2D polar meshes. It uses the parsed
+/// simulation parameters to decide what type of mesh to build.
+///
+/////////////////////////////////////////////////////////////////////////////
 class MeshBuilder
 {
 public:
 
-    // MeshBuilder() {}
+    MeshBuilder() {}
 
     ~MeshBuilder()
     {
-        // Empty destructor
     }
 
     /////////////////////////////////////////////////////////////////////////////
     ///
     /// \fn build_mesh
     ///
-    /// \brief <insert brief description>
+    /// \brief Build a mesh for Fierro based on the input instructions
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \param Simulation mesh that is built
+    /// \param Element state data
+    /// \param Node state data
+    /// \param Corner state data
+    /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
@@ -290,16 +302,13 @@ public:
     ///
     /// \fn build_2d_box
     ///
-    /// \brief <insert brief description>
+    /// \brief Builds an unstructured 2D rectilinear mesh
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \param Simulation mesh that is built
+    /// \param Element state data
+    /// \param Node state data
+    /// \param Corner state data
+    /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_2d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
@@ -417,16 +426,13 @@ public:
     ///
     /// \fn build_2d_polar
     ///
-    /// \brief <insert brief description>
+    /// \brief Builds an unstructured 2D polar mesh
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \param Simulation mesh that is built
+    /// \param Element state data
+    /// \param Node state data
+    /// \param Corner state data
+    /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_2d_polar(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
@@ -547,16 +553,13 @@ public:
     ///
     /// \fn build_3d_box
     ///
-    /// \brief <insert brief description>
+    /// \brief Builds an unstructured 3D rectilinear mesh
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \param Simulation mesh that is built
+    /// \param Element state data
+    /// \param Node state data
+    /// \param Corner state data
+    /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_3d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
@@ -692,16 +695,13 @@ public:
     ///
     /// \fn build_3d_HexN_box
     ///
-    /// \brief <insert brief description>
+     /// \brief Builds an unstructured high order 3D rectilinear mesh
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \param Simulation mesh that is built
+    /// \param Element state data
+    /// \param Node state data
+    /// \param Corner state data
+    /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_3d_HexN_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
@@ -709,23 +709,45 @@ public:
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
     }
 
-    // -------------------------------------------------------
-    // This gives the index value of the point or the elem
-    // the elem = i + (j)*(num_points_i-1) + (k)*(num_points_i-1)*(num_points_j-1)
-    // the point = i + (j)*num_points_i + (k)*num_points_i*num_points_j
-    // --------------------------------------------------------
-    //
-    // Returns a global id for a given i,j,k
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn get_id
+    ///
+    /// \brief This gives the index value of the point or the elem
+    ///
+    /// Assumes that the grid has an i,j,k structure
+    /// the elem = i + (j)*(num_points_i-1) + (k)*(num_points_i-1)*(num_points_j-1)
+    /// the point = i + (j)*num_points_i + (k)*num_points_i*num_points_j
+    ///
+    /// \param i index
+    /// \param j index
+    /// \param k index
+    /// \param Number of i indices
+    /// \param Number of j indices
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     int get_id(int i, int j, int k, int num_i, int num_j)
     {
         return i + j * num_i + k * num_i * num_j;
     }
 
-    /**\brief Given (i,j,k) coordinates within the Lagrange hex, return an offset into the local connectivity (PointIds) array.
-    *
-    * The \a order parameter must point to an array of 3 integers specifying the order
-    * along each axis of the hexahedron.
-    */
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn PointIndexFromIJK
+    ///
+    /// \brief Given (i,j,k) coordinates within the Lagrange hex, return an 
+    ///        offset into the local connectivity (PointIds) array.
+    ///
+    /// Assumes that the grid has an i,j,k structure
+    /// the elem = i + (j)*(num_points_i-1) + (k)*(num_points_i-1)*(num_points_j-1)
+    /// the point = i + (j)*num_points_i + (k)*num_points_i*num_points_j
+    ///
+    /// \param i index
+    /// \param j index
+    /// \param k index
+    /// \param array of 3 integers specifying the order along each axis of the hexahedron
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     int PointIndexFromIJK(int i, int j, int k, const int* order)
     {
         bool ibdy = (i == 0 || i == order[0]);
@@ -779,7 +801,17 @@ public:
     }
 };
 
-// Builds a mesh
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \class MeshWriter
+///
+/// \brief Class for writing out a mesh with its associated state from Fierro
+///
+/// This class contains the requisite functions required to write out a mesh
+/// with its associated state data from solvers in Fierro. Currently only ensight
+/// outputs are supported
+///
+/////////////////////////////////////////////////////////////////////////////
 class MeshWriter
 {
 private:
@@ -787,11 +819,10 @@ private:
 
 public:
 
-    // MeshWriter() {}
+    MeshWriter() {}
 
     ~MeshWriter()
     {
-        // Empty destructor
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -815,9 +846,7 @@ public:
     CArray<double> graphics_times)
     {
         if (sim_param.output_options.format == output_options::vtk) {
-            std::cout << "**** VTK OUTPUT TYPE NOT YET SUPPORTED **** " << std::endl;
-            throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
-            // write_vtk(mesh, elem, node, corner, sim_param, time_value, graphics_times);
+            write_vtk(mesh, elem, node, corner, sim_param, time_value, graphics_times);
         }
         else if (sim_param.output_options.format == output_options::ensight) {
             write_ensight(mesh, elem, node, corner, sim_param, time_value, graphics_times);
@@ -838,26 +867,25 @@ public:
     ///
     /// \fn write_ensight
     ///
-    /// \brief <insert brief description>
+    /// \brief Writes an ensight output file
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \param Simulation mesh
+    /// \param Element related state
+    /// \param Node related state
+    /// \param Corner related state
+    /// \param Simulation parameters
+    /// \param current time value
+    /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_ensight(
-    mesh_t&   mesh,
-    elem_t&   elem,
-    node_t&   node,
-    corner_t& corner,
-    simulation_parameters_t& sim_param,
-    double time_value,
-    CArray<double> graphics_times)
+        mesh_t&   mesh,
+        elem_t&   elem,
+        node_t&   node,
+        corner_t& corner,
+        simulation_parameters_t& sim_param,
+        double time_value,
+        CArray<double> graphics_times)
     {
         // Update host data
         elem.den.update_host();
@@ -1159,6 +1187,35 @@ public:
         delete[] name;
 
         return;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn write_ensight
+    ///
+    /// \brief Writes a vtk output file
+    ///
+    /// \param Simulation mesh
+    /// \param Element related state
+    /// \param Node related state
+    /// \param Corner related state
+    /// \param Simulation parameters
+    /// \param current time value
+    /// \param Vector of all graphics output times
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void write_vtk(
+        mesh_t&   mesh,
+        elem_t&   elem,
+        node_t&   node,
+        corner_t& corner,
+        simulation_parameters_t& sim_param,
+        double time_value,
+        CArray<double> graphics_times)
+    {
+        // Not yet supported
+        throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
+
     }
 };
 

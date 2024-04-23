@@ -383,11 +383,7 @@ public:
                         else{
                             // use the values in the input file
                             // set state vars for the region where mat_id resides
-
                             int num_eos_global_vars = sim_param.materials(mat_id).eos_global_vars.size();
-
-                            // std::cout <<  std::endl;
-                            // std::cout << "elem gid = "<< elem_gid <<" RK level = "<< rk_level << std::endl;
                             for (size_t var = 0; var < sim_param.materials(mat_id).eos_global_vars.size(); var++) {
                                 elem.statev(elem_gid, var) = sim_param.materials(mat_id).eos_global_vars(var); // state_vars(mat_id, var);
                             } // end for
@@ -428,9 +424,10 @@ public:
 
                                         break;
                                     }
+                                // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
                                 case init_conds::radial:
                                     {
-                                        // Setting up cylindrical
+                                        // Setting up radial
                                         double dir[2];
                                         dir[0] = 0.0;
                                         dir[1] = 0.0;
@@ -493,10 +490,12 @@ public:
                                     }
                                 case init_conds::radial_linear:
                                     {
+                                        throw std::runtime_error("**** Radial_linear initial conditions not yet supported ****");
                                         break;
                                     }
                                 case init_conds::spherical_linear:
                                     {
+                                        throw std::runtime_error("**** Spherical_linear initial conditions not yet supported ****");
                                         break;
                                     }
                                 case init_conds::tg_vortex:

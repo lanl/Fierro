@@ -40,17 +40,19 @@
 
 namespace boundary_conds
 {
-// types of boundary conditions
+// supported geometry for boundary conditions
 enum bdy_tag
 {
-    x_plane = 0,            // tag an x-plane
-    y_plane = 1,            // tag an y-plane
-    z_plane = 2,            // tag an z-plane
-    cylinder = 3,           // tag an cylindrical surface
-    sphere = 4,             // tag a spherical surface
-    read_file = 5            // read from a file
+    x_plane   = 0,  // tag an x-plane
+    y_plane   = 1,  // tag an y-plane
+    z_plane   = 2,  // tag an z-plane
+    cylinder  = 3,  // tag an cylindrical surface
+    sphere    = 4   // tag a spherical surface
+    //read_file = 5   // read from a file currently unsupported
 };
 
+// types of boundary conditions
+// WARNING: Currently only velocity is supported
 enum bdy_hydro_conds
 {
     displacement = 0,
@@ -62,6 +64,7 @@ enum bdy_hydro_conds
     temperature = 6
 };
 
+// Direction to apply boundary conditions
 enum bdy_direction
 {
     x_dir = 0,
@@ -76,8 +79,8 @@ static std::map<std::string, boundary_conds::bdy_tag> bc_geometry_map
     { "y_plane", boundary_conds::y_plane },
     { "z_plane", boundary_conds::z_plane },
     { "cylinder", boundary_conds::cylinder },
-    { "sphere", boundary_conds::sphere },
-    { "read_file", boundary_conds::read_file }
+    { "sphere", boundary_conds::sphere }
+    // { "read_file", boundary_conds::read_file }
 };
 
 static std::map<std::string, boundary_conds::bdy_hydro_conds> bc_type_map
@@ -98,20 +101,27 @@ static std::map<std::string, boundary_conds::bdy_direction> bc_direction_map
     { "z_dir", boundary_conds::z_dir }
 };
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct boundary_condition_t
+///
+/// \brief Stored boundary condition data 
+///
+/////////////////////////////////////////////////////////////////////////////
 struct boundary_condition_t
 {
-    solver_input::method solver = solver_input::NONE;
-    boundary_conds::bdy_hydro_conds type;
-    boundary_conds::bdy_tag geometry;
+    solver_input::method solver = solver_input::NONE; ///< Numerical solver method 
+    boundary_conds::bdy_hydro_conds type; ///< Type of boundary condition
+    boundary_conds::bdy_tag geometry; ///< Geometry boundary condition is applied to
 
-    boundary_conds::bdy_direction direction;
+    boundary_conds::bdy_direction direction; ///< Boundary condition direction
 
-    double value = 0.0;
-    double u     = 0.0;
-    double v     = 0.0;
-    double w     = 0.0;
+    double value = 0.0; ///< Magnitude of BC WARNING: Currently unused
+    double u     = 0.0; ///< WARNING: Currently unused
+    double v     = 0.0; ///< WARNING: Currently unused
+    double w     = 0.0; ///< WARNING: Currently unused
 
-    std::vector<double> origin = { 0.0, 0.0, 0.0 };
+    std::vector<double> origin = { 0.0, 0.0, 0.0 }; ///< Origin of boundary condition geometry
 
     // WARNING: CURRENTLY NOT PARSED
     double hydro_bc_vel_0 = 0.0;

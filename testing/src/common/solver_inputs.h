@@ -52,7 +52,13 @@ static std::map<std::string, solver_input::method> solver_map
     { "SGH", solver_input::SGH }
 };
 
-// solver input parameters
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \structsolver_input_t
+///
+/// \brief Struct for holding metadata on which solvers are used.
+///
+/////////////////////////////////////////////////////////////////////////////
 struct solver_input_t
 {
     solver_input::method method = solver_input::NONE;

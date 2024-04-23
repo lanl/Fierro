@@ -51,7 +51,7 @@ enum vol_tag
     box = 1,            // tag all elements inside a box
     cylinder = 2,       // tag all elements inside a cylinder
     sphere = 3,         // tag all elements inside a sphere
-    readVoxelFile = 4,           // tag all elements in a voxel mesh input
+    readVoxelFile = 4,  // tag all elements in a voxel mesh input WARING: Currently unimplemented
     planes = 5,         // tag all elements between two planes
 };
 } // end of namespace
@@ -65,50 +65,54 @@ static std::map<std::string, region::vol_tag> region_type_map
     { "readVoxelFile", region::readVoxelFile }
 };
 
-// fill instructions (was called mat_fill_t)
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct reg_fill_t
+///
+/// \brief Geometry data for regions of materials/states
+///
+/////////////////////////////////////////////////////////////////////////////
 struct reg_fill_t
 {
     // type
-    region::vol_tag volume; // global, box, sphere, planes, etc.
+    region::vol_tag volume; ///< Type of volume for this region eg. global, box, sphere, planes, etc.
 
     // material id
-    size_t material_id;
+    size_t material_id; ///< Material ID for this region
 
     // planes
-    double x1 = 0.0;
-    double x2 = 0.0;
-    double y1 = 0.0;
-    double y2 = 0.0;
-    double z1 = 0.0;
-    double z2 = 0.0;
+    double x1 = 0.0; ///< First X plane for creating a box
+    double x2 = 0.0; ///< Second X plane for creating a box
+    double y1 = 0.0; ///< First Y plane for creating a box
+    double y2 = 0.0; ///< Second Y plane for creating a box
+    double z1 = 0.0; ///< First Z plane for creating a box 
+    double z2 = 0.0; ///< Second Z plane for creating a box 
 
     // radius
-    double radius1 = 0.0;
-    double radius2 = 0.0;
+    double radius1 = 0.0;   ///< Inner radius to fill for sphere
+    double radius2 = 0.0;   ///< Outer radius to fill for sphere
 
     // initial conditions
-    init_conds::init_velocity_conds velocity;
+    init_conds::init_velocity_conds velocity;  ///< Initial conditions for this region WARNING: Currently unimplemented
 
     // velocity coefficients by component
-    double u = 0.0;
-    double v = 0.0;
-    double w = 0.0;
+    double u = 0.0; ///< U component of velocity
+    double v = 0.0; ///< V component of velocity
+    double w = 0.0; ///< W component of velocity
 
-    // velocity magnitude for radial velocity initialization
-    double speed = 0.0;
+    
+    double speed = 0.0; ///< velocity magnitude for radial velocity initialization
 
-    double ie  = 0.0;  // exstenive internal energy
-    double sie = 0.0;  // specific internal energy
-    double den = 0.0;  // density
+    double ie  = 0.0;  ///< extensive internal energy
+    double sie = 0.0;  ///< specific internal energy
+    double den = 0.0;  ///< density
 
-    std::vector<double> origin = { 0.0, 0.0, 0.0 };
+    std::vector<double> origin = { 0.0, 0.0, 0.0 }; ///< Origin for region
 };
 
 // ----------------------------------
 // valid inputs for a material fill
-//
-//   fill_volume_text_inp["words"]
-//
+// ----------------------------------
 static std::vector<std::string> str_region_inps
 {
     "type",
