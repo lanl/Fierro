@@ -25,7 +25,7 @@ set(SRC_Files
 src/boundary.cpp 
 src/energy_sgh.cpp
 src/force_sgh.cpp
-src/geometry.cpp
+src/position.cpp
 src/momentum.cpp
 src/properties.cpp
 src/sgh_solve.cpp

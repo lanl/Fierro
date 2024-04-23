@@ -50,7 +50,7 @@ using namespace mtr; // matar namespace
 ///
 /// \brief Class for containing functions required to perform SGH
 ///
-/// This class containts the requisite functions requited to perform
+/// This class contains the requisite functions requited to perform
 /// staggered grid hydrodynamics (SGH) which is equivalent to a lumped
 /// mass finite element (FE) scheme.
 ///
@@ -58,12 +58,6 @@ using namespace mtr; // matar namespace
 class SGH : public Solver
 {
 public:
-
-    simulation_parameters_t sim_param;
-    // mesh_t   mesh;
-    // node_t   node;
-    // elem_t   elem;
-    // corner_t corner;
 
     double dt = 0.0;
     double time_value = 0.0;
@@ -81,14 +75,8 @@ public:
     int rk_num_stages = 2;
     int cycle_stop    = 1000000000;
 
-    SGH()  : Solver() // simulation_parameters_t& io, mesh_t& mesh_in, node_t& node_in, elem_t& elem_in, corner_t& corner_in
+    SGH()  : Solver()
     {
-        // sim_param = io;
-        // mesh = mesh_in;
-
-        // node   = node_in;
-        // elem   = elem_in;
-        // corner = corner_in;
     }
 
     ~SGH() = default;
@@ -120,12 +108,9 @@ public:
 
         cycle_stop = sim_param.dynamic_options.cycle_stop;
 
-        // intialize time, time_step, and cycles
+        // initialize time, time_step, and cycles
         time_value = 0.0;
-
         dt = sim_param.dynamic_options.dt_start;
-
-        std::cout << "dt in initialize = " << dt << std::endl;
 
         graphics_id = 0;
         graphics_times(0) = 0.0;
@@ -156,59 +141,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner);
-
-    // void write_outputs(
-    //     const mesh_t& mesh,
-    //     DCArrayKokkos<double>& node_coords,
-    //     DCArrayKokkos<double>& node_vel,
-    //     DCArrayKokkos<double>& node_mass,
-    //     DCArrayKokkos<double>& elem_den,
-    //     DCArrayKokkos<double>& elem_pres,
-    //     DCArrayKokkos<double>& elem_stress,
-    //     DCArrayKokkos<double>& elem_sspd,
-    //     DCArrayKokkos<double>& elem_sie,
-    //     DCArrayKokkos<double>& elem_vol,
-    //     DCArrayKokkos<double>& elem_mass,
-    //     DCArrayKokkos<size_t>& elem_mat_id,
-    //     CArray<double>& graphics_times,
-    //     size_t&      graphics_id,
-    //     const double time_value);
-
-    void solve(
-        CArrayKokkos<material_t>& material,
-        CArrayKokkos<boundary_condition_t>& boundary,
-        mesh_t& mesh,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_mass,
-        DCArrayKokkos<double>& elem_den,
-        DCArrayKokkos<double>& elem_pres,
-        DCArrayKokkos<double>& elem_stress,
-        DCArrayKokkos<double>& elem_sspd,
-        DCArrayKokkos<double>& elem_sie,
-        DCArrayKokkos<double>& elem_vol,
-        DCArrayKokkos<double>& elem_div,
-        DCArrayKokkos<double>& elem_mass,
-        DCArrayKokkos<size_t>& elem_mat_id,
-        DCArrayKokkos<double>& elem_statev,
-        DCArrayKokkos<double>& corner_force,
-        DCArrayKokkos<double>& corner_mass,
-        double&      time_value,
-        const double time_final,
-        const double dt_max,
-        const double dt_min,
-        const double dt_cfl,
-        double&      graphics_time,
-        size_t graphics_cyc_ival,
-        double graphics_dt_ival,
-        const size_t cycle_stop,
-        const size_t rk_num_stages,
-        double dt,
-        const double    fuzz,
-        const double    tiny,
-        const double    small,
-        CArray<double>& graphics_times,
-        size_t& graphics_id);
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(

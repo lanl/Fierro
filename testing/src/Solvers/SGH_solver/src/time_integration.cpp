@@ -116,8 +116,6 @@ void SGH::get_timestep(mesh_t& mesh,
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
 
-    // std::cout << "dt in get timestep top = "<< dt  << std::endl;
-
     double dt_lcl;
     double min_dt_calc;
     REDUCE_MIN(elem_gid, 0, mesh.num_elems, dt_lcl, {
@@ -161,7 +159,7 @@ void SGH::get_timestep(mesh_t& mesh,
                 countB = 1 + loop;
                 countA = 0;
             }
-        } // endo for i
+        } // end for i
 
         double dist_min = dist(0);
 
@@ -192,9 +190,6 @@ void SGH::get_timestep(mesh_t& mesh,
 
     // make dt be exact for final time
     dt = fmin(dt, time_final - time_value);
-
-    // std::cout << "dt in get timestep bottom = "<< dt  << std::endl;
-
     return;
 } // end get_timestep
 
@@ -212,8 +207,6 @@ void SGH::get_timestep(mesh_t& mesh,
 /// \param View of nodal velocity data
 /// \param View of element sound speed
 /// \param View of element volume
-///
-/// REMOVE EXCESS TIME RELATED VARIABLES
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep2D(mesh_t& mesh,

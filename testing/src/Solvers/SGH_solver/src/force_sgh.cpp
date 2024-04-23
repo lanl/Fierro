@@ -96,7 +96,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
         // the sums in the Riemann solver
         double sum_array[4];
 
-        // corner shock impeadance x |corner area normal dot shock_dir|
+        // corner shock impedance x |corner area normal dot shock_dir|
         double muc_array[8];
 
         // Riemann velocity
@@ -114,8 +114,6 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
         ViewCArrayKokkos<double> muc(muc_array, num_nodes_in_elem);
         ViewCArrayKokkos<double> vel_star(vel_star_array, num_dims);
         ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
-
-        // --- abviatations of variables ---
 
         // element volume
         double vol = elem_vol(elem_gid);
@@ -173,7 +171,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
             tau(i, i) -= elem_pres(elem_gid);
         } // end for
 
-        // ---- Multidirectional Approximate Riemann solver (MARS) ----
+        // ---- Multi-directional Approximate Riemann solver (MARS) ----
         // find the average velocity of the elem, it is an
         // estimate of the Riemann velocity
 
@@ -185,7 +183,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
         // loop over nodes and calculate an average velocity, which is
         // an estimate of Riemann velocity
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-            // Get node gloabl index and create view of nodal velocity
+            // Get node global index and create view of nodal velocity
             int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
             ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
@@ -253,7 +251,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
 
             // Coding to use shock direction
             if (use_shock_dir == 1) {
-                // this is denominator of the Riamann solver and the multiplier
+                // this is denominator of the Riemann solver and the multiplier
                 // on velocity in the numerator.  It filters on the shock
                 // direction
                 mu_term = muc(node_lid) *
@@ -274,7 +272,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
             sum(2) += mu_term * vel(2);
             sum(3) += mu_term;
 
-            muc(node_lid) = mu_term; // the impeadance time surface area is stored here
+            muc(node_lid) = mu_term; // the impedance time surface area is stored here
         } // end for node_lid loop over nodes of the elem
 
         // The Riemann velocity, called vel_star
@@ -310,7 +308,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
         double n_coef = 1.0;  // the power on the limiting coefficient
                               //   (1=nominal, and n_coeff > 1 oscillatory)
 
-        // loop over the nieghboring cells
+        // loop over the neighboring cells
         for (size_t elem_lid = 0; elem_lid < mesh.num_elems_in_elem(elem_gid); elem_lid++) {
             // Get global index for neighboring cell
             size_t neighbor_gid = mesh.elems_in_elem(elem_gid, elem_lid);
@@ -461,7 +459,7 @@ void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
         // the sums in the Riemann solver
         double sum_array[4];
 
-        // corner shock impeadance x |corner area normal dot shock_dir|
+        // corner shock impedance x |corner area normal dot shock_dir|
         double muc_array[4];
 
         // Riemann velocity
@@ -553,7 +551,7 @@ void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
         // loop over nodes and calculate an average velocity, which is
         // an estimate of Riemann velocity
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-            // Get node gloabl index and create view of nodal velocity
+            // Get node global index and create view of nodal velocity
             int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
             ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
@@ -618,7 +616,7 @@ void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
 
             // Coding to use shock direction
             if (use_shock_dir == 1) {
-                // this is denominator of the Riamann solver and the multiplier
+                // this is denominator of the Riemann solver and the multiplier
                 // on velocity in the numerator.  It filters on the shock
                 // direction
                 mu_term = muc(node_lid) *
@@ -636,7 +634,7 @@ void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
             sum(1) += mu_term * vel(1);
             sum(3) += mu_term;
 
-            muc(node_lid) = mu_term; // the impeadance time surface area is stored here
+            muc(node_lid) = mu_term; // the impedance time surface area is stored here
         } // end for node_lid loop over nodes of the elem
 
         // The Riemann velocity, called vel_star
@@ -672,7 +670,7 @@ void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
         double n_coef = 1.0;  // the power on the limiting coefficient
                               //   (1=nominal, and n_coeff > 1 oscillatory)
 
-        // loop over the nieghboring cells
+        // loop over the neighboring cells
         for (size_t elem_lid = 0; elem_lid < mesh.num_elems_in_elem(elem_gid); elem_lid++) {
             // Get global index for neighboring cell
             size_t neighbor_gid = mesh.elems_in_elem(elem_gid, elem_lid);

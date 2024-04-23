@@ -113,9 +113,9 @@ void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     double u_array[num_nodes_in_elem];
     double v_array[num_nodes_in_elem];
     double w_array[num_nodes_in_elem];
-    ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
-    ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
-    ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir vel component
+    ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-direction velocity component
+    ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-direction velocity component
+    ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-direction velocity component
 
     // get the vertex velocities for the cell
     for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -338,7 +338,7 @@ void SGH::get_divergence(DCArrayKokkos<double>& elem_div,
 ///
 /// \param Divergence of velocity for all elements
 /// \param Simulation mesh (POSSIBLY REMOVE)
-/// \param iew of the nodal position data
+/// \param View of the nodal position data
 /// \param View of the nodal velocity data
 /// \param View of the volumes of each element
 ///

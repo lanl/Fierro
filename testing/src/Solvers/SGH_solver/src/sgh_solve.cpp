@@ -170,7 +170,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
-            // ---- Calculate velocity diveregence for the element ----
+            // ---- Calculate velocity divergence for the element ----
             if (mesh.num_dims == 2) {
                 get_divergence2D(elem.div,
                                  mesh,
@@ -366,8 +366,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     } // end for cycle loop
 
     auto time_2    = std::chrono::high_resolution_clock::now();
-    auto calc_time = std::chrono::duration_cast
-                     <std::chrono::nanoseconds>(time_2 - time_1).count();
+    auto calc_time = std::chrono::duration_cast <std::chrono::nanoseconds>(time_2 - time_1).count();
 
     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
