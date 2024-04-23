@@ -100,6 +100,7 @@ With all these files available you can now run EVPFFT as:
 ```
 mpirun -np 4 evpfft --infile=example_evpfft_standalone_inputfile.txt
 ```
+The user must update the file paths inside `example_evpfft_standalone_inputfile.txt` to be those on there machine.  The absolute file path can be found by typing in the terminal `pwd`.
 
 # Using EVPFFT with Fierro
 
