@@ -259,10 +259,7 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
             // initialize element mass
             Element_Masses(nonoverlapping_ielem, 0) = 0;
 
-            if (Element_Types(ielem) == elements::elem_types::Hex8)
-            {
-                direct_product_count = std::pow(num_gauss_points, num_dim);
-            }
+            direct_product_count = std::pow(num_gauss_points, num_dim);
 
             // loop over quadrature points
             for (int iquad = 0; iquad < direct_product_count; iquad++)
@@ -508,10 +505,7 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
             // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
         }
 
-        if (Element_Types(ielem) == elements::elem_types::Hex8)
-        {
-            direct_product_count = std::pow(num_gauss_points, num_dim);
-        }
+        direct_product_count = std::pow(num_gauss_points, num_dim);
 
         // loop over quadrature points
         for (int iquad = 0; iquad < direct_product_count; iquad++)
@@ -767,10 +761,7 @@ void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_de
         // initialize element mass
         Element_Moments(nonoverlapping_ielem, 0) = 0;
 
-        if (Element_Types(ielem) == elements::elem_types::Hex8)
-        {
-            direct_product_count = std::pow(num_gauss_points, num_dim);
-        }
+        direct_product_count = std::pow(num_gauss_points, num_dim);
 
         // loop over quadrature points
         for (int iquad = 0; iquad < direct_product_count; iquad++)
@@ -1070,10 +1061,7 @@ void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_v
             // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
         }
 
-        if (Element_Types(ielem) == elements::elem_types::Hex8)
-        {
-            direct_product_count = std::pow(num_gauss_points, num_dim);
-        }
+        direct_product_count = std::pow(num_gauss_points, num_dim);
 
         // loop over quadrature points
         for (int iquad = 0; iquad < direct_product_count; iquad++)
@@ -1404,10 +1392,7 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
         // initialize element mass
         Element_Moments_of_Inertia(nonoverlapping_ielem, 0) = 0;
 
-        if (Element_Types(ielem) == elements::elem_types::Hex8)
-        {
-            direct_product_count = std::pow(num_gauss_points, num_dim);
-        }
+        direct_product_count = std::pow(num_gauss_points, num_dim);
 
         // loop over quadrature points
         for (int iquad = 0; iquad < direct_product_count; iquad++)
@@ -1762,10 +1747,7 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
             // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
         }
 
-        if (Element_Types(ielem) == elements::elem_types::Hex8)
-        {
-            direct_product_count = std::pow(num_gauss_points, num_dim);
-        }
+        direct_product_count = std::pow(num_gauss_points, num_dim);
 
         // loop over quadrature points
         for (int iquad = 0; iquad < direct_product_count; iquad++)
@@ -2050,10 +2032,7 @@ void FEA_Module_Inertial::compute_element_volumes()
         // initialize element volume
         Element_Volumes(nonoverlapping_ielem, 0) = 0;
 
-        if (Element_Types(ielem) == elements::elem_types::Hex8)
-        {
-            direct_product_count = std::pow(num_gauss_points, num_dim);
-        }
+        direct_product_count = std::pow(num_gauss_points, num_dim);
 
         // loop over quadrature points
         for (int iquad = 0; iquad < direct_product_count; iquad++)

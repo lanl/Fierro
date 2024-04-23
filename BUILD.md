@@ -23,27 +23,8 @@ openmpi
 ```
 
 ### Environment Variables
-We need to have several environment variables point to these homebrew installations so that our build system knows where to look. These variables can either be set individually, or put into your ***~/.bashrc*** file and sourced. 
-The current setup for the build scripts is to add the below lines to your environment automatically. For user that are using a different software stack such as GCC, these path's would need to point to those paths in the script file they are pulled from. This file is
-```
-scripts/<solver>/machines/mac-env.sh
-```
-If you are changing the environment paths in your ***~/.bashrc*** then the file could look like this
-```
-export CC=/opt/homebrew/opt/llvm/bin/clang
-export CXX=/opt/homebrew/opt/llvm/bin/clang++
-export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
-export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
-export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
-export OMPI_CC=${CC}
-export OMPI_CXX=${CXX}
-```
-and then you would source those variables with 
-```
-source ~/.bashrc
-```
-For those that noticed, this looks exactly like the ***mac-env.sh*** file mentioned above.
-There are two things of note with this example. First, it is using the llvm/clang compiler. This is one of the possible options. If you prefer to use GCC as your base compiler, all of the variables (CC,CXX,PATH,LDFLAGS,CPPFLAGS) would need to be modified to point to the corresonding spot in the gcc directory. The second thing to note with this example is the path that homebrew has installed your software. By default on Apple silicon hardware (M1/M2), it should be the one listed as in the above example
+The paths are set in the **scripts/machine/mac.sh** script.
+There are two things of note. First, it is using the llvm/clang compiler. This is one of the possible options. If you prefer to use GCC as your base compiler, all of the variables (CC,CXX,PATH,LDFLAGS,CPPFLAGS) would need to be modified to point to the corresonding spot in the gcc directory. The second thing to note with this example is the path that homebrew has installed your software. By default on Apple silicon hardware (M1/M2), it should be the one listed as in the above example
 ```
 /opt/homebrew/opt/<software>
 ```
@@ -55,10 +36,11 @@ If you explicitally tell homebrew to install them elsewhere, or it does it in a 
 
 ### Running the build scripts
 Now the assumption is that you have the software installed and the system knows where to look for that software. The code can be built using the scripts in the ***scripts*** directory. There are several options here depending on the problems you'd like to run, but the build process is identical, so we will use the *Explicit* folder for our example. The script can be run from anywhere in the Fierro repository. If we were at the top of the directory would run
+Now the assumption is that you have the software installed and the system knows where to look for that software. The code can be built as normal now, with the exception that we always need to pass in the machine argument and set it to mac (also of note, unlike linux systems, we do not ***source*** script, we instead have to just run the script with ./)
 ```
-./scripts/Explicit/build-it.sh --machine=mac --kokkos_build_type=openmp
+./{path-to-repo}/scripts/build-fierro.sh --machine=mac [any other parameters we need to pass]
 ```
-***Note*** you can see more information on the script arguments in the *README.md* or running the script with the argument ***--help***. However this is the standard script you would run on a Mac. You could subistitue 'serial' in for 'openmp', but since the build supports OpenMP that is the suggestion option for better runtime performance.
+***Note*** you can still see more information on the script arguments by running the script with the argument ***--help***. However this is the standard script you would run on a Mac.
 
 ## Running the example
 Assuming a smooth build, you will be placed at the top of the repository again. You can move yourself into the build directory
@@ -69,20 +51,4 @@ From there you can run this example with
 ```
 ./bin/fierro-parallel-explicit ../src/Parallel-Solvers/Parallel-Explicit/example_simple.yaml
 ```
-***Note*** For this example the mesh file that is passed into *example_simple.yaml* needs to be present in your build directory. 
-
-## Important Notes
-Hopefully the above steps result in a smooth build process. When making changes to code that require another cmake configuration, we suggest running the full ***build-it.sh <args>*** script again. This is because it sources the necessaryfiles to setup environment paths. Trilinos will *not* get re-built as a result of this.
-The reason for this suggestion is ease of environment. It is possible to simply source the cmake script
-```
-source cmake_build.sh
-```
-However you may end up in an unexpected directory since all internal paths were not set. It is possible to
-```
-source setup-env.sh --machine=mac --kokkos_build_type=openmp
-```
-before the cmake step. This would set all path's globally, instead of self-contained inside the script run. However any software changes made after this needs to have environment-correcting commands.
-Also, it is not advised to source the ***build-it.sh*** script from anywhere as the initial step, because of how Macs handle that source. In bash shells the behavior would be more or less expected. However on others (for instance Mac's default zsh shell) the paths would not be expected.
-Therefore, we suggest one of the two options
-- run the script with ***./<path to script>/build-it.sh*** from anywhere or
-- ***source build-it.sh*** from *inside* the scripts/[solver] directory
+***Note*** For this example the mesh file that is passed into *example_simple.yaml* needs to be present in your build directory. For the examples, you can copy the one in {path-to-repo}/single-node/src/Explicit-Lagrange/meshes/mesh_Sedov_32.geo 

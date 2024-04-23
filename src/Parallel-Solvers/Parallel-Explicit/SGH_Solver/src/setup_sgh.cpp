@@ -49,13 +49,15 @@
 /////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::setup()
 {
-    const size_t rk_level      = simparam->dynamic_options.rk_num_bins - 1;
-    const size_t num_fills     = simparam->regions.size();
-    const size_t rk_num_bins   = simparam->dynamic_options.rk_num_bins;
-    const size_t num_bcs       = module_params->boundary_conditions.size();
-    const size_t num_materials = simparam->materials.size();
-    const int    num_dim       = simparam->num_dims;
-    const size_t num_lcs       = module_params->loading.size();
+    const size_t rk_level         = simparam->dynamic_options.rk_num_bins - 1;
+    const size_t num_fills        = simparam->regions.size();
+    const size_t rk_num_bins      = simparam->dynamic_options.rk_num_bins;
+    const size_t num_bcs          = module_params->boundary_conditions.size();
+    const size_t num_materials    = simparam->materials.size();
+    const int    num_dim          = simparam->num_dims;
+    const size_t num_lcs          = module_params->loading.size();
+    bool topology_optimization_on = simparam->topology_optimization_on;
+    bool shape_optimization_on    = simparam->shape_optimization_on;
     if (num_lcs) {
         have_loading_conditions = true;
     }
@@ -121,7 +123,7 @@ void FEA_Module_SGH::setup()
     elem_strength = DCArrayKokkos<strength_t>(num_elems);
 
     // optimization flags
-    if (simparam->topology_optimization_on) {
+    if (topology_optimization_on) {
         elem_extensive_initial_energy_condition = DCArrayKokkos<bool>(num_elems);
     }
 
@@ -245,7 +247,7 @@ void FEA_Module_SGH::setup()
     // --- apply the fill instructions over each of the Elements---//
 
     // initialize if topology optimization is used
-    if (simparam->topology_optimization_on) {
+    if (topology_optimization_on) {
         // compute element averaged density ratios corresponding to nodal density design variables
         CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
         { // view scope
@@ -267,6 +269,16 @@ void FEA_Module_SGH::setup()
 
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++) {
+        // if volume is defined by an stl file, voxelize it
+        if (mat_fill(f_id).volume.type == VOLUME_TYPE::stl) {
+            mat_fill(f_id).volume.stl_to_voxel();
+        }
+        
+        // if volume is defined by a vtk file, parse it
+        if (mat_fill(f_id).volume.type == VOLUME_TYPE::vtk) {
+            mat_fill(f_id).volume.vtk();
+        }
+        
         // parallel loop over elements in mesh
         // for (size_t elem_gid = 0; elem_gid <= rnum_elem; elem_gid++) {
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
@@ -297,7 +309,7 @@ void FEA_Module_SGH::setup()
             // paint the material state on the element
             if (fill_this) {
                 // density
-                if (simparam->topology_optimization_on) {
+                if (topology_optimization_on) {
                     elem_den(elem_gid) = mat_fill(f_id).den * relative_element_densities(elem_gid);
                 }
                 else{
@@ -310,11 +322,11 @@ void FEA_Module_SGH::setup()
                 // specific internal energy
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 
-                if (simparam->topology_optimization_on && mat_fill(f_id).extensive_energy_setting) {
+                if (topology_optimization_on && mat_fill(f_id).extensive_energy_setting) {
                     elem_sie(rk_level, elem_gid) = elem_sie(rk_level, elem_gid) / relative_element_densities(elem_gid);
                     elem_extensive_initial_energy_condition(elem_gid) = true;
                 }
-                else if (simparam->topology_optimization_on && !mat_fill(f_id).extensive_energy_setting) {
+                else if (topology_optimization_on && !mat_fill(f_id).extensive_energy_setting) {
                     elem_extensive_initial_energy_condition(elem_gid) = false;
                 }
 
@@ -521,13 +533,13 @@ void FEA_Module_SGH::setup()
 
     // current interface has differing mass arrays; this equates them until we unify memory
     // view scope
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on || simparam->num_dims == 2) {
+    if (topology_optimization_on || shape_optimization_on || simparam->num_dims == 2) {
         {
             vec_array node_mass_interface = node_masses_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
 
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                 node_mass_interface(node_gid, 0) = node_mass(node_gid);
-        }); // end parallel for
+            }); // end parallel for
         } // end view scope
         Kokkos::fence();
         // communicate ghost densities
@@ -540,13 +552,13 @@ void FEA_Module_SGH::setup()
 
             FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
                 node_mass(node_gid) = ghost_node_mass_interface(node_gid - nlocal_nodes, 0);
-        }); // end parallel for
+            }); // end parallel for
         } // end view scope
         Kokkos::fence();
     } // endif
 
     // initialize if topology optimization is used
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+    if (topology_optimization_on || shape_optimization_on) {
         init_assembly();
         // assemble_matrix();
     }
@@ -559,7 +571,7 @@ void FEA_Module_SGH::setup()
     elem_pres.update_host();
     elem_sspd.update_host();
 
-    if (simparam->topology_optimization_on) {
+    if (topology_optimization_on) {
         elem_extensive_initial_energy_condition.update_host();
     }
 

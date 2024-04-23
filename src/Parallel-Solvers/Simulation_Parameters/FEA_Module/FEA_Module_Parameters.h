@@ -29,7 +29,7 @@ struct FEA_Module_Parameters
     size_t material_id;
     std::vector<Boundary_Condition> boundary_conditions;
     std::vector<std::shared_ptr<Loading_Condition>> loading_conditions;
-
+    bool requires_conditions = true;
     // Non-serialized Fields
     DCArrayKokkos <loading_t>  loading;
     DCArrayKokkos <boundary_t> boundary;

@@ -900,6 +900,8 @@ void FEA_Module_SGH::sgh_solve()
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
+    bool topology_optimization_on = simparam->topology_optimization_on;
+    bool shape_optimization_on    = simparam->shape_optimization_on;
 
     // reset time accumulating objective and constraints
     /*
@@ -912,7 +914,7 @@ void FEA_Module_SGH::sgh_solve()
     }
     */
     // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
-    if (simparam->topology_optimization_on) {
+    if (topology_optimization_on) {
         obj_pointer = problem->getObjective();
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
         kinetic_energy_minimize_function.objective_accumulation = 0;
@@ -939,7 +941,7 @@ void FEA_Module_SGH::sgh_solve()
         }
     }
 
-    if (simparam->topology_optimization_on) {
+    if (topology_optimization_on) {
         nTO_modules = simparam->TO_Module_List.size();
     }
 
@@ -1032,7 +1034,7 @@ void FEA_Module_SGH::sgh_solve()
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     // save initial data
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+    if (topology_optimization_on || shape_optimization_on) {
         time_data[0] = 0;
         // assign current velocity data to multivector
         // view scope
@@ -1479,7 +1481,7 @@ void FEA_Module_SGH::sgh_solve()
         // increment the time
         Explicit_Solver_Pointer_->time_value = simparam->dynamic_options.time_value = time_value += dt;
 
-        if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+        if (topology_optimization_on || shape_optimization_on) {
             if (cycle >= max_time_steps) {
                 max_time_steps = cycle + 1;
             }
@@ -1584,21 +1586,54 @@ void FEA_Module_SGH::sgh_solve()
                 KE_loc_sum = 0.0;
                 KE_sum     = 0.0;
                 // extensive KE
-                REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
-                    double ke = 0;
-                    for (size_t dim = 0; dim < num_dim; dim++) {
-                        // midpoint integration approximation
-                        ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * (node_velocities_interface(node_gid,
-                        dim) + previous_node_velocities_interface(node_gid, dim)) / 4;                                                                                                                     // 1/2 at end
-                    } // end for
+                if(simparam->optimization_options.optimization_objective_regions.size()){
+                    int nobj_volumes = simparam->optimization_options.optimization_objective_regions.size();
+                    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+                        double ke = 0;
+                        double current_node_coords[3];
+                        bool contained = false;
+                        current_node_coords[0] = all_initial_node_coords(node_gid, 0);
+                        current_node_coords[1] = all_initial_node_coords(node_gid, 1);
+                        current_node_coords[2] = all_initial_node_coords(node_gid, 2);
+                        for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                            if(simparam->optimization_options.optimization_objective_regions(ivolume).contains(current_node_coords)){
+                                contained = true;
+                            }
+                        }
+                        if(contained){
+                            for (size_t dim = 0; dim < num_dim; dim++) {
+                                // midpoint integration approximation
+                                ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
+                                      (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
+                            } // end for
+                        }
 
-                    if (num_dim == 2) {
-                        KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
-                    }
-                    else{
-                        KE_loc_sum += node_mass(node_gid) * ke;
-                    }
-                }, KE_sum);
+                        if (num_dim == 2) {
+                            KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+                        }
+                        else{
+                            KE_loc_sum += node_mass(node_gid) * ke;
+                        }
+                    }, KE_sum);
+                }
+                else{
+                    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+                        double ke = 0;
+                        for (size_t dim = 0; dim < num_dim; dim++) {
+                            // midpoint integration approximation
+                            ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
+                                (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
+                        } // end for
+
+                        if (num_dim == 2) {
+                            KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+                        }
+                        else{
+                            KE_loc_sum += node_mass(node_gid) * ke;
+                        }
+                    }, KE_sum);
+                }
                 Kokkos::fence();
                 KE_sum = 0.5 * KE_sum;
                 objective_accumulation += KE_sum * dt;
@@ -1654,7 +1689,7 @@ void FEA_Module_SGH::sgh_solve()
     last_time_step = cycle;
 
     // simple setup to just calculate KE minimize objective for now
-    if (simparam->topology_optimization_on) {
+    if (topology_optimization_on) {
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
 
         // collect local objective values

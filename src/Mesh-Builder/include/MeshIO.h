@@ -22,7 +22,7 @@ namespace MeshIO {
 
     Mesh read_vtk(std::string filename, bool verbose=false);
     Mesh read_vtk(std::istream& in, bool verbose=false);
-    void write_vtk(std::string filename, const Mesh& mesh, bool verbose=false);
+    void write_vtk(std::string filename, std::string file_location, const Mesh& mesh, bool verbose=false);
     void write_vtk(std::ostream& out, const Mesh& mesh);
 
     Mesh read_ensight(std::string filename, bool verbose=false);

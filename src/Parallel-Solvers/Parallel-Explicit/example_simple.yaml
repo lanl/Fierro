@@ -22,37 +22,37 @@ fea_module_parameters:
     material_id: 0
     boundary_conditions:
       # Tag X plane
-      - surface: 
+      - surface:
           type: x_plane
           plane_position: 0.0
         type: reflected
                 
         # Tag Y plane
-      - surface: 
+      - surface:
           type: y_plane
           plane_position: 0.0
         type: reflected
                 
         # Tag Z plane
-      - surface: 
+      - surface:
           type: z_plane
           plane_position: 0.0
         type: reflected
                 
         # Tag X plane
-      - surface: 
+      - surface:
           type: x_plane
           plane_position: 1.2
         type: reflected
                 
         # Tag Y plane
-      - surface: 
+      - surface:
           type: y_plane
           plane_position: 1.2
         type: reflected
                 
         # Tag Z plane
-      - surface: 
+      - surface:
           type: z_plane
           plane_position: 1.2
         type: reflected
@@ -73,7 +73,7 @@ materials:
       - 1.0
 
 regions:
-  - volume: 
+  - volume:
       type: global
     material_id: 0
     den: 1.0
@@ -84,7 +84,7 @@ regions:
     v: 0.0
     w: 0.0
     # energy source initial conditions
-  - volume: 
+  - volume:
       type: sphere
       radius1: 0.0
       radius2: 0.0375

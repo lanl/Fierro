@@ -13,18 +13,44 @@
 
 # Usage
 ## Anaconda
-The recommended way to use **Fierro** is through the provided Anaconda package and command line utility. To use the anaconda package, follow the steps for your platform to install [anaconda](https://docs.anaconda.com/free/anaconda/install/index.html)/[miniconda](https://docs.conda.io/en/latest/miniconda.html)/[mamba](https://mamba.readthedocs.io/en/latest/installation.html). Then run the following command in your desired Anaconda environment:
+The recommended way to use **Fierro** is through the provided Anaconda package. To use the anaconda package, follow the steps for your platform to install [anaconda](https://docs.anaconda.com/free/anaconda/install/index.html)/[miniconda](https://docs.conda.io/en/latest/miniconda.html)/[mamba](https://mamba.readthedocs.io/en/latest/installation.html). 
 
+Open a terminal on your machine and go to a folder where you want to run the **Fierro** code.  Then create and activate an Anaconda environment by typing:  
 ```
-conda install fierro-cpu -c fierromechanics -c conda-forge
+conda create -n FierroCode
+conda activate FierroCode  
+```
+In this example, the enviroment is called FierroCode, but any name can be used.  In some cases, the text to activate an enviroment is `source activate FierroCode`.  Likewise, if an enviroment already exists, then just activate the desired environment.  
+
+To install the finite element physics solvers in **Fierro**, please type within the activated Anaconda environment:
+```
+conda install -c conda-forge -c fierromechanics fierro-cpu
+```
+The EVPFFT physics solver in **Fierro** can be installed by typing:
+```
+conda install -c conda-forge -c fierromechanics evpfft
+```
+A GUI is offered, it can be installed by typing:
+```
+conda install -c conda-forge -c fierromechanics evpfft_gui
 ```
 
-This will give you access to the **Fierro** command line interface. You can run the following to check that the package was installed correctly:
+After installing the finite element solvers, it gives you access to `fierro-mesh-builder`,`fierro-parallel-explicit`,`fierro-parallel-implicit`, and the `fierro-voxelizer` executables. These can be run by calling the appropriate executable with the desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
 ```
-fierro -h
+fierro-parallel-explicit input.yaml
 ```
+A sample input file for the explicit finite element solver is here:
+`./src/Parallel-Solvers/Parallel-Explicit/example_simple.yaml`
 
-## Material models  
+The GUI can be run in the anaconda enviroment by typing:
+```
+evpfft-gui
+```
+The anaconda distributions of Fierro are located [here](https://anaconda.org/FierroMechanics).
+
+
+
+## Material models
 The classical ideal gas model is the only material model implemented in the code, and it is useful for verification tests of the software and simple gas dynamic simulations. The linear Lagrangian finite element methods for explicit material dynamics have an interface to user developed material models. The interface is to enable **Fierro** to be used for model research and development that has historically been done with commercial explicit finite element codes. 
 
 To include your own custom material models, you need to implement them under `Fierro/Parallel-Solvers/User-Material-Interface` and re-build the project.
@@ -51,7 +77,7 @@ Building the code from source allows you to compile with more targeted hardware 
 To build it yourself, run the following from the root directory. The native CPU architecture will automatically be taken into account. 
 
 GPU hardware will be leveraged according to the distribution of Trilinos that **Fierro** is built against.
-You are welcome to only compile one solver or the other, and the one(s) that you did compile will be available through the CLI.
+You are welcome to only compile the desired solver, or all of the currently available ones. 
 
 ## Building dependencies
 **Fierro** depends on both ELEMENTS and Trilinos. If you are building **Fierro** for hardware optimizations, you should also build ELEMENTS from source. ELEMENTS is included in the **Fierro** source distribution and building ELEMENTS is enabled by default when building **Fierro**.
@@ -59,46 +85,17 @@ You are welcome to only compile one solver or the other, and the one(s) that you
 As for Trilinos, we recommend installing the Anaconda package for the desired build into a new Anaconda environment to satisfy **Fierro**'s dependency rather than building it from source. If you do wish to build it from source, however, sample build scripts for Trilinos can be found in `Fierro/Trilinos-Build-Scripts`. Build scripts for all Anaconda packages can be found in `Fierro/Anaconda-Packages/`.
 
 ## Alternative Build Workflows
-In addition to the primary build workflow described above, there are build scripts for a variety of alternative workflows. These scripts can be found under `Fierro/scripts`.
+In addition to the primary build workflow described above, there are build scripts for a variety of alternative workflows. These scripts can be found under `Fierro/scripts`. Although there are multiple scripts shown in this directory, the only one that will be run directly by the user is ***build-fierro.sh***
 ### Building the explicit and implicit Lagrangian methods with Trilinos+Kokkos
 Explicit Lagrangian codes are being added to the repository that are written using MATAR+Kokkos and run with fine-grained parallellism on multi-core CPUs and GPUs.  Build scripts are provided for each Lagrangian code, and those scripts follow those used in the [MATAR](https://github.com/lanl/MATAR/) GitHub repository. The scripts to build the Lagrangian codes (that use MATAR+Kokkos) are in the scripts folder.  The user must update the modules loaded by the build scripts (for the compiler etc.), and then type
 Immediate help with all scripts can be had running
 ```
-<script> --help
+source {path-to-repo}/build-fierro.sh --help
 ```
-The build-it script can take up to 3 arguments (with a minimum of 2)
-```
-source build-it.sh --machine=<arg> --kokkos_build_type=<arg> (optional)--build_cores=<arg>
-```
-machine currently has three options: darwin,linux,mc
-```
-    darwin: builds by loading modules on the darwin cluster. and can perform parallel builds (make -j). Changes can be made to scripts/[solver]/machines/darwin-setup.sh to reflect your machine.
-    linux: does not load any modules and instead sources some paths related to your loaded software. Additionally, the builds can be parallel (make -j <build_cores>)
-    macos: does not load any modules and instead sources some paths related to your loaded software. Additionally, the builds will be forced to beserial (make)
-For Mac builds, please see the ***BUILD.md*** file for more info
-```
-kokkos_build_type  has four options: 'cuda', 'hip', 'openmp', 'serial'
-***Note*** - all builds use Trilinos with Kokkos. The 'serial' option will utilize the Kokkos serial build
-```
-    cuda: loads cuda module and a working gcc module pairing
-    hip: loads hip module and a working clang module pairing
-    openmp: loads gcc module and sets openmp environment variables
-    serial: loads gcc module
-```
-***Note*** - compiler can be changed with the appropriate variables in *setup-env.sh*, the ones provided are simply known to work together
-If running on Mac, only the openmp and serial options are enabled
-
-All other scripts will be called with the appropriate arguments as a result of running build-it.
-
-If you need to simply rebuild Fierro without making a new Trilinos installation, simply
-```
-source cmake_build.sh
-```
-If you are getting back on to a machine or allocation to continue development, you will need to run
-```
-source setup-env.sh <same args you passed to build-it>
-```
+The default run will build the **full-app** settting up the **Explicit*** solver with **serial** Kokkos for a **linux** computer (non-HPC machine)
+Running with ```--help``` option will list all parameters and their accepted arguments
 If the scripts fail to build a Lagrangian code, then carefully review the modules used and the computer architecture settings.  
+For building on a Mac, please see the extra info in the BUILD.md
 #A more lenghtly discussion of the build scripts is provided in the MATAR GitHub repository. 
 
 For help with [Trilinos](https://github.com/trilinos/Trilinos/wiki/New-Trilinos-Developers)

@@ -15,6 +15,7 @@ struct Inertial_Parameters
     std::vector<double> moment_of_inertia_center {0.0, 0.0, 0.0};
 
     void derive() {
+        requires_conditions = false;
         enable_inertia_center = std::vector<bool> {
             inertia_center_x.has_value(),
             inertia_center_y.has_value(),
