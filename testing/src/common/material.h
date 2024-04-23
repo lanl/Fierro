@@ -98,12 +98,12 @@ struct material_t
     // setup the strength model via the input file for via a user_setup
     model_init::strength_setup_tag strength_setup = model_init::input;
 
-    size_t num_eos_state_vars = 0;
-    size_t num_strength_state_vars  = 0;
-    size_t num_eos_global_vars      = 0;
-    size_t num_strength_global_vars = 0;
+    size_t num_eos_state_vars = 0; ///< Number of state variables for the EOS
+    size_t num_strength_state_vars  = 0;///< Number of state variables for the strength model
+    size_t num_eos_global_vars      = 0;///< Number of global variables for the EOS
+    size_t num_strength_global_vars = 0;///< Number of global variables for the strength model
 
-    DCArrayKokkos<double> eos_global_vars;
+    DCArrayKokkos<double> eos_global_vars; ///< Array of global variables for the EOS
 
     double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression
     double q1ex = 1.3333;   ///< acoustic coefficient in Riemann solver for expansion

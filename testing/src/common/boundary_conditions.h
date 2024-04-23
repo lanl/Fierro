@@ -123,11 +123,11 @@ struct boundary_condition_t
 
     std::vector<double> origin = { 0.0, 0.0, 0.0 }; ///< Origin of boundary condition geometry
 
-    // WARNING: CURRENTLY NOT PARSED
-    double hydro_bc_vel_0 = 0.0;
-    double hydro_bc_vel_1 = 0.0;
-    double hydro_bc_vel_t_start = 0.0;
-    double hydro_bc_vel_t_end   = 0.0;
+    // WARNING: CURRENTLY NOT PARSED OR USED
+    double hydro_bc_vel_0 = 0.0;    ///< Initial velocity for timed velocity boundary condition
+    double hydro_bc_vel_1 = 0.0;    ///< Final velocity for timed velocity boundary condition
+    double hydro_bc_vel_t_start = 0.0;  ///< Start time for velocity boundary condition
+    double hydro_bc_vel_t_end   = 0.0;  ///< End time for velocity boundary condition
 }; // end boundary conditions
 
 // -------------------------------------
