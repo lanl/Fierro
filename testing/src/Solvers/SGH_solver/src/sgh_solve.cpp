@@ -50,8 +50,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     std::cout << "In execute function in sgh solver" << std::endl;
 
     printf("Writing outputs to file at %f \n", time_value);
-    mesh_writer.write_mesh(mesh, elem, node, corner,sim_param, time_value, graphics_times);
-    
+    mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
+
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
     // extensive energy tallies over the entire mesh
@@ -354,7 +354,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
-            mesh_writer.write_mesh(mesh, elem, node, corner,sim_param, time_value, graphics_times);
+            mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
 
             graphics_time = time_value + graphics_dt_ival;
         } // end if

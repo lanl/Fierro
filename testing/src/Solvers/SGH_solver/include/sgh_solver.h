@@ -81,7 +81,7 @@ public:
     int rk_num_stages = 2;
     int cycle_stop    = 1000000000;
 
-    SGH()  : Solver() //simulation_parameters_t& io, mesh_t& mesh_in, node_t& node_in, elem_t& elem_in, corner_t& corner_in
+    SGH()  : Solver() // simulation_parameters_t& io, mesh_t& mesh_in, node_t& node_in, elem_t& elem_in, corner_t& corner_in
     {
         // sim_param = io;
         // mesh = mesh_in;

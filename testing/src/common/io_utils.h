@@ -782,7 +782,6 @@ public:
 // Builds a mesh
 class MeshWriter
 {
-
 private:
     int graphics_id = 0;
 
@@ -807,22 +806,21 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_mesh(
-        mesh_t& mesh, 
-        elem_t& elem, 
-        node_t& node,
-        corner_t& corner, 
-        simulation_parameters_t& sim_param, 
-        double time_value,
-        CArray<double> graphics_times)
+    mesh_t&   mesh,
+    elem_t&   elem,
+    node_t&   node,
+    corner_t& corner,
+    simulation_parameters_t& sim_param,
+    double time_value,
+    CArray<double> graphics_times)
     {
-        
         if (sim_param.output_options.format == output_options::vtk) {
             std::cout << "**** VTK OUTPUT TYPE NOT YET SUPPORTED **** " << std::endl;
             throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
             // write_vtk(mesh, elem, node, corner, sim_param, time_value, graphics_times);
         }
         else if (sim_param.output_options.format == output_options::ensight) {
-            write_ensight(mesh, elem, node, corner,sim_param, time_value, graphics_times);
+            write_ensight(mesh, elem, node, corner, sim_param, time_value, graphics_times);
         }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
@@ -836,14 +834,30 @@ public:
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn write_ensight
+    ///
+    /// \brief <insert brief description>
+    ///
+    /// <Insert longer more detailed description which
+    /// can span multiple lines if needed>
+    ///
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    ///
+    /// \return <return type and definition description if not void>
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void write_ensight(
-        mesh_t& mesh, 
-        elem_t& elem, 
-        node_t& node,
-        corner_t& corner, 
-        simulation_parameters_t& sim_param, 
-        double time_value,
-        CArray<double> graphics_times)
+    mesh_t&   mesh,
+    elem_t&   elem,
+    node_t&   node,
+    corner_t& corner,
+    simulation_parameters_t& sim_param,
+    double time_value,
+    CArray<double> graphics_times)
     {
         // Update host data
         elem.den.update_host();
@@ -1146,7 +1160,6 @@ public:
 
         return;
     }
-
 };
 
 #endif // end Header Guard

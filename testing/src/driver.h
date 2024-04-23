@@ -138,7 +138,7 @@ public:
         // Create solvers
         for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
             if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
-                SGH* sgh_solver = new SGH(); //, mesh, node, elem, corner
+                SGH* sgh_solver = new SGH(); // , mesh, node, elem, corner
                 sgh_solver->initialize(sim_param);
                 solvers.push_back(sgh_solver);
             }

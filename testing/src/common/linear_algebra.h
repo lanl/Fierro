@@ -328,7 +328,6 @@ void LU_invert(
     int n)           // size of matrix
 {
     for (int j = 0; j < n; j++) {
-
         // Initialize col to zero
         FOR_ALL(i, 0, n, {
             col(i) = 0.0;

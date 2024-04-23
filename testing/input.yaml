@@ -18,13 +18,13 @@ mesh_options:
     type: Box
     origin: [0.0, 0.0, 0.0]
     length: [1.2, 1.2, 1.2]
-    num_elems: [30, 30, 30]
+    num_elems: [6, 6, 6]
 
 
 output_options:
     timer_output_level: thorough
     output_file_format: ensight
-    graphics_time_step: 0.1
+    graphics_time_step: 0.25
     # graphics_iteration_step: 10
 
 solver_options:

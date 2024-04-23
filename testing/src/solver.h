@@ -49,8 +49,6 @@ struct simulation_parameters_t;
 
 class Solver
 {
-
-
 public:
 
     MeshWriter mesh_writer;

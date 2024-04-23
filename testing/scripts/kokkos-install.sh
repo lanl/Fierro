@@ -11,6 +11,7 @@ mkdir -p ${KOKKOS_BUILD_DIR}
 
 # Kokkos flags for Cuda
 CUDA_ADDITIONS=(
+# -DKokkos_ARCH_PASCAL60=ON
 -D Kokkos_ENABLE_CUDA=ON
 -D Kokkos_ENABLE_CUDA_CONSTEXPR=ON
 -D Kokkos_ENABLE_CUDA_LAMBDA=ON
