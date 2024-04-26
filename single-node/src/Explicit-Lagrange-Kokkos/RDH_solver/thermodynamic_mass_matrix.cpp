@@ -5,6 +5,7 @@
 
 void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
                                         CArrayKokkos <double> &m,
+                                        CArrayKokkos <double> &M_inv,
                                         const mesh_t &mesh,
                                         const CArrayKokkos <double> &basis,
                                         const CArrayKokkos <double> &legendre_weights,
@@ -14,6 +15,7 @@ void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
     FOR_ALL(i, 0, mesh.num_zones, 
             j, 0, mesh.num_zones,{
                 M(i,j) = 0.0;
+                M_inv(i,j) = 0.0;
     });
     Kokkos::fence();
 
@@ -43,6 +45,7 @@ void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
                 //printf("thermo mass = %f at Tdofs %d, %d \n", M(global_i, global_j), global_i, global_j);
 
                 m(global_i) += M(global_i, global_j);
+                M_inv(global_i, global_i) = 1.0/m(global_i);
 
             }// end loop over j
 

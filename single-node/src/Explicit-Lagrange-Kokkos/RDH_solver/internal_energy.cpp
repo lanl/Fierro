@@ -1,6 +1,3 @@
-#include <Teuchos_RCP.hpp>
-#include <MueLu.hpp>
-
 #include "ref_elem.h"
 #include "mesh.h"
 #include "state.h"
@@ -9,16 +6,44 @@
 void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
                      const size_t stage,
                      const mesh_t &mesh,
-                     const CArrayKokkos <double> &A1,
-                     const CArrayKokkos <double> &lumped_mass){
+                     CArrayKokkos <double> &M_e_inv,
+                     CArrayKokkos <double> &force_tensor,
+                     CArrayKokkos <double> &F_dot_u,
+                     CArrayKokkos <double> &source,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const double dt){
+                    //  const CArrayKokkos <double> &A1,
+                    //  const CArrayKokkos <double> &lumped_mass){
     
     
-    FOR_ALL(zone_gid, 0, mesh.num_zones,{
+    FOR_ALL(zone_gid_1, 0, mesh.num_zones,{
 
-        zone_sie( 1, zone_gid ) = zone_sie(stage, zone_gid) - A1(zone_gid)/lumped_mass(zone_gid);
+        for (int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
+            for (int dim = 0; dim < mesh.num_dims; dim++){
+                F_dot_u(zone_gid_1) += 0.5*( force_tensor(stage, node_gid, zone_gid_1, dim)
+                                              + force_tensor(0, node_gid, zone_gid_1, dim) )
+                                       *0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
+            }
+        }// end loop over zone_lid
+
+        double RHS1 = 0.0;
+        double RHS2 = 0.0;
+
+        for (int zone_gid_2 = 0; zone_gid_2 < mesh.num_zones; zone_gid_2++){
+            RHS1 += M_e_inv(zone_gid_1, zone_gid_2)*F_dot_u(zone_gid_2);
+        }
+
+        for (int zone_gid_2 = 0; zone_gid_2 < mesh.num_zones; zone_gid_2++){
+            RHS2 += 0.5*M_e_inv(zone_gid_1, zone_gid_2)*
+                    (source(stage, zone_gid_2) + source(0, zone_gid_2));
+        }
+
+        double RHS = RHS1 + RHS2;
+
+        zone_sie( 1, zone_gid_1 ) = zone_sie(0, zone_gid_1) + dt*RHS;
 
     });//end for all
     Kokkos::fence();
     
 
-}// end update momentum
+}// end update internal energy

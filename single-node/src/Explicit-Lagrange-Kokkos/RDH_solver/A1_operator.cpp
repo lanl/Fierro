@@ -43,7 +43,7 @@ void assemble_A1(   CArrayKokkos <double> &A1,
                 }// end loop over zone_lid
 
                 //residual_in_elem(elem_gid, node_gid_1, dim) = M_dot_u(node_gid_1, dim) + dt*F_dot_ones(node_gid_1, dim);
-                A1(node_gid_1, dim) = M_dot_u(node_gid_1, dim) + dt*F_dot_ones(node_gid_1, dim);
+                A1(stage, node_gid_1, dim) = M_dot_u(node_gid_1, dim)/dt + F_dot_ones(node_gid_1, dim);
                 
             }// end loop over dim
             

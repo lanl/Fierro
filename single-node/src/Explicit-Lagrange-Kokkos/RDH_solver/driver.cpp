@@ -377,6 +377,7 @@ int main(int argc, char *argv[]){
         //printf("here\n");
         assemble_thermodynamic_mass_matrix(zone.M_e,
                                           zone.zonal_mass,
+                                          zone.M_e_inv,
                                           mesh,
                                           ref_elem.gauss_leg_elem_basis,
                                           ref_elem.gauss_leg_weights,

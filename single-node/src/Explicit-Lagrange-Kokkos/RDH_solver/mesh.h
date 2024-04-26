@@ -2031,6 +2031,20 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                      const size_t mat_id,
                      const size_t num_elems);
 
+void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
+                              const DViewCArrayKokkos <double> &vel,
+                              const DViewCArrayKokkos <double> &den,
+                              const DViewCArrayKokkos <double> &sspd,
+                              const DViewCArrayKokkos <double> &vol,
+                              const mesh_t &mesh,
+                              const fe_ref_elem_t &ref_elem,
+                              const size_t stage);
+
+void append_artificial_viscosity(DViewCArrayKokkos <double> &sigma,
+                                 const CArrayKokkos <double> &sigma_a,
+                                 const mesh_t &mesh,
+                                 const size_t stage);
+
 void build_force_tensor(CArrayKokkos <double> &force_tensor,
                         const size_t stage,
                         const mesh_t &mesh,
@@ -2064,6 +2078,7 @@ void compute_lumped_mass(CArrayKokkos <double> &lumped_mass,
 
 void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
                                     CArrayKokkos <double> &m,
+                                    CArrayKokkos <double> &M_inv,
                                     const mesh_t &mesh,
                                     const CArrayKokkos <double> &basis,
                                     const CArrayKokkos <double> &legendre_weights,
@@ -2081,7 +2096,7 @@ void assemble_A1(   CArrayKokkos <double> &A1,
                     const CArrayKokkos <double> &mass_matrix,
                     const DViewCArrayKokkos <double> &node_vel );
 
-void assemble_T_A1(   CArrayKokkos <double> &A1,
+void assemble_T_A1( CArrayKokkos <double> &A1,
                     CArrayKokkos <double> &residual_in_elem,
                     const size_t stage,
                     const double dt,
@@ -2097,14 +2112,30 @@ void assemble_T_A1(   CArrayKokkos <double> &A1,
 void update_momentum(DViewCArrayKokkos <double> &node_vel,
                      const size_t stage,
                      const mesh_t &mesh,
+                     const double dt,
                      const CArrayKokkos <double> &A1,
                      const CArrayKokkos <double> &lumped_mass);
 
 void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
                      const size_t stage,
                      const mesh_t &mesh,
-                     const CArrayKokkos <double> &A1,
-                     const CArrayKokkos <double> &lumped_mass);
+                     CArrayKokkos <double> &M_e_inv,
+                     CArrayKokkos <double> &force_tensor,
+                     CArrayKokkos <double> &F_dot_u,
+                     CArrayKokkos <double> &source,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const double dt);
+                    //  const CArrayKokkos <double> &A1,
+                    //  const CArrayKokkos <double> &lumped_mass);
+
+void get_sie_source(CArrayKokkos <double> source,
+                    const DViewCArrayKokkos <double> &node_coords,
+                    const mat_pt_t &mat_pt,
+                    const mesh_t &mesh,
+                    const zone_t &zone,
+                    const fe_ref_elem_t &ref_elem,
+                    const size_t stage
+                    );
 
 void update_position_rdh(const size_t stage,
                          double dt,

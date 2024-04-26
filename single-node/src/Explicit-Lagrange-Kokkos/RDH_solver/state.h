@@ -64,6 +64,9 @@ struct zone_t {
     // mass matrix //
     CArrayKokkos <double> M_e;
 
+    // inverse mass matrix //
+    CArrayKokkos <double> M_e_inv;
+
     // lumped mass //
     CArrayKokkos <double> zonal_mass;
 
@@ -80,6 +83,7 @@ struct zone_t {
         num_zones = num_elems*num_zones_in_elem; // to keep things global.
         this->sie = CArray <double> (num_rk, num_zones);
         this->M_e = CArrayKokkos <double> (num_zones, num_zones, "M_e");
+        this->M_e_inv = CArrayKokkos <double> (num_zones, num_zones, "M_e_inv");
         this->zonal_mass = CArrayKokkos <double> (num_zones, "zonal_mass");
         this->source = CArrayKokkos <double> (num_rk, num_zones, "source");
     
