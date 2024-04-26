@@ -1614,7 +1614,7 @@ void Solver::read_mesh_vtk(const char* MESH)
             }
         }
     }
-    std::cout << "before density read" << std::endl;
+
     //If restarting a topology optimization run, obtain nodal design density data here
     if(topology_optimization_restart){
         design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
