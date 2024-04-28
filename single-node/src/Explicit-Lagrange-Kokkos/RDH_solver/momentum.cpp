@@ -20,7 +20,7 @@ void update_momentum(DViewCArrayKokkos <double> &node_vel,
     // });//end for all
     FOR_ALL(node_gid, 0, mesh.num_nodes,{
 
-        double factor = 1.0/(2.0 - double(stage));
+        //double factor = 1.0/(2.0 - double(stage));
         for (int dim = 0; dim < mesh.num_dims; dim++){
             
             // printf(" lumped mass = %f \n", lumped_mass(node_gid));

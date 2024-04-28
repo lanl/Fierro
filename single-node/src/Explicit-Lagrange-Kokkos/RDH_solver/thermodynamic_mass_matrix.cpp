@@ -10,7 +10,7 @@ void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
                                         const CArrayKokkos <double> &basis,
                                         const CArrayKokkos <double> &legendre_weights,
                                         const CArrayKokkos <double> &legendre_jacobian_det,
-                                        const DViewCArrayKokkos <double> &density ){
+                                        const DViewCArrayKokkos <double> &density){
 
     FOR_ALL(i, 0, mesh.num_zones, 
             j, 0, mesh.num_zones,{
@@ -23,8 +23,20 @@ void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
         m(i) = 0.0;
     });
     Kokkos::fence();
-
+    
+    
     FOR_ALL( elem_gid, 0, mesh.num_elems, {
+
+        // CArrayKokkos <double> temp(mesh.num_zones_in_elem, mesh.num_zones_in_elem);
+        // CArrayKokkos <double> temp_inv(mesh.num_zones_in_elem, mesh.num_zones_in_elem);
+    
+        // for (int i = 0; i < mesh.num_zones_in_elem; i++){
+            
+        //     for (int j = 0; j < mesh.num_zones_in_elem; j++){
+        //         temp( i, j) = 0.0;
+        //         temp_inv( i, j) = 0.0;
+        //     }
+        // }
 
         for (int i = 0; i < mesh.num_zones_in_elem; i++){
             int global_i = mesh.zones_in_elem(elem_gid, i);
@@ -40,18 +52,144 @@ void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
                                                *legendre_jacobian_det(legendre_gid)
                                                *basis(legendre_lid, i)
                                                *basis(legendre_lid, j); 
+
+                    // temp( i, j ) += density(legendre_gid)
+                    //                 *legendre_weights(legendre_lid)
+                    //                 *legendre_jacobian_det(legendre_gid)
+                    //                 *basis(legendre_lid, i)
+                    //                 *basis(legendre_lid, j); 
                                                
                 }// end loop over legendre_lid
                 //printf("thermo mass = %f at Tdofs %d, %d \n", M(global_i, global_j), global_i, global_j);
 
                 m(global_i) += M(global_i, global_j);
+                                
                 M_inv(global_i, global_i) = 1.0/m(global_i);
 
             }// end loop over j
 
         }// end loop over i
+
+        //invert_matrix(temp_inv, temp, mesh, mesh.num_zones_in_elem);
+
+        // for (int i = 0; i < mesh.num_zones_in_elem; i++){
+        //     int global_i = mesh.zones_in_elem(elem_gid, i);
+            
+        //     for (int j = 0; j < mesh.num_zones_in_elem; j++){
+        //         int global_j = mesh.zones_in_elem(elem_gid, j);
+
+        //         M_inv(global_i, global_j) = temp_inv(i,j);
+        //     }
+        // }
+
+        
+        // CArrayKokkos <double> temp_left( mesh.num_zones_in_elem, mesh.num_zones_in_elem );
+        // CArrayKokkos <double> temp_right( mesh.num_zones_in_elem, mesh.num_zones_in_elem );
+
+        // for (int i = 0; i < mesh.num_zones_in_elem; i++){
+        //     for (int j = 0; j < mesh.num_zones_in_elem; j++){
+        //         temp_left(i,j) = 0.0;
+        //         temp_right(i,j) = 0.0;
+        //     }//
+        // }//
+        
+        
+        // for (int i = 0; i < mesh.num_zones_in_elem; i++){
+        //     for (int j = 0; j < mesh.num_zones_in_elem; j++){
+        //         for (int k = 0; k < mesh.num_zones_in_elem; k++){
+        //             temp_left(i,j) += temp_inv(i,k)*temp(k,j); 
+        //         } 
+        //     }
+        // }
+          
+        // for (int i = 0; i < mesh.num_zones_in_elem; i++){
+        //     for (int j = 0; j < mesh.num_zones_in_elem; j++){
+        //         for (int k = 0; k < mesh.num_zones_in_elem; k++){
+        //             temp_right(i,j) += temp(i,k)*temp_inv(k,j); 
+        //         }   
+        //     }
+        // }
+
+        // printf(" ######################## \n");
+        // printf(" ###### Left ##### \n");
+        // printf(" ######################## \n");
+        // for (int i = 0; i < mesh.num_zones_in_elem; i++){
+        //     for (int j = 0; j < mesh.num_zones_in_elem; j++){
+        //         printf(" %f ,", temp_left(i,j));
+        //     }
+        //     printf(" \n");
+        // }
+        // printf(" ######################## \n");
+        // printf(" \n");
+
+        // printf(" ######################## \n");
+        // printf(" ###### Right ##### \n");
+        // printf(" ######################## \n");
+        // for (int i = 0; i < mesh.num_zones_in_elem; i++){
+        //     for (int j = 0; j < mesh.num_zones_in_elem; j++){
+        //         printf(" %f ,", temp_right(i,j));
+        //     }
+        //     printf(" \n");
+        // }
+        // printf(" ######################## \n");
+        // printf(" \n");
+       
+
     }); // end FOR_ALL
     Kokkos::fence();
+
+    // FOR_ALL(i, 0, mesh.num_zones,
+    //         j, 0, mesh.num_zones, {
+
+    //     CArrayKokkos <double> temp_left(mesh.num_zones, mesh.num_zones);
+    //     CArrayKokkos <double> temp_right(mesh.num_zones, mesh.num_zones);
+
+    //     for (int i = 0; i < mesh.num_zones; i++){
+    //         for (int j = 0; j < mesh.num_zones; j++){
+    //             temp_left(i,j) = 0.0;
+    //             temp_right(i,j) = 0.0;
+    //         }
+    //     }
+
+    //     for (int i = 0; i < mesh.num_zones; i++){
+    //         for (int j = 0; j < mesh.num_zones; j++){
+    //             for (int k = 0; k < mesh.num_zones; k++){
+    //             temp_left(i,j) += M_inv(i,k)*M(k, j); 
+    //             } 
+    //         }
+    //     }
+          
+    //     for (int i = 0; i < mesh.num_zones; i++){
+    //         for (int j = 0; j < mesh.num_zones; j++){
+    //             for (int k = 0; k < mesh.num_zones; k++){
+    //             temp_right(i,j) += M(i,k)*M_inv( k, j); 
+    //             }   
+    //         }
+    //     }
+        
+    //     printf(" ######################## \n");
+    //     printf(" ###### Left ##### \n");
+    //     printf(" ######################## \n");
+    //     for (int i = 0; i < mesh.num_zones_in_elem; i++){
+    //         for (int j = 0; j < mesh.num_zones_in_elem; j++){
+    //             printf(" %f ,", temp_left(i,j));
+    //         }
+    //         printf(" \n");
+    //     }
+    //     printf(" ######################## \n");
+
+    //     printf(" ######################## \n");
+    //     printf(" ###### Right ##### \n");
+    //     printf(" ######################## \n");
+    //     for (int i = 0; i < mesh.num_zones_in_elem; i++){
+    //         for (int j = 0; j < mesh.num_zones_in_elem; j++){
+    //             printf(" %f ,", temp_right(i,j));
+    //         }
+    //         printf(" \n");
+    //     }
+    //     printf(" ######################## \n");
+
+    // });
     
     // RUN({
     //     for (int i =  0; i <  mesh.num_zones; i++){ 
@@ -63,12 +201,13 @@ void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
     //     }
     // });
 
-    FOR_ALL( i, 0, mesh.num_zones, {
-        if (m(i) <= 0.0){
-            printf("NEGATIVE thermo lumped mass in zone %d and val = %f \n", i, m(i));
-            //stop_calc = 1;
-        }
-    });
-    printf("\n");
-    Kokkos::fence();
+    // FOR_ALL( i, 0, mesh.num_zones, {
+    //     if (m(i) <= 0.0){
+    //         printf("NEGATIVE thermo lumped mass in zone %d and val = %f \n", i, m(i));
+    //         //stop_calc = 1;
+    //     }
+    // });
+    // printf("\n");
+    // Kokkos::fence();
 }// end assemble kinematic mass matrix
+

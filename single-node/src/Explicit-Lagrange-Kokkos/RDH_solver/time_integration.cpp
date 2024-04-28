@@ -362,38 +362,26 @@ void get_timestep_HexN(mesh_t &mesh,
 } // end get_timestep_HexN
 
 
-void init_tn(mesh_t &mesh,
+void init_tn(const mesh_t &mesh,
              DViewCArrayKokkos <double> &node_coords,
              DViewCArrayKokkos <double> &node_vel,
-             DViewCArrayKokkos <double> &zone_sie,
-             DViewCArrayKokkos <double> &mat_pt_stress,
-             CArrayKokkos <double> &source,
-             const size_t num_dims,
-             const size_t num_elems,
-             const size_t num_nodes){
+             DViewCArrayKokkos <double> &zone_sie){
 
     // save elem quantities
-    FOR_ALL(elem_gid, 0, num_elems, {
+    FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
-        for (int zone_lid = 0; zone_lid < mesh.num_zones; zone_lid++){
+        for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
             int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
             zone_sie(0,zone_gid) = zone_sie(1,zone_gid);
-            source(0,zone_gid) = source(1,zone_gid);
-        }
-        for (int legendre_lid = 0; legendre_lid < mesh.num_leg_gauss_in_elem; legendre_lid++){
-            int legendre_gid = mesh.legendre_in_elem(elem_gid, legendre_lid);
-            for (int dim = 0; dim < mesh.num_dims; dim++){
-                mat_pt_stress(0,legendre_gid,dim,dim) = mat_pt_stress(1,legendre_gid,dim,dim);
-            }
         }
 
     }); // end parallel for
     Kokkos::fence();
     
     // save nodal quantities
-    FOR_ALL(node_gid, 0, num_nodes, {
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
         
-        for(size_t i=0; i<num_dims; i++){
+        for(size_t i=0; i<mesh.num_dims; i++){
             node_coords(0,node_gid,i) = node_coords(1,node_gid,i);
             node_vel(0,node_gid,i) = node_vel(1,node_gid,i);
         }

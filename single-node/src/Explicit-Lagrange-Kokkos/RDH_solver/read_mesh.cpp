@@ -317,8 +317,8 @@ void readVTKPn(char* MESH,
     size_t num_nodes_in_zone = 8;
     // intialize elem mesh
     mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem, num_gauss_leg_in_elem, num_zones_in_elem, num_nodes_in_zone, num_surfs_in_elem, num_dims);
-    elem.initialize_Pn(num_elems); // always 3D here, even for 2D
-    zone.initialize_Pn( rk_num_bins,  num_elems, num_zones_in_elem);
+    elem.initialize_Pn(num_elems); 
+    zone.initialize_Pn( rk_num_bins, num_elems, num_zones_in_elem);
     mat_pt.initialize_Pn( rk_num_bins, num_elems, num_nodes_in_elem, num_zones_in_elem, num_dims, p);
     
     // intialize corner variables

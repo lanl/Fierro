@@ -70,7 +70,6 @@ void setup(const CArrayKokkos <material_t> &material,
            const DViewCArrayKokkos <double> &mat_pt_stress,
            const DViewCArrayKokkos <double> &mat_pt_sspd,
            const DViewCArrayKokkos <double> &zone_sie,
-           CArrayKokkos <double> &source,
            const DViewCArrayKokkos <double> &elem_vol,
            const DViewCArrayKokkos <double> &mat_pt_mass,
            const DViewCArrayKokkos <size_t> &elem_mat_id,
@@ -331,11 +330,11 @@ void setup(const CArrayKokkos <material_t> &material,
                         
                             node_vel(0, node_gid, 0) = mat_fill(f_id).u;
                             node_vel(0, node_gid, 1) = mat_fill(f_id).v;
-                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = mat_fill(f_id).w;
+                            node_vel(0, node_gid, 2) = mat_fill(f_id).w;
                             
                             node_vel(1, node_gid, 0) = mat_fill(f_id).u;
                             node_vel(1, node_gid, 1) = mat_fill(f_id).v;
-                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = mat_fill(f_id).w;
+                            node_vel(1, node_gid, 2) = mat_fill(f_id).w;
                         
                             break;
                         }
@@ -365,11 +364,11 @@ void setup(const CArrayKokkos <material_t> &material,
                         
                             node_vel(0, node_gid, 0) = mat_fill(f_id).speed*dir[0];
                             node_vel(0, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = 0.0;
+                            node_vel(0, node_gid, 2) = 0.0;
                             
                             node_vel(1, node_gid, 0) = mat_fill(f_id).speed*dir[0];
                             node_vel(1, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = 0.0;
+                            node_vel(1, node_gid, 2) = 0.0;
                             
                             break;
                         }
@@ -400,11 +399,11 @@ void setup(const CArrayKokkos <material_t> &material,
                         
                             node_vel(0, node_gid, 0) = mat_fill(f_id).speed*dir[0];
                             node_vel(0, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = mat_fill(f_id).speed*dir[2];
+                            node_vel(0, node_gid, 2) = mat_fill(f_id).speed*dir[2];
 
                             node_vel(1, node_gid, 0) = mat_fill(f_id).speed*dir[0];
                             node_vel(1, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = mat_fill(f_id).speed*dir[2];
+                            node_vel(1, node_gid, 2) = mat_fill(f_id).speed*dir[2];
                             break;
                         }
                         case init_conds::radial_linear:
@@ -429,7 +428,7 @@ void setup(const CArrayKokkos <material_t> &material,
 
                             node_vel(0, node_gid, 0) = sin( PI * node_coords(1, node_gid, 0) ) * cos(PI * node_coords(1, node_gid, 1)); 
                             node_vel(0, node_gid, 1) =  -1.0*cos(PI * node_coords(1, node_gid, 0)) * sin(PI * node_coords(1, node_gid, 1)); 
-                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = 0.0;
+                            node_vel(0, node_gid, 2) = 0.0;
                             
                             // printf("node_vel at node %d and dim %d is %f \n", node_gid, 0, node_vel(0, node_gid, 0));
                             // printf("node_vel at node %d and dim %d is %f \n", node_gid, 1, node_vel(0, node_gid, 1));
@@ -437,7 +436,7 @@ void setup(const CArrayKokkos <material_t> &material,
 
                             node_vel(1, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
                             node_vel(1, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
-                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = 0.0;
+                            node_vel(1, node_gid, 2) = 0.0;
 
                             break;
                         }
@@ -449,42 +448,32 @@ void setup(const CArrayKokkos <material_t> &material,
                 for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
                     
                     int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
-                    //printf("zone_gid is %d \n", zone_gid);
 
-                    // zonal coords for initializations that depend on functions of x
-                    // calculate the coordinates and radius of the element
-                    double zone_coords[3]; 
-                    zone_coords[0] = 0.0;
-                    zone_coords[1] = 0.0;
-                    zone_coords[2] = 0.0;
-
-                    // get the coordinates of the zone center
-                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
-                        zone_coords[0] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 0);
-                        zone_coords[1] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 1);
-                        if (mesh.num_dims == 3){
-                            zone_coords[2] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 2);
-                        } else
-                        {
-                            zone_coords[2] = 0.0;
-                        }
-                    } // end loop over nodes in element
-                    zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
-                    zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
-                    zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
-
-                    
-                    // printf("zone_coord at dim %d is %f \n", 0, zone_coords[0] );
-                    // printf("zone_coord at dim %d is %f \n", 1, zone_coords[1] );
-                    // printf("zone_coord at dim %d is %f \n", 2, zone_coords[2] );
-                    
-                    
                     // specific internal energy at each "time bin"
                     zone_sie( 0, zone_gid) = mat_fill(f_id).sie;
                     zone_sie( 1, zone_gid) = mat_fill(f_id).sie;
                      
                     if(mat_fill(f_id).velocity == init_conds::tg_vortex)
                     {
+                        // zonal coords for initializations that depend on functions of x
+                        // calculate the coordinates and radius of the element
+                        double zone_coords[3]; 
+                        zone_coords[0] = 0.0;
+                        zone_coords[1] = 0.0;
+                        zone_coords[2] = 0.0;
+
+                        // get the coordinates of the zone center
+                        for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
+                            
+                            zone_coords[0] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 0);
+                            zone_coords[1] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 1);
+                            zone_coords[2] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 2);
+                            
+                        } // end loop over nodes in element
+                        zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
+                        zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
+                        zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
+
                         // p = rho*ie*(gamma - 1)
                         size_t mat_id = f_id;
                         double gamma = state_vars(0,0);//elem_statev(elem_gid,4); // gamma value
@@ -499,8 +488,8 @@ void setup(const CArrayKokkos <material_t> &material,
                         zone_sie(0, zone_gid) = temp_pres/(mat_fill(f_id).den*(gamma - 1.0));
                         zone_sie(1, zone_gid) = temp_pres/(mat_fill(f_id).den*(gamma - 1.0));
                         //printf("elem_sie in zone %d is %f \n", zone_gid, elem_sie(1, zone_gid));
-                        source(0, zone_gid) = (3.0*PI/8.0)*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
-                        source(1, zone_gid) = (3.0*PI/8.0)*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
+                        //source(0, zone_gid) = (3.0*PI/8.0)*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
+                        //source(1, zone_gid) = (3.0*PI/8.0)*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
 
                     } // end if
                 }// end loop over zones
@@ -519,7 +508,7 @@ void setup(const CArrayKokkos <material_t> &material,
                         }        
                     }  // end for
                     // WARNING WARNING : Note elem_vol //
-                    mat_pt_mass(leg_gid) = mat_pt_den(leg_gid)/elem_vol(elem_gid);
+                    mat_pt_mass(leg_gid) = mat_pt_den(leg_gid)/elem_vol(elem_gid)/mesh.num_leg_gauss_in_elem;
                     
                     // interpolate sie at quad point //
                     double interp_sie = 0.0;

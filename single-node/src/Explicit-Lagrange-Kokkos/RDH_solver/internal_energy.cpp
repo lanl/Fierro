@@ -25,20 +25,23 @@ void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
                                        *0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
             }
         }// end loop over zone_lid
+    });
+    Kokkos::fence();
+
+    FOR_ALL(zone_gid_1, 0, mesh.num_zones,{
 
         double RHS1 = 0.0;
         double RHS2 = 0.0;
+        double RHS = 0.0;
 
         for (int zone_gid_2 = 0; zone_gid_2 < mesh.num_zones; zone_gid_2++){
             RHS1 += M_e_inv(zone_gid_1, zone_gid_2)*F_dot_u(zone_gid_2);
-        }
-
-        for (int zone_gid_2 = 0; zone_gid_2 < mesh.num_zones; zone_gid_2++){
+        
             RHS2 += 0.5*M_e_inv(zone_gid_1, zone_gid_2)*
                     (source(stage, zone_gid_2) + source(0, zone_gid_2));
         }
 
-        double RHS = RHS1 + RHS2;
+        RHS = RHS1;// RHS2;
 
         zone_sie( 1, zone_gid_1 ) = zone_sie(0, zone_gid_1) + dt*RHS;
 

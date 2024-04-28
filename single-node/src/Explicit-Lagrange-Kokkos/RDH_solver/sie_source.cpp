@@ -26,6 +26,38 @@ void get_sie_source(CArrayKokkos <double> source,
     });
     Kokkos::fence();
 
+    CArrayKokkos <double> zone_coords(mesh.num_elems, mesh.num_zones_in_elem, mesh.num_dims);
+    FOR_ALL(elem_gid, 0, mesh.num_elems,{
+
+        for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+            
+            for (int dim = 0; dim < mesh.num_dims; dim++){
+                zone_coords(elem_gid, zone_lid, dim) = 0.0;
+            }
+        }
+    });
+    Kokkos::fence();
+
+    FOR_ALL(elem_gid, 0, mesh.num_elems,{
+        // get the coordinates of the zone center
+        for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+            int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+
+            for (int dim = 0; dim < mesh.num_dims; dim++){
+                for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
+                    
+                    zone_coords(elem_gid, zone_lid, dim) += node_coords(stage, mesh.nodes_in_zone(zone_gid, node_lid), dim);
+                    
+                } // end loop over nodes in element
+
+
+                zone_coords(elem_gid, zone_lid, dim) = zone_coords(elem_gid, zone_lid, dim)/mesh.num_nodes_in_zone;
+            
+            }
+        }
+    });
+    Kokkos::fence();
+
     FOR_ALL(elem_gid, 0, mesh.num_elems,{
 
         for (int z_lid = 0; z_lid < mesh.num_zones_in_elem; z_lid++){
@@ -36,7 +68,7 @@ void get_sie_source(CArrayKokkos <double> source,
                 for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
                     int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
 
-                    temp(z_lid, zone_lid) += ( (3.0*PI)/8.0 )*mat_pt.gauss_legendre_det_j(gauss_gid)
+                    temp(elem_gid, z_lid, zone_lid) += ( (3.0*PI)/8.0 )*mat_pt.gauss_legendre_det_j(gauss_gid)
                                             *ref_elem.gauss_leg_weights(gauss_lid)
                                             *ref_elem.gauss_leg_elem_basis(gauss_lid, z_lid)
                                             *ref_elem.gauss_leg_elem_basis(gauss_lid, zone_lid);
@@ -50,35 +82,15 @@ void get_sie_source(CArrayKokkos <double> source,
     FOR_ALL(elem_gid, 0, mesh.num_elems,{
 
         for (int z_lid = 0; z_lid < mesh.num_zones_in_elem; z_lid++){
-            int z_gid = mesh.zones_in_elem(elem_gid, z_lid);
+            int zone_gid = mesh.zones_in_elem(elem_gid, z_lid);
+
 
             for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
-                int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+                
 
-                double zone_coords[3]; 
-                zone_coords[0] = 0.0;
-                zone_coords[1] = 0.0;
-                zone_coords[2] = 0.0;
-
-                // get the coordinates of the zone center
-                for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
-                    zone_coords[0] += node_coords(stage, mesh.nodes_in_zone(zone_gid, node_lid), 0);
-                    zone_coords[1] += node_coords(stage, mesh.nodes_in_zone(zone_gid, node_lid), 1);
-                    if (mesh.num_dims == 3){
-                        zone_coords[2] += node_coords(stage, mesh.nodes_in_zone(zone_gid, node_lid), 2);
-                    } else
-                    {
-                        zone_coords[2] = 0.0;
-                    }
-                } // end loop over nodes in element
-
-                zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
-                zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
-                zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
-
-                source(stage, z_gid) += temp(elem_gid, z_lid, zone_lid)*
-                                ( cos( 3.0*PI*zone_coords[0] )*cos( PI*zone_coords[1] ) 
-                                - cos( PI*zone_coords[0] )*cos( 3.0*PI*zone_coords[1] ) );
+                source(stage, zone_gid) += temp(elem_gid, z_lid, zone_lid)*
+                                ( cos( 3.0*PI*zone_coords(elem_gid, zone_lid, 0) )*cos( PI*zone_coords(elem_gid, zone_lid, 1) ) 
+                                - cos( PI*zone_coords(elem_gid, zone_lid, 0) )*cos( 3.0*PI*zone_coords(elem_gid, zone_lid, 1) ) );
             }// zone_lid
         }// z_lid
 

@@ -26,7 +26,9 @@ struct fe_ref_elem_t{
     
     // Gauss Points
     size_t num_gauss_lob_1d;
+    size_t num_dual_gauss_lob_1d;
     size_t num_gauss_lob_in_elem;
+    size_t num_dual_gauss_lob_in_elem;
    
     size_t num_gauss_leg_1d;
     size_t num_gauss_leg_in_elem;
@@ -53,6 +55,7 @@ struct fe_ref_elem_t{
    
     // Gauss and DOF positions 
     CArrayKokkos <double> lob_nodes_1D;
+    CArrayKokkos <double> dual_lob_nodes_1D;
     CArrayKokkos <double> leg_nodes_1D;
     
     CArrayKokkos <double> gauss_lob_positions;
@@ -88,6 +91,7 @@ struct fe_ref_elem_t{
         if(p_order == 0){       
             
             num_gauss_lob_1d = 2; // num gauss lobatto points in 1d
+            num_dual_gauss_lob_1d = 1;
             num_gauss_leg_1d = 1;
             num_dofs_1d = 2;
             num_elem_dofs_1d = 1;
@@ -98,17 +102,20 @@ struct fe_ref_elem_t{
         else{
             
             num_gauss_lob_1d = 2 * p_order + 1; // num gauss lobatto points in 1d
+            num_dual_gauss_lob_1d = 2*p_order - 1;
             num_gauss_leg_1d = 2*p_order;
 
             num_dofs_1d = p_order+1;
             num_elem_dofs_1d = p_order;
 
-            num_zones_1d = (num_dofs_1d - 1);
+            num_zones_1d = p_order;
             num_zones_in_elem = num_zones_1d*num_zones_1d*num_zones_1d;
 
         }
 
         num_gauss_lob_in_elem = 1;
+
+        num_dual_gauss_lob_in_elem = 1;
     
         num_gauss_leg_in_elem = 1;
 
@@ -120,7 +127,8 @@ struct fe_ref_elem_t{
         
         for (int dim = 0; dim < num_dim; dim++){
         
-            num_gauss_lob_in_elem *= num_gauss_lob_1d;    
+            num_gauss_lob_in_elem *= num_gauss_lob_1d;
+            num_dual_gauss_lob_in_elem *= num_dual_gauss_lob_1d;    
             num_gauss_leg_in_elem *= num_gauss_leg_1d;
 
             num_dofs_in_elem *= num_dofs_1d; 
@@ -162,9 +170,15 @@ struct fe_ref_elem_t{
         // --- build gauss nodal positions and weights ---
             
         lob_nodes_1D = CArrayKokkos <double> (num_gauss_lob_1d,"lob_nodes_1d");
+
+        dual_lob_nodes_1D = CArrayKokkos <double> (num_dual_gauss_lob_1d,"dual_lob_nodes_1d");
         
         RUN_CLASS({
             lobatto_nodes_1D( lob_nodes_1D, num_gauss_lob_1d);
+        });
+
+        RUN_CLASS({
+            lobatto_nodes_1D( dual_lob_nodes_1D, num_dual_gauss_lob_1d);
         });
 
         lob_weights_1D = CArrayKokkos <double> (num_gauss_lob_1d,"lob_weights_1d");
@@ -276,6 +290,7 @@ struct fe_ref_elem_t{
                 // dofs same as lobatto quadrature points 
                 FOR_ALL_CLASS(i,  0, num_gauss_lob_1d,{
                     dof_positions_1d(i) = lob_nodes_1D(i);
+                    elem_dof_positions_1d(i) = dual_lob_nodes_1D(i);
                 });
             }
 
@@ -287,6 +302,17 @@ struct fe_ref_elem_t{
                     for(int i = 0; i < num_gauss_lob_1d; i=i+2){
 
                         dof_positions_1d(dof_id) = lob_nodes_1D(i);
+
+                        dof_id++;
+                    }
+                });  
+
+                RUN_CLASS({
+                    int dof_id = 0;
+                    
+                    for(int i = 0; i < num_dual_gauss_lob_1d; i=i+2){
+
+                        elem_dof_positions_1d(dof_id) = dual_lob_nodes_1D(i);
 
                         dof_id++;
                     }
@@ -447,29 +473,32 @@ struct fe_ref_elem_t{
             // });
             // Kokkos::fence();
 
-            RUN_CLASS({
-                for (int gauss_lob_rid = 0; gauss_lob_rid < num_gauss_lob_in_elem; gauss_lob_rid++){
-                    // Get the nodal coordinates
-                    for(int dim = 0; dim < 3; dim++){
-                    point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-                    }
 
-                    get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+// lobatto dual basis
+            // RUN_CLASS({
+            //     for (int gauss_lob_rid = 0; gauss_lob_rid < num_gauss_lob_in_elem; gauss_lob_rid++){
+            //         // Get the nodal coordinates
+            //         for(int dim = 0; dim < 3; dim++){
+            //         point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
+            //         }
+
+            //         get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
                     
-                    //double check_basis = 0.0;
+            //         //double check_basis = 0.0;
 
-                    for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
+            //         for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
 
-                        gauss_lob_elem_basis(gauss_lob_rid, basis_id) = temp_elem_basis(basis_id);
-                        //check_basis += temp_elem_basis(basis_id);
-                        temp_elem_basis(basis_id) = 0.0;
-                    }
-                    //printf(" basis tally = %f \n", check_basis );
+            //             gauss_lob_elem_basis(gauss_lob_rid, basis_id) = temp_elem_basis(basis_id);
+            //             //check_basis += temp_elem_basis(basis_id);
+            //             temp_elem_basis(basis_id) = 0.0;
+            //         }
+            //         //printf(" basis tally = %f \n", check_basis );
 
-                }
+            //     }
                 
-            });
-            Kokkos::fence();
+            // });
+            // Kokkos::fence();
+// end lobatto dual basis
 
         // --- evaluate the thermodynamic basis at the legendre points
             // FOR_ALL_CLASS(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
@@ -500,8 +529,9 @@ struct fe_ref_elem_t{
                     for(int dim = 0; dim < 3; dim++){
                         point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
                     }
-
-                    get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                    
+                    get_elem_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                    //get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
                     //double check_basis = 0.0;
 
                     for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
@@ -954,7 +984,7 @@ void lobatto_nodes_1D ( const CArrayKokkos <double> &lob_nodes_1D,
 *  defined in 1D.
 *****************************************************************************************/
 
-//KOKKOS_FUNCTION
+KOKKOS_FUNCTION
 void lobatto_weights_1D(
                         const CArrayKokkos <double> &lob_weights_1D,  // Lobbatto weights
                         const int &num) const {                     // Interpolation order
@@ -1810,6 +1840,65 @@ void get_basis(const CArrayKokkos <double> &basis,
 }
 
 KOKKOS_FUNCTION
+void get_elem_basis(const CArrayKokkos <double> &basis,
+               const CArrayKokkos <double> &val_1d,
+               const CArrayKokkos <double> &val_3d,
+               const CArrayKokkos <double> &point) const{
+
+        
+        // initialize to zero //
+        for (int i =0; i < num_elem_dofs_1d; i++){
+          val_1d(i) = 0.0;
+        }
+        
+        // Calculate 1D basis for the X coordinate of the point
+        lagrange_elem_basis_1D(val_1d, point(0));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_elem_dofs_1d; i++){
+            val_3d(i,0) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+
+        // Calculate 1D basis for the Y coordinate of the point
+        lagrange_elem_basis_1D(val_1d, point(1));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_elem_dofs_1d; i++){
+            val_3d(i,1) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+
+        // Calculate 1D basis for the Z coordinate of the point
+        lagrange_elem_basis_1D(val_1d, point(2));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_elem_dofs_1d; i++){
+            val_3d(i,2) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+        
+        // Multiply the i, j, k components of the basis from each node
+        // to get the tensor product basis for the node
+        for(int k = 0; k < num_elem_dofs_1d; k++){
+            for(int j = 0; j < num_elem_dofs_1d; j++){
+                for(int i = 0; i < num_elem_dofs_1d; i++){
+
+                    int dof_rlid = elem_dof_rid(i,j,k);
+                    basis(dof_rlid) = val_3d(i,0)*val_3d(j,1)*val_3d(k,2);
+                }
+            }
+        }
+
+        for (int i =0; i< num_elem_dofs_1d; i++){
+          val_1d(i) = 0.0;
+          val_3d(i,0) = 0.0;
+          val_3d(i,1) = 0.0;
+          val_3d(i,2) = 0.0;
+        }
+}
+
+KOKKOS_FUNCTION
 void partial_xi_basis(const CArrayKokkos <double> &partial_xi,
                       const CArrayKokkos <double> &val_1d,
                       const CArrayKokkos <double> &val_3d,
@@ -2000,7 +2089,7 @@ void partial_mu_basis(const CArrayKokkos <double> &partial_mu,
         for(int i = 0; i < num_dofs_1d; i++){
             
             Dval_3d(i,2) = Dval_1d(i);
-            val_1d(i) = 0.0;
+            Dval_1d(i) = 0.0;
         }
 
         // Multiply the i, j, k components of the basis and partial_xi from each node
@@ -2030,63 +2119,63 @@ void partial_mu_basis(const CArrayKokkos <double> &partial_mu,
         }
 }
 
-KOKKOS_FUNCTION
-void get_bernstein_basis(const CArrayKokkos <double> &elem_basis,
-               const CArrayKokkos <double> &elem_val_1d,
-               const CArrayKokkos <double> &elem_val_3d,
-               const CArrayKokkos <double> &point) const {
+// KOKKOS_FUNCTION
+// void get_bernstein_basis(const CArrayKokkos <double> &elem_basis,
+//                const CArrayKokkos <double> &elem_val_1d,
+//                const CArrayKokkos <double> &elem_val_3d,
+//                const CArrayKokkos <double> &point) const {
 
-        // initialize to zero //
-        for (int i =0; i< num_elem_dofs_1d; i++){
-          elem_val_1d(i) = 0.0;
-        }
+//         // initialize to zero //
+//         for (int i =0; i< num_elem_dofs_1d; i++){
+//           elem_val_1d(i) = 0.0;
+//         }
         
-        // Calculate 1D basis for the X coordinate of the point
-        bernstein_basis_1D(elem_val_1d, point(0));
+//         // Calculate 1D basis for the X coordinate of the point
+//         bernstein_basis_1D(elem_val_1d, point(0));
         
-        // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_elem_dofs_1d; i++){
-            elem_val_3d(i,0) = elem_val_1d(i);
-            elem_val_1d(i) = 0.0;
-        }
+//         // Save the basis value at the point to a temp array and zero out the temp array
+//         for(int i = 0; i < num_elem_dofs_1d; i++){
+//             elem_val_3d(i,0) = elem_val_1d(i);
+//             elem_val_1d(i) = 0.0;
+//         }
 
-        // Calculate 1D basis for the Y coordinate of the point
-        bernstein_basis_1D(elem_val_1d, point(1));
+//         // Calculate 1D basis for the Y coordinate of the point
+//         bernstein_basis_1D(elem_val_1d, point(1));
         
-        // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_elem_dofs_1d; i++){
-            elem_val_3d(i,1) = elem_val_1d(i);
-            elem_val_1d(i) = 0.0;
-        }
+//         // Save the basis value at the point to a temp array and zero out the temp array
+//         for(int i = 0; i < num_elem_dofs_1d; i++){
+//             elem_val_3d(i,1) = elem_val_1d(i);
+//             elem_val_1d(i) = 0.0;
+//         }
 
-        // Calculate 1D basis for the Z coordinate of the point
-        bernstein_basis_1D(elem_val_1d, point(2));
+//         // Calculate 1D basis for the Z coordinate of the point
+//         bernstein_basis_1D(elem_val_1d, point(2));
         
-        // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_elem_dofs_1d; i++){
-            elem_val_3d(i,2) = elem_val_1d(i);
-            elem_val_1d(i) = 0.0;
-        }
+//         // Save the basis value at the point to a temp array and zero out the temp array
+//         for(int i = 0; i < num_elem_dofs_1d; i++){
+//             elem_val_3d(i,2) = elem_val_1d(i);
+//             elem_val_1d(i) = 0.0;
+//         }
         
-        // Multiply the i, j, k components of the basis from each node
-        // to get the tensor product basis for the node
-        for(int k = 0; k < num_elem_dofs_1d; k++){
-            for(int j = 0; j < num_elem_dofs_1d; j++){
-                for(int i = 0; i < num_elem_dofs_1d; i++){
+//         // Multiply the i, j, k components of the basis from each node
+//         // to get the tensor product basis for the node
+//         for(int k = 0; k < num_elem_dofs_1d; k++){
+//             for(int j = 0; j < num_elem_dofs_1d; j++){
+//                 for(int i = 0; i < num_elem_dofs_1d; i++){
 
-                    int dof_rlid = elem_dof_rid(i,j,k);
-                    elem_basis(dof_rlid) = elem_val_3d(i,0)*elem_val_3d(j,1)*elem_val_3d(k,2);
-                }
-            }
-        }
+//                     int dof_rlid = elem_dof_rid(i,j,k);
+//                     elem_basis(dof_rlid) = elem_val_3d(i,0)*elem_val_3d(j,1)*elem_val_3d(k,2);
+//                 }
+//             }
+//         }
 
-        for (int i =0; i< num_elem_dofs_1d; i++){
-          elem_val_1d(i) = 0.0;
-          elem_val_3d(i,0) = 0.0;
-          elem_val_3d(i,1) = 0.0;
-          elem_val_3d(i,2) = 0.0;
-        }
-}
+//         for (int i =0; i< num_elem_dofs_1d; i++){
+//           elem_val_1d(i) = 0.0;
+//           elem_val_3d(i,0) = 0.0;
+//           elem_val_3d(i,1) = 0.0;
+//           elem_val_3d(i,2) = 0.0;
+//         }
+// }
 
 KOKKOS_FUNCTION
 void lagrange_basis_1D(
@@ -2110,6 +2199,41 @@ void lagrange_basis_1D(
                     
                     // Calculate the denominator 
                     denominator = denominator*(dof_positions_1d(vert_i) - dof_positions_1d(vert_j));
+                
+                }//end if
+                
+                interpolant = numerator/denominator; // storing a single value for interpolation for node vert_i
+                
+            } // end looping over nodes != vert_i
+
+            // writing value to vectors for later use
+            interp(vert_i)   = interpolant;           // Interpolant value at given point
+
+        } // end loop over all nodes
+} // end of Lagrange_1D function
+
+KOKKOS_FUNCTION
+void lagrange_elem_basis_1D(
+        const CArrayKokkos <double> &interp,    // interpolant from each basis
+        const double x_point) const{     // point of interest in element
+                         
+        
+        // calculate the basis value associated with each node_i
+        for(int vert_i = 0; vert_i < num_elem_dofs_1d; vert_i++){ 
+            
+            double numerator = 1.0;         // placeholder numerator
+            double denominator = 1.0;       // placeholder denominator
+            double interpolant = 1.0;       // placeholder value of numerator/denominator
+            
+
+            for(int vert_j = 0; vert_j < num_elem_dofs_1d; vert_j++){  // looping over the verts !=vert_i
+                if (vert_j != vert_i ){
+                    
+                    // Calculate the numerator
+                    numerator = numerator*(x_point - elem_dof_positions_1d(vert_j));
+                    
+                    // Calculate the denominator 
+                    denominator = denominator*(elem_dof_positions_1d(vert_i) - elem_dof_positions_1d(vert_j));
                 
                 }//end if
                 
@@ -2169,28 +2293,28 @@ void lagrange_derivative_1D(
         } // end loop over all nodes
 } // end of Lagrange_1D function
 
-KOKKOS_INLINE_FUNCTION
-void bernstein_basis_1D(
-        const CArrayKokkos <double> &interp,
-        const double X) const {
+// KOKKOS_INLINE_FUNCTION
+// void bernstein_basis_1D(
+//         const CArrayKokkos <double> &interp,
+//         const double X) const {
       
-      for( int dof_i = 0; dof_i < num_elem_dofs_1d; dof_i++){
-        interp(dof_i) = eval_bernstein(num_elem_dofs_1d-1, dof_i, X);
-      }
-}
+//       for( int dof_i = 0; dof_i < num_elem_dofs_1d; dof_i++){
+//         interp(dof_i) = eval_bernstein(num_elem_dofs_1d-1, dof_i, X);
+//       }
+// }
 
-// WARNING WARNING WARNING: Change to for loop? //
-KOKKOS_INLINE_FUNCTION
-double eval_bernstein (
-        const size_t n,// polynomial order
-        const size_t v,// index
-        const double X) const { // point at which to evaluate polynomial 
+// // WARNING WARNING WARNING: Change to for loop? //
+// KOKKOS_INLINE_FUNCTION
+// double eval_bernstein (
+//         const size_t n,// polynomial order
+//         const size_t v,// index
+//         const double X) const { // point at which to evaluate polynomial 
       
-      if ( n == 0 && v != 0 ) return 0.0;
-      if ( n == 0 && v == 0 ) return 1.0;
-      if ( n < v ) return 0.0;
-      return 0.5*((1.0-X)*eval_bernstein(n-1, v, X) + (1.0+X)*eval_bernstein(n-1, v-1, X)); 
-}
+//       if ( n == 0 && v != 0 ) return 0.0;
+//       if ( n == 0 && v == 0 ) return 1.0;
+//       if ( n < v ) return 0.0;
+//       return 0.5*((1.0-X)*eval_bernstein(n-1, v, X) + (1.0+X)*eval_bernstein(n-1, v-1, X)); 
+// }
 
 
 };

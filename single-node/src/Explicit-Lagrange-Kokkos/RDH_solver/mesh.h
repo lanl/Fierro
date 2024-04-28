@@ -1862,7 +1862,6 @@ void setup(const CArrayKokkos <material_t> &material,
            const DViewCArrayKokkos <double> &elem_stress,
            const DViewCArrayKokkos <double> &elem_sspd,
            const DViewCArrayKokkos <double> &elem_sie,
-           CArrayKokkos <double> &source,
            const DViewCArrayKokkos <double> &elem_vol,
            const DViewCArrayKokkos <double> &elem_mass,
            const DViewCArrayKokkos <size_t> &elem_mat_id,
@@ -2036,9 +2035,16 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                               const DViewCArrayKokkos <double> &den,
                               const DViewCArrayKokkos <double> &sspd,
                               const DViewCArrayKokkos <double> &vol,
+                              const CArrayKokkos <double> &legendre_jacobian_inverse,
                               const mesh_t &mesh,
                               const fe_ref_elem_t &ref_elem,
                               const size_t stage);
+
+KOKKOS_FUNCTION
+void invert_matrix(CArrayKokkos <double> &mtx_inv,
+                   CArrayKokkos <double> &mtx,
+                   const mesh_t &mesh,
+                   const int size);
 
 void append_artificial_viscosity(DViewCArrayKokkos <double> &sigma,
                                  const CArrayKokkos <double> &sigma_a,
@@ -2085,8 +2091,7 @@ void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
                                     const CArrayKokkos <double> &legendre_jacobian_det,
                                     const DViewCArrayKokkos <double> &density );
 
-void assemble_A1(   CArrayKokkos <double> &A1,
-                    CArrayKokkos <double> &residual_in_elem,
+void assemble_L2(   CArrayKokkos <double> &L2,
                     const size_t stage,
                     const double dt,
                     const mesh_t &mesh,
@@ -2096,7 +2101,7 @@ void assemble_A1(   CArrayKokkos <double> &A1,
                     const CArrayKokkos <double> &mass_matrix,
                     const DViewCArrayKokkos <double> &node_vel );
 
-void assemble_T_A1( CArrayKokkos <double> &A1,
+void assemble_Thermo_L2( CArrayKokkos <double> &L2,
                     CArrayKokkos <double> &residual_in_elem,
                     const size_t stage,
                     const double dt,
@@ -2162,7 +2167,6 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                DViewCArrayKokkos <double> &zone_sie,
                CArrayKokkos <double> &M_e,
                CArrayKokkos <double> &zonal_mass,
-               CArrayKokkos <double> &source,
                DViewCArrayKokkos <double> &elem_vol,
                DViewCArrayKokkos <double> &mat_pt_div,
                DViewCArrayKokkos <double> &mat_pt_mass,
@@ -2225,15 +2229,10 @@ void get_timestep_HexN(mesh_t &mesh,
                   double &dt,
                   const double fuzz);
 
-void init_tn(mesh_t &mesh,
+void init_tn(const mesh_t &mesh,
              DViewCArrayKokkos <double> &node_coords,
              DViewCArrayKokkos <double> &node_vel,
-             DViewCArrayKokkos <double> &zone_sie,
-             DViewCArrayKokkos <double> &mat_pt_stress,
-             CArrayKokkos <double> &source,
-             const size_t num_dims,
-             const size_t num_elems,
-             const size_t num_nodes);
+             DViewCArrayKokkos <double> &zone_sie);
 
 KOKKOS_FUNCTION
 double heron(const double x1,

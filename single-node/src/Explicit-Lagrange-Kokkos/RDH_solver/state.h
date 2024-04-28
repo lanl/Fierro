@@ -69,8 +69,6 @@ struct zone_t {
 
     // lumped mass //
     CArrayKokkos <double> zonal_mass;
-
-    CArrayKokkos <double> source;
     
     size_t num_zones;
 
@@ -79,14 +77,12 @@ struct zone_t {
 		       size_t num_zones_in_elem)
                {
 
-        //thermodynamic variables are internal to the element and located at the zone centers
-        num_zones = num_elems*num_zones_in_elem; // to keep things global.
+        
+        num_zones = num_elems*num_zones_in_elem; 
         this->sie = CArray <double> (num_rk, num_zones);
         this->M_e = CArrayKokkos <double> (num_zones, num_zones, "M_e");
         this->M_e_inv = CArrayKokkos <double> (num_zones, num_zones, "M_e_inv");
-        this->zonal_mass = CArrayKokkos <double> (num_zones, "zonal_mass");
-        this->source = CArrayKokkos <double> (num_rk, num_zones, "source");
-    
+        this->zonal_mass = CArrayKokkos <double> (num_zones, "zonal_mass");    
     }
 };
 

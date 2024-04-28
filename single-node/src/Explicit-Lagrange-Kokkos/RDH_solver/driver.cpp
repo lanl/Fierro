@@ -279,9 +279,10 @@ int main(int argc, char *argv[]){
                                   mat_pt.gauss_legendre_jacobian,
                                   mat_pt.gauss_legendre_det_j,
                                   mat_pt.gauss_legendre_jacobian_inverse);
+        Kokkos::fence();
         
         get_vol(elem_vol, node_coords, ref_elem.gauss_leg_weights, mat_pt.gauss_legendre_det_j, mesh, elem, ref_elem);
-        
+        Kokkos::fence();
         // // double vol_check = 0.0;
         // for (int i = 0; i < mesh.num_elems; i++){
         //    vol_check += elem_vol(i);
@@ -346,7 +347,6 @@ int main(int argc, char *argv[]){
               mat_pt_stress,
               mat_pt_sspd,
               zone_sie,
-              zone.source,
               elem_vol,
               mat_pt_mass,
               elem_mat_id,
@@ -358,7 +358,7 @@ int main(int argc, char *argv[]){
               num_bcs,
               num_materials,
               num_state_vars);
-        
+        Kokkos::fence();
         // intialize time, time_step, and cycles
         time_value = 0.0;
         dt = dt_start;
@@ -374,6 +374,7 @@ int main(int argc, char *argv[]){
                                        ref_elem.gauss_leg_weights,
                                        mat_pt.gauss_legendre_det_j, 
                                        mat_pt_den);
+        Kokkos::fence();
         //printf("here\n");
         assemble_thermodynamic_mass_matrix(zone.M_e,
                                           zone.zonal_mass,
@@ -383,6 +384,7 @@ int main(int argc, char *argv[]){
                                           ref_elem.gauss_leg_weights,
                                           mat_pt.gauss_legendre_det_j, 
                                           mat_pt_den);
+        Kokkos::fence();
         // printf( " ############### \n");
         // printf(" thermo mass matrix \n");
         // printf( " ############### \n");
@@ -429,7 +431,6 @@ int main(int argc, char *argv[]){
                   mat_pt_sspd,
                   zone_sie,
                   zone.M_e,
-                  zone.source,
                   zone.zonal_mass,
                   elem_vol,
 		          mat_pt_div,

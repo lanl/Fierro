@@ -48,7 +48,7 @@ build_action="full-app"
 solver="RDH"
 machine="darwin"
 kokkos_build_type="cuda"
-build_corer="32"
+build_cores="32"
 
 
 # Define arrays of valid options
