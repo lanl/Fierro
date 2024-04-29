@@ -326,7 +326,6 @@ void FEA_Module_SGH::get_vol()
 /// \param Global element index
 /// \param View into nodal position data
 /// \param Runge Kutta time integration level
-/// WARNING: How does this work with const elem_vol?
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
