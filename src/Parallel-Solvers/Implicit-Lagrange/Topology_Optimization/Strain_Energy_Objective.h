@@ -119,9 +119,17 @@ public:
       constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     current_step++;
   }
+
+  /* --------------------------------------------------------------------------------------
+   Update objective value with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
     ROL::Ptr<const MV> zp = getVector(z);
@@ -149,10 +157,10 @@ public:
     return (current_strain_energy - target_strain_energy_)*(current_strain_energy - target_strain_energy_)/2;
   }
 
-  //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //g.zero();
-  //}
-  
+  /* --------------------------------------------------------------------------------------
+   Update gradient vector (g) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
     //get Tpetra multivector pointer from the ROL vector
     ROL::Ptr<const MV> zp = getVector(z);

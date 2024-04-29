@@ -94,6 +94,7 @@ private:
     ROL::Ptr<ROL_MV> ROL_Force;
     ROL::Ptr<ROL_MV> ROL_Velocities;
     ROL::Ptr<ROL_MV> ROL_Gradients;
+    real_t initial_kinetic_energy;
 
     bool useLC_; // Use linear form of energy.  Otherwise use quadratic form.
 
@@ -175,17 +176,10 @@ public:
         }
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn update
-    ///
-    /// \brief Evolve the physical simulation
-    ///
-    /// \param Design vector
-    /// \param Update type
-    /// \param Iteration
-    ///
-    /////////////////////////////////////////////////////////////////////////////
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
     void update(const ROL::Vector<real_t>& z, ROL::UpdateType type, int iter = -1)
     {
         if (set_module_type == FEA_MODULE_TYPE::SGH) {
@@ -196,17 +190,10 @@ public:
         }
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn update_elasticity
-    ///
-    /// \brief Evolve the simulation using dynamic elasticity
-    ///
-    /// \param Design vector
-    /// \param Update type
-    /// \param Iteration
-    ///
-    /////////////////////////////////////////////////////////////////////////////
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
     void update_elasticity(const ROL::Vector<real_t>& z, ROL::UpdateType type, int iter = -1)
     {
         // debug
@@ -266,17 +253,10 @@ public:
         }
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn update_sgh
-    ///
-    /// \brief Evolve the simulation using staggered grid hydrodynamics
-    ///
-    /// \param Design vector
-    /// \param Update type
-    /// \param Iteration
-    ///
-    /////////////////////////////////////////////////////////////////////////////
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
     void update_sgh(const ROL::Vector<real_t>& z, ROL::UpdateType type, int iter = -1)
     {
         // debug
@@ -340,19 +320,10 @@ public:
         }
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn value
-    ///
-    /// \brief Returns objective value for optimiation
-    ///
-    ///
-    /// \param Objective value vector
-    /// \param Value tolerance
-    ///
-    /// \return Objective value
-    ///
-    /////////////////////////////////////////////////////////////////////////////
+  /* --------------------------------------------------------------------------------------
+   Update objective value with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
     real_t value(const ROL::Vector<real_t>& z, real_t& tol)
     {
         // std::cout << "Started obj value on task " <<FEM_->myrank  << std::endl;
@@ -408,23 +379,16 @@ public:
         return objective_accumulation;
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn gradient
-    ///
-    /// \brief Calculate design gradient
-    ///
-    /// \param Vector of gradient values
-    /// \param Objective value vector
-    /// \param Design tolerance
-    ///
-    /////////////////////////////////////////////////////////////////////////////
+  /* --------------------------------------------------------------------------------------
+   Update gradient vector (g) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
     void gradient(ROL::Vector<real_t>& g, const ROL::Vector<real_t>& z, real_t& tol)
     {
         // std::cout << "Started obj gradient on task " <<FEM_->myrank  << std::endl;
         // get Tpetra multivector pointer from the ROL vector
-        ROL::Ptr<const MV> zp = getVector(z);
-        ROL::Ptr<MV> gp = getVector(g);
+        ROL::Ptr<const MV> zp = getVector(z); //pointer to design vector
+        ROL::Ptr<MV> gp = getVector(g); //pointer to gradient vector
 
         // communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
         // FEM_->gradient_print_sync=1;

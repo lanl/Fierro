@@ -125,10 +125,25 @@ public:
 
       real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_Heat);
       initial_heat_capacity_potential = current_heat_capacity_potential;
+      if(FEM_->simparam->optimization_options.objective_normalization_constant==0){
+        initial_heat_capacity_potential = current_heat_capacity_potential;
+      }
+      else{
+        initial_heat_capacity_potential = FEM_->simparam->optimization_options.objective_normalization_constant;
+      }
+
+      //save initial normalization value for restart data
+      if(FEM_->simparam->output_options.optimization_restart_file){
+        FEM_->simparam->optimization_options.objective_normalization_constant = initial_heat_capacity_potential;
+      }
       std::cout.precision(10);
       if(FEM_->myrank==0)
-      std::cout << "INITIAL HEAT CAPACITY POTENTIAL " << current_heat_capacity_potential << std::endl;
+      std::cout << "INITIAL HEAT CAPACITY POTENTIAL " << initial_heat_capacity_potential << std::endl;
   }
+
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     // //debug
@@ -186,6 +201,10 @@ public:
         FEM_->Implicit_Solver_Pointer_->output_design(current_step);
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update objective value with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
     //std::cout << "Started obj value on task " <<FEM_->myrank  << std::endl;
     ROL::Ptr<const MV> zp = getVector(z);
@@ -235,9 +254,9 @@ public:
     return current_heat_capacity_potential/initial_heat_capacity_potential;
   }
 
-  //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //g.zero();
-  //}
+  /* --------------------------------------------------------------------------------------
+   Update gradient vector (g) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
   
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
     //std::cout << "Started obj gradient on task " <<FEM_->myrank  << std::endl;
@@ -301,7 +320,11 @@ public:
     //std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
   }
   
-  
+  /* --------------------------------------------------------------------------------------
+   Update Hessian vector product (hv) using the differential design vector (v) and
+   the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
     // //debug
     // std::ostream &out = std::cout;

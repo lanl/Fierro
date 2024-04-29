@@ -139,7 +139,7 @@ void FEA_Module_SGH::setup()
     num_boundary_conditions = num_bcs;
 
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
-    const DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
+    DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
     const DCArrayKokkos<material_t> material = simparam->material;
 
     // Constitutive model data
@@ -270,15 +270,15 @@ void FEA_Module_SGH::setup()
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++) {
         // if volume is defined by an stl file, voxelize it
-        if (mat_fill(f_id).volume.type == VOLUME_TYPE::stl) {
-            mat_fill(f_id).volume.stl_to_voxel();
+        if (mat_fill.host(f_id).volume.type == VOLUME_TYPE::stl) {
+            mat_fill.host(f_id).volume.stl_to_voxel();
         }
         
         // if volume is defined by a vtk file, parse it
-        if (mat_fill(f_id).volume.type == VOLUME_TYPE::vtk) {
-            mat_fill(f_id).volume.vtk();
+        if (mat_fill.host(f_id).volume.type == VOLUME_TYPE::vtk) {
+            mat_fill.host(f_id).volume.vtk();
         }
-        
+        mat_fill.update_device();
         // parallel loop over elements in mesh
         // for (size_t elem_gid = 0; elem_gid <= rnum_elem; elem_gid++) {
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {

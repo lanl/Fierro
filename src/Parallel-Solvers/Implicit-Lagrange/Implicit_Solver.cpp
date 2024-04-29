@@ -2142,6 +2142,24 @@ void Implicit_Solver::parallel_tecplot_writer(bool mesh_conversion_flag){
 
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
+
+  if(simparam.output_options.optimization_restart_file){
+      // Write commented restart data to be used by Fierro
+      MPI_Offset current_stream_position;
+      MPI_Barrier(world);
+      MPI_File_sync(myfile_parallel);
+      MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+      MPI_File_sync(myfile_parallel);
+      MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+      current_line_stream.str("");
+      current_line_stream << std::endl << "#RESTART DATA: Objective_Normalization_Constant " <<
+                  simparam.optimization_options.objective_normalization_constant << std::endl;
+      if (myrank == 0)
+      {
+          MPI_File_write_at(myfile_parallel, current_stream_position, current_line_stream.str().c_str(),
+                      current_line_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
+      }
+  }
   
   MPI_File_close(&myfile_parallel);
   MPI_Barrier(world);
