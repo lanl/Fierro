@@ -125,9 +125,20 @@ public:
 
       real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_Heat);
       initial_heat_capacity_potential = current_heat_capacity_potential;
+      if(FEM_->simparam->optimization_options.objective_normalization_constant==0){
+        initial_heat_capacity_potential = current_heat_capacity_potential;
+      }
+      else{
+        initial_heat_capacity_potential = FEM_->simparam->optimization_options.objective_normalization_constant;
+      }
+
+      //save initial normalization value for restart data
+      if(FEM_->simparam->output_options.optimization_restart_file){
+        FEM_->simparam->optimization_options.objective_normalization_constant = initial_heat_capacity_potential;
+      }
       std::cout.precision(10);
       if(FEM_->myrank==0)
-      std::cout << "INITIAL HEAT CAPACITY POTENTIAL " << current_heat_capacity_potential << std::endl;
+      std::cout << "INITIAL HEAT CAPACITY POTENTIAL " << initial_heat_capacity_potential << std::endl;
   }
 
   /* --------------------------------------------------------------------------------------

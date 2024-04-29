@@ -119,6 +119,16 @@ public:
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
     initial_mass = ROL_Element_Masses->reduce(sumreduc);
+    if(FEM_->simparam->optimization_options.objective_normalization_constant==0){
+        initial_mass = ROL_Element_Masses->reduce(sumreduc);
+    }
+    else{
+        initial_mass = FEM_->simparam->optimization_options.objective_normalization_constant;
+    }
+    //save initial normalization value for restart data
+    if(FEM_->simparam->output_options.optimization_restart_file){
+      FEM_->simparam->optimization_options.objective_normalization_constant = initial_mass;
+    }
     //debug print
     std::cout << "INITIAL SYSTEM MASS: " << initial_mass << std::endl;
   }

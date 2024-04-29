@@ -19,7 +19,7 @@ struct Output_Options : Yaml::DerivedFields, Yaml::ValidatedYaml {
   bool restart_file = false;
   bool optimization_restart_file = false;
   size_t restart_step_interval = 100000;
-  size_t optimization_restart_step_interval = 10;
+  size_t optimization_restart_step_interval = 0;
     
   std::string output_file_location = "vtk/";
 };
