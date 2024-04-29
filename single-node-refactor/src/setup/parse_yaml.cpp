@@ -595,7 +595,6 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
                 std::cout << "\tlength = " << origin << std::endl;
             }
 
-            // get the origin numbers, values are words
             std::vector<std::string> numbers = exact_array_values(origin, ",");
 
             std::vector<double> val;
@@ -1068,9 +1067,9 @@ void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills)
 
                 // storing the origin values as (x1,y1,z1)
                 RUN({
-                    region_fills(reg_id).x1 = x1;
-                    region_fills(reg_id).y1 = y1;
-                    region_fills(reg_id).z1 = z1;
+                    region_fills(reg_id).origin[0] = x1;
+                    region_fills(reg_id).origin[1] = y1;
+                    region_fills(reg_id).origin[2] = z1;
                 });
             } // origin
             else {

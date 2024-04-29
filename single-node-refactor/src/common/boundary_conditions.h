@@ -61,7 +61,8 @@ enum bdy_hydro_conds
     reflected = 3,
     fixed = 4,
     pressure = 5,
-    temperature = 6
+    temperature = 6,
+    contact = 7
 };
 
 // Direction to apply boundary conditions
@@ -91,7 +92,8 @@ static std::map<std::string, boundary_conds::bdy_hydro_conds> bc_type_map
     { "reflected", boundary_conds::reflected },
     { "fixed", boundary_conds::fixed },
     { "pressure", boundary_conds::pressure },
-    { "temperature", boundary_conds::pressure }
+    { "temperature", boundary_conds::temperature },
+    { "contact", boundary_conds::contact }
 };
 
 static std::map<std::string, boundary_conds::bdy_direction> bc_direction_map
