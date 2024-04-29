@@ -236,8 +236,12 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                             node.mass,
                             corner.force);
 
-            // ---- apply force boundary conditions to the boundary patches----
+            // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
+
+
+            // ---- apply contact boundary conditions to the boundary patches----
+            boundary_contact(mesh, sim_param.boundary_conditions, node.vel, time_value);
 
             // mpi_coms();
 

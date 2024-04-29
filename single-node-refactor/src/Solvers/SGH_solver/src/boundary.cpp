@@ -102,3 +102,26 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
 
     return;
 } // end boundary_velocity function
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn boundary_velocity
+///
+/// \brief Evolves the boundary according to a give velocity
+///
+/// \param The simulation mesh
+/// \param An array of boundary_condition_t that contain information about BCs
+/// \param A view into the nodal velocity array
+/// \param The current simulation time
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGH::boundary_contact(const mesh_t&     mesh,
+    const CArrayKokkos<boundary_condition_t>& boundary,
+    DCArrayKokkos<double>& node_vel,
+    const double time_value)
+{
+    
+
+    return;
+} // end boundary_contact function

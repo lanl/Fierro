@@ -149,6 +149,12 @@ public:
         DCArrayKokkos<double>& node_vel,
         const double time_value);
 
+    void boundary_contact(
+        const mesh_t& mesh,
+        const CArrayKokkos<boundary_condition_t>& boundary,
+        DCArrayKokkos<double>& node_vel,
+        const double time_value);
+
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(
         double rk_alpha,
