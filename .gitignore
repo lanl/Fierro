@@ -13,3 +13,5 @@ main
 cmake_uninstall.cmake
 CTestTestfile.cmake
 install
+ensight
+scratch.yaml

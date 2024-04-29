@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -47,7 +47,7 @@ namespace region
 // for tagging boundary faces
 enum vol_tag
 {
-    global = 0,         // tag every elements in the mesh
+    global = 0,         // tag every element in the mesh
     box = 1,            // tag all elements inside a box
     cylinder = 2,       // tag all elements inside a cylinder
     sphere = 3,         // tag all elements inside a sphere
@@ -59,6 +59,7 @@ enum vol_tag
 static std::map<std::string, region::vol_tag> region_type_map
 {
     { "global", region::global },
+    { "box", region::box },
     { "sphere", region::sphere },
     { "planes", region::planes },
     { "cylinder", region::cylinder },
