@@ -175,14 +175,6 @@ public:
     ///
     /// \brief <insert brief description>
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
     ///
     /////////////////////////////////////////////////////////////////////////////
     void run()
@@ -199,14 +191,6 @@ public:
     ///
     /// \brief <insert brief description>
     ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
     ///
     /////////////////////////////////////////////////////////////////////////////
     void finalize()
@@ -283,17 +267,17 @@ public:
                         else{
                             elem_coords[2] = 0.0;
                         }
-                    } // end loop over nodes in element
-                    elem_coords[0] = elem_coords[0] / mesh.num_nodes_in_elem;
-                    elem_coords[1] = elem_coords[1] / mesh.num_nodes_in_elem;
-                    elem_coords[2] = elem_coords[2] / mesh.num_nodes_in_elem;
+                    } // end loop over nodes in element (NOTE: Translating using origin so below check works)
+                    elem_coords[0] = (elem_coords[0] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[0];
+                    elem_coords[1] = (elem_coords[1] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[1];
+                    elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[2];
 
-                    // spherical radius
+                    // spherical radius 
                     double radius = sqrt(elem_coords[0] * elem_coords[0] +
                                           elem_coords[1] * elem_coords[1] +
                                           elem_coords[2] * elem_coords[2]);
 
-                    // cylinderical radius
+                    // cylindrical radius
                     double radius_cyl = sqrt(elem_coords[0] * elem_coords[0] +
                                               elem_coords[1] * elem_coords[1]);
 
@@ -309,9 +293,20 @@ public:
                             }
                         case region::box:
                             {
-                                if (elem_coords[0] >= sim_param.region_fills(f_id).x1 && elem_coords[0] <= sim_param.region_fills(f_id).x2
-                                    && elem_coords[1] >= sim_param.region_fills(f_id).y1 && elem_coords[1] <= sim_param.region_fills(f_id).y2
-                                    && elem_coords[2] >= sim_param.region_fills(f_id).z1 && elem_coords[2] <= sim_param.region_fills(f_id).z2) {
+
+                                double x_lower_bound = sim_param.region_fills(f_id).x1;
+                                double x_upper_bound = sim_param.region_fills(f_id).x2;
+
+                                double y_lower_bound = sim_param.region_fills(f_id).y1;
+                                double y_upper_bound = sim_param.region_fills(f_id).y2;
+
+                                double z_lower_bound = sim_param.region_fills(f_id).z1;
+                                double z_upper_bound = sim_param.region_fills(f_id).z2;
+
+
+                                if (elem_coords[0] >= x_lower_bound && elem_coords[0] <= x_upper_bound &&
+                                    elem_coords[1] >= y_lower_bound && elem_coords[1] <= y_upper_bound &&
+                                    elem_coords[2] >= z_lower_bound && elem_coords[2] <= z_upper_bound) {
                                     fill_this = 1;
                                 }
                                 break;
