@@ -1027,6 +1027,19 @@ void Explicit_Solver::parallel_vtk_writer_new()
       data_ptr, all_element_map, data_num_comps, num_elem, world, myfile_parallel, element_sorting_importer);
     }
 
+    if(simparam.output_options.optimization_restart_file){
+        // Write commented restart data to be used by Fierro
+        str_stream.str("");
+        str_stream << std::endl << "#RESTART DATA: Objective_Normalization_Constant " <<
+                    simparam.optimization_options.objective_normalization_constant << std::endl;
+        current_offset = mpi_get_file_position_shared(world, myfile_parallel);
+        if (myrank == 0)
+        {
+            MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
+                        str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
+        }
+    }
+
     MPI_Barrier(world);
     MPI_File_sync(myfile_parallel);
     MPI_File_close(&myfile_parallel);

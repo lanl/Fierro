@@ -117,10 +117,18 @@ public:
       current_step = 0;
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     current_step++;
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update constraint value (c) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+  
   void value(ROL::Vector<real_t> &c, const ROL::Vector<real_t> &z, real_t &tol ) {
     ROL::Ptr<const MV> zp = getVector(z);
     //ROL::Ptr<MV> cp = getVector(c);

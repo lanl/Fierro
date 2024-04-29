@@ -112,6 +112,7 @@ struct Optimization_Options: Yaml::DerivedFields {
   double minimum_density = 0;
   double maximum_density = 1;
   double shell_density = 1;
+  real_t objective_normalization_constant = 0;
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
   std::vector<MultiObjectiveModule> multi_objective_modules;
@@ -134,5 +135,5 @@ IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options,
   simp_penalty_power, density_epsilon, thick_condition_boundary,
   optimization_output_freq, density_filter, minimum_density, maximum_density,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
-  variable_outer_shell, shell_density
+  variable_outer_shell, shell_density, objective_normalization_constant
 )

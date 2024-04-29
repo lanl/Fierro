@@ -18,6 +18,10 @@ struct Simulation_Parameters_Explicit : Simulation_Parameters {
         for (auto& mod : fea_module_parameters) 
             for (auto v : mod->default_output_fields)
                 output_options.output_fields.insert(v);
+
+        if(topology_optimization_on&&output_options.optimization_restart_file){
+            output_options.output_fields.insert(FIELD::design_density);
+        }
     }
     
     void derive() {
