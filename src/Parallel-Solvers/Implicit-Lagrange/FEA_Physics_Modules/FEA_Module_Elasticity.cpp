@@ -245,11 +245,15 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = DISPLACEMENT_CONDITION;
           }
-          if(!substring.compare("Pressure")){
-            
+          else if(!substring.compare("Pressure")){
             //std::cout << "FOUND PRESSURE ZONE" << std::endl;
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = SURFACE_LOADING_CONDITION;
+          }
+          else if(!substring.compare("Displacements")){
+            //std::cout << "FOUND BC ZONE" << std::endl;
+            searching_for_conditions = found_no_conditions = false;
+            zone_condition_type = ANSYS_DISPLACEMENT_IMPORT;
           }
         } //while
       }//while
@@ -287,6 +291,83 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       //broadcast number of fixed support conditions to read in (global ids)
       
       MPI_Bcast(&dof_count,1,MPI_LONG_LONG_INT,0,world);
+
+      //calculate buffer iterations to read number of lines
+      buffer_iterations = dof_count/buffer_lines;
+
+      if(dof_count%buffer_lines!=0) buffer_iterations++;
+      read_index_start = 0;
+
+      //allocate read buffer
+      read_buffer_indices = CArrayKokkos<long long int, array_layout, HostSpace, memory_traits>(buffer_lines);
+      //read global indices being fixed on rank zero then broadcast buffer until list is complete
+      for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+        //pack buffer on rank 0
+        if(myrank==0&&buffer_iteration<buffer_iterations-1){
+          for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
+            *in >> read_buffer_indices(buffer_loop);
+            read_buffer_indices(buffer_loop);
+          }
+        }
+        else if(myrank==0){
+          buffer_loop=0;
+          while(buffer_iteration*buffer_lines+buffer_loop < dof_count) {
+            *in >> read_buffer_indices(buffer_loop);
+            read_buffer_indices(buffer_loop);
+            buffer_loop++;
+          }
+        }
+
+        //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+        MPI_Bcast(read_buffer_indices.pointer(),buffer_lines,MPI_LONG_LONG_INT,0,world);
+        //broadcast how many nodes were read into this buffer iteration
+        MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
+
+        //debug_print
+        //std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+        //for(int iprint=0; iprint < buffer_loop; iprint++)
+        //std::cout<<"buffer packing: " << read_buffer_indices(iprint) << std::endl;
+        //return;
+
+        //determine which data to store in the swage mesh members (the local node data)
+        //loop through read buffer
+        for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
+          node_gid = read_buffer_indices(scan_loop)-1; //read indices are base 1, we need base 0
+          //let map decide if this node id belongs locally; if yes store data
+          if(all_node_map->isNodeGlobalElement(node_gid)){
+            //set local node index in this mpi rank
+            local_node_index = all_node_map->getLocalElement(node_gid);
+            if(map->isNodeGlobalElement(node_gid)){
+              Number_DOF_BCS+=num_dim;
+            }
+            if(nonzero_bc_flag){
+
+            }
+            else{
+              local_dof_id = num_dim*local_node_index;
+              Node_DOF_Boundary_Condition_Type(local_dof_id) = DISPLACEMENT_CONDITION;
+              Node_DOF_Displacement_Boundary_Conditions(local_dof_id) = 0;
+              Node_DOF_Boundary_Condition_Type(local_dof_id + 1) = DISPLACEMENT_CONDITION;
+              Node_DOF_Displacement_Boundary_Conditions(local_dof_id + 1) = 0;
+              if(num_dim==3){
+                Node_DOF_Boundary_Condition_Type(local_dof_id + 2) = DISPLACEMENT_CONDITION;
+                Node_DOF_Displacement_Boundary_Conditions(local_dof_id + 2) = 0;
+              }
+            }
+          }
+        }
+        read_index_start+=buffer_lines;
+      }
+    }
+
+    if(zone_condition_type==ANSYS_DISPLACEMENT_IMPORT){
+      if(myrank==0){
+        //skip 7 lines
+        for(int iskip = 0; iskip < 7; iskip++){
+          getline(*in, read_line);
+          std::cout << read_line << std::endl;
+        }
+      }
 
       //calculate buffer iterations to read number of lines
       buffer_iterations = dof_count/buffer_lines;
@@ -669,7 +750,6 @@ void FEA_Module_Elasticity::read_conditions_abaqus_inp(std::ifstream *in, std::s
             zone_condition_type = DISPLACEMENT_CONDITION;
           }
           if(!substring.compare("Pressure")){
-            
             //std::cout << "FOUND PRESSURE ZONE" << std::endl;
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = SURFACE_LOADING_CONDITION;

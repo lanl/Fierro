@@ -905,7 +905,7 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
       while (!line_parse.eof()){
         line_parse >> substring;
         //std::cout << substring << std::endl;
-        if(!substring.compare("Supports")||!substring.compare("Pressure")){
+        if(!substring.compare("Supports")||!substring.compare("Pressure")||!substring.compare("Displacements")){
           No_Conditions = searching_for_conditions = false;
           break;
         }
