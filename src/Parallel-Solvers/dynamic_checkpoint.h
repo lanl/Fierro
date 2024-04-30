@@ -37,10 +37,12 @@
 
 #include "matar.h"
 #include "utilities.h"
-
+#include <Teuchos_RCP.hpp>
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
+#include <Tpetra_MultiVector.hpp>
 #include <Kokkos_Core.hpp>
+#include "Tpetra_Details_DefaultTypes.hpp"
 
 using namespace utils;
 using namespace mtr;
@@ -49,10 +51,6 @@ class Dynamic_Checkpoint;
 
 class Dynamic_Checkpoint
 {
-private:
-
-    int saved_timestep;
-
 public:
     // Trilinos type definitions
     typedef Tpetra::Map<>::local_ordinal_type LO;
@@ -60,21 +58,50 @@ public:
     typedef Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>::size_type SizeType;
     using traits = Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>;
 
-    using array_layout    = typename traits::array_layout;
-    using execution_space = typename traits::execution_space;
-    using device_type     = typename traits::device_type;
-    using memory_traits   = typename traits::memory_traits;
+    typedef Tpetra::MultiVector<real_t, LO, GO> MV;
+    typedef Tpetra::MultiVector<GO, LO, GO> MCONN;
 
     // Default Constructor
     Dynamic_Checkpoint() {}
 
-    // Constructor with initialization
-    Dynamic_Checkpoint(CArray<GO>& nodes_init)
-    {
+    // Copy Constructor
+    Dynamic_Checkpoint(Dynamic_Checkpoint &copied_checkpoint){
+        saved_timestep = copied_checkpoint.saved_timestep;
+        num_state_vectors = copied_checkpoint.num_state_vectors;
+        state_vectors = copied_checkpoint.state_vectors;
     }
 
     // Destructor
     ~Dynamic_Checkpoint() {}
+
+    //assignment operator
+    Dynamic_Checkpoint& operator= (const Dynamic_Checkpoint &assigned_checkpoint){
+        saved_timestep = assigned_checkpoint.saved_timestep;
+        num_state_vectors = assigned_checkpoint.num_state_vectors;
+        state_vectors = assigned_checkpoint.state_vectors;
+        return *this;
+    }
+
+    //function to change timestep
+    void change_timestep(int new_timestep){
+        saved_timestep = new_timestep;
+    }
+
+    //function to change stored vectors
+    void change_vectors(Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> new_state_vectors){
+        state_vectors = new_state_vectors;
+    }
+
+    //function to change one of the stored vectors
+    void change_vector(int vector_index, Teuchos::RCP<MV> new_vector){
+        (*state_vectors)[vector_index] = new_vector;
+    }
+
+    private:
+    //checkpoint state data
+    int saved_timestep;
+    int num_state_vectors;
+    Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> state_vectors;
 
 };
 

@@ -59,6 +59,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
+#include "dynamic_checkpoint.h"
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 #include "FEA_Module_SGH.h"
