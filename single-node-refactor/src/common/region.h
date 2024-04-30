@@ -120,8 +120,6 @@ static std::vector<std::string> str_region_inps
     "material_id",
     "x1",
     "x2",
-    "x1",
-    "x2",
     "y1",
     "y2",
     "z1",

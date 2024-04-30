@@ -51,32 +51,13 @@
 #include <sys/resource.h>
 #include <ctime>
 
-Solver::Solver() // Simulation_Parameters& _simparam) : simparam(_simparam)
+Solver::Solver()
 {
 }
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn exit_solver
-///
-/// \brief End the solve
-///
-/////////////////////////////////////////////////////////////////////////////
-void Solver::exit_solver(int status)
-{
-    // Kokkos::finalize();
-    // // MPI_Barrier(MPI_COMM_WORLD);
-    // // MPI_Finalize();
-    // exit(status);
-}
 
 Solver::~Solver()
 {
-    // // destroy FEA modules
-    // for (int imodule = 0; imodule < nfea_modules; imodule++)
-    // {
-    //     delete fea_modules[imodule];
-    // }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -96,7 +77,6 @@ double Solver::CPU_Time()
     auto time = std::chrono::system_clock::now();
     auto time_duration = time.time_since_epoch();
 
-    // double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
     double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_duration - zero_time_duration).count();
     calc_time *= 1e-09;
 

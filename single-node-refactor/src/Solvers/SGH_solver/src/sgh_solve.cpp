@@ -49,8 +49,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
-    printf("Writing outputs to file at %f \n", time_value);
-    mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
+    // printf("Writing outputs to file at %f \n", time_value);
+    // mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
 
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
@@ -64,6 +64,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
     double IE_loc_sum = 0.0;
     double KE_loc_sum = 0.0;
+
+    double cached_pregraphics_dt = fuzz;
 
     // save the nodal mass
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
@@ -107,11 +109,13 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
+
         // stop calculation if flag
         if (stop_calc == 1) {
             break;
         }
 
+        cached_pregraphics_dt = dt;
         // get the step
         if (mesh.num_dims == 2) {
             get_timestep2D(mesh,
@@ -361,6 +365,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
 
             graphics_time = time_value + graphics_dt_ival;
+
+            dt = cached_pregraphics_dt;
         } // end if
 
         // end of calculation
