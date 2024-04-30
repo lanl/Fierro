@@ -13,10 +13,3 @@ main
 cmake_uninstall.cmake
 CTestTestfile.cmake
 install
-ensight
-scratch.yaml
-install-serial
-install-pthreads
-install-openmp
-.idea
-.DS_Store
