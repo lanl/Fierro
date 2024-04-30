@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -171,104 +171,104 @@ double LU_determ(
 /* ------------------------- */
 /* LU decomposition function */
 /* ------------------------- */
-template<typename T1, typename T2>
-int LU_decompos(
-    T1&  source_mat, // matrix to invert
-    T2&  indx,       // permutations
-    int& parity,     // parity (+1 0r -1)
-    const int n)     // matrix size
-{
-    int i, imax, k; // Indexing
-
-    double big, sum, temp; // useful storage
-
-    // double vv[n];       // temp arrary for solver
-
-    DCArrayKokkos<double> vv = DCArrayKokkos<double>(n);
-
-    parity = 1;
-    /* search for the largest element in each row; save the scaling in the
-    temporary array vv and return zero if the matrix is singular */
-    FOR_ALL(i, 0, n, {
-        big = 0.;
-        for (int j = 0; j < n; j++) {
-            if ((temp = fabs(source_mat(i, j))) > big) {
-                big = temp;
-            }
-        }
-
-        if (big == 0.) {
-            return(0);
-        }
-
-        vv(i) = big;
-    });
-
-    /* the main loop for the Crout's algorithm */
-    for (int j = 0; j < n; j++) {
-        /* this is the part a) of the algorithm except for i==j */
-        for (i = 0; i < j; i++) {
-            sum = source_mat(i, j);
-
-            for (k = 0; k < i; k++) {
-                sum -= source_mat(i, k) * source_mat(k, j);
-            }
-
-            source_mat(i, j) = sum;
-        }
-
-        /* initialize for the search for the largest pivot element */
-        big  = 0.;
-        imax = j;
-
-        /* this is the part a) for i==j and part b) for i>j + pivot search */
-        for (i = j; i < n; i++) {
-            sum = source_mat(i, j);
-
-            for (k = 0; k < j; k++) {
-                sum -= source_mat(i, k) * source_mat(k, j);
-            }
-
-            source_mat(i, j) = sum;
-
-            /* is the figure of merit for the pivot better than the best so far? */
-            if ((temp = vv(i) * fabs(sum)) >= big) {
-                big = temp; imax = i;
-            }
-        }
-
-        /* interchange rows, if needed, change parity and the scale factor */
-        if (imax != j) {
-            for (k = 0; k < n; k++) {
-                temp = source_mat(imax, k);
-                source_mat(imax, k) = source_mat(j, k);
-                source_mat(j, k)    = temp;
-            }
-
-            parity   = -(parity);
-            vv(imax) = vv(j);
-        }
-
-        /* store the index */
-        indx(j) = imax;
-        /* if the pivot element is zero, the matrix is singular but for some
-        applications a tiny number is desirable instead */
-
-        if (source_mat(j, j) == 0.) {
-            source_mat(j, j) = TINY;
-        }
-        /* finally, divide by the pivot element */
-
-        if (j < n - 1) {
-            temp = 1. / source_mat(j, j);
-            for (i = j + 1; i < n; i++) {
-                source_mat(i, j) *= temp;
-            }
-        }
-    }
-
-    return(1);
-}
+//template<typename T1, typename T2>
+//int LU_decompos(
+//    T1&  source_mat, // matrix to invert
+//    T2&  indx,       // permutations
+//    int& parity,     // parity (+1 0r -1)
+//    const int n)     // matrix size
+//{
+//    int i, imax, k; // Indexing
+//
+//    double big, sum, temp; // useful storage
+//
+//    // double vv[n];       // temp arrary for solver
+//
+//    DCArrayKokkos<double> vv = DCArrayKokkos<double>(n);
+//
+//    parity = 1;
+//    /* search for the largest element in each row; save the scaling in the
+//    temporary array vv and return zero if the matrix is singular */
+//    FOR_ALL(i, 0, n, {
+//        big = 0.;
+//        for (int j = 0; j < n; j++) {
+//            if ((temp = fabs(source_mat(i, j))) > big) {
+//                big = temp;
+//            }
+//        }
+//
+//        if (big == 0.) {
+//            return(0);
+//        }
+//
+//        vv(i) = big;
+//    });
+//
+//    /* the main loop for the Crout's algorithm */
+//    for (int j = 0; j < n; j++) {
+//        /* this is the part a) of the algorithm except for i==j */
+//        for (i = 0; i < j; i++) {
+//            sum = source_mat(i, j);
+//
+//            for (k = 0; k < i; k++) {
+//                sum -= source_mat(i, k) * source_mat(k, j);
+//            }
+//
+//            source_mat(i, j) = sum;
+//        }
+//
+//        /* initialize for the search for the largest pivot element */
+//        big  = 0.;
+//        imax = j;
+//
+//        /* this is the part a) for i==j and part b) for i>j + pivot search */
+//        for (i = j; i < n; i++) {
+//            sum = source_mat(i, j);
+//
+//            for (k = 0; k < j; k++) {
+//                sum -= source_mat(i, k) * source_mat(k, j);
+//            }
+//
+//            source_mat(i, j) = sum;
+//
+//            /* is the figure of merit for the pivot better than the best so far? */
+//            if ((temp = vv(i) * fabs(sum)) >= big) {
+//                big = temp; imax = i;
+//            }
+//        }
+//
+//        /* interchange rows, if needed, change parity and the scale factor */
+//        if (imax != j) {
+//            for (k = 0; k < n; k++) {
+//                temp = source_mat(imax, k);
+//                source_mat(imax, k) = source_mat(j, k);
+//                source_mat(j, k)    = temp;
+//            }
+//
+//            parity   = -(parity);
+//            vv(imax) = vv(j);
+//        }
+//
+//        /* store the index */
+//        indx(j) = imax;
+//        /* if the pivot element is zero, the matrix is singular but for some
+//        applications a tiny number is desirable instead */
+//
+//        if (source_mat(j, j) == 0.) {
+//            source_mat(j, j) = TINY;
+//        }
+//        /* finally, divide by the pivot element */
+//
+//        if (j < n - 1) {
+//            temp = 1. / source_mat(j, j);
+//            for (i = j + 1; i < n; i++) {
+//                source_mat(i, j) *= temp;
+//            }
+//        }
+//    }
+//
+//    return(1);
+//}
 
 /* ----------------------------- */
 /* LU back substitution function */
