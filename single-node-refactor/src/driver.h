@@ -189,7 +189,7 @@ public:
         std::cout << "Inside driver finalize" << std::endl;
         for (auto& solver : solvers) {
             if (solver->finalize_flag) {
-                solver->solver_finalize();
+                solver->finalize(sim_param);
             }
         }
         // destroy FEA modules
