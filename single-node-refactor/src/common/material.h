@@ -206,9 +206,9 @@ static std::map<std::string, eos_type> eos_map
 };
 
 // add the strength models here
-typedef void (*strength_type)(double, double);
+typedef void (*strength_ptr)(double, double);
 
-static std::map<std::string, strength_type> strength_map
+static std::map<std::string, strength_ptr> strength_map
 {
     { "elastic_plastic", elastic_plastic }
 };
