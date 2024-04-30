@@ -20,7 +20,6 @@ show_help() {
     echo " "
     echo "      --solver                        Builds the desired solver to run. The default action is 'SGH'"
     echo " "
-    echo "          1DSGH                       builds the 1D SGH solver"
     echo "          SGH                         builds the SGH solver"
     echo " "
     echo "      --kokkos_build_type             The desired kokkos parallel backend to use. The default is 'serial'"
@@ -50,7 +49,7 @@ build_cores="6"
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-kokkos" "fierro")
-valid_solver=("1DSGH" "SGH")
+valid_solver=("SGH")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_machines=("darwin" "chicoma" "linux" "mac")
 
