@@ -12,14 +12,12 @@ cmake_options=(
 #-D CMAKE_CXX_FLAGS="-I${matardir}/src"
 )
 
-if [ "$solver" = "1DSGH" ]; then
-    cmake_options+=(
-        -D BUILD_1D_KOKKOS_SGH=ON
-    )
-else
+if [ "$solver" = "SGH" ]; then
     cmake_options+=(
         -D BUILD_KOKKOS_SGH=ON
     )
+else
+    echo "Error: Solver not supported."
 fi
 
 # Print CMake options for reference
