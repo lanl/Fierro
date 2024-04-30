@@ -56,13 +56,14 @@ show_help() {
     return 1
 }
 
+
 # Initialize variables with default values
 build_action="full-app"
-solver="all"
-machine="msu"
-kokkos_build_type="openmp"
+solver="explicit"
+machine="linux"
+kokkos_build_type="serial"
 heffte_build_type="fftw"
-build_cores="6"
+build_cores="1"
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-trilinos" "install-hdf5" "install-heffte" "install-uncrustify" "fierro")
