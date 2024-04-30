@@ -56,7 +56,6 @@ show_help() {
     return 1
 }
 
-
 # Initialize variables with default values
 build_action="full-app"
 solver="explicit"
