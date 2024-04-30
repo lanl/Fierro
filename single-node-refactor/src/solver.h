@@ -79,16 +79,10 @@ public:
 
     virtual ~Solver();
 
-    virtual void initialize() {}
-    virtual void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) {}
-
+    virtual void initialize(simulation_parameters_t& sim_param) = 0;
+    virtual void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) = 0;
     virtual void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) = 0;
-
-    void solver_setup() {}
-
-    void solver_finalize() {}
-
-    void exit_solver(int status);
+    virtual void finalize(simulation_parameters_t& sim_param) = 0;
 
     // debug and system functions/variables
     double CPU_Time();
