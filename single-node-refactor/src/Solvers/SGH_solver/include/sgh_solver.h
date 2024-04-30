@@ -82,7 +82,7 @@ public:
     ~SGH() = default;
 
     // Initialize data specific to the SGH solver
-    void initialize(simulation_parameters_t& sim_param)
+    void initialize(simulation_parameters_t& sim_param) override
     {
         // Dimensions
         num_dims = 3;
@@ -124,7 +124,7 @@ public:
     /// \brief Calls setup_sgh, which initializes state, and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
+    void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) override
     {
         std::cout << "INSIDE SETUP FOR SGH SOLVER" << std::endl;
 
@@ -134,13 +134,19 @@ public:
 
     /////////////////////////////////////////////////////////////////////////////
     ///
-    /// \fn run
+    /// \fn execute
     ///
     /// \brief Calls the solve function which evolves the state
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner);
+    void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) override;
+
+
+    void finalize(simulation_parameters_t& sim_param) override
+    {
+        // Any finalize goes here, remove allocated memory, etc
+    }
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(

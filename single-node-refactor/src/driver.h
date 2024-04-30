@@ -37,8 +37,6 @@
 #include "solver.h"
 #include "simulation_parameters.h"
 
-#include "linear_algebra.h"
-
 // Headers for solver classes
 #include "sgh_solver.h"
 
@@ -149,16 +147,7 @@ public:
     ///
     /// \fn setup
     ///
-    /// \brief <insert brief description>
-    ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \brief Calls the setup function for each of the created solvers
     ///
     /////////////////////////////////////////////////////////////////////////////
     void setup()
@@ -173,8 +162,7 @@ public:
     ///
     /// \fn run
     ///
-    /// \brief <insert brief description>
-    ///
+    /// \brief Calls the exectue function for each of the created solvers
     ///
     /////////////////////////////////////////////////////////////////////////////
     void run()
@@ -189,7 +177,8 @@ public:
     ///
     /// \fn finalize
     ///
-    /// \brief <insert brief description>
+    /// \brief Calls the finalize function of each of the solvers assuming the 
+    ///        finalize function exists and deletes the solver
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
@@ -198,7 +187,7 @@ public:
         std::cout << "Inside driver finalize" << std::endl;
         for (auto& solver : solvers) {
             if (solver->finalize_flag) {
-                solver->solver_finalize();
+                solver->finalize(sim_param);
             }
         }
         // destroy FEA modules
@@ -212,16 +201,7 @@ public:
     ///
     /// \fn fill_regions
     ///
-    /// \brief <insert brief description>
-    ///
-    /// <Insert longer more detailed description which
-    /// can span multiple lines if needed>
-    ///
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    /// \param <function parameter description>
-    ///
-    /// \return <return type and definition description if not void>
+    /// \brief Fills mesh regions based on YAML input
     ///
     /////////////////////////////////////////////////////////////////////////////
     void fill_regions()

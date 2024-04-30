@@ -44,16 +44,8 @@
 ///
 /// \fn main
 ///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \brief Takes in a YAML input, creates a driver, and build simulation based
+///        on the YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])

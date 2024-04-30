@@ -59,6 +59,7 @@ enum vol_tag
 static std::map<std::string, region::vol_tag> region_type_map
 {
     { "global", region::global },
+    { "box", region::box },
     { "sphere", region::sphere },
     { "planes", region::planes },
     { "cylinder", region::cylinder },
@@ -117,8 +118,6 @@ static std::vector<std::string> str_region_inps
 {
     "type",
     "material_id",
-    "x1",
-    "x2",
     "x1",
     "x2",
     "y1",
