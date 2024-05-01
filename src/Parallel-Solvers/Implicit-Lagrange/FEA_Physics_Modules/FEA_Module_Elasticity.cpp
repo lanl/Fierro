@@ -199,7 +199,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   CArrayKokkos<long long int, array_layout, HostSpace, memory_traits> read_buffer_indices;
   int buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
   size_t read_index_start, node_rid, elem_gid;
-  LO local_dof_id;
+  LO local_dof_id, dof_dim_offset;
   GO node_gid;
   real_t dof_value;
   host_vec_array node_densities;
@@ -369,34 +369,41 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         }
       }
 
-      //calculate buffer iterations to read number of lines
-      buffer_iterations = dof_count/buffer_lines;
+      //Keep reading until a dof displacement setting line is not found
+      bool not_done_reading = true;
 
-      if(dof_count%buffer_lines!=0) buffer_iterations++;
-      read_index_start = 0;
-
-      //allocate read buffer
-      read_buffer_indices = CArrayKokkos<long long int, array_layout, HostSpace, memory_traits>(buffer_lines);
+      //allocate read buffer; format has 4 words per line of dof displacement data; we dont need the first substring
+      read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines, 3, max_word);
       //read global indices being fixed on rank zero then broadcast buffer until list is complete
-      for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+      while(not_done_reading){
         //pack buffer on rank 0
-        if(myrank==0&&buffer_iteration<buffer_iterations-1){
+        if(myrank==0){
           for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
-            *in >> read_buffer_indices(buffer_loop);
-            read_buffer_indices(buffer_loop);
-          }
-        }
-        else if(myrank==0){
-          buffer_loop=0;
-          while(buffer_iteration*buffer_lines+buffer_loop < dof_count) {
-            *in >> read_buffer_indices(buffer_loop);
-            read_buffer_indices(buffer_loop);
-            buffer_loop++;
+            getline(*in, read_line);
+            // std::cout << read_line << std::endl;
+            line_parse.clear();
+            line_parse.str(read_line);
+            line_parse >> substring;
+
+            //first substring in line should be "d,"
+            if(substring.compare("d,")||!in->good()){
+              not_done_reading = false;
+              break;
+            }
+            for (int iword = 0; iword < 3; iword++)
+            {
+                // read portions of the line into the substring variable
+                line_parse >> substring;
+                // assign the substring variable as a word of the read buffer
+                strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+            }
           }
         }
 
+        //broadcast search condition
+        MPI_Bcast(&not_done_reading,1,MPI_CXX_BOOL,0,world);
         //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-        MPI_Bcast(read_buffer_indices.pointer(),buffer_lines,MPI_LONG_LONG_INT,0,world);
+        MPI_Bcast(read_buffer.pointer(), buffer_lines * 3 * max_word, MPI_CHAR, 0, world);
         //broadcast how many nodes were read into this buffer iteration
         MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
 
@@ -409,31 +416,33 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         //determine which data to store in the swage mesh members (the local node data)
         //loop through read buffer
         for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-          node_gid = read_buffer_indices(scan_loop)-1; //read indices are base 1, we need base 0
+
+          node_gid = atoi(&read_buffer(scan_loop, 0, 0))-1; //read indices are base 1, we need base 0
+          // std::cout << node_gid << std::endl;
           //let map decide if this node id belongs locally; if yes store data
           if(all_node_map->isNodeGlobalElement(node_gid)){
             //set local node index in this mpi rank
             local_node_index = all_node_map->getLocalElement(node_gid);
             if(map->isNodeGlobalElement(node_gid)){
-              Number_DOF_BCS+=num_dim;
+              Number_DOF_BCS++;
             }
-            if(nonzero_bc_flag){
-
+            local_dof_id = num_dim*local_node_index;
+            substring = &read_buffer(scan_loop, 1, 0);
+            // std::cout << substring << std::endl;
+            if(!substring.compare("dx,")){
+              dof_dim_offset = 0;
             }
-            else{
-              local_dof_id = num_dim*local_node_index;
-              Node_DOF_Boundary_Condition_Type(local_dof_id) = DISPLACEMENT_CONDITION;
-              Node_DOF_Displacement_Boundary_Conditions(local_dof_id) = 0;
-              Node_DOF_Boundary_Condition_Type(local_dof_id + 1) = DISPLACEMENT_CONDITION;
-              Node_DOF_Displacement_Boundary_Conditions(local_dof_id + 1) = 0;
-              if(num_dim==3){
-                Node_DOF_Boundary_Condition_Type(local_dof_id + 2) = DISPLACEMENT_CONDITION;
-                Node_DOF_Displacement_Boundary_Conditions(local_dof_id + 2) = 0;
-              }
+            else if(!substring.compare("dy,")){
+              dof_dim_offset = 1;
             }
-          }
+            else if(!substring.compare("dz,")){
+              dof_dim_offset = 2;
+            }
+            Node_DOF_Boundary_Condition_Type(local_dof_id+dof_dim_offset) = DISPLACEMENT_CONDITION;
+            Node_DOF_Displacement_Boundary_Conditions(local_dof_id+dof_dim_offset) = atof(&read_buffer(scan_loop, 2, 0));
+            // std::cout << Node_DOF_Displacement_Boundary_Conditions(local_dof_id+dof_dim_offset) << std::endl;
         }
-        read_index_start+=buffer_lines;
+        }
       }
     }
     
