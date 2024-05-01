@@ -113,8 +113,8 @@ public:
         dt = sim_param.dynamic_options.dt_start;
 
         graphics_id = 0;
-        graphics_times(0) = 0.0;
-        graphics_time     = 0.0; // the times for writing graphics dump
+        graphics_times(0) = sim_param.output_options.graphics_time_step;
+        graphics_time     = sim_param.output_options.graphics_time_step;
     }
 
     /////////////////////////////////////////////////////////////////////////////
