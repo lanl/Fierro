@@ -10,6 +10,8 @@
 #include <chrono>
 #include <fstream>
 
+#include <math.h>
+
 #include <matar.h>
 #include "stl-to-voxelvtk.h"
 #include <chrono>

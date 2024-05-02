@@ -214,6 +214,10 @@ struct Simulation_Parameters
         for (auto& mod : fea_module_parameters) 
             for (auto v : mod->default_output_fields)
                 output_options.output_fields.insert(v);
+
+        if(topology_optimization_on){
+            output_options.output_fields.insert(FIELD::design_density);
+        }
     }
     
     void derive() {

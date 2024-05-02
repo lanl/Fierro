@@ -99,6 +99,8 @@ struct Optimization_Options: Yaml::DerivedFields {
   std::vector<Optimization_Constraint> constraints;
   std::vector<Optimization_Bound_Constraint_Region> volume_bound_constraints;
   DCArrayKokkos<Optimization_Bound_Constraint_Region> optimization_bound_constraint_volumes;
+  std::vector<Volume> objective_regions;
+  DCArrayKokkos<Volume> optimization_objective_regions;
   bool method_of_moving_asymptotes = false;
   double simp_penalty_power = 3.0;
   bool thick_condition_boundary = true;
@@ -110,6 +112,7 @@ struct Optimization_Options: Yaml::DerivedFields {
   double minimum_density = 0;
   double maximum_density = 1;
   double shell_density = 1;
+  real_t objective_normalization_constant = 0;
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
   std::vector<MultiObjectiveModule> multi_objective_modules;
@@ -118,6 +121,9 @@ struct Optimization_Options: Yaml::DerivedFields {
     if(volume_bound_constraints.size()>=1){
       mtr::from_vector(optimization_bound_constraint_volumes, volume_bound_constraints);
     }
+    if(objective_regions.size()>=1){
+      mtr::from_vector(optimization_objective_regions, objective_regions);
+    }
   }
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Optimization_Options,
@@ -125,9 +131,9 @@ YAML_ADD_REQUIRED_FIELDS_FOR(Optimization_Options,
 )
 IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options, 
   optimization_process, optimization_objective, 
-  constraints, method_of_moving_asymptotes, volume_bound_constraints,
+  constraints, method_of_moving_asymptotes, volume_bound_constraints, objective_regions,
   simp_penalty_power, density_epsilon, thick_condition_boundary,
   optimization_output_freq, density_filter, minimum_density, maximum_density,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
-  variable_outer_shell, shell_density
+  variable_outer_shell, shell_density, objective_normalization_constant
 )

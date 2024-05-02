@@ -1132,6 +1132,15 @@ void Explicit_Solver::setup_optimization_problem(){
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
   std::string filename = "optimization_parameters.xml";
+
+  //check if parameter file exists
+  std::ifstream param_file_check("optimization_parameters.xml");
+  if (!param_file_check.is_open()) {
+      *fos << "Unable to find xml parameter file required for optimization with the ROL library"  << std::endl;
+      exit_solver(0);
+  }
+  param_file_check.close();
+
   auto parlist = ROL::getParametersFromXmlFile( filename );
   //ROL::ParameterList parlist;
 
@@ -3293,49 +3302,31 @@ void Explicit_Solver::ensight_writer(){
 void Explicit_Solver::init_design(){
   int num_dim = simparam.num_dims;
   bool nodal_density_flag = simparam.nodal_density_flag;
-
+  Input_Options input_options;
+  if(simparam.input_options.has_value()){
+    input_options = simparam.input_options.value();
+  }
   //set densities
   if(nodal_density_flag){
-    if (!simparam.restart_file) {
+    if(simparam.input_options.has_value()){
+      if (!input_options.topology_optimization_restart) {
+        design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+        host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+      
+        for(int inode = 0; inode < nlocal_nodes; inode++){
+          node_densities(inode,0) = 1;
+        }
+      }
+    }
+    else{
       design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
       host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-      //notify that the host view is going to be modified in the file readin
-      //dual_node_densities.modify_host();
-    
-      //debug Tecplot file readin of initial densities (only works on runs with 1 MPI rank this way)
-      std::string skip_line, read_line, substring;
-      std::stringstream line_parse;
-      real_t read_density;
-      //in = new std::ifstream();
-      //in->open("TecplotDensity.dat");
-      //skip 3 lines
-      //for (int j = 1; j <= 3; j++) {
-      //getline(*in, skip_line);
-      // std::cout << skip_line << std::endl;
-      //}
-  
     
       for(int inode = 0; inode < nlocal_nodes; inode++){
-      //getline(*in,read_line);
-      //line_parse.clear();
-      //line_parse.str(read_line);
-      //for(int iword = 0; iword < 10; iword++){
-        //read portions of the line into the substring variable
-        
-       //if(iword==3){ line_parse >> read_density;}
-        //else {line_parse >> substring;}
-      //}
-      //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
-      //if(read_density < 0.3) read_density = 0.1;
-      //node_densities(inode,0) = read_density;
-      
-      node_densities(inode,0) = 1;
+        node_densities(inode,0) = 1;
+      }
     }
-
-    //sync device view
-    //dual_node_densities.sync_device();
-    }
-    //allocate global vector information
+      //allocate global vector information
     all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
 
     //communicate ghost information to the all vector
@@ -3345,16 +3336,7 @@ void Explicit_Solver::init_design(){
     //design_node_densities_distributed->randomize(0.1,1);
     //comms to get ghosts
     all_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
-
-    //debug print
-    //std::ostream &out = std::cout;
-    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(myrank==0)
-    //*fos << "Node Densities with Ghosts :" << std::endl;
-    //all_node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
-    //std::fflush(stdout);
-  
+    
   }
   else{
     //initialize memory for volume storage

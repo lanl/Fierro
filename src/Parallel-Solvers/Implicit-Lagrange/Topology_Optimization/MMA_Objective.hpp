@@ -151,6 +151,10 @@ public:
  
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void update(const ROL::Vector<real_t> &x, ROL::UpdateType type, int iter = -1 ) {
   
     ROL::Elementwise::ThresholdUpper<real_t> positive(0.0);
@@ -284,10 +288,12 @@ public:
     }
 
   }
+  
+  /* ------------------------------------------------------------------------------------------------------
+   Update objective value with the current design variable vector, z
+  \f[ F(x) \approx F(x^0) + \sum\limit_{i=1}^n \left( \frac{p_i}{U_i-x_i} + \frac{q_i}{x_i-L_i}\right) \f] 
+  --------------------------------------------------------------------------------------------------------- */
 
-  /*
-     \f[ F(x) \approx F(x^0) + \sum\limit_{i=1}^n \left( \frac{p_i}{U_i-x_i} + \frac{q_i}{x_i-L_i}\right) \f] 
-  */
   real_t value( const ROL::Vector<real_t> &x, real_t &tol ) {
   
     ROL::Elementwise::ReductionSum<real_t>    sum;
@@ -317,9 +323,11 @@ public:
 
   }
 
-  /*
-     \f[ \frac{F(x)}{\partial x_j} =  \frac{p_j}{(U_j-x_j)^2} - \frac{q_j}({x_j-L_j)^2}\ \f] 
-  */
+  /* --------------------------------------------------------------------------------------
+   Update gradient vector (g) with the current design variable vector, z
+     \f[ \frac{F(x)}{\partial x_j} =  \frac{p_j}{(U_j-x_j)^2} - \frac{q_j}({x_j-L_j)^2}\ \f]
+  ----------------------------------------------------------------------------------------- */
+
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &x, real_t &tol ) {
 
     ROL::Elementwise::DivideAndInvert<real_t> divinv;
@@ -343,6 +351,11 @@ public:
 
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update Hessian vector product (hv) using the differential design vector (v) and
+   the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+  
   void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &x, real_t &tol ) {
   
     ROL::Elementwise::DivideAndInvert<real_t> divinv;
