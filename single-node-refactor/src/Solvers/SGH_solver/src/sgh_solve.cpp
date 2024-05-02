@@ -36,6 +36,7 @@
 #include "mesh.h"
 #include "geometry_new.h"
 #include "sgh_solver.h"
+#include "contact.h"
 #include <chrono>
 
 /////////////////////////////////////////////////////////////////////////////

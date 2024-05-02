@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: /Users/gabemorris/Fierro/single-node-refactor/contact_test.geo
+  file_path: contact_test.geo
 
 #mesh_options:
 #  source: generate
