@@ -361,6 +361,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     }
 
     if(zone_condition_type==ANSYS_DISPLACEMENT_IMPORT){
+      nonzero_bc_flag = true;
       if(myrank==0){
         //skip 7 lines
         for(int iskip = 0; iskip < 7; iskip++){
