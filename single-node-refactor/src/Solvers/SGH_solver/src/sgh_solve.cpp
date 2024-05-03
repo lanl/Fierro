@@ -36,7 +36,6 @@
 #include "mesh.h"
 #include "geometry_new.h"
 #include "sgh_solver.h"
-#include "_debug_tools.h"  // can be removed
 #include <chrono>
 
 /////////////////////////////////////////////////////////////////////////////
@@ -233,6 +232,9 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                           rk_alpha);
             }
 
+            // ---- apply contact boundary conditions to the boundary patches----
+            boundary_contact(mesh, sim_param.boundary_conditions, node.vel, time_value);
+
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
                             dt,
@@ -243,11 +245,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
             // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
-
-
-            // ---- apply contact boundary conditions to the boundary patches----
-            // see SGH::contact in boundary.cpp. If there is no contact, then this pointer will point to an empty func
-            (this->*boundary_contact)(mesh, sim_param.boundary_conditions, node.vel, time_value);
 
             // mpi_coms();
 
