@@ -45,7 +45,6 @@ include_directories(src)
 include_directories(src/common)
 include_directories(src/setup)
 add_subdirectory(src/setup)
-add_subdirectory(src/contact)
 
 
 

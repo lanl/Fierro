@@ -45,6 +45,12 @@ boundary_conditions:
       value: 0.0
       type: reflected
 
+  # global contact condition (this should be used when it is not clear what the contact surface(s) will be)
+  - boundary_condition:
+      solver: SGH
+      geometry: global
+      type: contact
+
 materials:
   - material:
       id: 0

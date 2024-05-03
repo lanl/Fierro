@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -47,7 +47,8 @@ enum bdy_tag
     y_plane   = 1,  // tag an y-plane
     z_plane   = 2,  // tag an z-plane
     cylinder  = 3,  // tag an cylindrical surface
-    sphere    = 4   // tag a spherical surface
+    sphere    = 4,   // tag a spherical surface
+    global    = 5   // tag all boundary patches (used for contact only)
     //read_file = 5   // read from a file currently unsupported
 };
 
@@ -80,7 +81,8 @@ static std::map<std::string, boundary_conds::bdy_tag> bc_geometry_map
     { "y_plane", boundary_conds::y_plane },
     { "z_plane", boundary_conds::z_plane },
     { "cylinder", boundary_conds::cylinder },
-    { "sphere", boundary_conds::sphere }
+    { "sphere", boundary_conds::sphere },
+    {"global", boundary_conds::global }
     // { "read_file", boundary_conds::read_file }
 };
 

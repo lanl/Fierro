@@ -41,7 +41,7 @@ add_library(sgh_solver ${SRC_Files} ) # ${SGH_Solver_SRC}
 target_include_directories(sgh_solver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 
-target_link_libraries(sgh_solver matar Kokkos::kokkos contact)
+target_link_libraries(sgh_solver matar Kokkos::kokkos)
 
 
 
