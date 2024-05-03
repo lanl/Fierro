@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -116,12 +116,10 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_contact(const mesh_t&     mesh,
+void SGH::contact(const mesh_t&     mesh,
     const CArrayKokkos<boundary_condition_t>& boundary,
     DCArrayKokkos<double>& node_vel,
     const double time_value)
 {
-    
 
-    return;
 } // end boundary_contact function

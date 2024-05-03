@@ -82,7 +82,7 @@ static std::map<std::string, boundary_conds::bdy_tag> bc_geometry_map
     { "z_plane", boundary_conds::z_plane },
     { "cylinder", boundary_conds::cylinder },
     { "sphere", boundary_conds::sphere },
-    {"global", boundary_conds::global }
+    { "global", boundary_conds::global }
     // { "read_file", boundary_conds::read_file }
 };
 

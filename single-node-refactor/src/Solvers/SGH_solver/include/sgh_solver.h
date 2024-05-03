@@ -75,6 +75,11 @@ public:
     int rk_num_stages = 2;
     int cycle_stop    = 1000000000;
 
+    // Define a pointer to a member function of SGH
+    using SGHBoundaryFunc = void (SGH::*)(const mesh_t&, const CArrayKokkos<boundary_condition_t>&,
+                                          DCArrayKokkos<double>&, const double);
+    SGHBoundaryFunc boundary_contact;
+
     SGH()  : Solver()
     {
     }
@@ -130,6 +135,31 @@ public:
 
         std::cout << "Applying initial boundary conditions" << std::endl;
         boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
+
+        // Setting up contact
+        bool doing_contact = false;
+        for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
+            boundary_condition_t bound = sim_param.boundary_conditions(i);
+            if (bound.type == boundary_conds::contact && bound.geometry == boundary_conds::global) {
+                std::cout << "Setting up global contact" << std::endl;
+                doing_contact = true;
+
+                // TODO: Set up the data structures
+
+                break;
+            } else if (bound.type == boundary_conds:: contact && bound.geometry != boundary_conds::global) {
+                doing_contact = true;
+                std::cout << "Contact boundary conditions are only supported for global at the moment." << std::endl;
+                exit(1);
+            }
+        }
+
+        // Setting it up like this to avoid if statements in the cycles
+        if (doing_contact) {
+            boundary_contact = &SGH::contact;
+        } else {
+            boundary_contact = &SGH::do_nothing;
+        }
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -155,11 +185,19 @@ public:
         DCArrayKokkos<double>& node_vel,
         const double time_value);
 
-    void boundary_contact(
+    void contact(
         const mesh_t& mesh,
         const CArrayKokkos<boundary_condition_t>& boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value);
+
+    void do_nothing(
+        const mesh_t& mesh,
+        const CArrayKokkos<boundary_condition_t>& boundary,
+        DCArrayKokkos<double>& node_vel,
+        const double time_value) {
+        // Doing nothing is faster than hitting an if statement
+    }
 
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(

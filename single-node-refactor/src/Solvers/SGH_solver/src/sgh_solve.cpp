@@ -246,7 +246,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
 
             // ---- apply contact boundary conditions to the boundary patches----
-            boundary_contact(mesh, sim_param.boundary_conditions, node.vel, time_value);
+            // see SGH::contact in boundary.cpp. If there is no contact, then this pointer will point to an empty func
+            (this->*boundary_contact)(mesh, sim_param.boundary_conditions, node.vel, time_value);
 
             // mpi_coms();
 
