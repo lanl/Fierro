@@ -30,8 +30,8 @@ struct contact_patch_t
     // For a standard linear hex, xi = [-1.0, 1.0, 1.0, -1.0], eta = [-1.0, -1.0, 1.0, 1.0]
     // For now, these are the same for all patch objects, but should they be different, then remove static and look to
     // contact_patches_t::initialize for how to set these values
-    static CArrayKokkos<double> xi;  // xi coordinates
-    static CArrayKokkos<double> eta;  // eta coordinates
+    CArrayKokkos<double> xi;  // xi coordinates
+    CArrayKokkos<double> eta;  // eta coordinates
     static size_t num_nodes_in_patch;  // number of nodes in the patch
 
     /*
@@ -73,10 +73,10 @@ struct contact_patches_t
      * With the above data structure, you could easily get the nodes in a bucket by the following pythonic syntax:
      * nsort[npoint[bucket_id]:npoint[bucket_id] + nbox[bucket_id]]
      */
-    static CArrayKokkos<size_t> nbox;  // Size nb buckets
-    static CArrayKokkos<size_t> lbox;  // Size n nodes (n is the total number of nodes being checked for penetration)
-    static CArrayKokkos<size_t> nsort;  // Size n nodes
-    static CArrayKokkos<size_t> npoint;  // Size nb buckets
+    CArrayKokkos<size_t> nbox;  // Size nb buckets
+    CArrayKokkos<size_t> lbox;  // Size n nodes (n is the total number of nodes being checked for penetration)
+    CArrayKokkos<size_t> nsort;  // Size n nodes
+    CArrayKokkos<size_t> npoint;  // Size nb buckets
 
     /*
      * Constructs nbox, lbox, nsort, and npoint according to the Sandia Algorithm. These arrays are responsible for

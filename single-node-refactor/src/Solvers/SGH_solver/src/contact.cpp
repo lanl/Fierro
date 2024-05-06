@@ -1,8 +1,6 @@
 #include "contact.h"
 
 // Definition of static member variables
-CArrayKokkos<double> contact_patch_t::xi;
-CArrayKokkos<double> contact_patch_t::eta;
 size_t contact_patch_t::num_nodes_in_patch;
 
 void contact_patch_t::update_nodes(const node_t &nodes) // NOLINT(*-make-member-function-const)
@@ -53,9 +51,6 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         {
             contact_patch.nodes_gid(j) = nodes_in_patch(i, j);
         }
-
-        // Set up the iso-parametric coordinates for each patch object here in the future for the case where multiple
-        // element types are used
     }  // end for
 
     // Setting up the iso-parametric coordinates for all patch objects
@@ -64,14 +59,6 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         contact_patch_t::num_nodes_in_patch = 4;
         double xi_temp[4] = {-1.0, 1.0, 1.0, -1.0};
         double eta_temp[4] = {-1.0, -1.0, 1.0, 1.0};
-        contact_patch_t::xi = CArrayKokkos<double>(4);
-        contact_patch_t::eta = CArrayKokkos<double>(4);
-
-        for (int j = 0; j < 4; j++)
-        {
-            contact_patch_t::xi(j) = xi_temp[j];
-            contact_patch_t::eta(j) = eta_temp[j];
-        }
 
         // Allocating memory for the points and vel_points arrays
         for (int i = 0; i < num_contact_patches; i++)
@@ -79,6 +66,15 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
             contact_patch_t &contact_patch = contact_patches(i);
             contact_patch.points = CArrayKokkos<double>(3, 4);
             contact_patch.vel_points = CArrayKokkos<double>(3, 4);
+
+            contact_patch.xi = CArrayKokkos<double>(4);
+            contact_patch.eta = CArrayKokkos<double>(4);
+
+            for (int j = 0; j < 4; j++)
+            {
+                contact_patch.xi(j) = xi_temp[j];
+                contact_patch.eta(j) = eta_temp[j];
+            }
         }
 
     } else
