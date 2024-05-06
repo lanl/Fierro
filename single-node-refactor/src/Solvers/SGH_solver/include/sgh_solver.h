@@ -39,7 +39,6 @@
 #include "solver.h"
 #include "geometry_new.h"
 #include "contact.h"
-#include "_debug_tools.h"
 // #include "io_utils.h"
 
 #include "simulation_parameters.h"
@@ -78,6 +77,7 @@ public:
     int cycle_stop    = 1000000000;
 
     contact_patches_t contact_bank;  // keeps track of contact patches
+    bool doing_contact = false;  // Condition used in SGH::execute
 
     SGH()  : Solver()
     {
@@ -140,11 +140,13 @@ public:
             boundary_condition_t bound = sim_param.boundary_conditions(i);
             if (bound.type == boundary_conds::contact && bound.geometry == boundary_conds::global) {
                 std::cout << "Setting up global contact" << std::endl;
+                doing_contact = true;
 
                 contact_bank.initialize(mesh, mesh.bdy_patches);
 
                 break;
             } else if (bound.type == boundary_conds:: contact && bound.geometry != boundary_conds::global) {
+                doing_contact = true;
                 std::cerr << "Contact boundary conditions are only supported for global at the moment." << std::endl;
                 exit(1);
             }
@@ -174,11 +176,7 @@ public:
         DCArrayKokkos<double>& node_vel,
         const double time_value);
 
-    void boundary_contact(
-        const mesh_t& mesh,
-        const CArrayKokkos<boundary_condition_t>& boundary,
-        DCArrayKokkos<double>& node_vel,
-        const double time_value);
+    void boundary_contact(const node_t &nodes);
 
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(

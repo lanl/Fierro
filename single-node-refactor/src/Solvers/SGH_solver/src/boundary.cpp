@@ -116,10 +116,7 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_contact(const mesh_t&     mesh,
-    const CArrayKokkos<boundary_condition_t>& boundary,
-    DCArrayKokkos<double>& node_vel,
-    const double time_value)
+void SGH::boundary_contact(const node_t &nodes)
 {
-
+    contact_bank.sort(nodes);
 } // end boundary_contact function
