@@ -581,45 +581,75 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             // get the origin numbers, values are words
             std::vector<std::string> numbers = exact_array_values(origin, ",");
 
-            std::vector<double> val;
-            for (int i = 0; i < 3; i++) {
-                val.push_back(std::stod(numbers[i]));
+            double x1 = std::stod(numbers[0]);
+            double y1 = std::stod(numbers[1]);
+            double z1 = std::stod(numbers[2]);
+
+            if (VERBOSE) {
+                std::cout << "\tx1 = " << x1 << std::endl;
+                std::cout << "\ty1 = " << y1 << std::endl;
+                std::cout << "\tz1 = " << z1 << std::endl;
             }
 
-            mesh_input.origin = val;
+            // storing the origin values as
+            RUN({
+                mesh_input.origin(0) = x1;
+                mesh_input.origin(1) = y1;
+                mesh_input.origin(2) = z1;
+            });
         }
         // Extents of the mesh
         else if (a_word.compare("length") == 0) {
-            std::string origin = root["mesh_options"][a_word].As<std::string>();
+            std::string length = root["mesh_options"][a_word].As<std::string>();
             if (VERBOSE) {
-                std::cout << "\tlength = " << origin << std::endl;
+                std::cout << "\tlength = " << length << std::endl;
             }
 
-            std::vector<std::string> numbers = exact_array_values(origin, ",");
+            std::vector<std::string> numbers = exact_array_values(length, ",");
 
-            std::vector<double> val;
-            for (int i = 0; i < 3; i++) {
-                val.push_back(std::stod(numbers[i]));
+            double l1 = std::stod(numbers[0]);
+            double l2 = std::stod(numbers[1]);
+            double l3 = std::stod(numbers[2]);
+
+            if (VERBOSE) {
+                std::cout << "\tl1 = " << l1 << std::endl;
+                std::cout << "\tl2 = " << l2 << std::endl;
+                std::cout << "\tl3 = " << l3 << std::endl;
             }
 
-            mesh_input.length = val;
+            // storing the length values
+            RUN({
+                mesh_input.length(0) = l1;
+                mesh_input.length(1) = l2;
+                mesh_input.length(2) = l3;
+            });
         }
         // Number of elements per direction
         else if (a_word.compare("num_elems") == 0) {
-            std::string origin = root["mesh_options"][a_word].As<std::string>();
+            std::string elem_count = root["mesh_options"][a_word].As<std::string>();
             if (VERBOSE) {
-                std::cout << "\tnum_elems = " << origin << std::endl;
+                std::cout << "\tnum_elems = " << elem_count << std::endl;
             }
 
-            // get the origin numbers, values are words
-            std::vector<std::string> numbers = exact_array_values(origin, ",");
+            // get the elem_count numbers, values are words
+            std::vector<std::string> numbers = exact_array_values(elem_count, ",");
 
-            std::vector<int> val;
-            for (int i = 0; i < 3; i++) {
-                val.push_back(std::stoi(numbers[i]));
+            int n1 = std::stod(numbers[0]);
+            int n2 = std::stod(numbers[1]);
+            int n3 = std::stod(numbers[2]);
+
+            if (VERBOSE) {
+                std::cout << "\tn1 = " << n1 << std::endl;
+                std::cout << "\tn2 = " << n2 << std::endl;
+                std::cout << "\tn3 = " << n3 << std::endl;
             }
 
-            mesh_input.num_elems = val;
+            // storing the number of elements
+            RUN({
+                mesh_input.num_elems(0) = n1;
+                mesh_input.num_elems(1) = n2;
+                mesh_input.num_elems(2) = n3;
+            });
         }
         // Polynomial order for the mesh
         else if (a_word.compare("polynomial_order") == 0) {
@@ -1451,9 +1481,9 @@ void parse_bcs(Yaml::Node& root, CArrayKokkos<boundary_condition_t>& boundary_co
                 // storing the origin values as (x1,y1,z1)
 
                 RUN({
-                    boundary_conditions(bc_id).origin[0] = x1;
-                    boundary_conditions(bc_id).origin[1] = y1;
-                    boundary_conditions(bc_id).origin[2] = z1;
+                    boundary_conditions(bc_id).origin(0) = x1;
+                    boundary_conditions(bc_id).origin(1) = y1;
+                    boundary_conditions(bc_id).origin(2) = z1;
                 });
             } // origin
             else {

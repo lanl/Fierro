@@ -317,11 +317,11 @@ public:
 
         const int num_dim = 2;
 
-        const double lx = sim_param.mesh_input.length[0];
-        const double ly = sim_param.mesh_input.length[1];
+        const double lx = sim_param.mesh_input.length(0);
+        const double ly = sim_param.mesh_input.length(1);
 
-        const int num_elems_i = sim_param.mesh_input.num_elems[0];
-        const int num_elems_j = sim_param.mesh_input.num_elems[1];
+        const int num_elems_i = sim_param.mesh_input.num_elems(0);
+        const int num_elems_j = sim_param.mesh_input.num_elems(1);
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -333,7 +333,7 @@ public:
 
         const int num_elems = num_elems_i * num_elems_j;
 
-        std::vector<double> origin = sim_param.mesh_input.origin;
+        DCArrayKokkos<double> origin = sim_param.mesh_input.origin;
 
         // --- 2D parameters ---
         const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -365,8 +365,8 @@ public:
                 int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
 
                 // store the point coordinates
-                node.coords(0, node_gid, 0) = origin[0] + (double)i * dx;
-                node.coords(0, node_gid, 1) = origin[1] + (double)j * dy;
+                node.coords(0, node_gid, 0) = origin(0) + (double)i * dx;
+                node.coords(0, node_gid, 1) = origin(1) + (double)j * dy;
             } // end for i
         } // end for j
 
@@ -461,7 +461,7 @@ public:
 
         const int num_elems = num_elems_i * num_elems_j;
 
-        std::vector<double> origin = sim_param.mesh_input.origin;
+        DCArrayKokkos<double> origin = sim_param.mesh_input.origin;
 
         // --- 2D parameters ---
         const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -492,8 +492,8 @@ public:
                 double theta_j = start_angle + (double)j * dy;
 
                 // store the point coordinates
-                node.coords(0, node_gid, 0) = origin[0] + r_i * cos(theta_j);
-                node.coords(0, node_gid, 1) = origin[1] + r_i * sin(theta_j);
+                node.coords(0, node_gid, 0) = origin(0) + r_i * cos(theta_j);
+                node.coords(0, node_gid, 1) = origin(1) + r_i * sin(theta_j);
             } // end for i
         } // end for j
 
@@ -568,13 +568,13 @@ public:
 
         const int num_dim = 3;
 
-        const double lx = sim_param.mesh_input.length[0];
-        const double ly = sim_param.mesh_input.length[1];
-        const double lz = sim_param.mesh_input.length[2];
+        const double lx = sim_param.mesh_input.length(0);
+        const double ly = sim_param.mesh_input.length(1);
+        const double lz = sim_param.mesh_input.length(2);
 
-        const int num_elems_i = sim_param.mesh_input.num_elems[0];
-        const int num_elems_j = sim_param.mesh_input.num_elems[1];
-        const int num_elems_k = sim_param.mesh_input.num_elems[2];
+        const int num_elems_i = sim_param.mesh_input.num_elems(0);
+        const int num_elems_j = sim_param.mesh_input.num_elems(1);
+        const int num_elems_k = sim_param.mesh_input.num_elems(2);
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -588,7 +588,7 @@ public:
 
         const int num_elems = num_elems_i * num_elems_j * num_elems_k;
 
-        std::vector<double> origin = sim_param.mesh_input.origin;
+        DCArrayKokkos<double> origin = sim_param.mesh_input.origin;
 
         // --- 3D parameters ---
         const int num_faces_in_elem  = 6;  // number of faces in elem
@@ -625,9 +625,9 @@ public:
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
                     // store the point coordinates
-                    node.coords(0, node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords(0, node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords(0, node_gid, 2) = origin[2] + (double)k * dz;
+                    node.coords(0, node_gid, 0) = origin(0) + (double)i * dx;
+                    node.coords(0, node_gid, 1) = origin(1) + (double)j * dy;
+                    node.coords(0, node_gid, 2) = origin(2) + (double)k * dz;
                 } // end for i
             } // end for j
         } // end for k
