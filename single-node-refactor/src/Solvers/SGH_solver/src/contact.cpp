@@ -5,6 +5,7 @@ size_t contact_patch_t::num_nodes_in_patch;
 double contact_patches_t::bs;
 size_t contact_patches_t::n;
 
+KOKKOS_FUNCTION  // is called in macros
 void contact_patch_t::update_nodes(const mesh_t &mesh, const node_t &nodes, // NOLINT(*-make-member-function-const)
                                    const corner_t &corner)
 {
@@ -27,7 +28,49 @@ void contact_patch_t::update_nodes(const mesh_t &mesh, const node_t &nodes, // N
 
         }  // end local node loop
     }  // end dimension loop
-}
+}  // end update_nodes
+
+void contact_patch_t::capture_box(const double &vx_max, const double &vy_max, const double &vz_max,
+                                  const double &ax_max, const double &ay_max, const double &az_max,
+                                  const double &dt, CArrayKokkos<double> &bounds) const
+{
+    CArrayKokkos<double> add_sub(2, 3, contact_patch_t::num_nodes_in_patch);
+    FOR_ALL_CLASS(i, 0, contact_patch_t::num_nodes_in_patch, {
+        add_sub(0, 0, i) = points(0, i) + vx_max*dt + 0.5*ax_max*dt*dt;
+        add_sub(0, 1, i) = points(1, i) + vy_max*dt + 0.5*ay_max*dt*dt;
+        add_sub(0, 2, i) = points(2, i) + vz_max*dt + 0.5*az_max*dt*dt;
+        add_sub(1, 0, i) = points(0, i) - vx_max*dt - 0.5*ax_max*dt*dt;
+        add_sub(1, 1, i) = points(1, i) - vy_max*dt - 0.5*ay_max*dt*dt;
+        add_sub(1, 2, i) = points(2, i) - vz_max*dt - 0.5*az_max*dt*dt;
+    });
+    Kokkos::fence();
+
+    for (int i = 0; i < 3; i++)
+    {
+        // Find the max of dim i
+        double local_max;
+        double result_max;
+        REDUCE_MAX(j, 0, contact_patch_t::num_nodes_in_patch, local_max, {
+            if (local_max < add_sub(0, i, j))
+            {
+                local_max = add_sub(0, i, j);
+            }
+        }, result_max);
+        bounds(i) = result_max;
+
+        // Find the min of dim i
+        double local_min;
+        double result_min;
+        REDUCE_MIN(j, 0, contact_patch_t::num_nodes_in_patch, local_min, {
+            if (local_min > add_sub(1, i, j))
+            {
+                local_min = add_sub(1, i, j);
+            }
+        }, result_min);
+        bounds(i + 3) = result_min;
+    }
+    Kokkos::fence();
+}  // end capture_box
 
 void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches,
                                    const node_t &nodes)
@@ -189,7 +232,7 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
             }
         }
     }
-}
+}  // end initialize
 
 
 void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corner_t &corner)
@@ -350,7 +393,8 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
     Kokkos::fence();
 
     // Calculate the pointer for each bucket into a sorted list of nodes
-    for (size_t i = 1; i < nb; i++) {
+    for (size_t i = 1; i < nb; i++)
+    {
         npoint(i) = npoint(i - 1) + nbox(i - 1);
     }
 
@@ -361,7 +405,8 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
     Kokkos::fence();
 
     // Sort the slave nodes according to their bucket id into nsort
-    for (int i = 0; i < contact_patches_t::n; i ++) {
+    for (int i = 0; i < contact_patches_t::n; i++)
+    {
         nsort_lid(nbox(lbox(i)) + npoint(lbox(i))) = i;
         nbox(lbox(i)) += 1;
     }
@@ -371,4 +416,48 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
         nsort(i) = nodes_gid(nsort_lid(i));
     });
     Kokkos::fence();
-}
+}  // end sort
+
+void contact_patches_t::find_nodes(const contact_patch_t &contact_patch, const double &del_t,
+                                   std::vector<size_t> &nodes) const
+{
+    // Get capture box
+    CArrayKokkos<double> bounds(6);
+    contact_patch.capture_box(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, del_t, bounds);
+
+    // Determine the buckets that intersect with the capture box
+    size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounds(0) - x_min)/bs))); // NOLINT(*-narrowing-conversions)
+    size_t jbox_max = fmax(0, fmin(Sy - 1, floor((bounds(1) - y_min)/bs))); // NOLINT(*-narrowing-conversions)
+    size_t kbox_max = fmax(0, fmin(Sz - 1, floor((bounds(2) - z_min)/bs))); // NOLINT(*-narrowing-conversions)
+    size_t ibox_min = fmax(0, fmin(Sx - 1, floor((bounds(3) - x_min)/bs))); // NOLINT(*-narrowing-conversions)
+    size_t jbox_min = fmax(0, fmin(Sy - 1, floor((bounds(4) - y_min)/bs))); // NOLINT(*-narrowing-conversions)
+    size_t kbox_min = fmax(0, fmin(Sz - 1, floor((bounds(5) - z_min)/bs))); // NOLINT(*-narrowing-conversions)
+
+    std::vector<size_t> buckets;
+    for (size_t i = ibox_min; i < ibox_max + 1; i++)
+    {
+        for (size_t j = jbox_min; j < jbox_max + 1; j++)
+        {
+            for (size_t k = kbox_min; k < kbox_max + 1; k++)
+            {
+                buckets.push_back(k*Sx*Sy + j*Sx + i);
+            }
+        }
+    }
+
+    // Get all nodes in each bucket
+    for (size_t b : buckets)
+    {
+        for (size_t i = 0; i < nbox(b); i++)
+        {
+            nodes.push_back(nsort(npoint(b) + i));
+        }
+    }
+
+    // Remove the nodes that are a part of the contact patch
+    for (size_t i = 0; i < contact_patch_t::num_nodes_in_patch; i++)
+    {
+        size_t node_gid = contact_patch.nodes_gid(i);
+        nodes.erase(std::remove(nodes.begin(), nodes.end(), node_gid), nodes.end());
+    }
+}  // end find_nodes

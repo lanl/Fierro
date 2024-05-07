@@ -116,7 +116,7 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_contact(const mesh_t &mesh, const node_t &nodes, const corner_t &corner)
+void SGH::boundary_contact(const mesh_t &mesh, const node_t &nodes, const corner_t &corner, const double &del_t)
 {
     contact_bank.sort(mesh, nodes, corner);
 } // end boundary_contact function

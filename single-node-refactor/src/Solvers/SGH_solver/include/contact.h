@@ -41,7 +41,33 @@ struct contact_patch_t
      *
      * @param nodes: node object that contains coordinates and velocities of all nodes
      */
+    KOKKOS_FUNCTION
     void update_nodes(const mesh_t &mesh, const node_t &nodes, const corner_t &corner);
+
+    /*
+     * The capture box is used to determine which buckets penetrate the surface/patch. The nodes in the intersecting
+     * buckets are considered for potential contact. The capture box is constructed from the maximum absolute value
+     * of velocity and acceleration by considering the position at time dt, which is equal to
+     *
+     * position + velocity_max*dt + 0.5*acceleration_max*dt^2 and
+     * position - velocity_max*dt - 0.5*acceleration_max*dt^2
+     *
+     * The maximum and minimum components of the capture box are recorded and will be used in
+     * contact_patches_t::find_nodes.
+     *
+     * @param vx_max: absolute maximum x velocity across all nodes in the patch
+     * @param vy_max: ||        ||        ||        ||        ||        ||
+     * @param vz_max: ||        ||        ||        ||        ||        ||
+     * @param ax_max: absolute maximum x acceleration across all nodes in the patch
+     * @param ay_max: ||        ||        ||        ||        ||        ||
+     * @param az_max: ||        ||        ||        ||        ||        ||
+     * @param dt: time step
+     * @param bounds: array of size 6 that will contain the maximum and minimum components of the capture box in the
+     *                following order (xc_max, yc_max, zc_max, xc_min, yc_min, zc_min)
+     */
+    void capture_box(const double &vx_max, const double &vy_max, const double &vz_max,
+                     const double &ax_max, const double &ay_max, const double &az_max,
+                     const double &dt, CArrayKokkos<double> &bounds) const;
 
 };
 
@@ -110,4 +136,13 @@ struct contact_patches_t
      * @param corner: corner object that contains corner forces
      */
     void sort(const mesh_t &mesh, const node_t &nodes, const corner_t &corner);
+
+    /*
+     * Finds the nodes that could potentially contact a surface/patch.
+     *
+     * @param contact_patch: the patch object of interest
+     * @param del_t: time step
+     * @param nodes: node vector that contains the global node ids to be checked for contact
+     */
+    void find_nodes(const contact_patch_t &contact_patch, const double &del_t, std::vector<size_t> &nodes) const;
 };

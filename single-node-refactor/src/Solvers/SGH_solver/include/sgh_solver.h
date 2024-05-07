@@ -176,7 +176,7 @@ public:
         DCArrayKokkos<double>& node_vel,
         const double time_value);
 
-    void boundary_contact(const mesh_t &mesh, const node_t &nodes, const corner_t &corner);
+    void boundary_contact(const mesh_t &mesh, const node_t &nodes, const corner_t &corner, const double &del_t);
 
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(
