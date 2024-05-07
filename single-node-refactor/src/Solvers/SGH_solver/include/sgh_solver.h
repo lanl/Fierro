@@ -142,7 +142,7 @@ public:
                 std::cout << "Setting up global contact" << std::endl;
                 doing_contact = true;
 
-                contact_bank.initialize(mesh, mesh.bdy_patches);
+                contact_bank.initialize(mesh, mesh.bdy_patches, node);
 
                 break;
             } else if (bound.type == boundary_conds:: contact && bound.geometry != boundary_conds::global) {
@@ -176,7 +176,7 @@ public:
         DCArrayKokkos<double>& node_vel,
         const double time_value);
 
-    void boundary_contact(const node_t &nodes);
+    void boundary_contact(const mesh_t &mesh, const node_t &nodes, const corner_t &corner);
 
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(

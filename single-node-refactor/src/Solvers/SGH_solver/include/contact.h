@@ -25,6 +25,7 @@ struct contact_patch_t
      */
     CArrayKokkos<double> points;  // coordinate points of patch nodes
     CArrayKokkos<double> vel_points;  // velocity of patch nodes
+    CArrayKokkos<double> internal_force;  // any force that is not due to contact (corner force)
 
     // Iso-parametric coordinates of the patch nodes (1D array of size mesh.num_nodes_in_patch)
     // For a standard linear hex, xi = [-1.0, 1.0, 1.0, -1.0], eta = [-1.0, -1.0, 1.0, 1.0]
@@ -32,7 +33,7 @@ struct contact_patch_t
     // contact_patches_t::initialize for how to set these values
     CArrayKokkos<double> xi;  // xi coordinates
     CArrayKokkos<double> eta;  // eta coordinates
-    static size_t num_nodes_in_patch;  // number of nodes in the patch
+    static size_t num_nodes_in_patch;  // number of nodes in the patch (or surface)
 
     /*
      * Updates the points and vel_points arrays. This is called at the beginning of each time step in the
@@ -40,7 +41,7 @@ struct contact_patch_t
      *
      * @param nodes: node object that contains coordinates and velocities of all nodes
      */
-    void update_nodes(const node_t &nodes);
+    void update_nodes(const mesh_t &mesh, const node_t &nodes, const corner_t &corner);
 
 };
 
@@ -48,6 +49,7 @@ struct contact_patches_t
 {
     CArrayKokkos<contact_patch_t> contact_patches;  // patches that will be checked for contact
     CArrayKokkos<size_t> patches_gid;  // global patch ids
+    CArrayKokkos<size_t> nodes_gid;  // global node ids
     size_t num_contact_patches;  // total number of patches that will be checked for contact
 
     /*
@@ -55,8 +57,9 @@ struct contact_patches_t
      *
      * @param mesh: mesh object
      * @param bdy_contact_patches: global ids of patches that will be checked for contact
+     * @param nodes: node object that contains coordinates and velocities of all nodes
      */
-    void initialize(const mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches);
+    void initialize(const mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches, const node_t &nodes);
 
     /*
      * Here is a description of each array below:
@@ -72,17 +75,39 @@ struct contact_patches_t
      *
      * With the above data structure, you could easily get the nodes in a bucket by the following pythonic syntax:
      * nsort[npoint[bucket_id]:npoint[bucket_id] + nbox[bucket_id]]
+     *
+     * Buckets are ordered by propagating first in the x direction, then in the y direction, and finally in the z.
      */
     CArrayKokkos<size_t> nbox;  // Size nb buckets
     CArrayKokkos<size_t> lbox;  // Size n nodes (n is the total number of nodes being checked for penetration)
     CArrayKokkos<size_t> nsort;  // Size n nodes
     CArrayKokkos<size_t> npoint;  // Size nb buckets
 
+    static double bs;  // bucket size (defined as 1.001*min_node_distance) todo: consider changing it back to 0.999
+    static size_t n;  // total number of contact nodes (always less than or equal to mesh.num_bdy_nodes)
+    double x_max = 0.0;  // maximum x coordinate
+    double y_max = 0.0;  // maximum y coordinate
+    double z_max = 0.0;  // maximum z coordinate
+    double x_min = 0.0;  // minimum x coordinate
+    double y_min = 0.0;  // minimum y coordinate
+    double z_min = 0.0;  // minimum z coordinate
+    double vx_max = 0.0;  // maximum x velocity
+    double vy_max = 0.0;  // maximum y velocity
+    double vz_max = 0.0;  // maximum z velocity
+    double ax_max = 0.0;  // maximum x acceleration
+    double ay_max = 0.0;  // maximum y acceleration
+    double az_max = 0.0;  // maximum z acceleration
+    size_t Sx = 0;  // number of buckets in the x direction
+    size_t Sy = 0;  // number of buckets in the y direction
+    size_t Sz = 0;  // number of buckets in the z direction
+
     /*
      * Constructs nbox, lbox, nsort, and npoint according to the Sandia Algorithm. These arrays are responsible for
      * quickly finding the nodes in proximity to a patch. Additionally, this calls contact_patch_t::update_nodes.
      *
+     * @param mesh: mesh object
      * @param nodes: node object that contains coordinates and velocities of all nodes
+     * @param corner: corner object that contains corner forces
      */
-    void sort(const node_t &nodes);
+    void sort(const mesh_t &mesh, const node_t &nodes, const corner_t &corner);
 };

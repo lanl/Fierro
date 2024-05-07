@@ -235,7 +235,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             // ---- apply contact boundary conditions to the boundary patches----
             if (doing_contact)  // Structuring it like this to avoid having to sort() everytime.
             {
-                boundary_contact(node);
+                boundary_contact(mesh, node, corner);
                 // Todo: Ask about why the coordinates are updating every other step?
                 // contact_patch_t temp = contact_bank.contact_patches(18);
                 // matar_print(temp.nodes_gid);
