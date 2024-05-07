@@ -250,7 +250,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = SURFACE_LOADING_CONDITION;
           }
-          else if(!substring.compare("Displacements")){
+          else if(!substring.compare("Displacements")||!substring.compare("Displacement")){
             //std::cout << "FOUND BC ZONE" << std::endl;
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = ANSYS_DISPLACEMENT_IMPORT;
@@ -363,10 +363,26 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     if(zone_condition_type==ANSYS_DISPLACEMENT_IMPORT){
       nonzero_bc_flag = true;
       if(myrank==0){
-        //skip 7 lines
-        for(int iskip = 0; iskip < 7; iskip++){
+        std::streampos just_before_zone_data;
+        bool data_zone_reached = false;
+        //skip lines until displacement data is reached
+        while(!data_zone_reached){
+          //save stream position to reread first line with data in next code block
+          just_before_zone_data = in->tellg();
           getline(*in, read_line);
-          std::cout << read_line << std::endl;
+          //std::cout << read_line << std::endl;
+
+          line_parse.clear();
+          line_parse.str(read_line);
+          line_parse >> substring;
+
+          //first substring in line should be "d,"
+          if(!substring.compare("d,")||!in->good()){
+            data_zone_reached = true;
+            in->seekg(just_before_zone_data);
+            break;
+          }
+          
         }
       }
 
