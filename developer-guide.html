@@ -36,7 +36,8 @@
             <div class="col-lg-9 text-content">
                 <h1>Developer Guide</h1>
                 <p>
-                    The following is intended to outline how to build new models and applications in the <em>Fierro</em> ecosystem.
+                    The following is intended to outline how to build the code from scratch.  
+                    This is necessary if the user seeks to run the code on diverse hardware, add new user-defined models, and/or add capabilities to the <em>Fierro</em> ecosystem.
                 </p>
                 <h2>Folder Structure</h2>
                 <p>
@@ -44,26 +45,100 @@
                     annotated folder structure for the most important file locations.
                 </p>
                 <pre>
-Fierro
-  - CMakeLists.txt              // Top level CMake for building Fierro
-  - scripts                     // Bash Scripts for building Fierro from scratch
-  - single-node
-    - Explicit-Lagrange
-      - src
-        - meshes                // Suite of example meshes
-  - src
-    - Parallel-Solvers
-      - Simulation_Parameters.h // Comprehensive example of Yaml input parsing
-      - User-Material-Interface // Contains placeholders for implementing custom material models
-      - scripts                 // Bash scripts for building the parallel solvers
-      - Parallel-Explicit       // All code for the explicit solver
-        - example_simple.yaml   // Example explicit input file
-        - main.cpp              // Entry point for solver  
-      - Implicit-Lagrange       // All code for the implicit solver
-        - example_simple.yaml   // Example implicit input file
-        - main.cpp              // Entry point for solver
-    - Yaml-Serializable         // Library for parsing Yaml files into native structs
+                Fierro
+                  - CMakeLists.txt              // Top level CMake for building Fierro
+                  - scripts                     // Bash Scripts for building Fierro from scratch
+                  - single-node
+                    - Explicit-Lagrange
+                      - src
+                        - meshes                // Suite of example meshes
+                  - src
+                    - EVPFFT
+                        - scripts               // Bash scripts for building the small-strain EVPFFT solver
+                    - LS-EVPFFT
+                        - scripts               // Bash scripts for building the large-strain EVPFFT solver
+                    - Parallel-Solvers          // finite element solvers
+                      - Simulation_Parameters.h // Comprehensive example of Yaml input parsing
+                      - User-Material-Interface // Contains placeholders for implementing custom material models
+                      - scripts                 // Bash scripts for building the parallel solvers
+                      - Parallel-Explicit       // All code for the explicit solver
+                        - example_simple.yaml   // Example explicit input file
+                        - main.cpp              // Entry point for solver  
+                      - Implicit-Lagrange       // All code for the implicit solver
+                        - example_simple.yaml   // Example implicit input file
+                        - main.cpp              // Entry point for solver
+                    - Yaml-Serializable         // Library for parsing Yaml files into native structs
                 </pre>
+
+                <h2>Building from scratch inside Anaconda</h2>
+                <p>
+                    We encourage developers to use <a href="https://www.anaconda.com/">Anaconda</a>, making the build process as simple as possible. Anaconda can be installed on Mac and Linux OSs. 
+                    At this time, <u>Windows users must install Anaconda inside WSL-2</u>.  As a starting place, follow the steps for your platform to install 
+                        <a href="https://docs.anaconda.com/free/anaconda/install/index.html">Anaconda</a> /
+                        <a href="https://docs.conda.io/en/latest/miniconda.html">miniconda</a> /
+                        <a href="https://mamba.readthedocs.io/en/latest/installation.html">mamba</a>.
+                    The <em>Fierro</em> code contains many solvers: Finite element to micromechancal FFT-based solvers.  
+                    
+                    The instrutions that follow here will address
+                    building the solvers individually and then building all of them.  
+                </p> 
+
+                <h3>Building large- or small-strain EVPFFT inside Anaconda</h3>
+                </p> 
+                    Open a terminal on your machine.  Then create and activate an Anaconda environment by typing:  
+                    <pre><code> conda create -n FierroEVPFFT </code></pre>
+                    <pre><code> conda activate FierroEVPFFT </code></pre>
+                    In this example, the enviroment is called FierroEVPFFT, but any name can be used.  
+                    In some cases, the text to activate an enviroment is <code>source activate FierroEVPFFT</code>.  
+                    Likewise, if an enviroment already exists, then just activate the desired environment.  
+
+                    The next steps are to install essential dependencies for <em>EVPFFT</em>. C++ and Fortran compilers are installed by typing:
+                    <pre><code> conda install -c conda-forge "cxx-compiler=1.5.2" </code></pre>
+                    <pre><code> conda install -c conda-forge "fortran-compiler=1.5.2" </code></pre>
+                     Here, version 1.5.2 is used, which will install gcc version 11.0.  Omitting 1.5.2 will install gcc version 12 (at this time).  
+                     We encourage users who are interested in running with the CUDA backend to use a gcc version with 1 number less than the 
+                     cuda library version.    
+
+                     The next step is to install cmake by typing:
+                    <pre><code> conda install cmake </code></pre>
+
+                    The EVPFFT solver requires the following thrid-party libraries
+                    <pre><code> conda install "fftw=*=mpi_openmpi*" -c conda-forge </code></pre>
+                    <pre><code> conda install "hdf5=*=mpi_openmpi*" -c conda-forge </code></pre>
+                    It is essential to install mpi versions of these libraries.
+
+                    If running on an Nvidia GPU, install cudatoolkit by typing:
+                    <pre><code> conda install -c conda-forge cudatoolkit      </code></pre>
+                    <pre><code> conda install -c conda-forge cudatoolkit-dev  </code></pre>
+                    As this time, CUDA 12 will be installed using the above commands.
+                </p> 
+                </p>                    
+                    At this point, all necessary dependencies and third-party libraries are installed in the Conda environment.  
+                    It is now possible to build the EVPFFT solvers from scratch.  
+                    The build scripts are located at:
+                    <pre><code> Fierro/src/EVPFFT/scripts/build-scripts/ </code></pre>  
+<pre><code> Usage:  
+    source build_evpfft.sh [OPTION] 
+    Required arguments:
+        --heffte_build_type=&ltfftw|cufft|rocfft&gt
+        --kokkos_build_type=&ltserial|openmp|pthreads|cuda|hip&gt 
+    Optional arguments:
+        --build_fftw: builds fftw from scratch
+        --build_hdf5: builds hdf5 from scratch
+        --machine=&ltdarwin|chicoma|linux|ma&gt (default: none)
+        --num_jobs=&ltnumber&gt: Number of jobs for 'make' (default: 1, on Mac use 1)
+        --help: Display this help message
+</code></pre> 
+                    <u>Important: don't use the machine args when building EVPFFT from scratch with anaconda.</u>
+                    
+                    Compile the code with the the serial Kokkos backend, which means only MPI, type:
+                    <pre><code> source build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=serial </code></pre>  
+
+                    Congratulations, the code is compiled.  The executable is in:
+                    <pre><code> Fierro/src/EVPFFT/evpfft_fftw_serial </code></pre>
+
+
+                </p> 
                 
                 <h2>Custom Material Models</h2>
                 <p>
