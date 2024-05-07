@@ -32,90 +32,19 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#ifndef DYNAMIC_CHECKPOINT_H
-#define DYNAMIC_CHECKPOINT_H
-
-#include "matar.h"
+#include "dynamic_checkpoint.h"
 #include "utilities.h"
-#include <Teuchos_RCP.hpp>
-#include <Tpetra_Core.hpp>
-#include <Tpetra_Map.hpp>
-#include <Tpetra_MultiVector.hpp>
-#include <Kokkos_Core.hpp>
-#include "Tpetra_Details_DefaultTypes.hpp"
+#include "matar.h"
 
 using namespace utils;
-using namespace mtr;
 
-class Dynamic_Checkpoint;
-bool operator<(const Dynamic_Checkpoint& object1, const Dynamic_Checkpoint& object2);
-
-class Dynamic_Checkpoint
+// overload < operator
+bool operator<(const Dynamic_Checkpoint& object1, const Dynamic_Checkpoint& object2)
 {
-public:
-    // Trilinos type definitions
-    typedef Tpetra::Map<>::local_ordinal_type LO;
-    typedef Tpetra::Map<>::global_ordinal_type GO;
-    typedef Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>::size_type SizeType;
-    using traits = Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>;
-
-    typedef Tpetra::MultiVector<real_t, LO, GO> MV;
-    typedef Tpetra::MultiVector<GO, LO, GO> MCONN;
-
-    // Default Constructor
-    Dynamic_Checkpoint() {}
-
-    // Copy Constructor
-    Dynamic_Checkpoint(Dynamic_Checkpoint &copied_checkpoint){
-        saved_timestep = copied_checkpoint.saved_timestep;
-        num_state_vectors = copied_checkpoint.num_state_vectors;
-        state_vectors = copied_checkpoint.state_vectors;
-    }
-
-    // Destructor
-    ~Dynamic_Checkpoint() {}
-
-    //assignment operator
-    Dynamic_Checkpoint& operator= (const Dynamic_Checkpoint &assigned_checkpoint){
-        saved_timestep = assigned_checkpoint.saved_timestep;
-        num_state_vectors = assigned_checkpoint.num_state_vectors;
-        state_vectors = assigned_checkpoint.state_vectors;
-        return *this;
-    }
-
-    // overload = operator
-    bool operator==(Dynamic_Checkpoint& not_this)
+    if (object1.saved_timestep < object2.saved_timestep)
     {
-        if(this->saved_timestep!=not_this.saved_timestep){
-            return false;
-        }
         return true;
     }
 
-    //function to change timestep
-    void change_timestep(int new_timestep){
-        saved_timestep = new_timestep;
-    }
-
-    //function to change stored vectors
-    void change_vectors(Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> new_state_vectors){
-        state_vectors = new_state_vectors;
-    }
-
-    //function to change one of the stored vectors
-    void change_vector(int vector_index, Teuchos::RCP<MV> new_vector){
-        (*state_vectors)[vector_index] = new_vector;
-    }
-
-    public:
-    //checkpoint state data
-    int saved_timestep;
-    real_t saved_time;
-    int num_state_vectors;
-
-    private:
-    Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> state_vectors;
-
-};
-
-#endif // end STATE_H
+    return false;
+}
