@@ -84,61 +84,98 @@
                 </p> 
 
                 <h3>Building large- or small-strain EVPFFT inside Anaconda</h3>
-                </p> 
+                <p> 
                     Open a terminal on your machine.  Then create and activate an Anaconda environment by typing:  
-                    <pre><code> conda create -n FierroEVPFFT </code></pre>
-                    <pre><code> conda activate FierroEVPFFT </code></pre>
+                    <pre style="margin-bottom: -1.50em;"><code>conda create -n FierroEVPFFT</code></pre>
+                    <pre style="margin-top: -1.50em;"><code>conda activate FierroEVPFFT</code></pre>
+                </p>
+                <p style="margin : 0; padding-top:0;">
                     In this example, the enviroment is called FierroEVPFFT, but any name can be used.  
                     In some cases, the text to activate an enviroment is <code>source activate FierroEVPFFT</code>.  
                     Likewise, if an enviroment already exists, then just activate the desired environment.  
-
+                </p> 
+                <p>  
                     The next steps are to install essential dependencies for <em>EVPFFT</em>. C++ and Fortran compilers are installed by typing:
-                    <pre><code> conda install -c conda-forge "cxx-compiler=1.5.2" </code></pre>
-                    <pre><code> conda install -c conda-forge "fortran-compiler=1.5.2" </code></pre>
-                     Here, version 1.5.2 is used, which will install gcc version 11.0.  Omitting 1.5.2 will install gcc version 12 (at this time).  
+                    <pre style="margin-bottom: -1.50em;"><code> conda install -c conda-forge "cxx-compiler=1.5.2" </code></pre>
+                    <pre style="margin-top: -1.50em;"><code> conda install -c conda-forge "fortran-compiler=1.5.2" </code></pre>
+                </p>
+                <p style="margin : 0; padding-top:0;">
+                     Here, the conda compiler version 1.5.2 is used, which will install gcc version 11.0.  Omitting 1.5.2 will install gcc version 12 (at this time).  
                      We encourage users who are interested in running with the CUDA backend to use a gcc version with 1 number less than the 
-                     cuda library version.    
-
+                     CUDA library version.  For all other users, omit the version number, i.e., use "cxx-compiler" and "fortran-compiler".     
+                </p> 
+                <p>  
                      The next step is to install cmake by typing:
                     <pre><code> conda install cmake </code></pre>
-
+                </p>
+                <p>
                     The EVPFFT solver requires the following thrid-party libraries
-                    <pre><code> conda install "fftw=*=mpi_openmpi*" -c conda-forge </code></pre>
-                    <pre><code> conda install "hdf5=*=mpi_openmpi*" -c conda-forge </code></pre>
-                    It is essential to install mpi versions of these libraries.
-
+                    <pre style="margin-bottom: -1.50em;"><code> conda install "fftw=*=mpi_openmpi*" -c conda-forge </code></pre>
+                    <pre style="margin-top: -1.50em;"><code> conda install "hdf5=*=mpi_openmpi*" -c conda-forge </code></pre>
+                </p>
+                <p style="margin : 0; padding-top:0;">
+                    It is essential to install mpi versions of these libraries.  We offer an option to build these libraries (fftw and hdf5) from scratch, 
+                    details are given at the end of this subsection.  A word of caution, either install the libraries via conda or include the flags
+                    with the build script to compile these libraries.  Failure to do so may result in including incompatible versions of fftw and hdf5 that
+                    exist on the machine, resulting in compulation errors of EVPFFT.
+                </p> 
+                <p>  
                     If running on an Nvidia GPU, install cudatoolkit by typing:
-                    <pre><code> conda install -c conda-forge cudatoolkit      </code></pre>
-                    <pre><code> conda install -c conda-forge cudatoolkit-dev  </code></pre>
+                    <pre style="margin-bottom: -1.50em;"><code> conda install -c conda-forge cudatoolkit      </code></pre>
+                    <pre style="margin-top: -1.50em;"><code> conda install -c conda-forge cudatoolkit-dev  </code></pre>
+                </p>
+                <p style="margin : 0; padding-top:0;">
                     As this time, CUDA 12 will be installed using the above commands.
                 </p> 
-                </p>                    
+                <p>                    
                     At this point, all necessary dependencies and third-party libraries are installed in the Conda environment.  
                     It is now possible to build the EVPFFT solvers from scratch.  
                     The build scripts are located at:
-                    <pre><code> Fierro/src/EVPFFT/scripts/build-scripts/ </code></pre>  
-<pre><code> Usage:  
-    source build_evpfft.sh [OPTION] 
-    Required arguments:
-        --heffte_build_type=&ltfftw|cufft|rocfft&gt
-        --kokkos_build_type=&ltserial|openmp|pthreads|cuda|hip&gt 
-    Optional arguments:
-        --build_fftw: builds fftw from scratch
-        --build_hdf5: builds hdf5 from scratch
-        --machine=&ltdarwin|chicoma|linux|ma&gt (default: none)
-        --num_jobs=&ltnumber&gt: Number of jobs for 'make' (default: 1, on Mac use 1)
-        --help: Display this help message
-</code></pre> 
-                    <u>Important: don't use the machine args when building EVPFFT from scratch with anaconda.</u>
-                    
-                    Compile the code with the the serial Kokkos backend, which means only MPI, type:
-                    <pre><code> source build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=serial </code></pre>  
-
-                    Congratulations, the code is compiled.  The executable is in:
-                    <pre><code> Fierro/src/EVPFFT/evpfft_fftw_serial </code></pre>
-
-
+                    <pre style="margin-bottom: -1.50em;"><code> Fierro/src/EVPFFT/scripts/build-scripts/ </code></pre>  
+                    <pre style="margin-top: -1.50em;"><code> Usage:  </code></pre>
+                    <pre style="margin-top: -1.50em;"><code> source build_evpfft.sh [OPTION] </code></pre>
+                    <pre style="margin-top: -1.50em;"><code> Required arguments: </code></pre>
+                    <pre style="margin-top: -1.50em;"><code>     --heffte_build_type=&ltfftw|cufft|rocfft&gt </code></pre>
+                    <pre style="margin-top: -1.50em;"><code>     --kokkos_build_type=&ltserial|openmp|pthreads|cuda|hip&gt </code></pre>
+                    <pre style="margin-top: -1.50em;"><code> Optional arguments: </code></pre>
+                    <pre style="margin-top: -1.50em;"><code>     --build_fftw: builds fftw from scratch </code></pre>
+                    <pre style="margin-top: -1.50em;"><code>     --build_hdf5: builds hdf5 from scratch </code></pre>
+                    <pre style="margin-top: -1.50em;"><code>     --machine=&ltdarwin|chicoma|linux|ma&gt (default: none) </code></pre>
+                    <pre style="margin-top: -1.50em;"><code>     --num_jobs=&ltnumber&gt: Number of jobs for 'make' (default: 1, on Mac use 1) </code></pre>
+                    <pre style="margin-top: -1.50em;"><code>     --help: Display this help message </code></pre>
                 </p> 
+                <p style="margin : 0; padding-top:0;">  
+                    <u>Important: don't use the machine args when building EVPFFT from scratch with anaconda.</u>  
+                    When building inside anaconda on a Mac, the num_jobs can be >1 (i.e., compiling in parallel is possible).  
+                    However, using cmake installed on a Mac outside anaconda via homebrew is restricted to serial compulation at this time.
+                    Inside anaconda, for all OSs (Linux, Mac, WSL-2), it is recommended to set the number of jobs equal to 
+                    the number of cores on the CPU for fast compulation times.  
+                </p> 
+                <p>                    
+                    To compile the code with the the serial Kokkos backend, which means only MPI, type:
+                    <pre><code> source build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=serial </code></pre>  
+                </p> 
+                <p style="margin : 0; padding-top:0;">  
+                    Congratulations, the code is compiled.  The executable is located in:
+                    <pre><code> Fierro/src/EVPFFT/evpfft_fftw_serial </code></pre>
+                </p> 
+                <p>     
+                    To compile the code with the the openMP Kokkos backend, which means MPI plus openMP, type:
+                    <pre><code> source build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=openmp </code></pre>  
+                </p> 
+                <p style="margin : 0; padding-top:0;">  
+                    The executable is located in:
+                    <pre><code> Fierro/src/EVPFFT/evpfft_cufftw_openmp </code></pre>
+                </p> 
+                <p>     
+                    To compile the code with the the CUDA Kokkos backend, which means MPI plus CUDA, type:
+                    <pre><code> source build_evpfft.sh --heffte_build_type=cufft --kokkos_build_type=cuda </code></pre>  
+                </p> 
+                <p style="margin : 0; padding-top:0;">  
+                    The executable is located in:
+                    <pre><code> Fierro/src/EVPFFT/evpfft_fftw_cuda </code></pre>
+                </p> 
+
                 
                 <h2>Custom Material Models</h2>
                 <p>
