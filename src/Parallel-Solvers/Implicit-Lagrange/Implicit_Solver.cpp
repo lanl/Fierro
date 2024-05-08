@@ -862,7 +862,7 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
         line_parse >> substring;
         //std::cout << substring << std::endl;
         if(!substring.compare("Supports")||!substring.compare("Pressure")||
-           !substring.compare("Displacements")||!substring.compare("Displacement")){
+           !substring.compare("Displacements")||!substring.compare("Displacement\"")){
           No_Conditions = searching_for_conditions = false;
           break;
         }

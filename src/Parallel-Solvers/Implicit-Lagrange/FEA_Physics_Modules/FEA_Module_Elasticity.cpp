@@ -250,7 +250,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = SURFACE_LOADING_CONDITION;
           }
-          else if(!substring.compare("Displacements")||!substring.compare("Displacement")){
+          else if(!substring.compare("Displacements")||!substring.compare("Displacement\"")){
             //std::cout << "FOUND BC ZONE" << std::endl;
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = ANSYS_DISPLACEMENT_IMPORT;
@@ -375,9 +375,12 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
           line_parse.clear();
           line_parse.str(read_line);
           line_parse >> substring;
-
-          //first substring in line should be "d,"
-          if(!substring.compare("d,")||!in->good()){
+          line_parse2.clear();
+          line_parse2.str(substring);
+          getline(line_parse2, token, ',');
+          
+          //first token in line should be "d,"
+          if(!token.compare("d")||!in->good()){
             data_zone_reached = true;
             in->seekg(just_before_zone_data);
             break;
@@ -401,18 +404,20 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             line_parse.clear();
             line_parse.str(read_line);
             line_parse >> substring;
-
+            line_parse2.clear();
+            line_parse2.str(substring);
+            getline(line_parse2, token, ',');
             //first substring in line should be "d,"
-            if(substring.compare("d,")||!in->good()){
+            if(token.compare("d")||!in->good()){
               not_done_reading = false;
               break;
             }
             for (int iword = 0; iword < 3; iword++)
             {
                 // read portions of the line into the substring variable
-                line_parse >> substring;
+                getline(line_parse2, token, ',');
                 // assign the substring variable as a word of the read buffer
-                strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                strcpy(&read_buffer(buffer_loop, iword, 0), token.c_str());
             }
           }
         }
@@ -446,13 +451,13 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             local_dof_id = num_dim*local_node_index;
             substring = &read_buffer(scan_loop, 1, 0);
             // std::cout << substring << std::endl;
-            if(!substring.compare("dx,")){
+            if(!substring.compare("ux")){
               dof_dim_offset = 0;
             }
-            else if(!substring.compare("dy,")){
+            else if(!substring.compare("uy")){
               dof_dim_offset = 1;
             }
-            else if(!substring.compare("dz,")){
+            else if(!substring.compare("uz")){
               dof_dim_offset = 2;
             }
             Node_DOF_Boundary_Condition_Type(local_dof_id+dof_dim_offset) = DISPLACEMENT_CONDITION;
