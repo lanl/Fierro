@@ -131,7 +131,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 }
                 mu1(gauss_gid) = den(gauss_gid)*h*( coeff*sspd(gauss_gid) + abs(h*div_u(gauss_gid)) );
 
-                mu2(gauss_gid) = den(gauss_gid)*h*h*pow( abs(h*div_u(gauss_gid)), mesh.Pn-1 );
+                mu2(gauss_gid) = den(gauss_gid)*h*h*pow( abs(h*div_u(gauss_gid)), mesh.Pn );
 
                 mu(gauss_gid) = fmin( mu1(gauss_gid), mu2(gauss_gid) );
 

@@ -579,7 +579,7 @@ void input(CArrayKokkos <material_t> &material,
 
             // Tag X = 7 plane
             boundary(3).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
-            boundary(3).value = 6.0;  // some meshes are 7 and others are 6
+            boundary(3).value = 7.0;  // some meshes are 7 and others are 6
             boundary(3).hydro_bc = bdy::reflected;
             
             // Tag Y = 3 plane
@@ -589,7 +589,7 @@ void input(CArrayKokkos <material_t> &material,
             
             // Tag Z = 1 plane
             boundary(5).surface = bdy::z_plane;
-            boundary(5).value = 1.0;
+            boundary(5).value = 0.1;
             boundary(5).hydro_bc = bdy::reflected;
             
         });  // end RUN

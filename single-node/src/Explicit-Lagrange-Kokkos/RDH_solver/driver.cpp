@@ -46,7 +46,7 @@ double time_final = 1.e16;
 double dt = 1.e-8;
 double dt_max = 1.0e-2;
 double dt_min = 1.0e-8;
-double dt_cfl = 0.2;
+double dt_cfl = 0.1;
 double dt_start = 1.0e-8;
 
 size_t rk_num_stages = 2;
