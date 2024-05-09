@@ -712,8 +712,6 @@ void tag_bdys(const CArrayKokkos<boundary_condition_t>& boundary,
     mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords)
 {
-    size_t num_dims = mesh.num_dims;
-
     // if (bdy_set == mesh.num_bdy_sets){
     //    printf(" ERROR: number of boundary sets must be increased by %zu",
     //              bdy_set-mesh.num_bdy_sets+1);
