@@ -523,7 +523,6 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
         // Number of dimensions for the mesh
         else if (a_word.compare("num_dims") == 0) {
             int num_dim = root["mesh_options"][a_word].As<int>();
-            std::cout << "\tNTEST TEST TEST NUM DIM = " << num_dim << std::endl;
             if (VERBOSE) {
                 std::cout << "\tNum dimensions = " << num_dim << std::endl;
             }
@@ -825,7 +824,7 @@ void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills)
 
     size_t num_regions = region_yaml.Size();
 
-    region_fills = CArrayKokkos<reg_fill_t>(num_regions);
+    region_fills = CArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
 
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {
@@ -1097,9 +1096,9 @@ void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills)
 
                 // storing the origin values as (x1,y1,z1)
                 RUN({
-                    region_fills(reg_id).origin[0] = x1;
-                    region_fills(reg_id).origin[1] = y1;
-                    region_fills(reg_id).origin[2] = z1;
+                    region_fills(reg_id).origin(0) = x1;
+                    region_fills(reg_id).origin(1) = y1;
+                    region_fills(reg_id).origin(2) = z1;
                 });
             } // origin
             else {

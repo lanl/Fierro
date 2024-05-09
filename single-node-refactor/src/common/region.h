@@ -108,7 +108,8 @@ struct reg_fill_t
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
 
-    std::vector<double> origin = { 0.0, 0.0, 0.0 }; ///< Origin for region
+    // std::vector<double> origin = { 0.0, 0.0, 0.0 }; ///< Origin for region
+    DCArrayKokkos<double> origin = DCArrayKokkos<double> (3);
 };
 
 // ----------------------------------

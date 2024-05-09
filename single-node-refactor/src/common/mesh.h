@@ -399,7 +399,7 @@ struct mesh_t
             } // end for i
         } // end if on dims
 
-        node_ordering_in_elem = DViewCArrayKokkos<size_t>(&node_lids_in_patch_in_elem[0], num_patches_in_elem, num_nodes_in_patch, "mesh.node_ordering_in_elem");
+        node_ordering_in_elem = DViewCArrayKokkos<size_t>(&node_lids_in_patch_in_elem[0], num_patches_in_elem, num_nodes_in_patch);
 
         // for saviong the hash keys of the patches and then the nighboring elem_gid
         CArrayKokkos<int> hash_keys_in_elem(num_elems, num_patches_in_elem, num_nodes_in_patch, "hash_keys_in_elem"); // always 4 ids in 3D

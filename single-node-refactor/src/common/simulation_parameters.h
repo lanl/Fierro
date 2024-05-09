@@ -67,9 +67,7 @@ struct simulation_parameters_t
     CArrayKokkos<reg_fill_t> region_fills;  ///< Region data for simulation mesh
 
     CArrayKokkos<material_t> materials; ///< Material data for simulation
-
-    std::vector<std::vector<double>> eos_global_vars;   ///< EOS data for simulation
-
+    
 }; // simulation_parameters_t
 
 #endif // end Header Guard

@@ -90,7 +90,7 @@ struct material_t
                       const double sie);
 
     // Strength model (EOS) function pointer
-    void (*strength_model)(double, double); // WARNING: a placeholder
+    // void (*strength_model)(double, double); // WARNING: a placeholder
 
     // hypo or hyper elastic plastic model
     model::strength_tag strength_type;
