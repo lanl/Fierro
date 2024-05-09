@@ -291,7 +291,7 @@ void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
         std::cout << "Parsing YAML materials:" << std::endl;
     }
     // parse the material yaml text into a vector of materials
-    parse_materials(root, sim_param.materials, sim_param.eos_global_vars);
+    parse_materials(root, sim_param.materials);
 }
 
 // =================================================================================
@@ -1115,8 +1115,7 @@ void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills)
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
-    std::vector<std::vector<double>>& eos_global_vars)
+void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials)
 {
     Yaml::Node& material_yaml = root["materials"];
 
@@ -1125,7 +1124,6 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
     materials = CArrayKokkos<material_t>(num_materials);
 
     // allocate room for each material to store eos_global_vars
-    eos_global_vars = std::vector<std::vector<double>>(num_materials);
 
     // loop over the materials specified
     for (int mat_id = 0; mat_id < num_materials; mat_id++) {
@@ -1189,7 +1187,6 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
                 if (VERBOSE) {
                     std::cout << "\tq2ex = " << q2ex << std::endl;
                 }
-
                 RUN({
                     materials(mat_id).q2ex = q2ex;
                 });
@@ -1248,10 +1245,11 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
                 if (strength_map.find(strength_model) != strength_map.end()) {
                     auto strength = strength_map[strength_model];
 
-                    RUN({
-                        materials(mat_id).strength_model = strength;
-                        materials(mat_id).strength_model(0., 1.); // WARNING BUG HERE, replace with real strength model
-                    });
+                    std::cout << "WARNING: STRENGTH MODELS NOT YET SUPPORTED" << strength_model << std::endl;
+                    // RUN({
+                    //     materials(mat_id).strength_model = strength;
+                    //     materials(mat_id).strength_model(0., 1.); // WARNING BUG HERE, replace with real strength model
+                    // });
 
                     if (VERBOSE) {
                         std::cout << "\tstrength_model = " << strength_model << std::endl;
@@ -1263,12 +1261,13 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
             } // EOS model
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
-                // Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
 
-                size_t num_global_vars = material_inps_yaml.Size();
+                size_t num_global_vars = mat_global_vars_yaml.Size();
 
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
-                materials(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars);
+                materials(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars, "material.eos_global_vars");
+                materials(mat_id).num_eos_global_vars = num_global_vars;
 
                 if (VERBOSE) {
                     std::cout << "num global eos vars = " << num_global_vars << std::endl;
@@ -1276,7 +1275,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
 
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double eos_var = root["materials"][mat_id]["material"]["eos_global_vars"][global_var_id].As<double>();
-                    eos_global_vars[mat_id].push_back(eos_var);
+                    
 
                     RUN({
                         materials(mat_id).eos_global_vars(global_var_id) = eos_var;

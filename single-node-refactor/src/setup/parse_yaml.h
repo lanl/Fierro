@@ -94,9 +94,7 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options);
 void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills);
 
 // parse the region text
-void parse_materials(Yaml::Node& root,
-                     CArrayKokkos<material_t>& materials,
-                     std::vector<std::vector<double>>& eos_global_vars);
+void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials);
 
 // parse the boundary condition text
 void parse_bcs(Yaml::Node& root, CArrayKokkos<boundary_condition_t>& boundary_conditions);
