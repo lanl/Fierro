@@ -54,32 +54,40 @@
                     <a href="https://mamba.readthedocs.io/en/latest/installation.html">mamba</a>.
                     
                     Next, open a terminal on your machine and go to a folder where you want to run the <em>Fierro</em> code.  Then create and activate an Anaconda environment by typing:  
-                    <pre><code> conda create -n FierroCode </code></pre>
-                    <pre><code> conda activate FierroCode </code></pre>
-                    
+                    <pre style="margin-bottom: -1.50em;"><code> conda create -n FierroCode </code></pre>
+                    <pre style="margin-top: -1.50em;";><code> conda activate FierroCode </code></pre>
+                </p>
+                <p style="margin : 0; padding-top:0;">               
                     In this example, the enviroment is called FierroCode, but any name can be used.  In some cases, the text to activate an enviroment is <code>source activate FierroCode</code>.  
                     Likewise, if an enviroment already exists, then just activate the desired environment.  
-
+                </p>
+                <p>    
                     To install the finite element physics solvers in <em>Fierro</em>, please type, while within the activated Anaconda environment:
-                    
                     <pre><code> conda install -c conda-forge -c fierromechanics fierro-cpu </code></pre>
-
+                </p>
+                <p style="margin : 0; padding-top:0;">    
                     The EVPFFT physics solver in  <em>Fierro</em> can be installed by typing:
-
                     <pre><code> conda install -c conda-forge -c fierromechanics evpfft </code></pre>
-
+                </p>
+                <p> 
                     A GUI is offered, it can be installed by typing:    
-
                     <pre><code> conda install -c conda-forge -c fierromechanics fierro_gui </code></pre>
+                </p>
+                <p> 
+                    After installing the finite element solvers, it gives you access to <code>fierro-mesh-builder</code>, 
+                    <code>fierro-parallel-explicit</code>, <code>fierro-parallel-implicit</code>, and the 
+                    <code>fierro-voxelizer</code> executables. These can be run by calling the appropriate executable with the 
+                    desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
 
-                    After installing the finite element solvers, it gives you access to <code>fierro-mesh-builder</code>, <code>fierro-parallel-explicit</code>, <code>fierro-parallel-implicit</code>, and the <code>fierro-voxelizer</code> executables. These can be run by calling the appropriate executable with the desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
-                    
                     <pre><code> fierro-parallel-explicit input.yaml </code></pre>
 
+                </p>
+                <p style="margin : 0; padding-top:0;">   
                     A sample input file for the explicit finite element solver is in the 
                     <a href="https://github.com/lanl/Fierro/tree/main/src/Parallel-Solvers/Parallel-Explicit">Fierro GitHub code respository</a> at:
                     <pre><code>./src/Parallel-Solvers/Parallel-Explicit/example_simple.yaml</code></pre>
-
+                </p>
+                <p style="margin : 0; padding-top:0;">   
                     The GUI can be run in the anaconda enviroment by typing:
                     <pre><code>fierro-gui </code></pre>
 

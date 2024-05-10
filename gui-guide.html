@@ -39,23 +39,28 @@
                 <h1>GUI Guide</h1>
                 <p>
                     <em>Fierro</em> comes with two separate user interfaces for different workflows. 
-                    <li>The EVPFFT-GUI can be used to run the standalone EVPFFT program</li>
+                    <li>The Fierro-GUI can be used to run the EVPFFT and explicit finite element material dynamics solver </li>
                     <li>The Fierro-GUI (Coming Soon) allows you to configure dynamic simulation or topology optimization problems.</li>
-                    <b>Note:</b> if you are running any of the graphical user interfaces through WSL on windows, you may need to install and run an "X Server" on your Windows side to connect the WSL applications to the display. For testing, we use <a href="https://sourceforge.net/projects/vcxsrv/">VcXsrv</a>. Once the X server is running on Windows, you can connect your WSL terminal application to the display by setting the DISPLAY environment variable:
+                    The GUI can run on <b>Linux, Mac, and Windows (inside WSL-2) machines</b>.  
+                    <u>Note:</u> if you are running any of the graphical user interfaces through WSL on windows, 
+                    you may need to install and run an "X Server" on your Windows side to connect the WSL applications to the display. 
+                    For testing, we use <a href="https://sourceforge.net/projects/vcxsrv/">VcXsrv</a>. Once the X server is running on Windows, 
+                    you can connect your WSL terminal application to the display by setting the DISPLAY environment variable:
 <pre><code>export DISPLAY=localhost:0.0</code></pre>
                 </p>
-                <h2>EVPFFT-GUI</h2>
+                <h2>Fierro-GUI</h2>
                 <p>
-                    The EVPFTT-GUI is a Python based user interface that integrates with paraview to render initial conditions and results. The recommended way to 
-                    use the gui is through the anaconda package "evpfft_gui" available on our package repository. For more detailed installation instructions, 
+                    The Fierro-GUI is a Python based user interface that integrates with paraview to render initial conditions and results. The recommended way to 
+                    use the gui is through the anaconda package "fierro_gui" available on our package repository. For more detailed installation instructions, 
                     see <a href=installation.html>our installation guide</a>.
                 </p>
                 <p>
-                    Once the EVPFFT-GUI is installed, it can be launched by running the <code>evpfft-gui</code> command.
+                    Once the Fierro-GUI is installed, it can be launched by running the <code>fierro_gui</code> command.  The instructions that follow will
+                    guide a user through the steps to run the EVPFFT solver from the GUI.
                 </p>
                 <h3>1. Importing a Part</h3>
                 <p>
-                    The first step to running EVPFFT is importing a part geometry for analysis. EVPFFT operates on a voxelized grid, however the EVPFFT-GUI requires a triangle mesh in a binary STL format and will do the necessary voxelization automatically. To import a part, click the "Import Part" button followed by the "Upload Geometry File" button and select the input STL file. 
+                    The first step to running EVPFFT is importing a part geometry for analysis. EVPFFT operates on a voxelized grid, however the GUI requires a triangle mesh in a binary STL format and will do the necessary voxelization automatically. To import a part, click the "Import Part" button followed by the "Upload Geometry File" button and select the input STL file. 
                 </p>
                 <img src="assets/images/EVPFFT-GUI-Import.png"/>
                 <h2>2. Voxelization</h2>
@@ -93,13 +98,16 @@
                 <h4>Results</h4>
                 <div style="display: flex;">
                     <p>
-                        Once the process is complete, you can view some results the results directly in the EVPFFT-GUI, or open them in ParaView for more detailed analysis. Within this application, you can view the stress strain curves or examine a 3D render of your voxelized mesh with strain or stress color coding.
+                        Once the process is complete, you can view some results the results directly in the GUI, or open them in ParaView for more detailed analysis. Within this application, you can view the stress strain curves or examine a 3D render of your voxelized mesh with strain or stress color coding.
                     </p>
                     <img src="assets/images/EVPFFT-GUI-ResultsOptions.png" />
                 </div>
                 <img src="assets/images/EVPFFT-GUI-MonkeyResults.png" />
-                <h2>Fierro GUI</h2>
-                Coming soon...
+                
+                <p>
+                    <br>
+                    More features coming soon...
+                </p>
             </div>
         </div>
     </div>
