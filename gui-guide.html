@@ -38,16 +38,20 @@
             <div class="col-sm-9 text-content">
                 <h1>GUI Guide</h1>
                 <p>
-                    <em>Fierro</em> comes with two separate user interfaces for different workflows. 
-                    <li>The Fierro-GUI can be used to run the EVPFFT and explicit finite element material dynamics solver </li>
-                    <li>The Fierro-GUI (Coming Soon) allows you to configure dynamic simulation or topology optimization problems.</li>
-                    The GUI can run on <b>Linux, Mac, and Windows (inside WSL-2) machines</b>.  
+                    <em>Fierro</em> can be run in a terminal using the command line interface or by using the graphical user interface (GUI).
+                    <li style="font-size:14px">The Fierro GUI can be used to run the small-strain EVPFFT solver and explicit finite element material dynamics solver </li>
+                    <li style="font-size:14px"> (Coming Soon) enhanced features to setup EVPFFT simulations of polycrystalline materials </li>
+                    <li style="font-size:14px"> (Coming Soon) support to configure static and quasi-static simulations and topology optimization problems.</li>
+                </p>  
+                <p>  
+                    The Fierro GUI can run on <b>Linux, Mac, and Windows (inside WSL-2) machines</b>.  
                     <u>Note:</u> if you are running any of the graphical user interfaces through WSL on windows, 
                     you may need to install and run an "X Server" on your Windows side to connect the WSL applications to the display. 
                     For testing, we use <a href="https://sourceforge.net/projects/vcxsrv/">VcXsrv</a>. Once the X server is running on Windows, 
                     you can connect your WSL terminal application to the display by setting the DISPLAY environment variable:
 <pre><code>export DISPLAY=localhost:0.0</code></pre>
                 </p>
+
                 <h2>Fierro-GUI</h2>
                 <p>
                     The Fierro-GUI is a Python based user interface that integrates with paraview to render initial conditions and results. The recommended way to 
