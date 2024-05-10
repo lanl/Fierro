@@ -38,6 +38,7 @@
 #include "matar.h"
 #include "solver.h"
 #include "geometry_new.h"
+#include "contact.h"
 // #include "io_utils.h"
 
 #include "simulation_parameters.h"
@@ -74,6 +75,9 @@ public:
 
     int rk_num_stages = 2;
     int cycle_stop    = 1000000000;
+
+    contact_patches_t contact_bank;  // keeps track of contact patches
+    bool doing_contact = false;  // Condition used in SGH::execute
 
     SGH()  : Solver()
     {
@@ -113,8 +117,8 @@ public:
         dt = sim_param.dynamic_options.dt_start;
 
         graphics_id = 0;
-        graphics_times(0) = 0.0;
-        graphics_time     = 0.0; // the times for writing graphics dump
+        graphics_times(0) = sim_param.output_options.graphics_time_step;
+        graphics_time     = sim_param.output_options.graphics_time_step;
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -130,6 +134,23 @@ public:
 
         std::cout << "Applying initial boundary conditions" << std::endl;
         boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
+
+        // Setting up contact
+        for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
+            boundary_condition_t bound = sim_param.boundary_conditions(i);
+            if (bound.type == boundary_conds::contact && bound.geometry == boundary_conds::global) {
+                std::cout << "Setting up global contact" << std::endl;
+                doing_contact = true;
+
+                contact_bank.initialize(mesh, mesh.bdy_patches, node);
+
+                break;
+            } else if (bound.type == boundary_conds:: contact && bound.geometry != boundary_conds::global) {
+                doing_contact = true;
+                std::cerr << "Contact boundary conditions are only supported for global at the moment." << std::endl;
+                exit(1);
+            }
+        }
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -155,11 +176,7 @@ public:
         DCArrayKokkos<double>& node_vel,
         const double time_value);
 
-    void boundary_contact(
-        const mesh_t& mesh,
-        const CArrayKokkos<boundary_condition_t>& boundary,
-        DCArrayKokkos<double>& node_vel,
-        const double time_value);
+    void boundary_contact(const mesh_t &mesh, const node_t &nodes, const corner_t &corner, const double &del_t);
 
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(

@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -49,8 +49,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
-    // printf("Writing outputs to file at %f \n", time_value);
-    // mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
+    printf("Writing outputs to file at %f \n", time_value);
+    mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
 
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
@@ -232,6 +232,17 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                           rk_alpha);
             }
 
+            // ---- apply contact boundary conditions to the boundary patches----
+            if (doing_contact)  // Structuring it like this to avoid having to sort() everytime.
+            {
+                boundary_contact(mesh, node, corner, dt);
+                // Todo: Ask about why the coordinates are updating every other step?
+                // contact_patch_t temp = contact_bank.contact_patches(18);
+                // matar_print(temp.nodes_gid);
+                // matar_print(temp.points);
+                // matar_print(temp.vel_points);
+            }
+
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
                             dt,
@@ -242,10 +253,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
             // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
-
-
-            // ---- apply contact boundary conditions to the boundary patches----
-            boundary_contact(mesh, sim_param.boundary_conditions, node.vel, time_value);
 
             // mpi_coms();
 

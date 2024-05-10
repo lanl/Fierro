@@ -22,7 +22,8 @@ include_directories(src)
 
 
 set(SRC_Files 
-src/boundary.cpp 
+src/boundary.cpp
+src/contact.cpp
 src/energy_sgh.cpp
 src/force_sgh.cpp
 src/position.cpp
