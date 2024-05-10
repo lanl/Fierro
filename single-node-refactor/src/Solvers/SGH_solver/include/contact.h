@@ -1,10 +1,26 @@
-#pragma once
+// todo: change the documentation style
+#ifndef CONTACT_H
+#define CONTACT_H
 
 #include "matar.h"
 #include "mesh.h"
 #include "_debug_tools.h"  // Remove this file entirely once finished
 
 using namespace mtr;
+
+// solving options
+static constexpr size_t max_iter = 30;  // max number of iterations
+static constexpr double tol = 1e-10;  // tolerance for the things that are supposed to be zero
+
+struct contact_node_t
+{
+    double mass;  // mass of the node
+    CArrayKokkos<double> pos = CArrayKokkos<double>(3);  // position of the node
+    CArrayKokkos<double> vel = CArrayKokkos<double>(3);  // velocity of the node
+    CArrayKokkos<double> acc = CArrayKokkos<double>(3);  // acceleration of the node
+    CArrayKokkos<double> internal_force = CArrayKokkos<double>(3);  // any force that is not due to contact (corner force)
+    CArrayKokkos<double> contact_force = CArrayKokkos<double>(3);  // force due to contact
+};
 
 struct contact_patch_t
 {
@@ -25,6 +41,8 @@ struct contact_patch_t
      */
     CArrayKokkos<double> points;  // coordinate points of patch nodes
     CArrayKokkos<double> vel_points;  // velocity of patch nodes
+    CArrayKokkos<double> acc_points;  // acceleration of patch nodes
+    CArrayKokkos<double> mass_points;  // mass of patch nodes (mass is constant down the column)
     CArrayKokkos<double> internal_force;  // any force that is not due to contact (corner force)
 
     // Iso-parametric coordinates of the patch nodes (1D array of size mesh.num_nodes_in_patch)
@@ -34,6 +52,7 @@ struct contact_patch_t
     CArrayKokkos<double> xi;  // xi coordinates
     CArrayKokkos<double> eta;  // eta coordinates
     static size_t num_nodes_in_patch;  // number of nodes in the patch (or surface)
+    static constexpr size_t max_nodes = 4;  // max number of nodes in the patch (or surface); for allocating memory at compile time
 
     /*
      * Updates the points and vel_points arrays. This is called at the beginning of each time step in the
@@ -69,11 +88,66 @@ struct contact_patch_t
                      const double &ax_max, const double &ay_max, const double &az_max,
                      const double &dt, CArrayKokkos<double> &bounds) const;
 
+    /*
+     * Find the contact point in the reference space with the given contact node. The row node_lid of det_sol is taken
+     * as the guess which is of the order (xi, eta, del_tc) where del_tc is the time it takes for the node to penetrate
+     * the patch/surface. This will iteratively solve using a Newton-Raphson scheme and will change det_sol in place.
+     *
+     * @param node: Contact node object that is potentially penetrating this patch/surface
+     * @param det_sol: 2D array where each row is the solution containing (xi, eta, del_tc).
+     * @param node_lid: The row to modify det_sol
+     * @return: true if a solution was found in less than max_iter iterations; false if the solution took up to max_iter
+     *          iterations or if a singularity was encountered
+     */
+    KOKKOS_FUNCTION  // will be called inside a macro
+    bool get_contact_point(const contact_node_t &node, CArrayKokkos<double> &det_sol, const size_t &node_lid) const;
+
+    /*
+     * Construct the basis matrix at time del_t for the patch.
+     *
+     * @param A: basis matrix memory location
+     * @param del_t: time step
+     */
+    KOKKOS_FUNCTION
+    void construct_basis(ViewCArrayKokkos<double> &A, const double &del_t) const;
+
+    /*
+     * Modifies the phi_k array to contain the basis function values at the given xi and eta values.
+     *
+     * @param phi_k: basis function values memory location
+     * @param xi_value: xi value
+     * @param eta_value: eta value
+     */
+    KOKKOS_FUNCTION
+    void phi(ViewCArrayKokkos<double> &phi_k, const double &xi_value, const double &eta_value) const;
+
+    /*
+     * Modifies the d_phi_k_d_xi array to contain the basis function derivatives with respect to xi at the given xi and
+     * eta values.
+     *
+     * @param d_phi_k_d_xi: basis function derivative memory location
+     * @param xi_value: xi value
+     * @param eta_value: eta value
+     */
+    KOKKOS_FUNCTION
+    void d_phi_d_xi(ViewCArrayKokkos<double> &d_phi_k_d_xi, const double &xi_value, const double &eta_value) const;
+
+    /*
+     * Modifies the d_phi_k_d_eta array to contain the basis function derivatives with respect to eta at the given xi
+     * and eta values.
+     *
+     * @param d_phi_k_d_eta: basis function derivative memory location
+     * @param xi_value: xi value
+     * @param eta_value: eta value
+     */
+    KOKKOS_FUNCTION
+    void d_phi_d_eta(ViewCArrayKokkos<double> &d_phi_k_d_eta, const double &xi_value, const double &eta_value) const;
 };
 
 struct contact_patches_t
 {
     CArrayKokkos<contact_patch_t> contact_patches;  // patches that will be checked for contact
+    CArrayKokkos<contact_node_t> contact_nodes;  // all nodes that are in contact_patches (accessed through node gid)
     CArrayKokkos<size_t> patches_gid;  // global patch ids
     CArrayKokkos<size_t> nodes_gid;  // global node ids
     size_t num_contact_patches;  // total number of patches that will be checked for contact
@@ -146,3 +220,29 @@ struct contact_patches_t
      */
     void find_nodes(const contact_patch_t &contact_patch, const double &del_t, std::vector<size_t> &nodes) const;
 };
+
+/*
+ * Matrix multiplication with A*x = b
+ */
+KOKKOS_FUNCTION
+void mat_mul(const ViewCArrayKokkos<double> &A, const ViewCArrayKokkos<double> &x, ViewCArrayKokkos<double> &b);
+
+/*
+ * Computes the norm (sqrt(x1^1 + x2^2 + ...)) of a 1D array.
+ */
+KOKKOS_FUNCTION
+double norm(const ViewCArrayKokkos<double> &x);
+
+/*
+ * Finds the determinant of a 3x3 matrix.
+ */
+KOKKOS_INLINE_FUNCTION
+double det(const ViewCArrayKokkos<double> &A);
+
+/*
+ * Finds the inverse of a 3x3 matrix.
+ */
+KOKKOS_FUNCTION
+void inv(const ViewCArrayKokkos<double> &A, ViewCArrayKokkos<double> &A_inv, const double &A_det);
+
+#endif  // CONTACT_H

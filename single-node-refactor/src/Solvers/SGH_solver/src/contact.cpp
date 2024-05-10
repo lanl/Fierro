@@ -5,6 +5,74 @@ size_t contact_patch_t::num_nodes_in_patch;
 double contact_patches_t::bs;
 size_t contact_patches_t::n;
 
+KOKKOS_FUNCTION
+void mat_mul(const ViewCArrayKokkos<double> &A, const ViewCArrayKokkos<double> &x, ViewCArrayKokkos<double> &b)
+{
+    size_t x_ord = x.order();
+    size_t m = A.dims(0);
+    size_t n = A.dims(1);
+
+    if (x_ord == 1)
+    {
+        size_t p = x.dims(0);
+        for (size_t i = 0; i < m; i++)
+        {
+            b(i) = 0.0;
+            for (size_t k = 0; k < n; k++)
+            {
+                b(i) += A(i, k)*x(k);
+            }
+        }
+    } else
+    {
+        size_t p = x.dims(1);
+        for (size_t i = 0; i < m; i++)
+        {
+            for (size_t j = 0; j < p; j++)
+            {
+                b(i, j) = 0.0;
+                for (size_t k = 0; k < n; k++)
+                {
+                    b(i, j) += A(i, k)*x(k, j);
+                }
+            }
+        }
+    }
+}  // end mat_mul
+
+KOKKOS_FUNCTION
+double norm(const ViewCArrayKokkos<double> &x)
+{
+    double sum = 0.0;
+    for (size_t i = 0; i < x.size(); i++)
+    {
+        sum += fabs(x(i)*x(i));
+    }
+    return sqrt(sum);
+}  // end norm
+
+KOKKOS_INLINE_FUNCTION
+double det(const ViewCArrayKokkos<double> &A)
+{
+    return A(0, 0)*(A(1, 1)*A(2, 2) - A(1, 2)*A(2, 1)) - A(0, 1)*(A(1, 0)*A(2, 2) - A(1, 2)*A(2, 0)) +
+           A(0, 2)*(A(1, 0)*A(2, 1) - A(1, 1)*A(2, 0));
+}  // end det
+
+KOKKOS_FUNCTION
+void inv(const ViewCArrayKokkos<double> &A, ViewCArrayKokkos<double> &A_inv, const double &A_det)
+{
+    // A_inv = 1/det(A)*adj(A)
+    A_inv(0, 0) = (A(1, 1)*A(2, 2) - A(1, 2)*A(2, 1))/A_det;
+    A_inv(0, 1) = (A(0, 2)*A(2, 1) - A(0, 1)*A(2, 2))/A_det;
+    A_inv(0, 2) = (A(0, 1)*A(1, 2) - A(0, 2)*A(1, 1))/A_det;
+    A_inv(1, 0) = (A(1, 2)*A(2, 0) - A(1, 0)*A(2, 2))/A_det;
+    A_inv(1, 1) = (A(0, 0)*A(2, 2) - A(0, 2)*A(2, 0))/A_det;
+    A_inv(1, 2) = (A(0, 2)*A(1, 0) - A(0, 0)*A(1, 2))/A_det;
+    A_inv(2, 0) = (A(1, 0)*A(2, 1) - A(1, 1)*A(2, 0))/A_det;
+    A_inv(2, 1) = (A(0, 1)*A(2, 0) - A(0, 0)*A(2, 1))/A_det;
+    A_inv(2, 2) = (A(0, 0)*A(1, 1) - A(0, 1)*A(1, 0))/A_det;
+}  // end inv
+
 KOKKOS_FUNCTION  // is called in macros
 void contact_patch_t::update_nodes(const mesh_t &mesh, const node_t &nodes, // NOLINT(*-make-member-function-const)
                                    const corner_t &corner)
@@ -14,7 +82,7 @@ void contact_patch_t::update_nodes(const mesh_t &mesh, const node_t &nodes, // N
     {
         for (int j = 0; j < num_nodes_in_patch; j++)
         {
-            const size_t node_gid = this->nodes_gid(j);
+            const size_t node_gid = nodes_gid(j);
 
             points(i, j) = nodes.coords(0, node_gid, i);
             vel_points(i, j) = nodes.vel(0, node_gid, i);
@@ -25,6 +93,12 @@ void contact_patch_t::update_nodes(const mesh_t &mesh, const node_t &nodes, // N
                 size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
                 internal_force(i, j) += corner.force(corner_gid, i);
             }
+
+            // construct the mass
+            mass_points(i, j) = nodes.mass(node_gid);
+
+            // construct the acceleration
+            acc_points(i, j) = internal_force(i, j)/mass_points(i, j);
 
         }  // end local node loop
     }  // end dimension loop
@@ -71,6 +145,210 @@ void contact_patch_t::capture_box(const double &vx_max, const double &vy_max, co
     }
     Kokkos::fence();
 }  // end capture_box
+
+KOKKOS_FUNCTION
+void contact_patch_t::construct_basis(ViewCArrayKokkos<double> &A, const double &del_t) const
+{
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < num_nodes_in_patch; j++)
+        {
+            A(i, j) = points(i, j) + vel_points(i, j)*del_t + 0.5*acc_points(i, j)*del_t*del_t;
+        }
+    }
+}  // end construct_basis
+
+KOKKOS_FUNCTION  // will be called inside a macro
+bool contact_patch_t::get_contact_point(const contact_node_t &node, CArrayKokkos<double> &det_sol,
+                                        const size_t &node_lid) const
+{
+    // In order to understand this, just see this PDF:
+    // https://github.com/gabemorris12/contact_surfaces/blob/master/Finding%20the%20Contact%20Point.pdf
+
+    // The python version of this is also found in contact.py from that same repo.
+
+    double* xi_ = &det_sol(node_lid, 0);
+    double* eta_ = &det_sol(node_lid, 1);
+    double* del_tc = &det_sol(node_lid, 2);
+
+    // Using "max_nodes" for the array size to ensure that the array is large enough
+    double A_arr[3*contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> A(&A_arr[0], 3, num_nodes_in_patch);
+
+    double phi_k_arr[contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> phi_k(&phi_k_arr[0], num_nodes_in_patch);
+
+    double d_phi_d_xi_arr[contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> d_phi_d_xi_(&d_phi_d_xi_arr[0], num_nodes_in_patch);
+
+    double d_phi_d_eta_arr[contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> d_phi_d_eta_(&d_phi_d_eta_arr[0], num_nodes_in_patch);
+
+    double d_A_d_del_t_arr[3*contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> d_A_d_del_t(&d_A_d_del_t_arr[0], 3, num_nodes_in_patch);
+
+    double rhs_arr[3];  // right hand side (A_arr*phi_k)
+    ViewCArrayKokkos<double> rhs(&rhs_arr[0], 3);
+
+    double lhs;  // left hand side (node.pos + node.vel*del_t + 0.5*node.acc*del_t*del_t)
+
+    double F_arr[3];  // defined as rhs - lhs
+    ViewCArrayKokkos<double> F(&F_arr[0], 3);
+
+    double J0_arr[3];  // column 1 of jacobian
+    ViewCArrayKokkos<double> J0(&J0_arr[0], 3);
+
+    double J1_arr[3];  // column 2 of jacobian
+    ViewCArrayKokkos<double> J1(&J1_arr[0], 3);
+
+    double J2_arr[3];  // column 3 of jacobian
+    ViewCArrayKokkos<double> J2(&J2_arr[0], 3);
+
+    double J_arr[9];  // jacobian
+    ViewCArrayKokkos<double> J(&J_arr[0], 3, 3);
+
+    double J_inv_arr[9];  // inverse of jacobian
+    ViewCArrayKokkos<double> J_inv(&J_inv_arr[0], 3, 3);
+
+    double J_det;  // determinant of jacobian
+    double sol[3];  // solution containing (xi, eta, del_tc)
+    sol[0] = *xi_;
+    sol[1] = *eta_;
+    sol[2] = *del_tc;
+
+    double grad_arr[3];  // J_inv*F term
+    ViewCArrayKokkos<double> grad(&grad_arr[0], 3);
+
+    // begin Newton-Rasphson solver
+    size_t iters;  // need to keep track of the number of iterations outside the scope of the loop
+    for (int i = 0; i < max_iter; i++)
+    {
+        iters = i;
+        construct_basis(A, *del_tc);
+        phi(phi_k, *xi_, *eta_);
+        mat_mul(A, phi_k, rhs);
+        for (int j = 0; j < 3; j++)
+        {
+            lhs = node.pos(j) + node.vel(j)*(*del_tc) + 0.5*node.acc(j)*(*del_tc)*(*del_tc);
+            F(j) = rhs(j) - lhs;
+        }
+
+        if (norm(F) < tol)
+        {
+            break;
+        }
+
+        d_phi_d_xi(d_phi_d_xi_, *xi_, *eta_);
+        d_phi_d_eta(d_phi_d_eta_, *xi_, *eta_);
+
+        // Construct d_A_d_del_t
+        for (int j = 0; j < 3; j++)
+        {
+            for (int k = 0; k < num_nodes_in_patch; k++)
+            {
+                d_A_d_del_t(j, k) = vel_points(j, k) + acc_points(j, k)*(*del_tc);
+            }
+        }
+
+        mat_mul(A, d_phi_d_xi_, J0);
+        mat_mul(A, d_phi_d_eta_, J1);
+        mat_mul(d_A_d_del_t, phi_k, J2);
+        // lhs is a function of del_t, so have to subtract the derivative of lhs wrt del_t
+        for (int j = 0; j < 3; j++)
+        {
+            J2(j) = J2(j) - node.vel(j) - node.acc(j)*(*del_tc);
+        }
+
+        // Construct the Jacobian
+        for (int j = 0; j < 3; j++)
+        {
+            J(j, 0) = J0(j);
+            J(j, 1) = J1(j);
+            J(j, 2) = J2(j);
+        }
+
+        // Construct the inverse of the Jacobian and check for singularity. Singularities occur when the node and patch
+        // are travelling at the same velocity (same direction) or if the patch is perfectly planar and the node travels
+        // parallel to the plane. Both cases mean no force resolution is needed and will return a false condition. These
+        // conditions can be seen in singularity_detection_check.py in the python version.
+        J_det = det(J);
+        if (fabs(J_det) < tol)
+        {
+            return false;
+        }
+
+        inv(J, J_inv, J_det);
+        mat_mul(J_inv, F, grad);
+        for (int j = 0; j < 3; j++)
+        {
+            sol[j] = sol[j] - grad(j);
+        }
+        // update xi, eta, and del_tc
+        *xi_ = sol[0];
+        *eta_ = sol[1];
+        *del_tc = sol[2];
+    }  // end solver loop
+
+    if (iters == max_iter - 1)
+    {
+        return false;
+    } else
+    {
+        return true;
+    }
+}  // end get_contact_point
+
+KOKKOS_FUNCTION
+void contact_patch_t::phi(ViewCArrayKokkos<double> &phi_k, const double &xi_value, const double &eta_value) const
+{
+    if (num_nodes_in_patch == 4)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            phi_k(i) = 0.25*(1.0 + xi(i)*xi_value)*(1.0 + eta(i)*eta_value);
+        }
+    } else
+    {
+        std::cerr << "Error: higher order elements are not yet tested for contact" << std::endl;
+        exit(1);
+    }
+}  // end phi
+
+KOKKOS_FUNCTION
+void contact_patch_t::d_phi_d_xi(ViewCArrayKokkos<double> &d_phi_k_d_xi, const double &xi_value,
+                                 const double &eta_value) const
+{
+    // xi_value is used for higher order elements
+    if (num_nodes_in_patch == 4)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            d_phi_k_d_xi(i) = 0.25*xi(i)*(1.0 + eta(i)*eta_value);
+        }
+    } else
+    {
+        std::cerr << "Error: higher order elements are not yet tested for contact" << std::endl;
+        exit(1);
+    }
+}  // end d_phi_d_xi
+
+KOKKOS_FUNCTION
+void contact_patch_t::d_phi_d_eta(ViewCArrayKokkos<double> &d_phi_k_d_eta, const double &xi_value,
+                                  const double &eta_value) const
+{
+    // eta_value is used for higher order elements
+    if (num_nodes_in_patch == 4)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            d_phi_k_d_eta(i) = 0.25*(1.0 + xi(i)*xi_value)*eta(i);
+        }
+    } else
+    {
+        std::cerr << "Error: higher order elements are not yet tested for contact" << std::endl;
+        exit(1);
+    }
+}  // end d_phi_d_eta
 
 void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches,
                                    const node_t &nodes)
@@ -124,6 +402,8 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
             contact_patch.points = CArrayKokkos<double>(3, 4);
             contact_patch.vel_points = CArrayKokkos<double>(3, 4);
             contact_patch.internal_force = CArrayKokkos<double>(3, 4);
+            contact_patch.acc_points = CArrayKokkos<double>(3, 4);
+            contact_patch.mass_points = CArrayKokkos<double>(3, 4);
 
             contact_patch.xi = CArrayKokkos<double>(4);
             contact_patch.eta = CArrayKokkos<double>(4);
@@ -215,6 +495,9 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         });
     }
 
+    // Initialize the contact_nodes array
+    contact_nodes = CArrayKokkos<contact_node_t>(max_index + 1);
+
     // Construct nodes_gid
     nodes_gid = CArrayKokkos<size_t>(contact_patches_t::n);
     size_t node_lid = 0;
@@ -242,6 +525,29 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
         contact_patches(i).update_nodes(mesh, nodes, corner);
     });  // end parallel for
     Kokkos::fence();
+
+    // Update node objects
+    FOR_ALL_CLASS(i, 0, contact_patches_t::n, {
+        const size_t &node_gid = nodes_gid(i);
+        contact_node_t &contact_node = contact_nodes(node_gid);
+        contact_node.mass = nodes.mass(node_gid);
+
+        // Update pos, vel, acc, and internal force
+        for (int j = 0; j < 3; j++)
+        {
+            contact_node.pos(j) = nodes.coords(0, node_gid, j);
+            contact_node.vel(j) = nodes.vel(0, node_gid, j);
+
+            // Loop over the corners
+            for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++)
+            {
+                size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
+                contact_node.internal_force(j) += corner.force(corner_gid, j);
+            }
+
+            contact_node.acc(j) = contact_node.internal_force(j)/contact_node.mass;
+        }
+    });
 
     // Grouping all the coordinates, velocities, and accelerations
     CArrayKokkos<double> points(3, contact_patch_t::num_nodes_in_patch*num_contact_patches);
@@ -354,7 +660,7 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
 
     // If the max velocity is zero, then we want to set it to a small value. The max velocity and acceleration are used
     // for creating a capture box around the contact patch. We want there to be at least some thickness to the box.
-    double *vel_max[3] = {&vx_max, &vy_max, &vz_max};
+    double* vel_max[3] = {&vx_max, &vy_max, &vz_max};
     for (auto &i: vel_max)
     {
         if (*i == 0.0)
@@ -446,7 +752,7 @@ void contact_patches_t::find_nodes(const contact_patch_t &contact_patch, const d
     }
 
     // Get all nodes in each bucket
-    for (size_t b : buckets)
+    for (size_t b: buckets)
     {
         for (size_t i = 0; i < nbox(b); i++)
         {
