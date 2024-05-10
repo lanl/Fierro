@@ -143,7 +143,7 @@ public:
                 doing_contact = true;
 
                 contact_bank.initialize(mesh, mesh.bdy_patches, node);
-
+                // run_contact_tests();
                 break;
             } else if (bound.type == boundary_conds:: contact && bound.geometry != boundary_conds::global) {
                 doing_contact = true;
