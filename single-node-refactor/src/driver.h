@@ -465,12 +465,12 @@ public:
                                     }
                                 case init_conds::radial_linear:
                                     {
-                                        throw std::runtime_error("**** Radial_linear initial conditions not yet supported ****");
+                                        printf("**** Radial_linear initial conditions not yet supported ****\n");
                                         break;
                                     }
                                 case init_conds::spherical_linear:
                                     {
-                                        throw std::runtime_error("**** Spherical_linear initial conditions not yet supported ****");
+                                        printf("**** spherical_linear initial conditions not yet supported ****\n");
                                         break;
                                     }
                                 case init_conds::tg_vortex:
