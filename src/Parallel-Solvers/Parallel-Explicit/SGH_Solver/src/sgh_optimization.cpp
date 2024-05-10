@@ -544,21 +544,30 @@ double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const C
 /// \brief Coupled adjoint problem for the kinetic energy minimization problem
 ///
 /////////////////////////////////////////////////////////////////////////////
-void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
+void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     size_t num_bdy_nodes  = mesh->num_bdy_nodes;
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
     const int num_dim = simparam->num_dims;
+    bool use_solve_checkpoints = simparam->optimization_options.use_solve_checkpoints;
     real_t    global_dt;
     size_t    current_data_index, next_data_index;
     Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
     Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed, current_phi_adjoint_vector_distributed;
+
     // initialize first adjoint vector at last_time_step to 0 as the terminal value
-    (*adjoint_vector_data)[last_time_step + 1]->putScalar(0);
-    (*phi_adjoint_vector_data)[last_time_step + 1]->putScalar(0);
-    (*psi_adjoint_vector_data)[last_time_step + 1]->putScalar(0);
+    if(use_solve_checkpoints){
+        adjoint_vector_distributed->putScalar(0);
+        phi_adjoint_vector_distributed->putScalar(0);
+        psi_adjoint_vector_distributed->putScalar(0);
+    }
+    else{
+        (*adjoint_vector_data)[last_time_step + 1]->putScalar(0);
+        (*phi_adjoint_vector_data)[last_time_step + 1]->putScalar(0);
+        (*psi_adjoint_vector_data)[last_time_step + 1]->putScalar(0);
+    }
 
     // solve terminal value problem, proceeds in time backward. For simplicity, we use the same timestep data from the forward solve.
     // A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
@@ -592,14 +601,28 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
         // view scope
         {
             // set velocity, internal energy, and position for this timestep
-            const_vec_array previous_velocity_vector = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            const_vec_array current_velocity_vector  = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array previous_velocity_vector;
+            const_vec_array current_velocity_vector;
 
-            const_vec_array previous_coordinate_vector = (*forward_solve_coordinate_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            const_vec_array current_coordinate_vector  = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array previous_coordinate_vector;
+            const_vec_array current_coordinate_vector;
 
-            const_vec_array previous_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            const_vec_array current_element_internal_energy  = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array previous_element_internal_energy;
+            const_vec_array current_element_internal_energy;
+            
+            if(use_solve_checkpoints){
+
+            }
+            else{
+                previous_velocity_vector = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_velocity_vector  = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+                previous_coordinate_vector = (*forward_solve_coordinate_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_coordinate_vector  = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+                previous_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_element_internal_energy  = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
 
             // interface of arrays for current implementation of force calculation
 
@@ -1251,7 +1274,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         std::cout << "Computing accumulated kinetic energy gradient" << std::endl;
     }
 
-    compute_topology_optimization_adjoint_full();
+    compute_topology_optimization_adjoint_full(design_densities_distributed, design_gradients_distributed);
 
     { // view scope
         vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
