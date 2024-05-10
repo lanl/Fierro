@@ -99,18 +99,19 @@ struct contact_patches_t
      *         nsort[npoint[5]] would return the starting node in bucket 5. This is a means for finding the nodes given
      *         a bucket id.
      *
-     * With the above data structure, you could easily get the nodes in a bucket by the following pythonic syntax:
+     * With the above data structure, you could easily get the nodes in a bucket by doing this:
      * nsort[npoint[bucket_id]:npoint[bucket_id] + nbox[bucket_id]]
      *
      * Buckets are ordered by propagating first in the x direction, then in the y direction, and finally in the z.
      */
     CArrayKokkos<size_t> nbox;  // Size nb buckets
-    CArrayKokkos<size_t> lbox;  // Size n nodes (n is the total number of nodes being checked for penetration)
-    CArrayKokkos<size_t> nsort;  // Size n nodes
+    CArrayKokkos<size_t> lbox;  // Size num_contact_nodes nodes (num_contact_nodes is the total number of nodes being checked for penetration)
+    CArrayKokkos<size_t> nsort;  // Size num_contact_nodes nodes
     CArrayKokkos<size_t> npoint;  // Size nb buckets
 
-    static double bs;  // bucket size (defined as 1.001*min_node_distance) todo: consider changing it back to 0.999
-    static size_t n;  // total number of contact nodes (always less than or equal to mesh.num_bdy_nodes)
+    // todo: consider redefining the bucket size as 0.999*min_node_distance
+    static double bucket_size;  // bucket size (defined as 1.001*min_node_distance)
+    static size_t num_contact_nodes;  // total number of contact nodes (always less than or equal to mesh.num_bdy_nodes)
     double x_max = 0.0;  // maximum x coordinate
     double y_max = 0.0;  // maximum y coordinate
     double z_max = 0.0;  // maximum z coordinate
