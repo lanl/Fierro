@@ -1306,7 +1306,7 @@ void parse_bcs(Yaml::Node& root, CArrayKokkos<boundary_condition_t>& boundary_co
 
     size_t num_bcs = bc_yaml.Size();
 
-    boundary_conditions = CArrayKokkos<boundary_condition_t>(num_bcs);
+    boundary_conditions = CArrayKokkos<boundary_condition_t>(num_bcs, "sim_param.boundary_conditions");
 
     // loop over the fill regions specified
     for (int bc_id = 0; bc_id < num_bcs; bc_id++) {
@@ -1335,7 +1335,7 @@ void parse_bcs(Yaml::Node& root, CArrayKokkos<boundary_condition_t>& boundary_co
 
                 // set the solver
                 if (map.find(solver) != map.end()) {
-                    auto bc_solver = map[solver];
+                    solver_input::method bc_solver = map[solver];
 
                     RUN({
                         boundary_conditions(bc_id).solver = bc_solver;
