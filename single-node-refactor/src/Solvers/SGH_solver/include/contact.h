@@ -1,4 +1,5 @@
 // todo: change the documentation style
+// todo: make sure that a better explanation of edge_tol is included in get_contact_pairs
 #ifndef CONTACT_H
 #define CONTACT_H
 
@@ -11,6 +12,7 @@ using namespace mtr;
 // solving options
 static constexpr size_t max_iter = 30;  // max number of iterations
 static constexpr double tol = 1e-10;  // tolerance for the things that are supposed to be zero
+static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (see get_contact_pairs for more info)
 
 struct contact_node_t
 {
@@ -22,6 +24,7 @@ struct contact_node_t
     CArrayKokkos<double> contact_force = CArrayKokkos<double>(3);  // force due to contact
 
     contact_node_t();
+
     contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCArrayKokkos<double> &vel, const double &mass);
 };
 
@@ -58,6 +61,7 @@ struct contact_patch_t
     static constexpr size_t max_nodes = 4;  // max number of nodes in the patch (or surface); for allocating memory at compile time
 
     contact_patch_t();
+
     contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points);
 
     /*
@@ -100,7 +104,7 @@ struct contact_patch_t
      * the patch/surface. This will iteratively solve using a Newton-Raphson scheme and will change det_sol in place.
      *
      * @param node: Contact node object that is potentially penetrating this patch/surface
-     * @param det_sol: 2D array where each row is the solution containing (xi, eta, del_tc).
+     * @param det_sol: 2D array where each row is the solution containing (xi, eta, del_tc)
      * @param node_lid: The row to modify det_sol
      * @return: true if a solution was found in less than max_iter iterations; false if the solution took up to max_iter
      *          iterations or if a singularity was encountered
@@ -109,13 +113,49 @@ struct contact_patch_t
     bool get_contact_point(const contact_node_t &node, CArrayKokkos<double> &det_sol, const size_t &node_lid) const;
 
     /*
-     * Construct the basis matrix at time del_t for the patch.
+     * Determines if a contact pair should be formed. This is responsible for getting a guess value to feed into the
+     * get_contact_point method. If a solution is found from that scheme, the reference coordinates of xi and eta are
+     * between -1 and 1, and the calculated del_tc is between 0 and the current time step (del_t), then this will
+     * return true and a contact pair should be formed. The exception to not adding a contact pair between 'this' and
+     * 'node' is if the solution is on the edge. This behavior is handled in contact_patches_t::get_contact_pairs.
+     *
+     * @param node: Contact node object that is being checked for contact with 'this'
+     * @param del_t: time step
+     * @param det_sol: 2D array where each row is the solution containing (xi, eta, del_tc)
+     * @param node_lid: The row to modify det_sol
+     * @return: true if a contact pair should be formed; false otherwise
+     */
+    KOKKOS_FUNCTION
+    bool contact_check(const contact_node_t &node, const double &del_t, CArrayKokkos<double> &det_sol,
+                       const size_t &node_lid) const;
+
+    /*
+     * Construct the basis matrix at time del_t for the patch. The columns of A are defined as the position of each
+     * patch/surface node at time del_t. This is a 3x4 for a standard linear hex element and its construction is like
+     * this:
+     *
+     * ⎡p_{nx} + v_{nx}*del_t + 0.5*a_{nx}*del_t^2 ... for each n⎤
+     * ⎢                                                         ⎥
+     * ⎡p_{ny} + v_{ny}*del_t + 0.5*a_{ny}*del_t^2 ... for each n⎤
+     * ⎢                                                         ⎥
+     * ⎣p_{nz} + v_{nz}*del_t + 0.5*a_{nz}*del_t^2 ... for each n⎦
      *
      * @param A: basis matrix memory location
      * @param del_t: time step
      */
     KOKKOS_FUNCTION
     void construct_basis(ViewCArrayKokkos<double> &A, const double &del_t) const;
+
+    /*
+     * Converts the reference coordinates defined by 'this->xi' and 'this->eta' to the physical coordinates.
+     *
+     * @param ref: reference coordinates memory location (xi, eta)
+     * @param A: basis matrix as defined in construct_basis
+     * @param phys: physical coordinates memory location (x, y, z)
+     */
+    KOKKOS_FUNCTION
+    void ref_to_physical(const ViewCArrayKokkos<double> &ref, const ViewCArrayKokkos<double> &A,
+                         ViewCArrayKokkos<double> &phys) const;
 
     /*
      * Modifies the phi_k array to contain the basis function values at the given xi and eta values.

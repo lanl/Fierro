@@ -46,7 +46,7 @@ double norm(const ViewCArrayKokkos<double> &x)
     double sum = 0.0;
     for (size_t i = 0; i < x.size(); i++)
     {
-        sum += fabs(x(i)*x(i));
+        sum += pow(x(i), 2);
     }
     return sqrt(sum);
 }  // end norm
@@ -299,6 +299,127 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, CArrayKokkos
 }  // end get_contact_point
 
 KOKKOS_FUNCTION
+bool contact_patch_t::contact_check(const contact_node_t &node, const double &del_t, CArrayKokkos<double> &det_sol,
+                                    const size_t &node_lid) const
+{
+    // Constructing the guess value
+    // The guess is determined by projecting the node onto a plane formed by the patch at del_t/2.
+    // First, compute the centroid of the patch at time del_t/2
+    double A_arr[3*contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> A(&A_arr[0], 3, num_nodes_in_patch);
+    construct_basis(A, del_t/2);
+
+    double centroid[3];
+    for (int i = 0; i < 3; i++)
+    {
+        centroid[i] = 0.0;
+        for (int j = 0; j < num_nodes_in_patch; j++)
+        {
+            centroid[i] += A(i, j);
+        }
+        centroid[i] /= num_nodes_in_patch;
+    }
+
+    // Compute the position of the penetrating node at del_t/2
+    double node_later[3];
+    for (int i = 0; i < 3; i++)
+    {
+        node_later[i] = node.pos(i) + node.vel(i)*del_t/2 + 0.25*node.acc(i)*del_t*del_t;
+    }
+
+    // Construct the basis vectors. The first row of the matrix is the vector from the centroid to the reference point
+    // (1, 0) on the patch. The second row of the matrix is the vector from the centroid to the reference point (0, 1).
+    // The basis matrix is a 2x3 matrix always.
+    double b1_arr[3];
+    ViewCArrayKokkos<double> b1(&b1_arr[0], 3);
+    double b2_arr[3];
+    ViewCArrayKokkos<double> b2(&b2_arr[0], 3);
+    double p1_arr[2];
+    ViewCArrayKokkos<double> p1(&p1_arr[0], 2);
+    p1(0) = 1.0;
+    p1(1) = 0.0;
+    double p2_arr[2];
+    ViewCArrayKokkos<double> p2(&p2_arr[0], 2);
+    p2(0) = 0.0;
+    p2(1) = 1.0;
+    ref_to_physical(p1, A, b1);
+    ref_to_physical(p2, A, b2);
+
+    // Get b1, b2, and node_later relative to centroid
+    ViewCArrayKokkos<double> v(&node_later[0], 3);  // position of node relative to centroid
+    for (int i = 0; i < 3; i++)
+    {
+        b1(i) -= centroid[i];
+        b2(i) -= centroid[i];
+        v(i) -= centroid[i];
+    }
+
+    // b1 and b2 need to be unit vectors to ensure that the guess values are between -1 and 1.
+    double b1_norm = norm(b1);
+    double b2_norm = norm(b2);
+    for (int i = 0; i < 3; i++)
+    {
+        b1(i) /= b1_norm;
+        b2(i) /= b2_norm;
+    }
+    // v also needs to be a normal vector, but if its norm is zero, then we leave it as is.
+    double v_norm = norm(v);
+    if (v_norm != 0.0)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            v(i) /= v_norm;
+        }
+    }
+
+    // Get A_basis, which is the basis vectors found above.
+    double A_basis_arr[2*3];
+    ViewCArrayKokkos<double> A_basis(&A_basis_arr[0], 2, 3);
+    for (int i = 0; i < 3; i++)
+    {
+        A_basis(0, i) = b1(i);
+        A_basis(1, i) = b2(i);
+    }
+
+    // The matrix multiplication of A_basis*v is the projection of the node onto the plane formed by the patch.
+    double guess_arr[2];
+    ViewCArrayKokkos<double> guess(&guess_arr[0], 2);
+    mat_mul(A_basis, v, guess);
+    det_sol(node_lid, 0) = guess(0);
+    det_sol(node_lid, 1) = guess(1);
+    det_sol(node_lid, 2) = del_t/2;
+
+    // Get the solution
+    bool solution_found = get_contact_point(node, det_sol, node_lid);
+    double &xi_ = det_sol(node_lid, 0);
+    double &eta_ = det_sol(node_lid, 1);
+    double &del_tc = det_sol(node_lid, 2);
+
+    if (solution_found && fabs(xi_) <= 1.0 + edge_tol && fabs(eta_) <= 1.0 + edge_tol && del_tc >= 0.0 - tol &&
+        del_tc <= del_t + tol)
+    {
+        return true;
+    } else
+    {
+        return false;
+    }
+}  // end contact_check
+
+KOKKOS_FUNCTION
+void contact_patch_t::ref_to_physical(const ViewCArrayKokkos<double> &ref, const ViewCArrayKokkos<double> &A,
+                                      ViewCArrayKokkos<double> &phys) const
+{
+    const double &xi_ = ref(0);
+    const double &eta_ = ref(1);
+
+    double phi_k_arr[contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> phi_k(&phi_k_arr[0], num_nodes_in_patch);
+    phi(phi_k, xi_, eta_);
+
+    mat_mul(A, phi_k, phys);
+}
+
+KOKKOS_FUNCTION
 void contact_patch_t::phi(ViewCArrayKokkos<double> &phi_k, const double &xi_value, const double &eta_value) const
 {
     if (num_nodes_in_patch == 4)
@@ -314,6 +435,8 @@ void contact_patch_t::phi(ViewCArrayKokkos<double> &phi_k, const double &xi_valu
     }
 }  // end phi
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "UnusedParameter"
 KOKKOS_FUNCTION
 void contact_patch_t::d_phi_d_xi(ViewCArrayKokkos<double> &d_phi_k_d_xi, const double &xi_value,
                                  const double &eta_value) const
@@ -349,6 +472,7 @@ void contact_patch_t::d_phi_d_eta(ViewCArrayKokkos<double> &d_phi_k_d_eta, const
         exit(1);
     }
 }  // end d_phi_d_eta
+#pragma clang diagnostic pop
 
 void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches,
                                    const node_t &nodes)
@@ -769,7 +893,7 @@ void contact_patches_t::find_nodes(const contact_patch_t &contact_patch, const d
 }  // end find_nodes
 
 // contact tests ///////////////////////////////////////////////////////////////////////////////////////////////////////
-contact_patch_t::contact_patch_t()= default;
+contact_patch_t::contact_patch_t() = default;
 
 contact_patch_t::contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points)
 {
@@ -797,7 +921,7 @@ contact_patch_t::contact_patch_t(const ViewCArrayKokkos<double> &points, const V
     }
 }
 
-contact_node_t::contact_node_t()= default;
+contact_node_t::contact_node_t() = default;
 
 contact_node_t::contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCArrayKokkos<double> &vel,
                                const double &mass)
@@ -832,12 +956,16 @@ void run_contact_tests()
     contact_node_t test1_node(test1_pos, test1_vel, 1.0);
 
     CArrayKokkos<double> test1_sol(1, 3);
-    test1_patch.get_contact_point(test1_node, test1_sol, 0);
+    bool is_hitting = test1_patch.get_contact_point(test1_node, test1_sol, 0);
+    bool contact_check = test1_patch.contact_check(test1_node, 1.0, test1_sol, 0);
     std::cout << "\nTesting get_contact_point:" << std::endl;
     std::cout << "0 ---> -0.433241 -0.6 0.622161 vs. ";
     matar_print(test1_sol);
     assert(fabs(test1_sol(0, 0) + 0.43324096) < err_tol);
     assert(fabs(test1_sol(0, 1) + 0.6) < err_tol);
     assert(fabs(test1_sol(0, 2) - 0.6221606424928471) < err_tol);
+    assert(is_hitting);
+    assert(contact_check);
+
     exit(0);
 }
