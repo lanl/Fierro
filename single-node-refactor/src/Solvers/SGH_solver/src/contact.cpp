@@ -2,8 +2,8 @@
 
 // Definition of static member variables
 size_t contact_patch_t::num_nodes_in_patch;
-double contact_patches_t::bs;
-size_t contact_patches_t::n;
+double contact_patches_t::bucket_size;
+size_t contact_patches_t::num_contact_nodes;
 
 KOKKOS_FUNCTION  // is called in macros
 void contact_patch_t::update_nodes(const mesh_t &mesh, const node_t &nodes, // NOLINT(*-make-member-function-const)
@@ -187,7 +187,7 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
                    }
                }, result);
 
-    contact_patches_t::bs = 1.001*result;
+    contact_patches_t::bucket_size = 1.001*result;
 
     // Find the total number of nodes (this is should always be less than or equal to mesh.num_bdy_nodes)
     size_t local_max_index = 0;
@@ -210,13 +210,13 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
             if (node_count(node_gid) == 0)
             {
                 node_count(node_gid) = 1;
-                contact_patches_t::n += 1;
+                contact_patches_t::num_contact_nodes += 1;
             }
         });
     }
 
     // Construct nodes_gid
-    nodes_gid = CArrayKokkos<size_t>(contact_patches_t::n);
+    nodes_gid = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
     size_t node_lid = 0;
     for (int i = 0; i < num_contact_patches; i++)
     {
@@ -354,7 +354,7 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
 
     // If the max velocity is zero, then we want to set it to a small value. The max velocity and acceleration are used
     // for creating a capture box around the contact patch. We want there to be at least some thickness to the box.
-    double *vel_max[3] = {&vx_max, &vy_max, &vz_max};
+    double* vel_max[3] = {&vx_max, &vy_max, &vz_max};
     for (auto &i: vel_max)
     {
         if (*i == 0.0)
@@ -364,28 +364,28 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
     }
 
     // Define Sx, Sy, and Sz
-    Sx = floor((x_max - x_min)/bs) + 1; // NOLINT(*-narrowing-conversions)
-    Sy = floor((y_max - y_min)/bs) + 1; // NOLINT(*-narrowing-conversions)
-    Sz = floor((z_max - z_min)/bs) + 1; // NOLINT(*-narrowing-conversions)
+    Sx = floor((x_max - x_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
+    Sy = floor((y_max - y_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
+    Sz = floor((z_max - z_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
 
     // Initializing the nbox, lbox, nsort, and npoint arrays
     size_t nb = Sx*Sy*Sz;  // total number of buckets
     nbox = CArrayKokkos<size_t>(nb);
-    lbox = CArrayKokkos<size_t>(contact_patches_t::n);
-    nsort = CArrayKokkos<size_t>(contact_patches_t::n);
+    lbox = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
+    nsort = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
     npoint = CArrayKokkos<size_t>(nb);
-    CArrayKokkos<size_t> nsort_lid(contact_patches_t::n);
+    CArrayKokkos<size_t> nsort_lid(contact_patches_t::num_contact_nodes);
 
     // Find the bucket id for each node by constructing lbox
-    FOR_ALL_CLASS(i, 0, contact_patches_t::n, {
+    FOR_ALL_CLASS(i, 0, contact_patches_t::num_contact_nodes, {
         size_t node_gid = nodes_gid(i);
         double x = nodes.coords(0, node_gid, 0);
         double y = nodes.coords(0, node_gid, 1);
         double z = nodes.coords(0, node_gid, 2);
 
-        size_t Si_x = floor((x - x_min)/bs);
-        size_t Si_y = floor((y - y_min)/bs);
-        size_t Si_z = floor((z - z_min)/bs);
+        size_t Si_x = floor((x - x_min)/bucket_size);
+        size_t Si_y = floor((y - y_min)/bucket_size);
+        size_t Si_z = floor((z - z_min)/bucket_size);
 
         lbox(i) = Si_z*Sx*Sy + Si_y*Sx + Si_x;
         nbox(lbox(i)) += 1;  // increment nbox
@@ -405,14 +405,14 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
     Kokkos::fence();
 
     // Sort the slave nodes according to their bucket id into nsort
-    for (int i = 0; i < contact_patches_t::n; i++)
+    for (int i = 0; i < contact_patches_t::num_contact_nodes; i++)
     {
         nsort_lid(nbox(lbox(i)) + npoint(lbox(i))) = i;
         nbox(lbox(i)) += 1;
     }
 
     // Change nsort to reflect the global node id's
-    FOR_ALL_CLASS(i, 0, contact_patches_t::n, {
+    FOR_ALL_CLASS(i, 0, contact_patches_t::num_contact_nodes, {
         nsort(i) = nodes_gid(nsort_lid(i));
     });
     Kokkos::fence();
@@ -426,12 +426,12 @@ void contact_patches_t::find_nodes(const contact_patch_t &contact_patch, const d
     contact_patch.capture_box(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, del_t, bounds);
 
     // Determine the buckets that intersect with the capture box
-    size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounds(0) - x_min)/bs))); // NOLINT(*-narrowing-conversions)
-    size_t jbox_max = fmax(0, fmin(Sy - 1, floor((bounds(1) - y_min)/bs))); // NOLINT(*-narrowing-conversions)
-    size_t kbox_max = fmax(0, fmin(Sz - 1, floor((bounds(2) - z_min)/bs))); // NOLINT(*-narrowing-conversions)
-    size_t ibox_min = fmax(0, fmin(Sx - 1, floor((bounds(3) - x_min)/bs))); // NOLINT(*-narrowing-conversions)
-    size_t jbox_min = fmax(0, fmin(Sy - 1, floor((bounds(4) - y_min)/bs))); // NOLINT(*-narrowing-conversions)
-    size_t kbox_min = fmax(0, fmin(Sz - 1, floor((bounds(5) - z_min)/bs))); // NOLINT(*-narrowing-conversions)
+    size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounds(0) - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t jbox_max = fmax(0, fmin(Sy - 1, floor((bounds(1) - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t kbox_max = fmax(0, fmin(Sz - 1, floor((bounds(2) - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t ibox_min = fmax(0, fmin(Sx - 1, floor((bounds(3) - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t jbox_min = fmax(0, fmin(Sy - 1, floor((bounds(4) - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t kbox_min = fmax(0, fmin(Sz - 1, floor((bounds(5) - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
 
     std::vector<size_t> buckets;
     for (size_t i = ibox_min; i < ibox_max + 1; i++)
@@ -446,7 +446,7 @@ void contact_patches_t::find_nodes(const contact_patch_t &contact_patch, const d
     }
 
     // Get all nodes in each bucket
-    for (size_t b : buckets)
+    for (size_t b: buckets)
     {
         for (size_t i = 0; i < nbox(b); i++)
         {

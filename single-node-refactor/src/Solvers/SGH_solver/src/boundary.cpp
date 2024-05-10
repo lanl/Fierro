@@ -119,4 +119,7 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
 void SGH::boundary_contact(const mesh_t &mesh, const node_t &nodes, const corner_t &corner, const double &del_t)
 {
     contact_bank.sort(mesh, nodes, corner);
+    contact_patch_t &temp = contact_bank.contact_patches(2);
+    std::vector<size_t> found;
+    contact_bank.find_nodes(temp, del_t, found);
 } // end boundary_contact function
