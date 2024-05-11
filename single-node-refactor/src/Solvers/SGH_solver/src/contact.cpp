@@ -5,6 +5,7 @@ size_t contact_patch_t::num_nodes_in_patch;
 double contact_patches_t::bucket_size;
 size_t contact_patches_t::num_contact_nodes;
 
+/// beginning of global, linear algebra functions //////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void mat_mul(const ViewCArrayKokkos<double> &A, const ViewCArrayKokkos<double> &x, ViewCArrayKokkos<double> &b)
 {
@@ -14,7 +15,6 @@ void mat_mul(const ViewCArrayKokkos<double> &A, const ViewCArrayKokkos<double> &
 
     if (x_ord == 1)
     {
-        size_t p = x.dims(0);
         for (size_t i = 0; i < m; i++)
         {
             b(i) = 0.0;
@@ -72,7 +72,9 @@ void inv(const ViewCArrayKokkos<double> &A, ViewCArrayKokkos<double> &A_inv, con
     A_inv(2, 1) = (A(0, 1)*A(2, 0) - A(0, 0)*A(2, 1))/A_det;
     A_inv(2, 2) = (A(0, 0)*A(1, 1) - A(0, 1)*A(1, 0))/A_det;
 }  // end inv
+/// end of global, linear algebra functions ////////////////////////////////////////////////////////////////////////////
 
+/// beginning of contact_patch_t member functions //////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION  // is called in macros
 void contact_patch_t::update_nodes(const mesh_t &mesh, const node_t &nodes, // NOLINT(*-make-member-function-const)
                                    const corner_t &corner)
@@ -108,6 +110,8 @@ void contact_patch_t::capture_box(const double &vx_max, const double &vy_max, co
                                   const double &ax_max, const double &ay_max, const double &az_max,
                                   const double &dt, CArrayKokkos<double> &bounds) const
 {
+    // collecting all the points that will be used to construct the bounding box into add_sub
+    // the bounding box is the maximum and minimum points for each dimension
     CArrayKokkos<double> add_sub(2, 3, contact_patch_t::num_nodes_in_patch);
     FOR_ALL_CLASS(i, 0, contact_patch_t::num_nodes_in_patch, {
         add_sub(0, 0, i) = points(0, i) + vx_max*dt + 0.5*ax_max*dt*dt;
@@ -473,7 +477,9 @@ void contact_patch_t::d_phi_d_eta(ViewCArrayKokkos<double> &d_phi_k_d_eta, const
     }
 }  // end d_phi_d_eta
 #pragma clang diagnostic pop
+/// end of contact_patch_t member functions ////////////////////////////////////////////////////////////////////////////
 
+/// beginning of contact_patches_t member functions ////////////////////////////////////////////////////////////////////
 void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches,
                                    const node_t &nodes)
 {
@@ -891,8 +897,9 @@ void contact_patches_t::find_nodes(const contact_patch_t &contact_patch, const d
         nodes.erase(std::remove(nodes.begin(), nodes.end(), node_gid), nodes.end());
     }
 }  // end find_nodes
+/// end of contact_patches_t member functions //////////////////////////////////////////////////////////////////////////
 
-// contact tests ///////////////////////////////////////////////////////////////////////////////////////////////////////
+/// beginning of internal, not to be used anywhere else tests //////////////////////////////////////////////////////////
 contact_patch_t::contact_patch_t() = default;
 
 contact_patch_t::contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points)
@@ -958,7 +965,7 @@ void run_contact_tests()
     CArrayKokkos<double> test1_sol(1, 3);
     bool is_hitting = test1_patch.get_contact_point(test1_node, test1_sol, 0);
     bool contact_check = test1_patch.contact_check(test1_node, 1.0, test1_sol, 0);
-    std::cout << "\nTesting get_contact_point:" << std::endl;
+    std::cout << "\nTesting get_contact_point and contact_check:" << std::endl;
     std::cout << "0 ---> -0.433241 -0.6 0.622161 vs. ";
     matar_print(test1_sol);
     assert(fabs(test1_sol(0, 0) + 0.43324096) < err_tol);
@@ -969,3 +976,4 @@ void run_contact_tests()
 
     exit(0);
 }
+/// end of internal, not to be used anywhere else tests ////////////////////////////////////////////////////////////////
