@@ -41,19 +41,19 @@ void write_outputs (const mesh_t &mesh,
     // Kokkos::fence();
     
     // write out state file
-    state_file(mesh,
-               node_coords,
-               node_vel,
-               node_mass,
-               elem_den,
-               elem_pres,
-               elem_stress,
-               elem_sspd,
-               elem_sie,
-               elem_vol,
-               elem_mass,
-               elem_mat_id,
-               time_value);
+    // state_file(mesh,
+    //            node_coords,
+    //            node_vel,
+    //            node_mass,
+    //            elem_den,
+    //            elem_pres,
+    //            elem_stress,
+    //            elem_sspd,
+    //            elem_sie,
+    //            elem_vol,
+    //            elem_mass,
+    //            elem_mat_id,
+    //            time_value);
     
     
     // write out ensight file
@@ -413,14 +413,15 @@ void ensight( const mesh_t &mesh,
 void state_file( const mesh_t &mesh,
                  const DViewCArrayKokkos <double> &node_coords,
                  const DViewCArrayKokkos <double> &node_vel,
+                 const DViewCArrayKokkos <double> &mat_pt_vel,
                  const DViewCArrayKokkos <double> &node_mass,
-                 const DViewCArrayKokkos <double> &elem_den,
-                 const DViewCArrayKokkos <double> &elem_pres,
-                 const DViewCArrayKokkos <double> &elem_stress,
-                 const DViewCArrayKokkos <double> &elem_sspd,
-                 const DViewCArrayKokkos <double> &elem_sie,
+                 const DViewCArrayKokkos <double> &mat_pt_den,
+                 const DViewCArrayKokkos <double> &mat_pt_pres,
+                 const DViewCArrayKokkos <double> &mat_pt_stress,
+                 const DViewCArrayKokkos <double> &mat_pt_sspd,
+                 const DViewCArrayKokkos <double> &mat_pt_sie,
                  const DViewCArrayKokkos <double> &elem_vol,
-                 const DViewCArrayKokkos <double> &elem_mass,
+                 const DViewCArrayKokkos <double> &mat_pt_mass,
                  const DViewCArrayKokkos <size_t> &elem_mat_id,
                  const double time_value ) {
     
@@ -436,70 +437,84 @@ void state_file( const mesh_t &mesh,
     //  ---------------------------------------------------------------------------
     
     // output file
-    FILE *out_elem_state;  //element average state
+    FILE *out_mat_pt_state;  //element average state
     char filename[128];
     
-    sprintf(filename, "state/elem_state_t%6.5e.txt", time_value);
+    sprintf(filename, "./state/mat_pt_state_t_%6.5e.txt", time_value);
     
     // output files
-    out_elem_state  = fopen(filename, "w");
+    out_mat_pt_state  = fopen(filename, "w");
 
     // write state dump
-    fprintf(out_elem_state, "# state dump file\n");
-    fprintf(out_elem_state, "# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass \n");
+    fprintf(out_mat_pt_state, "# state dump file\n");
+    fprintf(out_mat_pt_state, "# u v w den  pres  sie  sspd \n");
     
 
     
     // write out values for the elem
     for (size_t elem_gid=0; elem_gid<mesh.num_elems; elem_gid++){
+
+        for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
+            int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+
+            fprintf( out_mat_pt_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
+                 mat_pt_vel.host( gauss_gid, 0 ),
+                 mat_pt_vel.host( gauss_gid, 1 ),
+                 mat_pt_vel.host( gauss_gid, 2 ),
+                 mat_pt_den.host( gauss_gid ),
+                 mat_pt_pres.host( gauss_gid ),
+                 mat_pt_sie.host( gauss_gid ),
+                 mat_pt_sspd.host( gauss_gid ));
+
+        }
         
-        double elem_coords[3];
-        elem_coords[0] = 0.0;
-        elem_coords[1] = 0.0;
-        elem_coords[2] = 0.0;
+        // double elem_coords[3];
+        // elem_coords[0] = 0.0;
+        // elem_coords[1] = 0.0;
+        // elem_coords[2] = 0.0;
 	
 	
-        // get the coordinates of the element center
-        for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-            elem_coords[0] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
-            elem_coords[1] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
-            if(num_dims == 3){
-                elem_coords[2] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
-            }
-            else {
-                elem_coords[2] = 0.0;
-            }
-        } // end loop over nodes in element
+        // // get the coordinates of the element center
+        // for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+        //     elem_coords[0] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
+        //     elem_coords[1] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
+        //     if(num_dims == 3){
+        //         elem_coords[2] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
+        //     }
+        //     else {
+        //         elem_coords[2] = 0.0;
+        //     }
+        // } // end loop over nodes in element
 	
-        elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
-        elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
-        elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
+        // elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
+        // elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
+        // elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
         
-        double rad2 = sqrt(elem_coords[0]*elem_coords[0] +
-                           elem_coords[1]*elem_coords[1]);
+        // double rad2 = sqrt(elem_coords[0]*elem_coords[0] +
+        //                    elem_coords[1]*elem_coords[1]);
         
-        double rad3 = sqrt(elem_coords[0]*elem_coords[0] +
-                           elem_coords[1]*elem_coords[1] +
-                           elem_coords[2]*elem_coords[2]);
+        // double rad3 = sqrt(elem_coords[0]*elem_coords[0] +
+        //                    elem_coords[1]*elem_coords[1] +
+        //                    elem_coords[2]*elem_coords[2]);
         
-        fprintf( out_elem_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
-                 elem_coords[0],
-                 elem_coords[1],
-                 elem_coords[2],
-                 rad2,
-                 rad3,
-                 elem_den.host(elem_gid),
-                 elem_pres.host(elem_gid),
-                 elem_sie.host(1,elem_gid),
-                 elem_sspd.host(elem_gid),
-                 elem_vol.host(elem_gid),
-                 elem_mass.host(elem_gid) );
+        // fprintf( out_mat_pt_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
+        //          elem_coords[0],
+        //          elem_coords[1],
+        //          elem_coords[2],
+        //          rad2,
+        //          rad3,
+        //          elem_den.host(elem_gid),
+        //          elem_pres.host(elem_gid),
+        //          elem_sie.host(1,elem_gid),
+        //          elem_sspd.host(elem_gid),
+        //          elem_vol.host(elem_gid),
+        //          elem_mass.host(elem_gid) );
 	
         
     }; // end for
     
     
-    fclose(out_elem_state);
+    fclose(out_mat_pt_state);
  
     return;
     

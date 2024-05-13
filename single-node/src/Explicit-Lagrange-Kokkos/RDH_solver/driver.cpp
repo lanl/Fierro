@@ -211,6 +211,9 @@ int main(int argc, char *argv[]){
                                             rk_num_bins,
                                             num_nodes,
                                             num_dims);
+        DViewCArrayKokkos <double> mat_pt_vel(&mat_pt.vel(0,0),
+                                            num_leg_pts,
+                                            num_dims);
 
         DViewCArrayKokkos <double> node_mass(&node.mass(0),
                                              num_nodes);
@@ -238,6 +241,9 @@ int main(int argc, char *argv[]){
         DViewCArrayKokkos <double> zone_sie(&zone.sie(0,0),
                                             rk_num_bins,
                                             num_zones);
+
+        DViewCArrayKokkos <double> mat_pt_sie(&mat_pt.sie(0),
+                                            num_leg_pts);
 
         DViewCArrayKokkos <double> mat_pt_div(&mat_pt.div(0),
                                             num_leg_pts);
@@ -341,12 +347,14 @@ int main(int argc, char *argv[]){
               ref_elem,
               node_coords,
               node_vel,
+              mat_pt_vel,
               node_mass,
               mat_pt_den,
               mat_pt_pressure,
               mat_pt_stress,
               mat_pt_sspd,
               zone_sie,
+              mat_pt_sie,
               elem_vol,
               mat_pt_mass,
               elem_mat_id,
@@ -422,6 +430,7 @@ int main(int argc, char *argv[]){
                   zone,
                   node_coords,
                   node_vel,
+                  mat_pt_vel,
                   node.M_V,
                   node.lumped_mass,
                   node_mass,
@@ -430,6 +439,7 @@ int main(int argc, char *argv[]){
                   mat_pt_stress,
                   mat_pt_sspd,
                   zone_sie,
+                  mat_pt_sie,
                   zone.M_e,
                   zone.zonal_mass,
                   elem_vol,
@@ -460,6 +470,8 @@ int main(int argc, char *argv[]){
         mat_pt_pressure.update_host();
         mat_pt_stress.update_host();
         mat_pt_sspd.update_host();
+        mat_pt_vel.update_host();
+        mat_pt_sie.update_host();
         zone_sie.update_host();
         elem_vol.update_host();
         mat_pt_mass.update_host();
@@ -485,6 +497,12 @@ int main(int argc, char *argv[]){
                 graphics_times,
                 graphics_id,
                 time_value);
+
+        state_file( mesh, node_coords, node_vel, mat_pt_vel,
+                    node_mass, mat_pt_den, mat_pt_pressure, mat_pt_stress,
+                    mat_pt_sspd, mat_pt_sie, elem_vol, mat_pt_mass,
+                    elem_mat_id, time_value );
+            
     } // end of kokkos scope
     Kokkos::finalize();
     

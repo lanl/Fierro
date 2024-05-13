@@ -41,7 +41,7 @@ void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
                     (source(stage, zone_gid_2) + source(0, zone_gid_2));
         }
 
-        RHS = RHS1;// RHS2;
+        RHS = RHS1;// + RHS2;
 
         zone_sie( 1, zone_gid_1 ) = zone_sie(0, zone_gid_1) + dt*RHS;
 

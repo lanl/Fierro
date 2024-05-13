@@ -64,12 +64,14 @@ void setup(const CArrayKokkos <material_t> &material,
            fe_ref_elem_t &ref_elem,
            const DViewCArrayKokkos <double> &node_coords,
            DViewCArrayKokkos <double> &node_vel,
+           DViewCArrayKokkos <double> &mat_pt_vel,
            DViewCArrayKokkos <double> &node_mass,
            const DViewCArrayKokkos <double> &mat_pt_den,
            const DViewCArrayKokkos <double> &mat_pt_pres,
            const DViewCArrayKokkos <double> &mat_pt_stress,
            const DViewCArrayKokkos <double> &mat_pt_sspd,
            const DViewCArrayKokkos <double> &zone_sie,
+           const DViewCArrayKokkos <double> &mat_pt_sie,
            const DViewCArrayKokkos <double> &elem_vol,
            const DViewCArrayKokkos <double> &mat_pt_mass,
            const DViewCArrayKokkos <size_t> &elem_mat_id,
@@ -442,7 +444,18 @@ void setup(const CArrayKokkos <material_t> &material,
                         }
                     } // end of switch
 
-                }// end loop over nodes of element                
+                }// end loop over nodes of element  
+
+                // interpolate node_vel at gauss legendre points
+                for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
+                    int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+                        int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                        for (int dim = 0; dim < mesh.num_dims; dim++){
+                            mat_pt_vel(gauss_gid, dim) += ref_elem.gauss_leg_basis(gauss_lid, node_lid)*node_vel(1, node_gid, dim);
+                        }// dim
+                    }// node_lid
+                }// gauss_lid
 
                 // Building polynomial coefficients for elem fields //
                 for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
@@ -516,6 +529,7 @@ void setup(const CArrayKokkos <material_t> &material,
                         int T_dof_gid = mesh.zones_in_elem(elem_gid, T_dof);
                         interp_sie += ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*zone_sie(1, T_dof_gid);
                     }
+                    mat_pt_sie(leg_gid) = interp_sie;
                     // -- FIX make over legendre points
                     // --- Pressure and stress ---
                     material(mat_id).eos_model(mat_pt_pres,

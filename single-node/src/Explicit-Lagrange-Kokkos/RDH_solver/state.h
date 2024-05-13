@@ -106,6 +106,14 @@ struct mat_pt_t {
     // mass of elem
     CArray <double> mass;
 
+    // velocity interpolated at gauss legendre points
+    // only stored at the current time,
+    // i.e. constructed from node_vel(1, node_gid, dim) 
+    CArray <double> vel;
+
+    // constructed from zone.sie(1, zone_gid) as for vel
+    CArray <double> sie;
+
     // jacobians
     CArrayKokkos <double> gauss_lobatto_jacobian;
     CArrayKokkos <double> gauss_legendre_jacobian;
@@ -139,6 +147,10 @@ struct mat_pt_t {
         this->pres   = CArray <double> (num_leg_pts);
         this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);
         this->sspd   = CArray <double> (num_leg_pts);
+
+        // visualization
+        this->vel = CArray <double> (num_leg_pts, num_dims);
+        this->sie = CArray <double> (num_leg_pts);
 	
         this->gauss_lobatto_jacobian  = CArrayKokkos <double> (num_lob_pts, num_dims, num_dims);
         this->gauss_legendre_jacobian = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
