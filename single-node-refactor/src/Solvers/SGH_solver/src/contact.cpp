@@ -108,10 +108,11 @@ void contact_patch_t::update_nodes(const mesh_t &mesh, const node_t &nodes, // N
 
 void contact_patch_t::capture_box(const double &vx_max, const double &vy_max, const double &vz_max,
                                   const double &ax_max, const double &ay_max, const double &az_max,
-                                  const double &dt, CArrayKokkos<double> &bounds) const
+                                  const double &dt)
 {
     // collecting all the points that will be used to construct the bounding box into add_sub
     // the bounding box is the maximum and minimum points for each dimension
+    // todo: add_sub needs to be moved to a member variable. Can't have this being allocated for every call.
     CArrayKokkos<double> add_sub(2, 3, contact_patch_t::num_nodes_in_patch);
     FOR_ALL_CLASS(i, 0, contact_patch_t::num_nodes_in_patch, {
         add_sub(0, 0, i) = points(0, i) + vx_max*dt + 0.5*ax_max*dt*dt;
@@ -123,6 +124,7 @@ void contact_patch_t::capture_box(const double &vx_max, const double &vy_max, co
     });
     Kokkos::fence();
 
+    // todo: Does bounds(i) = result_max and bounds(i + 3) = result_min need to be inside Run()?
     for (int i = 0; i < 3; i++)
     {
         // Find the max of dim i
@@ -504,6 +506,7 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
                   });  // end parallel for
     Kokkos::fence();
 
+    // todo: Kokkos arrays are being accessed and modified but this isn't inside a macro. Should this be inside Run()?
     for (int i = 0; i < num_contact_patches; i++)
     {
         contact_patch_t &contact_patch = contact_patches(i);
@@ -518,6 +521,7 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         }
     }  // end for
 
+    // todo: This if statement might need a closer look
     // Setting up the iso-parametric coordinates for all patch objects
     if (mesh.num_nodes_in_patch == 4)
     {
@@ -538,6 +542,8 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
             contact_patch.xi = CArrayKokkos<double>(4);
             contact_patch.eta = CArrayKokkos<double>(4);
 
+            // todo: We have the Kokkos xi and eta members being modified on host. I think it may be that the xi_temp
+            // todo: and eta_temp arrays need to be ridden and do a serial Run() for the construction of xi and eta.
             for (int j = 0; j < 4; j++)
             {
                 contact_patch.xi(j) = xi_temp[j];
@@ -625,8 +631,11 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         });
     }
 
-    // Initialize the contact_nodes array
+    // Initialize the contact_nodes and contact_pairs arrays
     contact_nodes = CArrayKokkos<contact_node_t>(max_index + 1);
+    contact_pairs = CArrayKokkos<contact_pair_t>(max_index + 1);
+    is_patch_node = CArrayKokkos<bool>(max_index + 1);
+    is_pen_node = CArrayKokkos<bool>(max_index + 1);
 
     // Construct nodes_gid
     nodes_gid = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
@@ -679,6 +688,8 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
         }
     });
 
+    // todo: I don't think it's a good idea to have these allocated here. These should become member variables, and
+    // todo: its allocation should be moved to initialize() because sort() is being called every step.
     // Grouping all the coordinates, velocities, and accelerations
     CArrayKokkos<double> points(3, contact_patch_t::num_nodes_in_patch*num_contact_patches);
     CArrayKokkos<double> velocities(3, contact_patch_t::num_nodes_in_patch*num_contact_patches);
@@ -804,6 +815,8 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
     Sy = floor((y_max - y_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
     Sz = floor((z_max - z_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
 
+    // todo: Something similar to the points, velocities, and accelerations arrays above should be done here. The issue
+    // todo: with this one is that nb changes through the iterations. lbox and npoint might need to change to Views.
     // Initializing the nbox, lbox, nsort, and npoint arrays
     size_t nb = Sx*Sy*Sz;  // total number of buckets
     nbox = CArrayKokkos<size_t>(nb);
@@ -854,12 +867,12 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
     Kokkos::fence();
 }  // end sort
 
-void contact_patches_t::find_nodes(const contact_patch_t &contact_patch, const double &del_t,
-                                   std::vector<size_t> &nodes) const
+void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double &del_t,
+                                   size_t &num_nodes_found)
 {
     // Get capture box
-    CArrayKokkos<double> bounds(6);
-    contact_patch.capture_box(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, del_t, bounds);
+    contact_patch.capture_box(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, del_t);
+    CArrayKokkos<double> &bounds = contact_patch.bounds;
 
     // Determine the buckets that intersect with the capture box
     size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounds(0) - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
@@ -869,32 +882,44 @@ void contact_patches_t::find_nodes(const contact_patch_t &contact_patch, const d
     size_t jbox_min = fmax(0, fmin(Sy - 1, floor((bounds(4) - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
     size_t kbox_min = fmax(0, fmin(Sz - 1, floor((bounds(5) - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
 
-    std::vector<size_t> buckets;
+    size_t bucket_index = 0;
     for (size_t i = ibox_min; i < ibox_max + 1; i++)
     {
         for (size_t j = jbox_min; j < jbox_max + 1; j++)
         {
             for (size_t k = kbox_min; k < kbox_max + 1; k++)
             {
-                buckets.push_back(k*Sx*Sy + j*Sx + i);
+                contact_patch.buckets(bucket_index) = k*Sx*Sy + j*Sx + i;
+                bucket_index += 1;
             }
         }
     }
 
     // Get all nodes in each bucket
-    for (size_t b: buckets)
+    num_nodes_found = 0;  // local node index for possible_nodes member
+    for (int bucket_lid = 0; bucket_lid < bucket_index; bucket_lid++)
     {
+        size_t b = contact_patch.buckets(bucket_lid);
         for (size_t i = 0; i < nbox(b); i++)
         {
-            nodes.push_back(nsort(npoint(b) + i));
-        }
-    }
+            size_t node_gid = nsort(npoint(b) + i);
+            bool add_node = true;
+            // If the node is in the current contact_patch, then continue; else, add it to possible_nodes
+            for (int j = 0; j < contact_patch_t::num_nodes_in_patch; j++)
+            {
+                if (node_gid == contact_patch.nodes_gid(j))
+                {
+                    add_node = false;
+                    break;
+                }
+            }
 
-    // Remove the nodes that are a part of the contact patch
-    for (size_t i = 0; i < contact_patch_t::num_nodes_in_patch; i++)
-    {
-        size_t node_gid = contact_patch.nodes_gid(i);
-        nodes.erase(std::remove(nodes.begin(), nodes.end(), node_gid), nodes.end());
+            if (add_node)
+            {
+                contact_patch.possible_nodes(num_nodes_found) = node_gid;
+                num_nodes_found += 1;
+            }
+        }
     }
 }  // end find_nodes
 /// end of contact_patches_t member functions //////////////////////////////////////////////////////////////////////////

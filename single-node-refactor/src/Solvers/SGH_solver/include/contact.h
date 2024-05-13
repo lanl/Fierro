@@ -10,7 +10,7 @@ using namespace mtr;
 // solving options
 static constexpr size_t max_iter = 30;  // max number of iterations
 static constexpr double tol = 1e-10;  // tolerance for the things that are supposed to be zero
-static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (see get_contact_pairs for more info)
+static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (see contact_check for more info)
 
 struct contact_node_t
 {
@@ -58,6 +58,16 @@ struct contact_patch_t
     static size_t num_nodes_in_patch;  // number of nodes in the patch (or surface)
     static constexpr size_t max_nodes = 4;  // max number of nodes in the patch (or surface); for allocating memory at compile time
 
+    // members to be used in find_nodes and capture_box
+    // expected max number of nodes that could hit a patch
+    static constexpr size_t max_contacting_nodes_in_patch = 25;
+    // bounds of the capture box (xc_max, yc_max, zc_max, xc_min, yc_min, zc_min)
+    CArrayKokkos<double> bounds = CArrayKokkos<double>(6);
+    // buckets that intersect the patch
+    CArrayKokkos<size_t> buckets = CArrayKokkos<size_t>(max_contacting_nodes_in_patch);
+    // nodes that could potentially contact the patch
+    CArrayKokkos<size_t> possible_nodes = CArrayKokkos<size_t>(max_contacting_nodes_in_patch);
+
     contact_patch_t();
 
     contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points);
@@ -98,12 +108,10 @@ struct contact_patch_t
     /// \param ay_max absolute maximum y acceleration across all nodes in the patch
     /// \param az_max absolute maximum z acceleration across all nodes in the patch
     /// \param dt time step
-    /// \param bounds array of size 6 that will contain the maximum and minimum components of the capture box in the
-    ///                 following order (xc_max, yc_max, zc_max, xc_min, yc_min, zc_min)
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void capture_box(const double &vx_max, const double &vy_max, const double &vz_max,
                      const double &ax_max, const double &ay_max, const double &az_max,
-                     const double &dt, CArrayKokkos<double> &bounds) const;
+                     const double &dt);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn get_contact_point
@@ -172,13 +180,6 @@ struct contact_patch_t
     KOKKOS_FUNCTION
     void construct_basis(ViewCArrayKokkos<double> &A, const double &del_t) const;
 
-    /*
-     * Converts the reference coordinates defined by 'this->xi' and 'this->eta' to the physical coordinates.
-     *
-     * @param ref: reference coordinates memory location (xi, eta)
-     * @param A: basis matrix as defined in construct_basis
-     * @param phys: physical coordinates memory location (x, y, z)
-     */
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn ref_to_physical
     ///
@@ -232,6 +233,16 @@ struct contact_patch_t
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     KOKKOS_FUNCTION
     void d_phi_d_eta(ViewCArrayKokkos<double> &d_phi_k_d_eta, const double &xi_value, const double &eta_value) const;
+};
+
+struct contact_pair_t
+{
+    contact_patch_t patch;  // patch object (or surface)
+    contact_node_t node;  // node object
+    double xi;  // xi coordinate of the contact point
+    double eta;  // eta coordinate of the contact point
+    double del_tc;  // time it takes for the node to penetrate the patch/surface (only useful for initial contact)
+    CArrayKokkos<double> normal = CArrayKokkos<double>(3);  // normal vector of the patch/surface at the contact point
 };
 
 struct contact_patches_t
@@ -293,6 +304,10 @@ struct contact_patches_t
     size_t Sy = 0;  // number of buckets in the y direction
     size_t Sz = 0;  // number of buckets in the z direction
 
+    CArrayKokkos<contact_pair_t> contact_pairs;  // contact pairs (accessed through node gid)
+    CArrayKokkos<bool> is_patch_node;  // container for determining if a node is a patch node for a contact pair
+    CArrayKokkos<bool> is_pen_node;  // container for determining if a node is a penetrating node for a contact pair
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn sort
     ///
@@ -304,13 +319,6 @@ struct contact_patches_t
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void sort(const mesh_t &mesh, const node_t &nodes, const corner_t &corner);
 
-    /*
-     * Finds the nodes that could potentially contact a surface/patch.
-     *
-     * @param contact_patch: the patch object of interest
-     * @param del_t: time step
-     * @param nodes: node vector that contains the global node ids to be checked for contact
-     */
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn find_nodes
     ///
@@ -318,9 +326,12 @@ struct contact_patches_t
     ///
     /// \param contact_patch patch object of interest
     /// \param del_t current time step in the analysis
-    /// \param nodes vector of global node ids to be checked for contact
+    /// \param num_nodes_found number of nodes that could potentially contact the patch (used to access possible_nodes)
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void find_nodes(const contact_patch_t &contact_patch, const double &del_t, std::vector<size_t> &nodes) const;
+    void find_nodes(contact_patch_t &contact_patch, const double &del_t, size_t &num_nodes_found);
+
+    // todo: add docs here
+    void get_contact_pairs(const double &del_t);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
