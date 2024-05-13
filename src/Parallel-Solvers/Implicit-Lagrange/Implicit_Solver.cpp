@@ -357,13 +357,21 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
   int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop, nodes_per_element;
-  size_t read_index_start, node_rid, elem_gid;
+  size_t read_index_start, node_rid, elem_gid, zone_num_elem;
   GO node_gid;
   real_t dof_value;
   host_vec_array node_densities;
   bool zero_index_base = input_options.zero_index_base;
   int negative_index_found = 0;
   int global_negative_index_found = 0;
+  num_elem = 0;
+  rnum_elem = 0;
+  int etype_index = 0;
+  bool searching_for_elements = true;
+  bool no_elements_found = true;
+  elements::elem_types::elem_type mesh_element_type;
+  std::vector<size_t> element_temp;
+  std::vector<size_t> global_indices_temp;
 
   //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
@@ -631,220 +639,265 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
 
   
   //read in element info
-  //seek element connectivity zone
-  int etype_index = 0;
-  if(myrank==0){
-    bool searching_for_elements = true;
-    //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
-    while (searching_for_elements&&in->good()) {
-      getline(*in, skip_line);
-      //std::cout << skip_line << std::endl;
-      line_parse.clear();
-      line_parse.str(skip_line);
-      //stop when the NODES= string is reached
-      while (!line_parse.eof()){
-        line_parse >> substring;
-        //std::cout << substring << std::endl;
-        if(!substring.compare("Elements")){
-          searching_for_elements = false;
-          break;
+  //seek element connectivity zone; ansys dat can store element data in multiple file zones for different declared bodies
+  size_t num_elem_zone_readins = 0;
+  while(searching_for_elements){
+    num_elem_zone_readins++;
+    if(myrank==0){
+      //search for element zone header
+      bool searching_for_element_zone = true;
+      std::string substring2, substring3;
+      while (in->good()&&searching_for_element_zone) {
+        getline(*in, skip_line);
+        //std::cout << skip_line << std::endl;
+        // line_parse.clear();
+        // line_parse.str(skip_line);
+        // //stop when the NODES= string is reached
+        // while (!line_parse.eof()){
+        //   line_parse >> substring;
+        //   //std::cout << substring << std::endl;
+        //   if(!substring.compare("Elements")){
+        //     no_elements_found = false;
+        //     searching_for_element_zone = false;
+        //     break;
+        //   }
+        // } //while
+        if(skip_line.find("Elements for Body")!=std::string::npos){
+            no_elements_found = false;
+            searching_for_element_zone = false;
+            break;
         }
-      } //while
+        
+      }
+
+      //check if no more element zones could be found
+      if(!in->good()){
+        searching_for_elements = false;
+      }
+
+      if(no_elements_found){
+        std::cout << "FILE FORMAT ERROR; NO ELEMENTS FOUND" << std::endl;
+      }
+    }
+
+    //broadcast element zone find flag
+    MPI_Bcast(&searching_for_elements,1,MPI_CXX_BOOL,0,world);
+    if(!searching_for_elements){
+      break;
+    }
+    //std::cout << "NO MORE ELEMENT READINS AFTER " << num_elem_zone_readins << std::endl;
+
+    if(myrank==0){
+      //read in element type from following line
+      getline(*in, read_line);
+      std::cout << read_line << std::endl;
+      line_parse.clear();
+      line_parse.str(read_line);
+      line_parse >> substring;
+      //std::cout << substring << std::endl;
+      if(!substring.compare("et,1,185")){
+        //Hex8 type
+        etype_index = 1;
+
+      }
+      else if(!substring.compare("et,1,186")){
+        //Hex20 type
+        etype_index = 2;
+      }
+      else{
+        etype_index = 0;
+      }
+      //for
       
-    }
-    if(searching_for_elements){
-      std::cout << "FILE FORMAT ERROR" << std::endl;
+      //seek element count line
+      //read in element count from the following line
+      getline(*in, read_line);
+      std::cout << read_line << std::endl;
+      line_parse.clear();
+      line_parse.str(read_line);
+      line_parse >> substring;
+      //parse element line out of jumble of comma delimited entries
+      line_parse.clear();
+      line_parse.str(substring);
+      while(line_parse.good()){
+        getline(line_parse, token, ',');
+      }
+      //element count should be the last token read in
+      zone_num_elem = std::stoi(token);
+
+      //skip line
+      for (int j = 0; j < 1; j++) {
+        getline(*in, skip_line);
+        std::cout << skip_line << std::endl;
+      }
     }
 
-    //read in element type from following line
-    getline(*in, read_line);
-    std::cout << read_line << std::endl;
-    line_parse.clear();
-    line_parse.str(read_line);
-    line_parse >> substring;
-    //std::cout << substring << std::endl;
-    if(!substring.compare("et,1,185")){
-      //Hex8 type
-      etype_index = 1;
+    //broadcast element type
+    MPI_Bcast(&etype_index,1,MPI_INT,0,world);
 
+    int elem_words_per_line_no_nodes = 11;
+    if(etype_index==1){
+      mesh_element_type = elements::elem_types::Hex8;
+      nodes_per_element = 8;
+      elem_words_per_line = elem_words_per_line_no_nodes + 8;
+      max_nodes_per_patch = 4;
     }
-    else if(!substring.compare("et,1,186")){
-      //Hex20 type
-      etype_index = 2;
+    else if(etype_index==2){
+      mesh_element_type = elements::elem_types::Hex20;
+      nodes_per_element = 20;
+      elem_words_per_line = elem_words_per_line_no_nodes + 20;
+      max_nodes_per_patch = 8;
+    }
+    else if(etype_index==3){
+      mesh_element_type = elements::elem_types::Hex32;
+      nodes_per_element = 32;
+      elem_words_per_line = elem_words_per_line_no_nodes + 32;
+      max_nodes_per_patch = 12;
     }
     else{
-      etype_index = 0;
+      *fos << "ERROR: ANSYS ELEMENT TYPE NOT FOUND OR RECOGNIZED" << std::endl;
+      exit_solver(0);
     }
-     //for
     
-    //seek element count line
-    //read in element count from the following line
-    getline(*in, read_line);
-    std::cout << read_line << std::endl;
-    line_parse.clear();
-    line_parse.str(read_line);
-    line_parse >> substring;
-    //parse element line out of jumble of comma delimited entries
-    line_parse.clear();
-    line_parse.str(substring);
-    while(line_parse.good()){
-      getline(line_parse, token, ',');
-    }
-    //element count should be the last token read in
-    num_elem = std::stoi(token);
-
-    //skip line
-    for (int j = 0; j < 1; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    }
-  }
-
-  //broadcast element type
-  MPI_Bcast(&etype_index,1,MPI_INT,0,world);
-
-  elements::elem_types::elem_type mesh_element_type;
-  int elem_words_per_line_no_nodes = elem_words_per_line;
-  if(etype_index==1){
-    mesh_element_type = elements::elem_types::Hex8;
-    nodes_per_element = 8;
-    elem_words_per_line += 8;
-    max_nodes_per_patch = 4;
-  }
-  else if(etype_index==2){
-    mesh_element_type = elements::elem_types::Hex20;
-    nodes_per_element = 20;
-    elem_words_per_line += 20;
-    max_nodes_per_patch = 8;
-  }
-  else if(etype_index==3){
-    mesh_element_type = elements::elem_types::Hex32;
-    nodes_per_element = 32;
-    elem_words_per_line += 32;
-    max_nodes_per_patch = 12;
-  }
-  else{
-    *fos << "ERROR: ANSYS ELEMENT TYPE NOT FOUND OR RECOGNIZED" << std::endl;
-    exit_solver(0);
-  }
-  
-  //broadcast number of elements
-  MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
-  
-  *fos << "declared element count: " << num_elem << std::endl;
-  //std::cout<<"before initial mesh initialization"<<std::endl;
-  
-  //read in element connectivity
-  //we're gonna reallocate for the words per line expected for the element connectivity
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,elem_words_per_line,MAX_WORD); 
-  CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(nodes_per_element);
-
-  //calculate buffer iterations to read number of lines
-  buffer_iterations = num_elem/BUFFER_LINES;
-  int assign_flag;
-
-  //dynamic buffer used to store elements before we know how many this rank needs
-  std::vector<size_t> element_temp(BUFFER_LINES*elem_words_per_line);
-  std::vector<size_t> global_indices_temp(BUFFER_LINES);
-  size_t buffer_max = BUFFER_LINES*elem_words_per_line;
-  size_t indices_buffer_max = BUFFER_LINES;
-
-  if(num_elem%BUFFER_LINES!=0) buffer_iterations++;
-  read_index_start = 0;
-  //std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
-  rnum_elem = 0;
-  //std::cout << "BUFFER ITERATIONS IS: " << buffer_iterations << std::endl;
-  for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
-    //pack buffer on rank 0
-    if(myrank==0&&buffer_iteration<buffer_iterations-1){
-      for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < elem_words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-      }
-    }
-    else if(myrank==0){
-      buffer_loop=0;
-      while(buffer_iteration*BUFFER_LINES+buffer_loop < num_elem) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < elem_words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-        buffer_loop++;
-        //std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
-      }
-    }
-
-    //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),BUFFER_LINES*elem_words_per_line*MAX_WORD,MPI_CHAR,0,world);
-    //broadcast how many nodes were read into this buffer iteration
-    MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
+    //broadcast number of elements
+    MPI_Bcast(&zone_num_elem,1,MPI_LONG_LONG_INT,0,world);
     
-    //store element connectivity that belongs to this rank
-    //loop through read buffer
-    for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-      //set global node id (ensight specific order)
-      elem_gid = read_index_start + scan_loop;
-      //add this element to the local list if any of its nodes belong to this rank according to the map
-      //get list of nodes for each element line and check if they belong to the map
-      assign_flag = 0;
-      for(int inode = elem_words_per_line_no_nodes; inode < elem_words_per_line; inode++){
-        //as we loop through the nodes belonging to this element we store them
-        //if any of these nodes belongs to this rank this list is used to store the element locally
-        node_gid = atoi(&read_buffer(scan_loop,inode,0));
-        if(zero_index_base)
-          node_store(inode-elem_words_per_line_no_nodes) = node_gid; //subtract 1 since file index start is 1 but code expects 0
-        else
-          node_store(inode-elem_words_per_line_no_nodes) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
-        if(node_store(inode-elem_words_per_line_no_nodes) < 0){
-          negative_index_found = 1;
-        }
-        //first we add the elements to a dynamically allocated list
-        if(zero_index_base){
-          if(map->isNodeGlobalElement(node_gid)&&!assign_flag){
-            assign_flag = 1;
-            rnum_elem++;
+    *fos << "declared element count in this zone: " << zone_num_elem << std::endl;
+    num_elem += zone_num_elem;
+    *fos << "total declared elements is now: " << num_elem << std::endl;
+
+    //std::cout<<"before initial mesh initialization"<<std::endl;
+    
+    //read in element connectivity
+    //we're gonna reallocate for the words per line expected for the element connectivity
+    read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,elem_words_per_line,MAX_WORD); 
+    CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(nodes_per_element);
+
+    //calculate buffer iterations to read number of lines
+    buffer_iterations = zone_num_elem/BUFFER_LINES;
+    int assign_flag;
+
+    //dynamic buffer used to store elements before we know how many this rank needs
+    if(num_elem_zone_readins == 1){
+      element_temp = std::vector<size_t>(BUFFER_LINES*elem_words_per_line);
+      global_indices_temp = std::vector<size_t>(BUFFER_LINES);
+    }
+    size_t buffer_max = BUFFER_LINES*elem_words_per_line;
+    size_t indices_buffer_max = BUFFER_LINES;
+
+    if(zone_num_elem%BUFFER_LINES!=0) buffer_iterations++;
+    read_index_start = 0;
+    //std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
+    //std::cout << "BUFFER ITERATIONS IS: " << buffer_iterations << std::endl;
+    for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+      //pack buffer on rank 0
+      if(myrank==0&&buffer_iteration<buffer_iterations-1){
+        for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
+          getline(*in,read_line);
+          //std::cout << read_line << std::endl;
+          line_parse.clear();
+          line_parse.str(read_line);
+          for(int iword = 0; iword < elem_words_per_line; iword++){
+          //read portions of the line into the substring variable
+          line_parse >> substring;
+          //assign the substring variable as a word of the read buffer
+          strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
           }
         }
-        else{
-          if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
-            assign_flag = 1;
-            rnum_elem++;
+      }
+      else if(myrank==0){
+        buffer_loop=0;
+        while(buffer_iteration*BUFFER_LINES+buffer_loop < zone_num_elem) {
+          getline(*in,read_line);
+          //std::cout << read_line << std::endl;
+          line_parse.clear();
+          line_parse.str(read_line);
+          for(int iword = 0; iword < elem_words_per_line; iword++){
+          //read portions of the line into the substring variable
+          line_parse >> substring;
+          //assign the substring variable as a word of the read buffer
+          strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
           }
+          buffer_loop++;
+          //std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
         }
       }
 
-      if(assign_flag){
-        for(int inode = 0; inode < nodes_per_element; inode++){
-          if((rnum_elem-1)*nodes_per_element + inode>=buffer_max){ 
-            element_temp.resize((rnum_elem-1)*nodes_per_element + inode + BUFFER_LINES*nodes_per_element);
-            buffer_max = (rnum_elem-1)*nodes_per_element + inode + BUFFER_LINES*nodes_per_element;
+      //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+      MPI_Bcast(read_buffer.pointer(),BUFFER_LINES*elem_words_per_line*MAX_WORD,MPI_CHAR,0,world);
+      //broadcast how many nodes were read into this buffer iteration
+      MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
+      
+      //store element connectivity that belongs to this rank
+      //loop through read buffer
+      for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
+        //set global node id (ensight specific order)
+        elem_gid = read_index_start + scan_loop + num_elem - zone_num_elem;
+        //std::cout << elem_gid << std::endl;
+        //add this element to the local list if any of its nodes belong to this rank according to the map
+        //get list of nodes for each element line and check if they belong to the map
+        assign_flag = 0;
+        for(int inode = elem_words_per_line_no_nodes; inode < elem_words_per_line; inode++){
+          //as we loop through the nodes belonging to this element we store them
+          //if any of these nodes belongs to this rank this list is used to store the element locally
+          node_gid = atoi(&read_buffer(scan_loop,inode,0));
+          //std::cout << node_gid << " ";
+          if(zero_index_base)
+            node_store(inode-elem_words_per_line_no_nodes) = node_gid; //subtract 1 since file index start is 1 but code expects 0
+          else
+            node_store(inode-elem_words_per_line_no_nodes) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+          if(node_store(inode-elem_words_per_line_no_nodes) < 0){
+            negative_index_found = 1;
           }
-          element_temp[(rnum_elem-1)*nodes_per_element + inode] = node_store(inode); 
-          //std::cout << "VECTOR STORAGE FOR ELEM " << rnum_elem << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
+          //first we add the elements to a dynamically allocated list
+          if(zero_index_base){
+            if(map->isNodeGlobalElement(node_gid)&&!assign_flag){
+              assign_flag = 1;
+              rnum_elem++;
+            }
+          }
+          else{
+            if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
+              assign_flag = 1;
+              rnum_elem++;
+            }
+          }
         }
-        //assign global element id to temporary list
-        if(rnum_elem-1>=indices_buffer_max){ 
-          global_indices_temp.resize(rnum_elem-1 + BUFFER_LINES);
-          indices_buffer_max = rnum_elem-1 + BUFFER_LINES;
+        //std::cout << std::endl;
+
+        if(assign_flag){
+          for(int inode = 0; inode < nodes_per_element; inode++){
+            if((rnum_elem-1)*nodes_per_element + inode>=buffer_max){ 
+              element_temp.resize((rnum_elem-1)*nodes_per_element + inode + BUFFER_LINES*nodes_per_element);
+              buffer_max = (rnum_elem-1)*nodes_per_element + inode + BUFFER_LINES*nodes_per_element;
+            }
+            element_temp[(rnum_elem-1)*nodes_per_element + inode] = node_store(inode); 
+            //std::cout << "VECTOR STORAGE FOR ELEM " << rnum_elem << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
+          }
+          //assign global element id to temporary list
+          if(rnum_elem-1>=indices_buffer_max){ 
+            global_indices_temp.resize(rnum_elem-1 + BUFFER_LINES);
+            indices_buffer_max = rnum_elem-1 + BUFFER_LINES;
+          }
+          global_indices_temp[rnum_elem-1] = elem_gid;
         }
-        global_indices_temp[rnum_elem-1] = elem_gid;
       }
+      read_index_start+=BUFFER_LINES;
     }
-    read_index_start+=BUFFER_LINES;
-  }
+
+    //if the next attempt to find an element zone failed; this will allow moving the stream position so we can find other data such as boundary conditions
+    if(myrank==0){
+      if(in->good())
+        prev_read_elem_zone_end = in->tellg();
+    }
+  } //element read in while
   
+  //move streamposition back to the end of the last element connectivity data zone
+  if(myrank==0){
+    in->clear();
+    in->seekg(prev_read_elem_zone_end);
+  }
+
   //check if ANSYS file has boundary and loading condition zones
   bool No_Conditions = true;
   if(myrank==0){
@@ -1006,7 +1059,6 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
       nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
     }
   }
- 
 } // end read_mesh
 
 /* ----------------------------------------------------------------------
