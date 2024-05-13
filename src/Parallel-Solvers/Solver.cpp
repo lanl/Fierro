@@ -2407,7 +2407,7 @@ void Solver::read_mesh_tecplot(const char* MESH)
 } // end read_mesh
 
 /* ----------------------------------------------------------------------
-   Read ANSYS dat format mesh file
+   Read Abaqus .inp format mesh file
 ------------------------------------------------------------------------- */
 void Solver::read_mesh_abaqus_inp(const char *MESH){
   Input_Options input_options = simparam.input_options.value();
