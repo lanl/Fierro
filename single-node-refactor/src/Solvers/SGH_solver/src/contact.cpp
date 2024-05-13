@@ -165,17 +165,13 @@ void contact_patch_t::construct_basis(ViewCArrayKokkos<double> &A, const double 
 }  // end construct_basis
 
 KOKKOS_FUNCTION  // will be called inside a macro
-bool contact_patch_t::get_contact_point(const contact_node_t &node, CArrayKokkos<double> &det_sol,
-                                        const size_t &node_lid) const
+bool contact_patch_t::get_contact_point(const contact_node_t &node, double &xi_val, double &eta_val,
+                                        double &del_tc) const
 {
     // In order to understand this, just see this PDF:
     // https://github.com/gabemorris12/contact_surfaces/blob/master/Finding%20the%20Contact%20Point.pdf
 
     // The python version of this is also found in contact.py from that same repo.
-
-    double* xi_ = &det_sol(node_lid, 0);
-    double* eta_ = &det_sol(node_lid, 1);
-    double* del_tc = &det_sol(node_lid, 2);
 
     // Using "max_nodes" for the array size to ensure that the array is large enough
     double A_arr[3*contact_patch_t::max_nodes];
@@ -218,9 +214,9 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, CArrayKokkos
 
     double J_det;  // determinant of jacobian
     double sol[3];  // solution containing (xi, eta, del_tc)
-    sol[0] = *xi_;
-    sol[1] = *eta_;
-    sol[2] = *del_tc;
+    sol[0] = xi_val;
+    sol[1] = eta_val;
+    sol[2] = del_tc;
 
     double grad_arr[3];  // J_inv*F term
     ViewCArrayKokkos<double> grad(&grad_arr[0], 3);
@@ -230,12 +226,12 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, CArrayKokkos
     for (int i = 0; i < max_iter; i++)
     {
         iters = i;
-        construct_basis(A, *del_tc);
-        phi(phi_k, *xi_, *eta_);
+        construct_basis(A, del_tc);
+        phi(phi_k, xi_val, eta_val);
         mat_mul(A, phi_k, rhs);
         for (int j = 0; j < 3; j++)
         {
-            lhs = node.pos(j) + node.vel(j)*(*del_tc) + 0.5*node.acc(j)*(*del_tc)*(*del_tc);
+            lhs = node.pos(j) + node.vel(j)*(del_tc) + 0.5*node.acc(j)*(del_tc)*(del_tc);
             F(j) = rhs(j) - lhs;
         }
 
@@ -244,15 +240,15 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, CArrayKokkos
             break;
         }
 
-        d_phi_d_xi(d_phi_d_xi_, *xi_, *eta_);
-        d_phi_d_eta(d_phi_d_eta_, *xi_, *eta_);
+        d_phi_d_xi(d_phi_d_xi_, xi_val, eta_val);
+        d_phi_d_eta(d_phi_d_eta_, xi_val, eta_val);
 
         // Construct d_A_d_del_t
         for (int j = 0; j < 3; j++)
         {
             for (int k = 0; k < num_nodes_in_patch; k++)
             {
-                d_A_d_del_t(j, k) = vel_points(j, k) + acc_points(j, k)*(*del_tc);
+                d_A_d_del_t(j, k) = vel_points(j, k) + acc_points(j, k)*(del_tc);
             }
         }
 
@@ -262,7 +258,7 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, CArrayKokkos
         // lhs is a function of del_t, so have to subtract the derivative of lhs wrt del_t
         for (int j = 0; j < 3; j++)
         {
-            J2(j) = J2(j) - node.vel(j) - node.acc(j)*(*del_tc);
+            J2(j) = J2(j) - node.vel(j) - node.acc(j)*(del_tc);
         }
 
         // Construct the Jacobian
@@ -290,9 +286,9 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, CArrayKokkos
             sol[j] = sol[j] - grad(j);
         }
         // update xi, eta, and del_tc
-        *xi_ = sol[0];
-        *eta_ = sol[1];
-        *del_tc = sol[2];
+        xi_val = sol[0];
+        eta_val = sol[1];
+        del_tc = sol[2];
     }  // end solver loop
 
     if (iters == max_iter - 1)
@@ -305,8 +301,8 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, CArrayKokkos
 }  // end get_contact_point
 
 KOKKOS_FUNCTION
-bool contact_patch_t::contact_check(const contact_node_t &node, const double &del_t, CArrayKokkos<double> &det_sol,
-                                    const size_t &node_lid) const
+bool contact_patch_t::contact_check(const contact_node_t &node, const double &del_t, double &xi_val, double &eta_val,
+                                    double &del_tc) const
 {
     // Constructing the guess value
     // The guess is determined by projecting the node onto a plane formed by the patch at del_t/2.
@@ -391,17 +387,14 @@ bool contact_patch_t::contact_check(const contact_node_t &node, const double &de
     double guess_arr[2];
     ViewCArrayKokkos<double> guess(&guess_arr[0], 2);
     mat_mul(A_basis, v, guess);
-    det_sol(node_lid, 0) = guess(0);
-    det_sol(node_lid, 1) = guess(1);
-    det_sol(node_lid, 2) = del_t/2;
+    xi_val = guess(0);
+    eta_val = guess(1);
+    del_tc = del_t/2;
 
     // Get the solution
-    bool solution_found = get_contact_point(node, det_sol, node_lid);
-    double &xi_ = det_sol(node_lid, 0);
-    double &eta_ = det_sol(node_lid, 1);
-    double &del_tc = det_sol(node_lid, 2);
+    bool solution_found = get_contact_point(node, xi_val, eta_val, del_tc);
 
-    if (solution_found && fabs(xi_) <= 1.0 + edge_tol && fabs(eta_) <= 1.0 + edge_tol && del_tc >= 0.0 - tol &&
+    if (solution_found && fabs(xi_val) <= 1.0 + edge_tol && fabs(eta_val) <= 1.0 + edge_tol && del_tc >= 0.0 - tol &&
         del_tc <= del_t + tol)
     {
         return true;
@@ -634,6 +627,8 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
     // Initialize the contact_nodes and contact_pairs arrays
     contact_nodes = CArrayKokkos<contact_node_t>(max_index + 1);
     contact_pairs = CArrayKokkos<contact_pair_t>(max_index + 1);
+    contact_pairs_access = DynamicRaggedRightArrayKokkos<size_t>(num_contact_patches,
+                                                                 contact_patch_t::max_contacting_nodes_in_patch);
     is_patch_node = CArrayKokkos<bool>(max_index + 1);
     is_pen_node = CArrayKokkos<bool>(max_index + 1);
 
@@ -922,6 +917,14 @@ void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double 
         }
     }
 }  // end find_nodes
+
+void contact_patches_t::get_contact_pairs(const double &del_t)
+{
+    for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++)
+    {
+        const contact_patch_t &contact_patch = contact_patches(patch_lid);
+    }
+}
 /// end of contact_patches_t member functions //////////////////////////////////////////////////////////////////////////
 
 /// beginning of internal, not to be used anywhere else tests //////////////////////////////////////////////////////////
@@ -987,15 +990,15 @@ void run_contact_tests()
     ViewCArrayKokkos<double> test1_vel(&test1_node_vel[0], 3);
     contact_node_t test1_node(test1_pos, test1_vel, 1.0);
 
-    CArrayKokkos<double> test1_sol(1, 3);
-    bool is_hitting = test1_patch.get_contact_point(test1_node, test1_sol, 0);
-    bool contact_check = test1_patch.contact_check(test1_node, 1.0, test1_sol, 0);
+    double xi_val, eta_val, del_tc;
+    bool is_hitting = test1_patch.get_contact_point(test1_node, xi_val, eta_val, del_tc);
+    bool contact_check = test1_patch.contact_check(test1_node, 1.0, xi_val, eta_val, del_tc);
     std::cout << "\nTesting get_contact_point and contact_check:" << std::endl;
-    std::cout << "0 ---> -0.433241 -0.6 0.622161 vs. ";
-    matar_print(test1_sol);
-    assert(fabs(test1_sol(0, 0) + 0.43324096) < err_tol);
-    assert(fabs(test1_sol(0, 1) + 0.6) < err_tol);
-    assert(fabs(test1_sol(0, 2) - 0.6221606424928471) < err_tol);
+    std::cout << "-0.433241 -0.6 0.622161 vs. ";
+    std::cout << xi_val << " " << eta_val << " " << del_tc << std::endl;
+    assert(fabs(xi_val + 0.43324096) < err_tol);
+    assert(fabs(eta_val + 0.6) < err_tol);
+    assert(fabs(del_tc - 0.6221606424928471) < err_tol);
     assert(is_hitting);
     assert(contact_check);
 

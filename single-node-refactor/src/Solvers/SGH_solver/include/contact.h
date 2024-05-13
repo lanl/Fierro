@@ -123,14 +123,15 @@ struct contact_patch_t
     /// scheme and will change det_sol in place.
     ///
     /// \param node Contact node object that is potentially penetrating this patch/surface
-    /// \param det_sol 2D array where each row is the solution containing (xi, eta, del_tc)
-    /// \param node_lid The row to modify det_sol
+    /// \param xi_val xi value to change in place
+    /// \param eta_val eta value to change in place
+    /// \param del_tc del_tc value to change in place
     ///
     /// \return true if a solution was found in less than max_iter iterations; false if the solution took up to max_iter
     ///         iterations or if a singularity was encountered
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     KOKKOS_FUNCTION  // will be called inside a macro
-    bool get_contact_point(const contact_node_t &node, CArrayKokkos<double> &det_sol, const size_t &node_lid) const;
+    bool get_contact_point(const contact_node_t &node, double &xi_val, double &eta_val, double &del_tc) const;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn contact_check
@@ -152,13 +153,15 @@ struct contact_patch_t
     ///
     /// \param node Contact node object that is being checked for contact with 'this'
     /// \param del_t time step
-    /// \param det_sol 2D array where each row is the solution containing (xi, eta, del_tc)
-    /// \param node_lid The row to modify det_sol
+    /// \param xi_val xi value to change in place
+    /// \param eta_val eta value to change in place
+    /// \param del_tc del_tc value to change in place
+    ///
     /// \return true if a contact pair should be formed; false otherwise
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     KOKKOS_FUNCTION
-    bool contact_check(const contact_node_t &node, const double &del_t, CArrayKokkos<double> &det_sol,
-                       const size_t &node_lid) const;
+    bool contact_check(const contact_node_t &node, const double &del_t, double &xi_val, double &eta_val,
+                       double &del_tc) const;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn construct_basis
@@ -305,6 +308,7 @@ struct contact_patches_t
     size_t Sz = 0;  // number of buckets in the z direction
 
     CArrayKokkos<contact_pair_t> contact_pairs;  // contact pairs (accessed through node gid)
+    DynamicRaggedRightArrayKokkos<size_t> contact_pairs_access;  // each row is the patch gid and the columns represent the node in contact with the patch; used for quick access and iterating
     CArrayKokkos<bool> is_patch_node;  // container for determining if a node is a patch node for a contact pair
     CArrayKokkos<bool> is_pen_node;  // container for determining if a node is a penetrating node for a contact pair
 
