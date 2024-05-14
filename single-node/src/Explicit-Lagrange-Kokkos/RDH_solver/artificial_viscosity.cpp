@@ -276,7 +276,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
 
                 mu(gauss_gid) = coeff*phi_curl*den(gauss_gid)*h*sspd(gauss_gid);
 
-                mu(gauss_gid) += coeff*2.0*den(gauss_gid)*h*h*abs(div_u(gauss_gid));
+               // mu(gauss_gid) += coeff*2.0*den(gauss_gid)*h*h*abs(div_u(gauss_gid));
 
             }// gauss_lid
         });// elem_gid
@@ -288,9 +288,9 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 for(int i = 0; i < mesh.num_dims; i++){
                     for(int j = 0; j < mesh.num_dims; j++){
                         sigma_a(stage, gauss_gid, i, j) = mu(gauss_gid)*grad_u(gauss_gid, i, j);
-                    }
-                }
-            }
+                    }// j
+                }// i
+            }// gauss_lid
         });
         Kokkos::fence();
 

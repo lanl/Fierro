@@ -444,7 +444,22 @@ void setup(const CArrayKokkos <material_t> &material,
                         }
                     } // end of switch
 
-                }// end loop over nodes of element  
+                }// end loop over nodes of element 
+
+                for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+                    int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                    int lobatto_lid = ref_elem.dof_lobatto_map(node_lid);
+                    
+                    for (int dim = 0; dim < mesh.num_dims; dim++){
+                        double interp = 0.0;
+                        for (int dof_id = 0; dof_id < mesh.num_nodes_in_elem; dof_id++){
+                            int dof_gid = mesh.nodes_in_elem(elem_gid, dof_id);
+                            interp += ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
+                                                             *node_vel(1, dof_gid, dim);
+                        }// dim
+                        node_vel(1, node_gid, dim) = interp;
+                    }// node_lid
+                }// gauss_lid 
 
                 // interpolate node_vel at gauss legendre points
                 for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
@@ -507,6 +522,20 @@ void setup(const CArrayKokkos <material_t> &material,
                     } // end if
                 }// end loop over zones
 
+                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+                    int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+                    int lobatto_lid = ref_elem.dual_dof_lobatto_map(zone_lid);
+                    
+                    double interp = 0.0;
+                    for (int dof_id = 0; dof_id < mesh.num_zones_in_elem; dof_id++){
+                        int dof_gid = mesh.zones_in_elem(elem_gid, dof_id);
+                        interp += ref_elem.gauss_lob_elem_basis(lobatto_lid, dof_id)
+                                                            *zone_sie(1, dof_gid);
+                    }// node_lid
+                    zone_sie(1, zone_gid) = interp;
+                   
+                }// gauss_lid
+
                 for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
                     int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
                     // density
@@ -541,7 +570,7 @@ void setup(const CArrayKokkos <material_t> &material,
                                             mat_pt_sspd,
                                             mat_pt_den(leg_gid),
                                             interp_sie);
-                }
+                }// leg_lid
             } // end if fill
           
         }); // end FOR_ALL element loop

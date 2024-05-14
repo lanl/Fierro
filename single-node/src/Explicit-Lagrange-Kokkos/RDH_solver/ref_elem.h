@@ -76,6 +76,9 @@ struct fe_ref_elem_t{
     CArrayKokkos <double> gauss_leg_weights;
     //CArrayKokkos <double> gauss_leg_surf_weights;
 
+    CArrayKokkos <size_t> dof_lobatto_map;
+    CArrayKokkos <size_t> dual_dof_lobatto_map;
+
    
 
 
@@ -164,8 +167,9 @@ struct fe_ref_elem_t{
         gauss_lob_positions = CArrayKokkos <double> (num_gauss_lob_in_elem, num_dim, "gauss_lob_positions"); 
         gauss_leg_positions = CArrayKokkos <double> (num_gauss_leg_in_elem, num_dim, "gauss_leg_positions");
 
-        // gauss_leg_surf_positions = CArrayKokkos <double> (num_surfs, num_gauss_leg_in_surfs, num_dim-1, "gauss_leg_surf_positions");
-        // gauss_leg_surf_weights = CArrayKokkos <double> (num_surfs, num_gauss_leg_in_surfs, "gauss_leg_surf_weights");
+        dof_lobatto_map = CArrayKokkos <size_t> (num_dofs_in_elem, "dof to lobatto map");
+        dual_dof_lobatto_map = CArrayKokkos <size_t> (num_elem_dofs_in_elem, "Thermo dof to lobatto map");
+
 
         // --- build gauss nodal positions and weights ---
             
@@ -215,6 +219,53 @@ struct fe_ref_elem_t{
             });
             Kokkos::fence();
 
+            // WARNING WARNING WARNING: Assumes p > 0 ...
+            RUN_CLASS({
+                size_t dof_rid = 0;
+                for (int k = 0; k < num_gauss_lob_1d; k=k+2){
+                    for (int j = 0; j < num_gauss_lob_1d; j = j+2){
+                        for (int i = 0; i < num_gauss_lob_1d; i = i+2){
+                            size_t lob_rid = lobatto_rid(i,j,k);
+                            dof_lobatto_map(dof_rid) = lob_rid;
+                            dof_rid++;
+                        }// i
+                    }// j
+                }// k
+            });// RUN_CLASS
+            Kokkos::fence();
+
+            if ( p_order == 1 ){
+                RUN_CLASS({
+                    size_t dual_dof_rid = 0;
+                    for (int k = 0; k < num_dual_gauss_lob_1d; k++){
+                        for (int j = 0; j < num_dual_gauss_lob_1d; j++){
+                            for (int i = 0; i < num_dual_gauss_lob_1d; i++){
+                                size_t dual_lob_rid = dual_lobatto_rid(i,j,k);
+                                dual_dof_lobatto_map(dual_dof_rid) = dual_lob_rid;
+                                dual_dof_rid++;
+                            }// i
+                        }// j
+                    }// k
+                });// RUN_CLASS
+                Kokkos::fence();
+            }// if p=0
+            if (p_order > 1){
+                RUN_CLASS({
+                    size_t dual_dof_rid = 0;
+                    for (int k = 0; k < num_dual_gauss_lob_1d; k=k+2){
+                        for (int j = 0; j < num_dual_gauss_lob_1d; j = j+2){
+                            for (int i = 0; i < num_dual_gauss_lob_1d; i = i+2){
+                                size_t dual_lob_rid = dual_lobatto_rid(i,j,k);
+                                dual_dof_lobatto_map(dual_dof_rid) = dual_lob_rid;
+                                dual_dof_rid++;
+                            }// i
+                        }// j
+                    }// k
+                });// RUN_CLASS
+                Kokkos::fence();
+            }// p > 1
+            
+
         
             FOR_ALL_CLASS( k, 0, num_gauss_leg_1d, 
                      j, 0, num_gauss_leg_1d,
@@ -231,59 +282,6 @@ struct fe_ref_elem_t{
             });
             Kokkos::fence();
 
-            // surface quadrature i faces
-            // FOR_ALL_CLASS( k, 0, num_gauss_leg_1d, 
-            //          j, 0, num_gauss_leg_1d, { 
-            
-            //             int leg_rid = legendre_rid_2D(j,k);
-                        
-            //             // i min
-            //             gauss_leg_surf_positions(0, leg_rid,0) = leg_nodes_1D(j);
-            //             gauss_leg_surf_positions(0, leg_rid,1) = leg_nodes_1D(k);
-            //             gauss_leg_weights(0,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
-
-            //             // i max
-            //             gauss_leg_surf_positions(1, leg_rid,0) = leg_nodes_1D(j);
-            //             gauss_leg_surf_positions(1, leg_rid,1) = leg_nodes_1D(k);
-            //             gauss_leg_weights(1,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
-            // });
-            // Kokkos::fence();
-
-            // // surface quadrature j faces
-            // FOR_ALL_CLASS( i, 0, num_gauss_leg_1d, 
-            //          k, 0, num_gauss_leg_1d, { 
-            
-            //             int leg_rid = legendre_rid_2D(j,k);
-                        
-            //             // j min
-            //             gauss_leg_surf_positions(2, leg_rid,0) = leg_nodes_1D(i);
-            //             gauss_leg_surf_positions(2, leg_rid,1) = leg_nodes_1D(k);
-            //             gauss_leg_weights(2,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
-
-            //             // j max
-            //             gauss_leg_surf_positions(3, leg_rid,0) = leg_nodes_1D(i);
-            //             gauss_leg_surf_positions(3, leg_rid,1) = leg_nodes_1D(k);
-            //             gauss_leg_weights(3,leg_rid) = leg_weights_1D(i)*leg_weights_1D(k);
-            // });
-            // Kokkos::fence();
-
-            // // surface quadrature k faces
-            // FOR_ALL_CLASS(i , 0, num_gauss_leg_1d, 
-            //          j, 0, num_gauss_leg_1d, { 
-            
-            //             int leg_rid = legendre_rid_2D(i,j);
-                        
-            //             // k min
-            //             gauss_leg_surf_positions(4, leg_rid,0) = leg_nodes_1D(i);
-            //             gauss_leg_surf_positions(4, leg_rid,1) = leg_nodes_1D(j);
-            //             gauss_leg_weights(4,leg_rid) = leg_weights_1D(i)*leg_weights_1D(j);
-
-            //             // k max
-            //             gauss_leg_surf_positions(5, leg_rid,0) = leg_nodes_1D(i);
-            //             gauss_leg_surf_positions(5, leg_rid,1) = leg_nodes_1D(j);
-            //             gauss_leg_weights(5,leg_rid) = leg_weights_1D(i)*leg_weights_1D(j);
-            // });
-            // Kokkos::fence();
 
             // Saving vertex positions in 1D
             if( p_order == 0){
@@ -345,36 +343,7 @@ struct fe_ref_elem_t{
             CArrayKokkos <double> elem_val_3d(num_elem_dofs_1d, 3);
 
             CArrayKokkos <double> point(3);
-
-            //printf(" num_dofs = %d \n", num_dofs_in_elem );
-
-            // //--- evaluate the basis at the lobatto positions
-            // FOR_ALL_CLASS(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
-
-            //     // Get the nodal coordinates
-            //     for(int dim = 0; dim < 3; dim++){
-            //       point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-            //       //printf(" point value = %f \n", point(dim) );
-
-            //     }
-
-            //     get_basis(temp_nodal_basis, val_1d, val_3d, point);
-            //     double check_basis = 0.0;
-
-            //     for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
-            //         //printf(" computed basis value = %f \n", temp_nodal_basis(basis_id) );
-            //         gauss_lob_basis(gauss_lob_rid, basis_id) = temp_nodal_basis(basis_id);
-            //         //check_basis += temp_nodal_basis(basis_id);
-            //     	temp_nodal_basis(basis_id) = 0.0;
-            //     }
-            //     //printf(" basis tally = %f \n", check_basis );
-
-            // });
-            // Kokkos::fence();
-
-            // WARNING WARNING WARNING:: works well for modest Pn orders, especially since this and the 
-            // following loops to build the basis structures are only called once.  Should consider making
-            // these computations parallel if we need to run with very large Pn orders.
+            
             RUN_CLASS({
                 for (int gauss_lob_rid = 0; gauss_lob_rid < num_gauss_lob_in_elem; gauss_lob_rid++){
                     // Get the nodal coordinates
@@ -397,30 +366,6 @@ struct fe_ref_elem_t{
                 }
             });
             Kokkos::fence();
-
-        // --- evaluate the basis at the legendre points
-            // FOR_ALL_CLASS(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
-                
-            //     // Get the nodal coordinates
-            //     for(int dim = 0; dim < 3; dim++){
-            //         point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
-            //         //printf(" point value = %f \n", point(dim) );
-            //     }
-
-            //     get_basis(temp_nodal_basis, val_1d, val_3d, point);
-                
-            //     double check_basis = 0.0;
-
-            //     for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
-            //         //printf(" computed basis value = %f \n", temp_nodal_basis(basis_id) );
-            //         gauss_leg_basis(gauss_leg_rid, basis_id) = temp_nodal_basis(basis_id);
-            //         check_basis += temp_nodal_basis(basis_id);
-            //         temp_nodal_basis(basis_id) = 0.0;
-            //     }
-
-            //     printf(" basis tally = %f \n", check_basis );
-            // });
-            // Kokkos::fence();
 
             RUN_CLASS({
                 
@@ -448,80 +393,7 @@ struct fe_ref_elem_t{
                 
             });
             Kokkos::fence();
-
-
-            // --- evaluate the thermodynamic basis at the lobatto positions
-            // FOR_ALL_CLASS(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
-
-            //     // Get the nodal coordinates
-            //     for(int dim = 0; dim < 3; dim++){
-            //       point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-            //     }
-
-            //     get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
-                
-            //     //double check_basis = 0.0;
-
-            //     for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
-
-            //         gauss_lob_elem_basis(gauss_lob_rid, basis_id) = temp_elem_basis(basis_id);
-            //         //check_basis += temp_elem_basis(basis_id);
-            //     	temp_elem_basis(basis_id) = 0.0;
-            //     }
-            //     //printf(" basis tally = %f \n", check_basis );
-
-            // });
-            // Kokkos::fence();
-
-
-// lobatto dual basis
-            // RUN_CLASS({
-            //     for (int gauss_lob_rid = 0; gauss_lob_rid < num_gauss_lob_in_elem; gauss_lob_rid++){
-            //         // Get the nodal coordinates
-            //         for(int dim = 0; dim < 3; dim++){
-            //         point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-            //         }
-
-            //         get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
-                    
-            //         //double check_basis = 0.0;
-
-            //         for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
-
-            //             gauss_lob_elem_basis(gauss_lob_rid, basis_id) = temp_elem_basis(basis_id);
-            //             //check_basis += temp_elem_basis(basis_id);
-            //             temp_elem_basis(basis_id) = 0.0;
-            //         }
-            //         //printf(" basis tally = %f \n", check_basis );
-
-            //     }
-                
-            // });
-            // Kokkos::fence();
-// end lobatto dual basis
-
-        // --- evaluate the thermodynamic basis at the legendre points
-            // FOR_ALL_CLASS(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
-
-            //     // Get the nodal coordinates
-            //     for(int dim = 0; dim < 3; dim++){
-            //         point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
-            //     }
-
-            //     get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
-                
-            //     //double check_basis = 0.0;
-
-            //     for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
-
-            //         gauss_leg_elem_basis(gauss_leg_rid, basis_id) = temp_elem_basis(basis_id);
-            //         //check_basis += temp_elem_basis(basis_id);
-            //         temp_elem_basis(basis_id) = 0.0;
-            // }
-
-            //     //printf(" basis tally = %f \n", check_basis );
-            // });
-            // Kokkos::fence();
+        
 
             RUN_CLASS({
                 for (int gauss_leg_rid = 0; gauss_leg_rid < num_gauss_leg_in_elem; gauss_leg_rid++ ){
@@ -547,6 +419,31 @@ struct fe_ref_elem_t{
                 
             });
             Kokkos::fence();
+
+            RUN_CLASS({
+                for (int gauss_lob_rid = 0; gauss_lob_rid < num_gauss_lob_in_elem; gauss_lob_rid++ ){
+                    // Get the nodal coordinates
+                    for(int dim = 0; dim < 3; dim++){
+                        point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
+                    }
+                    
+                    get_elem_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                    //get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                    //double check_basis = 0.0;
+
+                    for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
+
+                        gauss_lob_elem_basis(gauss_lob_rid, basis_id) = temp_elem_basis(basis_id);
+                        //check_basis += temp_elem_basis(basis_id);
+                        temp_elem_basis(basis_id) = 0.0;
+                    }
+
+                    //printf(" basis tally = %f \n", check_basis );
+
+                }
+                
+            });
+            Kokkos::fence();
             
 
 
@@ -558,40 +455,6 @@ struct fe_ref_elem_t{
             
             CArrayKokkos <double> Dval_1d(num_dofs_1d);
             CArrayKokkos <double> Dval_3d(num_dofs_1d,3);
-            
-            // FOR_ALL_CLASS(gauss_lob_rid, 0, num_gauss_lob_in_elem,{
-
-            //     // Get the lobatto coordinates
-            //     for(int dim = 0; dim < 3; dim++){
-            //         point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-            //     }
-
-            //     //double check[3];
-            //     //for (int i = 0; i < 3; i++) check[i] = 0.0;
-
-            //     partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
-            //     partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
-            //     partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
-
-            //     for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
-
-
-            //         gauss_lob_grad_basis(gauss_lob_rid, basis_id, 0) = temp_partial_xi(basis_id);
-            //         gauss_lob_grad_basis(gauss_lob_rid, basis_id, 1) = temp_partial_eta(basis_id);
-            //         gauss_lob_grad_basis(gauss_lob_rid, basis_id, 2) = temp_partial_mu(basis_id);
-                    
-            //       //  check[0] += temp_partial_xi(basis_id);
-            //       //  check[1] += temp_partial_eta(basis_id);
-            //       //  check[2] += temp_partial_mu(basis_id);
-
-            //         temp_partial_xi(basis_id)  = 0.0;
-            //         temp_partial_eta(basis_id) = 0.0;
-            //         temp_partial_mu(basis_id)  = 0.0;
-            //     }
-                
-            //     //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
-            // });
-            // Kokkos::fence();
 
             RUN_CLASS({
                 for (int gauss_lob_rid = 0; gauss_lob_rid < num_gauss_lob_in_elem; gauss_lob_rid++){
@@ -629,43 +492,6 @@ struct fe_ref_elem_t{
             });
             Kokkos::fence();
 
-
-            // FOR_ALL_CLASS(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
-
-            //     // Get the nodal coordinates
-            //     for(int dim = 0; dim < 3; dim++){
-            //         point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
-            //     }
-
-            //     partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
-            //     partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
-            //     partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
-                
-            //     double check[3];
-            //     for (int i = 0; i < 3; i++) check[i] = 0.0;
-
-            //     for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
-
-
-            //         gauss_leg_grad_basis(gauss_leg_rid, basis_id, 0) = temp_partial_xi(basis_id);
-            //         //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 0) );
-            //         gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) = temp_partial_eta(basis_id);
-            //         //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) );
-            //         gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) = temp_partial_mu(basis_id);
-            //         //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) );
-                
-            //        check[0] += temp_partial_xi(basis_id);
-            //        check[1] += temp_partial_eta(basis_id);
-            //        check[2] += temp_partial_mu(basis_id);
-                    
-            //         temp_partial_xi(basis_id)  = 0.0;
-            //         temp_partial_eta(basis_id) = 0.0;
-            //         temp_partial_mu(basis_id)  = 0.0;
-            //     }
-                
-            //     //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
-            // });
-            // Kokkos::fence();
 
             RUN_CLASS({
                 for (int gauss_leg_rid = 0; gauss_leg_rid < num_gauss_leg_in_elem; gauss_leg_rid++){
@@ -1766,6 +1592,12 @@ KOKKOS_INLINE_FUNCTION
 int lobatto_rid(int i, int j, int k) const 
 {
     return i + j*num_gauss_lob_1d + k*num_gauss_lob_1d*num_gauss_lob_1d;
+}
+
+KOKKOS_INLINE_FUNCTION
+int dual_lobatto_rid(int i, int j, int k) const 
+{
+    return i + j*num_dual_gauss_lob_1d + k*num_dual_gauss_lob_1d*num_dual_gauss_lob_1d;
 }
 
 KOKKOS_INLINE_FUNCTION

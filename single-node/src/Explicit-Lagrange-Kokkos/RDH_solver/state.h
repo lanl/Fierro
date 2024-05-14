@@ -138,7 +138,7 @@ struct mat_pt_t {
 		       size_t p_order)
     {
         num_leg_pts = num_elems*std::pow( (2*p_order), 3 ); // continuous index across mesh
-        num_lob_pts = num_elems*std::pow( (2*p_order+1), 3 ); // discontinuous index across mesh
+        //num_lob_pts = num_elems*std::pow( (2*p_order+1), 3 ); // discontinuous index across mesh
 
         this->div    = CArray <double> (num_leg_pts);
         this->mass   = CArray <double> (num_leg_pts);
@@ -155,10 +155,10 @@ struct mat_pt_t {
         this->gauss_lobatto_jacobian  = CArrayKokkos <double> (num_lob_pts, num_dims, num_dims);
         this->gauss_legendre_jacobian = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
         
-        this->gauss_lobatto_jacobian_inverse  = CArrayKokkos <double> (num_lob_pts, num_dims, num_dims);
+        //this->gauss_lobatto_jacobian_inverse  = CArrayKokkos <double> (num_lob_pts, num_dims, num_dims);
         this->gauss_legendre_jacobian_inverse = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
         
-        this->gauss_lobatto_det_j  = CArrayKokkos <double> (num_lob_pts);
+        //this->gauss_lobatto_det_j  = CArrayKokkos <double> (num_lob_pts);
         this->gauss_legendre_det_j = CArrayKokkos <double> (num_leg_pts);
 
     }
