@@ -49,7 +49,7 @@
 
 #define PI 3.141592653589793
 
-bool VERBOSE = false;
+bool VERBOSE = true;
 
 // ==============================================================================
 //   Function Definitions
@@ -242,10 +242,10 @@ void print_yaml(Yaml::Node root)
 // =================================================================================
 void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
 {
-    if (VERBOSE) {
-        printf("\n");
-        std::cout << "Printing YAML Input file:" << std::endl;
-    }
+    // if (VERBOSE) {
+    //     printf("\n");
+    //     std::cout << "Printing YAML Input file:" << std::endl;
+    // }
     // print the input file
     print_yaml(root);
 
@@ -835,6 +835,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
         region_fills.host(i).origin = DCArrayKokkos<double> (3, "region_fills.origin");
         region_fills(i).origin.update_device();
     }
+    region_fills.update_device();
 
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {
@@ -1318,10 +1319,11 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
 
     boundary_conditions = DCArrayKokkos<boundary_condition_t>(num_bcs, "sim_param.boundary_conditions");
 
-
     for(int i=0; i< num_bcs; i++){
-        boundary_conditions(i).origin = DCArrayKokkos<double> (3, "boundary_conditions.origin");
+        boundary_conditions.host(i).origin = DCArrayKokkos<double> (3, "boundary_conditions.origin");
+        boundary_conditions(i).origin.update_device();
     }
+    boundary_conditions.update_device();
 
     // loop over the fill regions specified
     for (int bc_id = 0; bc_id < num_bcs; bc_id++) {
