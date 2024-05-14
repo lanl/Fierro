@@ -484,7 +484,7 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
     mesh_input.origin = DCArrayKokkos<double> (3, "mesh_input.origin");
     mesh_input.length = DCArrayKokkos<double> (3, "mesh_input.length");
-    mesh_input.num_elems= DCArrayKokkos<int> (3, "mesh_input.num_elems");
+    mesh_input.num_elems = DCArrayKokkos<int> (3, "mesh_input.num_elems");
 
 
     // extract words from the input file and validate they are correct
@@ -833,7 +833,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 
     for(int i=0; i< num_regions; i++){
         region_fills.host(i).origin = DCArrayKokkos<double> (3, "region_fills.origin");
-        region_fills(i).origin.update_device();
+        region_fills.host(i).origin.update_device();
     }
     region_fills.update_device();
 
