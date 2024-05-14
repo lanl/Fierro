@@ -1321,7 +1321,7 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
 
     for(int i=0; i< num_bcs; i++){
         boundary_conditions.host(i).origin = DCArrayKokkos<double> (3, "boundary_conditions.origin");
-        boundary_conditions(i).origin.update_device();
+        boundary_conditions.host(i).origin.update_device();
     }
     boundary_conditions.update_device();
 
