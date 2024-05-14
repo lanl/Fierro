@@ -76,7 +76,7 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
 {
     // std::cout<<"Num elems in mesh  = " <<mesh.num_elems<<std::endl;
     // loop over all the elements in the mesh
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
         const size_t num_dims = mesh.num_dims;
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
 
@@ -190,7 +190,7 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
     )
 {
     // loop over all the elements in the mesh
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
         const size_t num_dims = mesh.num_dims;
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
 

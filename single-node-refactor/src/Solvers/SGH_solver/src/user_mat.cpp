@@ -70,7 +70,7 @@ void user_strength_model(const DCArrayKokkos<double>& elem_pres,
     //   :
     // statev(N) = var_N
 
-    int num_dims = 3;
+    // int num_dims = 3;
 
     // -----------------------------------------------------------------------------
     // The user must coding goes here

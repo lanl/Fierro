@@ -63,16 +63,18 @@ int main(int argc, char* argv[])
     Kokkos::initialize();
 
     // Create driver on heap
-    Driver* driver;
-    driver = new Driver(argv[1]);
+    // Driver* driver;
+    // driver = new Driver(argv[1]);
 
-    driver->initialize();
-    driver->setup();
-    driver->run();
-    driver->finalize();
+    Driver driver(argv[1]);
+
+    driver.initialize();
+    driver.setup();
+    driver.run();
+    driver.finalize();
 
     // Delete driver
-    delete driver;
+   //delete driver;
 
     Kokkos::finalize();
 

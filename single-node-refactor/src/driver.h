@@ -131,7 +131,7 @@ public:
         elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials(0).eos_global_vars.size()); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
-        fill_regions();
+        this->fill_regions();
 
         // Create solvers
         for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
@@ -226,7 +226,7 @@ public:
             int num_elems = mesh.num_elems;
 
             // parallel loop over elements in mesh
-            FOR_ALL(elem_gid, 0, num_elems, {
+            FOR_ALL_CLASS(elem_gid, 0, num_elems, {
                 // for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
                 for (int rk_level = 0; rk_level < 2; rk_level++) {
                     // const size_t rk_level = 1;
@@ -345,8 +345,6 @@ public:
                         elem.mat_id(elem_gid) = sim_param.region_fills(f_id).material_id;
 
                         size_t mat_id = elem.mat_id(elem_gid); // short name
-
-                        // printf("mat_id = %lu\n", mat_id);
 
                         // get state_vars from the input file or read them in
                         if (false) { // sim_param.materials(mat_id).strength_setup == model_init::user_init) {
@@ -490,14 +488,13 @@ public:
                             elem.pres(elem_gid) = 0.25 * (cos(2.0 * PI * elem_coords[0]) + cos(2.0 * PI * elem_coords[1]) ) + 1.0;
 
                             // p = rho*ie*(gamma - 1)
-                            size_t mat_id = f_id;
+                            // size_t mat_id = f_id;
                             double gamma  = elem.statev(elem_gid, 4); // gamma value WARNING: BUG HERE
                             elem.sie(rk_level, elem_gid) =
                                 elem.pres(elem_gid) / (sim_param.region_fills(f_id).den * (gamma - 1.0));
                         } // end if
                     } // end if fill
                 } // end RK loop
-                  // }
             }); // end FOR_ALL element loop
             Kokkos::fence();
         } // end for loop over fills
@@ -522,7 +519,7 @@ public:
         // } // end of
 
         // calculate the nodal mass
-        FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
             node.mass(node_gid) = 0.0;
 
             if (mesh.num_dims == 3) {

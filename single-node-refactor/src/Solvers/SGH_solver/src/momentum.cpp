@@ -106,7 +106,7 @@ void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<double>& b_matrix,
     const double elem_vol,
     const size_t elem_gid
-    )
+    ) const
 {
     const size_t num_nodes_in_elem = 8;
 
@@ -203,7 +203,7 @@ void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
     const double elem_vol,
     const double elem_area,
     const size_t elem_gid
-    )
+    ) const
 {
     const size_t num_nodes_in_elem = 4;
 

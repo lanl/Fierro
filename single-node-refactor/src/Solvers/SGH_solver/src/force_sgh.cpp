@@ -80,7 +80,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
     )
 {
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
         const size_t num_dims = 3;
         const size_t num_nodes_in_elem = 8;
 
@@ -131,7 +131,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
                               elem_node_gids);
 
         // --- Calculate the velocity gradient ---
-        get_velgrad(vel_grad,
+        SGH::get_velgrad(vel_grad,
                     elem_node_gids,
                     node_vel,
                     area_normal,
@@ -443,7 +443,7 @@ void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
     )
 {
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
         const size_t num_dims = 2;
         const size_t num_nodes_in_elem = 4;
 

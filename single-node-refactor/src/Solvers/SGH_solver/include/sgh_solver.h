@@ -238,7 +238,7 @@ public:
         const DCArrayKokkos<double>&    node_vel,
         const ViewCArrayKokkos<double>& b_matrix,
         const double elem_vol,
-        const size_t elem_gid);
+        const size_t elem_gid) const;
 
     KOKKOS_FUNCTION
     void get_velgrad2D(
@@ -248,7 +248,7 @@ public:
         const ViewCArrayKokkos<double>& b_matrix,
         const double elem_vol,
         const double elem_area,
-        const size_t elem_gid);
+        const size_t elem_gid) const;
 
     void get_divergence(
         DCArrayKokkos<double>& elem_div,

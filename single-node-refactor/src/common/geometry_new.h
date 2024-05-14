@@ -707,8 +707,7 @@ size_t check_bdy(const size_t patch_gid,
 /// \param Nodal coordinates
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
-void tag_bdys(const CArrayKokkos<boundary_condition_t>& boundary,
+inline void tag_bdys(const CArrayKokkos<boundary_condition_t>& boundary,
     mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords)
 {
