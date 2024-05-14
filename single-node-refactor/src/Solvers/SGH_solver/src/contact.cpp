@@ -471,8 +471,90 @@ void contact_patch_t::d_phi_d_eta(ViewCArrayKokkos<double> &d_phi_k_d_eta, const
         exit(1);
     }
 }  // end d_phi_d_eta
+
+KOKKOS_FUNCTION
+void contact_patch_t::get_normal(const double &xi_val, const double &eta_val, const double &del_t,
+                                 ViewCArrayKokkos<double> &normal) const
+{
+    // The normal is defined as the cross product between dr/dxi and dr/deta where r is the position vector, that is
+    // r = A*phi_k.
+
+    // Get the derivative arrays
+    double d_phi_d_xi_arr[contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> d_phi_d_xi_(&d_phi_d_xi_arr[0], num_nodes_in_patch);
+    d_phi_d_xi(d_phi_d_xi_, xi_val, eta_val);
+
+    double d_phi_d_eta_arr[contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> d_phi_d_eta_(&d_phi_d_eta_arr[0], num_nodes_in_patch);
+    d_phi_d_eta(d_phi_d_eta_, xi_val, eta_val);
+
+    // Construct the basis matrix A
+    double A_arr[3*contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> A(&A_arr[0], 3, num_nodes_in_patch);
+    construct_basis(A, del_t);
+
+    // Get dr_dxi and dr_deta by performing the matrix multiplication A*d_phi_d_xi and A*d_phi_d_eta
+    double dr_dxi_arr[3];
+    ViewCArrayKokkos<double> dr_dxi(&dr_dxi_arr[0], 3);
+    mat_mul(A, d_phi_d_xi_, dr_dxi);
+
+    double dr_deta_arr[3];
+    ViewCArrayKokkos<double> dr_deta(&dr_deta_arr[0], 3);
+    mat_mul(A, d_phi_d_eta_, dr_deta);
+
+    // Get the normal by performing the cross product between dr_dxi and dr_deta
+    normal(0) = dr_dxi(1)*dr_deta(2) - dr_dxi(2)*dr_deta(1);
+    normal(1) = dr_dxi(2)*dr_deta(0) - dr_dxi(0)*dr_deta(2);
+    normal(2) = dr_dxi(0)*dr_deta(1) - dr_dxi(1)*dr_deta(0);
+
+    // Make the normal a unit vector
+    double norm_val = norm(normal);
+    for (int i = 0; i < 3; i++)
+    {
+        normal(i) /= norm_val;
+    }
+}  // end get_normal
+
 #pragma clang diagnostic pop
 /// end of contact_patch_t member functions ////////////////////////////////////////////////////////////////////////////
+
+/// beginning of contact_pair_t member functions ///////////////////////////////////////////////////////////////////////
+contact_pair_t::contact_pair_t()
+{
+    // Default constructor
+}
+
+KOKKOS_FUNCTION
+contact_pair_t::contact_pair_t(contact_patches_t &contact_patches_obj, const contact_patch_t &patch_obj,
+                               const contact_node_t &node_obj, const double &xi_val, const double &eta_val,
+                               const double &del_tc_val, const ViewCArrayKokkos<double> &normal_view,
+                               const size_t &patch_lid)
+{
+    // Set the contact_pair_t members
+    // todo: patch and node might need to be pointers instead so that changes to the patch and node objects are
+    //       reflected in contact_patches_t::contact_nodes and contact_patches_t::contact_patches; however, I think that
+    //       the patch and node objects references in the call mean that this is already happening.
+    patch = patch_obj;
+    node = node_obj;
+    xi = xi_val;
+    eta = eta_val;
+    del_tc = del_tc_val;
+    normal(0) = normal_view(0);
+    normal(1) = normal_view(1);
+    normal(2) = normal_view(2);
+
+    contact_patches_obj.is_pen_node(node.gid) = true;
+    for (int i = 0; i < contact_patch_t::num_nodes_in_patch; i++)
+    {
+        contact_patches_obj.is_patch_node(patch.nodes_gid(i)) = true;
+    }
+
+    // Add the pair to the contact_pairs_access
+    size_t &patch_stride = contact_patches_obj.contact_pairs_access.stride(patch_lid);
+    patch_stride++;
+    contact_patches_obj.contact_pairs_access(patch_lid, patch_stride - 1) = node.gid;
+}
+/// end of contact_pair_t member functions /////////////////////////////////////////////////////////////////////////////
 
 /// beginning of contact_patches_t member functions ////////////////////////////////////////////////////////////////////
 void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches,
@@ -536,7 +618,7 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
             contact_patch.eta = CArrayKokkos<double>(4);
 
             // todo: We have the Kokkos xi and eta members being modified on host. I think it may be that the xi_temp
-            // todo: and eta_temp arrays need to be ridden and do a serial Run() for the construction of xi and eta.
+            //       and eta_temp arrays need to be ridden and do a serial Run() for the construction of xi and eta.
             for (int j = 0; j < 4; j++)
             {
                 contact_patch.xi(j) = xi_temp[j];
@@ -664,6 +746,7 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
     FOR_ALL_CLASS(i, 0, contact_patches_t::num_contact_nodes, {
         const size_t &node_gid = nodes_gid(i);
         contact_node_t &contact_node = contact_nodes(node_gid);
+        contact_node.gid = node_gid;
         contact_node.mass = nodes.mass(node_gid);
 
         // Update pos, vel, acc, and internal force
@@ -684,7 +767,7 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
     });
 
     // todo: I don't think it's a good idea to have these allocated here. These should become member variables, and
-    // todo: its allocation should be moved to initialize() because sort() is being called every step.
+    //       its allocation should be moved to initialize() because sort() is being called every step.
     // Grouping all the coordinates, velocities, and accelerations
     CArrayKokkos<double> points(3, contact_patch_t::num_nodes_in_patch*num_contact_patches);
     CArrayKokkos<double> velocities(3, contact_patch_t::num_nodes_in_patch*num_contact_patches);
@@ -811,7 +894,7 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
     Sz = floor((z_max - z_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
 
     // todo: Something similar to the points, velocities, and accelerations arrays above should be done here. The issue
-    // todo: with this one is that nb changes through the iterations. lbox and npoint might need to change to Views.
+    //       with this one is that nb changes through the iterations. lbox and npoint might need to change to Views.
     // Initializing the nbox, lbox, nsort, and npoint arrays
     size_t nb = Sx*Sy*Sz;  // total number of buckets
     nbox = CArrayKokkos<size_t>(nb);
@@ -920,9 +1003,49 @@ void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double 
 
 void contact_patches_t::get_contact_pairs(const double &del_t)
 {
+    // clear the is_patch_node and is_pen_node arrays to be false
+    FOR_ALL_CLASS(i, 0, is_patch_node.size(), {
+        is_patch_node(i) = false;
+        is_pen_node(i) = false;
+    });
+    Kokkos::fence();
+
     for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++)
     {
-        const contact_patch_t &contact_patch = contact_patches(patch_lid);
+        contact_patch_t &contact_patch = contact_patches(patch_lid);
+        size_t num_nodes_found;
+        find_nodes(contact_patch, del_t, num_nodes_found);
+        // todo: once finished debugging, turn this into a FOR_ALL_CLASS
+        for (int node_lid = 0; node_lid < num_nodes_found; node_lid++)
+        {
+            const size_t &node_gid = contact_patch.possible_nodes(node_lid);
+            const contact_node_t &node = contact_nodes(node_gid);
+            contact_pair_t &current_pair = contact_pairs(node_gid);
+            // If this is already an active pair, then back out of the thread/continue
+            if (current_pair.active)
+            {
+                is_pen_node(node_gid) = true;
+                for (int i = 0; i < contact_patch_t::num_nodes_in_patch; i++)
+                {
+                    is_patch_node(contact_patch.nodes_gid(i)) = true;
+                }
+                // todo: ending the thread here has performance consequences for cuda; though it may be fine to do this
+                //       because the number of possible nodes is small
+                // return;
+                continue;
+            }
+
+            double xi_val, eta_val, del_tc;
+            bool is_hitting = contact_patch.contact_check(node, del_t, xi_val, eta_val, del_tc);
+
+            if (is_hitting && !is_pen_node(node_gid) && !is_patch_node(node_gid))
+            {
+                double normal_arr[3];
+                ViewCArrayKokkos<double> normal(&normal_arr[0], 3);
+                contact_patch.get_normal(xi_val, eta_val, del_t, normal);
+                current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, normal, patch_lid);
+            }
+        }
     }
 }
 /// end of contact_patches_t member functions //////////////////////////////////////////////////////////////////////////
@@ -969,7 +1092,8 @@ contact_node_t::contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCA
     }
 }
 
-void run_contact_tests()
+void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mesh, const node_t &nodes,
+                       const corner_t &corner)
 {
     double err_tol = 1.0e-6;  // error tolerance
 
@@ -1001,6 +1125,34 @@ void run_contact_tests()
     assert(fabs(del_tc - 0.6221606424928471) < err_tol);
     assert(is_hitting);
     assert(contact_check);
+
+    // Testing sort and get_contact_pairs
+    std::cout << "\nTesting sort and get_contact_pairs:" << std::endl;
+    std::cout << "Patch with nodes 10 11 5 4 is paired with node 22" << std::endl;
+    std::cout << "Patch with nodes 9 10 4 3 is paired with node 23" << std::endl;
+    std::cout << "Patch with nodes 16 17 11 10 is paired with node 18" << std::endl;
+    std::cout << "Patch with nodes 15 16 10 9 is paired with node 19" << std::endl;
+    std::cout << "vs." << std::endl;
+    contact_patches_obj.sort(mesh, nodes, corner);
+    contact_patches_obj.get_contact_pairs(0.1);
+    for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
+    {
+        for (int j = 0; j < contact_patches_obj.contact_pairs_access.stride(i); j++)
+        {
+            size_t node_gid = contact_patches_obj.contact_pairs_access(i, j);
+            contact_pair_t &pair = contact_patches_obj.contact_pairs(node_gid);
+            std::cout << "Patch with nodes ";
+            for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
+            {
+                std::cout << pair.patch.nodes_gid(k) << " ";
+            }
+            std::cout << "is paired with node " << pair.node.gid << std::endl;
+        }
+    }
+    assert(contact_patches_obj.contact_pairs_access(2, 0) == 22);
+    assert(contact_patches_obj.contact_pairs_access(6, 0) == 23);
+    assert(contact_patches_obj.contact_pairs_access(10, 0) == 18);
+    assert(contact_patches_obj.contact_pairs_access(14, 0) == 19);
 
     exit(0);
 }

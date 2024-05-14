@@ -14,6 +14,7 @@ static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (
 
 struct contact_node_t
 {
+    size_t gid;  // global node id
     double mass;  // mass of the node
     CArrayKokkos<double> pos = CArrayKokkos<double>(3);  // position of the node
     CArrayKokkos<double> vel = CArrayKokkos<double>(3);  // velocity of the node
@@ -236,7 +237,24 @@ struct contact_patch_t
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     KOKKOS_FUNCTION
     void d_phi_d_eta(ViewCArrayKokkos<double> &d_phi_k_d_eta, const double &xi_value, const double &eta_value) const;
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn get_normal
+    ///
+    /// \brief Computes the normal vector of the patch/surface at the given xi and eta values
+    ///
+    /// \param xi_val xi value
+    /// \param eta_val eta value
+    /// \param del_t time step to compute the normal at
+    /// \param normal kokkos view that will be changed in place
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    KOKKOS_FUNCTION
+    void get_normal(const double &xi_val, const double &eta_val, const double &del_t,
+                    ViewCArrayKokkos<double> &normal) const;
 };
+
+// forward declaration
+struct contact_patches_t;
 
 struct contact_pair_t
 {
@@ -246,6 +264,15 @@ struct contact_pair_t
     double eta;  // eta coordinate of the contact point
     double del_tc;  // time it takes for the node to penetrate the patch/surface (only useful for initial contact)
     CArrayKokkos<double> normal = CArrayKokkos<double>(3);  // normal vector of the patch/surface at the contact point
+
+    bool active = false;  // if the pair is active or not
+
+    contact_pair_t();
+
+    KOKKOS_FUNCTION
+    contact_pair_t(contact_patches_t &contact_patches_obj, const contact_patch_t &patch_obj,
+                   const contact_node_t &node_obj, const double &xi_val, const double &eta_val,
+                   const double &del_tc_val, const ViewCArrayKokkos<double> &normal_view, const size_t &patch_lid);
 };
 
 struct contact_patches_t
@@ -334,7 +361,20 @@ struct contact_patches_t
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void find_nodes(contact_patch_t &contact_patch, const double &del_t, size_t &num_nodes_found);
 
-    // todo: add docs here
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn get_contact_pairs
+    ///
+    /// \brief Constructs the contact pairs
+    ///
+    /// This will construct this->contact_pairs and this->contact_pairs_access. This member will be called once before
+    /// force resolution, then it will be called iteratively up to a certain max or until no new contact pairs are found
+    /// after the force resolution. The algorithm presented in this member does not have a master and slave hierarchy,
+    /// and the pairs are determined by whichever node is penetrating first. An important characteristic of the
+    /// datastructure is that a contact patch can have multiple nodes, but a contact node is only associated with one
+    /// contact patch.
+    ///
+    /// \param del_t current time step in the analysis
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void get_contact_pairs(const double &del_t);
 };
 
@@ -371,6 +411,7 @@ KOKKOS_FUNCTION
 void inv(const ViewCArrayKokkos<double> &A, ViewCArrayKokkos<double> &A_inv, const double &A_det);
 
 // run tests
-void run_contact_tests();
+void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mesh, const node_t &nodes,
+                       const corner_t &corner);
 
 #endif  // CONTACT_H
