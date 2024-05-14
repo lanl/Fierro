@@ -823,16 +823,17 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options)
 // =================================================================================
 //    Parse Fill regions
 // =================================================================================
-void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills)
+void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 {
     Yaml::Node& region_yaml = root["regions"];
 
     size_t num_regions = region_yaml.Size();
 
-    region_fills = CArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
+    region_fills = DCArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
 
     for(int i=0; i< num_regions; i++){
-        region_fills(i).origin = DCArrayKokkos<double> (3, "region_fills.origin");
+        region_fills.host(i).origin = DCArrayKokkos<double> (3, "region_fills.origin");
+        region_fills(i).origin.update_device();
     }
 
     // loop over the fill regions specified
@@ -1124,13 +1125,13 @@ void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills)
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials)
+void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 {
     Yaml::Node& material_yaml = root["materials"];
 
     size_t num_materials = material_yaml.Size();
 
-    materials = CArrayKokkos<material_t>(num_materials);
+    materials = DCArrayKokkos<material_t>(num_materials);
 
     // allocate room for each material to store eos_global_vars
 
@@ -1309,13 +1310,14 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials)
 // =================================================================================
 //    Parse Boundary Conditions
 // =================================================================================
-void parse_bcs(Yaml::Node& root, CArrayKokkos<boundary_condition_t>& boundary_conditions)
+void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_conditions)
 {
     Yaml::Node& bc_yaml = root["boundary_conditions"];
 
     size_t num_bcs = bc_yaml.Size();
 
-    boundary_conditions = CArrayKokkos<boundary_condition_t>(num_bcs, "sim_param.boundary_conditions");
+    boundary_conditions = DCArrayKokkos<boundary_condition_t>(num_bcs, "sim_param.boundary_conditions");
+
 
     for(int i=0; i< num_bcs; i++){
         boundary_conditions(i).origin = DCArrayKokkos<double> (3, "boundary_conditions.origin");

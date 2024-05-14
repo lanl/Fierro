@@ -846,7 +846,7 @@ struct mesh_t
     /// REMOVE TO SETUP
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_boundry_node_sets(const CArrayKokkos<boundary_condition_t>& boundary,
+    void build_boundry_node_sets(const DCArrayKokkos<boundary_condition_t>& boundary,
         mesh_t& mesh)
     {
         // build boundary nodes in each boundary set

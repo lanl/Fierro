@@ -130,6 +130,7 @@ struct boundary_condition_t
     double hydro_bc_vel_1 = 0.0;    ///< Final velocity for timed velocity boundary condition
     double hydro_bc_vel_t_start = 0.0;  ///< Start time for velocity boundary condition
     double hydro_bc_vel_t_end   = 0.0;  ///< End time for velocity boundary condition
+
 }; // end boundary conditions
 
 // -------------------------------------

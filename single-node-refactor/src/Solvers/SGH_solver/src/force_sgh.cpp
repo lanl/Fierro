@@ -59,7 +59,7 @@
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_force(const CArrayKokkos<material_t>& material,
+void SGH::get_force(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -422,7 +422,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
+void SGH::get_force_2D(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,

@@ -151,13 +151,13 @@ public:
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(
         const mesh_t& mesh,
-        const CArrayKokkos<boundary_condition_t>& boundary,
+        const DCArrayKokkos<boundary_condition_t>& boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value);
 
     void boundary_contact(
         const mesh_t& mesh,
-        const CArrayKokkos<boundary_condition_t>& boundary,
+        const DCArrayKokkos<boundary_condition_t>& boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value);
 
@@ -174,7 +174,7 @@ public:
 
     // **** Functions defined in force_sgh.cpp **** //
     void get_force(
-        const CArrayKokkos<material_t>& material,
+        const DCArrayKokkos<material_t>& material,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
@@ -194,7 +194,7 @@ public:
         const double rk_alpha);
 
     void get_force_2D(
-        const CArrayKokkos<material_t>& material,
+        const DCArrayKokkos<material_t>& material,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
@@ -277,7 +277,7 @@ public:
 
     // **** Functions defined in properties.cpp **** //
     void update_state(
-        const CArrayKokkos<material_t>& material,
+        const DCArrayKokkos<material_t>& material,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
@@ -294,7 +294,7 @@ public:
         const double rk_alpha);
 
     void update_state2D(
-        const CArrayKokkos<material_t>& material,
+        const DCArrayKokkos<material_t>& material,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,

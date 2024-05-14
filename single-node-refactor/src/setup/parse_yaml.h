@@ -91,12 +91,12 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input);
 void parse_output_options(Yaml::Node& root, output_options_t& output_options);
 
 // parse the region text
-void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills);
+void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills);
 
 // parse the region text
-void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials);
+void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials);
 
 // parse the boundary condition text
-void parse_bcs(Yaml::Node& root, CArrayKokkos<boundary_condition_t>& boundary_conditions);
+void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_conditions);
 
 #endif // end Header Guard

@@ -62,11 +62,11 @@ struct simulation_parameters_t
 
     std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
 
-    CArrayKokkos<boundary_condition_t> boundary_conditions; ///< Simulation boundary conditions
+    DCArrayKokkos<boundary_condition_t> boundary_conditions; ///< Simulation boundary conditions
 
-    CArrayKokkos<reg_fill_t> region_fills;  ///< Region data for simulation mesh
+    DCArrayKokkos<reg_fill_t> region_fills;  ///< Region data for simulation mesh
 
-    CArrayKokkos<material_t> materials; ///< Material data for simulation
+    DCArrayKokkos<material_t> materials; ///< Material data for simulation
     
 }; // simulation_parameters_t
 
