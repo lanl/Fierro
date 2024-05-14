@@ -310,7 +310,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
+    void build_2d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
     {
         printf(" Creating a 2D box mesh \n");
 
@@ -366,17 +366,18 @@ public:
                 int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
 
                 // store the point coordinates
-                node.coords(0, node_gid, 0) = origin[0] + (double)i * dx;
-                node.coords(0, node_gid, 1) = origin[1] + (double)j * dy;
+                node.coords.host(0, node_gid, 0) = origin[0] + (double)i * dx;
+                node.coords.host(0, node_gid, 1) = origin[1] + (double)j * dy;
             } // end for i
         } // end for j
 
         for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
             for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                node.coords(rk_level, node_gid, 0) = node.coords(0, node_gid, 0);
-                node.coords(rk_level, node_gid, 1) = node.coords(0, node_gid, 1);
+                node.coords.host(rk_level, node_gid, 0) = node.coords.host(0, node_gid, 0);
+                node.coords.host(rk_level, node_gid, 1) = node.coords.host(0, node_gid, 1);
             }
         }
+        node.coords.update_device();
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
@@ -436,7 +437,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_polar(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
+    void build_2d_polar(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
     {
         printf(" Creating a 2D polar mesh \n");
 
@@ -495,17 +496,19 @@ public:
                 double theta_j = start_angle + (double)j * dy;
 
                 // store the point coordinates
-                node.coords(0, node_gid, 0) = origin[0] + r_i * cos(theta_j);
-                node.coords(0, node_gid, 1) = origin[1] + r_i * sin(theta_j);
+                node.coords.host(0, node_gid, 0) = origin[0] + r_i * cos(theta_j);
+                node.coords.host(0, node_gid, 1) = origin[1] + r_i * sin(theta_j);
             } // end for i
         } // end for j
 
         for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
             for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                node.coords(rk_level, node_gid, 0) = node.coords(0, node_gid, 0);
-                node.coords(rk_level, node_gid, 1) = node.coords(0, node_gid, 1);
+                node.coords.host(rk_level, node_gid, 0) = node.coords.host(0, node_gid, 0);
+                node.coords.host(rk_level, node_gid, 1) = node.coords.host(0, node_gid, 1);
             }
         }
+        node.coords.update_device();
+
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
@@ -565,7 +568,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
+    void build_3d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
     {
         printf(" Creating a 3D box mesh \n");
 
@@ -630,20 +633,21 @@ public:
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
                     // store the point coordinates
-                    node.coords(0, node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords(0, node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords(0, node_gid, 2) = origin[2] + (double)k * dz;
+                    node.coords.host(0, node_gid, 0) = origin[0] + (double)i * dx;
+                    node.coords.host(0, node_gid, 1) = origin[1] + (double)j * dy;
+                    node.coords.host(0, node_gid, 2) = origin[2] + (double)k * dz;
                 } // end for i
             } // end for j
         } // end for k
 
         for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
             for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                node.coords(rk_level, node_gid, 0) = node.coords(0, node_gid, 0);
-                node.coords(rk_level, node_gid, 1) = node.coords(0, node_gid, 1);
-                node.coords(rk_level, node_gid, 2) = node.coords(0, node_gid, 2);
+                node.coords.host(rk_level, node_gid, 0) = node.coords.host(0, node_gid, 0);
+                node.coords.host(rk_level, node_gid, 1) = node.coords.host(0, node_gid, 1);
+                node.coords.host(rk_level, node_gid, 2) = node.coords.host(0, node_gid, 2);
             }
         }
+        node.coords.update_device();
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
@@ -709,7 +713,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_HexN_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
+    void build_3d_HexN_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
     {
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
     }
@@ -731,7 +735,7 @@ public:
     /// \param Number of j indices
     ///
     /////////////////////////////////////////////////////////////////////////////
-    int get_id(int i, int j, int k, int num_i, int num_j)
+    int get_id(int i, int j, int k, int num_i, int num_j) const
     {
         return i + j * num_i + k * num_i * num_j;
     }
@@ -753,7 +757,7 @@ public:
     /// \param array of 3 integers specifying the order along each axis of the hexahedron
     ///
     /////////////////////////////////////////////////////////////////////////////
-    int PointIndexFromIJK(int i, int j, int k, const int* order)
+    int PointIndexFromIJK(int i, int j, int k, const int* order) const
     {
         bool ibdy = (i == 0 || i == order[0]);
         bool jbdy = (j == 0 || j == order[1]);

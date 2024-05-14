@@ -127,8 +127,9 @@ public:
         geometry::get_vol(elem.vol, node.coords, mesh);
 
         // Create memory for state variables
-        printf("Num State variables per element = %lu\n", sim_param.materials(0).eos_global_vars.size());
-        elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials(0).eos_global_vars.size()); // WARNING: HACK
+        sim_param.materials.update_host();
+        printf("Num State variables per element = %lu\n", sim_param.materials.host(0).eos_global_vars.size());
+        elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials.host(0).eos_global_vars.size()); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
         this->fill_regions();
