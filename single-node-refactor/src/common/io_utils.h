@@ -574,10 +574,12 @@ public:
 
         const int num_dim = 3;
 
+        sim_param.mesh_input.length.update_host();
         const double lx = sim_param.mesh_input.length.host(0);
         const double ly = sim_param.mesh_input.length.host(1);
         const double lz = sim_param.mesh_input.length.host(2);
 
+        sim_param.mesh_input.num_elems.update_host();
         const int num_elems_i = sim_param.mesh_input.num_elems.host(0);
         const int num_elems_j = sim_param.mesh_input.num_elems.host(1);
         const int num_elems_k = sim_param.mesh_input.num_elems.host(2);
