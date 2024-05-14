@@ -109,7 +109,7 @@ struct reg_fill_t
     double den = 0.0;  ///< density
 
     // std::vector<double> origin = { 0.0, 0.0, 0.0 }; ///< Origin for region
-    DCArrayKokkos<double> origin = DCArrayKokkos<double> (3);
+    DCArrayKokkos<double> origin; // = DCArrayKokkos<double> (3);
 };
 
 // ----------------------------------

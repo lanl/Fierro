@@ -82,10 +82,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     }, IE_sum);
     IE_t0 = IE_sum;
 
-    // Use to remove compiler warning
-    double warn1 = IE_loc_sum;
-
-
     // extensive KE
     KE_loc_sum = 0.0;
     REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
@@ -102,10 +98,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
         }
     }, KE_sum);
     Kokkos::fence();
-
-    // Use to remove compiler warning
-    warn1 = KE_loc_sum;
-
     KE_t0 = 0.5 * KE_sum;
 
     // extensive TE

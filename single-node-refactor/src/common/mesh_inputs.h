@@ -81,9 +81,9 @@ struct mesh_input_t
     std::string file_path     = ""; ///< Absolute path of mesh file
     mesh_input::type type;  ///< Type of mesh to generate if
 
-    DCArrayKokkos<double> origin = DCArrayKokkos<double> (3); ///< Mesh origin for generating a mesh
-    DCArrayKokkos<double> length = DCArrayKokkos<double> (3); ///< x,y,z length of generated mesh
-    DCArrayKokkos<int> num_elems = DCArrayKokkos<int> (3);  ///< Number of elements along x,y, z for generating a mesh.
+    DCArrayKokkos<double> origin; // = DCArrayKokkos<double> (3); ///< Mesh origin for generating a mesh
+    DCArrayKokkos<double> length; // = DCArrayKokkos<double> (3); ///< x,y,z length of generated mesh
+    DCArrayKokkos<int> num_elems; // = DCArrayKokkos<int> (3);  ///< Number of elements along x,y, z for generating a mesh.
 
 
     size_t p_order = 1;

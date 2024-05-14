@@ -482,6 +482,11 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
     // get the mesh variables names set by the user
     std::vector<std::string> user_mesh_inputs;
 
+    mesh_input.origin = DCArrayKokkos<double> (3, "mesh_input.origin");
+    mesh_input.length = DCArrayKokkos<double> (3, "mesh_input.length");
+    mesh_input.num_elems= DCArrayKokkos<int> (3, "mesh_input.num_elems");
+
+
     // extract words from the input file and validate they are correct
     validate_inputs(mesh_yaml, user_mesh_inputs, str_mesh_inps);
 
@@ -825,6 +830,10 @@ void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills)
     size_t num_regions = region_yaml.Size();
 
     region_fills = CArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
+
+    for(int i=0; i< num_regions; i++){
+        region_fills(i).origin = DCArrayKokkos<double> (3, "region_fills.origin");
+    }
 
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {
@@ -1307,6 +1316,10 @@ void parse_bcs(Yaml::Node& root, CArrayKokkos<boundary_condition_t>& boundary_co
     size_t num_bcs = bc_yaml.Size();
 
     boundary_conditions = CArrayKokkos<boundary_condition_t>(num_bcs, "sim_param.boundary_conditions");
+
+    for(int i=0; i< num_bcs; i++){
+        boundary_conditions(i).origin = DCArrayKokkos<double> (3, "boundary_conditions.origin");
+    }
 
     // loop over the fill regions specified
     for (int bc_id = 0; bc_id < num_bcs; bc_id++) {
