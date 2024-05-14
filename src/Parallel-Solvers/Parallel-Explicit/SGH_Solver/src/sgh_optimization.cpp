@@ -1269,6 +1269,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     size_t current_data_index, next_data_index;
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    bool use_solve_checkpoints = simparam->optimization_options.use_solve_checkpoints;
 
     if (myrank == 0) {
         std::cout << "Computing accumulated kinetic energy gradient" << std::endl;
@@ -1276,6 +1277,9 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
 
     compute_topology_optimization_adjoint_full(design_densities_distributed, design_gradients_distributed);
 
+    if(use_solve_checkpoints){ 
+        return;
+    }
     { // view scope
         vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
         const_vec_array design_densities = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
