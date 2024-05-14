@@ -1283,7 +1283,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 materials.host(mat_id).eos_global_vars.update_device();
                 RUN({
                     materials(mat_id).num_eos_global_vars = num_global_vars;
-                })
+                });
                 materials.update_device();
 
                 if (VERBOSE) {

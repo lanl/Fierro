@@ -333,7 +333,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        for(int i=0; i<num_dim; i++) origin[i] = sim_param.mesh_input.origin(i);
+        sim_param.mesh_input.origin.update_host();
+        for(int i=0; i<num_dim; i++) origin[i] = sim_param.mesh_input.origin.host(i);
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -462,7 +463,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        for(int i=0; i<num_dim; i++) origin[i] = sim_param.mesh_input.origin(i);
+        sim_param.mesh_input.origin.update_host();
+        for(int i=0; i<num_dim; i++) origin[i] = sim_param.mesh_input.origin.host(i);
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -590,7 +592,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j * num_elems_k;
 
         std::vector<double> origin(num_dim);
-        for(int i=0; i<num_dim; i++) origin[i] = sim_param.mesh_input.origin(i);
+        sim_param.mesh_input.origin.update_host();
+        for(int i=0; i<num_dim; i++) origin[i] = sim_param.mesh_input.origin.host(i);
 
         // --- 3D parameters ---
         // const int num_faces_in_elem  = 6;  // number of faces in elem
