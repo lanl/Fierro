@@ -6,6 +6,8 @@ double contact_patches_t::bucket_size;
 size_t contact_patches_t::num_contact_nodes;
 
 /// beginning of global, linear algebra functions //////////////////////////////////////////////////////////////////////
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCDFAInspection"
 KOKKOS_FUNCTION
 void mat_mul(const ViewCArrayKokkos<double> &A, const ViewCArrayKokkos<double> &x, ViewCArrayKokkos<double> &b)
 {
@@ -39,6 +41,7 @@ void mat_mul(const ViewCArrayKokkos<double> &A, const ViewCArrayKokkos<double> &
         }
     }
 }  // end mat_mul
+#pragma clang diagnostic pop
 
 KOKKOS_FUNCTION
 double norm(const ViewCArrayKokkos<double> &x)
@@ -72,6 +75,17 @@ void inv(const ViewCArrayKokkos<double> &A, ViewCArrayKokkos<double> &A_inv, con
     A_inv(2, 1) = (A(0, 1)*A(2, 0) - A(0, 0)*A(2, 1))/A_det;
     A_inv(2, 2) = (A(0, 0)*A(1, 1) - A(0, 1)*A(1, 0))/A_det;
 }  // end inv
+
+KOKKOS_FUNCTION
+double dot(const ViewCArrayKokkos<double> &a, const ViewCArrayKokkos<double> &b)
+{
+    double sum = 0.0;
+    for (size_t i = 0; i < a.size(); i++)
+    {
+        sum += a(i)*b(i);
+    }
+    return sum;
+}  // end dot
 /// end of global, linear algebra functions ////////////////////////////////////////////////////////////////////////////
 
 /// beginning of contact_patch_t member functions //////////////////////////////////////////////////////////////////////
@@ -1045,7 +1059,7 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
         contact_patch_t &contact_patch = contact_patches(patch_lid);
         size_t num_nodes_found;
         find_nodes(contact_patch, del_t, num_nodes_found);
-        // todo: once finished debugging, turn this into a FOR_ALL_CLASS
+        // todo: original plan was for this to be a parallel loop, but there are collisions in the contact_pairs_access
         for (int node_lid = 0; node_lid < num_nodes_found; node_lid++)
         {
             const size_t &node_gid = contact_patch.possible_nodes(node_lid);
@@ -1081,10 +1095,165 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
                 // from this iteration, then that means that this iteration will intersect the patch first. For this,
                 // we need to update the parameters in `current_pair` to reflect the ones here. The only thing that
                 // stays constant is the node, while the patch, xi, eta, del_tc, etc. are updated.
+                if (del_tc + tol < current_pair.del_tc)
+                {
+                    // see edge_cases.py for testing this branch (first test in file)
+                    // remove all the patch nodes from is_patch_node
+                    const contact_patch_t &original_patch = current_pair.patch;
+                    for (int i = 0; i < contact_patch_t::num_nodes_in_patch; i++)
+                    {
+                        is_patch_node(original_patch.nodes_gid(i)) = false;
+                    }
+
+                    // todo: remove_pair might be a reason why this whole loop should be serial
+                    remove_pair(current_pair);
+                    double normal_arr[3];
+                    ViewCArrayKokkos<double> normal(&normal_arr[0], 3);
+                    contact_patch.get_normal(xi_val, eta_val, del_t, normal);
+                    current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, normal);
+                } else if (current_pair.del_tc - tol <= del_tc && current_pair.del_tc + tol >= del_tc)
+                {
+                    // todo: see edge_cases.py second and fourth test in file
+
+                    // This means that the node is hitting an edge. The dominant pair to be selected is based off the
+                    // normal at the penetrating node's surface and the normal at the contact point.
+                    double normal1_arr[3];
+                    ViewCArrayKokkos<double> normal1(&normal1_arr[0], 3);
+                    // current pair stores normal1
+                    for (int i = 0; i < 3; i++)
+                    {
+                        normal1(i) = current_pair.normal(i);
+                    }
+
+                    double normal2_arr[3];
+                    ViewCArrayKokkos<double> normal2(&normal2_arr[0], 3);
+                    contact_patch.get_normal(xi_val, eta_val, del_t, normal2);
+                    double new_normal_arr[3];
+                    ViewCArrayKokkos<double> new_normal(&new_normal_arr[0], 3);
+                    bool add_new_pair = get_edge_pair(normal1, normal2, node_gid, del_t, new_normal);
+
+                    if (add_new_pair)
+                    {
+                        // remove all the patch nodes from is_patch_node
+                        const contact_patch_t &original_patch = current_pair.patch;
+                        for (int i = 0; i < contact_patch_t::num_nodes_in_patch; i++)
+                        {
+                            is_patch_node(original_patch.nodes_gid(i)) = false;
+                        }
+
+                        remove_pair(current_pair);
+                        current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, new_normal);
+                    }
+                }
             }
         }
     }
 }
+
+KOKKOS_FUNCTION
+void contact_patches_t::remove_pair(contact_pair_t &pair)
+{
+    pair.active = false;
+
+    // modify the contact_pairs_access array
+    // keep iterating in the row until the pair is found and shift all the elements to the left
+    // then decrement the stride
+    size_t &patch_stride = contact_pairs_access.stride(pair.patch.lid);
+    bool found_node = false;
+    for (size_t i = 0; i < patch_stride; i++)
+    {
+        const size_t &node_gid = contact_pairs_access(pair.patch.lid, i);
+        if (node_gid == pair.node.gid)
+        {
+            found_node = true;
+        } else if (found_node)
+        {
+            contact_pairs_access(pair.patch.lid, i - 1) = node_gid;
+        }
+    }
+    patch_stride -= 1;
+    assert(found_node && "Error: attempted to remove pair that doesn't exist in contact_pairs_access");
+}  // end remove_pair
+
+KOKKOS_FUNCTION
+bool contact_patches_t::get_edge_pair(const ViewCArrayKokkos<double> &normal1, const ViewCArrayKokkos<double> &normal2,
+                                      const size_t &node_gid, const double &del_t,
+                                      ViewCArrayKokkos<double> &new_normal) const
+{
+    // Get the surface normal of the penetrating node by averaging all the normals at that node
+    // we do this by looping through all the patches that the node is in
+    double node_normal_arr[3];
+    ViewCArrayKokkos<double> node_normal(&node_normal_arr[0], 3);
+    // zero node normal
+    for (int i = 0; i < 3; i++)
+    {
+        node_normal(i) = 0.0;
+    }
+
+    const size_t &num_patches = num_patches_in_node(node_gid);
+    double local_normal_arr[3];
+    ViewCArrayKokkos<double> local_normal(&local_normal_arr[0], 3);
+    for (size_t i = 0; i < num_patches; i++)
+    {
+        const contact_patch_t &patch = contact_patches(patches_in_node(node_gid, i));
+        // loop through the nodes in the patch until we find the node_gid the index matches with patch.xi and patch.eta
+        for (int j = 0; j < contact_patch_t::num_nodes_in_patch; j++)
+        {
+            if (patch.nodes_gid(j) == node_gid)
+            {
+                // get the normal at that node
+                patch.get_normal(patch.xi(j), patch.eta(j), del_t, local_normal);
+                for (int k = 0; k < 3; k++)
+                {
+                    node_normal(k) += local_normal(k);
+                }
+                break;
+            }
+        }
+    }
+    // finish getting the average
+    for (int i = 0; i < 3; i++)
+    {
+        node_normal(i) /= num_patches;
+    }
+    // Make it a unit vector
+    double normal_norm = norm(node_normal);
+    for (int i = 0; i < 3; i++)
+    {
+        node_normal(i) /= normal_norm;
+    }
+
+    // returning true means that a new pair should be formed
+    // the pair that should be selected is the one that has the most negative dot product with the node normal
+    // if normal1 is the most negative, then return false and make new_normal = normal1
+    // if normal2 is the most negative, then return true and make new_normal = normal2
+    // if the normals are the same, then return true and make new_normal the average between the two
+    double dot1 = dot(normal1, node_normal);
+    double dot2 = dot(normal2, node_normal);
+
+    if (dot2 - tol <= dot1 && dot2 + tol >= dot1)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            new_normal(i) = (normal1(i) + normal2(i))/2.0;
+        }
+        return true;
+    } else if (dot1 < dot2)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            new_normal(i) = normal1(i);
+        }
+        return false;
+    } else
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            new_normal(i) = normal2(i);
+        }
+        return true;
+    }
+}  // end get_edge_pair
 /// end of contact_patches_t member functions //////////////////////////////////////////////////////////////////////////
 
 /// beginning of internal, not to be used anywhere else tests //////////////////////////////////////////////////////////
@@ -1130,7 +1299,7 @@ contact_node_t::contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCA
 }
 
 void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mesh, const node_t &nodes,
-                       const corner_t &corner)
+                       const corner_t &corner, const simulation_parameters_t &sim_params)
 {
     double err_tol = 1.0e-6;  // error tolerance
 
@@ -1164,32 +1333,62 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
     assert(contact_check);
 
     // Testing sort and get_contact_pairs
+    std::string file_name = sim_params.mesh_input.file_path;
+    std::string main_test = "contact_test.geo";
+    std::string edge_case1 = "edge_case1.geo";
+
     std::cout << "\nTesting sort and get_contact_pairs:" << std::endl;
-    std::cout << "Patch with nodes 10 11 5 4 is paired with node 22" << std::endl;
-    std::cout << "Patch with nodes 9 10 4 3 is paired with node 23" << std::endl;
-    std::cout << "Patch with nodes 16 17 11 10 is paired with node 18" << std::endl;
-    std::cout << "Patch with nodes 15 16 10 9 is paired with node 19" << std::endl;
-    std::cout << "vs." << std::endl;
-    contact_patches_obj.sort(mesh, nodes, corner);
-    contact_patches_obj.get_contact_pairs(0.1);
-    for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
+    if (file_name.find(main_test) != std::string::npos)
     {
-        for (int j = 0; j < contact_patches_obj.contact_pairs_access.stride(i); j++)
+        std::cout << "Patch with nodes 10 11 5 4 is paired with node 22" << std::endl;
+        std::cout << "Patch with nodes 9 10 4 3 is paired with node 23" << std::endl;
+        std::cout << "Patch with nodes 16 17 11 10 is paired with node 18" << std::endl;
+        std::cout << "Patch with nodes 15 16 10 9 is paired with node 19" << std::endl;
+        std::cout << "vs." << std::endl;
+        contact_patches_obj.sort(mesh, nodes, corner);
+        contact_patches_obj.get_contact_pairs(0.1);
+        for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
-            size_t node_gid = contact_patches_obj.contact_pairs_access(i, j);
-            contact_pair_t &pair = contact_patches_obj.contact_pairs(node_gid);
-            std::cout << "Patch with nodes ";
-            for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
+            for (int j = 0; j < contact_patches_obj.contact_pairs_access.stride(i); j++)
             {
-                std::cout << pair.patch.nodes_gid(k) << " ";
+                size_t node_gid = contact_patches_obj.contact_pairs_access(i, j);
+                contact_pair_t &pair = contact_patches_obj.contact_pairs(node_gid);
+                std::cout << "Patch with nodes ";
+                for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
+                {
+                    std::cout << pair.patch.nodes_gid(k) << " ";
+                }
+                std::cout << "is paired with node " << pair.node.gid << std::endl;
             }
-            std::cout << "is paired with node " << pair.node.gid << std::endl;
         }
+        assert(contact_patches_obj.contact_pairs_access(2, 0) == 22);
+        assert(contact_patches_obj.contact_pairs_access(6, 0) == 23);
+        assert(contact_patches_obj.contact_pairs_access(10, 0) == 18);
+        assert(contact_patches_obj.contact_pairs_access(14, 0) == 19);
+    } else if (file_name.find(edge_case1) != std::string::npos)
+    {
+        std::cout << "Patch with nodes 7 8 2 1 is paired with node 12" << std::endl;
+        std::cout << "Patch with nodes 7 8 2 1 is paired with node 16" << std::endl;
+        std::cout << "vs." << std::endl;
+        contact_patches_obj.sort(mesh, nodes, corner);
+        contact_patches_obj.get_contact_pairs(1.0);
+        for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
+        {
+            for (int j = 0; j < contact_patches_obj.contact_pairs_access.stride(i); j++)
+            {
+                size_t node_gid = contact_patches_obj.contact_pairs_access(i, j);
+                contact_pair_t &pair = contact_patches_obj.contact_pairs(node_gid);
+                std::cout << "Patch with nodes ";
+                for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
+                {
+                    std::cout << pair.patch.nodes_gid(k) << " ";
+                }
+                std::cout << "is paired with node " << pair.node.gid << std::endl;
+            }
+        }
+        assert(contact_patches_obj.contact_pairs_access(6, 0) == 12);
+        assert(contact_patches_obj.contact_pairs_access(6, 1) == 16);
     }
-    assert(contact_patches_obj.contact_pairs_access(2, 0) == 22);
-    assert(contact_patches_obj.contact_pairs_access(6, 0) == 23);
-    assert(contact_patches_obj.contact_pairs_access(10, 0) == 18);
-    assert(contact_patches_obj.contact_pairs_access(14, 0) == 19);
 
     exit(0);
 }

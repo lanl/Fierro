@@ -3,6 +3,7 @@
 
 #include "matar.h"
 #include "mesh.h"
+#include "simulation_parameters.h"
 #include "_debug_tools.h"  // Remove this file entirely once finished
 
 using namespace mtr;
@@ -63,10 +64,11 @@ struct contact_patch_t
     // members to be used in find_nodes and capture_box
     // expected max number of nodes that could hit a patch
     static constexpr size_t max_contacting_nodes_in_patch = 25;
+    static constexpr size_t max_number_buckets = 200;  // todo: this needs to be ridden of and determined in initialize
     // bounds of the capture box (xc_max, yc_max, zc_max, xc_min, yc_min, zc_min)
     CArrayKokkos<double> bounds = CArrayKokkos<double>(6);
     // buckets that intersect the patch
-    CArrayKokkos<size_t> buckets = CArrayKokkos<size_t>(max_contacting_nodes_in_patch);
+    CArrayKokkos<size_t> buckets = CArrayKokkos<size_t>(max_number_buckets);
     // nodes that could potentially contact the patch
     CArrayKokkos<size_t> possible_nodes = CArrayKokkos<size_t>(max_contacting_nodes_in_patch);
 
@@ -379,6 +381,19 @@ struct contact_patches_t
     /// \param del_t current time step in the analysis
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void get_contact_pairs(const double &del_t);
+
+    /*
+     * todo: add docs
+     */
+    KOKKOS_FUNCTION
+    void remove_pair(contact_pair_t &pair);
+
+    /*
+     * todo: add docs
+     */
+    KOKKOS_FUNCTION
+    bool get_edge_pair(const ViewCArrayKokkos<double> &normal1, const ViewCArrayKokkos<double> &normal2,
+                       const size_t &node_gid, const double &del_t, ViewCArrayKokkos<double> &new_normal) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -413,8 +428,16 @@ double det(const ViewCArrayKokkos<double> &A);
 KOKKOS_FUNCTION
 void inv(const ViewCArrayKokkos<double> &A, ViewCArrayKokkos<double> &A_inv, const double &A_det);
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn dot
+///
+/// \brief Computes the dot product of two 1D arrays
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+double dot(const ViewCArrayKokkos<double> &a, const ViewCArrayKokkos<double> &b);
+
 // run tests
 void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mesh, const node_t &nodes,
-                       const corner_t &corner);
+                       const corner_t &corner, const simulation_parameters_t &sim_params);
 
 #endif  // CONTACT_H
