@@ -691,16 +691,16 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
       //read in element type from following line
       getline(*in, read_line);
       std::cout << read_line << std::endl;
-      line_parse.clear();
-      line_parse.str(read_line);
-      line_parse >> substring;
+      // line_parse.clear();
+      // line_parse.str(read_line);
+      // line_parse >> substring;
       //std::cout << substring << std::endl;
-      if(!substring.compare("et,1,185")){
+      if(read_line.find("185")!=std::string::npos){
         //Hex8 type
         etype_index = 1;
 
       }
-      else if(!substring.compare("et,1,186")){
+      else if(read_line.find("186")!=std::string::npos){
         //Hex20 type
         etype_index = 2;
       }
