@@ -494,9 +494,11 @@ public:
 
     void node_density_constraints(host_vec_array node_densities_lower_bound);
 
-    void compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed); // Force depends on node coords and velocity
+    void compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed); // Force depends on node coords, velocity, and sie
 
     void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
+
+    void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed, unsigned long cycle);
 
     void boundary_adjoint(const mesh_t& mesh,
                           const DCArrayKokkos<boundary_t>& boundary,

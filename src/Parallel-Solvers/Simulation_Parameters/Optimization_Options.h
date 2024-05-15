@@ -115,6 +115,7 @@ struct Optimization_Options: Yaml::DerivedFields {
   real_t objective_normalization_constant = 0;                //allows a user specified normalization of the objective; default is initial value
   size_t num_solve_checkpoints = 10;                          //number of checkpoints to store explicit solve solutions for adjoint solves
   bool use_solve_checkpoints = false;                         //when false; all timesteps of explicit solves are stored for adjoint solves; expensive
+  bool use_gradient_tally = false;                            //tallies gradient in tandem with the time sequence solving for the adjoint vectors
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
   std::vector<MultiObjectiveModule> multi_objective_modules;
@@ -125,6 +126,9 @@ struct Optimization_Options: Yaml::DerivedFields {
     }
     if(objective_regions.size()>=1){
       mtr::from_vector(optimization_objective_regions, objective_regions);
+    }
+    if(use_solve_checkpoints){
+      use_gradient_tally = true;
     }
   }
 };
@@ -138,5 +142,5 @@ IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options,
   optimization_output_freq, density_filter, minimum_density, maximum_density,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
   variable_outer_shell, shell_density, objective_normalization_constant,
-  num_solve_checkpoints, use_solve_checkpoints
+  num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally
 )
