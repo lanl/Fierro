@@ -30,6 +30,7 @@ struct contact_node_t
 struct contact_patch_t
 {
     size_t gid;  // global patch id
+    size_t lid;  // local patch id (local to contact_patches_t::contact_patches); this is needed in contact_pairs_t
     CArrayKokkos<size_t> nodes_gid;  // global node ids
 
     /*
@@ -272,7 +273,7 @@ struct contact_pair_t
     KOKKOS_FUNCTION
     contact_pair_t(contact_patches_t &contact_patches_obj, const contact_patch_t &patch_obj,
                    const contact_node_t &node_obj, const double &xi_val, const double &eta_val,
-                   const double &del_tc_val, const ViewCArrayKokkos<double> &normal_view, const size_t &patch_lid);
+                   const double &del_tc_val, const ViewCArrayKokkos<double> &normal_view);
 };
 
 struct contact_patches_t
@@ -282,6 +283,8 @@ struct contact_patches_t
     CArrayKokkos<size_t> patches_gid;  // global patch ids
     CArrayKokkos<size_t> nodes_gid;  // global node ids
     size_t num_contact_patches;  // total number of patches that will be checked for contact
+    RaggedRightArrayKokkos<size_t> patches_in_node;  // each row is the node gid and the columns are the patches (local to contact_patches) that the node is in
+    CArrayKokkos<size_t> num_patches_in_node;  // the strides for patches_in_node
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn initialize

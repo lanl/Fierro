@@ -527,8 +527,7 @@ contact_pair_t::contact_pair_t()
 KOKKOS_FUNCTION
 contact_pair_t::contact_pair_t(contact_patches_t &contact_patches_obj, const contact_patch_t &patch_obj,
                                const contact_node_t &node_obj, const double &xi_val, const double &eta_val,
-                               const double &del_tc_val, const ViewCArrayKokkos<double> &normal_view,
-                               const size_t &patch_lid)
+                               const double &del_tc_val, const ViewCArrayKokkos<double> &normal_view)
 {
     // Set the contact_pair_t members
     // todo: patch and node might need to be pointers instead so that changes to the patch and node objects are
@@ -550,9 +549,9 @@ contact_pair_t::contact_pair_t(contact_patches_t &contact_patches_obj, const con
     }
 
     // Add the pair to the contact_pairs_access
-    size_t &patch_stride = contact_patches_obj.contact_pairs_access.stride(patch_lid);
+    size_t &patch_stride = contact_patches_obj.contact_pairs_access.stride(patch.lid);
     patch_stride++;
-    contact_patches_obj.contact_pairs_access(patch_lid, patch_stride - 1) = node.gid;
+    contact_patches_obj.contact_pairs_access(patch.lid, patch_stride - 1) = node.gid;
 }
 /// end of contact_pair_t member functions /////////////////////////////////////////////////////////////////////////////
 
@@ -586,6 +585,7 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
     {
         contact_patch_t &contact_patch = contact_patches(i);
         contact_patch.gid = patches_gid(i);
+        contact_patch.lid = i;
 
         // Make contact_patch.nodes_gid equal to the row of nodes_in_patch(i)
         // This line is what is limiting the parallelism
@@ -678,7 +678,7 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
                    }
                }, result);
 
-    contact_patches_t::bucket_size = 1.001*result;
+    contact_patches_t::bucket_size = 0.999*result;
 
     // Find the total number of nodes (this is should always be less than or equal to mesh.num_bdy_nodes)
     size_t local_max_index = 0;
@@ -731,6 +731,36 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
             }
         }
     }
+
+    // Construct patches_in_node and num_patches_in_node
+    num_patches_in_node = CArrayKokkos<size_t>(max_index + 1);
+    for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++)
+    {
+        const contact_patch_t &contact_patch = contact_patches(patch_lid);
+        // for each node in the patch, increment the counter in num_patches_in_node
+        FOR_ALL_CLASS(i, 0, contact_patch_t::num_nodes_in_patch, {
+            const size_t &node_gid = contact_patch.nodes_gid(i);
+            num_patches_in_node(node_gid) += 1;
+        });
+        Kokkos::fence();
+    }
+
+    CArrayKokkos<size_t> stride_index(max_index + 1);
+    patches_in_node = RaggedRightArrayKokkos<size_t>(num_patches_in_node);
+    // Walk through the patches, and for each node in the patch, add the patch to the patches_in_node array
+    for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++)
+    {
+        // todo: will the device have access to patch_lid as I have it here?
+        const contact_patch_t &contact_patch = contact_patches(patch_lid);
+        FOR_ALL_CLASS(i, 0, contact_patch_t::num_nodes_in_patch, {
+            const size_t &node_gid = contact_patch.nodes_gid(i);
+            const size_t &stride = stride_index(node_gid);
+            patches_in_node(node_gid, stride) = patch_lid;
+            stride_index(node_gid) += 1;
+        });
+        Kokkos::fence();
+    }
+
 }  // end initialize
 
 
@@ -1043,7 +1073,14 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
                 double normal_arr[3];
                 ViewCArrayKokkos<double> normal(&normal_arr[0], 3);
                 contact_patch.get_normal(xi_val, eta_val, del_t, normal);
-                current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, normal, patch_lid);
+                current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, normal);
+            } else if (is_hitting && is_pen_node(node_gid))
+            {
+                // This means that the current_pair has already been initialized. We need to compare the pair stored in
+                // `current_pair` to the parameters in this iteration. If `current_pair.del_tc` is larger than `del_tc`
+                // from this iteration, then that means that this iteration will intersect the patch first. For this,
+                // we need to update the parameters in `current_pair` to reflect the ones here. The only thing that
+                // stays constant is the node, while the patch, xi, eta, del_tc, etc. are updated.
             }
         }
     }
