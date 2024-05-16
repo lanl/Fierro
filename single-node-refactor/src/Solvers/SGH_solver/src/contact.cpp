@@ -86,6 +86,32 @@ double dot(const ViewCArrayKokkos<double> &a, const ViewCArrayKokkos<double> &b)
     }
     return sum;
 }  // end dot
+
+KOKKOS_FUNCTION
+bool all(const ViewCArrayKokkos<bool> &a, const size_t &size)
+{
+    for (size_t i = 0; i < size; i++)
+    {
+        if (!a(i))
+        {
+            return false;
+        }
+    }
+    return true;
+}  // end all
+
+KOKKOS_FUNCTION
+bool any(const ViewCArrayKokkos<bool> &a, const size_t &size)
+{
+    for (size_t i = 0; i < size; i++)
+    {
+        if (a(i))
+        {
+            return true;
+        }
+    }
+    return false;
+}  // end any
 /// end of global, linear algebra functions ////////////////////////////////////////////////////////////////////////////
 
 /// beginning of contact_patch_t member functions //////////////////////////////////////////////////////////////////////
@@ -1145,6 +1171,69 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
                         current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, new_normal);
                     }
                 }
+            } else if (is_hitting && is_patch_node(node_gid))
+            {
+                // This means that the current node is a patch node in a previous contact pair but is also being
+                // considered as a penetrating node in this iteration. The logic with this case is loop through the
+                // nodes in the patch of this iteration and see if the node_gid exists as a penetrating node in a
+                // contact pair. If it does, then a comparison must be made with all the found pairs.
+                bool add_current_pair = false;
+                bool hitting_before_arr[contact_patch_t::max_nodes];  // stores true or false if the node of this iteration is hitting before its adjacent pairs
+                ViewCArrayKokkos<bool> hitting_before(&hitting_before_arr[0], contact_patch_t::num_nodes_in_patch);
+                size_t hitting_index = 0;
+
+                for (int i = 0; i < contact_patch_t::num_nodes_in_patch; i++)
+                {
+                    const size_t &patch_node_gid = contact_patch.nodes_gid(i);
+                    if (is_pen_node(patch_node_gid))
+                    {
+                        const contact_pair_t &pair = contact_pairs(patch_node_gid);  // adjacent pair
+                        if (del_tc + tol < pair.del_tc)
+                        {
+                            // this means that the current node is hitting the patch object before the patch object
+                            // node is hitting its patch
+                            hitting_before(hitting_index) = true;
+                            // todo: If the contact pair is a glue condition, then we need to remove the adjacent pair
+                            //       here. It might be best to remove it for any case.
+                        } else if (pair.del_tc - tol <= del_tc && pair.del_tc + tol >= del_tc)
+                        {
+                            // this means we are hitting at the same time
+                            // if the contact point is not on the edge, then we hitting before is true
+                            if (fabs(xi_val) < 1.0 - tol && fabs(eta_val) < 1.0 - tol)
+                            {
+                                hitting_before(hitting_index) = true;
+                            } else
+                            {
+                                hitting_before(hitting_index) = false;
+                            }
+                        } else
+                        {
+                            // this means that the adjacent pair is hitting before the current node
+                            hitting_before(hitting_index) = false;
+                        }
+                        hitting_index += 1;
+                    }
+                }
+
+                if (hitting_index == 0)
+                {
+                    add_current_pair = true;
+                } else if (all(hitting_before, hitting_index))
+                {
+                    add_current_pair = true;
+                } else if (any(hitting_before, hitting_index) && fabs(xi_val) < 1.0 - tol &&
+                           fabs(eta_val) < 1.0 - tol)
+                {
+                    add_current_pair = true;
+                }
+
+                if (add_current_pair)
+                {
+                    double normal_arr[3];
+                    ViewCArrayKokkos<double> normal(&normal_arr[0], 3);
+                    contact_patch.get_normal(xi_val, eta_val, del_t, normal);
+                    current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, normal);
+                }
             }
         }
     }
@@ -1353,6 +1442,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
         std::cout << "Patch with nodes 9 10 4 3 is paired with node 23" << std::endl;
         std::cout << "Patch with nodes 16 17 11 10 is paired with node 18" << std::endl;
         std::cout << "Patch with nodes 15 16 10 9 is paired with node 19" << std::endl;
+        std::cout << "Patch with nodes 18 19 23 22 is paired with node 10" << std::endl;
         std::cout << "vs." << std::endl;
         contact_patches_obj.sort(mesh, nodes, corner);
         contact_patches_obj.get_contact_pairs(0.1);
@@ -1374,6 +1464,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
         assert(contact_patches_obj.contact_pairs_access(6, 0) == 23);
         assert(contact_patches_obj.contact_pairs_access(10, 0) == 18);
         assert(contact_patches_obj.contact_pairs_access(14, 0) == 19);
+        assert(contact_patches_obj.contact_pairs_access(18, 0) == 10);
     } else if (file_name.find(edge_case1) != std::string::npos)
     {
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 12" << std::endl;

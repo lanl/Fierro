@@ -436,6 +436,22 @@ void inv(const ViewCArrayKokkos<double> &A, ViewCArrayKokkos<double> &A_inv, con
 KOKKOS_FUNCTION
 double dot(const ViewCArrayKokkos<double> &a, const ViewCArrayKokkos<double> &b);
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn all
+///
+/// \brief Checks if all elements in the array are true up to the provided size
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+bool all(const ViewCArrayKokkos<bool> &a, const size_t &size);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn any
+///
+/// \brief Checks if any elements in the array are true up to the provided size
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+bool any(const ViewCArrayKokkos<bool> &a, const size_t &size);
+
 // run tests
 void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mesh, const node_t &nodes,
                        const corner_t &corner, const simulation_parameters_t &sim_params);
