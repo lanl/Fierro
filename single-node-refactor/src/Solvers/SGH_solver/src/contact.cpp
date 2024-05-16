@@ -1237,6 +1237,13 @@ bool contact_patches_t::get_edge_pair(const ViewCArrayKokkos<double> &normal1, c
         {
             new_normal(i) = (normal1(i) + normal2(i))/2.0;
         }
+
+        // make new_normal a unit vector
+        double new_normal_norm = norm(new_normal);
+        for (int i = 0; i < 3; i++)
+        {
+            new_normal(i) /= new_normal_norm;
+        }
         return true;
     } else if (dot1 < dot2)
     {
@@ -1336,6 +1343,8 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
     std::string file_name = sim_params.mesh_input.file_path;
     std::string main_test = "contact_test.geo";
     std::string edge_case1 = "edge_case1.geo";
+    std::string edge_case2 = "edge_case2.geo";
+    std::string edge_case3 = "edge_case3.geo";
 
     std::cout << "\nTesting sort and get_contact_pairs:" << std::endl;
     if (file_name.find(main_test) != std::string::npos)
@@ -1388,6 +1397,76 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
         }
         assert(contact_patches_obj.contact_pairs_access(6, 0) == 12);
         assert(contact_patches_obj.contact_pairs_access(6, 1) == 16);
+    } else if (file_name.find(edge_case2) != std::string::npos)
+    {
+        std::cout << "Patch with nodes 7 8 2 1 is paired with node 12" << std::endl;
+        std::cout << "Patch with nodes 7 8 2 1 is paired with node 13" << std::endl;
+        std::cout << "Patch with nodes 7 8 2 1 is paired with node 16" << std::endl;
+        std::cout << "Patch with nodes 7 8 2 1 is paired with node 17" << std::endl;
+        std::cout << "vs." << std::endl;
+        contact_patches_obj.sort(mesh, nodes, corner);
+        contact_patches_obj.get_contact_pairs(1.0);
+        for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
+        {
+            for (int j = 0; j < contact_patches_obj.contact_pairs_access.stride(i); j++)
+            {
+                size_t node_gid = contact_patches_obj.contact_pairs_access(i, j);
+                contact_pair_t &pair = contact_patches_obj.contact_pairs(node_gid);
+                std::cout << "Patch with nodes ";
+                for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
+                {
+                    std::cout << pair.patch.nodes_gid(k) << " ";
+                }
+                std::cout << "is paired with node " << pair.node.gid << std::endl;
+            }
+        }
+        assert(contact_patches_obj.contact_pairs_access(6, 0) == 12);
+        assert(contact_patches_obj.contact_pairs_access(6, 1) == 13);
+        assert(contact_patches_obj.contact_pairs_access(6, 2) == 16);
+        assert(contact_patches_obj.contact_pairs_access(6, 3) == 17);
+    } else if (file_name.find(edge_case3) != std::string::npos)
+    {
+        std::cout << "Patch with nodes 6 7 1 0 is paired with node 12";
+        std::cout << " ---> Pushback Direction: 0 -0.447214 0.894427" << std::endl;
+        std::cout << "Patch with nodes 6 7 1 0 is paired with node 18";
+        std::cout << " ---> Pushback Direction: 0 -0.447214 0.894427" << std::endl;
+        std::cout << "Patch with nodes 7 8 2 1 is paired with node 13";
+        std::cout << " ---> Pushback Direction: 0 0 1" << std::endl;
+        std::cout << "Patch with nodes 7 8 2 1 is paired with node 14";
+        std::cout << " ---> Pushback Direction: 0 0.447214 0.894427" << std::endl;
+        std::cout << "Patch with nodes 7 8 2 1 is paired with node 19";
+        std::cout << " ---> Pushback Direction: 0 0 1" << std::endl;
+        std::cout << "Patch with nodes 7 8 2 1 is paired with node 20";
+        std::cout << " ---> Pushback Direction: 0 0.447214 0.894427" << std::endl;
+        std::cout << "vs." << std::endl;
+        contact_patches_obj.sort(mesh, nodes, corner);
+        contact_patches_obj.get_contact_pairs(1.0);
+        for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
+        {
+            for (int j = 0; j < contact_patches_obj.contact_pairs_access.stride(i); j++)
+            {
+                size_t node_gid = contact_patches_obj.contact_pairs_access(i, j);
+                contact_pair_t &pair = contact_patches_obj.contact_pairs(node_gid);
+                std::cout << "Patch with nodes ";
+                for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
+                {
+                    std::cout << pair.patch.nodes_gid(k) << " ";
+                }
+                std::cout << "is paired with node " << pair.node.gid;
+                std::cout << " ---> Pushback Direction: ";
+                for (int k = 0; k < 3; k++)
+                {
+                    std::cout << pair.normal(k) << " ";
+                }
+                std::cout << std::endl;
+            }
+        }
+        assert(contact_patches_obj.contact_pairs_access(1, 0) == 12);
+        assert(contact_patches_obj.contact_pairs_access(1, 1) == 18);
+        assert(contact_patches_obj.contact_pairs_access(6, 0) == 13);
+        assert(contact_patches_obj.contact_pairs_access(6, 1) == 14);
+        assert(contact_patches_obj.contact_pairs_access(6, 2) == 19);
+        assert(contact_patches_obj.contact_pairs_access(6, 3) == 20);
     }
 
     exit(0);
