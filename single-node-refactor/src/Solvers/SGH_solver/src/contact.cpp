@@ -1139,7 +1139,7 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
                     current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, normal);
                 } else if (current_pair.del_tc - tol <= del_tc && current_pair.del_tc + tol >= del_tc)
                 {
-                    // todo: see edge_cases.py second and fourth test in file
+                    // see edge_cases.py second and fourth test in file
 
                     // This means that the node is hitting an edge. The dominant pair to be selected is based off the
                     // normal at the penetrating node's surface and the normal at the contact point.

@@ -382,15 +382,34 @@ struct contact_patches_t
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void get_contact_pairs(const double &del_t);
 
-    /*
-     * todo: add docs
-     */
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn remove_pair
+    ///
+    /// \brief Removes a contact pair from the contact_pairs_access array
+    ///
+    /// \param pair Contact pair object to remove
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     KOKKOS_FUNCTION
     void remove_pair(contact_pair_t &pair);
 
-    /*
-     * todo: add docs
-     */
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn get_edge_pair
+    ///
+    /// \brief Determines the more dominant pair for the case when a penetrating node contacts an edge
+    ///
+    /// This method will determine the best pair to use based off the most opposing normal. For each pair, the normal
+    /// at the contact point is dotted with the surface normal of the penetrating node. The most negative dot product
+    /// value indicates the superior patch to pair to. If the dot products are the same, then the second patch is used
+    /// with a normal being the average of the two.
+    ///
+    /// \param normal1 normal of the already existing pair
+    /// \param normal2 normal of the current pair in the iterations
+    /// \param node_gid global node id of the penetrating node
+    /// \param del_t current time step in the analysis
+    /// \param new_normal modified normal to be used in the case where a new pair should be added
+    ///
+    /// \return true if a new pair should be added; false otherwise
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     KOKKOS_FUNCTION
     bool get_edge_pair(const ViewCArrayKokkos<double> &normal1, const ViewCArrayKokkos<double> &normal2,
                        const size_t &node_gid, const double &del_t, ViewCArrayKokkos<double> &new_normal) const;
