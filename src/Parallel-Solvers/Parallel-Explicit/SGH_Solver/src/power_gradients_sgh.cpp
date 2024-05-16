@@ -63,8 +63,6 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
 
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
 
-    DCArrayKokkos<real_t> elem_power_dgradients(rnum_elem);
-
     // gradient contribution from gradient of Force vector with respect to design variable.
     if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
         if (myrank == 0) {

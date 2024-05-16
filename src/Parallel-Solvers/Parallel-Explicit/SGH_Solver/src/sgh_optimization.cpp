@@ -1245,8 +1245,33 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
         } // end view scope
         
         //tally contribution to the gradient vector
-        if(use_gradient_tally)
-        compute_topology_optimization_gradient_tally(design_densities_distributed, design_gradients_distributed, cycle);
+        if(use_gradient_tally){
+            get_force_dgradient_sgh(material,
+                                *mesh,
+                                node_coords,
+                                node_vel,
+                                elem_den,
+                                elem_sie,
+                                elem_pres,
+                                elem_stress,
+                                elem_sspd,
+                                elem_vol,
+                                elem_div,
+                                elem_mat_id,
+                                1.0,
+                                cycle);
+
+            get_power_dgradient_sgh(1.0,
+                            *mesh,
+                            node_vel,
+                            node_coords,
+                            elem_sie,
+                            elem_mass,
+                            corner_force,
+                            elem_power_dgradients);
+
+            compute_topology_optimization_gradient_tally(design_densities_distributed, design_gradients_distributed, cycle);
+        }
 
         // phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
     }
@@ -1646,17 +1671,76 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 Kokkos::fence();
             } // end view scope
         }
-    } // end view scope design gradients
 
-    // view scope
-    {
-        // host_vec_array host_design_gradients = design_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-        // const_host_vec_array host_design_variables = design_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-        vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-        const_vec_array design_variables = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-        force_design_gradient_term(design_variables, design_gradients);
-        power_design_gradient_term(design_variables, design_gradients);
-    } // end view scope
+        //compute terms with gradient of force and gradient of specific internal energy w.r.t design density
+        // view scope
+        {
+            const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            global_dt = time_data[cycle + 1] - time_data[cycle];
+            // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                size_t node_id;
+                size_t corner_id;
+                real_t inner_product;
+
+                inner_product = 0;
+                for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                    node_id   = nodes_in_elem(elem_id, ifill);
+                    corner_id = elem_id * num_nodes_in_elem + ifill;
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        inner_product += corner_vector_storage(corner_id, idim) * current_adjoint_vector(node_id, idim);
+                    }
+                }
+
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    // compute gradient of local element contribution to v^t*M*v product
+                    corner_id = elem_id * num_nodes_in_elem + inode;
+                    corner_value_storage(corner_id) = inner_product;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    corner_id = corners_in_node(node_id, icorner);
+                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) * global_dt;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            const_vec_array current_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+            // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                size_t node_id;
+                size_t corner_id;
+                real_t inner_product;
+
+                inner_product = current_psi_adjoint_vector(elem_id, 0) * elem_power_dgradients(elem_id);
+
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    // compute gradient of local element contribution to v^t*M*v product
+                    corner_id = elem_id * num_nodes_in_elem + inode;
+                    corner_value_storage(corner_id) = inner_product;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    corner_id = corners_in_node(node_id, icorner);
+                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) * global_dt;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+        } // end view scope
+    } // end view scope design gradients
 }
 
 /////////////////////////////////////////////////////////////////////////////

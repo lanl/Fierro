@@ -157,10 +157,14 @@ FEA_Module_SGH::FEA_Module_SGH(
     graphics_id    = simparam->output_options.graphics_id;
     rk_num_bins    = simparam->dynamic_options.rk_num_bins;
 
-    if (simparam->topology_optimization_on&&!simparam->optimization_options.use_solve_checkpoints) {
+    if (simparam->topology_optimization_on) {
         max_time_steps = BUFFER_GROW;
-        time_data.resize(max_time_steps + 1);
+        elem_power_dgradients = DCArrayKokkos<real_t>(rnum_elem);
         element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
+    }
+
+    if (simparam->topology_optimization_on&&!simparam->optimization_options.use_solve_checkpoints) {
+        time_data.resize(max_time_steps + 1);
         forward_solve_velocity_data   = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_internal_energy_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));

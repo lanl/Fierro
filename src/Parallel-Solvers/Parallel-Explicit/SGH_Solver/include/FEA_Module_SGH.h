@@ -610,6 +610,7 @@ public:
     RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Gradient_Entries;
     RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>     Original_Gradient_Entry_Indices;
     DCArrayKokkos<size_t, array_layout, device_type, memory_traits>          Original_Gradient_Entries_Strides;
+    DCArrayKokkos<real_t>                                                    elem_power_dgradients;
 
     // distributed matrices
     Teuchos::RCP<MAT> distributed_force_gradient_positions;
