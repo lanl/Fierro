@@ -25,7 +25,8 @@ struct contact_node_t
 
     contact_node_t();
 
-    contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCArrayKokkos<double> &vel, const double &mass);
+    contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCArrayKokkos<double> &vel,
+                   const ViewCArrayKokkos<double> &acc, const double &mass);
 };
 
 struct contact_patch_t
@@ -74,7 +75,8 @@ struct contact_patch_t
 
     contact_patch_t();
 
-    contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points);
+    contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points,
+                    const ViewCArrayKokkos<double> &acc_points);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn update_nodes

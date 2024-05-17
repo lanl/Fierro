@@ -1355,7 +1355,8 @@ bool contact_patches_t::get_edge_pair(const ViewCArrayKokkos<double> &normal1, c
 /// beginning of internal, not to be used anywhere else tests //////////////////////////////////////////////////////////
 contact_patch_t::contact_patch_t() = default;
 
-contact_patch_t::contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points)
+contact_patch_t::contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points,
+                                 const ViewCArrayKokkos<double> &acc_points)
 {
     this->xi = CArrayKokkos<double>(4);
     this->eta = CArrayKokkos<double>(4);
@@ -1377,6 +1378,7 @@ contact_patch_t::contact_patch_t(const ViewCArrayKokkos<double> &points, const V
         {
             this->points(i, j) = points(i, j);
             this->vel_points(i, j) = vel_points(i, j);
+            this->acc_points(i, j) = acc_points(i, j);
         }
     }
 }
@@ -1384,13 +1386,14 @@ contact_patch_t::contact_patch_t(const ViewCArrayKokkos<double> &points, const V
 contact_node_t::contact_node_t() = default;
 
 contact_node_t::contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCArrayKokkos<double> &vel,
-                               const double &mass)
+                               const ViewCArrayKokkos<double> &acc, const double &mass)
 {
     this->mass = mass;
     for (int i = 0; i < 3; i++)
     {
         this->pos(i) = pos(i);
         this->vel(i) = vel(i);
+        this->acc(i) = acc(i);
     }
 }
 
@@ -1406,15 +1409,21 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
     double test1_vels_arr[3*4] = {0.0, 0.0, 0.0, 0.0,
                                   1.0, 0.1, 0.2, 0.0,
                                   0.0, 0.0, 0.0, 0.0};
+    double test1_acc_arr[3*4] = {0.0, 0.0, 0.0, 0.0,
+                                 0.0, 0.0, 0.0, 0.0,
+                                 0.0, 0.0, 0.0, 0.0};
     ViewCArrayKokkos<double> test1_points(&test1_points_arr[0], 3, 4);
     ViewCArrayKokkos<double> test1_vels(&test1_vels_arr[0], 3, 4);
-    contact_patch_t test1_patch(test1_points, test1_vels);
+    ViewCArrayKokkos<double> test1_accs(&test1_acc_arr[0], 3, 4);
+    contact_patch_t test1_patch(test1_points, test1_vels, test1_accs);
 
     double test1_node_pos[3] = {0.25, 1.0, 0.2};
     double test1_node_vel[3] = {0.75, -1.0, 0.0};
+    double test1_node_acc[3] = {0.0, 0.0, 0.0};
     ViewCArrayKokkos<double> test1_pos(&test1_node_pos[0], 3);
     ViewCArrayKokkos<double> test1_vel(&test1_node_vel[0], 3);
-    contact_node_t test1_node(test1_pos, test1_vel, 1.0);
+    ViewCArrayKokkos<double> test1_acc(&test1_node_acc[0], 3);
+    contact_node_t test1_node(test1_pos, test1_vel, test1_acc, 1.0);
 
     double xi_val, eta_val, del_tc;
     bool is_hitting = test1_patch.get_contact_point(test1_node, xi_val, eta_val, del_tc);
