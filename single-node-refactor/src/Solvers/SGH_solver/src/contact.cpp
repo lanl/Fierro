@@ -88,6 +88,18 @@ double dot(const ViewCArrayKokkos<double> &a, const ViewCArrayKokkos<double> &b)
 }  // end dot
 
 KOKKOS_FUNCTION
+void outer(const ViewCArrayKokkos<double> &a, const ViewCArrayKokkos<double> &b, ViewCArrayKokkos<double> &c)
+{
+    for (size_t i = 0; i < a.size(); i++)
+    {
+        for (size_t j = 0; j < b.size(); j++)
+        {
+            c(i, j) = a(i)*b(j);
+        }
+    }
+}  // end outer
+
+KOKKOS_FUNCTION
 bool all(const ViewCArrayKokkos<bool> &a, const size_t &size)
 {
     for (size_t i = 0; i < size; i++)
@@ -128,6 +140,7 @@ void contact_patch_t::update_nodes(const mesh_t &mesh, const node_t &nodes, // N
 
             points(i, j) = nodes.coords(0, node_gid, i);
             vel_points(i, j) = nodes.vel(0, node_gid, i);
+            internal_force(i, j) = 0.0;
 
             // looping over the corners
             for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++)
@@ -275,7 +288,7 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, double &xi_v
             F(j) = rhs(j) - lhs;
         }
 
-        if (norm(F) < tol)
+        if (norm(F) <= tol)
         {
             break;
         }
@@ -593,6 +606,190 @@ contact_pair_t::contact_pair_t(contact_patches_t &contact_patches_obj, const con
     patch_stride++;
     contact_patches_obj.contact_pairs_access(patch.lid, patch_stride - 1) = node.gid;
 }
+
+KOKKOS_FUNCTION
+void contact_pair_t::frictionless_increment(const contact_patches_t &contact_patches, const double &del_t)
+{
+    // In order to understand this, just see this PDF:
+    // https://github.com/gabemorris12/contact_surfaces/blob/master/Finding%20the%20Contact%20Force.pdf
+
+    double A_arr[3*contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> A(&A_arr[0], 3, contact_patch_t::num_nodes_in_patch);
+
+    double phi_k_arr[contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> phi_k(&phi_k_arr[0], contact_patch_t::num_nodes_in_patch);
+
+    double d_phi_d_xi_arr[contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> d_phi_d_xi_(&d_phi_d_xi_arr[0], contact_patch_t::num_nodes_in_patch);
+
+    double d_phi_d_eta_arr[contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> d_phi_d_eta_(&d_phi_d_eta_arr[0], contact_patch_t::num_nodes_in_patch);
+
+    double ak;  // place to store acceleration of a patch node
+    double as;  // place to store acceleration of the penetrating node
+
+    double rhs_arr[3];  // right hand side (A_arr*phi_k)
+    ViewCArrayKokkos<double> rhs(&rhs_arr[0], 3);
+
+    double lhs;  // left hand side (node.pos + node.vel*del_t + 0.5*node.acc*del_t*del_t)
+
+    double F_arr[3];  // defined as lhs - rhs
+    ViewCArrayKokkos<double> F(&F_arr[0], 3);
+
+    double d_A_d_xi_arr[3*contact_patch_t::max_nodes];  // derivative of A wrt xi
+    ViewCArrayKokkos<double> d_A_d_xi(&d_A_d_xi_arr[0], 3, contact_patch_t::num_nodes_in_patch);
+
+    double d_A_d_eta_arr[3*contact_patch_t::max_nodes];  // derivative of A wrt eta
+    ViewCArrayKokkos<double> d_A_d_eta(&d_A_d_eta_arr[0], 3, contact_patch_t::num_nodes_in_patch);
+
+    double d_A_d_fc_arr[3*contact_patch_t::max_nodes];  // derivative of A wrt fc_inc
+    ViewCArrayKokkos<double> d_A_d_fc(&d_A_d_fc_arr[0], 3, contact_patch_t::num_nodes_in_patch);
+
+    double neg_normal_arr[3];
+    ViewCArrayKokkos<double> neg_normal(&neg_normal_arr[0], 3);
+    for (int i = 0; i < 3; i++)
+    {
+        neg_normal(i) = -normal(i);
+    }
+
+    double outer1_arr[contact_patch_t::max_nodes];  // right segment in first outer product
+    ViewCArrayKokkos<double> outer1(&outer1_arr[0], contact_patch_t::num_nodes_in_patch);
+
+    double outer2_arr[contact_patch_t::max_nodes];  // right segment in second outer product
+    ViewCArrayKokkos<double> outer2(&outer2_arr[0], contact_patch_t::num_nodes_in_patch);
+
+    double outer3_arr[contact_patch_t::max_nodes];  // right segment in third outer product
+    ViewCArrayKokkos<double> outer3(&outer3_arr[0], contact_patch_t::num_nodes_in_patch);
+
+    double J0_first_arr[3];  // first term in the J0 column calculation
+    ViewCArrayKokkos<double> J0_first(&J0_first_arr[0], 3);
+
+    double J0_second_arr[3];  // second term in the J0 column calculation
+    ViewCArrayKokkos<double> J0_second(&J0_second_arr[0], 3);
+
+    double J1_first_arr[3];  // first term in the J1 column calculation
+    ViewCArrayKokkos<double> J1_first(&J1_first_arr[0], 3);
+
+    double J1_second_arr[3];  // second term in the J1 column calculation
+    ViewCArrayKokkos<double> J1_second(&J1_second_arr[0], 3);
+
+    double J2_second_arr[3];  // second term in the J2 column calculation
+    ViewCArrayKokkos<double> J2_second(&J2_second_arr[0], 3);
+
+    double J0_arr[3];  // column 1 of jacobian
+    ViewCArrayKokkos<double> J0(&J0_arr[0], 3);
+
+    double J1_arr[3];  // column 2 of jacobian
+    ViewCArrayKokkos<double> J1(&J1_arr[0], 3);
+
+    double J2_arr[3];  // column 3 of jacobian
+    ViewCArrayKokkos<double> J2(&J2_arr[0], 3);
+
+    double J_arr[9];  // jacobian
+    ViewCArrayKokkos<double> J(&J_arr[0], 3, 3);
+
+    double J_inv_arr[9];  // inverse of jacobian
+    ViewCArrayKokkos<double> J_inv(&J_inv_arr[0], 3, 3);
+
+    double J_det;  // determinant of jacobian
+    double sol[3];
+    sol[0] = xi;
+    sol[1] = eta;
+    sol[2] = fc_inc;
+
+    double grad_arr[3];  // J_inv*F term
+    ViewCArrayKokkos<double> grad(&grad_arr[0], 3);
+
+    for (int i = 0; i < max_iter; i++)
+    {
+        patch.phi(phi_k, xi, eta);
+        // construct A
+        for (int j = 0; j < 3; j++)
+        {
+            for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
+            {
+                const contact_node_t &patch_node = contact_patches.contact_nodes(patch.nodes_gid(k));
+                ak = (patch.internal_force(j, k) - fc_inc*normal(j)*phi_k(k) +
+                      patch_node.contact_force(j))/patch.mass_points(j, k);
+                A(j, k) = patch.points(j, k) + patch.vel_points(j, k)*del_t + 0.5*ak*del_t*del_t;
+            }
+        }
+
+        // construct F
+        mat_mul(A, phi_k, rhs);
+        for (int j = 0; j < 3; j++)
+        {
+            as = (node.internal_force(j) + fc_inc*normal(j) + node.contact_force(j))/node.mass;
+            lhs = node.pos(j) + node.vel(j)*del_t + 0.5*as*del_t*del_t;
+            F(j) = lhs - rhs(j);
+        }
+
+        if (norm(F) <= tol)
+        {
+            break;
+        }
+
+        // construct J
+        patch.d_phi_d_xi(d_phi_d_xi_, xi, eta);
+        patch.d_phi_d_eta(d_phi_d_eta_, xi, eta);
+
+        for (int j = 0; j < contact_patch_t::num_nodes_in_patch; j++)
+        {
+            outer1(j) = (0.5*d_phi_d_xi_(j)*fc_inc*del_t*del_t)/patch.mass_points(0, j);
+            outer2(j) = (0.5*d_phi_d_eta_(j)*fc_inc*del_t*del_t)/patch.mass_points(0, j);
+            outer3(j) = (0.5*phi_k(j)*del_t*del_t)/patch.mass_points(0, j);
+        }
+
+        outer(neg_normal, outer1, d_A_d_xi);
+        outer(neg_normal, outer2, d_A_d_eta);
+        outer(neg_normal, outer3, d_A_d_fc);
+
+        mat_mul(A, d_phi_d_xi_, J0_first);
+        mat_mul(d_A_d_xi, phi_k, J0_second);
+        for (int j = 0; j < 3; j++)
+        {
+            J0(j) = -J0_first(j) - J0_second(j);
+        }
+
+        mat_mul(A, d_phi_d_eta_, J1_first);
+        mat_mul(d_A_d_eta, phi_k, J1_second);
+        for (int j = 0; j < 3; j++)
+        {
+            J1(j) = -J1_first(j) - J1_second(j);
+        }
+
+        mat_mul(d_A_d_fc, phi_k, J2_second);
+        for (int j = 0; j < 3; j++)
+        {
+            J2(j) = (0.5*del_t*del_t*normal(j))/node.mass - J2_second(j);
+        }
+
+        for (int j = 0; j < 3; j++)
+        {
+            J(j, 0) = J0(j);
+            J(j, 1) = J1(j);
+            J(j, 2) = J2(j);
+        }
+
+        J_det = det(J);  // there should be no singularities in this calculation
+        if (fabs(J_det) < tol)
+        {
+            fc_inc = 0.0;
+            printf("Error: Singularity detected in frictionless_increment\n");
+            break;
+        }
+
+        inv(J, J_inv, J_det);
+        mat_mul(J_inv, F, grad);
+        for (int j = 0; j < 3; j++)
+        {
+            sol[j] = sol[j] - grad(j);
+        }
+        xi = sol[0];
+        eta = sol[1];
+        fc_inc = sol[2];
+    }
+}
 /// end of contact_pair_t member functions /////////////////////////////////////////////////////////////////////////////
 
 /// beginning of contact_patches_t member functions ////////////////////////////////////////////////////////////////////
@@ -824,6 +1021,10 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
         {
             contact_node.pos(j) = nodes.coords(0, node_gid, j);
             contact_node.vel(j) = nodes.vel(0, node_gid, j);
+
+            // zero forces
+            contact_node.contact_force(j) = 0.0;
+            contact_node.internal_force(j) = 0.0;
 
             // Loop over the corners
             for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++)
@@ -1372,6 +1573,8 @@ contact_patch_t::contact_patch_t(const ViewCArrayKokkos<double> &points, const V
     this->points = CArrayKokkos<double>(3, contact_patch_t::num_nodes_in_patch);
     this->vel_points = CArrayKokkos<double>(3, contact_patch_t::num_nodes_in_patch);
     this->acc_points = CArrayKokkos<double>(3, contact_patch_t::num_nodes_in_patch);
+    this->mass_points = CArrayKokkos<double>(3, contact_patch_t::num_nodes_in_patch);
+    this->internal_force = CArrayKokkos<double>(3, contact_patch_t::num_nodes_in_patch);
     for (int i = 0; i < 3; i++)
     {
         for (int j = 0; j < num_nodes_in_patch; j++)
@@ -1436,6 +1639,68 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
     assert(fabs(del_tc - 0.6221606424928471) < err_tol);
     assert(is_hitting);
     assert(contact_check);
+
+    // Testing contact force calculation with the previous pair. See contact_check_visual_through_reference.py.
+    std::cout << "\nTesting frictionless_increment:" << std::endl;
+    double test1_internal_force_arr[3*4] = {0.0, 0.0, 0.0, 0.0,
+                                            0.0, 0.0, 0.0, 0.0,
+                                            0.0, 0.0, 0.0, 0.0};
+    ViewCArrayKokkos<double> test1_internal_force(&test1_internal_force_arr[0], 3, 4);
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            test1_patch.internal_force(i, j) = test1_internal_force(i, j);
+            test1_patch.mass_points(i, j) = 1.0;
+        }
+    }
+
+    double test1_node_internal_arr[3] = {0.0, 0.0, 0.0};
+    ViewCArrayKokkos<double> test1_node_internal(&test1_node_internal_arr[0], 3);
+    test1_node.mass = 1.0;
+    for (int i = 0; i < 3; i++)
+    {
+        test1_node.internal_force(i) = test1_node_internal(i);
+        test1_node.contact_force(i) = 0.0;
+    }
+
+    contact_patches_t test1_contact_patches;
+    test1_contact_patches.contact_nodes = CArrayKokkos<contact_node_t> (4);
+    test1_patch.nodes_gid = CArrayKokkos<size_t> (4);
+    for (int i = 0; i < 4; i++)
+    {
+        contact_node_t &node = test1_contact_patches.contact_nodes(i);
+        for (int j = 0; j < 3; j++)
+        {
+            node.contact_force(j) = 0.0;
+        }
+
+        test1_patch.nodes_gid(i) = i;
+    }
+
+    contact_pair_t test1_pair;
+    test1_pair.patch = test1_patch;
+    test1_pair.node = test1_node;
+    test1_pair.xi = xi_val;
+    test1_pair.eta = eta_val;
+    test1_pair.del_tc = del_tc;
+
+    double force_normal[3];
+    ViewCArrayKokkos<double> force_n(&force_normal[0], 3);
+    // Normal is not taken at del_tc, but is taken at the current time step; this is just for testing purposes
+    test1_pair.patch.get_normal(test1_pair.xi, test1_pair.eta, test1_pair.del_tc, force_n);
+    for (int i = 0; i < 3; i++)
+    {
+        test1_pair.normal(i) = force_n(i);
+    }
+
+    test1_pair.fc_inc = 0.5;
+    test1_pair.frictionless_increment(test1_contact_patches, 1.0);
+    std::cout << "-0.581465 -0.176368 0.858551 vs. ";
+    std::cout << test1_pair.xi << " " << test1_pair.eta << " " << test1_pair.fc_inc << std::endl;
+    assert(fabs(test1_pair.xi + 0.581465) < err_tol);
+    assert(fabs(test1_pair.eta + 0.176368) < err_tol);
+    assert(fabs(test1_pair.fc_inc - 0.858551) < err_tol);
 
     // Testing sort and get_contact_pairs
     std::string file_name = sim_params.mesh_input.file_path;

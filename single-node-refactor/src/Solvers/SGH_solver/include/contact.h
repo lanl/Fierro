@@ -272,12 +272,32 @@ struct contact_pair_t
 
     bool active = false;  // if the pair is active or not
 
+    // force members
+    double fc_inc = 0.0;  // force increment to be added to contact_node_t::contact_force
+    double fc_inc_total = 0.0;  // all previous force increments get summed to this member (see contact_patches_t::force_resolution())
+
     contact_pair_t();
 
     KOKKOS_FUNCTION
     contact_pair_t(contact_patches_t &contact_patches_obj, const contact_patch_t &patch_obj,
                    const contact_node_t &node_obj, const double &xi_val, const double &eta_val,
                    const double &del_tc_val, const ViewCArrayKokkos<double> &normal_view);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn frictionless_increment
+    ///
+    /// \brief Computes the force increment for the contact pair with no friction
+    ///
+    /// This method will compute the force increment between a contact patch and node with no friction. The force is
+    /// strictly calculated in the normal direction only. The xi, eta, and fc_inc members will be changed in place. The
+    /// force increment value is determined by kinematic conditions and will result in the position of the node being
+    /// on the patch/surface at time del_t.
+    ///
+    /// \param contact_patches contact_patches object
+    /// \param del_t current time step in the analysis
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    KOKKOS_FUNCTION
+    void frictionless_increment(const contact_patches_t &contact_patches, const double &del_t);
 };
 
 struct contact_patches_t
@@ -456,6 +476,14 @@ void inv(const ViewCArrayKokkos<double> &A, ViewCArrayKokkos<double> &A_inv, con
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 double dot(const ViewCArrayKokkos<double> &a, const ViewCArrayKokkos<double> &b);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn outer
+///
+/// \brief Computes the outer product of two 1D arrays
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void outer(const ViewCArrayKokkos<double> &a, const ViewCArrayKokkos<double> &b, ViewCArrayKokkos<double> &c);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn all
