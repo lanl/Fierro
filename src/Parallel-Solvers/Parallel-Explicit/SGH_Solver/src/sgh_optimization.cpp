@@ -626,74 +626,91 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             }
 
             // interface of arrays for current implementation of force calculation
+            if(cycle==last_time_step||!use_gradient_tally){
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        node_vel(rk_level, node_gid, idim)    = previous_velocity_vector(node_gid, idim);
+                        node_coords(rk_level, node_gid, idim) = previous_coordinate_vector(node_gid, idim);
+                    }
+                });
+                Kokkos::fence();
 
-            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
-                for (int idim = 0; idim < num_dim; idim++) {
-                    node_vel(rk_level, node_gid, idim)    = previous_velocity_vector(node_gid, idim);
-                    node_coords(rk_level, node_gid, idim) = previous_coordinate_vector(node_gid, idim);
+                FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+                    elem_sie(rk_level, elem_gid) = previous_element_internal_energy(elem_gid, 0);
+                });
+                Kokkos::fence();
+
+                // set state according to phase data at this timestep
+
+                get_vol();
+
+                // ---- Calculate velocity diveregence for the element ----
+                if (num_dim == 2) {
+                    get_divergence2D(elem_div,
+                            node_coords,
+                            node_vel,
+                            elem_vol);
                 }
-      });
-            Kokkos::fence();
+                else{
+                    get_divergence(elem_div,
+                            node_coords,
+                            node_vel,
+                            elem_vol);
+                } // end if 2D
 
-            FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
-                elem_sie(rk_level, elem_gid) = previous_element_internal_energy(elem_gid, 0);
-      });
-            Kokkos::fence();
+                // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+                if (num_dim == 2) {
+                    update_state2D(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            elem_den,
+                            elem_pres,
+                            elem_stress,
+                            elem_sspd,
+                            elem_sie,
+                            elem_vol,
+                            elem_mass,
+                            elem_mat_id,
+                            1.0,
+                            cycle);
+                }
+                else{
+                    update_state(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            elem_den,
+                            elem_pres,
+                            elem_stress,
+                            elem_sspd,
+                            elem_sie,
+                            elem_vol,
+                            elem_mass,
+                            elem_mat_id,
+                            1.0,
+                            cycle);
+                }
 
-            // set state according to phase data at this timestep
-
-            get_vol();
-
-            // ---- Calculate velocity diveregence for the element ----
-            if (num_dim == 2) {
-                get_divergence2D(elem_div,
-                          node_coords,
-                          node_vel,
-                          elem_vol);
-            }
-            else{
-                get_divergence(elem_div,
-                        node_coords,
-                        node_vel,
-                        elem_vol);
-            } // end if 2D
-
-            // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
-            if (num_dim == 2) {
-                update_state2D(material,
-                          *mesh,
-                          node_coords,
-                          node_vel,
-                          elem_den,
-                          elem_pres,
-                          elem_stress,
-                          elem_sspd,
-                          elem_sie,
-                          elem_vol,
-                          elem_mass,
-                          elem_mat_id,
-                          1.0,
-                          cycle);
-            }
-            else{
-                update_state(material,
-                        *mesh,
-                        node_coords,
-                        node_vel,
-                        elem_den,
-                        elem_pres,
-                        elem_stress,
-                        elem_sspd,
-                        elem_sie,
-                        elem_vol,
-                        elem_mass,
-                        elem_mat_id,
-                        1.0,
-                        cycle);
-            }
-
-            if (num_dim == 2) {
-                get_force_sgh2D(material,
+                if (num_dim == 2) {
+                    get_force_sgh2D(material,
+                                *mesh,
+                                node_coords,
+                                node_vel,
+                                elem_den,
+                                elem_sie,
+                                elem_pres,
+                                elem_stress,
+                                elem_sspd,
+                                elem_vol,
+                                elem_div,
+                                elem_mat_id,
+                                corner_force,
+                                1.0,
+                                cycle);
+                }
+                else{
+                    get_force_sgh(material,
                             *mesh,
                             node_coords,
                             node_vel,
@@ -708,25 +725,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                             corner_force,
                             1.0,
                             cycle);
+                }
             }
-            else{
-                get_force_sgh(material,
-                        *mesh,
-                        node_coords,
-                        node_vel,
-                        elem_den,
-                        elem_sie,
-                        elem_pres,
-                        elem_stress,
-                        elem_sspd,
-                        elem_vol,
-                        elem_div,
-                        elem_mat_id,
-                        corner_force,
-                        1.0,
-                        cycle);
-            }
-
             // compute gradient matrices
             get_force_egradient_sgh(material,
                               *mesh,
@@ -1246,6 +1246,131 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
         
         //tally contribution to the gradient vector
         if(use_gradient_tally){
+            const_vec_array previous_velocity_vector;
+            const_vec_array current_velocity_vector;
+
+            const_vec_array previous_coordinate_vector;
+            const_vec_array current_coordinate_vector;
+
+            const_vec_array previous_element_internal_energy;
+            const_vec_array current_element_internal_energy;
+            
+            if(use_solve_checkpoints){
+
+            }
+            else{
+                previous_velocity_vector = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_velocity_vector  = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+                previous_coordinate_vector = (*forward_solve_coordinate_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_coordinate_vector  = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+                previous_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_element_internal_energy  = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+
+            // interface of arrays for current implementation of force calculation
+
+            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+                for (int idim = 0; idim < num_dim; idim++) {
+                    node_vel(rk_level, node_gid, idim)    = current_velocity_vector(node_gid, idim);
+                    node_coords(rk_level, node_gid, idim) = current_coordinate_vector(node_gid, idim);
+                }
+            });
+            Kokkos::fence();
+
+            FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+                elem_sie(rk_level, elem_gid) = current_element_internal_energy(elem_gid, 0);
+            });
+            Kokkos::fence();
+
+            // set state according to phase data at this timestep
+
+            get_vol();
+
+            // ---- Calculate velocity diveregence for the element ----
+            if (num_dim == 2) {
+                get_divergence2D(elem_div,
+                          node_coords,
+                          node_vel,
+                          elem_vol);
+            }
+            else{
+                get_divergence(elem_div,
+                        node_coords,
+                        node_vel,
+                        elem_vol);
+            } // end if 2D
+
+            // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+            if (num_dim == 2) {
+                update_state2D(material,
+                          *mesh,
+                          node_coords,
+                          node_vel,
+                          elem_den,
+                          elem_pres,
+                          elem_stress,
+                          elem_sspd,
+                          elem_sie,
+                          elem_vol,
+                          elem_mass,
+                          elem_mat_id,
+                          1.0,
+                          cycle);
+            }
+            else{
+                update_state(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_sie,
+                        elem_vol,
+                        elem_mass,
+                        elem_mat_id,
+                        1.0,
+                        cycle);
+            }
+
+            if (num_dim == 2) {
+                get_force_sgh2D(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            elem_den,
+                            elem_sie,
+                            elem_pres,
+                            elem_stress,
+                            elem_sspd,
+                            elem_vol,
+                            elem_div,
+                            elem_mat_id,
+                            corner_force,
+                            1.0,
+                            cycle);
+            }
+            else{
+                get_force_sgh(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_sie,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_vol,
+                        elem_div,
+                        elem_mat_id,
+                        corner_force,
+                        1.0,
+                        cycle);
+            }
+
             get_force_dgradient_sgh(material,
                                 *mesh,
                                 node_coords,
@@ -1307,29 +1432,10 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
     { // view scope
         vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
         const_vec_array design_densities = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-        // initialize design gradients
-        FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-            design_gradients(node_id, 0) = 0;
-        }); // end parallel for
-        Kokkos::fence();
 
             // compute timestep from time data
             global_dt = time_data[cycle + 1] - time_data[cycle];
 
-            // print
-            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
-                if (cycle == 0) {
-                    if (myrank == 0) {
-                        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-                    }
-                }
-                // print time step every 10 cycles
-                else if (cycle % 20 == 0) {
-                    if (myrank == 0) {
-                        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-                    }
-                } // end if
-            }
             // view scope
             {
                 const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -1423,41 +1529,14 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                     size_t corner_id;
                     for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                         corner_id = corners_in_node(node_id, icorner);
-                        design_gradients(node_id, 0) += corner_value_storage(corner_id);
+                        design_gradients(node_id, 0) += 0.5 * corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
                     }
                 }); // end parallel for
                 Kokkos::fence();
-            } // end view scope
-
-        // multiply by Hex8 constants (the diagonlization here only works for Hex8 anyway)
-        FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-            design_gradients(node_id, 0) *= 0.5 / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
-        }); // end parallel for
-        Kokkos::fence();
-
-        // gradient contribution from time derivative of adjoint \dot{lambda}(dM/drho)v product.
-        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
-            if (myrank == 0) {
-                std::cout << "gradient term involving adjoint derivative" << std::endl;
-            }
-        }
+            } // end view scope=
 
             // compute timestep from time data
             global_dt = time_data[cycle + 1] - time_data[cycle];
-            // print
-            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
-                if (cycle == 0) {
-                    if (myrank == 0) {
-                        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-                    }
-                }
-                // print time step every 10 cycles
-                else if (cycle % 20 == 0) {
-                    if (myrank == 0) {
-                        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-                    }
-                } // end if
-            }
 
             // compute adjoint vector for this data point; use velocity midpoint
             // view scope
@@ -1516,29 +1595,8 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 Kokkos::fence();
             } // end view scope
 
-        // gradient contribution from time derivative of psi_adjoint \dot{psi}(dM_E/drho)e product.
-        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
-            if (myrank == 0) {
-                std::cout << "gradient term involving adjoint derivative" << std::endl;
-            }
-        }
-
             // compute timestep from time data
             global_dt = time_data[cycle + 1] - time_data[cycle];
-            // print
-            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
-                if (cycle == 0) {
-                    if (myrank == 0) {
-                        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-                    }
-                }
-                // print time step every 10 cycles
-                else if (cycle % 20 == 0) {
-                    if (myrank == 0) {
-                        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-                    }
-                } // end if
-            }
 
             // compute adjoint vector for this data point; use velocity midpoint
             // view scope
@@ -1772,6 +1830,9 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         std::cout << "Computing accumulated kinetic energy gradient" << std::endl;
     }
 
+    //initialize design gradient vector
+    design_gradients_distributed->putScalar(0);
+
     compute_topology_optimization_adjoint_full(design_densities_distributed, design_gradients_distributed);
 
     if(use_gradient_tally){ 
@@ -1780,11 +1841,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     { // view scope
         vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
         const_vec_array design_densities = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-        // initialize design gradients
-        FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-            design_gradients(node_id, 0) = 0;
-        }); // end parallel for
-        Kokkos::fence();
 
         // gradient contribution from kinetic energy v(dM/drho)v product.
         if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
