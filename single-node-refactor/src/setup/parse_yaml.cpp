@@ -49,7 +49,7 @@
 
 #define PI 3.141592653589793
 
-bool VERBOSE = true;
+bool VERBOSE = false;
 
 // ==============================================================================
 //   Function Definitions

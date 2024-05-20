@@ -132,8 +132,10 @@ public:
         elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials.host(0).eos_global_vars.size()); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
-        this->fill_regions();
-
+        std::cout << "Before kokkos fence before fill region" << std::endl;
+        Kokkos::fence();
+        fill_regions();
+        std::cout << "After fill region" << std::endl;
         // Create solvers
         for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
             if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
@@ -224,8 +226,11 @@ public:
             //     voxel_elem_values.update_device();
             // } // endif
 
+            printf("Before setting num elements\n");
             int num_elems = mesh.num_elems;
 
+            printf("Before FOR_ALL_CLASS in fill_regions\n");
+            
             // parallel loop over elements in mesh
             FOR_ALL_CLASS(elem_gid, 0, num_elems, {
                 // for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
