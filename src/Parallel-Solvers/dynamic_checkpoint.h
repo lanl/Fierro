@@ -63,10 +63,18 @@ public:
     typedef Tpetra::MultiVector<GO, LO, GO> MCONN;
 
     // Default Constructor
-    Dynamic_Checkpoint() {}
+    Dynamic_Checkpoint(){}
+
+    // Argument Constructor
+    Dynamic_Checkpoint(int vector_count, int timestep, real_t time) {
+        num_state_vectors = vector_count;
+        saved_timestep = timestep;
+        saved_time = time;
+        *state_vectors = std::vector<Teuchos::RCP<MV>>(num_state_vectors);
+    }
 
     // Copy Constructor
-    Dynamic_Checkpoint(Dynamic_Checkpoint &copied_checkpoint){
+    Dynamic_Checkpoint(const Dynamic_Checkpoint &copied_checkpoint){
         saved_timestep = copied_checkpoint.saved_timestep;
         num_state_vectors = copied_checkpoint.num_state_vectors;
         state_vectors = copied_checkpoint.state_vectors;
@@ -105,6 +113,19 @@ public:
     //function to change one of the stored vectors
     void change_vector(int vector_index, Teuchos::RCP<MV> new_vector){
         (*state_vectors)[vector_index] = new_vector;
+    }
+
+    //function to assign new values to stored vectors
+    void assign_vectors(Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> new_state_vectors){
+        //TODO: add error control for differing sizes of input and member vector
+        for(int vector_index = 0; vector_index < (*new_state_vectors).size(); vector_index++){
+            (*state_vectors)[vector_index]->assign(*((*new_state_vectors)[vector_index]));
+        }
+    }
+
+    //function to assign new values to one of the stored vectors
+    void assign_vector(int vector_index, Teuchos::RCP<MV> new_vector){
+        (*state_vectors)[vector_index]->assign(*new_vector);
     }
 
     public:

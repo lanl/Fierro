@@ -40,8 +40,10 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
+#include "dynamic_checkpoint.h"
 #include "FEA_Module.h"
 #include "material_models.h"
+#include <set>
 
 class Explicit_Solver;
 
@@ -687,8 +689,10 @@ public:
     CArray<double> graphics_times;
     int rk_num_bins;
 
-    // optimization flags
+    // optimization flags and data
     bool kinetic_energy_objective;
+    Teuchos::RCP<std::set<Dynamic_Checkpoint>> dynamic_checkpoint_set;
+    enum vector_name { U_DATA=0, V_DATA=1, SIE_DATA=2 };
 };
 
 #endif // end HEADER_H
