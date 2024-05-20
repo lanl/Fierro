@@ -1234,10 +1234,17 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                 // set the EOS
                 if (eos_map.find(eos) != eos_map.end()) {
-                    auto eos_model = eos_map[eos];
+                    
+                    // eos_type eos_model = eos_map[eos];
+
+                    DCArrayKokkos<eos_type> eos_model = DCArrayKokkos<eos_type>(1, "material.eos_model");
+                    eos_model.host(0) = eos_map[eos];
+                    eos_model.update_device();
 
                     RUN({
                         materials(mat_id).eos_model = eos_model;
+
+                        materials(mat_id).eos_model = eos_model(0);
                         // materials(mat_id).eos_model(0.,1.,2.); // WARNING BUG HERE, replace with real EOS model
                     });
 
