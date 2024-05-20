@@ -49,6 +49,46 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
+
+    double fuzz  = sim_param.dynamic_options.fuzz;
+    double tiny  = sim_param.dynamic_options.tiny;
+    double small = sim_param.dynamic_options.small;
+
+
+    double graphics_dt_ival  = sim_param.output_options.graphics_time_step;
+    int graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
+
+    // double dt_min   = 1e-8;     // Minimum time step
+    // double dt_max   = 1e-2;     // Maximum time step
+    // double dt_start = 1e-5;     // Starting time step
+    // double dt_cfl   = 0.4;      // CFL multiplier for time step calculation
+
+    double time_initial = sim_param.dynamic_options.time_initial;
+    double time_final   = sim_param.dynamic_options.time_final;
+    double dt_min   = sim_param.dynamic_options.dt_min;
+    double dt_max   = sim_param.dynamic_options.dt_max;
+    double dt_start = sim_param.dynamic_options.dt_start;
+    double dt_cfl   = sim_param.dynamic_options.dt_cfl;
+
+    int rk_num_stages = sim_param.dynamic_options.rk_num_stages;
+    int cycle_stop    = sim_param.dynamic_options.cycle_stop;
+
+
+    // initialize time, time_step, and cycles
+    double time_value = 0.0;
+    double dt = dt_start;
+
+
+    // --- num vars ----
+    size_t num_dims = 3;
+
+    CArray<double> graphics_times = CArray<double>(20000);
+    graphics_times(0) = 0.0;
+    double graphics_time = 0.0; // the times for writing graphics dump
+    size_t graphics_id = 0;
+    //double graphics_time;
+
+
     // printf("Writing outputs to file at %f \n", time_value);
     // mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
 
@@ -107,6 +147,10 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     size_t stop_calc = 0;
 
     auto time_1 = std::chrono::high_resolution_clock::now();
+
+
+    std::cout << "Applying initial boundary conditions" << std::endl;
+    boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value); // Time value = 0.0;
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {

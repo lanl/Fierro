@@ -76,8 +76,7 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
     const double small,
     const DCArrayKokkos<double>& elem_statev,
     const double dt,
-    const double rk_alpha
-    )
+    const double rk_alpha) const
 {
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -439,8 +438,7 @@ void SGH::get_force_2D(const DCArrayKokkos<material_t>& material,
     const double small,
     const DCArrayKokkos<double>& elem_statev,
     const double dt,
-    const double rk_alpha
-    )
+    const double rk_alpha) const
 {
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {

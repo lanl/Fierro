@@ -52,7 +52,7 @@ void SGH::update_position(double rk_alpha,
     const size_t num_dims,
     const size_t num_nodes,
     DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel)
+    const DCArrayKokkos<double>& node_vel) const
 {
     // loop over all the nodes in the mesh
     FOR_ALL(node_gid, 0, num_nodes, {

@@ -57,7 +57,7 @@ void SGH::update_energy(double rk_alpha,
     const DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& elem_sie,
     const DCArrayKokkos<double>& elem_mass,
-    const DCArrayKokkos<double>& corner_force)
+    const DCArrayKokkos<double>& corner_force) const
 {
     // loop over all the elements in the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems, {

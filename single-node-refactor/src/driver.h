@@ -83,7 +83,7 @@ public:
     // Will be parsed from YAML input
     void initialize()
     {
-        std::cout << "Inside driver initialize" << std::endl;
+        std::cout << "Initializing Driver" << std::endl;
         Yaml::Node root;
         try
         {
@@ -112,8 +112,6 @@ public:
             return;
         }
 
-        // mesh_builder.build_mesh(mesh, elem, node, corner, sim_param);
-
         // Build boundary conditions
         int num_bcs = sim_param.boundary_conditions.size();
         printf("Num BC's = %d\n", num_bcs);
@@ -133,7 +131,7 @@ public:
         // --- apply the fill instructions over the Elements---//
         Kokkos::fence();
         fill_regions();
-        std::cout << "After fill region" << std::endl;
+
         // Create solvers
         for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
             if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
@@ -224,17 +222,11 @@ public:
             //     voxel_elem_values.update_device();
             // } // endif
 
-            printf("Before setting num elements\n");
             int num_elems = mesh.num_elems;
-
-            printf("Before FOR_ALL_CLASS in fill_regions\n");
-            
             // parallel loop over elements in mesh
             FOR_ALL_CLASS(elem_gid, 0, num_elems, {
-                // for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
                 for (int rk_level = 0; rk_level < 2; rk_level++) {
-                    // const size_t rk_level = 1;
-
+                    
                     // calculate the coordinates and radius of the element
                     double elem_coords[3]; // note:initialization with a list won't work
                     elem_coords[0] = 0.0;
@@ -382,7 +374,7 @@ public:
                                                    elem.statev,
                                                    elem.sspd,
                                                    elem.den(elem_gid),
-                                                   elem.sie(1, elem_gid));
+                                                   elem.sie(rk_level, elem_gid));
 
                         // loop over the nodes of this element and apply velocity
                         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {

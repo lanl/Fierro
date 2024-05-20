@@ -52,8 +52,7 @@ void SGH::update_velocity(double rk_alpha,
     const mesh_t& mesh,
     DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_mass,
-    const DCArrayKokkos<double>& corner_force
-    )
+    const DCArrayKokkos<double>& corner_force) const
 {
     const size_t num_dims = mesh.num_dims;
 
@@ -105,8 +104,7 @@ void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     const DCArrayKokkos<double>&    node_vel,
     const ViewCArrayKokkos<double>& b_matrix,
     const double elem_vol,
-    const size_t elem_gid
-    ) const
+    const size_t elem_gid) const
 {
     const size_t num_nodes_in_elem = 8;
 
@@ -202,8 +200,7 @@ void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<double>& b_matrix,
     const double elem_vol,
     const double elem_area,
-    const size_t elem_gid
-    ) const
+    const size_t elem_gid) const
 {
     const size_t num_nodes_in_elem = 4;
 
@@ -270,8 +267,7 @@ void SGH::get_divergence(DCArrayKokkos<double>& elem_div,
     const mesh_t mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& elem_vol
-    )
+    const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -347,8 +343,7 @@ void SGH::get_divergence2D(DCArrayKokkos<double>& elem_div,
     const mesh_t mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& elem_vol
-    )
+    const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -439,8 +434,7 @@ void SGH::decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
     const size_t elem_gid,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
-    const double vol
-    )
+    const double vol) const
 {
     // --- Calculate the velocity gradient ---
 

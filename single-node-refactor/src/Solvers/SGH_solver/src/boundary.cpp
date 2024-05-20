@@ -49,7 +49,7 @@
 void SGH::boundary_velocity(const mesh_t&     mesh,
     const DCArrayKokkos<boundary_condition_t>& boundary,
     DCArrayKokkos<double>& node_vel,
-    const double time_value)
+    const double time_value) const
 {
     // Loop over boundary sets
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
@@ -119,7 +119,7 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
 void SGH::boundary_contact(const mesh_t&     mesh,
     const DCArrayKokkos<boundary_condition_t>& boundary,
     DCArrayKokkos<double>& node_vel,
-    const double time_value)
+    const double time_value) const
 {
     
 

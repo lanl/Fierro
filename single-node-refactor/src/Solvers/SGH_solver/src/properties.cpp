@@ -71,8 +71,7 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
     const DCArrayKokkos<size_t>& elem_mat_id,
     const DCArrayKokkos<double>& elem_statev,
     const double dt,
-    const double rk_alpha
-    )
+    const double rk_alpha) const
 {
     // std::cout<<"Num elems in mesh  = " <<mesh.num_elems<<std::endl;
     // loop over all the elements in the mesh
@@ -186,11 +185,10 @@ void SGH::update_state2D(const DCArrayKokkos<material_t>& material,
     const DCArrayKokkos<size_t>& elem_mat_id,
     const DCArrayKokkos<double>& elem_statev,
     const double dt,
-    const double rk_alpha
-    )
+    const double rk_alpha) const
 {
     // loop over all the elements in the mesh
-    FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+    FOR_ALL(elem_gid, 0, mesh.num_elems, {
         const size_t num_dims = mesh.num_dims;
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
 
