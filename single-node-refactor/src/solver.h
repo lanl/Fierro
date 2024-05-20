@@ -51,24 +51,7 @@ class Solver
 {
 public:
 
-    MeshWriter mesh_writer;
-
-
-
-    // ==============================================================================
-    //   Variables, setting default inputs
-    // ==============================================================================
-
-    // // --- num vars ----
-    // size_t num_dims = 3;
-
-    // CArray<double> graphics_times;
-    // size_t graphics_id = 0;
-    // double graphics_time;
-
-    // double fuzz  = 1e-16;       // machine precision
-    // double tiny  = 1e-12;       // very very small (between real_t and single)
-    // double small = 1e-8;        // single precision
+    MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
     Solver();
     virtual ~Solver();

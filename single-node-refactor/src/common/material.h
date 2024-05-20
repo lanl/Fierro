@@ -45,8 +45,8 @@ namespace model
 enum strength_tag
 {
     none = 0,
-    hypo = 1,         // hypoelastic plastic model
-    hyper = 2,        // hyperelastic plastic model
+    increment_based = 1,    // Model evaluation is independent of time integration
+    state_based = 2,        // Model is dependent on time integration
 };
 } // end of namespace
 

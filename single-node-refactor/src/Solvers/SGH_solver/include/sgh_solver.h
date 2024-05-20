@@ -59,38 +59,9 @@ class SGH : public Solver
 {
 public:
 
-    // double dt = 0.0;
-    // double time_value = 0.0;
-    // double time_initial = 0.0;  // Starting time
-    // double time_final   = 1.0;  // Final simulation time
-    // double dt_min   = 1e-8;     // Minimum time step
-    // double dt_max   = 1e-2;     // Maximum time step
-    // double dt_start = 1e-5;     // Starting time step
-    // double dt_cfl   = 0.4;      // CFL multiplier for time step calculation
 
-    // double graphics_dt_ival  = 1.0; // time increment for graphics output
-    // int    graphics_cyc_ival = 2000000; // Cycle count for graphics output
-
-    // int rk_num_stages = 2;
-    // int cycle_stop    = 1000000000;
-
-    // --- num vars ----
-    // size_t num_dims = 3;
-
-    // CArray<double> graphics_times;
-    // size_t graphics_id = 0;
-    // double graphics_time;
-
-    // double fuzz  = 1e-16;       // machine precision
-    // double tiny  = 1e-12;       // very very small (between real_t and single)
-    // double small = 1e-8;        // single precision
-
-    // ---------------------------------------------------------------------
-    //    state data type declarations
-    // ---------------------------------------------------------------------
-
-    int max_num_state_vars = 6;
-    CArrayKokkos<double> state_vars; // array to hold init model variables
+    // int max_num_state_vars = 6;
+    // CArrayKokkos<double> state_vars; // array to hold init model variables
 
     SGH()  : Solver()
     {
@@ -101,36 +72,6 @@ public:
     // Initialize data specific to the SGH solver
     void initialize(simulation_parameters_t& sim_param) const override
     {
-        // Dimensions
-        // num_dims = 3;
-
-        // graphics_times = CArray<double>(20000);
-
-        // NOTE: Possible remove this and pass directly
-        // fuzz  = sim_param.dynamic_options.fuzz;
-        // tiny  = sim_param.dynamic_options.tiny;
-        // small = sim_param.dynamic_options.small;
-
-        // time_initial = sim_param.dynamic_options.time_initial;
-        // time_final   = sim_param.dynamic_options.time_final;
-        // dt_min   = sim_param.dynamic_options.dt_min;
-        // dt_max   = sim_param.dynamic_options.dt_max;
-        // dt_start = sim_param.dynamic_options.dt_start;
-        // dt_cfl   = sim_param.dynamic_options.dt_cfl;
-
-        // graphics_dt_ival  = sim_param.output_options.graphics_time_step;
-        // graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
-
-        // rk_num_stages = sim_param.dynamic_options.rk_num_stages;
-        // cycle_stop = sim_param.dynamic_options.cycle_stop;
-
-        // // initialize time, time_step, and cycles
-        // time_value = 0.0;
-        // dt = sim_param.dynamic_options.dt_start;
-
-        // graphics_id = 0;
-        // graphics_times(0) = 0.0;
-        // graphics_time     = 0.0; // the times for writing graphics dump
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -142,8 +83,6 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) const override
     {
-        // std::cout << "Applying initial boundary conditions" << std::endl;
-        // boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
     }
 
     /////////////////////////////////////////////////////////////////////////////

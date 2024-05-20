@@ -58,11 +58,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     double graphics_dt_ival  = sim_param.output_options.graphics_time_step;
     int graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
 
-    // double dt_min   = 1e-8;     // Minimum time step
-    // double dt_max   = 1e-2;     // Maximum time step
-    // double dt_start = 1e-5;     // Starting time step
-    // double dt_cfl   = 0.4;      // CFL multiplier for time step calculation
-
     double time_initial = sim_param.dynamic_options.time_initial;
     double time_final   = sim_param.dynamic_options.time_final;
     double dt_min   = sim_param.dynamic_options.dt_min;
@@ -86,8 +81,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     graphics_times(0) = 0.0;
     double graphics_time = 0.0; // the times for writing graphics dump
     size_t graphics_id = 0;
-    //double graphics_time;
-
 
     // printf("Writing outputs to file at %f \n", time_value);
     // mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
