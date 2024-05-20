@@ -1237,15 +1237,11 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     
                     eos_type eos_model = eos_map[eos];
 
-                    RUN({
-
-                        if(eos = "ideal_gas"){
-                            materials(mat_id).eos_model = ideal_gas;
-                        }
-                        // materials(mat_id).eos_model = eos_model;
-                        // materials(mat_id).eos_model(0.,1.,2.); // WARNING BUG HERE, replace with real EOS model
-                    });
-
+                    if(eos == "ideal_gas"){
+                        RUN({
+                            materials(mat_id).eos_model = &ideal_gas;
+                        });
+                    }
                     if (VERBOSE) {
                         std::cout << "\teos_model = " << eos << std::endl;
                     }
