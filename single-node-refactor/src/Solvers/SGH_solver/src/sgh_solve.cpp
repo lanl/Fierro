@@ -68,7 +68,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     double cached_pregraphics_dt = fuzz;
 
     // save the nodal mass
-    FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
         double radius = 1.0;
         if (mesh.num_dims == 2) {
             radius = node.coords(1, node_gid, 1);
@@ -315,7 +315,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             // calculate the new corner masses if 2D
             if (mesh.num_dims == 2) {
                 // calculate the nodal areal mass
-                FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
+                FOR_ALL(node_gid, 0, mesh.num_nodes, {
                     node.mass(node_gid) = 0.0;
 
                     if (node.coords(1, node_gid, 1) > tiny) {
@@ -324,7 +324,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                 }); // end parallel for over node_gid
                 Kokkos::fence();
 
-                FOR_ALL_CLASS(node_bdy_gid, 0, mesh.num_bdy_nodes, {
+                FOR_ALL(node_bdy_gid, 0, mesh.num_bdy_nodes, {
                     size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
 
                     if (node.coords(1, node_gid, 1) < tiny) {

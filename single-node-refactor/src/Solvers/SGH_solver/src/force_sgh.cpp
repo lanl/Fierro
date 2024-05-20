@@ -80,7 +80,7 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
     )
 {
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+    FOR_ALL(elem_gid, 0, mesh.num_elems, {
         const size_t num_dims = 3;
         const size_t num_nodes_in_elem = 8;
 

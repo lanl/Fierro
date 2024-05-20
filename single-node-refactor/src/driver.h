@@ -128,11 +128,9 @@ public:
 
         // Create memory for state variables
         sim_param.materials.update_host();
-        printf("Num State variables per element = %lu\n", sim_param.materials.host(0).eos_global_vars.size());
         elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials.host(0).eos_global_vars.size()); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
-        std::cout << "Before kokkos fence before fill region" << std::endl;
         Kokkos::fence();
         fill_regions();
         std::cout << "After fill region" << std::endl;

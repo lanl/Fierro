@@ -35,12 +35,12 @@
 #ifndef SGH_SOLVER_H
 #define SGH_SOLVER_H
 
-#include "matar.h"
-#include "solver.h"
 #include "geometry_new.h"
-// #include "io_utils.h"
-
+#include "matar.h"
 #include "simulation_parameters.h"
+#include "solver.h"
+
+
 
 using namespace mtr; // matar namespace
 
@@ -126,8 +126,6 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) override
     {
-        std::cout << "INSIDE SETUP FOR SGH SOLVER" << std::endl;
-
         std::cout << "Applying initial boundary conditions" << std::endl;
         boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
     }
