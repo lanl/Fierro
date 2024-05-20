@@ -66,12 +66,10 @@ int main(int argc, char* argv[])
     Driver* driver;
     driver = new Driver(argv[1]);
 
-    Driver driver(argv[1]);
-
-    driver.initialize();
-    driver.setup();
-    driver.run();
-    driver.finalize();
+    driver->initialize();
+    driver->setup();
+    driver->run();
+    driver->finalize();
 
     // Delete driver
     delete driver;
