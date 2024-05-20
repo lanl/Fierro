@@ -208,6 +208,17 @@ void contact_patch_t::capture_box(const double &vx_max, const double &vy_max, co
 KOKKOS_FUNCTION
 void contact_patch_t::construct_basis(ViewCArrayKokkos<double> &A, const double &del_t) const
 {
+//    double local_acc_arr[3*contact_patch_t::max_nodes];
+//    ViewCArrayKokkos<double> local_acc(&local_acc_arr[0], 3, num_nodes_in_patch);
+//    for (int i = 0; i < 3; i++)
+//    {
+//        for (int j = 0; j < num_nodes_in_patch; j++)
+//        {
+//            const contact_node_t &node_obj = nodes_obj(j);
+//            local_acc(i, j) = (node_obj.contact_force(i) + node_obj.internal_force(i))/node_obj.mass;
+//        }
+//    }
+
     for (int i = 0; i < 3; i++)
     {
         for (int j = 0; j < num_nodes_in_patch; j++)
@@ -790,6 +801,79 @@ void contact_pair_t::frictionless_increment(const contact_patches_t &contact_pat
         fc_inc = sol[2];
     }
 }
+
+KOKKOS_FUNCTION
+void contact_pair_t::distribute_frictionless_force(contact_patches_t &contact_patches, const double &force_scale)
+{
+    double force_val = force_scale*fc_inc;
+
+    // get phi_k
+    double phi_k_arr[contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> phi_k(&phi_k_arr[0], contact_patch_t::num_nodes_in_patch);
+    patch.phi(phi_k, xi, eta);
+
+    // if tensile, then subtract left over fc_inc_total; if not, then distribute to nodes
+    if (force_val + fc_inc_total < 0.0)
+    {
+        // update penetrating node
+        for (int i = 0; i < 3; i++)
+        {
+            node.contact_force(i) -= fc_inc_total*normal(i);
+        }
+
+        // update patch nodes
+        for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
+        {
+            contact_node_t &patch_node = contact_patches.contact_nodes(patch.nodes_gid(k));
+            for (int i = 0; i < 3; i++)
+            {
+                patch_node.contact_force(i) += fc_inc_total*normal(i)*phi_k(k);
+            }
+        }
+
+        fc_inc_total = 0.0;
+        fc_inc = 0.0;
+    } else
+    {
+        fc_inc_total += force_val;
+
+        // update penetrating node
+        for (int i = 0; i < 3; i++)
+        {
+            node.contact_force(i) += force_val*normal(i);
+        }
+
+        // update patch nodes
+        for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
+        {
+            contact_node_t &patch_node = contact_patches.contact_nodes(patch.nodes_gid(k));
+            for (int i = 0; i < 3; i++)
+            {
+                patch_node.contact_force(i) -= force_val*normal(i)*phi_k(k);
+            }
+        }
+    }
+}  // end distribute_frictionless_force
+
+bool contact_pair_t::should_remove(const double &del_t)
+{
+    if (fc_inc_total == 0.0 || fabs(xi) > 1.0 + edge_tol || fabs(eta) > 1.0 + edge_tol)
+    {
+        return true;
+    } else
+    {
+        // update the normal
+        double new_normal_arr[3];
+        ViewCArrayKokkos<double> new_normal(&new_normal_arr[0], 3);
+        patch.get_normal(xi, eta, del_t, new_normal);
+        for (int i = 0; i < 3; i++)
+        {
+            normal(i) = new_normal(i);
+        }
+
+        return false;
+    }
+}  // end should_remove
 /// end of contact_pair_t member functions /////////////////////////////////////////////////////////////////////////////
 
 /// beginning of contact_patches_t member functions ////////////////////////////////////////////////////////////////////
@@ -827,6 +911,7 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         // Make contact_patch.nodes_gid equal to the row of nodes_in_patch(i)
         // This line is what is limiting the parallelism
         contact_patch.nodes_gid = CArrayKokkos<size_t>(mesh.num_nodes_in_patch);
+        contact_patch.nodes_obj = CArrayKokkos<contact_node_t>(mesh.num_nodes_in_patch);
         for (size_t j = 0; j < mesh.num_nodes_in_patch; j++)
         {
             contact_patch.nodes_gid(j) = nodes_in_patch(i, j);
@@ -950,8 +1035,10 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
                                                                  contact_patch_t::max_contacting_nodes_in_patch);
     is_patch_node = CArrayKokkos<bool>(max_index + 1);
     is_pen_node = CArrayKokkos<bool>(max_index + 1);
+    active_pairs = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
+    forces = CArrayKokkos<double>(contact_patches_t::num_contact_nodes);
 
-    // Construct nodes_gid
+    // Construct nodes_gid and nodes_obj
     nodes_gid = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
     size_t node_lid = 0;
     for (int i = 0; i < num_contact_patches; i++)
@@ -960,6 +1047,8 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         for (int j = 0; j < contact_patch_t::num_nodes_in_patch; j++)
         {
             size_t node_gid = contact_patch.nodes_gid(j);
+            const contact_node_t &node_obj = contact_nodes(node_gid);
+            contact_patch.nodes_obj(j) = node_obj;
             if (node_count(node_gid) == 1)
             {
                 node_count(node_gid) = 2;
@@ -1438,7 +1527,21 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
             }
         }
     }
-}
+
+    // set the active pairs
+    num_active_pairs = 0;
+    for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++)
+    {
+        for (int patch_stride = 0; patch_stride < contact_pairs_access.stride(patch_lid); patch_stride++)
+        {
+            const size_t &node_gid = contact_pairs_access(patch_lid, patch_stride);
+            contact_pair_t &pair = contact_pairs(node_gid);
+            pair.active = true;
+            active_pairs(num_active_pairs) = node_gid;
+            num_active_pairs += 1;
+        }
+    }
+}  // end get_contact_pairs
 
 KOKKOS_FUNCTION
 void contact_patches_t::remove_pair(contact_pair_t &pair)
@@ -1551,6 +1654,73 @@ bool contact_patches_t::get_edge_pair(const ViewCArrayKokkos<double> &normal1, c
         return true;
     }
 }  // end get_edge_pair
+
+void contact_patches_t::force_resolution(const double &del_t)
+{
+    ViewCArrayKokkos<double> forces_view(&forces(0), num_active_pairs);
+    for (int i = 0; i < max_iter; i++)
+    {
+        // find force increment for each pair
+        // todo: having trouble breaking this into two parts, find force and apply force. It's not giving the right
+        //       results so keep it serial for now.
+        for (int j = 0; j < num_active_pairs; j++)
+        {
+            const size_t &node_gid = active_pairs(j);
+            contact_pair_t &pair = contact_pairs(node_gid);
+
+            // The reason why we are doing if statements inside the loop instead of loops inside of if statements is to
+            // be able to have different contact types per pair. This makes it to where we can have a portion of the
+            // mesh do frictionless contact and another portion do glue contact.
+            if (pair.contact_type == contact_pair_t::contact_types::frictionless)
+            {
+                pair.frictionless_increment(*this, del_t);
+                pair.distribute_frictionless_force(*this, 1.0);  // if not doing serial, then this would be called in the second loop
+                forces_view(j) = pair.fc_inc;
+            } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
+        }
+        // Kokkos::fence();
+
+        // check convergence (the force increments should be zero)
+        if (norm(forces_view) <= tol)
+        {
+            break;
+        }
+
+        // distribute forces to nodes
+        // todo: this loop is a little more complicated since we are accessing patches at the same time
+        //       keep this serial until determining a way to use kokkos atomics
+        // for (int j = 0; j < num_active_pairs; j++)
+        // {
+            // const size_t &node_gid = active_pairs(j);
+            // contact_pair_t &pair = contact_pairs(node_gid);
+
+            // if (pair.contact_type == contact_pair_t::contact_types::frictionless)
+            // {
+                // pair.distribute_frictionless_force(*this, 0.5);
+            // } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
+        // }
+    }
+}  // end force_resolution
+
+void contact_patches_t::remove_pairs(const double &del_t)
+{
+    for (int i = 0; i < num_active_pairs; i++)
+    {
+        const size_t &node_gid = active_pairs(i);
+        contact_pair_t &pair = contact_pairs(node_gid);
+
+        bool should_remove = false;
+        if (pair.contact_type == contact_pair_t::contact_types::frictionless)
+        {
+            should_remove = pair.should_remove(del_t);
+        } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
+
+        if (should_remove)
+        {
+            remove_pair(pair);
+        }
+    }
+}
 /// end of contact_patches_t member functions //////////////////////////////////////////////////////////////////////////
 
 /// beginning of internal, not to be used anywhere else tests //////////////////////////////////////////////////////////
@@ -1832,6 +2002,56 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
         assert(contact_patches_obj.contact_pairs_access(6, 1) == 14);
         assert(contact_patches_obj.contact_pairs_access(6, 2) == 19);
         assert(contact_patches_obj.contact_pairs_access(6, 3) == 20);
+    }
+
+    // Testing force resolution
+    std::cout << "\nTesting force_resolution and remove_pairs:" << std::endl;
+    if (file_name.find(main_test) != std::string::npos)
+    {
+        std::cout << "Penetrating node 22 has a fc_inc_total value of 0.148976" << std::endl;
+        std::cout << "Penetrating node 23 has a fc_inc_total value of 0.148976" << std::endl;
+        std::cout << "Penetrating node 18 has a fc_inc_total value of 0.148976" << std::endl;
+        std::cout << "Penetrating node 19 has a fc_inc_total value of 0.148976" << std::endl;
+        std::cout << "Penetrating node 10 has a fc_inc_total value of 0" << std::endl;
+        std::cout << "vs." << std::endl;
+        contact_patches_obj.force_resolution(0.1);
+
+        double pen_node_sum = 0.0;
+        double patch_node_sum = 0.0;
+        bool seen_patch_node[26];
+        for (int i = 0; i < contact_patches_obj.num_active_pairs; i++)
+        {
+            const size_t &node_gid = contact_patches_obj.active_pairs(i);
+            const contact_pair_t &pair = contact_patches_obj.contact_pairs(node_gid);
+            std::cout << "Penetrating node " << node_gid << " has a fc_inc_total_value of ";
+            std::cout << pair.fc_inc_total << std::endl;
+
+            pen_node_sum += pair.fc_inc_total;
+            for (int j = 0; j < contact_patch_t::num_nodes_in_patch; j++)
+            {
+                const size_t &patch_node_gid = pair.patch.nodes_gid(j);
+                if (!seen_patch_node[patch_node_gid] && pair.fc_inc_total > 0.0)
+                {
+                    seen_patch_node[patch_node_gid] = true;
+
+                    const contact_node_t &patch_node = contact_patches_obj.contact_nodes(patch_node_gid);
+                    patch_node_sum += patch_node.contact_force(2);
+                }
+            }
+        }
+        std::cout << "Penetrating node sum: " << pen_node_sum << std::endl;
+        std::cout << "Patch node sum: " << patch_node_sum << std::endl;
+
+        assert(fabs(pen_node_sum + patch_node_sum) < err_tol);
+        assert(fabs(contact_patches_obj.contact_pairs(22).fc_inc_total - 0.148976) < err_tol);
+        assert(fabs(contact_patches_obj.contact_pairs(23).fc_inc_total - 0.148976) < err_tol);
+        assert(fabs(contact_patches_obj.contact_pairs(18).fc_inc_total - 0.148976) < err_tol);
+        assert(fabs(contact_patches_obj.contact_pairs(19).fc_inc_total - 0.148976) < err_tol);
+        assert(contact_patches_obj.contact_pairs(10).fc_inc_total < err_tol);
+
+        // Testing remove_pairs
+        contact_patches_obj.remove_pairs(0.1);
+        assert(!contact_patches_obj.contact_pairs(10).active);
     }
 
     exit(0);

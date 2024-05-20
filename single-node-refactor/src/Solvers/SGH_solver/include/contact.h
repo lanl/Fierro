@@ -34,6 +34,7 @@ struct contact_patch_t
     size_t gid;  // global patch id
     size_t lid;  // local patch id (local to contact_patches_t::contact_patches); this is needed in contact_pairs_t
     CArrayKokkos<size_t> nodes_gid;  // global node ids
+    CArrayKokkos<contact_node_t> nodes_obj;  // contact node objects
 
     /*
      * If the position of a point is denoted by "p" and "p" is a vector p = (px, py, pz), then the following arrays
@@ -276,6 +277,16 @@ struct contact_pair_t
     double fc_inc = 0.0;  // force increment to be added to contact_node_t::contact_force
     double fc_inc_total = 0.0;  // all previous force increments get summed to this member (see contact_patches_t::force_resolution())
 
+    enum contact_types
+    {
+        frictionless,  // no friction; only normal force
+        glue  // contact point stays constant
+    };
+
+    // todo: frictionless is the only contact type implemented, but in the future, changing this member before the
+    //       force resolution call will allow for different contact types
+    contact_types contact_type = frictionless;  // default contact type
+
     contact_pair_t();
 
     KOKKOS_FUNCTION
@@ -298,6 +309,44 @@ struct contact_pair_t
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     KOKKOS_FUNCTION
     void frictionless_increment(const contact_patches_t &contact_patches, const double &del_t);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn distribute_frictionless_force
+    ///
+    /// \brief Distributes the force increment to the penetrating node and the patch nodes
+    ///
+    /// This method will distribute an incremental force value (fc_inc member) to the penetrating node and the patch
+    /// nodes. For the penetrating node, it's N*fc_inc and for the patch nodes, a value of -N*fc_inc*phi_k where N is
+    /// the unit normal and phi_k is the basis function array values as defined in contact_patch_t::phi. This method
+    /// will also add the force increment to fc_inc_total. If fc_inc_total is less than zero, then this means that a
+    /// tensile force is required to keep the node on the patch, but this is not possible since contact is always
+    /// compressive when there is no adhesive phenomena. When fc_inc_total goes below zero, fc_inc is set to zero,
+    /// and the left over fc_inc_total will be subtracted from the penetrating node and the patch nodes, then
+    /// fc_inc_total is set to zero.
+    ///
+    /// \param contact_patches contact patches object
+    /// \param force_scale instead of distributing the full fc_inc, a fraction of it can be distributed to prevent large
+    ///                    shocks to the solving scheme
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    KOKKOS_FUNCTION
+    void distribute_frictionless_force(contact_patches_t &contact_patches, const double &force_scale);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn should_remove
+    ///
+    /// \brief Determines if the contact pair should be removed
+    ///
+    /// This method will determine if the contact pair should be removed. If the fc_inc_total value is zero or if the
+    /// xi and eta values are out of the bounds of the patch (not between -1 - edge_tol and 1 + edge_tol), then the pair
+    /// will be removed. This method is not used for all contact types as some (i.e. glue) require different conditions.
+    /// Additionally, this method will update the unit normal to the current xi and eta values. At the moment, this
+    /// method is used for frictionless contact only.
+    ///
+    /// \param del_t current time step in the analysis
+    ///
+    /// \return true if the contact pair should be removed; false otherwise
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    bool should_remove(const double &del_t);
 };
 
 struct contact_patches_t
@@ -365,6 +414,9 @@ struct contact_patches_t
     DynamicRaggedRightArrayKokkos<size_t> contact_pairs_access;  // each row is the patch gid and the columns represent the node in contact with the patch; used for quick access and iterating
     CArrayKokkos<bool> is_patch_node;  // container for determining if a node is a patch node for a contact pair
     CArrayKokkos<bool> is_pen_node;  // container for determining if a node is a penetrating node for a contact pair
+    CArrayKokkos<size_t> active_pairs;  // array of only the active pairs (accessed through node gid)
+    CArrayKokkos<double> forces;  // member to store contact force increments (only used to check convergence)
+    size_t num_active_pairs = 0;  // number of active pairs
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn sort
@@ -415,6 +467,18 @@ struct contact_patches_t
     void remove_pair(contact_pair_t &pair);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn remove_pairs
+    ///
+    /// \brief Loops through all active pairs and removes the pairs that don't meet the criteria
+    ///
+    /// This method will walk through all the active contact pairs and remove the pairs that don't meet the criteria of
+    /// the corresponding `should_remove` function.
+    ///
+    /// \param del_t current time step in the analysis
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void remove_pairs(const double &del_t);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn get_edge_pair
     ///
     /// \brief Determines the more dominant pair for the case when a penetrating node contacts an edge
@@ -435,6 +499,17 @@ struct contact_patches_t
     KOKKOS_FUNCTION
     bool get_edge_pair(const ViewCArrayKokkos<double> &normal1, const ViewCArrayKokkos<double> &normal2,
                        const size_t &node_gid, const double &del_t, ViewCArrayKokkos<double> &new_normal) const;
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn force_resolution
+    ///
+    /// \brief Resolves the contact forces
+    ///
+    /// todo: add more information here
+    ///
+    /// \param del_t current time step in the analysis
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void force_resolution(const double &del_t);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
