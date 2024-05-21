@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 
     Kokkos::initialize();
 
-    // Create driver on heap
+    // Create driver
     Driver* driver;
     driver = new Driver(argv[1]);
 

@@ -51,38 +51,15 @@ class Solver
 {
 public:
 
-    MeshWriter mesh_writer;
+    MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
-    // ---------------------------------------------------------------------
-    //    state data type declarations
-    // ---------------------------------------------------------------------
-
-    int max_num_state_vars = 6;
-    CArrayKokkos<double> state_vars; // array to hold init model variables
-
-    // ==============================================================================
-    //   Variables, setting default inputs
-    // ==============================================================================
-
-    // --- num vars ----
-    size_t num_dims = 3;
-
-    CArray<double> graphics_times;
-    size_t graphics_id = 0;
-    double graphics_time;
-
-    double fuzz  = 1e-16;       // machine precision
-    double tiny  = 1e-12;       // very very small (between real_t and single)
-    double small = 1e-8;        // single precision
-
-    Solver(); // Simulation_Parameters& _simparam);
-
+    Solver();
     virtual ~Solver();
 
-    virtual void initialize(simulation_parameters_t& sim_param) = 0;
-    virtual void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) = 0;
+    virtual void initialize(simulation_parameters_t& sim_param) const = 0;
+    virtual void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) const = 0;
     virtual void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) = 0;
-    virtual void finalize(simulation_parameters_t& sim_param) = 0;
+    virtual void finalize(simulation_parameters_t& sim_param) const = 0;
 
     // debug and system functions/variables
     double CPU_Time();

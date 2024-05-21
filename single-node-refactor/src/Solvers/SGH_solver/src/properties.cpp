@@ -57,7 +57,7 @@
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::update_state(const CArrayKokkos<material_t>& material,
+void SGH::update_state(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -71,10 +71,8 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
     const DCArrayKokkos<size_t>& elem_mat_id,
     const DCArrayKokkos<double>& elem_statev,
     const double dt,
-    const double rk_alpha
-    )
+    const double rk_alpha) const
 {
-    // std::cout<<"Num elems in mesh  = " <<mesh.num_elems<<std::endl;
     // loop over all the elements in the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
         const size_t num_dims = mesh.num_dims;
@@ -89,8 +87,8 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
         size_t mat_id = elem_mat_id(elem_gid);
 
         // --- Stress ---
-        // hyper elastic plastic model
-        if (material(mat_id).strength_type == model::hyper) {
+        // state_based elastic plastic model
+        if (material(mat_id).strength_type == model::state_based) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
@@ -132,7 +130,7 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
             //                                 elem_vol(elem_gid),
             //                                 dt,
             //                                 rk_alpha);
-        } // end logical on hyper strength model
+        } // end logical on state_based strength model
 
         // --- Pressure ---
         material(mat_id).eos_model(elem_pres,
@@ -172,7 +170,7 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::update_state2D(const CArrayKokkos<material_t>& material,
+void SGH::update_state2D(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -186,8 +184,7 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
     const DCArrayKokkos<size_t>& elem_mat_id,
     const DCArrayKokkos<double>& elem_statev,
     const double dt,
-    const double rk_alpha
-    )
+    const double rk_alpha) const
 {
     // loop over all the elements in the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -203,8 +200,8 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
         size_t mat_id = elem_mat_id(elem_gid);
 
         // --- Stress ---
-        // hyper elastic plastic model
-        if (material(mat_id).strength_type == model::hyper) {
+        // state_based elastic plastic model
+        if (material(mat_id).strength_type == model::state_based) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
@@ -246,7 +243,7 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
             //                                 elem_vol(elem_gid),
             //                                 dt,
             //                                 rk_alpha);
-        } // end logical on hyper strength model
+        } // end logical on state_based strength model
 
         // --- Pressure ---
         // material(mat_id).eos_model(elem_pres,

@@ -81,9 +81,11 @@ struct mesh_input_t
     std::string file_path     = ""; ///< Absolute path of mesh file
     mesh_input::type type;  ///< Type of mesh to generate if
 
-    std::vector<double> origin { 0.0, 0.0, 0.0 };   ///< Mesh origin for generating a mesh
-    std::vector<double> length { 1.0, 1.0, 1.0 };   ///< x,y,z length of generated mesh
-    std::vector<int> num_elems { 2, 2, 2 };         ///< Number of elements along x,y, z for generating a mesh.
+    DCArrayKokkos<double> origin; // = DCArrayKokkos<double> (3); ///< Mesh origin for generating a mesh
+    DCArrayKokkos<double> length; // = DCArrayKokkos<double> (3); ///< x,y,z length of generated mesh
+    DCArrayKokkos<int> num_elems; // = DCArrayKokkos<int> (3);  ///< Number of elements along x,y, z for generating a mesh.
+
+
     size_t p_order = 1;
 
     // WARNING, NOT YET PARSED
@@ -92,8 +94,8 @@ struct mesh_input_t
     double starting_angle = 0.0;     ///< Starting angle in degrees for 2D RZ mesh
     double ending_angle   = 90;      ///< Ending angle in degrees for 2D RZ mesh
 
-    int num_radial_elems  = 10; ///< Number of elements in the radial direction for 2DRZ mesh
-    int num_angular_elems = 10; ///< Number of elements in the radial direction for 2DRZ mesh
+    int num_radial_elems  = 10;     ///< Number of elements in the radial direction for 2DRZ mesh
+    int num_angular_elems = 10;     ///< Number of elements in the radial direction for 2DRZ mesh
 }; // mesh_input_t
 
 // ----------------------------------

@@ -55,7 +55,7 @@ void SGH::rk_init(DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& elem_stress,
     const size_t num_dims,
     const size_t num_elems,
-    const size_t num_nodes)
+    const size_t num_nodes) const
 {
     // save elem quantities
     FOR_ALL(elem_gid, 0, num_elems, {
@@ -111,7 +111,7 @@ void SGH::get_timestep(mesh_t& mesh,
     const double dt_min,
     const double dt_cfl,
     double&      dt,
-    const double fuzz)
+    const double fuzz) const
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
@@ -221,7 +221,7 @@ void SGH::get_timestep2D(mesh_t& mesh,
     const double dt_min,
     const double dt_cfl,
     double&      dt,
-    const double fuzz)
+    const double fuzz) const
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;

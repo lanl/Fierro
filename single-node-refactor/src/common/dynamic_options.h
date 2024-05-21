@@ -54,12 +54,18 @@ struct dynamic_options_t
     double dt_max   = 1e-2;     ///< Maximum time step
     double dt_start = 1e-5;     ///< Starting time step
     double dt_cfl   = 0.4;      ///< CFL multiplier for time step calculation
+    
     double fuzz     = 1e-16;    ///< machine precision
     double tiny     = 1e-12;    ///< very very small (between real_t and single)
     double small    = 1e-8;     ///< single precision
 
     int rk_num_stages = 2;      ///< Number of RK stages
     int rk_num_bins   = 2;      ///< Number of memory bins for time integration
+
+
+    // Unparsed internal variables
+    
+
 }; // output_options_t
 
 // ----------------------------------

@@ -83,7 +83,7 @@ public:
     // Will be parsed from YAML input
     void initialize()
     {
-        std::cout << "Inside driver initialize" << std::endl;
+        std::cout << "Initializing Driver" << std::endl;
         Yaml::Node root;
         try
         {
@@ -112,8 +112,6 @@ public:
             return;
         }
 
-        // mesh_builder.build_mesh(mesh, elem, node, corner, sim_param);
-
         // Build boundary conditions
         int num_bcs = sim_param.boundary_conditions.size();
         printf("Num BC's = %d\n", num_bcs);
@@ -127,10 +125,11 @@ public:
         geometry::get_vol(elem.vol, node.coords, mesh);
 
         // Create memory for state variables
-        printf("Num State variables per element = %lu\n", sim_param.materials(0).eos_global_vars.size());
-        elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials(0).eos_global_vars.size()); // WARNING: HACK
+        sim_param.materials.update_host();
+        elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials.host(0).eos_global_vars.size()); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
+        Kokkos::fence();
         fill_regions();
 
         // Create solvers
@@ -224,13 +223,10 @@ public:
             // } // endif
 
             int num_elems = mesh.num_elems;
-
             // parallel loop over elements in mesh
-            FOR_ALL(elem_gid, 0, num_elems, {
-                // for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+            FOR_ALL_CLASS(elem_gid, 0, num_elems, {
                 for (int rk_level = 0; rk_level < 2; rk_level++) {
-                    // const size_t rk_level = 1;
-
+                    
                     // calculate the coordinates and radius of the element
                     double elem_coords[3]; // note:initialization with a list won't work
                     elem_coords[0] = 0.0;
@@ -248,9 +244,9 @@ public:
                             elem_coords[2] = 0.0;
                         }
                     } // end loop over nodes in element (NOTE: Translating using origin so below check works)
-                    elem_coords[0] = (elem_coords[0] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[0];
-                    elem_coords[1] = (elem_coords[1] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[1];
-                    elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[2];
+                    elem_coords[0] = (elem_coords[0] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin(0);
+                    elem_coords[1] = (elem_coords[1] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin(1);
+                    elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin(2);
 
                     // spherical radius 
                     double radius = sqrt(elem_coords[0] * elem_coords[0] +
@@ -346,8 +342,6 @@ public:
 
                         size_t mat_id = elem.mat_id(elem_gid); // short name
 
-                        // printf("mat_id = %lu\n", mat_id);
-
                         // get state_vars from the input file or read them in
                         if (false) { // sim_param.materials(mat_id).strength_setup == model_init::user_init) {
                             // use the values read from a file to get elem state vars
@@ -380,7 +374,7 @@ public:
                                                    elem.statev,
                                                    elem.sspd,
                                                    elem.den(elem_gid),
-                                                   elem.sie(1, elem_gid));
+                                                   elem.sie(rk_level, elem_gid));
 
                         // loop over the nodes of this element and apply velocity
                         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -465,12 +459,12 @@ public:
                                     }
                                 case init_conds::radial_linear:
                                     {
-                                        throw std::runtime_error("**** Radial_linear initial conditions not yet supported ****");
+                                        printf("**** Radial_linear initial conditions not yet supported ****\n");
                                         break;
                                     }
                                 case init_conds::spherical_linear:
                                     {
-                                        throw std::runtime_error("**** Spherical_linear initial conditions not yet supported ****");
+                                        printf("**** spherical_linear initial conditions not yet supported ****\n");
                                         break;
                                     }
                                 case init_conds::tg_vortex:
@@ -490,14 +484,13 @@ public:
                             elem.pres(elem_gid) = 0.25 * (cos(2.0 * PI * elem_coords[0]) + cos(2.0 * PI * elem_coords[1]) ) + 1.0;
 
                             // p = rho*ie*(gamma - 1)
-                            size_t mat_id = f_id;
+                            // size_t mat_id = f_id;
                             double gamma  = elem.statev(elem_gid, 4); // gamma value WARNING: BUG HERE
                             elem.sie(rk_level, elem_gid) =
                                 elem.pres(elem_gid) / (sim_param.region_fills(f_id).den * (gamma - 1.0));
                         } // end if
                     } // end if fill
                 } // end RK loop
-                  // }
             }); // end FOR_ALL element loop
             Kokkos::fence();
         } // end for loop over fills
@@ -522,7 +515,7 @@ public:
         // } // end of
 
         // calculate the nodal mass
-        FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
             node.mass(node_gid) = 0.0;
 
             if (mesh.num_dims == 3) {
