@@ -41,7 +41,6 @@
 #include "solver.h"
 
 
-
 using namespace mtr; // matar namespace
 
 /////////////////////////////////////////////////////////////////////////////
@@ -58,10 +57,6 @@ using namespace mtr; // matar namespace
 class SGH : public Solver
 {
 public:
-
-
-    // int max_num_state_vars = 6;
-    // CArrayKokkos<double> state_vars; // array to hold init model variables
 
     SGH()  : Solver()
     {

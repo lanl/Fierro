@@ -36,6 +36,7 @@
 #include "mesh.h"
 #include "geometry_new.h"
 #include "sgh_solver.h"
+#include "io_utils.h"
 #include <chrono>
 
 /////////////////////////////////////////////////////////////////////////////
@@ -73,6 +74,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     double time_value = 0.0;
     double dt = dt_start;
 
+    // Create mesh writer
+    MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
     // --- num vars ----
     size_t num_dims = 3;
