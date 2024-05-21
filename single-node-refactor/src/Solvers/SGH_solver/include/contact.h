@@ -26,7 +26,8 @@ struct contact_node_t
     contact_node_t();
 
     contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCArrayKokkos<double> &vel,
-                   const ViewCArrayKokkos<double> &acc, const double &mass);
+                   const ViewCArrayKokkos<double> &acc, const ViewCArrayKokkos<double> &internal_force,
+                   const ViewCArrayKokkos<double> &contact_force, const double &mass);
 };
 
 struct contact_patch_t
@@ -77,7 +78,8 @@ struct contact_patch_t
     contact_patch_t();
 
     contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points,
-                    const ViewCArrayKokkos<double> &acc_points);
+                    const ViewCArrayKokkos<double> &acc_points, const ViewCArrayKokkos<double> &internal_force_points,
+                    const ViewCArrayKokkos<double> &contact_force_points, const ViewCArrayKokkos<double> &mass_points_);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn update_nodes
@@ -308,7 +310,7 @@ struct contact_pair_t
     /// \param del_t current time step in the analysis
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     KOKKOS_FUNCTION
-    void frictionless_increment(const contact_patches_t &contact_patches, const double &del_t);
+    void frictionless_increment(const double &del_t);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn distribute_frictionless_force
@@ -324,12 +326,11 @@ struct contact_pair_t
     /// and the left over fc_inc_total will be subtracted from the penetrating node and the patch nodes, then
     /// fc_inc_total is set to zero.
     ///
-    /// \param contact_patches contact patches object
     /// \param force_scale instead of distributing the full fc_inc, a fraction of it can be distributed to prevent large
     ///                    shocks to the solving scheme
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     KOKKOS_FUNCTION
-    void distribute_frictionless_force(contact_patches_t &contact_patches, const double &force_scale);
+    void distribute_frictionless_force(const double &force_scale);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn should_remove
