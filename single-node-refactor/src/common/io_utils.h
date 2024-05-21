@@ -1,36 +1,36 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
- This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
- National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
- Department of Energy/National Nuclear Security Administration. All rights in the program are
- reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
- Security Administration. The Government is granted for itself and others acting on its behalf a
- nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
- derivative works, distribute copies to the public, perform publicly and display publicly, and
- to permit others to do so.
- This program is open source under the BSD-3 License.
- Redistribution and use in source and binary forms, with or without modification, are permitted
- provided that the following conditions are met:
- 1.  Redistributions of source code must retain the above copyright notice, this list of
- conditions and the following disclaimer.
- 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
- conditions and the following disclaimer in the documentation and/or other materials
- provided with the distribution.
- 3.  Neither the name of the copyright holder nor the names of its contributors may be used
- to endorse or promote products derived from this software without specific prior
- written permission.
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- **********************************************************************************************/
+© 2020. Triad National Security, LLC. All rights reserved.
+This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+Department of Energy/National Nuclear Security Administration. All rights in the program are
+reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+Security Administration. The Government is granted for itself and others acting on its behalf a
+nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+derivative works, distribute copies to the public, perform publicly and display publicly, and
+to permit others to do so.
+This program is open source under the BSD-3 License.
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+1.  Redistributions of source code must retain the above copyright notice, this list of
+conditions and the following disclaimer.
+2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+conditions and the following disclaimer in the documentation and/or other materials
+provided with the distribution.
+3.  Neither the name of the copyright holder nor the names of its contributors may be used
+to endorse or promote products derived from this software without specific prior
+written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********************************************************************************************/
 #ifndef FIERRO_IO_H
 #define FIERRO_IO_H
 
@@ -50,8 +50,8 @@
 ///
 /// \brief Class for simplifying reading meshes
 ///
-/// This class contains the requisite functions required to read different 
-/// mesh formats. The idea is to set the mesh file name, and parse the 
+/// This class contains the requisite functions required to read different
+/// mesh formats. The idea is to set the mesh file name, and parse the
 /// extension to decide which reader to use. Currently, only ensight .geo
 /// files are supported.
 ///
@@ -175,8 +175,6 @@ public:
             else{
                 double dummy;
                 fscanf(in, "%le", &dummy);
-
-
             }
         } // end for
 
@@ -334,7 +332,7 @@ public:
 
         std::vector<double> origin(num_dim);
         sim_param.mesh_input.origin.update_host();
-        for(int i=0; i<num_dim; i++) origin[i] = sim_param.mesh_input.origin.host(i);
+        for (int i = 0; i < num_dim; i++) { origin[i] = sim_param.mesh_input.origin.host(i); }
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -465,7 +463,7 @@ public:
 
         std::vector<double> origin(num_dim);
         sim_param.mesh_input.origin.update_host();
-        for(int i=0; i<num_dim; i++) origin[i] = sim_param.mesh_input.origin.host(i);
+        for (int i = 0; i < num_dim; i++) { origin[i] = sim_param.mesh_input.origin.host(i); }
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -508,7 +506,6 @@ public:
             }
         }
         node.coords.update_device();
-
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
@@ -598,7 +595,7 @@ public:
 
         std::vector<double> origin(num_dim);
         sim_param.mesh_input.origin.update_host();
-        for(int i=0; i<num_dim; i++) origin[i] = sim_param.mesh_input.origin.host(i);
+        for (int i = 0; i < num_dim; i++) { origin[i] = sim_param.mesh_input.origin.host(i); }
 
         // --- 3D parameters ---
         // const int num_faces_in_elem  = 6;  // number of faces in elem
@@ -706,7 +703,7 @@ public:
     ///
     /// \fn build_3d_HexN_box
     ///
-     /// \brief Builds an unstructured high order 3D rectilinear mesh
+    /// \brief Builds an unstructured high order 3D rectilinear mesh
     ///
     /// \param Simulation mesh that is built
     /// \param Element state data
@@ -746,7 +743,7 @@ public:
     ///
     /// \fn PointIndexFromIJK
     ///
-    /// \brief Given (i,j,k) coordinates within the Lagrange hex, return an 
+    /// \brief Given (i,j,k) coordinates within the Lagrange hex, return an
     ///        offset into the local connectivity (PointIds) array.
     ///
     /// Assumes that the grid has an i,j,k structure
@@ -890,13 +887,13 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_ensight(
-        mesh_t&   mesh,
-        elem_t&   elem,
-        node_t&   node,
-        corner_t& corner,
-        simulation_parameters_t& sim_param,
-        double time_value,
-        CArray<double> graphics_times)
+    mesh_t& mesh,
+    elem_t&   elem,
+    node_t&   node,
+    corner_t& corner,
+    simulation_parameters_t& sim_param,
+    double time_value,
+    CArray<double> graphics_times)
     {
         // Update host data
         elem.den.update_host();
@@ -1216,17 +1213,16 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_vtk(
-        mesh_t&   mesh,
-        elem_t&   elem,
-        node_t&   node,
-        corner_t& corner,
-        simulation_parameters_t& sim_param,
-        double time_value,
-        CArray<double> graphics_times)
+    mesh_t&   mesh,
+    elem_t&   elem,
+    node_t&   node,
+    corner_t& corner,
+    simulation_parameters_t& sim_param,
+    double time_value,
+    CArray<double> graphics_times)
     {
         // Not yet supported
         throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
-
     }
 };
 
