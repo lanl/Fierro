@@ -227,8 +227,8 @@ struct mesh_t
     // ---- Global Mesh Definitions ---- //
     mesh_init::elem_name_tag elem_kind; ///< The type of elements used in the mesh
 
-    size_t Pn; ///< Polynomial order of kinematic space
-    size_t num_dims; ///< Number of spatial dimension
+    size_t Pn = 1; ///< Polynomial order of kinematic space
+    size_t num_dims = 3; ///< Number of spatial dimension
 
     // ---- Element Data Definitions ---- //
     size_t num_elems;   ///< Number of elements in the mesh
@@ -1472,7 +1472,7 @@ struct mesh_t
 
         // Parallel loop over boundary sets on device
         FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
-            // finde the number of patches_in_set
+            // find the number of patches_in_set
             size_t num_bdy_patches_in_set = mesh.bdy_patches_in_set.stride(bdy_set);
 
             // Loop over boundary patches in boundary set
