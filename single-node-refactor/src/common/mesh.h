@@ -225,7 +225,7 @@ struct mesh_t
     // Corner: A element-node pair
 
     // ---- Global Mesh Definitions ---- //
-    mesh_init::elem_name_tag elem_kind; ///< The type of elements used in the mesh
+    mesh_init::elem_name_tag elem_kind = mesh_init::linear_tensor_element; ///< The type of elements used in the mesh
 
     size_t Pn = 1; ///< Polynomial order of kinematic space
     size_t num_dims = 3; ///< Number of spatial dimension
@@ -949,6 +949,7 @@ struct mesh_t
                 } // k
             }); // end FOR_ALL elem_gid
         } // end if arbitrary-order element
+        
         else {
             printf("\nERROR: mesh type is not known \n");
         } // end if
