@@ -3525,6 +3525,9 @@ void Solver::init_maps()
     // create import object using local node indices map and all indices map
     comm_importer_setup();
 
+    // create export objects for reverse comms
+    comm_exporter_setup();
+
     // comms to get ghosts
     all_node_coords_distributed->doImport(*node_coords_distributed, *importer, Tpetra::INSERT);
     // all_node_nconn_distributed->doImport(*node_nconn_distributed, importer, Tpetra::INSERT);
@@ -3873,6 +3876,16 @@ void Solver::comm_importer_setup()
     // sorted element mapping
     sorted_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_elem, 0, comm));
     element_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(all_element_map, sorted_element_map));;
+}
+
+/* ----------------------------------------------------------------------
+  Setup Tpetra exporters for reverse comms
+------------------------------------------------------------------------- */
+
+void Solver::comm_exporter_setup()
+{
+    // create import object using local node indices map and ghost indices map
+    exporter = Teuchos::rcp(new Tpetra::Export<LO, GO>(all_node_map, map));
 }
 
 /* ----------------------------------------------------------------------

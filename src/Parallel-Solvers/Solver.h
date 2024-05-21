@@ -144,6 +144,8 @@ public:
 
     virtual void comm_importer_setup();
 
+    virtual void comm_exporter_setup();
+
     virtual void comm_coordinates();
 
     virtual void tecplot_writer() {}
@@ -167,6 +169,7 @@ public:
     int      nranks; // number of mpi ranks in the world communicator
     MPI_Comm world; // stores the default communicator object (MPI_COMM_WORLD)
     Teuchos::RCP<Tpetra::Import<LO, GO>> importer; // all node comms
+    Teuchos::RCP<Tpetra::Export<LO, GO>> exporter; // reverse all node comms (typically used with a combine mode like max or sum)
     Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; // ghost node comms
     Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; // sorted node comms
     Teuchos::RCP<Tpetra::Import<LO, GO>> element_sorting_importer; // sorted element comms
@@ -239,7 +242,7 @@ public:
     Teuchos::RCP<const MV> test_node_densities_distributed;
     Teuchos::RCP<MV>       all_node_densities_distributed;
     Teuchos::RCP<MV>       all_filtered_node_densities_distributed;
-    Teuchos::RCP<MV>       lower_bound_node_densities_distributed;
+    Teuchos::RCP<MV>       lower_bound_node_densities_distributed, all_lower_bound_node_densities_distributed;
     Teuchos::RCP<MV>       upper_bound_node_densities_distributed;
     Teuchos::RCP<MV>       Global_Element_Densities_Upper_Bound;
     Teuchos::RCP<MV>       Global_Element_Densities_Lower_Bound;

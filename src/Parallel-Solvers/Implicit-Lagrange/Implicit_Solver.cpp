@@ -1159,9 +1159,10 @@ void Implicit_Solver::setup_optimization_problem(){
   if(nodal_density_flag){
     //allocate global vector information
     upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
-    lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+    all_lower_bound_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
+    lower_bound_node_densities_distributed = Teuchos::rcp(new MV(*all_lower_bound_node_densities_distributed, map));
     host_vec_array node_densities_upper_bound = upper_bound_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    host_vec_array node_densities_lower_bound = lower_bound_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array node_densities_lower_bound = all_lower_bound_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
 
     //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
@@ -1172,6 +1173,8 @@ void Implicit_Solver::setup_optimization_problem(){
       else{
         node_densities_upper_bound(inode,0) = 1;
       }
+    }
+    for(int inode = 0; inode < nall_nodes; inode++){
       if(simparam.optimization_options.minimum_density>simparam.optimization_options.density_epsilon){
         node_densities_lower_bound(inode,0) = simparam.optimization_options.minimum_density;
       }
@@ -1216,10 +1219,8 @@ void Implicit_Solver::setup_optimization_problem(){
             //acquire set of nodes for this face
             for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
               current_node_index = nodes_in_elem(current_element_index,node_loop);
-              if(map->isNodeGlobalElement(current_node_index)){
-                local_node_index = map->getLocalElement(current_node_index);
-                node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
-              }
+              local_node_index = all_node_map->getLocalElement(current_node_index);
+              node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
             }// node loop for
           }//if
           else{
@@ -1260,10 +1261,8 @@ void Implicit_Solver::setup_optimization_problem(){
             //acquire set of nodes for this face
             for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
               current_node_index = nodes_in_elem(current_element_index,node_loop);
-              if(map->isNodeGlobalElement(current_node_index)){
-                local_node_index = map->getLocalElement(current_node_index);
-                node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
-              }
+              local_node_index = all_node_map->getLocalElement(current_node_index);
+              node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
             }// node loop for
           }//if
           else{
@@ -1307,6 +1306,9 @@ void Implicit_Solver::setup_optimization_problem(){
         }
       }//node for
     }//fill region for
+
+    //communicate constraints vector
+    lower_bound_node_densities_distributed->doExport(*all_lower_bound_node_densities_distributed, *exporter, Tpetra::ABSMAX, true);
   }
   else{
     //initialize memory for volume storage
