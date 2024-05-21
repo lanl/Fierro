@@ -61,18 +61,19 @@ int main(int argc, char* argv[])
     } // end if
 
     Kokkos::initialize();
+    {
 
-    // Create driver
-    Driver* driver;
-    driver = new Driver(argv[1]);
+        // Create driver
+        Driver* driver = new Driver(argv[1]);
 
-    driver->initialize();
-    driver->setup();
-    driver->run();
-    driver->finalize();
+        driver->initialize();
+        driver->setup();
+        driver->run();
+        driver->finalize();
 
-    // Delete driver
-    delete driver;
+        // Delete driver
+        delete driver;
+    }
 
     Kokkos::finalize();
 
