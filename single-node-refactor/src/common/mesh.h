@@ -130,22 +130,7 @@ struct zones_in_elem_t
             return elem_gid * num_zones_in_elem_ + zone_lid;
         };
 
-        /////////////////////////////////////////////////////////////////////////////
-        ///
-        /// \fn operator ()
-        ///
-        /// \brief <insert brief description>
-        ///
-        /// <Insert longer more detailed description which
-        /// can span multiple lines if needed>
-        ///
-        /// \param <function parameter description>
-        /// \param <function parameter description>
-        /// \param <function parameter description>
-        ///
-        /// \return <return type and definition description if not void>
-        ///
-        /////////////////////////////////////////////////////////////////////////////
+        // Return the global zone ID given an element gloabl ID and a local zone ID
         KOKKOS_INLINE_FUNCTION
         size_t operator()(const size_t elem_gid, const size_t zone_lid) const
         {
@@ -172,22 +157,7 @@ struct legendre_in_elem_t
             return elem_gid * num_leg_gauss_in_elem_ + leg_gauss_lid;
         };
 
-        /////////////////////////////////////////////////////////////////////////////
-        ///
-        /// \fn operator ()
-        ///
-        /// \brief <insert brief description>
-        ///
-        /// <Insert longer more detailed description which
-        /// can span multiple lines if needed>
-        ///
-        /// \param <function parameter description>
-        /// \param <function parameter description>
-        /// \param <function parameter description>
-        ///
-        /// \return <return type and definition description if not void>
-        ///
-        /////////////////////////////////////////////////////////////////////////////
+        // Return the global gauss ID given an element gloabl ID and a local gauss ID
         KOKKOS_INLINE_FUNCTION
         size_t operator()(const size_t elem_gid, const size_t leg_gauss_lid) const
         {
@@ -214,22 +184,7 @@ struct lobatto_in_elem_t
             return elem_gid * num_lob_gauss_in_elem_ + lob_gauss_lid;
         };
 
-        /////////////////////////////////////////////////////////////////////////////
-        ///
-        /// \fn operator ()
-        ///
-        /// \brief <insert brief description>
-        ///
-        /// <Insert longer more detailed description which
-        /// can span multiple lines if needed>
-        ///
-        /// \param <function parameter description>
-        /// \param <function parameter description>
-        /// \param <function parameter description>
-        ///
-        /// \return <return type and definition description if not void>
-        ///
-        /////////////////////////////////////////////////////////////////////////////
+        // Return the global gauss ID given an element gloabl ID and a local gauss ID
         KOKKOS_INLINE_FUNCTION
         size_t operator()(const size_t elem_gid, const size_t lob_gauss_lid) const
         {
@@ -261,127 +216,93 @@ struct lobatto_in_elem_t
 // mesh sizes and connectivity data structures
 struct mesh_t
 {
-    mesh_init::elem_name_tag elem_kind;
+    // ******* Entity Definitions **********//
+    // Element: A hexahedral volume
+    // Zone: A discretization of an element base on subdividing the element using the nodes
+    // Node: A kinematic degree of freedom
+    // Surface: The 2D surface of the element
+    // Patch: A discretization of a surface by subdividing the surface using the nodes
+    // Corner: A element-node pair
 
-    size_t Pn;
+    // ---- Global Mesh Definitions ---- //
+    mesh_init::elem_name_tag elem_kind; ///< The type of elements used in the mesh
 
-    size_t num_dims;
+    size_t Pn; ///< Polynomial order of kinematic space
+    size_t num_dims; ///< Number of spatial dimension
 
-    size_t num_nodes;
+    // ---- Element Data Definitions ---- //
+    size_t num_elems;   ///< Number of elements in the mesh
+    size_t num_nodes_in_elem;   ///< Number of nodes in an element
+    size_t num_patches_in_elem; ///< Number of patches in an element
+    size_t num_surfs_in_elem;   ///< Number of surfaces in an element
+    size_t num_zones_in_elem;   ///< Number of zones in an element
 
-    size_t num_elems;
-    size_t num_nodes_in_elem;
-    size_t num_patches_in_elem;
-    size_t num_surfs_in_elem;
-    size_t num_patches_in_surf;  // high-order mesh class
+    size_t num_leg_gauss_in_elem; ///< Number of Gauss Legendre points in an element
+    size_t num_lob_gauss_in_elem; ///< Number of Gauss Lobatto points in an element
 
-    size_t num_corners;
+    DCArrayKokkos<size_t> nodes_in_elem; ///< Nodes in an element
+    CArrayKokkos<size_t> corners_in_elem; ///< Corners in an element
 
-    size_t num_patches;
-    size_t num_surfs;           // high_order mesh class
-    size_t num_zones;           // high_order mesh class
-    size_t num_nodes_in_zone;
-    size_t num_zones_in_elem;
+    RaggedRightArrayKokkos<size_t> elems_in_elem; ///< Elements connected to an element
+    CArrayKokkos<size_t> num_elems_in_elem; ///< Number of elements connected to an element
 
-    size_t num_leg_gauss_in_elem;
-    size_t num_lob_gauss_in_elem;
+    CArrayKokkos<size_t> patches_in_elem; ///< Patches in an element (including internal patches)
+    CArrayKokkos<size_t> surfs_in_elem; ///< Surfaces on an element
 
-    // num_leg_gauss_in_elem = std::pow(2*Pn, num_dims);
-    // legendre_in_elem_t legendre_in_elem;
-    // num_lob_gauss_in_elem = std::pow(2*Pn+1, num_dims);
+    // CArrayKokkos <size_t> zones_in_elem; ///< Zones in an element
+    zones_in_elem_t zones_in_elem; ///< Zones in an element
+    lobatto_in_elem_t lobatto_in_elem; ///< Gauss Lobatto points in an element
+    legendre_in_elem_t legendre_in_elem; ///< Gauss Legendre points in an element
 
-    size_t num_bdy_patches;
-    size_t num_bdy_nodes;
-    size_t num_bdy_sets;
-    size_t num_nodes_in_patch;
-    size_t num_nodes_in_surf;
+    // ---- Node Data Definitions ---- //
+    size_t num_nodes; ///< Number of nodes in the mesh
 
-    // Surface quadrature
-    // size_t num_lobatto_in_patch;
-    // size_t num_legendre_in_patch;
+    RaggedRightArrayKokkos<size_t> corners_in_node; ///< Corners connected to a node
+    CArrayKokkos<size_t> num_corners_in_node;       ///< Number of corners connected to a node
+    RaggedRightArrayKokkos<size_t> elems_in_node; ///< Elements connected to a given node
+    RaggedRightArrayKokkos<size_t> nodes_in_node; ///< Nodes connected to a node along an edge
+    CArrayKokkos<size_t> num_nodes_in_node; ///< Number of nodes connected to a node along an edge
 
-    // mesh index converting
-    CArray<size_t> convert_vtk_to_fierro;
-    CArray<size_t> convert_fierro_to_vtk;
+    // ---- Surface Data Definitions ---- //
+    size_t num_surfs;   ///< Number of surfaces in the mesh
+    size_t num_nodes_in_surf;   ///< Number of nodes in a surface
+    size_t num_patches_in_surf; ///< Number of patches in a surface
 
-    // ---- nodes ----
+    CArrayKokkos<size_t> patches_in_surf; ///< Patches in a surface
+    CArrayKokkos<size_t> nodes_in_surf; ///< Nodes connected to a surface
+    CArrayKokkos<size_t> elems_in_surf; ///< Elements connected to a surface
 
-    // corner ids in node
-    RaggedRightArrayKokkos<size_t> corners_in_node;
-    CArrayKokkos<size_t> num_corners_in_node;
+    // ---- Patch Data Definitions ---- //
+    size_t num_patches; ///< Number of patches in the mesh
+    size_t num_nodes_in_patch;  ///< Number of nodes in a patch
+    // size_t num_lobatto_in_patch; ///< Number of Gauss Lobatto nodes in a patch
+    // size_t num_legendre_in_patch; ///< Number of Gauss Legendre nodes in a patch
 
-    // elem ids in node
-    RaggedRightArrayKokkos<size_t> elems_in_node;
+    CArrayKokkos<size_t> nodes_in_patch; ///< Nodes connected to a patch
+    CArrayKokkos<size_t> elems_in_patch; ///< Elements connected to a patch
+    CArrayKokkos<size_t> surf_in_patch; ///< Surfaces connected to a patch (co-planar)
 
-    // node ids in node
-    RaggedRightArrayKokkos<size_t> nodes_in_node;
-    CArrayKokkos<size_t> num_nodes_in_node;
+    // ---- Corner Data Definitions ---- //
+    size_t num_corners; ///< Number of corners (define) in the mesh
 
-    // ---- elems ----
+    // ---- Zone Data Definitions ---- //
+    size_t num_zones;   ///< Number of zones in the mesh
+    size_t num_nodes_in_zone; ///< Number of nodes in a zone
 
-    // node ids in elem
-    DCArrayKokkos<size_t> nodes_in_elem;
-
-    // corner ids in elem
-    CArrayKokkos<size_t> corners_in_elem;
-
-    // elem ids in elem
-    RaggedRightArrayKokkos<size_t> elems_in_elem;
-    CArrayKokkos<size_t> num_elems_in_elem;
-
-    // patch ids in elem
-    CArrayKokkos<size_t> patches_in_elem;
-
-    // surface ids in elem
-    CArrayKokkos<size_t> surfs_in_elem;  // high-order mesh class
-
-    // zone ids in elem
-    // CArrayKokkos <size_t> zones_in_elem;     // high-order mesh class
-    zones_in_elem_t zones_in_elem;
-
-    // gauss points in elem
-    lobatto_in_elem_t lobatto_in_elem;
-    legendre_in_elem_t legendre_in_elem;
-
-    // ---- patches / surfaces ----
-
-    // node ids in a patch
-    CArrayKokkos<size_t> nodes_in_patch;
-
-    // element ids in a patch
-    CArrayKokkos<size_t> elems_in_patch;
-
-    // the two element ids sharing a surface
-    CArrayKokkos<size_t> elems_in_surf;
-
-    // patch ids in a surface
-    CArrayKokkos<size_t> patches_in_surf;  // high-order mesh class
-
-    CArrayKokkos<size_t> surf_in_patch;       // high-order mesh class
-
-    CArrayKokkos<size_t> nodes_in_surf;
-
-    CArrayKokkos<size_t> nodes_in_zone;
-
+    CArrayKokkos<size_t> nodes_in_zone; ///< Nodes defining a zone
     // nodes_in_zone_t nodes_in_zone;
-    // Surface quadrature
-    // CArrayKokkos <size_t> legendre_in_patch;
-    // CArrayKokkos <size_t> lobatto_in_patch;
 
-    // ---- bdy ----
+    // ---- Boundary Data Definitions ---- //
+    size_t num_bdy_sets;    ///< Number of boundary sets
+    size_t num_bdy_nodes;   ///< Number of boundary nodes
+    size_t num_bdy_patches; ///< Number of boundary patches
 
-    // bdy_patches
-    CArrayKokkos<size_t> bdy_patches;
+    CArrayKokkos<size_t> bdy_patches; ///< Boundary patches
+    CArrayKokkos<size_t> bdy_nodes;   ///< Boundary nodes
 
-    // bdy nodes
-    CArrayKokkos<size_t> bdy_nodes;
-
-    // patch ids in bdy set
-    DynamicRaggedRightArrayKokkos<size_t> bdy_patches_in_set;
-
-    // node ids in bdy_patch set
-    RaggedRightArrayKokkos<size_t> bdy_nodes_in_set;
-    DCArrayKokkos<size_t> num_bdy_nodes_in_set;
+    DynamicRaggedRightArrayKokkos<size_t> bdy_patches_in_set; ///< Boundary patches in a boundary set
+    RaggedRightArrayKokkos<size_t> bdy_nodes_in_set; ///< Boundary nodes in a boundary set
+    DCArrayKokkos<size_t> num_bdy_nodes_in_set; ///< Number of boundary nodes in a set
 
     // initialization methods
     void initialize_nodes(const size_t num_nodes_inp)

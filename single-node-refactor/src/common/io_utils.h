@@ -887,7 +887,7 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_ensight(
-    mesh_t& mesh,
+    mesh_t&   mesh,
     elem_t&   elem,
     node_t&   node,
     corner_t& corner,
