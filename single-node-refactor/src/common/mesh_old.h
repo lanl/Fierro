@@ -36,27 +36,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "matar.h"
 #include "state.h"
-#include "ref_elem.h"
-#include <cmath>
 
 #define PI 3.141592653589793
 
-using namespace mtr;
-
 struct boundary_condition_t;
 
-namespace mesh_init
-{
-// element mesh types
-enum elem_name_tag
-{
-    linear_simplex_element = 0,
-    linear_tensor_element = 1,
-    arbitrary_tensor_element = 2
-};
-
-// other enums could go here on the mesh
-} // end namespace
+using namespace mtr;
 
 /*
 ==========================
@@ -112,197 +97,93 @@ void bubble_sort(size_t arr[], const size_t num)
     } // end for i
 } // end function
 
-struct zones_in_elem_t
-{
-    private:
-        size_t num_zones_in_elem_;
-    public:
-        zones_in_elem_t() {
-        };
-
-        zones_in_elem_t(const size_t num_zones_in_elem_inp) {
-            this->num_zones_in_elem_ = num_zones_in_elem_inp;
-        };
-
-        // return global zone index for given local zone index in an element
-        size_t  host(const size_t elem_gid, const size_t zone_lid) const
-        {
-            return elem_gid * num_zones_in_elem_ + zone_lid;
-        };
-
-        // Return the global zone ID given an element gloabl ID and a local zone ID
-        KOKKOS_INLINE_FUNCTION
-        size_t operator()(const size_t elem_gid, const size_t zone_lid) const
-        {
-            return elem_gid * num_zones_in_elem_ + zone_lid;
-        };
-};
-
-// if material points are defined strictly internal to the element.
-struct legendre_in_elem_t
-{
-    private:
-        size_t num_leg_gauss_in_elem_;
-    public:
-        legendre_in_elem_t() {
-        };
-
-        legendre_in_elem_t(const size_t num_leg_gauss_in_elem_inp) {
-                this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
-        };
-
-        // return global gauss index for given local gauss index in an element
-        size_t  host(const size_t elem_gid, const size_t leg_gauss_lid) const
-        {
-            return elem_gid * num_leg_gauss_in_elem_ + leg_gauss_lid;
-        };
-
-        // Return the global gauss ID given an element gloabl ID and a local gauss ID
-        KOKKOS_INLINE_FUNCTION
-        size_t operator()(const size_t elem_gid, const size_t leg_gauss_lid) const
-        {
-            return elem_gid * num_leg_gauss_in_elem_ + leg_gauss_lid;
-        };
-};
-
-/// if material points are defined at element interfaces
-struct lobatto_in_elem_t
-{
-    private:
-        size_t num_lob_gauss_in_elem_;
-    public:
-        lobatto_in_elem_t() {
-        };
-
-        lobatto_in_elem_t(const size_t num_lob_gauss_in_elem_inp) {
-                this->num_lob_gauss_in_elem_ = num_lob_gauss_in_elem_inp;
-        };
-
-        // return global gauss index for given local gauss index in an element
-        size_t  host(const size_t elem_gid, const size_t lob_gauss_lid) const
-        {
-            return elem_gid * num_lob_gauss_in_elem_ + lob_gauss_lid;
-        };
-
-        // Return the global gauss ID given an element gloabl ID and a local gauss ID
-        KOKKOS_INLINE_FUNCTION
-        size_t operator()(const size_t elem_gid, const size_t lob_gauss_lid) const
-        {
-            return elem_gid * num_lob_gauss_in_elem_ + lob_gauss_lid;
-        };
-};
-
-// struct nodes_in_zone_t {
-//     private:
-//          size_t num_nodes_in_zone_;
-//     public:
-//          nodes_in_zone_t(){};
-
-//          nodes_in_zone_t(const size_t num_nodes_in_zone_inp){
-//                  this->num_nodes_in_zone_ = num_nodes_in_zone_inp;
-//          };
-
-//         // return global zone index for given local zone index in an element
-//         size_t  host(const size_t zone_gid, const size_t node_lid) const{
-//             return zone_gid*num_nodes_in_zone_ + node_lid;
-//          };
-
-//         KOKKOS_INLINE_FUNCTION
-//         size_t operator()(const size_t zone_gid, const size_t node_lid) const{
-//             return zone_gid*num_nodes_in_zone_ + node_lid;
-//         };
-// };
-
 // mesh sizes and connectivity data structures
 struct mesh_t
 {
-    // ******* Entity Definitions **********//
-    // Element: A hexahedral volume
-    // Zone: A discretization of an element base on subdividing the element using the nodes
-    // Node: A kinematic degree of freedom
-    // Surface: The 2D surface of the element
-    // Patch: A discretization of a surface by subdividing the surface using the nodes
-    // Corner: A element-node pair
+    size_t num_dims;
 
-    // ---- Global Mesh Definitions ---- //
-    mesh_init::elem_name_tag elem_kind = mesh_init::linear_tensor_element; ///< The type of elements used in the mesh
+    size_t num_nodes;
 
-    size_t Pn = 1; ///< Polynomial order of kinematic space
-    size_t num_dims = 3; ///< Number of spatial dimension
+    size_t num_elems;
+    size_t num_nodes_in_elem;
+    size_t num_patches_in_elem;
+    size_t num_surfs_in_elem;
+    size_t num_patches_in_surf;  // high-order mesh class
 
-    // ---- Element Data Definitions ---- //
-    size_t num_elems;   ///< Number of elements in the mesh
-    size_t num_nodes_in_elem;   ///< Number of nodes in an element
-    size_t num_patches_in_elem; ///< Number of patches in an element
-    size_t num_surfs_in_elem;   ///< Number of surfaces in an element
-    size_t num_zones_in_elem;   ///< Number of zones in an element
+    size_t num_corners;
 
-    size_t num_leg_gauss_in_elem; ///< Number of Gauss Legendre points in an element
-    size_t num_lob_gauss_in_elem; ///< Number of Gauss Lobatto points in an element
+    size_t num_patches;
+    size_t num_surfs;           // high_order mesh class
 
-    DCArrayKokkos<size_t> nodes_in_elem; ///< Nodes in an element
-    CArrayKokkos<size_t> corners_in_elem; ///< Corners in an element
+    size_t num_bdy_patches;
+    size_t num_bdy_nodes;
+    size_t num_bdy_sets;
+    size_t num_nodes_in_patch;
 
-    RaggedRightArrayKokkos<size_t> elems_in_elem; ///< Elements connected to an element
-    CArrayKokkos<size_t> num_elems_in_elem; ///< Number of elements connected to an element
+    // ---- nodes ----
 
-    CArrayKokkos<size_t> patches_in_elem; ///< Patches in an element (including internal patches)
-    CArrayKokkos<size_t> surfs_in_elem; ///< Surfaces on an element
+    // corner ids in node
+    RaggedRightArrayKokkos<size_t> corners_in_node;
+    CArrayKokkos<size_t> num_corners_in_node;
 
-    // CArrayKokkos <size_t> zones_in_elem; ///< Zones in an element
-    zones_in_elem_t zones_in_elem; ///< Zones in an element
-    lobatto_in_elem_t lobatto_in_elem; ///< Gauss Lobatto points in an element
-    legendre_in_elem_t legendre_in_elem; ///< Gauss Legendre points in an element
+    // elem ids in node
+    RaggedRightArrayKokkos<size_t> elems_in_node;
 
-    // ---- Node Data Definitions ---- //
-    size_t num_nodes; ///< Number of nodes in the mesh
+    // node ids in node
+    RaggedRightArrayKokkos<size_t> nodes_in_node;
+    CArrayKokkos<size_t> num_nodes_in_node;
 
-    RaggedRightArrayKokkos<size_t> corners_in_node; ///< Corners connected to a node
-    CArrayKokkos<size_t> num_corners_in_node;       ///< Number of corners connected to a node
-    RaggedRightArrayKokkos<size_t> elems_in_node; ///< Elements connected to a given node
-    RaggedRightArrayKokkos<size_t> nodes_in_node; ///< Nodes connected to a node along an edge
-    CArrayKokkos<size_t> num_nodes_in_node; ///< Number of nodes connected to a node along an edge
+    // ---- elems ----
 
-    // ---- Surface Data Definitions ---- //
-    size_t num_surfs;   ///< Number of surfaces in the mesh
-    size_t num_nodes_in_surf;   ///< Number of nodes in a surface
-    size_t num_patches_in_surf; ///< Number of patches in a surface
+    // node ids in elem
+    DCArrayKokkos<size_t> nodes_in_elem;
 
-    CArrayKokkos<size_t> patches_in_surf; ///< Patches in a surface
-    CArrayKokkos<size_t> nodes_in_surf; ///< Nodes connected to a surface
-    CArrayKokkos<size_t> elems_in_surf; ///< Elements connected to a surface
+    // corner ids in elem
+    CArrayKokkos<size_t> corners_in_elem;
 
-    // ---- Patch Data Definitions ---- //
-    size_t num_patches; ///< Number of patches in the mesh
-    size_t num_nodes_in_patch;  ///< Number of nodes in a patch
-    // size_t num_lobatto_in_patch; ///< Number of Gauss Lobatto nodes in a patch
-    // size_t num_legendre_in_patch; ///< Number of Gauss Legendre nodes in a patch
+    // elem ids in elem
+    RaggedRightArrayKokkos<size_t> elems_in_elem;
+    CArrayKokkos<size_t> num_elems_in_elem;
 
-    CArrayKokkos<size_t> nodes_in_patch; ///< Nodes connected to a patch
-    CArrayKokkos<size_t> elems_in_patch; ///< Elements connected to a patch
-    CArrayKokkos<size_t> surf_in_patch; ///< Surfaces connected to a patch (co-planar)
+    // patch ids in elem
+    CArrayKokkos<size_t> patches_in_elem;
 
-    // ---- Corner Data Definitions ---- //
-    size_t num_corners; ///< Number of corners (define) in the mesh
+    // surface ids in elem
+    CArrayKokkos<size_t> surfs_in_elem;  // high-order mesh class
 
-    // ---- Zone Data Definitions ---- //
-    size_t num_zones;   ///< Number of zones in the mesh
-    size_t num_nodes_in_zone; ///< Number of nodes in a zone
+    // surface ids in elem
+    CArrayKokkos<size_t> zones_in_elem;     // high-order mesh class
 
-    CArrayKokkos<size_t> nodes_in_zone; ///< Nodes defining a zone
-    // nodes_in_zone_t nodes_in_zone;
+    // ---- patches / surfaces ----
 
-    // ---- Boundary Data Definitions ---- //
-    size_t num_bdy_sets;    ///< Number of boundary sets
-    size_t num_bdy_nodes;   ///< Number of boundary nodes
-    size_t num_bdy_patches; ///< Number of boundary patches
+    // node ids in a patch
+    CArrayKokkos<size_t> nodes_in_patch;
 
-    CArrayKokkos<size_t> bdy_patches; ///< Boundary patches
-    CArrayKokkos<size_t> bdy_nodes;   ///< Boundary nodes
+    // element ids in a patch
+    CArrayKokkos<size_t> elems_in_patch;
 
-    DynamicRaggedRightArrayKokkos<size_t> bdy_patches_in_set; ///< Boundary patches in a boundary set
-    RaggedRightArrayKokkos<size_t> bdy_nodes_in_set; ///< Boundary nodes in a boundary set
-    DCArrayKokkos<size_t> num_bdy_nodes_in_set; ///< Number of boundary nodes in a set
+    // the two element ids sharing a surface
+    CArrayKokkos<size_t> elems_in_surf;
+
+    // patch ids in a surface
+    CArrayKokkos<size_t> patches_in_surf;  // high-order mesh class
+
+    CArrayKokkos<size_t> surf_in_patch;       // high-order mesh class
+
+    // ---- bdy ----
+
+    // bdy_patches
+    CArrayKokkos<size_t> bdy_patches;
+
+    // bdy nodes
+    CArrayKokkos<size_t> bdy_nodes;
+
+    // patch ids in bdy set
+    DynamicRaggedRightArrayKokkos<size_t> bdy_patches_in_set;
+
+    // node ids in bdy_patch set
+    RaggedRightArrayKokkos<size_t> bdy_nodes_in_set;
+    DCArrayKokkos<size_t> num_bdy_nodes_in_set;
 
     // initialization methods
     void initialize_nodes(const size_t num_nodes_inp)
@@ -323,36 +204,6 @@ struct mesh_t
         num_elems       = num_elems_inp;
         nodes_in_elem   = DCArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.nodes_in_elem");
         corners_in_elem = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
-
-        return;
-    }; // end method
-
-    // initialization method
-    void initialize_elems_Pn(const size_t num_elems_inp,
-        const size_t num_nodes_in_elem_inp,
-        const size_t num_gauss_leg_in_elem_inp,
-        const size_t num_zones_in_elem_inp,
-        const size_t num_nodes_in_zone_inp,
-        const size_t num_surfs_in_elem_inp,
-        const size_t num_dims_inp)
-    {
-        num_dims  = num_dims_inp;
-        num_elems = num_elems_inp;
-
-        num_nodes_in_elem     = num_nodes_in_elem_inp;
-        num_nodes_in_zone     = num_nodes_in_zone_inp;
-        num_leg_gauss_in_elem = num_gauss_leg_in_elem_inp;
-        num_zones_in_elem     = num_zones_in_elem_inp;
-        num_surfs_in_elem     = num_surfs_in_elem_inp;
-
-        num_zones = num_zones_in_elem * num_elems;
-
-        nodes_in_elem    = DCArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.nodes_in_elem");
-        corners_in_elem  = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
-        zones_in_elem    = zones_in_elem_t(num_zones_in_elem);
-        surfs_in_elem    = CArrayKokkos<size_t>(num_elems, num_surfs_in_elem, "mesh.surfs_in_zone");
-        nodes_in_zone    = CArrayKokkos<size_t>(num_zones, num_nodes_in_zone, "mesh.nodes_in_zone");
-        legendre_in_elem = legendre_in_elem_t(num_leg_gauss_in_elem);
 
         return;
     }; // end method
@@ -398,7 +249,7 @@ struct mesh_t
         // he elems_in_elem data type
         elems_in_node = RaggedRightArrayKokkos<size_t>(num_corners_in_node, "mesh.elems_in_node");
 
-        // populate the elements connected to a node list and corners in a node
+        // populate the elems connected to a node list and corners in a node
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             FOR_ALL_CLASS(node_lid, 0, num_nodes_in_elem, {
                 // get the global_id of the node
@@ -508,468 +359,58 @@ struct mesh_t
     // build the patches
     void build_patch_connectivity()
     {
-        // WARNING WARNING
-        // the mesh element kind should be in the input file and set when reading mesh
-        // mesh_elem_kind = mesh_init::linear_tensor_element; // MUST BE SET
+        size_t high_order = 0;
 
         // building patches
+        DViewCArrayKokkos<size_t> node_ordering_in_elem;  // node lids in a patch
 
-        num_nodes_in_patch = 2 * (num_dims - 1);  // 2 (2D) or 4 (3D)
-        num_surfs_in_elem  = 2 * num_dims; // 4 (2D) or 6 (3D)
+        num_nodes_in_patch  = 2 * (num_dims - 1); // 2 (2D) or 4 (3D)
+        num_patches_in_elem = 2 * num_dims; // 4 (2D) or 6 (3D)
 
-        // num_lobatto_in_patch = int(pow(3, num_dims-1));
-
-        // num_legendre_in_patch = 2*(num_dims-1);
-
-        size_t num_patches_in_surf;  // = Pn_order or = Pn_order*Pn_order
-
-        size_t num_1D = Pn + 1; // number of nodes in 1D
-
-        // num quad points 1D //
-        // size_t num_lob_1D = 2*Pn + 1;
-        // size_t num_leg_1D = 2*Pn;
-
-        DCArrayKokkos<size_t> node_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_nodes_in_patch);
-
-        // DCArrayKokkos <size_t> lobatto_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_lobatto_in_patch);
-
-        // DCArrayKokkos <size_t> legendre_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_legendre_in_patch);
-
-        printf("num_dims = %zu \n", num_dims);
+        size_t node_lids_in_patch_in_elem[24];
 
         if (num_dims == 3) {
-            // num_patches_in_surf = [1^2, 2^2, 3^2, 4^2, ... , Pn^2]
+            size_t temp_node_lids[24] = { 0, 4, 7, 3,
+                                          1, 2, 6, 5,
+                                          0, 1, 5, 4,
+                                          2, 3, 7, 6,
+                                          0, 3, 2, 1,
+                                          4, 5, 6, 7 };
 
-            num_patches_in_surf = Pn * Pn;
-
-            num_patches_in_elem = num_patches_in_surf * num_surfs_in_elem;
-
-            // nodes in a patch in the element
-            node_ordering_in_elem = DCArrayKokkos<size_t>(num_patches_in_elem, num_nodes_in_patch, "node_ordering_in_elem");
-
-            // lobatto_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_lobatto_in_patch);
-
-            // legendre_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_legendre_in_patch);
-
-            // printf("num_patches_in_elem = %zu \n", num_patches_in_elem);
-            // printf("num_nodes_in_patch = %zu \n", num_nodes_in_patch);
-            // printf("num_lobatto_in_patch = %zu \n", num_lobatto_in_patch);
-            // printf("num_legendre_in_patch = %zu \n", num_legendre_in_patch);
-            printf("num_surfaces = %zu \n", num_surfs_in_elem);
+            for (size_t i = 0; i < 24; i++) {
+                node_lids_in_patch_in_elem[i] = temp_node_lids[i];
+            } // end for i
         }
-        else {
-            num_patches_in_surf = Pn;
-
-            num_patches_in_elem = num_patches_in_surf * num_surfs_in_elem;
-
-            // nodes in a patch in the element
-            node_ordering_in_elem = DCArrayKokkos<size_t>(num_patches_in_elem, num_nodes_in_patch, "node_ordering_in_elem");
-            // lobatto_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_lobatto_in_patch);
-            // legendre_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_legendre_in_patch);
-        } // end if dim
-
-        // On the CPU, set the node order for the patches in an element
-        // classic linear elements
-        if (elem_kind == mesh_init::linear_tensor_element) {
-            if (num_dims == 3) {
-                size_t temp_node_lids[24] = { 0, 4, 7, 3,
-                                              1, 2, 6, 5,
-                                              0, 1, 5, 4,
-                                              2, 3, 7, 6,
-                                              0, 3, 2, 1,
-                                              4, 5, 6, 7 };
-
-                int count = 0;
-                int elem_patch_lid = 0;
-                for (size_t surf_lid = 0; surf_lid < num_surfs_in_elem; surf_lid++) {
-                    for (size_t patch_lid = 0; patch_lid < num_patches_in_surf; patch_lid++) {
-                        for (size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++) {
-                            node_ordering_in_elem.host(elem_patch_lid, node_lid) = temp_node_lids[count];
-                            // legendre_ordering_in_elem.host( elem_patch_lid, node_lid ) = temp_node_lids[count];
-                            count++;
-                        } // end for node_lid
-                        elem_patch_lid++;
-                    } // end for patch_lid in a surface
-                } // end for i
-
-                // count = 0;
-                // elem_patch_lid = 0;
-                // for ( size_t surf_lid=0; surf_lid < num_surfs_in_elem; surf_lid++ ){
-                //     for ( size_t patch_lid=0; patch_lid < num_patches_in_surf; patch_lid++ ){
-                //         for ( size_t lobatto_lid=0; lobatto_lid < num_lobatto_in_patch; lobatto_lid++ ){
-                //             lobatto_ordering_in_elem.host( elem_patch_lid, lobatto_lid ) = temp_node_lids[count];
-                //             count++;
-                //         } // end for node_lid
-                //         elem_patch_lid ++;
-                //     } // end for patch_lid in a surface
-                // } // end for i
-            }
-            else {
-                //   J
-                //   |
-                // 3---2
-                // |   |  -- I
-                // 0---1
-                //
-                size_t temp_node_lids[8] =
-                { 0, 3,
-                  1, 2,
-                  0, 1,
-                  3, 2 };
-
-                int count = 0;
-                int elem_patch_lid = 0;
-                for (size_t surf_lid = 0; surf_lid < num_surfs_in_elem; surf_lid++) {
-                    for (size_t patch_lid = 0; patch_lid < num_patches_in_surf; patch_lid++) {
-                        for (size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++) {
-                            node_ordering_in_elem.host(elem_patch_lid, node_lid) = temp_node_lids[count];
-                            // legendre_ordering_in_elem.host( elem_patch_lid, node_lid ) = temp_node_lids[count];
-                            count++;
-                        } // end for node_lid
-                        elem_patch_lid++;
-                    } // end for patch_lid in a surface
-                } // end for i
-            } // end if on dims
-        } // end of linear element iwth classic numbering
-        // -----
-        // arbitrary-order element
-        // -----
-        else if (elem_kind == mesh_init::arbitrary_tensor_element) {
-            size_t temp_node_lids[num_nodes_in_patch * num_patches_in_surf * num_surfs_in_elem];
-
-            printf("arbitrary order tensor element \n");
-
-            // arbitrary-order node ordering in patches of an element
-            if (num_dims == 3) {
-                /*
-
-                    i,j,k layout
-
-                    k  j
-                    | /
-                    |/
-                    o-->i
-
-
-                    i=0,imax
-                    o (j+1,k+1)
-                    /|
-                    (j,k+1) o o (j+1,k)
-                    |/
-                    (j,k) o
-
-                    */
-
-                int count = 0;
-
-                int i_patch, j_patch, k_patch;
-
-                // i-minus-dir patches
-
-                i_patch = 0;
-                for (int k = 0; k < num_1D - 1; k++) {
-                    for (int j = 0; j < num_1D - 1; j++) {
-                        // node_lid 0 in patch
-                        // index = i + j*num_1D + k*num_1D*num_1D;
-                        temp_node_lids[count] = i_patch + j * num_1D + k * num_1D * num_1D; // node_rid(i_patch, j, k, num_1D);
-                        count++;
-
-                        // node_lid 1 in patch
-                        // index = i + j*num_1D + (k+1)*num_1D*num_1D;
-                        temp_node_lids[count] = i_patch + j * num_1D + (k + 1) * num_1D * num_1D; // node_rid(i_patch, j, k+1, num_1D);
-                        count++;
-
-                        // node_lid 2 in patch
-                        // index = i + (j+1)*num_1D + (k+1)*num_1D*num_1D;
-                        temp_node_lids[count] = i_patch + (j + 1) * num_1D + (k + 1) * num_1D * num_1D; // node_rid(i_patch, j+1, k+1, num_1D);
-                        count++;
-
-                        // node_lid 3 in patch
-                        // index = i + (j+1)*num_1D + k*num_1D*num_1D;
-                        temp_node_lids[count] = i_patch + (j + 1) * num_1D + k * num_1D * num_1D; // node_rid(i_patch, j+1, k, num_1D);
-                        count++;
-                    } // end for k
-                } // end for j
-
-                // printf("i-minus\n");
-
-                // i-plus-dir patches
-                i_patch = num_1D - 1;
-                // printf("num_1D = %zu \n", num_1D);
-                // printf("i_patch = %d \n", i_patch);
-                printf("num_nodes_in_elem %zu \n", num_nodes_in_elem);
-                for (int k = 0; k < num_1D - 1; k++) {
-                    for (int j = 0; j < num_1D - 1; j++) {
-                        // node_lid 0 in patch
-                        // index = i + j*num_1D + k*num_1D*num_1D;
-                        temp_node_lids[count] = i_patch + j * num_1D + k * num_1D * num_1D; // node_rid(i_patch, j, k, num_1D);
-                        count++;
-
-                        // node_lid 1 in patch
-                        // index = i + (j+1)*num_1D + k*num_1D*num_1D;
-                        temp_node_lids[count] = i_patch + (j + 1) * num_1D + k * num_1D * num_1D; // node_rid(i_patch, j+1, k, num_1D);
-                        count++;
-
-                        // node_lid 2 in patch
-                        // index = i + (j+1)*num_1D + (k+1)*num_1D*num_1D;
-                        temp_node_lids[count] = i_patch + (j + 1) * num_1D + (k + 1) * num_1D * num_1D; // node_rid(i_patch, j+1, k+1, num_1D);
-                        count++;
-
-                        // node_lid 3 in patch
-                        // index = i + j*num_1D + (k+1)*num_1D*num_1D;
-                        temp_node_lids[count] = i_patch + j * num_1D + (k + 1) * num_1D * num_1D; // node_rid(i_patch, j, k+1, num_1D);
-                        count++;
-                    } // end for j
-                } // end for k
-
-                // printf("i-plus\n");
-
-                /*
-
-                    i,j,k layout
-
-                    k  j
-                    | /
-                    |/
-                    o-->i
-
-
-                    j=0,jmax
-
-                    (i,,k+1) o--o (i+1,,k+1)
-                    |  |
-                    (i,,k) o--o (i+1,,k)
-
-                    */
-
-                j_patch = 0;
-                for (int k = 0; k < num_1D - 1; k++) {
-                    for (int i = 0; i < num_1D - 1; i++) {
-                        // node_lid 0 in patch
-                        temp_node_lids[count] = i + j_patch * num_1D + k * num_1D * num_1D; // node_rid(i, j_patch, k, num_1D);
-                        count++;
-
-                        // node_lid 1 in patch
-                        temp_node_lids[count] = i + 1 + j_patch * num_1D + k * num_1D * num_1D; // node_rid(i+1, j_patch, k, num_1D);
-                        count++;
-
-                        // node_lid 2 in patch
-                        temp_node_lids[count] = i + 1 + j_patch * num_1D + (k + 1) * num_1D * num_1D; // node_rid(i+1, j_patch, k+1, num_1D);
-                        count++;
-
-                        // node_lid 3 in patch
-                        temp_node_lids[count] = i + j_patch * num_1D + (k + 1) * num_1D * num_1D; // node_rid(i, j_patch, k+1, num_1D);
-                        count++;
-                    } // end for i
-                } // end for k
-
-                // printf("j-minus\n");
-
-                j_patch = num_1D - 1;
-                for (int k = 0; k < num_1D - 1; k++) {
-                    for (int i = 0; i < num_1D - 1; i++) {
-                        // node_lid 0 in patch
-                        temp_node_lids[count] = i + j_patch * num_1D + k * num_1D * num_1D; // node_rid(i, j_patch, k, num_1D);
-                        count++;
-
-                        // node_lid 1 in patch
-                        temp_node_lids[count] = i + j_patch * num_1D + (k + 1) * num_1D * num_1D; // node_rid(i, j_patch, k+1, num_1D);
-                        count++;
-
-                        // node_lid 2 in patch
-                        temp_node_lids[count] = i + 1 + j_patch * num_1D + (k + 1) * num_1D * num_1D; // node_rid(i+1, j_patch, k+1, num_1D);
-                        count++;
-
-                        // node_lid 3 in patch
-                        temp_node_lids[count] = i + 1 + j_patch * num_1D + k * num_1D * num_1D; // node_rid(i+1, j_patch, k, num_1D);
-                        count++;
-                    } // end for i
-                } // end for k
-
-                // printf("j-plus\n");
-
-                /*
-
-                    i,j,k layout
-
-                    k  j
-                    | /
-                    |/
-                    o-->i
-
-
-                    k=0,kmax
-
-                    (i,j+1) o--o (i+1,j+1)
-                    /  /
-                    (i,j) o--o (i+1,j)
-
-                    */
-
-                k_patch = 0;
-                for (int j = 0; j < num_1D - 1; j++) {
-                    for (int i = 0; i < num_1D - 1; i++) {
-                        // node_lid 0 in patch
-                        temp_node_lids[count] = i + j * num_1D + k_patch * num_1D * num_1D; // node_rid(i, j, k_patch, num_1D);
-                        count++;
-
-                        // node_lid 1 in patch
-                        temp_node_lids[count] = i + (j + 1) * num_1D + k_patch * num_1D * num_1D; // node_rid(i, j+1, k_patch, num_1D);
-                        count++;
-
-                        // node_lid 2 in patch
-                        temp_node_lids[count] = i + 1 + (j + 1) * num_1D + k_patch * num_1D * num_1D; // node_rid(i+1, j+1, k_patch, num_1D);
-                        count++;
-
-                        // node_lid 3 in patch
-                        temp_node_lids[count] = i + 1 + j * num_1D + k_patch * num_1D * num_1D; // node_rid(i+1, j, k_patch, num_1D);
-                        count++;
-                    } // end for i
-                } // end for j
-                  // printf("k-minus\n");
-
-                k_patch = num_1D - 1;
-                for (int j = 0; j < num_1D - 1; j++) {
-                    for (int i = 0; i < num_1D - 1; i++) {
-                        // node_lid 0 in patch
-                        temp_node_lids[count] = i + j * num_1D + k_patch * num_1D * num_1D; // node_rid(i, j, k_patch, num_1D);
-                        count++;
-
-                        // node_lid 1 in patch
-                        temp_node_lids[count] = i + 1 + j * num_1D + k_patch * num_1D * num_1D; // node_rid(i+1, j, k_patch, num_1D);
-                        count++;
-
-                        // node_lid 2 in patch
-                        temp_node_lids[count] = i + 1 + (j + 1) * num_1D + k_patch * num_1D * num_1D; // node_rid(i+1, j+1, k_patch, num_1D);
-                        count++;
-
-                        // node_lid 3 in patch
-                        temp_node_lids[count] = i + (j + 1) * num_1D + k_patch * num_1D * num_1D; // node_rid(i, j+1, k_patch, num_1D);
-                        count++;
-                    } // end for i
-                } // end for j
-
-                // printf("k-plus\n");
-
-                count = 0;
-                int elem_patch_lid = 0;
-                for (size_t surf_lid = 0; surf_lid < 6; surf_lid++) {
-                    for (size_t patch_lid = 0; patch_lid < num_patches_in_surf; patch_lid++) {
-                        for (size_t node_lid = 0; node_lid < 4; node_lid++) {
-                            node_ordering_in_elem.host(elem_patch_lid, node_lid) = temp_node_lids[count];
-                            count++;
-                        } // end for node_lid
-                        elem_patch_lid++;
-                    } // end for patch_lid in a surface
-                } // end for i
-            }  // end if 3D
+        else{
+            //   J
+            //   |
+            // 3---2
+            // |   |  -- I
+            // 0---1
             //
-            else{
-                // 2D arbitrary order elements
-                int count = 0;
-                int i_patch, j_patch;
+            size_t temp_node_lids[8] =
+            { 0, 3,
+              1, 2,
+              0, 1,
+              3, 2 };
 
-                // i-minus-dir patches
+            for (size_t i = 0; i < 8; i++) {
+                node_lids_in_patch_in_elem[i] = temp_node_lids[i];
+            } // end for i
+        } // end if on dims
 
-                i_patch = 0;
-                for (int j = 0; j < num_1D - 1; j++) {
-                    temp_node_lids[count] = i_patch + j * num_1D; // node_rid(i_patch, j, num_1D;
-                    count++;
+        node_ordering_in_elem = DViewCArrayKokkos<size_t>(&node_lids_in_patch_in_elem[0], num_patches_in_elem, num_nodes_in_patch);
 
-                    temp_node_lids[count] = i_patch + (j + 1) * num_1D; // node_rid(i_patch, j+1, num_1D;
-                    count++;
-                } // end for j
+        // for saviong the hash keys of the patches and then the nighboring elem_gid
+        CArrayKokkos<int> hash_keys_in_elem(num_elems, num_patches_in_elem, num_nodes_in_patch, "hash_keys_in_elem"); // always 4 ids in 3D
 
-                // i-plus-dir patches
-                i_patch = num_1D - 1;
-                for (int j = 0; j < num_1D - 1; j++) {
-                    temp_node_lids[count] = i_patch + j * num_1D; // node_rid(i_patch, j, num_1D;
-                    count++;
-
-                    temp_node_lids[count] = i_patch + (j + 1) * num_1D; // node_rid(i_patch, j+1, num_1D;
-                    count++;
-                } // end for j
-
-                j_patch = 0;
-                for (int i = 0; i < num_1D - 1; i++) {
-                    temp_node_lids[count] = i + j_patch * num_1D; // node_rid(i, j_patch, num_1D);
-                    count++;
-
-                    temp_node_lids[count] = i + 1 + j_patch * num_1D; // node_rid(i+1, j_patch, num_1D);
-                    count++;
-                } // end for i
-
-                j_patch = num_1D - 1;
-                for (int i = 0; i < num_1D - 1; i++) {
-                    temp_node_lids[count] = i + j_patch * num_1D; // node_rid(i, j_patch, num_1D);
-                    count++;
-
-                    temp_node_lids[count] = i + 1 + j_patch * num_1D; // node_rid(i+1, j_patch, num_1D);
-                    count++;
-                } // end for i
-
-                count = 0;
-                int elem_patch_lid = 0;
-                for (size_t surf_lid = 0; surf_lid < num_surfs_in_elem; surf_lid++) {
-                    for (size_t patch_lid = 0; patch_lid < num_patches_in_surf; patch_lid++) {
-                        for (size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++) {
-                            node_ordering_in_elem.host(elem_patch_lid, node_lid) = temp_node_lids[count];
-                            count++;
-                        } // end for node_lid
-                        elem_patch_lid++;
-                    } // end for patch_lid in a surface
-                } // end for i
-            } // end else on dim
-
-            // build zones in high order element
-            FOR_ALL_CLASS(elem_gid, 0, num_elems, {
-                size_t node_lids[8]; // temp storage for local node ids
-                for (int k = 0; k < num_1D - 1; k++) {
-                    for (int j = 0; j < num_1D - 1; j++) {
-                        for (int i = 0; i < num_1D - 1; i++) {
-                            node_lids[0] = i + j * (num_1D) + k * (num_1D) * (num_1D); // i,j,k
-                            node_lids[1] = i + 1 + j * (num_1D) + k * (num_1D) * (num_1D); // i+1, j, k
-                            node_lids[2] = i + (j + 1) * (num_1D) + k * (num_1D) * (num_1D); // i,j+1,k
-                            node_lids[3] = i + 1 + (j + 1) * (num_1D) + k * (num_1D) * (num_1D); // i+1, j+1, k
-                            node_lids[4] = i + j * (num_1D) + (k + 1) * (num_1D) * (num_1D); // i, j , k+1
-                            node_lids[5] = i + 1 + j * (num_1D) + (k + 1) * (num_1D) * (num_1D); // i + 1, j , k+1
-                            node_lids[6] = i + (j + 1) * (num_1D) + (k + 1) * (num_1D) * (num_1D); // i,j+1,k+1
-                            node_lids[7] = i + 1 + (j + 1) * (num_1D) + (k + 1) * (num_1D) * (num_1D); // i+1, j+1, k+1
-
-                            size_t zone_lid = i + j * (num_1D - 1) + k * (num_1D - 1) * (num_1D - 1);
-                            size_t zone_gid = zones_in_elem(elem_gid, zone_lid);
-
-                            for (int node_lid = 0; node_lid < 8; node_lid++) {
-                                // get global id for the node
-                                size_t node_gid = nodes_in_elem(elem_gid, node_lids[node_lid]);
-                                nodes_in_zone(zone_gid, node_lid) = node_gid;
-                            }
-                        } // i
-                    } // j
-                } // k
-            }); // end FOR_ALL elem_gid
-        } // end if arbitrary-order element
-        
-        else {
-            printf("\nERROR: mesh type is not known \n");
-        } // end if
-
-        // update the device
-        node_ordering_in_elem.update_device();
-        Kokkos::fence();
-
-        printf("done building node ordering \n");
-
-        // for saving the hash keys of the patches and then the neighboring elem_gid
-        CArrayKokkos<int> hash_keys_in_elem(num_elems, num_patches_in_elem, num_nodes_in_patch, "hash_keys_in_elem");// always 4 ids in 3D
-
-        // for saving the adjacent patch_lid, which is the slide_lid
+        // for saving the adjacient patch_lid, which is the slide_lid
         // CArrayKokkos <size_t> neighboring_side_lids (num_elems, num_patches_in_elem);
 
         // allocate memory for the patches in the elem
         patches_in_elem = CArrayKokkos<size_t>(num_elems, num_patches_in_elem, "mesh.patches_in_elem");
 
-        // a temporary storage for the patch_gids that are on the mesh boundary
+        // a temporary storaage for the patch_gids that are on the mesh boundary
         CArrayKokkos<size_t> temp_bdy_patches(num_elems * num_patches_in_elem, "temp_bdy_patches");
 
         // step 1) calculate the hash values for each patch in the element
@@ -996,7 +437,7 @@ struct mesh_t
             } // end for patch_lid
         }); // end FOR_ALL elem_gid
 
-        DCArrayKokkos<size_t> num_values(2, "num_values");
+        DCArrayKokkos<size_t> num_values(2);
 
         // 8x8x8 mesh
         // num_patches = 8*8*9*3 = 1728
@@ -1037,7 +478,7 @@ struct mesh_t
                                     hash_keys_in_elem(elem_gid, patch_lid, 0) = -1;
                                     hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid, 0) = -1;
 
-                                    // save the patch_lids for the adjacent sides
+                                    // save the patch_lids for the adjacient sides
                                     // neighboring_side_lids(elem_gid, patch_lid) = neighbor_patch_lid;
                                     // neighboring_side_lids(neighbor_elem_gid, neighbor_patch_lid) = patch_lid;
 
@@ -1060,7 +501,7 @@ struct mesh_t
                 } // end for patch_lid
 
                 // loop over the patches in this element again
-                // remaining positive hash key values are the boundary patches
+                // remaining postive hash key values are the boundary patches
                 for (size_t patch_lid = 0; patch_lid < num_patches_in_elem; patch_lid++) {
                     if (hash_keys_in_elem(elem_gid, patch_lid, 0) >= 0) {
                         hash_keys_in_elem(elem_gid, patch_lid, 0) = -1;  // make it negative, because we saved it
@@ -1093,9 +534,8 @@ struct mesh_t
         // size_t exact_num_bdy_patches = (mesh_1D*mesh_1D)*6;
         // printf("num_patches = %lu, exact = %lu \n", num_patches, exact_num_patches);
         // printf("num_bdy_patches = %lu exact = %lu \n", num_bdy_patches, exact_num_bdy_patches);
-
-        // printf("Num patches = %lu \n", num_patches);
-        // printf("Num boundary patches = %lu \n", num_bdy_patches);
+        printf("Num patches = %lu \n", num_patches);
+        printf("Num boundary patches = %lu \n", num_bdy_patches);
 
         elems_in_patch = CArrayKokkos<size_t>(num_patches, 2, "mesh.elems_in_patch");
         nodes_in_patch = CArrayKokkos<size_t>(num_patches, num_nodes_in_patch, "mesh.nodes_in_patch");
@@ -1131,9 +571,12 @@ struct mesh_t
         } // end for
 
         // Surfaces and patches in surface
-        if (elem_kind == mesh_init::arbitrary_tensor_element) {
+        if (high_order == 1) {
+            num_surfs_in_elem   = 2 * num_dims; // 4 (2D) or 6 (3D)
+            num_patches_in_surf = 1;  // =Pn_order, must update for high-order mesh class
+
             // allocate memory for the surfaces in the elem
-            surfs_in_elem = CArrayKokkos<size_t>(num_elems, num_surfs_in_elem);
+            surfs_in_elem = CArrayKokkos<size_t>(num_elems, num_surfs_in_elem, "mesh.surfs_in_elem");
 
             // allocate memory for surface data structures
             num_surfs = num_patches / num_patches_in_surf;
@@ -1172,67 +615,9 @@ struct mesh_t
                     size_t patch_gid = patches_in_elem(elem_gid, patch_lid);
 
                     // save the surface gid
-                    // Grab the first patch on surf and return surface_gid from surf_in_patch //
                     surfs_in_elem(elem_gid, surf_lid) = surf_in_patch(patch_gid);
                 } // end surf_lid
             });
-
-            DViewCArrayKokkos<size_t> surf_node_ordering_in_elem;
-
-            if (num_dims == 3) {
-                // num_1D = Pn+1
-                int    num_surface_nodes = num_surfs_in_elem * pow(num_1D, num_dims - 1);
-                size_t temp_surf_node_lids[num_surface_nodes];
-                // 2D arbitrary order elements
-                int count = 0;
-
-                for (int i_surf = 0; i_surf < 2; i_surf++) {
-                    for (int k = 0; k < num_1D; k++) {
-                        for (int j = 0; j < num_1D; j++) {
-                            // node_lid 0 in patch
-                            // index = i + j*num_1D + k*num_1D*num_1D;
-                            temp_surf_node_lids[count] = i_surf + j * num_1D + k * num_1D * num_1D;
-                            count++;
-                        } // end for k
-                    } // end for j
-                }
-
-                for (int j_surf = 0; j_surf < 2; j_surf++) {
-                    for (int k = 0; k < num_1D; k++) {
-                        for (int i = 0; i < num_1D; i++) {
-                            // node_lid 0 in patch
-                            temp_surf_node_lids[count] = i + j_surf * num_1D + k * num_1D * num_1D;
-                            count++;
-                        }
-                    }
-                }
-
-                for (int k_surf = 0; k_surf < 2; k_surf++) {
-                    for (int j = 0; j < num_1D; j++) {
-                        for (int i = 0; i < num_1D; i++) {
-                            // node_lid 0 in patch
-                            temp_surf_node_lids[count] = i + j * num_1D + k_surf * num_1D * num_1D;
-                            count++;
-                        }
-                    }
-                }
-
-                nodes_in_surf = CArrayKokkos<size_t>(num_surfs, num_1D * num_1D, "mesh.nodes_in_surf");
-
-                num_nodes_in_surf = num_1D * num_1D;
-                surf_node_ordering_in_elem = DViewCArrayKokkos<size_t>(&temp_surf_node_lids[0], num_surfs_in_elem, num_nodes_in_surf);
-                surf_node_ordering_in_elem.update_device();
-                for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-                    FOR_ALL_CLASS(surf_lid, 0, num_surfs_in_elem, {
-                        int surf_gid = surfs_in_elem(elem_gid, surf_lid);
-                        for (int surf_node_lid = 0; surf_node_lid < num_nodes_in_surf; surf_node_lid++) {
-                            int node_lid = surf_node_ordering_in_elem(surf_lid, surf_node_lid);
-                            int node_gid = nodes_in_elem(elem_gid, node_lid);
-                            nodes_in_surf(surf_gid, surf_node_lid) = node_gid;
-                        } // end loop over surf_node_lid
-                    }); // end loop over FOR_ALL_CLASS
-                } // end loop over elem_gid
-            } // end 3D scope
         } // end of high-order mesh objects
 
         // ----------------
@@ -1245,15 +630,15 @@ struct mesh_t
         }); // end FOR_ALL bdy_patch_gid
 
         // find and store the boundary nodes
-        CArrayKokkos<size_t> temp_bdy_nodes(num_nodes, "temp_bdy_nodes");
-        CArrayKokkos<long long int> hash_bdy_nodes(num_nodes, "hash_bdy_nodes");
+        CArrayKokkos<size_t> temp_bdy_nodes(num_nodes);
+        CArrayKokkos<long long int> hash_bdy_nodes(num_nodes);
 
         FOR_ALL_CLASS(node_gid, 0, num_nodes, {
             hash_bdy_nodes(node_gid) = -1;
         }); // end for node_gid
 
         // Parallel loop over boundary patches
-        DCArrayKokkos<size_t> num_bdy_nodes_saved(1, "num_bdy_nodes_saved");
+        DCArrayKokkos<size_t> num_bdy_nodes_saved(1);
 
         RUN_CLASS({
             num_bdy_nodes_saved(0) = 0;
@@ -1290,12 +675,12 @@ struct mesh_t
             bdy_nodes(node_gid) = temp_bdy_nodes(node_gid);
         }); // end for boundary node_gid
 
-        // printf("Num boundary nodes = %lu \n", num_bdy_nodes);
+        printf("Num boundary nodes = %lu \n", num_bdy_nodes);
 
         return;
     } // end patch connectivity method
 
-    // build the patches
+    // build the node-node connectivity
     void build_node_node_connectivity()
     {
         // find the max number of elems around a node
@@ -1331,7 +716,7 @@ struct mesh_t
                         if (node_lid == num_nodes_in_patch - 1) {
                             node_gid_1 = nodes_in_patch(patch_gid, 0);
                         }
-                        else {
+                        else{
                             node_gid_1 = nodes_in_patch(patch_gid, node_lid + 1);
                         } // end if
 
@@ -1377,7 +762,7 @@ struct mesh_t
                     } // end for node in patch
                 } // end for patches
             } // end if 3D
-            else {
+            else{
                 for (size_t patch_gid = 0; patch_gid < num_patches; patch_gid++) {
                     // the first node on the edge
                     size_t node_gid_0 = nodes_in_patch(patch_gid, 0);
@@ -1439,7 +824,7 @@ struct mesh_t
     ///
     /// \fn init_bdy_sets
     ///
-    /// \brief Initialize memory for boundary sets 
+    /// \brief Initializes memory for boundary sets
     ///
     /////////////////////////////////////////////////////////////////////////////
     void init_bdy_sets(size_t num_bcs)
@@ -1458,14 +843,13 @@ struct mesh_t
     ///
     /// \fn build_boundry_node_sets
     ///
-    /// \brief Build sets of boundary nodes
+    /// REMOVE TO SETUP
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_boundry_node_sets(const DCArrayKokkos<boundary_condition_t>& boundary,
         mesh_t& mesh)
     {
         // build boundary nodes in each boundary set
-
         mesh.num_bdy_nodes_in_set = DCArrayKokkos<size_t>(mesh.num_bdy_sets, "mesh.num_bdy_nodes_in_set");
         CArrayKokkos<long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes, "temp_count_num_bdy_nodes_in_set");
 
@@ -1473,7 +857,7 @@ struct mesh_t
 
         // Parallel loop over boundary sets on device
         FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
-            // find the number of patches_in_set
+            // finde the number of patches_in_set
             size_t num_bdy_patches_in_set = mesh.bdy_patches_in_set.stride(bdy_set);
 
             // Loop over boundary patches in boundary set
@@ -1516,7 +900,7 @@ struct mesh_t
         Kokkos::fence();
 
         // allocate the RaggedRight bdy_nodes_in_set array
-        mesh.bdy_nodes_in_set = RaggedRightArrayKokkos<size_t>(mesh.num_bdy_nodes_in_set, "mesh.bdy_nodes_in_set");
+        mesh.bdy_nodes_in_set = RaggedRightArrayKokkos<size_t>(mesh.num_bdy_nodes_in_set);
 
         FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
             // Loop over boundary patches in boundary set
@@ -1532,6 +916,41 @@ struct mesh_t
         return;
     } // end method to build boundary nodes
 }; // end mesh_t
+
+void ensight(const mesh_t& mesh,
+             const DCArrayKokkos<double>& node_coords,
+             const DCArrayKokkos<double>& node_vel,
+             const DCArrayKokkos<double>& node_mass,
+             const DCArrayKokkos<double>& elem_den,
+             const DCArrayKokkos<double>& elem_pres,
+             const DCArrayKokkos<double>& elem_stress,
+             const DCArrayKokkos<double>& elem_sspd,
+             const DCArrayKokkos<double>& elem_sie,
+             const DCArrayKokkos<double>& elem_vol,
+             const DCArrayKokkos<double>& elem_mass,
+             const DCArrayKokkos<size_t>& elem_mat_id,
+             CArray<double>& graphics_times,
+             size_t&      graphics_id,
+             const double time_value);
+
+void state_file(const mesh_t& mesh,
+                const DCArrayKokkos<double>& node_coords,
+                const DCArrayKokkos<double>& node_vel,
+                const DCArrayKokkos<double>& node_mass,
+                const DCArrayKokkos<double>& elem_den,
+                const DCArrayKokkos<double>& elem_pres,
+                const DCArrayKokkos<double>& elem_stress,
+                const DCArrayKokkos<double>& elem_sspd,
+                const DCArrayKokkos<double>& elem_sie,
+                const DCArrayKokkos<double>& elem_vol,
+                const DCArrayKokkos<double>& elem_mass,
+                const DCArrayKokkos<size_t>& elem_mat_id,
+                const double time_value);
+
+void user_model_init(const DCArrayKokkos<double>& file_state_vars,
+                     const size_t num_state_vars,
+                     const size_t mat_id,
+                     const size_t num_elems);
 
 KOKKOS_FUNCTION
 void decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,

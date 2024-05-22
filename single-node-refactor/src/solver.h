@@ -43,15 +43,13 @@
 #include "material.h"
 #include "region.h"
 #include "boundary_conditions.h"
-#include "io_utils.h"
+
 
 struct simulation_parameters_t;
 
 class Solver
 {
 public:
-
-    MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
     Solver();
     virtual ~Solver();
