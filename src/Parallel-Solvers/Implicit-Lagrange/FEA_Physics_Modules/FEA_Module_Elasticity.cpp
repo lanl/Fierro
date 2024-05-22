@@ -2111,7 +2111,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
-  real_t constant_pressure = module_params->constant_pressure;
+  real_t constant_stress_flag = module_params->constant_stress_flag;
 
    //force vector initialization
   for(int i=0; i < num_dim*nlocal_nodes; i++)
@@ -2508,8 +2508,8 @@ void FEA_Module_Elasticity::assemble_vector(){
     }//for
   }
 
-  //apply contribution from constant pressure
-  if(constant_pressure!=0){
+  //apply contribution from constant stress
+  if(constant_stress_flag){
     //initialize quadrature data
     elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
     elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
@@ -2520,15 +2520,13 @@ void FEA_Module_Elasticity::assemble_vector(){
     FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> stress_matrix(Brows);
-    //initialize C matrix
-    for(int irow = 0; irow < Brows; irow++)
-        stress_matrix(irow) = 0;
     
-    stress_matrix(0) = constant_pressure;
-    stress_matrix(1) = constant_pressure;
-    if(num_dim==3){
-      stress_matrix(2) = constant_pressure;
-    }
+    stress_matrix(0) = module_params->constant_stress[0];
+    stress_matrix(1) = module_params->constant_stress[1];
+    stress_matrix(2) = module_params->constant_stress[2];
+    stress_matrix(3) = module_params->constant_stress[3];
+    stress_matrix(4) = module_params->constant_stress[4];
+    stress_matrix(5) = module_params->constant_stress[5];
     
     for(size_t ielem = 0; ielem < rnum_elem; ielem++){
 
