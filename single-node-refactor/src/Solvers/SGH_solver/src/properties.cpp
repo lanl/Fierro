@@ -246,14 +246,14 @@ void SGH::update_state2D(const DCArrayKokkos<material_t>& material,
         } // end logical on state_based strength model
 
         // --- Pressure ---
-        // material(mat_id).eos_model(elem_pres,
-        //                            elem_stress,
-        //                            elem_gid,
-        //                            elem_mat_id(elem_gid),
-        //                            elem_statev,
-        //                            elem_sspd,
-        //                            elem_den(elem_gid),
-        //                            elem_sie(1, elem_gid));
+        material(mat_id).eos_model(elem_pres,
+                                   elem_stress,
+                                   elem_gid,
+                                   elem_mat_id(elem_gid),
+                                   elem_statev,
+                                   elem_sspd,
+                                   elem_den(elem_gid),
+                                   elem_sie(1, elem_gid));
     }); // end parallel for
     Kokkos::fence();
 
