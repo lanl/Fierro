@@ -860,10 +860,11 @@ bool contact_pair_t::should_remove(const double &del_t)
 {
     if (fc_inc_total == 0.0 || fabs(xi) > 1.0 + edge_tol || fabs(eta) > 1.0 + edge_tol)
     {
+        fc_inc_total = 0.0;
         return true;
     } else
     {
-        // update the normal
+        // update the normal and zero fc_inc_total for the next iteration
         double new_normal_arr[3];
         ViewCArrayKokkos<double> new_normal(&new_normal_arr[0], 3);
         patch.get_normal(xi, eta, del_t, new_normal);
@@ -871,6 +872,7 @@ bool contact_pair_t::should_remove(const double &del_t)
         {
             normal(i) = new_normal(i);
         }
+        fc_inc_total = 0.0;
 
         return false;
     }
@@ -879,7 +881,7 @@ bool contact_pair_t::should_remove(const double &del_t)
 
 /// beginning of contact_patches_t member functions ////////////////////////////////////////////////////////////////////
 void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches,
-                                   const node_t &nodes)
+                                   const node_t &nodes, const corner_t &corners)
 {
     // Contact is only supported in 3D
     if (mesh.num_dims != 3)
@@ -1037,6 +1039,10 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         }
     }
 
+    // todo: instead of these arrays being accessed through the node gid directly, they can be made much smaller with a
+    //       size of num_contact_nodes. The nsort member should simply be a sorted array of local indices (see the
+    //       final portion of sort()). Then, use nodes_gid to get the global index to be used for mesh_t, node_t, and
+    //       corner_t objects.
     // Initialize the contact_nodes and contact_pairs arrays
     contact_nodes = CArrayKokkos<contact_node_t>(max_index + 1);
     contact_pairs = CArrayKokkos<contact_pair_t>(max_index + 1);
@@ -1057,7 +1063,6 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         {
             size_t node_gid = contact_patch.nodes_gid(j);
             contact_node_t &node_obj = contact_nodes(node_gid);
-            node_obj.gid = node_gid;
 
             contact_patch.nodes_obj(j) = node_obj;
             if (node_count(node_gid) == 1)
@@ -1098,10 +1103,12 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         Kokkos::fence();
     }
 
+    // Update the node members
+    update_nodes(mesh, nodes, corners);
+
 }  // end initialize
 
-
-void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corner_t &corner)
+void contact_patches_t::update_nodes(const mesh_t &mesh, const node_t &nodes, const corner_t &corner)
 {
     // Update the points and vel_points arrays for each contact patch
     FOR_ALL_CLASS(i, 0, num_contact_patches, {
@@ -1136,7 +1143,10 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
             contact_node.acc(j) = contact_node.internal_force(j)/contact_node.mass;
         }
     });
+}
 
+void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corner_t &corner)
+{
     // todo: I don't think it's a good idea to have these allocated here. These should become member variables, and
     //       its allocation should be moved to initialize() because sort() is being called every step.
     // Grouping all the coordinates, velocities, and accelerations
@@ -1558,6 +1568,8 @@ KOKKOS_FUNCTION
 void contact_patches_t::remove_pair(contact_pair_t &pair)
 {
     pair.active = false;
+    pair.fc_inc_total = 0.0;
+    pair.fc_inc = 0.0;
 
     // modify the contact_pairs_access array
     // keep iterating in the row until the pair is found and shift all the elements to the left

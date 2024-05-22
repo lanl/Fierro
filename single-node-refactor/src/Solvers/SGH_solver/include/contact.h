@@ -37,6 +37,7 @@ struct contact_patch_t
     CArrayKokkos<size_t> nodes_gid;  // global node ids
     CArrayKokkos<contact_node_t> nodes_obj;  // contact node objects
 
+    // todo: This data structure below should be ridden of. Access those members through nodes_obj instead.
     /*
      * If the position of a point is denoted by "p" and "p" is a vector p = (px, py, pz), then the following arrays
      * are structured as follows:
@@ -369,7 +370,8 @@ struct contact_patches_t
     /// \param bdy_contact_patches global ids of patches that will be checked for contact
     /// \param nodes node object that contains coordinates and velocities of all nodes
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void initialize(const mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches, const node_t &nodes);
+    void initialize(const mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches, const node_t &nodes,
+                    const corner_t &corners);
 
     /*
      * Here is a description of each array below:
@@ -429,6 +431,17 @@ struct contact_patches_t
     /// \param corner corner object that contains corner forces
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void sort(const mesh_t &mesh, const node_t &nodes, const corner_t &corner);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn update_nodes
+    ///
+    /// \brief Updates the coordinates, velocities, internal forces, and zeros contact force for all contact nodes
+    ///
+    /// \param mesh mesh object
+    /// \param nodes node object that contains coordinates and velocities of all nodes
+    /// \param corner corner object that contains corner forces
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void update_nodes(const mesh_t &mesh, const node_t &nodes, const corner_t &corner);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn find_nodes

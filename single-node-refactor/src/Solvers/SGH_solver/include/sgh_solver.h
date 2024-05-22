@@ -142,7 +142,7 @@ public:
                 std::cout << "Setting up global contact" << std::endl;
                 doing_contact = true;
 
-                contact_bank.initialize(mesh, mesh.bdy_patches, node);
+                contact_bank.initialize(mesh, mesh.bdy_patches, node, corner);
                 // run_contact_tests(contact_bank, mesh, node, corner, sim_param);
                 break;
             } else if (bound.type == boundary_conds:: contact && bound.geometry != boundary_conds::global) {
