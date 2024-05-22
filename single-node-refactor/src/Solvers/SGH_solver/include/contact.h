@@ -19,15 +19,14 @@ struct contact_node_t
     double mass;  // mass of the node
     CArrayKokkos<double> pos = CArrayKokkos<double>(3);  // position of the node
     CArrayKokkos<double> vel = CArrayKokkos<double>(3);  // velocity of the node
-    CArrayKokkos<double> acc = CArrayKokkos<double>(3);  // acceleration of the node
     CArrayKokkos<double> internal_force = CArrayKokkos<double>(3);  // any force that is not due to contact
     CArrayKokkos<double> contact_force = CArrayKokkos<double>(3);  // force due to contact
 
     contact_node_t();
 
     contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCArrayKokkos<double> &vel,
-                   const ViewCArrayKokkos<double> &acc, const ViewCArrayKokkos<double> &internal_force,
-                   const ViewCArrayKokkos<double> &contact_force, const double &mass);
+                   const ViewCArrayKokkos<double> &internal_force, const ViewCArrayKokkos<double> &contact_force,
+                   const double &mass);
 };
 
 struct contact_patch_t
@@ -36,25 +35,6 @@ struct contact_patch_t
     size_t lid;  // local patch id (local to contact_patches_t::contact_patches); this is needed in contact_pairs_t
     CArrayKokkos<size_t> nodes_gid;  // global node ids
     CArrayKokkos<contact_node_t> nodes_obj;  // contact node objects
-
-    // todo: This data structure below should be ridden of. Access those members through nodes_obj instead.
-    /*
-     * If the position of a point is denoted by "p" and "p" is a vector p = (px, py, pz), then the following arrays
-     * are structured as follows:
-     *
-     * ⎡p_{0x}  p_{1x}  p_{2x} ... p_{nx}⎤
-     * ⎢                                 ⎥
-     * ⎢p_{0y}  p_{1y}  p_{2y} ... p_{ny}⎥
-     * ⎢                                 ⎥
-     * ⎣p_{0z}  p_{1z}  p_{2z} ... p_{nz}⎦
-     *
-     * For a standard linear hex, this matrix is a 3x4. vel_points is structured the same way.
-     */
-    CArrayKokkos<double> points;  // coordinate points of patch nodes
-    CArrayKokkos<double> vel_points;  // velocity of patch nodes
-    CArrayKokkos<double> acc_points;  // acceleration of patch nodes
-    CArrayKokkos<double> mass_points;  // mass of patch nodes (mass is constant down the column)
-    CArrayKokkos<double> internal_force;  // any force that is not due to contact (corner force)
 
     // Iso-parametric coordinates of the patch nodes (1D array of size mesh.num_nodes_in_patch)
     // For a standard linear hex, xi = [-1.0, 1.0, 1.0, -1.0], eta = [-1.0, -1.0, 1.0, 1.0]
@@ -79,22 +59,8 @@ struct contact_patch_t
     contact_patch_t();
 
     contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points,
-                    const ViewCArrayKokkos<double> &acc_points, const ViewCArrayKokkos<double> &internal_force_points,
+                    const ViewCArrayKokkos<double> &internal_force_points,
                     const ViewCArrayKokkos<double> &contact_force_points, const ViewCArrayKokkos<double> &mass_points_);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn update_nodes
-    ///
-    /// \brief Updates the points and vel_points arrays
-    ///
-    /// This is called at the beginning of each time step in the contact_patches_t::sort() method.
-    ///
-    /// \param mesh mesh object
-    /// \param nodes node object that contains coordinates and velocities of all nodes
-    /// \param corner corner object that contains corner forces
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    KOKKOS_FUNCTION
-    void update_nodes(const mesh_t &mesh, const node_t &nodes, const corner_t &corner);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn capture_box

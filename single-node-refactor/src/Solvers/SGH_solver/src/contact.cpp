@@ -127,39 +127,6 @@ bool any(const ViewCArrayKokkos<bool> &a, const size_t &size)
 /// end of global, linear algebra functions ////////////////////////////////////////////////////////////////////////////
 
 /// beginning of contact_patch_t member functions //////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION  // is called in macros
-void contact_patch_t::update_nodes(const mesh_t &mesh, const node_t &nodes, // NOLINT(*-make-member-function-const)
-                                   const corner_t &corner)
-{
-    // Constructing the points, vel_points, and internal_force arrays
-    for (int i = 0; i < 3; i++)
-    {
-        for (int j = 0; j < num_nodes_in_patch; j++)
-        {
-            const size_t node_gid = nodes_gid(j);
-            nodes_obj(j).mass = nodes.mass(node_gid);
-
-            points(i, j) = nodes.coords(0, node_gid, i);
-            vel_points(i, j) = nodes.vel(0, node_gid, i);
-            internal_force(i, j) = 0.0;
-
-            // looping over the corners
-            for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++)
-            {
-                size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
-                internal_force(i, j) += corner.force(corner_gid, i);
-            }
-
-            // construct the mass
-            mass_points(i, j) = nodes.mass(node_gid);
-
-            // construct the acceleration
-            acc_points(i, j) = internal_force(i, j)/mass_points(i, j);
-
-        }  // end local node loop
-    }  // end dimension loop
-}  // end update_nodes
-
 void contact_patch_t::capture_box(const double &vx_max, const double &vy_max, const double &vz_max,
                                   const double &ax_max, const double &ay_max, const double &az_max,
                                   const double &dt)
@@ -168,13 +135,15 @@ void contact_patch_t::capture_box(const double &vx_max, const double &vy_max, co
     // the bounding box is the maximum and minimum points for each dimension
     // todo: add_sub needs to be moved to a member variable. Can't have this being allocated for every call.
     CArrayKokkos<double> add_sub(2, 3, contact_patch_t::num_nodes_in_patch);
+    double max_v_arr[3] = {vx_max, vy_max, vz_max};
+    double max_a_arr[3] = {ax_max, ay_max, az_max};
     FOR_ALL_CLASS(i, 0, contact_patch_t::num_nodes_in_patch, {
-        add_sub(0, 0, i) = points(0, i) + vx_max*dt + 0.5*ax_max*dt*dt;
-        add_sub(0, 1, i) = points(1, i) + vy_max*dt + 0.5*ay_max*dt*dt;
-        add_sub(0, 2, i) = points(2, i) + vz_max*dt + 0.5*az_max*dt*dt;
-        add_sub(1, 0, i) = points(0, i) - vx_max*dt - 0.5*ax_max*dt*dt;
-        add_sub(1, 1, i) = points(1, i) - vy_max*dt - 0.5*ay_max*dt*dt;
-        add_sub(1, 2, i) = points(2, i) - vz_max*dt - 0.5*az_max*dt*dt;
+        const contact_node_t &node_obj = nodes_obj(i);
+        for (int j = 0; j < 3; j++)
+        {
+            add_sub(0, j, i) = node_obj.pos(j) + max_v_arr[j]*dt + 0.5*max_a_arr[j]*dt*dt;
+            add_sub(1, j, i) = node_obj.pos(j) - max_v_arr[j]*dt - 0.5*max_a_arr[j]*dt*dt;
+        }
     });
     Kokkos::fence();
 
@@ -209,22 +178,13 @@ void contact_patch_t::capture_box(const double &vx_max, const double &vy_max, co
 KOKKOS_FUNCTION
 void contact_patch_t::construct_basis(ViewCArrayKokkos<double> &A, const double &del_t) const
 {
-    double local_acc_arr[3*contact_patch_t::max_nodes];
-    ViewCArrayKokkos<double> local_acc(&local_acc_arr[0], 3, num_nodes_in_patch);
     for (int i = 0; i < 3; i++)
     {
         for (int j = 0; j < num_nodes_in_patch; j++)
         {
             const contact_node_t &node_obj = nodes_obj(j);
-            local_acc(i, j) = (node_obj.contact_force(i) + node_obj.internal_force(i))/node_obj.mass;
-        }
-    }
-
-    for (int i = 0; i < 3; i++)
-    {
-        for (int j = 0; j < num_nodes_in_patch; j++)
-        {
-            A(i, j) = points(i, j) + vel_points(i, j)*del_t + 0.5*local_acc(i, j)*del_t*del_t;
+            double a = (node_obj.internal_force(i) + node_obj.contact_force(i))/node_obj.mass;
+            A(i, j) = node_obj.pos(i) + node_obj.vel(i)*del_t + 0.5*a*del_t*del_t;
         }
     }
 }  // end construct_basis
@@ -296,7 +256,8 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, double &xi_v
         mat_mul(A, phi_k, rhs);
         for (int j = 0; j < 3; j++)
         {
-            lhs = node.pos(j) + node.vel(j)*(del_tc) + 0.5*node.acc(j)*(del_tc)*(del_tc);
+            double a = (node.internal_force(j) + node.contact_force(j))/node.mass;
+            lhs = node.pos(j) + node.vel(j)*del_tc + 0.5*a*del_tc*del_tc;
             F(j) = rhs(j) - lhs;
         }
 
@@ -313,7 +274,9 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, double &xi_v
         {
             for (int k = 0; k < num_nodes_in_patch; k++)
             {
-                d_A_d_del_t(j, k) = vel_points(j, k) + acc_points(j, k)*(del_tc);
+                const contact_node_t &patch_node = nodes_obj(k);
+                double a = (patch_node.internal_force(j) + patch_node.contact_force(j))/patch_node.mass;
+                d_A_d_del_t(j, k) = patch_node.vel(j) + a*del_tc;
             }
         }
 
@@ -323,7 +286,8 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, double &xi_v
         // lhs is a function of del_t, so have to subtract the derivative of lhs wrt del_t
         for (int j = 0; j < 3; j++)
         {
-            J2(j) = J2(j) - node.vel(j) - node.acc(j)*(del_tc);
+            double a = (node.internal_force(j) + node.contact_force(j))/node.mass;
+            J2(j) = J2(j) - node.vel(j) - a*del_tc;
         }
 
         // Construct the Jacobian
@@ -391,7 +355,8 @@ bool contact_patch_t::contact_check(const contact_node_t &node, const double &de
     double node_later[3];
     for (int i = 0; i < 3; i++)
     {
-        node_later[i] = node.pos(i) + node.vel(i)*del_t/2 + 0.25*node.acc(i)*del_t*del_t;
+        double a = (node.internal_force(i) + node.contact_force(i))/node.mass;
+        node_later[i] = node.pos(i) + node.vel(i)*del_t/2 + 0.25*a*del_t*del_t;
     }
 
     // Construct the basis vectors. The first row of the matrix is the vector from the centroid to the reference point
@@ -721,9 +686,9 @@ void contact_pair_t::frictionless_increment(const double &del_t)
             for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
             {
                 const contact_node_t &patch_node = patch.nodes_obj(k);
-                ak = (patch.internal_force(j, k) - fc_inc*normal(j)*phi_k(k) +
-                      patch_node.contact_force(j))/patch.mass_points(j, k);
-                A(j, k) = patch.points(j, k) + patch.vel_points(j, k)*del_t + 0.5*ak*del_t*del_t;
+                ak = (patch_node.internal_force(j) - fc_inc*normal(j)*phi_k(k) +
+                      patch_node.contact_force(j))/patch_node.mass;
+                A(j, k) = patch_node.pos(j) + patch_node.vel(j)*del_t + 0.5*ak*del_t*del_t;
             }
         }
 
@@ -747,9 +712,10 @@ void contact_pair_t::frictionless_increment(const double &del_t)
 
         for (int j = 0; j < contact_patch_t::num_nodes_in_patch; j++)
         {
-            outer1(j) = (0.5*d_phi_d_xi_(j)*fc_inc*del_t*del_t)/patch.mass_points(0, j);
-            outer2(j) = (0.5*d_phi_d_eta_(j)*fc_inc*del_t*del_t)/patch.mass_points(0, j);
-            outer3(j) = (0.5*phi_k(j)*del_t*del_t)/patch.mass_points(0, j);
+            const contact_node_t &patch_node = patch.nodes_obj(j);
+            outer1(j) = (0.5*d_phi_d_xi_(j)*fc_inc*del_t*del_t)/patch_node.mass;
+            outer2(j) = (0.5*d_phi_d_eta_(j)*fc_inc*del_t*del_t)/patch_node.mass;
+            outer3(j) = (0.5*phi_k(j)*del_t*del_t)/patch_node.mass;
         }
 
         outer(neg_normal, outer1, d_A_d_xi);
@@ -933,11 +899,6 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         for (int i = 0; i < num_contact_patches; i++)
         {
             contact_patch_t &contact_patch = contact_patches(i);
-            contact_patch.points = CArrayKokkos<double>(3, 4);
-            contact_patch.vel_points = CArrayKokkos<double>(3, 4);
-            contact_patch.internal_force = CArrayKokkos<double>(3, 4);
-            contact_patch.acc_points = CArrayKokkos<double>(3, 4);
-            contact_patch.mass_points = CArrayKokkos<double>(3, 4);
 
             contact_patch.xi = CArrayKokkos<double>(4);
             contact_patch.eta = CArrayKokkos<double>(4);
@@ -1063,7 +1024,10 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
         {
             size_t node_gid = contact_patch.nodes_gid(j);
             contact_node_t &node_obj = contact_nodes(node_gid);
-
+            // todo: for some reason, these non-matar types do not update in the contact_patches_t::update_nodes func
+            //       this is only a problem if the node mass is changing
+            node_obj.mass = nodes.mass(node_gid);
+            node_obj.gid = node_gid;
             contact_patch.nodes_obj(j) = node_obj;
             if (node_count(node_gid) == 1)
             {
@@ -1110,12 +1074,6 @@ void contact_patches_t::initialize(const mesh_t &mesh, const CArrayKokkos<size_t
 
 void contact_patches_t::update_nodes(const mesh_t &mesh, const node_t &nodes, const corner_t &corner)
 {
-    // Update the points and vel_points arrays for each contact patch
-    FOR_ALL_CLASS(i, 0, num_contact_patches, {
-        contact_patches(i).update_nodes(mesh, nodes, corner);
-    });  // end parallel for
-    Kokkos::fence();
-
     // Update node objects
     FOR_ALL_CLASS(i, 0, contact_patches_t::num_contact_nodes, {
         const size_t &node_gid = nodes_gid(i);
@@ -1139,10 +1097,12 @@ void contact_patches_t::update_nodes(const mesh_t &mesh, const node_t &nodes, co
                 size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
                 contact_node.internal_force(j) += corner.force(corner_gid, j);
             }
-
-            contact_node.acc(j) = contact_node.internal_force(j)/contact_node.mass;
         }
     });
+
+    // todo: if node mass is changing, then this will need to be updated here by looping through contact patches as well
+    //       I'm not sure why, but the non-matar members (gid and mass) of contact_node_t is not updating the
+    //       nodes_obj member in contact_patch_t
 }
 
 void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corner_t &corner)
@@ -1158,14 +1118,13 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
         const contact_patch_t &contact_patch = contact_patches(i);
         for (int j = 0; j < contact_patch_t::num_nodes_in_patch; j++)
         {
-            const size_t node_gid = contact_patch.nodes_gid(j);
-            const double &mass = nodes.mass(node_gid);
+            const contact_node_t &node = contact_patch.nodes_obj(j);
             for (int k = 0; k < 3; k++)
             {
-                points(k, i*contact_patch_t::num_nodes_in_patch + j) = contact_patch.points(k, j);
-                velocities(k, i*contact_patch_t::num_nodes_in_patch + j) = fabs(contact_patch.vel_points(k, j));
-                accelerations(k, i*contact_patch_t::num_nodes_in_patch + j) = fabs(
-                    contact_patch.internal_force(k, j)/mass);
+                points(k, i*contact_patch_t::num_nodes_in_patch + j) = node.pos(k);
+                velocities(k, i*contact_patch_t::num_nodes_in_patch + j) = fabs(node.vel(k));
+                accelerations(k, i*contact_patch_t::num_nodes_in_patch + j) = fabs((node.internal_force(k) +
+                    node.contact_force(k))/node.mass);
             }
         }
     });  // end parallel for
@@ -1331,7 +1290,7 @@ void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double 
 {
     // Get capture box
     contact_patch.capture_box(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, del_t);
-    CArrayKokkos<double> &bounds = contact_patch.bounds;
+    const CArrayKokkos<double> &bounds = contact_patch.bounds;
 
     // Determine the buckets that intersect with the capture box
     size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounds(0) - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
@@ -1750,7 +1709,6 @@ void contact_patches_t::remove_pairs(const double &del_t)
 contact_patch_t::contact_patch_t() = default;
 
 contact_patch_t::contact_patch_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points,
-                                 const ViewCArrayKokkos<double> &acc_points,
                                  const ViewCArrayKokkos<double> &internal_force_points,
                                  const ViewCArrayKokkos<double> &contact_force_points,
                                  const ViewCArrayKokkos<double> &mass_points_)
@@ -1768,43 +1726,23 @@ contact_patch_t::contact_patch_t(const ViewCArrayKokkos<double> &points, const V
 
     this->nodes_obj = CArrayKokkos<contact_node_t>(4);
 
-    this->points = CArrayKokkos<double>(3, contact_patch_t::num_nodes_in_patch);
-    this->vel_points = CArrayKokkos<double>(3, contact_patch_t::num_nodes_in_patch);
-    this->acc_points = CArrayKokkos<double>(3, contact_patch_t::num_nodes_in_patch);
-    this->mass_points = CArrayKokkos<double>(3, contact_patch_t::num_nodes_in_patch);
-    this->internal_force = CArrayKokkos<double>(3, contact_patch_t::num_nodes_in_patch);
-
     for (int i = 0; i < num_nodes_in_patch; i++)
     {
-        ViewCArrayKokkos<double> pos_view = ViewCArrayKokkos<double>(&points(0, i), 3);
-        ViewCArrayKokkos<double> vel_view = ViewCArrayKokkos<double>(&vel_points(0, i), 3);
-        ViewCArrayKokkos<double> acc_view = ViewCArrayKokkos<double>(&acc_points(0, i), 3);
-        ViewCArrayKokkos<double> internal_force_view = ViewCArrayKokkos<double>(&internal_force_points(0, i), 3);
-        ViewCArrayKokkos<double> contact_force_view = ViewCArrayKokkos<double>(&contact_force_points(0, i), 3);
-        ViewCArrayKokkos<double> mass_view = ViewCArrayKokkos<double>(&mass_points_(0, i), 3);
+        ViewCArrayKokkos<double> pos_view = ViewCArrayKokkos<double>(&points(i, 0), 3);
+        ViewCArrayKokkos<double> vel_view = ViewCArrayKokkos<double>(&vel_points(i, 0), 3);
+        ViewCArrayKokkos<double> internal_force_view = ViewCArrayKokkos<double>(&internal_force_points(i, 0), 3);
+        ViewCArrayKokkos<double> contact_force_view = ViewCArrayKokkos<double>(&contact_force_points(i, 0), 3);
 
-        contact_node_t node = contact_node_t(pos_view, vel_view, acc_view, internal_force_view, contact_force_view,
-                                             mass_view(0));
+        contact_node_t node = contact_node_t(pos_view, vel_view, internal_force_view, contact_force_view,
+                                             mass_points_(i));
         nodes_obj(i) = node;
-    }
-
-    for (int i = 0; i < 3; i++)
-    {
-        for (int j = 0; j < num_nodes_in_patch; j++)
-        {
-            this->points(i, j) = points(i, j);
-            this->vel_points(i, j) = vel_points(i, j);
-            this->acc_points(i, j) = acc_points(i, j);
-            this->internal_force(i, j) = internal_force_points(i, j);
-            this->mass_points(i, j) = mass_points_(i, j);
-        }
     }
 }
 
 contact_node_t::contact_node_t() = default;
 
 contact_node_t::contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCArrayKokkos<double> &vel,
-                               const ViewCArrayKokkos<double> &acc, const ViewCArrayKokkos<double> &internal_force,
+                               const ViewCArrayKokkos<double> &internal_force,
                                const ViewCArrayKokkos<double> &contact_force, const double &mass)
 {
     this->mass = mass;
@@ -1812,7 +1750,6 @@ contact_node_t::contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCA
     {
         this->pos(i) = pos(i);
         this->vel(i) = vel(i);
-        this->acc(i) = acc(i);
         this->internal_force(i) = internal_force(i);
         this->contact_force(i) = contact_force(i);
     }
@@ -1824,44 +1761,40 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
     double err_tol = 1.0e-6;  // error tolerance
 
     // Testing get_contact_point with abnormal patch velocities. See contact_check_visual_through_reference.py.
-    double test1_points_arr[3*4] = {1.0, 0.0, 0.0, 1.0,
-                                    0.0, 0.0, 0.0, 0.0,
-                                    0.0, 0.0, 1.0, 1.0};
-    double test1_vels_arr[3*4] = {0.0, 0.0, 0.0, 0.0,
-                                  1.0, 0.1, 0.2, 0.0,
-                                  0.0, 0.0, 0.0, 0.0};
-    double test1_acc_arr[3*4] = {0.0, 0.0, 0.0, 0.0,
-                                 0.0, 0.0, 0.0, 0.0,
-                                 0.0, 0.0, 0.0, 0.0};
-    double test1_internal_force_arr[3*4] = {0.0, 0.0, 0.0, 0.0,
-                                            0.0, 0.0, 0.0, 0.0,
-                                            0.0, 0.0, 0.0, 0.0};
-    double test1_contact_force_arr[3*4] = {0.0, 0.0, 0.0, 0.0,
-                                           0.0, 0.0, 0.0, 0.0,
-                                           0.0, 0.0, 0.0, 0.0};
-    double test1_mass_points_arr[3*4] = {1.0, 1.0, 1.0, 1.0,
-                                         1.0, 1.0, 1.0, 1.0,
-                                         1.0, 1.0, 1.0, 1.0};
-    ViewCArrayKokkos<double> test1_points(&test1_points_arr[0], 3, 4);
-    ViewCArrayKokkos<double> test1_vels(&test1_vels_arr[0], 3, 4);
-    ViewCArrayKokkos<double> test1_accs(&test1_acc_arr[0], 3, 4);
-    ViewCArrayKokkos<double> test1_internal_force(&test1_internal_force_arr[0], 3, 4);
-    ViewCArrayKokkos<double> test1_contact_force(&test1_contact_force_arr[0], 3, 4);
-    ViewCArrayKokkos<double> test1_mass_points(&test1_mass_points_arr[0], 3, 4);
-    contact_patch_t test1_patch(test1_points, test1_vels, test1_accs, test1_internal_force, test1_contact_force,
+    double test1_points_arr[4*3] = {1.0, 0.0, 0.0,
+                                    0.0, 0.0, 0.0,
+                                    0.0, 0.0, 1.0,
+                                    1.0, 0.0, 1.0};
+    double test1_vels_arr[4*3] = {0.0, 1.0, 0.0,
+                                  0.0, 0.1, 0.0,
+                                  0.0, 0.2, 0.0,
+                                  0.0, 0.0, 0.0};
+    double test1_internal_force_arr[4*3] = {0.0, 0.0, 0.0,
+                                            0.0, 0.0, 0.0,
+                                            0.0, 0.0, 0.0,
+                                            0.0, 0.0, 0.0};
+    double test1_contact_force_arr[4*3] = {0.0, 0.0, 0.0,
+                                           0.0, 0.0, 0.0,
+                                           0.0, 0.0, 0.0,
+                                           0.0, 0.0, 0.0};
+    double test1_mass_points_arr[4] = {1.0, 1.0, 1.0, 1.0};
+    ViewCArrayKokkos<double> test1_points(&test1_points_arr[0], 4, 3);
+    ViewCArrayKokkos<double> test1_vels(&test1_vels_arr[0], 4, 3);
+    ViewCArrayKokkos<double> test1_internal_force(&test1_internal_force_arr[0], 4, 3);
+    ViewCArrayKokkos<double> test1_contact_force(&test1_contact_force_arr[0], 4, 3);
+    ViewCArrayKokkos<double> test1_mass_points(&test1_mass_points_arr[0], 4);
+    contact_patch_t test1_patch(test1_points, test1_vels, test1_internal_force, test1_contact_force,
                                 test1_mass_points);
 
     double test1_node_pos[3] = {0.25, 1.0, 0.2};
     double test1_node_vel[3] = {0.75, -1.0, 0.0};
-    double test1_node_acc[3] = {0.0, 0.0, 0.0};
     double test1_node_internal_force_arr[3] = {0.0, 0.0, 0.0};
     double test1_node_contact_force_arr[3] = {0.0, 0.0, 0.0};
     ViewCArrayKokkos<double> test1_pos(&test1_node_pos[0], 3);
     ViewCArrayKokkos<double> test1_vel(&test1_node_vel[0], 3);
-    ViewCArrayKokkos<double> test1_acc(&test1_node_acc[0], 3);
     ViewCArrayKokkos<double> test1_node_internal_force(&test1_node_internal_force_arr[0], 3);
     ViewCArrayKokkos<double> test1_node_contact_force(&test1_node_contact_force_arr[0], 3);
-    contact_node_t test1_node(test1_pos, test1_vel, test1_acc, test1_node_internal_force, test1_node_contact_force,
+    contact_node_t test1_node(test1_pos, test1_vel, test1_node_internal_force, test1_node_contact_force,
                               1.0);
 
     double xi_val, eta_val, del_tc;
