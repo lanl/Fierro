@@ -1105,7 +1105,7 @@ void contact_patches_t::update_nodes(const mesh_t &mesh, const node_t &nodes, co
     //       nodes_obj member in contact_patch_t
 }
 
-void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corner_t &corner)
+void contact_patches_t::sort()
 {
     // todo: I don't think it's a good idea to have these allocated here. These should become member variables, and
     //       its allocation should be moved to initialize() because sort() is being called every step.
@@ -1246,9 +1246,10 @@ void contact_patches_t::sort(const mesh_t &mesh, const node_t &nodes, const corn
     // Find the bucket id for each node by constructing lbox
     FOR_ALL_CLASS(i, 0, contact_patches_t::num_contact_nodes, {
         size_t node_gid = nodes_gid(i);
-        double x = nodes.coords(0, node_gid, 0);
-        double y = nodes.coords(0, node_gid, 1);
-        double z = nodes.coords(0, node_gid, 2);
+        const contact_node_t &node = contact_nodes(node_gid);
+        double x = node.pos(0);
+        double y = node.pos(1);
+        double z = node.pos(2);
 
         size_t Si_x = floor((x - x_min)/bucket_size);
         size_t Si_y = floor((y - y_min)/bucket_size);
@@ -1852,7 +1853,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
         std::cout << "Patch with nodes 15 16 10 9 is paired with node 19" << std::endl;
         std::cout << "Patch with nodes 18 19 23 22 is paired with node 10" << std::endl;
         std::cout << "vs." << std::endl;
-        contact_patches_obj.sort(mesh, nodes, corner);
+        contact_patches_obj.sort();
         contact_patches_obj.get_contact_pairs(0.1);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
@@ -1878,7 +1879,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 12" << std::endl;
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 16" << std::endl;
         std::cout << "vs." << std::endl;
-        contact_patches_obj.sort(mesh, nodes, corner);
+        contact_patches_obj.sort();
         contact_patches_obj.get_contact_pairs(1.0);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
@@ -1903,7 +1904,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 16" << std::endl;
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 17" << std::endl;
         std::cout << "vs." << std::endl;
-        contact_patches_obj.sort(mesh, nodes, corner);
+        contact_patches_obj.sort();
         contact_patches_obj.get_contact_pairs(1.0);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
@@ -1938,7 +1939,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mes
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 20";
         std::cout << " ---> Pushback Direction: 0 0.447214 0.894427" << std::endl;
         std::cout << "vs." << std::endl;
-        contact_patches_obj.sort(mesh, nodes, corner);
+        contact_patches_obj.sort();
         contact_patches_obj.get_contact_pairs(1.0);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {

@@ -118,5 +118,7 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_contact(const mesh_t &mesh, const node_t &nodes, const corner_t &corner, const double &del_t)
 {
-    contact_bank.sort(mesh, nodes, corner);
+    contact_bank.sort();
+    // get_contact_pairs and do force resolution
+    contact_bank.update_nodes(mesh, nodes, corner);
 } // end boundary_contact function
