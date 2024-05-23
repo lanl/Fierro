@@ -191,16 +191,10 @@ FEA_Module_SGH::FEA_Module_SGH(
                 (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                 (*psi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
             }
-            else{
-                Dynamic_Checkpoint temp(3,0,0);
-                temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[istep]);
-                temp.change_vector(V_DATA, (*forward_solve_velocity_data)[istep]);
-                temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[istep]);
-                dynamic_checkpoint_set->insert(temp);
-            }
         }
     }
-
+    
+    num_active_checkpoints = 0;
     have_loading_conditions = false;
 }
 
@@ -926,6 +920,7 @@ void FEA_Module_SGH::sgh_solve()
     bool topology_optimization_on = simparam->topology_optimization_on;
     bool shape_optimization_on    = simparam->shape_optimization_on;
     bool use_solve_checkpoints    = simparam->optimization_options.use_solve_checkpoints;
+    int  num_solve_checkpoints    = simparam->optimization_options.num_solve_checkpoints;
 
     // reset time accumulating objective and constraints
     /*
@@ -944,10 +939,7 @@ void FEA_Module_SGH::sgh_solve()
         kinetic_energy_minimize_function.objective_accumulation = 0;
         global_objective_accumulation = objective_accumulation = 0;
         kinetic_energy_objective = true;
-        if(use_solve_checkpoints){
-
-        }
-        else{
+        if(!use_solve_checkpoints){
             if (max_time_steps + 1 > forward_solve_velocity_data->size()) {
                 old_max_forward_buffer = forward_solve_velocity_data->size();
                 time_data.resize(max_time_steps + 1);
@@ -1134,9 +1126,17 @@ void FEA_Module_SGH::sgh_solve()
         } // end view scope
 
         if(use_solve_checkpoints){
-
+            //always assign t=0 as a checkpoint
+            Dynamic_Checkpoint temp(3,0,time_value);
+            temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[0]);
+            temp.change_vector(V_DATA, (*forward_solve_velocity_data)[0]);
+            temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[0]);
+            temp.assign_vector(U_DATA,all_node_coords_distributed);
+            temp.assign_vector(V_DATA,all_node_velocities_distributed);
+            temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
+            dynamic_checkpoint_set->insert(temp);
         }
-        else{
+        if(!use_solve_checkpoints){
             (*forward_solve_internal_energy_data)[0]->assign(*element_internal_energy_distributed);
             (*forward_solve_velocity_data)[0]->assign(*Explicit_Solver_Pointer_->all_node_velocities_distributed);
             (*forward_solve_coordinate_data)[0]->assign(*Explicit_Solver_Pointer_->all_node_coords_distributed);
@@ -1525,10 +1525,7 @@ void FEA_Module_SGH::sgh_solve()
                 max_time_steps = cycle + 1;
             }
             
-            if(use_solve_checkpoints){
-
-            }
-            else{
+            if(!use_solve_checkpoints){
                 if (max_time_steps + 1 > forward_solve_velocity_data->size()) {
                     old_max_forward_buffer = forward_solve_velocity_data->size();
                     time_data.resize(max_time_steps + BUFFER_GROW + 1);
@@ -1619,7 +1616,18 @@ void FEA_Module_SGH::sgh_solve()
             Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
 
             if(use_solve_checkpoints){
-
+                //add level 0 checkpoints sequentially until requested total limit is reached
+                if(num_active_checkpoints < num_solve_checkpoints){
+                    Dynamic_Checkpoint temp(3,cycle+1,time_value);
+                    temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[cycle + 1]);
+                    temp.change_vector(V_DATA, (*forward_solve_velocity_data)[cycle + 1]);
+                    temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[cycle + 1]);
+                    temp.assign_vector(U_DATA,all_node_coords_distributed);
+                    temp.assign_vector(V_DATA,all_node_velocities_distributed);
+                    temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
+                    dynamic_checkpoint_set->insert(temp);
+                    num_active_checkpoints++;
+                }
             }
             else{
                 (*forward_solve_internal_energy_data)[cycle + 1]->assign(*element_internal_energy_distributed);

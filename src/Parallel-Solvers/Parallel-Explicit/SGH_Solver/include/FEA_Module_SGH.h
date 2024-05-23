@@ -692,6 +692,7 @@ public:
     // optimization flags and data
     bool kinetic_energy_objective;
     Teuchos::RCP<std::set<Dynamic_Checkpoint>> dynamic_checkpoint_set;
+    int num_active_checkpoints;
     enum vector_name { U_DATA=0, V_DATA=1, SIE_DATA=2 };
 };
 

@@ -66,11 +66,12 @@ public:
     Dynamic_Checkpoint(){}
 
     // Argument Constructor
-    Dynamic_Checkpoint(int vector_count, int timestep, real_t time) {
+    Dynamic_Checkpoint(int vector_count, int timestep, real_t time, int pass_level=0) {
         num_state_vectors = vector_count;
         saved_timestep = timestep;
         saved_time = time;
-        *state_vectors = std::vector<Teuchos::RCP<MV>>(num_state_vectors);
+        state_vectors = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(num_state_vectors));
+        level = pass_level;
     }
 
     // Copy Constructor
@@ -78,6 +79,7 @@ public:
         saved_timestep = copied_checkpoint.saved_timestep;
         num_state_vectors = copied_checkpoint.num_state_vectors;
         state_vectors = copied_checkpoint.state_vectors;
+        level = copied_checkpoint.level;
     }
 
     // Destructor
@@ -88,6 +90,7 @@ public:
         saved_timestep = assigned_checkpoint.saved_timestep;
         num_state_vectors = assigned_checkpoint.num_state_vectors;
         state_vectors = assigned_checkpoint.state_vectors;
+        level = assigned_checkpoint.level;
         return *this;
     }
 
@@ -105,18 +108,26 @@ public:
         saved_timestep = new_timestep;
     }
 
+    void change_time(real_t new_time){
+        saved_time = new_time;
+    }
+
+    void change_level(int new_level){
+        level = new_level;
+    }
+
     //function to change stored vectors
     void change_vectors(Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> new_state_vectors){
         state_vectors = new_state_vectors;
     }
 
     //function to change one of the stored vectors
-    void change_vector(int vector_index, Teuchos::RCP<MV> new_vector){
+    void change_vector(int vector_index, Teuchos::RCP<MV> new_vector) const{
         (*state_vectors)[vector_index] = new_vector;
     }
 
     //function to assign new values to stored vectors
-    void assign_vectors(Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> new_state_vectors){
+    void assign_vectors(Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> new_state_vectors) const{
         //TODO: add error control for differing sizes of input and member vector
         for(int vector_index = 0; vector_index < (*new_state_vectors).size(); vector_index++){
             (*state_vectors)[vector_index]->assign(*((*new_state_vectors)[vector_index]));
@@ -124,7 +135,7 @@ public:
     }
 
     //function to assign new values to one of the stored vectors
-    void assign_vector(int vector_index, Teuchos::RCP<MV> new_vector){
+    void assign_vector(int vector_index, Teuchos::RCP<MV> new_vector) const{
         (*state_vectors)[vector_index]->assign(*new_vector);
     }
 
@@ -133,6 +144,7 @@ public:
     int saved_timestep;
     real_t saved_time;
     int num_state_vectors;
+    int level;
 
     private:
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> state_vectors;
