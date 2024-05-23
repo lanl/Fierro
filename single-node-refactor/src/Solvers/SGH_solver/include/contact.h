@@ -48,7 +48,7 @@ struct contact_patch_t
     // members to be used in find_nodes and capture_box
     // expected max number of nodes that could hit a patch
     static constexpr size_t max_contacting_nodes_in_patch = 25;
-    static constexpr size_t max_number_buckets = 200;  // todo: this needs to be ridden of and determined in initialize
+    static constexpr size_t max_number_buckets = 1000;  // todo: this needs to be ridden of and determined in initialize
     // bounds of the capture box (xc_max, yc_max, zc_max, xc_min, yc_min, zc_min)
     CArrayKokkos<double> bounds = CArrayKokkos<double>(6);
     // buckets that intersect the patch

@@ -176,7 +176,7 @@ public:
         DCArrayKokkos<double>& node_vel,
         const double time_value);
 
-    void boundary_contact(const mesh_t &mesh, const node_t &nodes, const corner_t &corner, const double &del_t);
+    void boundary_contact(const double &del_t);
 
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(
@@ -246,7 +246,8 @@ public:
         const mesh_t& mesh,
         DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& corner_force);
+        const DCArrayKokkos<double>& corner_force,
+        const CArrayKokkos<contact_node_t> &contact_nodes);
 
     KOKKOS_FUNCTION
     void get_velgrad(

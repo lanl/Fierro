@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -52,7 +52,8 @@ void SGH::update_velocity(double rk_alpha,
     const mesh_t& mesh,
     DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_mass,
-    const DCArrayKokkos<double>& corner_force
+    const DCArrayKokkos<double>& corner_force,
+    const CArrayKokkos<contact_node_t> &contact_nodes
     )
 {
     const size_t num_dims = mesh.num_dims;
@@ -60,8 +61,10 @@ void SGH::update_velocity(double rk_alpha,
     // walk over the nodes to update the velocity
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         double node_force[3];
+        // adding in contact force
+        const contact_node_t &contact_node = contact_nodes(node_gid);
         for (size_t dim = 0; dim < num_dims; dim++) {
-            node_force[dim] = 0.0;
+            node_force[dim] = contact_node.contact_force(dim);
         } // end for dim
 
         // loop over all corners around the node and calculate the nodal force

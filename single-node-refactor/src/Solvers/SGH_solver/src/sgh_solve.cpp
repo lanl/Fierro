@@ -235,13 +235,10 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             // ---- apply contact boundary conditions to the boundary patches----
             if (doing_contact)  // Structuring it like this to avoid having to sort() everytime.
             {
-                boundary_contact(mesh, node, corner, dt);
-                // Todo: Ask about why the coordinates are updating every other step?
-                // contact_patch_t temp = contact_bank.contact_patches(18);
-                // matar_print(temp.nodes_gid);
-                // matar_print(temp.points);
-                // matar_print(temp.vel_points);
+                boundary_contact(dt);
             }
+
+            // mpi_coms();
 
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
@@ -249,12 +246,17 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                             mesh,
                             node.vel,
                             node.mass,
-                            corner.force);
+                            corner.force,
+                            contact_bank.contact_nodes);
 
             // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
 
-            // mpi_coms();
+            if (doing_contact)
+            {
+                // updating contact nodes
+                contact_bank.update_nodes(mesh, node, corner);
+            }
 
             // ---- Update specific internal energy in the elements ----
             update_energy(rk_alpha,
