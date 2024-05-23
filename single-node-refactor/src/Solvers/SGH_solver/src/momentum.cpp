@@ -61,11 +61,19 @@ void SGH::update_velocity(double rk_alpha,
     // walk over the nodes to update the velocity
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         double node_force[3];
-        // adding in contact force
-        const contact_node_t &contact_node = contact_nodes(node_gid);
+
         for (size_t dim = 0; dim < num_dims; dim++) {
-            node_force[dim] = contact_node.contact_force(dim);
+            node_force[dim] = 0;
         } // end for dim
+
+        // adding in contact force
+        if (doing_contact)
+        {
+            const contact_node_t &contact_node = contact_nodes(node_gid);
+            for (size_t dim = 0; dim < num_dims; dim++) {
+                node_force[dim] += contact_node.contact_force(dim);
+            } // end for dim
+        }
 
         // loop over all corners around the node and calculate the nodal force
         for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
