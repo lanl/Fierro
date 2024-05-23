@@ -369,36 +369,6 @@ public:
         double&      dt,
         const double fuzz);
 
-    // **** Functions defined in user_mat.cpp **** //
-    // NOTE: Pull up into high level
-    KOKKOS_FUNCTION
-    void user_eos_model(
-        const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie);
-
-    KOKKOS_FUNCTION
-    void user_strength_model(
-        const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie,
-        const ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
-        const double vol,
-        const double dt,
-        const double rk_alpha);
 };
 
 #endif // end HEADER_H
