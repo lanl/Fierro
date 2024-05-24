@@ -1685,6 +1685,9 @@ void contact_patches_t::force_resolution(const double &del_t)
                 // pair.distribute_frictionless_force(*this, 0.5);
             // } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
         // }
+
+        // todo: multi-stage detection should get added here. To do this, wrap this whole function in a while loop and
+        //       implement the multi-stage detection as is in the python version.
     }
 }  // end force_resolution
 
