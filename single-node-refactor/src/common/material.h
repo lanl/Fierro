@@ -42,12 +42,21 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace model
 {
 // strength model types
-enum strength_tag
+enum strength_type
 {
-    none = 0,
+    no_strength = 0,
     increment_based = 1,    // Model evaluation is independent of time integration
     state_based = 2,        // Model is dependent on time integration
 };
+
+// EOS model types
+enum eos_type
+{
+    no_eos, 
+    ideal_gas, 
+    user_defined,
+};
+
 } // end of namespace
 
 namespace model_init
@@ -78,6 +87,9 @@ struct material_t
     // statev(4) = ref density
     // statev(5) = ref specific internal energy
 
+    // Type of EOS model used
+    model::eos_type eos_type;
+
     // Equation of state (EOS) function pointer
     void (*eos_model)(const DCArrayKokkos<double>& elem_pres,
                       const DCArrayKokkos<double>& elem_stress,
@@ -92,7 +104,9 @@ struct material_t
     // void (*strength_model)(double, double); // WARNING: a placeholder
 
     // hypo or hyper elastic plastic model
-    model::strength_tag strength_type;
+    model::strength_type strength_type;
+
+
 
     // setup the strength model via the input file for via a user_setup
     model_init::strength_setup_tag strength_setup = model_init::input;
@@ -182,6 +196,21 @@ static void ideal_gas(const DCArrayKokkos<double>& elem_pres,
     return;
 } // end of ideal_gas
 
+
+KOKKOS_FUNCTION
+static void no_eos(const DCArrayKokkos<double>& elem_pres,
+    const DCArrayKokkos<double>& elem_stress,
+    const size_t elem_gid,
+    const size_t mat_id,
+    const DCArrayKokkos<double>& elem_state_vars,
+    const DCArrayKokkos<double>& elem_sspd,
+    const double den,
+    const double sie)
+{
+    return;
+} // end of no_eos
+
+
 // WARNING: placeholder
 static void elastic_plastic(double stress, double strain)
 {
@@ -190,18 +219,19 @@ static void elastic_plastic(double stress, double strain)
 }
 
 // EOS function pointer
-typedef void (*eos_type)(const DCArrayKokkos<double>& elem_pres,
-                         const DCArrayKokkos<double>& elem_stress,
-                         const size_t elem_gid,
-                         const size_t mat_id,
-                         const DCArrayKokkos<double>& elem_state_vars,
-                         const DCArrayKokkos<double>& elem_sspd,
-                         const double den,
-                         const double sie);
+typedef void (*eos_ptr)(const DCArrayKokkos<double>& elem_pres,
+                        const DCArrayKokkos<double>& elem_stress,
+                        const size_t elem_gid,
+                        const size_t mat_id,
+                        const DCArrayKokkos<double>& elem_state_vars,
+                        const DCArrayKokkos<double>& elem_sspd,
+                        const double den,
+                        const double sie);
 
-static std::map<std::string, eos_type> eos_map
+static std::map<std::string, model::eos_type> eos_map
 {
-    { "ideal_gas", ideal_gas }
+    { "no_eos", model::no_eos },
+    { "ideal_gas", model::ideal_gas }
 };
 
 // add the strength models here

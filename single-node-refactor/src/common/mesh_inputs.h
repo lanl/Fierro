@@ -36,6 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define FIERRO_MESH_INPUT_OPTIONS_H
 #include <stdio.h>
 #include "matar.h"
+#include "parse_yaml.h"
 
 namespace mesh_input
 {
@@ -117,5 +118,6 @@ static std::vector<std::string> str_mesh_inps
     "num_radial_elems",
     "num_angular_elems"
 };
+
 
 #endif // end Header Guard
