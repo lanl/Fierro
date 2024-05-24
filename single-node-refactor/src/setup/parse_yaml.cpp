@@ -54,7 +54,7 @@ bool VERBOSE = false;
 // ==============================================================================
 //   Function Definitions
 // ==============================================================================
-// modified code from stack overflow for string delimiter parsing
+// modified code from stack over./flow for string delimiter parsing
 std::vector<std::string> exact_array_values(std::string s, std::string delimiter)
 {
     size_t pos_start = 0, pos_end, delim_len = delimiter.length();
@@ -1237,7 +1237,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     
                     switch(eos_map[eos]){
 
-                    case model::no_eos:
+                        case model::no_eos:
                             RUN({
                                 materials(mat_id).eos_type = model::no_eos;
                                 materials(mat_id).eos_model = no_eos;
@@ -1256,9 +1256,14 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
                             break;
-                        case model::user_defined:
-                            materials(mat_id).eos_type = model::user_defined;
-                            std::cout << "\t User defined not yet defined! " << eos << std::endl;
+                        case model::user_defined_eos:
+                            RUN({
+                                materials(mat_id).eos_type = model::user_defined_eos;
+                                materials(mat_id).eos_model = user_eos_model;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
                             break;
                         default:
                             std::cout << "ERROR: invalid input: " << eos << std::endl;
@@ -1274,24 +1279,63 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
             else if (a_word.compare("strength_model") == 0) {
                 std::string strength_model = root["materials"][mat_id]["material"]["strength_model"].As<std::string>();
 
-                // set the strength_model
+                // set the EOS
                 if (strength_map.find(strength_model) != strength_map.end()) {
-                    auto strength = strength_map[strength_model];
+                    
+                    switch(strength_map[strength_model]){
 
-                    std::cout << "WARNING: STRENGTH MODELS NOT YET SUPPORTED" << strength_model << std::endl;
-                    // RUN({
-                    //     materials(mat_id).strength_model = strength;
-                    //     materials(mat_id).strength_model(0., 1.); // WARNING BUG HERE, replace with real strength model
-                    // });
+                        case model::no_strength:
+                            RUN({
+                                materials(mat_id).strength_type = model::no_strength;
+                                materials(mat_id).strength_model = no_strength;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model = " << strength_model << std::endl;
+                            }
+                            break;
 
-                    if (VERBOSE) {
-                        std::cout << "\tstrength_model = " << strength_model << std::endl;
-                    }
+                        case model::increment_based:
+                            RUN({
+                                materials(mat_id).strength_type = model::increment_based;
+                            });
+                            std::cout << "ERROR: increment_based models not yet defined: " << std::endl;
+                            throw std::runtime_error("**** ERROR: increment_based models not yet defined ****");
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model = " << strength_model << std::endl;
+                            }
+                            break;
+                        case model::state_based:
+                            RUN({
+                                materials(mat_id).strength_type = model::state_based;
+                            });
+                            std::cout << "ERROR: state_based models not yet defined: " << std::endl;
+                            throw std::runtime_error("**** ERROR: state_based models not yet defined ****");
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model = " << strength_model << std::endl;
+                            }
+                            break;
+                        case model::user_defined_strength:
+                            RUN({
+                                materials(mat_id).strength_type = model::user_defined_strength;
+                                materials(mat_id).strength_model = user_strength_model;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model = " << strength_model << std::endl;
+                            }
+                            break;
+
+                        default:
+                            std::cout << "ERROR: invalid strength input: " << strength_model << std::endl;
+                            throw std::runtime_error("**** Strength model Not Understood ****");
+                            break;
+                    } // end switch on EOS type
                 }
                 else{
-                    std::cout << "ERROR: invalid input: " << strength_model << std::endl;
+                    std::cout << "ERROR: invalid Strength model input: " << strength_model << std::endl;
+                    throw std::runtime_error("**** Strength model Not Understood ****");
                 } // end if
-            } // EOS model
+
+            } // Strength model
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
                 Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
