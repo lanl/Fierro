@@ -115,21 +115,21 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
                         elem_gid);
 
             // --- call strength model ---
-            // material(mat_id).strength_model(elem_pres,
-            //                                 elem_stress,
-            //                                 elem_gid,
-            //                                 mat_id,
-            //                                 elem_statev,
-            //                                 elem_sspd,
-            //                                 elem_den(elem_gid),
-            //                                 elem_sie(elem_gid),
-            //                                 vel_grad,
-            //                                 elem_node_gids,
-            //                                 node_coords,
-            //                                 node_vel,
-            //                                 elem_vol(elem_gid),
-            //                                 dt,
-            //                                 rk_alpha);
+            material(mat_id).strength_model(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            mat_id,
+                                            elem_statev,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(elem_gid),
+                                            vel_grad,
+                                            elem_node_gids,
+                                            node_coords,
+                                            node_vel,
+                                            elem_vol(elem_gid),
+                                            dt,
+                                            rk_alpha);
         } // end logical on state_based strength model
 
         // --- Pressure ---

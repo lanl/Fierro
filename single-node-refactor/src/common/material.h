@@ -41,13 +41,20 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace model
 {
+
 // strength model types
 enum strength_type
 {
-    no_strength = 0,
-    increment_based = 1,    // Model evaluation is independent of time integration
-    state_based = 2,        // Model is dependent on time integration
-    user_defined_strength = 3,
+    no_strength_type,
+    increment_based,    // Model evaluation is independent of time integration
+    state_based,        // Model is dependent on time integration
+};
+
+// Specific strength models
+enum strength_models
+{
+    no_strength_model,
+    user_defined_strength,
 };
 
 // EOS model types
@@ -58,7 +65,28 @@ enum eos_type
     user_defined_eos,
 };
 
-} // end of namespace
+} // end model namespace 
+
+static std::map<std::string, model::eos_type> eos_map
+{
+    { "no_eos", model::no_eos },
+    { "ideal_gas", model::ideal_gas },
+    { "user_defined", model::user_defined_eos},
+};
+
+static std::map<std::string, model::strength_type> strength_type_map
+{
+    { "no_strength", model::no_strength_type },
+    { "increment_based", model::increment_based },
+    { "state_based", model::state_based },
+};
+
+static std::map<std::string, model::strength_models> strength_models_map
+{
+    { "no_strength", model::no_strength_model },
+    { "user_defined_strength", model::user_defined_strength },
+};
+
 
 namespace model_init
 {
@@ -101,26 +129,27 @@ struct material_t
                       const double den,
                       const double sie);
 
+    // Strength model type
+    model::strength_type strength_type = model::no_strength_type;
+
     // Material strength model function pointer
     void (*strength_model)(const DCArrayKokkos<double>& elem_pres,
-                           const DCArrayKokkos<double>& elem_stress,
-                           const size_t elem_gid,
-                           const size_t mat_id,
-                           const DCArrayKokkos<double>& elem_state_vars,
-                           const DCArrayKokkos<double>& elem_sspd,
-                           const double den,
-                           const double sie,
-                           const ViewCArrayKokkos <double> &vel_grad,
-                           const ViewCArrayKokkos <size_t> &elem_node_gids,
-                           const DViewCArrayKokkos <double> &node_coords,
-                           const DViewCArrayKokkos <double> &node_vel,
-                           const double vol,
-                           const double dt,
-                           const double rk_alpha);
+                                 const DCArrayKokkos<double>& elem_stress,
+                                 const size_t elem_gid,
+                                 const size_t mat_id,
+                                 const DCArrayKokkos<double>& elem_state_vars,
+                                 const DCArrayKokkos<double>& elem_sspd,
+                                 const double den,
+                                 const double sie,
+                                 const ViewCArrayKokkos <double> &vel_grad,
+                                 const ViewCArrayKokkos <size_t> &elem_node_gids,
+                                 const DCArrayKokkos <double> &node_coords,
+                                 const DCArrayKokkos <double> &node_vel,
+                                 const double vol,
+                                 const double dt,
+                                 const double rk_alpha);
 
 
-    // Strength model type
-    model::strength_type strength_type;
 
 
 
@@ -133,6 +162,9 @@ struct material_t
     size_t num_strength_global_vars = 0; ///< Number of global variables for the strength model
 
     DCArrayKokkos<double> eos_global_vars; ///< Array of global variables for the EOS
+
+
+    DCArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
 
     double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression
     double q1ex = 1.3333;   ///< acoustic coefficient in Riemann solver for expansion
@@ -152,6 +184,7 @@ static std::vector<std::string> str_material_inps
 {
     "id",
     "eos_model",
+    "strength_model_type"
     "strength_model",
     "q1",
     "q2",
@@ -246,7 +279,7 @@ static void user_eos_model(const DCArrayKokkos<double>& elem_pres,
     // -----------------------------------------------------------------------------
     // Required variables are here
     //------------------------------------------------------------------------------
-    
+    std::cout<<"Inside user EOS model"<<std::endl;
 
     // -----------------------------------------------------------------------------
     // The user must coding goes here
@@ -258,22 +291,22 @@ static void user_eos_model(const DCArrayKokkos<double>& elem_pres,
 } // end for user_eos_model
 
 
-// Strength function pointer
-typedef void (*strength_ptr)(const DCArrayKokkos<double>& elem_pres,
-                           const DCArrayKokkos<double>& elem_stress,
-                           const size_t elem_gid,
-                           const size_t mat_id,
-                           const DCArrayKokkos<double>& elem_state_vars,
-                           const DCArrayKokkos<double>& elem_sspd,
-                           const double den,
-                           const double sie,
-                           const ViewCArrayKokkos <double> &vel_grad,
-                           const ViewCArrayKokkos <size_t> &elem_node_gids,
-                           const DViewCArrayKokkos <double> &node_coords,
-                           const DViewCArrayKokkos <double> &node_vel,
-                           const double vol,
-                           const double dt,
-                           const double rk_alpha);
+// // Strength function pointer
+// typedef void (*strength_ptr)(const DCArrayKokkos<double>& elem_pres,
+//                              const DCArrayKokkos<double>& elem_stress,
+//                              const size_t elem_gid,
+//                              const size_t mat_id,
+//                              const DCArrayKokkos<double>& elem_state_vars,
+//                              const DCArrayKokkos<double>& elem_sspd,
+//                              const double den,
+//                              const double sie,
+//                              const ViewCArrayKokkos <double> &vel_grad,
+//                              const ViewCArrayKokkos <size_t> &elem_node_gids,
+//                              const DCArrayKokkos <double> &node_coords,
+//                              const DCArrayKokkos <double> &node_vel,
+//                              const double vol,
+//                              const double dt,
+//                              const double rk_alpha);
 // -----------------------------------------------------------------------------
 // This is the user material model function for the stress tensor
 //------------------------------------------------------------------------------
@@ -288,8 +321,8 @@ static void user_strength_model(const DCArrayKokkos<double>& elem_pres,
                                  const double sie,
                                  const ViewCArrayKokkos <double> &vel_grad,
                                  const ViewCArrayKokkos <size_t> &elem_node_gids,
-                                 const DViewCArrayKokkos <double> &node_coords,
-                                 const DViewCArrayKokkos <double> &node_vel,
+                                 const DCArrayKokkos <double> &node_coords,
+                                 const DCArrayKokkos <double> &node_vel,
                                  const double vol,
                                  const double dt,
                                  const double rk_alpha){
@@ -298,7 +331,7 @@ static void user_strength_model(const DCArrayKokkos<double>& elem_pres,
     // Required variables are here
     //------------------------------------------------------------------------------
     
-
+    std::cout<<"Inside user strength model"<<std::endl;
     // -----------------------------------------------------------------------------
     // The user must coding goes here
     //------------------------------------------------------------------------------   
@@ -314,50 +347,33 @@ static void user_strength_model(const DCArrayKokkos<double>& elem_pres,
 //------------------------------------------------------------------------------
 KOKKOS_FUNCTION
 static void no_strength(const DCArrayKokkos<double>& elem_pres,
-                         const DCArrayKokkos<double>& elem_stress,
-                         const size_t elem_gid,
-                         const size_t mat_id,
-                         const DCArrayKokkos<double>& elem_state_vars,
-                         const DCArrayKokkos<double>& elem_sspd,
-                         const double den,
-                         const double sie,
-                         const ViewCArrayKokkos <double> &vel_grad,
-                         const ViewCArrayKokkos <size_t> &elem_node_gids,
-                         const DViewCArrayKokkos <double> &node_coords,
-                         const DViewCArrayKokkos <double> &node_vel,
-                         const double vol,
-                         const double dt,
-                         const double rk_alpha){
+                                 const DCArrayKokkos<double>& elem_stress,
+                                 const size_t elem_gid,
+                                 const size_t mat_id,
+                                 const DCArrayKokkos<double>& elem_state_vars,
+                                 const DCArrayKokkos<double>& elem_sspd,
+                                 const double den,
+                                 const double sie,
+                                 const ViewCArrayKokkos <double> &vel_grad,
+                                 const ViewCArrayKokkos <size_t> &elem_node_gids,
+                                 const DCArrayKokkos <double> &node_coords,
+                                 const DCArrayKokkos <double> &node_vel,
+                                 const double vol,
+                                 const double dt,
+                                 const double rk_alpha){
     
     return;
 
 } // end of user mat
 
-// EOS function pointer
-typedef void (*eos_ptr)(const DCArrayKokkos<double>& elem_pres,
-                        const DCArrayKokkos<double>& elem_stress,
-                        const size_t elem_gid,
-                        const size_t mat_id,
-                        const DCArrayKokkos<double>& elem_state_vars,
-                        const DCArrayKokkos<double>& elem_sspd,
-                        const double den,
-                        const double sie);
-
-static std::map<std::string, model::eos_type> eos_map
-{
-    { "no_eos", model::no_eos },
-    { "ideal_gas", model::ideal_gas },
-    { "user_defined", model::user_defined_eos},
-};
-
-
-
-static std::map<std::string, model::strength_type> strength_map
-{
-    { "no_strength", model::no_strength },
-    { "increment_based", model::increment_based },
-    { "state_based", model::state_based },
-    { "user_defined_strength", model::user_defined_strength },
-};
+// // EOS function pointer
+// typedef void (*eos_ptr)(const DCArrayKokkos<double>& elem_pres,
+//                         const DCArrayKokkos<double>& elem_stress,
+//                         const size_t elem_gid,
+//                         const size_t mat_id,
+//                         const DCArrayKokkos<double>& elem_state_vars,
+//                         const DCArrayKokkos<double>& elem_sspd,
+//                         const double den,
+//                         const double sie);
 
 #endif // end Header Guard

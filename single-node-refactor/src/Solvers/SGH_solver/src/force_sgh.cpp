@@ -375,21 +375,21 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
             // --- call strength model ---
-            // material(mat_id).strength_model(elem_pres,
-            //                                 elem_stress,
-            //                                 elem_gid,
-            //                                 mat_id,
-            //                                 elem_statev,
-            //                                 elem_sspd,
-            //                                 elem_den(elem_gid),
-            //                                 elem_sie(elem_gid),
-            //                                 vel_grad,
-            //                                 elem_node_gids,
-            //                                 node_coords,
-            //                                 node_vel,
-            //                                 elem_vol(elem_gid),
-            //                                 dt,
-            //                                 rk_alpha);
+            material(mat_id).strength_model(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            mat_id,
+                                            elem_statev,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(elem_gid),
+                                            vel_grad,
+                                            elem_node_gids,
+                                            node_coords,
+                                            node_vel,
+                                            elem_vol(elem_gid),
+                                            dt,
+                                            rk_alpha);
         } // end logical on increment_based strength model
     }); // end parallel for loop over elements
 
