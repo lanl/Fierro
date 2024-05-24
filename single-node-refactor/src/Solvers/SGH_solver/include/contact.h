@@ -10,7 +10,7 @@ using namespace mtr;
 
 // solving options
 static constexpr size_t max_iter = 100;  // max number of iterations
-static constexpr double tol = 1e-10;  // tolerance for the things that are supposed to be zero
+static constexpr double tol = 1e-15;  // tolerance for the things that are supposed to be zero
 static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (see contact_check for more info)
 
 struct contact_node_t
