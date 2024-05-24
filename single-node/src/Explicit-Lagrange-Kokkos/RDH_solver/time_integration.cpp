@@ -104,9 +104,9 @@ void get_timestep(mesh_t &mesh,
             b = countB;
             
             // returns magnitude of distance between each node, 28 total options
-            dist(i) = fabs(sqrt(( pow((coords(b, 0) - coords(a, 0)), 2.0)
+            dist(i) = sqrt(( pow((coords(b, 0) - coords(a, 0)), 2.0)
                                 + pow((coords(b, 1) - coords(a, 1)), 2.0)
-                                + pow((coords(b, 2) - coords(a, 2)), 2.0))));
+                                + pow((coords(b, 2) - coords(a, 2)), 2.0)));
 
             countB++;
             countA++;
@@ -269,14 +269,14 @@ void get_timestep_HexN(mesh_t &mesh,
     double min_dt_calc;
     REDUCE_MIN(elem_gid, 0, mesh.num_elems, dt_lcl, {
         
-        // WARNING WARNING WARNING : TAKING THE AVERAGE OF THE SPEED OF SOUND AS A HACK
-        // FOR NOW, NEED TO FIX THIS!!!
+        
         double elem_sspd = 0.0;
         for (int legendre_lid = 0; legendre_lid < mesh.num_leg_gauss_in_elem; legendre_lid++){
             int legendre_gid = mesh.legendre_in_elem(elem_gid, legendre_lid);
-            elem_sspd += mat_pt_sspd(legendre_gid);
+            elem_sspd = elem_sspd > mat_pt_sspd(legendre_gid) ? elem_sspd : mat_pt_sspd(legendre_gid);//+= mat_pt_sspd(legendre_gid);
         }
-        elem_sspd = elem_sspd/mesh.num_leg_gauss_in_elem;
+        //elem_sspd = elem_sspd/mesh.num_leg_gauss_in_elem;
+
 
         for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
             int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
@@ -312,9 +312,9 @@ void get_timestep_HexN(mesh_t &mesh,
                 b = countB;
                 
                 // returns magnitude of distance between each node, 28 total options
-                dist(i) = fabs(sqrt(( pow((coords(b, 0) - coords(a, 0)), 2.0)
+                dist(i) = sqrt(( pow((coords(b, 0) - coords(a, 0)), 2.0)
                                     + pow((coords(b, 1) - coords(a, 1)), 2.0)
-                                    + pow((coords(b, 2) - coords(a, 2)), 2.0))));
+                                    + pow((coords(b, 2) - coords(a, 2)), 2.0)));
 
                 countB++;
                 countA++;

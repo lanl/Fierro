@@ -46,7 +46,7 @@ double time_final = 1.e16;
 double dt = 1.e-8;
 double dt_max = 1.0e-2;
 double dt_min = 1.0e-8;
-double dt_cfl = 0.1;
+double dt_cfl = 0.01;
 double dt_start = 1.0e-8;
 
 size_t rk_num_stages = 2;
@@ -207,10 +207,15 @@ int main(int argc, char *argv[]){
                                                num_nodes,
                                                num_dims);
 
+        DViewCArrayKokkos <double> mat_pt_coords(&mat_pt.coords(0,0),
+                                                num_leg_pts,
+                                                num_dims);
+
         DViewCArrayKokkos <double> node_vel(&node.vel(0,0,0),
                                             rk_num_bins,
                                             num_nodes,
                                             num_dims);
+
         DViewCArrayKokkos <double> mat_pt_vel(&mat_pt.vel(0,0),
                                             num_leg_pts,
                                             num_dims);
@@ -425,10 +430,12 @@ int main(int argc, char *argv[]){
                   boundary,
                   mesh,
                   elem,
+                  node,
                   ref_elem,
                   mat_pt,
                   zone,
                   node_coords,
+                  mat_pt_coords,
                   node_vel,
                   mat_pt_vel,
                   node.M_V,
@@ -471,6 +478,7 @@ int main(int argc, char *argv[]){
         mat_pt_stress.update_host();
         mat_pt_sspd.update_host();
         mat_pt_vel.update_host();
+        mat_pt_coords.update_host();
         mat_pt_sie.update_host();
         zone_sie.update_host();
         elem_vol.update_host();
@@ -498,7 +506,7 @@ int main(int argc, char *argv[]){
                 graphics_id,
                 time_value);
 
-        state_file( mesh, node_coords, node_vel, mat_pt_vel,
+        state_file( mesh, node_coords, node_vel, mat_pt_vel, mat_pt_coords,
                     node_mass, mat_pt_den, mat_pt_pressure, mat_pt_stress,
                     mat_pt_sspd, mat_pt_sie, elem_vol, mat_pt_mass,
                     elem_mat_id, time_value );

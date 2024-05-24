@@ -8,10 +8,12 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                CArrayKokkos <boundary_t> &boundary,
                mesh_t &mesh,
                elem_t &elem,
+               node_t &node,
                fe_ref_elem_t &ref_elem,
                mat_pt_t &mat_pt,
                zone_t &zone,
                DViewCArrayKokkos <double> &node_coords,
+               DViewCArrayKokkos <double> &mat_pt_coords,
                DViewCArrayKokkos <double> &node_vel,
                DViewCArrayKokkos <double> &mat_pt_vel,
                CArrayKokkos <double> &M_V,
@@ -216,8 +218,22 @@ void rdh_solve(CArrayKokkos <material_t> &material,
         });
         Kokkos::fence();
 
+        FOR_ALL(node_gid, 0 , mesh.num_nodes, {
+            for (int dim = 0; dim < mesh.num_dims; dim++){
+                node.vel_tilde(node_gid, dim) = 0.0;
+            }
+        });// node_gid
+
+        CArrayKokkos <double> correction(mesh.num_zones, "sie correction");
+
+        // FOR_ALL(zone_gid, 0 , mesh.num_zones, {
+        //     correction(zone_gid) = 0.0;
+        // });// node_gid
+
+
         // integrate solution forward in time
         //printf("Integrating solution forward in time \n");
+        
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
             
             
@@ -280,12 +296,6 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             update_momentum(node_vel, rk_stage, mesh, dt, L2, lumped_mass);
             //printf("Momentum DOFs updated \n");
 
-           
-            // v\cdot n = 0 on the boundary
-            //printf("Applying boundary conditions at stage %lu in cycle %lu \n", rk_stage, cycle);
-            boundary_velocity(mesh, boundary, node_vel, time_value);
-            //printf("Boundary conditions applied \n");
-
             FOR_ALL(elem_gid, 0, mesh.num_elems,{
                 for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
                     int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
@@ -303,25 +313,45 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                 }// gauss_lid
             });// for_all
 
+            // v\cdot n = 0 on the boundary
+            //printf("Applying boundary conditions at stage %lu in cycle %lu \n", rk_stage, cycle);
+            boundary_velocity(mesh, boundary, node_vel, time_value);
+            //printf("Boundary conditions applied \n");
+
+            if (rk_stage == 0){
+                FOR_ALL(node_gid, 0 , mesh.num_nodes,{
+                    for (int dim = 0; dim < mesh.num_dims; dim++){
+                        node.vel_tilde(node_gid, dim) = node_vel(1, node_gid, dim);
+                    }// dim
+                });// node_gid
+            }// if
+
+            
+
+
             FOR_ALL(elem_gid, 0, mesh.num_elems,{
                 for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
                     int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
-                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-                        int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-                        for (int dim = 0; dim < mesh.num_dims; dim++){
-                            mat_pt_vel(gauss_gid, dim) += ref_elem.gauss_leg_basis(gauss_lid, node_lid)*node_vel(1, node_gid, dim);
-                        }// dim
-                    }// node_lid
+                    for (int dim = 0; dim < mesh.num_dims; dim++){
+                        double interp = 0.0;
+                        for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+                            int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                        
+                                interp += ref_elem.gauss_leg_basis(gauss_lid, node_lid)*node_vel(1, node_gid, dim);
+                        }// node_lid
+                        mat_pt_vel(gauss_gid, dim) = interp;
+                    }// dim
                 }// gauss_lid
             });// for_all
             
-            // CArrayKokkos <double> Thermo_L2(mesh.num_zones,"Thermo_L2");
+            CArrayKokkos <double> Thermo_L2(mesh.num_zones,"Thermo_L2");
+            CArrayKokkos <double> M_dot_e(mesh.num_zones,"M delta e");
             CArrayKokkos <double> F_dot_u( mesh.num_zones, "F_dot_ones" );
             
             FOR_ALL(i, 0, mesh.num_zones,{
-                    // Thermo_L2(i) = 0.0;
+                    Thermo_L2(i) = 0.0;
                     F_dot_u(i) = 0.0;
-                    // M_dot_e(i) = 0.0;
+                    M_dot_e(i) = 0.0;
             });
             Kokkos::fence();
             
@@ -332,11 +362,40 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             // });
             
             // internal energy update //
-            // assemble_Thermo_L2(Thermo_L2, Thermo_residual_in_elem, rk_stage, dt, mesh, M_dot_e, F_dot_u, force_tensor, source, M_e, zone_sie, node_vel);
-            
             get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
 
-            update_internal_energy(zone_sie, rk_stage, mesh, zone.M_e_inv, force_tensor, F_dot_u, source, node_vel, dt);//T_L2, zone.zonal_mass);
+            assemble_Thermo_L2(Thermo_L2, rk_stage, dt, mesh, M_dot_e, F_dot_u, force_tensor, source, M_e, zone_sie, node_vel);
+            
+            CArrayKokkos <double> ke_correction(mesh.num_zones, "ke correction");
+            FOR_ALL(zone_gid, 0, mesh.num_zones,{
+                ke_correction(zone_gid) = 0.0;
+            });
+            Kokkos::fence();
+
+            FOR_ALL(elem_gid, 0, mesh.num_elems,{
+                double temp = 0.0;
+                for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+                    int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                    for (int dim = 0; dim < mesh.num_dims; dim++){
+                        temp += 0.5*(node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim))
+                                *M_dot_u(node_gid, dim);
+                    }
+                }
+
+                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+                    int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+                    ke_correction(zone_gid) = temp;
+                }
+                
+            });// elem_gid FOR_ALL
+            Kokkos::fence();
+
+            
+            get_sie_correction(correction, ke_correction, M_dot_e, mesh);
+
+            //update_internal_energy(zone_sie, rk_stage, mesh, zone.M_e_inv, force_tensor, F_dot_u, source, node_vel, dt);//T_L2, zone.zonal_mass);
+            
+            update_internal_energy_DeC(zone_sie, rk_stage, mesh, zone.zonal_mass, Thermo_L2, correction, dt);
 
             FOR_ALL(elem_gid, 0, mesh.num_elems,{
                 for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
@@ -346,10 +405,13 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                     double interp = 0.0;
                     for (int dof_id = 0; dof_id < mesh.num_zones_in_elem; dof_id++){
                         int dof_gid = mesh.zones_in_elem(elem_gid, dof_id);
-                        interp += ref_elem.gauss_lob_elem_basis(lobatto_lid, dof_id)
-                                                            *zone_sie(1, dof_gid);
+                        interp += ref_elem.zone_interp_basis(lobatto_lid, dof_id)*zone_sie(1, dof_gid);
                     }// node_lid
                     zone_sie(1, zone_gid) = interp;
+
+                    if (zone_sie( 1, zone_gid ) <= 0.0){
+                        printf("NEGATIVE INTERNAL ENERGY AFTER INTERPOLATION %f \n", zone_sie( 1, zone_gid ));
+                    }
                    
                 }// gauss_lid
             });// for_all
@@ -376,6 +438,21 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                 }// gauss_lid
             });// for_all
 
+            FOR_ALL(elem_gid, 0, mesh.num_elems,{
+                for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
+                    int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+                    for (int dim = 0; dim < mesh.num_dims; dim++){
+                        double interp = 0.0;
+                        for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+                            int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                        
+                                interp += ref_elem.gauss_leg_basis(gauss_lid, node_lid)*node_coords(1, node_gid, dim);
+                        }// node_lid
+                        mat_pt_coords(gauss_gid, dim) = interp;
+                    }// dim
+                }// gauss_lid
+            });// for_all
+
 
             //printf("Updating Jacobian at stage %lu in cycle %lu \n", rk_stage, cycle);
             get_gauss_leg_pt_jacobian(mesh,
@@ -395,7 +472,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                 for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
                     int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
                     // density
-                    mat_pt_den(leg_gid) = abs(rho0_detJ0(leg_gid))/abs(mat_pt.gauss_legendre_det_j(leg_gid));
+                    mat_pt_den(leg_gid) = rho0_detJ0(leg_gid)/mat_pt.gauss_legendre_det_j(leg_gid);//abs(rho0_detJ0(leg_gid))/abs(mat_pt.gauss_legendre_det_j(leg_gid));
                     //printf("mat_pt_den(%d) = %f \n", leg_gid, mat_pt_den(leg_gid));
                     
                     // interpolate sie at quad point //

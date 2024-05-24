@@ -414,6 +414,7 @@ void state_file( const mesh_t &mesh,
                  const DViewCArrayKokkos <double> &node_coords,
                  const DViewCArrayKokkos <double> &node_vel,
                  const DViewCArrayKokkos <double> &mat_pt_vel,
+                 const DViewCArrayKokkos <double> &mat_pt_coords,
                  const DViewCArrayKokkos <double> &node_mass,
                  const DViewCArrayKokkos <double> &mat_pt_den,
                  const DViewCArrayKokkos <double> &mat_pt_pres,
@@ -427,8 +428,8 @@ void state_file( const mesh_t &mesh,
     
     struct stat st;
     
-    if(stat("state",&st) != 0)
-        system("mkdir state");
+    if(stat("../state",&st) != 0)
+        system("mkdir ../state");
     
     size_t num_dims = mesh.num_dims;
     
@@ -437,17 +438,17 @@ void state_file( const mesh_t &mesh,
     //  ---------------------------------------------------------------------------
     
     // output file
-    FILE *out_mat_pt_state;  //element average state
+    FILE *out_mat_pt_state;  
     char filename[128];
     
-    sprintf(filename, "./state/mat_pt_state_t_%6.5e.txt", time_value);
+    sprintf(filename, "../state/mat_pt_state_t_%6.5e.txt", time_value);
     
     // output files
     out_mat_pt_state  = fopen(filename, "w");
 
     // write state dump
     fprintf(out_mat_pt_state, "# state dump file\n");
-    fprintf(out_mat_pt_state, "# u v w den  pres  sie  sspd \n");
+    fprintf(out_mat_pt_state, "# x y z u v w den  pres  sie  sspd \n");
     
 
     
@@ -457,7 +458,10 @@ void state_file( const mesh_t &mesh,
         for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
             int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
 
-            fprintf( out_mat_pt_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
+            fprintf( out_mat_pt_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
+                 mat_pt_coords.host( gauss_gid, 0),
+                 mat_pt_coords.host( gauss_gid, 1),
+                 mat_pt_coords.host( gauss_gid, 2),
                  mat_pt_vel.host( gauss_gid, 0 ),
                  mat_pt_vel.host( gauss_gid, 1 ),
                  mat_pt_vel.host( gauss_gid, 2 ),
@@ -467,54 +471,42 @@ void state_file( const mesh_t &mesh,
                  mat_pt_sspd.host( gauss_gid ));
 
         }
-        
-        // double elem_coords[3];
-        // elem_coords[0] = 0.0;
-        // elem_coords[1] = 0.0;
-        // elem_coords[2] = 0.0;
-	
-	
-        // // get the coordinates of the element center
-        // for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-        //     elem_coords[0] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
-        //     elem_coords[1] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
-        //     if(num_dims == 3){
-        //         elem_coords[2] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
-        //     }
-        //     else {
-        //         elem_coords[2] = 0.0;
-        //     }
-        // } // end loop over nodes in element
-	
-        // elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
-        // elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
-        // elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
-        
-        // double rad2 = sqrt(elem_coords[0]*elem_coords[0] +
-        //                    elem_coords[1]*elem_coords[1]);
-        
-        // double rad3 = sqrt(elem_coords[0]*elem_coords[0] +
-        //                    elem_coords[1]*elem_coords[1] +
-        //                    elem_coords[2]*elem_coords[2]);
-        
-        // fprintf( out_mat_pt_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
-        //          elem_coords[0],
-        //          elem_coords[1],
-        //          elem_coords[2],
-        //          rad2,
-        //          rad3,
-        //          elem_den.host(elem_gid),
-        //          elem_pres.host(elem_gid),
-        //          elem_sie.host(1,elem_gid),
-        //          elem_sspd.host(elem_gid),
-        //          elem_vol.host(elem_gid),
-        //          elem_mass.host(elem_gid) );
-	
-        
+  
     }; // end for
     
     
     fclose(out_mat_pt_state);
+
+
+    FILE *out_node_state;  
+    char filename2[128];
+    
+    sprintf(filename2, "../state/node_state_t_%6.5e.txt", time_value);
+    
+    // output files
+    out_node_state  = fopen(filename2, "w");
+
+    // write state dump
+    fprintf(out_node_state, "# state dump file\n");
+    fprintf(out_node_state, "# x y z u v w\n");
+    
+
+    
+    // write out values for the elem
+    for (size_t node_gid=0; node_gid<mesh.num_nodes; node_gid++){
+
+        fprintf( out_node_state, "%f\t %f\t %f\t %f\t %f\t %f\t \n",
+                node_coords.host(1, node_gid, 0),
+                node_coords.host(1, node_gid, 1),
+                node_coords.host(1, node_gid, 2),
+                node_vel.host(1, node_gid, 0 ),
+                node_vel.host(1, node_gid, 1 ),
+                node_vel.host(1, node_gid, 2 ));
+        
+    }; // end for
+    
+    
+    fclose(out_node_state);
  
     return;
     
@@ -955,3 +947,46 @@ void VTKHexN(const mesh_t &mesh,
     delete[] name;
 
 } // end write vtk high-order
+
+
+        // double elem_coords[3];
+        // elem_coords[0] = 0.0;
+        // elem_coords[1] = 0.0;
+        // elem_coords[2] = 0.0;
+	
+	
+        // // get the coordinates of the element center
+        // for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+        //     elem_coords[0] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
+        //     elem_coords[1] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
+        //     if(num_dims == 3){
+        //         elem_coords[2] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
+        //     }
+        //     else {
+        //         elem_coords[2] = 0.0;
+        //     }
+        // } // end loop over nodes in element
+	
+        // elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
+        // elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
+        // elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
+        
+        // double rad2 = sqrt(elem_coords[0]*elem_coords[0] +
+        //                    elem_coords[1]*elem_coords[1]);
+        
+        // double rad3 = sqrt(elem_coords[0]*elem_coords[0] +
+        //                    elem_coords[1]*elem_coords[1] +
+        //                    elem_coords[2]*elem_coords[2]);
+        
+        // fprintf( out_mat_pt_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
+        //          elem_coords[0],
+        //          elem_coords[1],
+        //          elem_coords[2],
+        //          rad2,
+        //          rad3,
+        //          elem_den.host(elem_gid),
+        //          elem_pres.host(elem_gid),
+        //          elem_sie.host(1,elem_gid),
+        //          elem_sspd.host(elem_gid),
+        //          elem_vol.host(elem_gid),
+        //          elem_mass.host(elem_gid) );

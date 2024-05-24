@@ -88,7 +88,7 @@ void input(CArrayKokkos <material_t> &material,
 
     
     // --- number of material regions ---
-    num_materials = 3; // usually 1, 3 for triple point
+    num_materials = 1; // usually 1, but 3 for triple point (really, it's 1 but this is simple)
     material = CArrayKokkos <material_t> (num_materials); // create material
     
     
@@ -98,7 +98,7 @@ void input(CArrayKokkos <material_t> &material,
     
     
     // --- number of fill regions ---
-    num_fills = 3;  // =2 for Sedov,Sod; =3 for Triple point; =1 Noh3D,TGV
+    num_fills = 2;  // =2 for Sedov,Sod; =3 for Triple point; =1 Noh3D,TGV
     mat_fill = CArrayKokkos <mat_fill_t> (num_fills); // create fills
     
     
@@ -107,7 +107,7 @@ void input(CArrayKokkos <material_t> &material,
     boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---
-    test_problem = test::TriplePoint;//test::Sedov3D;//test::TaylorGreen;//test::Noh3D;//
+    test_problem = test::Sedov3D;//test::TaylorGreen;//test::Noh3D;//test::TriplePoint;//
     
     
     // ---- fill instructions and intial conditions ---- //
@@ -138,7 +138,7 @@ void input(CArrayKokkos <material_t> &material,
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 3;  // actual num_state_vars
-            state_vars(0,0) = 5.0/3.0; // gamma value
+            state_vars(0,0) = 1.4;//5.0/3.0;//  // gamma value
             state_vars(0,1) = 1.0E-14; // minimum sound speed
             state_vars(0,2) = 1.0;     // specific heat
             
@@ -157,7 +157,7 @@ void input(CArrayKokkos <material_t> &material,
             mat_fill(1).volume = region::sphere; // fill a sphere
             mat_fill(1).mat_id = 0;              // material id
             mat_fill(1).radius1 = 0.0;           // inner radius of fill region
-            mat_fill(1).radius2 = 1.2/8.0;       // outer radius of fill region
+            mat_fill(1).radius2 = 1.2/8.0; //32.0;// 30.0;// 16.0;//     // outer radius of fill region
             mat_fill(1).den = 1.0;               // initial density
             mat_fill(1).sie = (963.652344*pow((1.2/30.0),3))/pow((mat_fill(1).radius2),3);
             

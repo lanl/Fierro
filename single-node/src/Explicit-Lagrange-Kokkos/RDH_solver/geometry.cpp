@@ -16,8 +16,9 @@ void update_position_rdh(const size_t stage,
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
 
         for (int dim = 0; dim < mesh.num_dims; dim++){
-            double half_vel = 0.5*(node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim));
-            node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + dt*half_vel;
+            //double half_vel = 0.5*( node_vel(stage, node_gid, dim) + node_vel(0, node_gid, dim) );
+            node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) 
+                                            + dt*0.5*( node_vel(stage, node_gid, dim) + node_vel(0, node_gid, dim) );
         }
         
     }); // end parallel for over nodes

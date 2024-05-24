@@ -23,6 +23,8 @@ struct node_t {
 
     CArrayKokkos <double> M_V;
     CArrayKokkos <double> lumped_mass;
+
+    CArrayKokkos <double> vel_tilde;
     
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
@@ -33,6 +35,7 @@ struct node_t {
         this->mass   = CArray <double> (num_nodes);
         this->M_V    = CArrayKokkos <double> (num_nodes, num_nodes, "M_V");
         this->lumped_mass = CArrayKokkos <double> (num_nodes, "lumped_mass");
+        this->vel_tilde = CArrayKokkos <double> (num_nodes, "tilde u");
     }; // end method
 
 }; // end node_t
@@ -111,6 +114,8 @@ struct mat_pt_t {
     // i.e. constructed from node_vel(1, node_gid, dim) 
     CArray <double> vel;
 
+    CArray <double> coords;
+
     // constructed from zone.sie(1, zone_gid) as for vel
     CArray <double> sie;
 
@@ -147,10 +152,6 @@ struct mat_pt_t {
         this->pres   = CArray <double> (num_leg_pts);
         this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);
         this->sspd   = CArray <double> (num_leg_pts);
-
-        // visualization
-        this->vel = CArray <double> (num_leg_pts, num_dims);
-        this->sie = CArray <double> (num_leg_pts);
 	
         this->gauss_lobatto_jacobian  = CArrayKokkos <double> (num_lob_pts, num_dims, num_dims);
         this->gauss_legendre_jacobian = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
@@ -160,6 +161,11 @@ struct mat_pt_t {
         
         //this->gauss_lobatto_det_j  = CArrayKokkos <double> (num_lob_pts);
         this->gauss_legendre_det_j = CArrayKokkos <double> (num_leg_pts);
+
+        // visualization
+        this->vel = CArray <double> (num_leg_pts, num_dims);
+        this->coords = CArray <double> (num_leg_pts, num_dims);
+        this->sie = CArray <double> (num_leg_pts);
 
     }
 

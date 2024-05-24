@@ -19,7 +19,7 @@ void assemble_L2(   CArrayKokkos <double> &L2,
             for (int dim = 0; dim < mesh.num_dims; dim++){
 
                 M_dot_u(node_gid_1, dim ) += mass_matrix(node_gid_1, node_gid_2)*node_vel(stage, node_gid_2, dim) 
-                                                 - mass_matrix(node_gid_1, node_gid_2)*node_vel(0, node_gid_2, dim);
+                                             - mass_matrix(node_gid_1, node_gid_2)*node_vel(0, node_gid_2, dim);
 
             }//
         }// 

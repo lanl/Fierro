@@ -48,6 +48,8 @@ struct fe_ref_elem_t{
     // Thermodynamic basis evaluation at nodes
     CArrayKokkos <double> gauss_lob_elem_basis;
     CArrayKokkos <double> gauss_leg_elem_basis;
+
+    CArrayKokkos <double> zone_interp_basis;
     
     // Gradient of basis
     CArrayKokkos <double> gauss_lob_grad_basis;
@@ -60,7 +62,8 @@ struct fe_ref_elem_t{
     
     CArrayKokkos <double> gauss_lob_positions;
     CArrayKokkos <double> gauss_leg_positions;
-    //CArrayKokkos <double> gauss_leg_surf_positions;
+
+    CArrayKokkos <double> dual_gauss_lob_positions;
     
     CArrayKokkos <double> dof_positions;
     CArrayKokkos <double> dof_positions_1d;
@@ -163,9 +166,13 @@ struct fe_ref_elem_t{
         
         gauss_lob_elem_basis = CArrayKokkos <double> (num_gauss_lob_in_elem, num_elem_basis, "gauss_lob_elem_basis");
         gauss_leg_elem_basis = CArrayKokkos <double> (num_gauss_leg_in_elem, num_elem_basis, "gauss_leg_elem_basis");
+
+        zone_interp_basis = CArrayKokkos <double> (num_dual_gauss_lob_in_elem, num_elem_basis, "zonal interpolation basis");
         
         gauss_lob_positions = CArrayKokkos <double> (num_gauss_lob_in_elem, num_dim, "gauss_lob_positions"); 
         gauss_leg_positions = CArrayKokkos <double> (num_gauss_leg_in_elem, num_dim, "gauss_leg_positions");
+
+        dual_gauss_lob_positions = CArrayKokkos <double> (num_dual_gauss_lob_in_elem, num_dim, "dual gauss_lob_positions"); 
 
         dof_lobatto_map = CArrayKokkos <size_t> (num_dofs_in_elem, "dof to lobatto map");
         dual_dof_lobatto_map = CArrayKokkos <size_t> (num_elem_dofs_in_elem, "Thermo dof to lobatto map");
@@ -232,6 +239,19 @@ struct fe_ref_elem_t{
                     }// j
                 }// k
             });// RUN_CLASS
+            Kokkos::fence();
+
+            FOR_ALL_CLASS( k, 0, num_dual_gauss_lob_1d, 
+                     j, 0, num_dual_gauss_lob_1d,
+                     i, 0, num_dual_gauss_lob_1d, { 
+                        
+                        int lob_rid = dual_lobatto_rid(i,j,k);
+                                            
+                        dual_gauss_lob_positions(lob_rid,0) = dual_lob_nodes_1D(i);
+                        dual_gauss_lob_positions(lob_rid,1) = dual_lob_nodes_1D(j);
+                        dual_gauss_lob_positions(lob_rid,2) = dual_lob_nodes_1D(k);
+                    
+            });
             Kokkos::fence();
 
             if ( p_order == 1 ){
@@ -444,7 +464,31 @@ struct fe_ref_elem_t{
                 
             });
             Kokkos::fence();
-            
+
+            RUN_CLASS({
+                for (int dual_gauss_lob_rid = 0; dual_gauss_lob_rid < num_dual_gauss_lob_in_elem; dual_gauss_lob_rid++ ){
+                    // Get the nodal coordinates
+                    for(int dim = 0; dim < 3; dim++){
+                        point(dim) = dual_gauss_lob_positions(dual_gauss_lob_rid, dim);
+                    }
+                    
+                    get_elem_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                    //get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                    //double check_basis = 0.0;
+
+                    for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
+
+                        zone_interp_basis(dual_gauss_lob_rid, basis_id) = temp_elem_basis(basis_id);
+                        //check_basis += temp_elem_basis(basis_id);
+                        temp_elem_basis(basis_id) = 0.0;
+                    }
+
+                    //printf(" basis tally = %f \n", check_basis );
+
+                }
+                
+            });
+            Kokkos::fence();
 
 
             // --- evaluate grad_basis functions at the lobatto points ---
