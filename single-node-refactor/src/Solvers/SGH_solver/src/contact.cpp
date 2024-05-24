@@ -750,7 +750,7 @@ void contact_pair_t::frictionless_increment(const double &del_t)
         }
 
         J_det = det(J);  // there should be no singularities in this calculation
-        if (fabs(J_det) < tol)
+        if (J_det == 0.0)
         {
             fc_inc = 0.0;
             printf("Error: Singularity detected in frictionless_increment\n");
@@ -1308,6 +1308,9 @@ void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double 
         {
             for (size_t k = kbox_min; k < kbox_max + 1; k++)
             {
+                // todo: If there is a segfault here, then that means that we have more than max_number_buckets.
+                //       increase that value as this means that there was so much strain that the number of buckets
+                //       exceeded the value.
                 contact_patch.buckets(bucket_index) = k*Sx*Sy + j*Sx + i;
                 bucket_index += 1;
             }

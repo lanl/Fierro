@@ -235,8 +235,24 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             // ---- apply contact boundary conditions to the boundary patches----
             if (doing_contact)  // Structuring it like this to avoid having to sort() everytime.
             {
-                boundary_contact(dt);
+                contact_bank.update_nodes(mesh, node, corner);
+                boundary_contact(dt*rk_alpha);
             }
+
+            // Check to see if contact force all sums to zero
+            // double total_force[3] = {0.0, 0.0, 0.0};
+            // for (size_t i = 0; i < mesh.num_nodes; i++)
+            // {
+                // const contact_node_t &contact_node = contact_bank.contact_nodes(i);
+                // for (size_t j = 0; j < 3; j++)
+                // {
+                    // total_force[j] += contact_node.contact_force(j);
+                // }
+            // }
+
+            // ViewCArrayKokkos<double> total_force_view(&total_force[0], 3);
+            // print out total_force
+            // printf("Total force: %f %f %f\n", total_force[0], total_force[1], total_force[2]);
 
             // mpi_coms();
 
@@ -251,12 +267,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
             // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
-
-            if (doing_contact)
-            {
-                // updating contact nodes
-                contact_bank.update_nodes(mesh, node, corner);
-            }
 
             // ---- Update specific internal energy in the elements ----
             update_energy(rk_alpha,
