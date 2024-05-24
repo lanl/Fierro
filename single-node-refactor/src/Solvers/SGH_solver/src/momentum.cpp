@@ -59,7 +59,8 @@ void SGH::update_velocity(double rk_alpha,
     const size_t num_dims = mesh.num_dims;
 
     // walk over the nodes to update the velocity
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+    //FOR_ALL(node_gid, 0, mesh.num_nodes, {
+    for(int node_gid = 0; node_gid<mesh.num_nodes; node_gid++){
         double node_force[3];
 
         for (size_t dim = 0; dim < num_dims; dim++) {
@@ -91,7 +92,8 @@ void SGH::update_velocity(double rk_alpha,
             node_vel(1, node_gid, dim) = node_vel(0, node_gid, dim) +
                                          rk_alpha * dt * node_force[dim] / node_mass(node_gid);
         } // end for dim
-    }); // end for parallel for over nodes
+    //}); // end for parallel for over nodes
+    }
 
     return;
 } // end subroutine update_velocity

@@ -114,7 +114,7 @@ static std::map<std::string, boundary_conds::bdy_direction> bc_direction_map
 /////////////////////////////////////////////////////////////////////////////
 struct boundary_condition_t
 {
-    solver_input::method solver = solver_input::NONE; ///< Numerical solver method 
+    solver_input::method solver = solver_input::NONE; ///< Numerical solver method
     boundary_conds::bdy_hydro_conds type; ///< Type of boundary condition
     boundary_conds::bdy_tag geometry; ///< Geometry boundary condition is applied to
 
@@ -125,7 +125,7 @@ struct boundary_condition_t
     double v     = 0.0; ///< WARNING: Currently unused
     double w     = 0.0; ///< WARNING: Currently unused
 
-    std::vector<double> origin = { 0.0, 0.0, 0.0 }; ///< Origin of boundary condition geometry
+    DCArrayKokkos<double> origin; // 
 
     // WARNING: CURRENTLY NOT PARSED OR USED
     double hydro_bc_vel_0 = 0.0;    ///< Initial velocity for timed velocity boundary condition
@@ -133,7 +133,6 @@ struct boundary_condition_t
     double hydro_bc_vel_t_start = 0.0;  ///< Start time for velocity boundary condition
     double hydro_bc_vel_t_end   = 0.0;  ///< End time for velocity boundary condition
 }; // end boundary conditions
-
 // -------------------------------------
 // valid inputs for boundary conditions
 // -------------------------------------

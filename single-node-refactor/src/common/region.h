@@ -86,8 +86,8 @@ struct reg_fill_t
     double x2 = 0.0; ///< Second X plane for creating a box
     double y1 = 0.0; ///< First Y plane for creating a box
     double y2 = 0.0; ///< Second Y plane for creating a box
-    double z1 = 0.0; ///< First Z plane for creating a box 
-    double z2 = 0.0; ///< Second Z plane for creating a box 
+    double z1 = 0.0; ///< First Z plane for creating a box
+    double z2 = 0.0; ///< Second Z plane for creating a box
 
     // radius
     double radius1 = 0.0;   ///< Inner radius to fill for sphere
@@ -101,14 +101,13 @@ struct reg_fill_t
     double v = 0.0; ///< V component of velocity
     double w = 0.0; ///< W component of velocity
 
-    
     double speed = 0.0; ///< velocity magnitude for radial velocity initialization
 
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
 
-    std::vector<double> origin = { 0.0, 0.0, 0.0 }; ///< Origin for region
+    DCArrayKokkos<double> origin; ///< Origin for region
 };
 
 // ----------------------------------

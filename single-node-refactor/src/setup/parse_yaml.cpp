@@ -1,36 +1,36 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
- This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
- National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
- Department of Energy/National Nuclear Security Administration. All rights in the program are
- reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
- Security Administration. The Government is granted for itself and others acting on its behalf a
- nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
- derivative works, distribute copies to the public, perform publicly and display publicly, and
- to permit others to do so.
- This program is open source under the BSD-3 License.
- Redistribution and use in source and binary forms, with or without modification, are permitted
- provided that the following conditions are met:
- 1.  Redistributions of source code must retain the above copyright notice, this list of
- conditions and the following disclaimer.
- 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
- conditions and the following disclaimer in the documentation and/or other materials
- provided with the distribution.
- 3.  Neither the name of the copyright holder nor the names of its contributors may be used
- to endorse or promote products derived from this software without specific prior
- written permission.
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- **********************************************************************************************/
+© 2020. Triad National Security, LLC. All rights reserved.
+This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+Department of Energy/National Nuclear Security Administration. All rights in the program are
+reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+Security Administration. The Government is granted for itself and others acting on its behalf a
+nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+derivative works, distribute copies to the public, perform publicly and display publicly, and
+to permit others to do so.
+This program is open source under the BSD-3 License.
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+1.  Redistributions of source code must retain the above copyright notice, this list of
+conditions and the following disclaimer.
+2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+conditions and the following disclaimer in the documentation and/or other materials
+provided with the distribution.
+3.  Neither the name of the copyright holder nor the names of its contributors may be used
+to endorse or promote products derived from this software without specific prior
+written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********************************************************************************************/
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -54,7 +54,7 @@ bool VERBOSE = false;
 // ==============================================================================
 //   Function Definitions
 // ==============================================================================
-// modified code from stackover flow for string delimiter parsing
+// modified code from stack over./flow for string delimiter parsing
 std::vector<std::string> exact_array_values(std::string s, std::string delimiter)
 {
     size_t pos_start = 0, pos_end, delim_len = delimiter.length();
@@ -242,10 +242,10 @@ void print_yaml(Yaml::Node root)
 // =================================================================================
 void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
 {
-    if (VERBOSE) {
-        printf("\n");
-        std::cout << "Printing YAML Input file:" << std::endl;
-    }
+    // if (VERBOSE) {
+    //     printf("\n");
+    //     std::cout << "Printing YAML Input file:" << std::endl;
+    // }
     // print the input file
     print_yaml(root);
 
@@ -291,7 +291,7 @@ void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
         std::cout << "Parsing YAML materials:" << std::endl;
     }
     // parse the material yaml text into a vector of materials
-    parse_materials(root, sim_param.materials, sim_param.eos_global_vars);
+    parse_materials(root, sim_param.materials);
 }
 
 // =================================================================================
@@ -482,6 +482,11 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
     // get the mesh variables names set by the user
     std::vector<std::string> user_mesh_inputs;
 
+    mesh_input.origin = DCArrayKokkos<double> (3, "mesh_input.origin");
+    mesh_input.length = DCArrayKokkos<double> (3, "mesh_input.length");
+    mesh_input.num_elems = DCArrayKokkos<int> (3, "mesh_input.num_elems");
+
+
     // extract words from the input file and validate they are correct
     validate_inputs(mesh_yaml, user_mesh_inputs, str_mesh_inps);
 
@@ -523,7 +528,6 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
         // Number of dimensions for the mesh
         else if (a_word.compare("num_dims") == 0) {
             int num_dim = root["mesh_options"][a_word].As<int>();
-            std::cout << "\tNTEST TEST TEST NUM DIM = " << num_dim << std::endl;
             if (VERBOSE) {
                 std::cout << "\tNum dimensions = " << num_dim << std::endl;
             }
@@ -581,45 +585,75 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             // get the origin numbers, values are words
             std::vector<std::string> numbers = exact_array_values(origin, ",");
 
-            std::vector<double> val;
-            for (int i = 0; i < 3; i++) {
-                val.push_back(std::stod(numbers[i]));
+            double x1 = std::stod(numbers[0]);
+            double y1 = std::stod(numbers[1]);
+            double z1 = std::stod(numbers[2]);
+
+            if (VERBOSE) {
+                std::cout << "\tx1 = " << x1 << std::endl;
+                std::cout << "\ty1 = " << y1 << std::endl;
+                std::cout << "\tz1 = " << z1 << std::endl;
             }
 
-            mesh_input.origin = val;
+            // storing the origin values as
+            RUN({
+                mesh_input.origin(0) = x1;
+                mesh_input.origin(1) = y1;
+                mesh_input.origin(2) = z1;
+            });
         }
         // Extents of the mesh
         else if (a_word.compare("length") == 0) {
-            std::string origin = root["mesh_options"][a_word].As<std::string>();
+            std::string length = root["mesh_options"][a_word].As<std::string>();
             if (VERBOSE) {
-                std::cout << "\tlength = " << origin << std::endl;
+                std::cout << "\tlength = " << length << std::endl;
             }
 
-            std::vector<std::string> numbers = exact_array_values(origin, ",");
+            std::vector<std::string> numbers = exact_array_values(length, ",");
 
-            std::vector<double> val;
-            for (int i = 0; i < 3; i++) {
-                val.push_back(std::stod(numbers[i]));
+            double l1 = std::stod(numbers[0]);
+            double l2 = std::stod(numbers[1]);
+            double l3 = std::stod(numbers[2]);
+
+            if (VERBOSE) {
+                std::cout << "\tl1 = " << l1 << std::endl;
+                std::cout << "\tl2 = " << l2 << std::endl;
+                std::cout << "\tl3 = " << l3 << std::endl;
             }
 
-            mesh_input.length = val;
+            // storing the length values
+            RUN({
+                mesh_input.length(0) = l1;
+                mesh_input.length(1) = l2;
+                mesh_input.length(2) = l3;
+            });
         }
         // Number of elements per direction
         else if (a_word.compare("num_elems") == 0) {
-            std::string origin = root["mesh_options"][a_word].As<std::string>();
+            std::string elem_count = root["mesh_options"][a_word].As<std::string>();
             if (VERBOSE) {
-                std::cout << "\tnum_elems = " << origin << std::endl;
+                std::cout << "\tnum_elems = " << elem_count << std::endl;
             }
 
-            // get the origin numbers, values are words
-            std::vector<std::string> numbers = exact_array_values(origin, ",");
+            // get the elem_count numbers, values are words
+            std::vector<std::string> numbers = exact_array_values(elem_count, ",");
 
-            std::vector<int> val;
-            for (int i = 0; i < 3; i++) {
-                val.push_back(std::stoi(numbers[i]));
+            int n1 = std::stod(numbers[0]);
+            int n2 = std::stod(numbers[1]);
+            int n3 = std::stod(numbers[2]);
+
+            if (VERBOSE) {
+                std::cout << "\tn1 = " << n1 << std::endl;
+                std::cout << "\tn2 = " << n2 << std::endl;
+                std::cout << "\tn3 = " << n3 << std::endl;
             }
 
-            mesh_input.num_elems = val;
+            // storing the number of elements
+            RUN({
+                mesh_input.num_elems(0) = n1;
+                mesh_input.num_elems(1) = n2;
+                mesh_input.num_elems(2) = n3;
+            });
         }
         // Polynomial order for the mesh
         else if (a_word.compare("polynomial_order") == 0) {
@@ -789,13 +823,19 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options)
 // =================================================================================
 //    Parse Fill regions
 // =================================================================================
-void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills)
+void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 {
     Yaml::Node& region_yaml = root["regions"];
 
     size_t num_regions = region_yaml.Size();
 
-    region_fills = CArrayKokkos<reg_fill_t>(num_regions);
+    region_fills = DCArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
+
+    for(int i=0; i< num_regions; i++){
+        region_fills.host(i).origin = DCArrayKokkos<double> (3, "region_fills.origin");
+        region_fills.host(i).origin.update_device();
+    }
+    region_fills.update_device();
 
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {
@@ -1067,9 +1107,9 @@ void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills)
 
                 // storing the origin values as (x1,y1,z1)
                 RUN({
-                    region_fills(reg_id).origin[0] = x1;
-                    region_fills(reg_id).origin[1] = y1;
-                    region_fills(reg_id).origin[2] = z1;
+                    region_fills(reg_id).origin(0) = x1;
+                    region_fills(reg_id).origin(1) = y1;
+                    region_fills(reg_id).origin(2) = z1;
                 });
             } // origin
             else {
@@ -1086,17 +1126,15 @@ void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills)
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
-    std::vector<std::vector<double>>& eos_global_vars)
+void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 {
     Yaml::Node& material_yaml = root["materials"];
 
     size_t num_materials = material_yaml.Size();
 
-    materials = CArrayKokkos<material_t>(num_materials);
+    materials = DCArrayKokkos<material_t>(num_materials, "sim_param.materials");
 
     // allocate room for each material to store eos_global_vars
-    eos_global_vars = std::vector<std::vector<double>>(num_materials);
 
     // loop over the materials specified
     for (int mat_id = 0; mat_id < num_materials; mat_id++) {
@@ -1160,7 +1198,6 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
                 if (VERBOSE) {
                     std::cout << "\tq2ex = " << q2ex << std::endl;
                 }
-
                 RUN({
                     materials(mat_id).q2ex = q2ex;
                 });
@@ -1197,49 +1234,152 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
 
                 // set the EOS
                 if (eos_map.find(eos) != eos_map.end()) {
-                    auto eos_model = eos_map[eos];
+                    
+                    switch(eos_map[eos]){
 
-                    RUN({
-                        materials(mat_id).eos_model = eos_model;
-                        // materials(mat_id).eos_model(0.,1.,2.); // WARNING BUG HERE, replace with real EOS model
-                    });
+                        case model::no_eos:
+                            RUN({
+                                materials(mat_id).eos_type = model::no_eos;
+                                materials(mat_id).eos_model = no_eos;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
+                            break;
 
-                    if (VERBOSE) {
-                        std::cout << "\teos_model = " << eos << std::endl;
-                    }
+                        case model::ideal_gas:
+                            RUN({
+                                materials(mat_id).eos_type = model::ideal_gas;
+                                materials(mat_id).eos_model = ideal_gas;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
+                            break;
+                        case model::user_defined_eos:
+                            RUN({
+                                materials(mat_id).eos_type = model::user_defined_eos;
+                                materials(mat_id).eos_model = user_eos_model;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
+                            break;
+                        default:
+                            std::cout << "ERROR: invalid input: " << eos << std::endl;
+                            throw std::runtime_error("**** EOS Not Understood ****");
+                            break;
+                    } // end switch on EOS type
                 }
                 else{
-                    std::cout << "ERROR: invalid input: " << eos << std::endl;
+                    std::cout << "ERROR: invalid EOS input: " << eos << std::endl;
+                    throw std::runtime_error("**** EOS Not Understood ****");
                 } // end if
             } // EOS model
+
+            // Type of strength model
+            else if (a_word.compare("strength_model_type") == 0) {
+                std::string strength_model_type = root["materials"][mat_id]["material"]["strength_model_type"].As<std::string>();
+
+                // set the EOS
+                if (strength_type_map.find(strength_model_type) != strength_type_map.end()) {
+                    
+                    switch(strength_type_map[strength_model_type]){
+
+                        case model::no_strength_type:
+                            RUN({
+                                materials(mat_id).strength_type = model::no_strength_type;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model_type_type = " << strength_model_type << std::endl;
+                            }
+                            break;
+
+                        case model::increment_based:
+                            RUN({
+                                materials(mat_id).strength_type = model::increment_based;
+                            });
+                            
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model_type = " << strength_model_type << std::endl;
+                            }
+                            break;
+                        case model::state_based:
+                            RUN({
+                                materials(mat_id).strength_type = model::state_based;
+                            });
+                            std::cout << "ERROR: state_based models not yet defined: " << std::endl;
+                            throw std::runtime_error("**** ERROR: state_based models not yet defined ****");
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model_type = " << strength_model_type << std::endl;
+                            }
+                            break;
+                        default:
+                            std::cout << "ERROR: invalid strength type input: " << strength_model_type << std::endl;
+                            throw std::runtime_error("**** Strength Model Type Not Understood ****");
+                            break;
+                    } // end switch on EOS type
+                }
+                else{
+                    std::cout << "ERROR: Invalid strength model type input: " << strength_model_type << std::endl;
+                    throw std::runtime_error("**** Strength model type not understood ****");
+                } // end if
+
+            } // Strength model type
+            
+            // Set specific strength model
             else if (a_word.compare("strength_model") == 0) {
                 std::string strength_model = root["materials"][mat_id]["material"]["strength_model"].As<std::string>();
 
-                // set the strength_model
-                if (strength_map.find(strength_model) != strength_map.end()) {
-                    auto strength = strength_map[strength_model];
+                // set the EOS
+                if (strength_models_map.find(strength_model) != strength_models_map.end()) {
+                    
+                    switch(strength_models_map[strength_model]){
 
-                    RUN({
-                        materials(mat_id).strength_model = strength;
-                        materials(mat_id).strength_model(0., 1.); // WARNING BUG HERE, replace with real strength model
-                    });
+                        case model::no_strength_model:
+                            RUN({
+                                materials(mat_id).strength_model = no_strength;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model = " << strength_model << std::endl;
+                            }
+                            break;
 
-                    if (VERBOSE) {
-                        std::cout << "\tstrength_model = " << strength_model << std::endl;
-                    }
+                        case model::user_defined_strength:
+                            RUN({
+                                materials(mat_id).strength_model = user_strength_model;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model = " << strength_model << std::endl;
+                            }
+                            break;
+                        default:
+                            std::cout << "ERROR: invalid strength input: " << strength_model << std::endl;
+                            throw std::runtime_error("**** Strength model Not Understood ****");
+                            break;
+                    } // end switch on EOS type
                 }
                 else{
-                    std::cout << "ERROR: invalid input: " << strength_model << std::endl;
+                    std::cout << "ERROR: invalid Strength model input: " << strength_model << std::endl;
+                    throw std::runtime_error("**** Strength model Not Understood ****");
                 } // end if
-            } // EOS model
+
+            } // Strength model
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
-                // Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
 
-                size_t num_global_vars = material_inps_yaml.Size();
+                size_t num_global_vars = mat_global_vars_yaml.Size();
 
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
-                materials(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars);
+                
+
+                materials.host(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars, "material.eos_global_vars");
+                materials.host(mat_id).eos_global_vars.update_device();
+                RUN({
+                    materials(mat_id).num_eos_global_vars = num_global_vars;
+                });
+                materials.update_device();
 
                 if (VERBOSE) {
                     std::cout << "num global eos vars = " << num_global_vars << std::endl;
@@ -1247,7 +1387,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
 
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double eos_var = root["materials"][mat_id]["material"]["eos_global_vars"][global_var_id].As<double>();
-                    eos_global_vars[mat_id].push_back(eos_var);
+                    
 
                     RUN({
                         materials(mat_id).eos_global_vars(global_var_id) = eos_var;
@@ -1272,13 +1412,19 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials,
 // =================================================================================
 //    Parse Boundary Conditions
 // =================================================================================
-void parse_bcs(Yaml::Node& root, CArrayKokkos<boundary_condition_t>& boundary_conditions)
+void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_conditions)
 {
     Yaml::Node& bc_yaml = root["boundary_conditions"];
 
     size_t num_bcs = bc_yaml.Size();
 
-    boundary_conditions = CArrayKokkos<boundary_condition_t>(num_bcs);
+    boundary_conditions = DCArrayKokkos<boundary_condition_t>(num_bcs, "sim_param.boundary_conditions");
+
+    for(int i=0; i< num_bcs; i++){
+        boundary_conditions.host(i).origin = DCArrayKokkos<double> (3, "boundary_conditions.origin");
+        boundary_conditions.host(i).origin.update_device();
+    }
+    boundary_conditions.update_device();
 
     // loop over the fill regions specified
     for (int bc_id = 0; bc_id < num_bcs; bc_id++) {
@@ -1307,7 +1453,7 @@ void parse_bcs(Yaml::Node& root, CArrayKokkos<boundary_condition_t>& boundary_co
 
                 // set the solver
                 if (map.find(solver) != map.end()) {
-                    auto bc_solver = map[solver];
+                    solver_input::method bc_solver = map[solver];
 
                     RUN({
                         boundary_conditions(bc_id).solver = bc_solver;
@@ -1451,9 +1597,9 @@ void parse_bcs(Yaml::Node& root, CArrayKokkos<boundary_condition_t>& boundary_co
                 // storing the origin values as (x1,y1,z1)
 
                 RUN({
-                    boundary_conditions(bc_id).origin[0] = x1;
-                    boundary_conditions(bc_id).origin[1] = y1;
-                    boundary_conditions(bc_id).origin[2] = z1;
+                    boundary_conditions(bc_id).origin(0) = x1;
+                    boundary_conditions(bc_id).origin(1) = y1;
+                    boundary_conditions(bc_id).origin(2) = z1;
                 });
             } // origin
             else {

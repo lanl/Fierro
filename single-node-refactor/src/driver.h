@@ -248,9 +248,9 @@ public:
                             elem_coords[2] = 0.0;
                         }
                     } // end loop over nodes in element (NOTE: Translating using origin so below check works)
-                    elem_coords[0] = (elem_coords[0] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[0];
-                    elem_coords[1] = (elem_coords[1] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[1];
-                    elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[2];
+                    elem_coords[0] = (elem_coords[0] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin(0);
+                    elem_coords[1] = (elem_coords[1] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin(1);
+                    elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin(2);
 
                     // spherical radius 
                     double radius = sqrt(elem_coords[0] * elem_coords[0] +

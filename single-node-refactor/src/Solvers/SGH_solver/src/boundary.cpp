@@ -47,7 +47,7 @@
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_velocity(const mesh_t&     mesh,
-    const CArrayKokkos<boundary_condition_t>& boundary,
+    const DCArrayKokkos<boundary_condition_t>& boundary,
     DCArrayKokkos<double>& node_vel,
     const double time_value)
 {

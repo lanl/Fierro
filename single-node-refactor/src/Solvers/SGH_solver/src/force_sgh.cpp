@@ -59,7 +59,7 @@
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_force(const CArrayKokkos<material_t>& material,
+void SGH::get_force(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -366,32 +366,32 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
         } // end for loop over nodes in elem
 
         // --- Update Stress ---
-        // calculate the new stress at the next rk level, if it is a hypo model
+        // calculate the new stress at the next rk level, if it is a increment_based
 
         size_t mat_id = elem_mat_id(elem_gid);
 
-        // hypo elastic plastic model
-        if (material(mat_id).strength_type == model::hypo) {
+        // increment_based strength model
+        if (material(mat_id).strength_type == model::increment_based) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
             // --- call strength model ---
-            // material(mat_id).strength_model(elem_pres,
-            //                                 elem_stress,
-            //                                 elem_gid,
-            //                                 mat_id,
-            //                                 elem_statev,
-            //                                 elem_sspd,
-            //                                 elem_den(elem_gid),
-            //                                 elem_sie(elem_gid),
-            //                                 vel_grad,
-            //                                 elem_node_gids,
-            //                                 node_coords,
-            //                                 node_vel,
-            //                                 elem_vol(elem_gid),
-            //                                 dt,
-            //                                 rk_alpha);
-        } // end logical on hypo strength model
+            material(mat_id).strength_model(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            mat_id,
+                                            elem_statev,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(elem_gid),
+                                            vel_grad,
+                                            elem_node_gids,
+                                            node_coords,
+                                            node_vel,
+                                            elem_vol(elem_gid),
+                                            dt,
+                                            rk_alpha);
+        } // end logical on increment_based strength model
     }); // end parallel for loop over elements
 
     return;
@@ -422,7 +422,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
+void SGH::get_force_2D(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -740,32 +740,32 @@ void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
         } // end for loop over nodes in elem
 
         // --- Update Stress ---
-        // calculate the new stress at the next rk level, if it is a hypo model
+        // calculate the new stress at the next rk level, if it is a Increment based model
 
         size_t mat_id = elem_mat_id(elem_gid);
 
-        // hypo elastic plastic model
-        if (material(mat_id).strength_type == model::hypo) {
+        // Increment based elastic plastic model
+        if (material(mat_id).strength_type == model::increment_based) {
             // cut out the node_gids for this element
-            ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+            ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
             // --- call strength model ---
-            // material(mat_id).strength_model(elem_pres,
-            //                                 elem_stress,
-            //                                 elem_gid,
-            //                                 mat_id,
-            //                                 elem_statev,
-            //                                 elem_sspd,
-            //                                 elem_den(elem_gid),
-            //                                 elem_sie(elem_gid),
-            //                                 vel_grad,
-            //                                 elem_node_gids,
-            //                                 node_coords,
-            //                                 node_vel,
-            //                                 elem_vol(elem_gid),
-            //                                 dt,
-            //                                 rk_alpha);
-        } // end logical on hypo strength model
+            material(mat_id).strength_model(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            mat_id,
+                                            elem_statev,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(elem_gid),
+                                            vel_grad,
+                                            elem_node_gids,
+                                            node_coords,
+                                            node_vel,
+                                            elem_vol(elem_gid),
+                                            dt,
+                                            rk_alpha);
+        } // end logical on increment_based strength model
     }); // end parallel for loop over elements
 
     return;
