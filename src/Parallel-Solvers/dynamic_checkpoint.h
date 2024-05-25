@@ -121,6 +121,11 @@ public:
         state_vectors = new_state_vectors;
     }
 
+    //copy vectors from another checkpoint object
+    void copy_vectors(const Dynamic_Checkpoint &copied_checkpoint){
+        state_vectors = copied_checkpoint.state_vectors;
+    }
+
     //function to change one of the stored vectors
     void change_vector(int vector_index, Teuchos::RCP<MV> new_vector) const{
         (*state_vectors)[vector_index] = new_vector;
