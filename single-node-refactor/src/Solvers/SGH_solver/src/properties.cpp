@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -132,6 +132,23 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
             //                                 rk_alpha);
         } // end logical on state_based strength model
 
+        // apply the element erosion model
+        if(material(mat_id).erosion_type == model::erosion){
+            
+            // starting simple, but in the future call an erosion model
+            if(elem_pres(elem_gid) <= material(mat_id).erode_tension_val ||
+               elem_den(elem_gid)  <= material(mat_id).erode_density_val) {
+
+                printf("**** applying blank eos \n");
+                printf(" turning on %lu \n", material(mat_id).blank_mat_id);
+
+                elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
+
+            } // end if
+                
+        } // end if
+
+        // must add an if check on where an eos is used or not
         // --- Pressure ---
         material(mat_id).eos_model(elem_pres,
                                    elem_stress,

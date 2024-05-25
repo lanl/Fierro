@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -41,13 +41,38 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace model
 {
-// strength model types
-enum strength_tag
-{
-    none = 0,
-    increment_based = 1,    // Model evaluation is independent of time integration
-    state_based = 2,        // Model is dependent on time integration
-};
+    // eos model types
+    enum eos_tag
+    {
+        no_eos = 0,     ///< on eos used
+        decoupled = 1,  ///<  only an eos, or an eos plus deviatoric stress model
+        coupled = 2,    ///<  eos is part of a full stress tensor evolution model
+    };
+
+    // strength model types
+    enum strength_tag
+    {
+        no_strength = 0,
+        increment_based = 1,    ///<  Model evaluation is inline with the time integration
+        state_based = 2,        ///<  Model is based on the state after each stage of the time step
+    };
+
+    // failure model types
+    enum failure_tag
+    {
+        no_failure = 0,
+        brittle_failure = 1,     ///< Material fails after exceeding yield stress
+        ductile_failure = 2      ///< Material grows voids that lead to complete failure
+    };
+
+    // erosion model types
+    enum erosion_tag
+    {
+        no_erosion = 0,
+        erosion = 1,        ///<  element erosion
+        erosion_contact = 2 ///<  element erosion and apply contact enforcement
+    };
+
 } // end of namespace
 
 namespace model_init
@@ -88,7 +113,7 @@ struct material_t
                       const double den,
                       const double sie);
 
-    // Strength model (EOS) function pointer
+    // Strength model function pointer
     // void (*strength_model)(double, double); // WARNING: a placeholder
 
     // hypo or hyper elastic plastic model
@@ -96,6 +121,17 @@ struct material_t
 
     // setup the strength model via the input file for via a user_setup
     model_init::strength_setup_tag strength_setup = model_init::input;
+
+    // failure model
+    model::failure_tag failure_type;
+    
+    // erosion model
+    model::erosion_tag erosion_type;
+    size_t blank_mat_id;        ///< eroded elements get this mat_id
+    double erode_tension_val;   ///< tension threshold to initiate erosion
+    double erode_density_val;   ///< density threshold to initiate erosion
+    // above should be removed, they go in DCArrayKokkos<double> erosion_global_vars;
+
 
     size_t num_eos_state_vars = 0; ///< Number of state variables for the EOS
     size_t num_strength_state_vars  = 0; ///< Number of state variables for the strength model
@@ -109,8 +145,12 @@ struct material_t
     double q2   = 1.0;      ///< linear coefficient in Riemann solver for compression
     double q2ex = 1.3333;   ///< linear coefficient in Riemann solver for expansion
 
+    // should be removed, they go in DCArrayKokkos<double> strength_global_vars;
     double elastic_modulus; ///< Young's modulus
     double poisson_ratio;   ///< Poisson ratio
+
+    
+
 }; // end material_t
 
 // ----------------------------------
@@ -129,7 +169,17 @@ static std::vector<std::string> str_material_inps
     "q2ex",
     "eos_global_vars",
     "elastic_modulus",
-    "poisson_ratio"
+    "poisson_ratio",
+    "blank_mat_id",    
+    "erode_tension_val",
+    "erode_density_val"
+};
+
+static std::map<std::string, model::erosion_tag> erosion_type_map
+{
+    { "no_erosion", model::no_erosion },
+    { "erosion", model::erosion },
+    { "erosion_contact", model::erosion_contact },
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -150,13 +200,13 @@ static std::vector<std::string> str_material_inps
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 static void ideal_gas(const DCArrayKokkos<double>& elem_pres,
-    const DCArrayKokkos<double>& elem_stress,
-    const size_t elem_gid,
-    const size_t mat_id,
-    const DCArrayKokkos<double>& elem_state_vars,
-    const DCArrayKokkos<double>& elem_sspd,
-    const double den,
-    const double sie)
+                      const DCArrayKokkos<double>& elem_stress,
+                      const size_t elem_gid,
+                      const size_t mat_id,
+                      const DCArrayKokkos<double>& elem_state_vars,
+                      const DCArrayKokkos<double>& elem_sspd,
+                      const double den,
+                      const double sie)
 {
     // statev(0) = gamma
     // statev(1) = minimum sound speed
@@ -182,6 +232,31 @@ static void ideal_gas(const DCArrayKokkos<double>& elem_pres,
     return;
 } // end of ideal_gas
 
+
+// -----------------------------------------------------------------------------
+// This is the blank (a.k.a. void) eos
+//------------------------------------------------------------------------------
+KOKKOS_FUNCTION
+static void blank(const DCArrayKokkos<double>& elem_pres,
+           const DCArrayKokkos<double>& elem_stress,
+           const size_t elem_gid,
+           const size_t mat_id,
+           const DCArrayKokkos<double>& elem_state_vars,
+           const DCArrayKokkos<double>& elem_sspd,
+           const double den,
+           const double sie)
+{
+    
+    // pressure of a void is 0
+    elem_pres(elem_gid) = 0.0;
+    
+    // sound speed of a void is 0, machine small must be used for CFL calculation
+    elem_sspd(elem_gid) = 1.0e-32;
+    
+    return;
+} // end of blank
+
+
 // WARNING: placeholder
 static void elastic_plastic(double stress, double strain)
 {
@@ -201,7 +276,8 @@ typedef void (*eos_type)(const DCArrayKokkos<double>& elem_pres,
 
 static std::map<std::string, eos_type> eos_map
 {
-    { "ideal_gas", ideal_gas }
+    { "ideal_gas", ideal_gas },
+    { "blank"    , blank }
 };
 
 // add the strength models here

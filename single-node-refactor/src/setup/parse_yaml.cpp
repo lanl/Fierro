@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -1242,6 +1242,11 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                             materials(mat_id).eos_model = &ideal_gas;
                         });
                     }
+                    else if(eos == "blank"){
+                        RUN({
+                            materials(mat_id).eos_model = &blank;
+                        });
+                    }
                     if (VERBOSE) {
                         std::cout << "\teos_model = " << eos << std::endl;
                     }
@@ -1270,7 +1275,57 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 else{
                     std::cout << "ERROR: invalid input: " << strength_model << std::endl;
                 } // end if
-            } // EOS model
+            } // strength model
+            //extract erosion model
+            else if (a_word.compare("erosion_type") == 0) {
+                std::string type = root["materials"][mat_id]["material"]["erosion_type"].As<std::string>();
+
+                // set the erosion type
+                if (erosion_type_map.find(type) != erosion_type_map.end()) {
+
+                    auto erode_type = erosion_type_map[type];
+                    if(erode_type == model::erosion)
+                    RUN({
+                        materials(mat_id).erosion_type = model::erosion;
+                    });
+
+                    if (VERBOSE) {
+                        std::cout << "\terosion = " << type << std::endl;
+                    }
+
+                } 
+                else{
+                    std::cout << "ERROR: invalid erosion type input: " << type << std::endl;
+                } // end if
+
+            } // erosion model variables
+            else if (a_word.compare("blank_mat_id") == 0) {
+                double blank_mat_id = root["materials"][mat_id]["material"]["blank_mat_id"].As<size_t>();
+                if (VERBOSE) {
+                    std::cout << "\tblank_mat_id = " << blank_mat_id << std::endl;
+                }
+                RUN({
+                    materials(mat_id).blank_mat_id = blank_mat_id;
+                });
+            } // blank_mat_id 
+            else if (a_word.compare("erode_tension_val") == 0) {
+                double erode_tension_val = root["materials"][mat_id]["material"]["erode_tension_val"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\terode_tension_val = " << erode_tension_val << std::endl;
+                }
+                RUN({
+                    materials(mat_id).erode_tension_val = erode_tension_val;
+                });
+            } // erode_tension_val
+            else if (a_word.compare("erode_density_val") == 0) {
+                double erode_density_val = root["materials"][mat_id]["material"]["erode_density_val"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\terode_density_val = " << erode_density_val << std::endl;
+                }
+                RUN({
+                    materials(mat_id).erode_density_val = erode_density_val;
+                });
+            } // erode_density_val
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
                 Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
