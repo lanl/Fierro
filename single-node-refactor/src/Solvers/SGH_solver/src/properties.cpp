@@ -139,9 +139,6 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
             if(elem_pres(elem_gid) <= material(mat_id).erode_tension_val ||
                elem_den(elem_gid)  <= material(mat_id).erode_density_val) {
 
-                printf("**** applying blank eos \n");
-                printf(" turning on %lu \n", material(mat_id).blank_mat_id);
-
                 elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
 
             } // end if
