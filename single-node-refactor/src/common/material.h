@@ -49,6 +49,14 @@ namespace model
         coupled = 2,    ///<  eos is part of a full stress tensor evolution model
     };
 
+    // The names of the eos models
+    enum eos_names
+    {
+        ideal_gas = 0,  ///<  gamma law gas
+        blank = 1,      ///<  a void material, no sound speed and no pressure
+        user_eos = 2,   ///<  an eos function defined by the user
+    };
+
     // strength model types
     enum strength_tag
     {
@@ -103,6 +111,9 @@ struct material_t
     // statev(4) = ref density
     // statev(5) = ref specific internal energy
 
+    // none, decoupled, or cooupled eos 
+    model::eos_tag eos_type = model::no_eos;
+
     // Equation of state (EOS) function pointer
     void (*eos_model)(const DCArrayKokkos<double>& elem_pres,
                       const DCArrayKokkos<double>& elem_stress,
@@ -116,14 +127,14 @@ struct material_t
     // Strength model function pointer
     // void (*strength_model)(double, double); // WARNING: a placeholder
 
-    // hypo or hyper elastic plastic model
-    model::strength_tag strength_type;
+    // none, or increment- or state-based elastic plastic model
+    model::strength_tag strength_type = model::no_strength;
 
     // setup the strength model via the input file for via a user_setup
     model_init::strength_setup_tag strength_setup = model_init::input;
 
     // failure model
-    model::failure_tag failure_type;
+    model::failure_tag failure_type = model::no_failure;
     
     // erosion model
     model::erosion_tag erosion_type;
@@ -145,11 +156,9 @@ struct material_t
     double q2   = 1.0;      ///< linear coefficient in Riemann solver for compression
     double q2ex = 1.3333;   ///< linear coefficient in Riemann solver for expansion
 
-    // should be removed, they go in DCArrayKokkos<double> strength_global_vars;
+    // should be removed, they go in strength global vars
     double elastic_modulus; ///< Young's modulus
     double poisson_ratio;   ///< Poisson ratio
-
-    
 
 }; // end material_t
 
@@ -175,6 +184,13 @@ static std::vector<std::string> str_material_inps
     "erode_density_val"
 };
 
+static std::map<std::string, model::eos_tag> eos_type_map
+{
+    { "no_eos", model::no_eos },
+    { "coupled", model::coupled },
+    { "decoupled", model::decoupled },
+};
+
 static std::map<std::string, model::erosion_tag> erosion_type_map
 {
     { "no_erosion", model::no_erosion },
@@ -198,6 +214,17 @@ static std::map<std::string, model::erosion_tag> erosion_type_map
 /// \param Material specific internal energy
 ///
 /////////////////////////////////////////////////////////////////////////////
+namespace ideal_gas_state_var
+{
+    enum var_names{
+        gamma = 0,
+        min_sound_speed = 1,
+        c_v = 2,
+        ref_temp = 3,
+        ref_density = 4,
+        ref_sie = 5
+    };
+}
 KOKKOS_FUNCTION
 static void ideal_gas(const DCArrayKokkos<double>& elem_pres,
                       const DCArrayKokkos<double>& elem_stress,
@@ -208,15 +235,8 @@ static void ideal_gas(const DCArrayKokkos<double>& elem_pres,
                       const double den,
                       const double sie)
 {
-    // statev(0) = gamma
-    // statev(1) = minimum sound speed
-    // statev(2) = specific heat c_v
-    // statev(3) = ref temperature
-    // statev(4) = ref density
-    // statev(5) = ref specific internal energy
-
-    double gamma = elem_state_vars(elem_gid, 0);
-    double csmin = elem_state_vars(elem_gid, 1);
+    double gamma = elem_state_vars(elem_gid, ideal_gas_state_var::gamma);
+    double csmin = elem_state_vars(elem_gid, ideal_gas_state_var::min_sound_speed);
 
     // pressure
     elem_pres(elem_gid) = (gamma - 1.0) * sie * den;
@@ -264,20 +284,11 @@ static void elastic_plastic(double stress, double strain)
     std::cout << "hello from elastic_plastic! Replace with actual strength model!" << std::endl;
 }
 
-// EOS function pointer
-typedef void (*eos_type)(const DCArrayKokkos<double>& elem_pres,
-                         const DCArrayKokkos<double>& elem_stress,
-                         const size_t elem_gid,
-                         const size_t mat_id,
-                         const DCArrayKokkos<double>& elem_state_vars,
-                         const DCArrayKokkos<double>& elem_sspd,
-                         const double den,
-                         const double sie);
 
-static std::map<std::string, eos_type> eos_map
+static std::map<std::string, model::eos_names> eos_map
 {
-    { "ideal_gas", ideal_gas },
-    { "blank"    , blank }
+    { "ideal_gas", model::ideal_gas },
+    { "blank"    , model::blank }
 };
 
 // add the strength models here
