@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -117,6 +117,9 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
         // element volume
         double vol = elem_vol(elem_gid);
 
+        // the id for the material in this element
+        size_t mat_id = elem_mat_id(elem_gid);
+
         // create a view of the stress_matrix
         ViewCArrayKokkos<double> stress(&elem_stress(1, elem_gid, 0, 0), 3, 3);
 
@@ -165,10 +168,12 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
             } // end for
         } // end for
 
-        // add the pressure
-        for (int i = 0; i < num_dims; i++) {
-            tau(i, i) -= elem_pres(elem_gid);
-        } // end for
+        // add the pressure if a decoupled model is used
+        if(material(mat_id).eos_type == model::decoupled){
+            for (int i = 0; i < num_dims; i++) {
+                tau(i, i) -= elem_pres(elem_gid);
+            } // end for
+        }
 
         // ---- Multi-directional Approximate Riemann solver (MARS) ----
         // find the average velocity of the elem, it is an
@@ -235,7 +240,6 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
             } // end if mag_vel
 
             // cell divergence indicates compression or expansions
-            size_t mat_id = elem_mat_id(elem_gid);
             if (div < 0) { // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
@@ -366,8 +370,6 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
 
         // --- Update Stress ---
         // calculate the new stress at the next rk level, if it is a increment_based model
-
-        size_t mat_id = elem_mat_id(elem_gid);
 
         // increment_based elastic plastic model
         if (material(mat_id).strength_type == model::increment_based) {

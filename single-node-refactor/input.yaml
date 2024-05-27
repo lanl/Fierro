@@ -67,6 +67,7 @@ boundary_conditions:
 materials:
     - material:
         id: 0
+        eos_type: decoupled
         eos_model: ideal_gas
         # strength_model: none
         q1: 1.0

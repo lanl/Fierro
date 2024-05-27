@@ -145,16 +145,17 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
                 
         } // end if
 
-        // must add an if check on where an eos is used or not
-        // --- Pressure ---
-        material(mat_id).eos_model(elem_pres,
-                                   elem_stress,
-                                   elem_gid,
-                                   elem_mat_id(elem_gid),
-                                   elem_statev,
-                                   elem_sspd,
-                                   elem_den(elem_gid),
-                                   elem_sie(1, elem_gid));
+        if(material(mat_id).eos_type == model::decoupled){
+            // --- Pressure ---
+            material(mat_id).eos_model(elem_pres,
+                                       elem_stress,
+                                       elem_gid,
+                                       elem_mat_id(elem_gid),
+                                       elem_statev,
+                                       elem_sspd,
+                                       elem_den(elem_gid),
+                                       elem_sie(1, elem_gid));
+        }
     }); // end parallel for
     Kokkos::fence();
 
