@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -65,6 +65,13 @@ namespace model
         state_based = 2,        ///<  Model is based on the state after each stage of the time step
     };
 
+    // The names of the strength models
+    enum strength_names
+    {
+        elastic_plastic = 0,        ///<  a linear elastic plastic model
+        hypo_elastic_plastic = 1,   ///<  a hypo elastic plastic model for stress deviators
+    };
+
     // failure model types
     enum failure_tag
     {
@@ -104,13 +111,7 @@ struct material_t
 {
     size_t id;
 
-    // statev(0) = gamma
-    // statev(1) = minimum sound speed
-    // statev(2) = specific heat c_v
-    // statev(3) = ref temperature
-    // statev(4) = ref density
-    // statev(5) = ref specific internal energy
-
+    // -- EOS --
     // none, decoupled, or cooupled eos 
     model::eos_tag eos_type = model::no_eos;
 
@@ -124,8 +125,7 @@ struct material_t
                       const double den,
                       const double sie);
 
-    // Strength model function pointer
-    // void (*strength_model)(double, double); // WARNING: a placeholder
+    // -- Strength --
 
     // none, or increment- or state-based elastic plastic model
     model::strength_tag strength_type = model::no_strength;
@@ -133,15 +133,24 @@ struct material_t
     // setup the strength model via the input file for via a user_setup
     model_init::strength_setup_tag strength_setup = model_init::input;
 
-    // failure model
+    // Strength model function pointer
+    // void (*strength_model)(double, double); // WARNING: a placeholder
+
+
+    // -- Failure --
+
+    // none or there is a failure model
     model::failure_tag failure_type = model::no_failure;
-    
+
+
+    // -- Erosion --
+
     // erosion model
     model::erosion_tag erosion_type;
     size_t blank_mat_id;        ///< eroded elements get this mat_id
     double erode_tension_val;   ///< tension threshold to initiate erosion
     double erode_density_val;   ///< density threshold to initiate erosion
-    // above should be removed, they go in DCArrayKokkos<double> erosion_global_vars;
+    // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
 
 
     size_t num_eos_state_vars = 0; ///< Number of state variables for the EOS
@@ -149,6 +158,7 @@ struct material_t
     size_t num_eos_global_vars      = 0; ///< Number of global variables for the EOS
     size_t num_strength_global_vars = 0; ///< Number of global variables for the strength model
 
+    // this should be a CArrayKokkos
     DCArrayKokkos<double> eos_global_vars; ///< Array of global variables for the EOS
 
     double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression
@@ -197,6 +207,23 @@ static std::map<std::string, model::erosion_tag> erosion_type_map
     { "erosion", model::erosion },
     { "erosion_contact", model::erosion_contact },
 };
+
+
+
+static std::map<std::string, model::eos_names> eos_map
+{
+    { "ideal_gas", model::ideal_gas },
+    { "blank"    , model::blank }
+};
+
+
+static std::map<std::string, model::strength_names> strength_map
+{
+    { "elastic_plastic",      model::elastic_plastic },
+    { "hypo_elastic_plastic", model::hypo_elastic_plastic },
+};
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -285,18 +312,6 @@ static void elastic_plastic(double stress, double strain)
 }
 
 
-static std::map<std::string, model::eos_names> eos_map
-{
-    { "ideal_gas", model::ideal_gas },
-    { "blank"    , model::blank }
-};
 
-// add the strength models here
-typedef void (*strength_ptr)(double, double);
-
-static std::map<std::string, strength_ptr> strength_map
-{
-    { "elastic_plastic", elastic_plastic }
-};
 
 #endif // end Header Guard

@@ -1132,6 +1132,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
     size_t num_materials = material_yaml.Size();
 
+    // material definitions live on the device, we can drop to CArrayKokkos
     materials = DCArrayKokkos<material_t>(num_materials, "sim_param.materials");
 
     // allocate room for each material to store eos_global_vars
@@ -1386,12 +1387,10 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
 
-                materials.host(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars, "material.eos_global_vars");
-                materials.host(mat_id).eos_global_vars.update_device();
+                materials(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars, "material.eos_global_vars");
                 RUN({
                     materials(mat_id).num_eos_global_vars = num_global_vars;
                 });
-                materials.update_device();
 
                 if (VERBOSE) {
                     std::cout << "num global eos vars = " << num_global_vars << std::endl;
