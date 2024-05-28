@@ -68,9 +68,9 @@ namespace model
     // The names of the eos models
     enum eos_models
     {
-        no_eos_model,   ///<  a void material, no sound speed and no pressure
+        no_eos_model,   ///<  no model evaluation
         ideal_gas,      ///<  gamma law gas
-        void, 
+        void_gas,       ///<  a void material, no sound speed and no pressure
         user_eos,       ///<  an eos function defined by the user
     };
 
@@ -116,6 +116,7 @@ static std::map<std::string, model::eos_type> eos_map
 {
     { "no_eos", model::no_eos },
     { "ideal_gas", model::ideal_gas },
+    { "void_gas", model::void_gas }
     { "user_defined", model::user_defined_eos},
 };
 

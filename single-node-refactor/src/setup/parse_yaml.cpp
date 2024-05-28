@@ -1229,6 +1229,42 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     materials(mat_id).poisson_ratio = poisson_ratio;
                 });
             } // poisson_ratio
+            //extract eos model
+            else if (a_word.compare("eos_type") == 0) {
+                std::string type = root["materials"][mat_id]["material"]["eos_type"].As<std::string>();
+
+                // set the eos type
+                if (eos_type_map.find(type) != eos_type_map.end()) {
+
+                    // eos_type_map[type] returns enum value, e.g., model::decoupled
+                    switch(eos_type_map[type]){
+                        case model::decoupled:
+                            RUN({
+                                materials(mat_id).eos_type = model::decoupled;
+                            });
+                            break;
+
+                        case model::coupled:
+                            RUN({
+                                materials(mat_id).eos_type = model::coupled;
+                            });
+                            break;
+
+                        default:
+                            materials(mat_id).eos_type = model::no_eos;
+                            break;
+                    } // end switch
+
+                    if (VERBOSE) {
+                        std::cout << "\teos = " << type << std::endl;
+                    }
+                } 
+                else{
+                    std::cout << "ERROR: invalid eos type input: " << type << std::endl;
+                } // end if
+            }
+
+
             else if (a_word.compare("eos_model") == 0) {
                 std::string eos = root["materials"][mat_id]["material"]["eos_model"].As<std::string>();
 
@@ -1239,7 +1275,6 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                         case model::no_eos:
                             RUN({
-                                materials(mat_id).eos_type = model::no_eos;
                                 materials(mat_id).eos_model = no_eos;
                             });
                             if (VERBOSE) {
@@ -1249,16 +1284,24 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                         case model::ideal_gas:
                             RUN({
-                                materials(mat_id).eos_type = model::ideal_gas;
                                 materials(mat_id).eos_model = ideal_gas;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
                             break;
+
+                        case model::void_gas:
+                            RUN({
+                                materials(mat_id).eos_model = void_gas;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
+                            break;
+
                         case model::user_defined_eos:
                             RUN({
-                                materials(mat_id).eos_type = model::user_defined_eos;
                                 materials(mat_id).eos_model = user_eos_model;
                             });
                             if (VERBOSE) {
@@ -1365,6 +1408,70 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 } // end if
 
             } // Strength model
+            //extract erosion model
+            else if (a_word.compare("erosion_type") == 0) {
+                std::string type = root["materials"][mat_id]["material"]["erosion_type"].As<std::string>();
+
+                // set the erosion type
+                if (erosion_type_map.find(type) != erosion_type_map.end()) {
+
+                    // erosion_type_map[type] returns enum value, e.g., model::erosion
+                    switch(erosion_type_map[type]){
+                        case model::erosion:
+                            RUN({
+                                materials(mat_id).erosion_type = model::erosion;
+                            });
+                            break;
+                        case model::erosion_contact:
+                            RUN({
+                                materials(mat_id).erosion_type = model::erosion_contact;
+                            });
+                            break;
+                        default:
+                            RUN({
+                                materials(mat_id).erosion_type = model::no_erosion;
+                            });
+                            break;
+                    } // end switch
+
+                    if (VERBOSE) {
+                        std::cout << "\terosion = " << type << std::endl;
+                    }
+
+                } 
+                else{
+                    std::cout << "ERROR: invalid erosion type input: " << type << std::endl;
+                } // end if
+
+            } // erosion model variables
+            else if (a_word.compare("blank_mat_id") == 0) {
+                double blank_mat_id = root["materials"][mat_id]["material"]["blank_mat_id"].As<size_t>();
+                if (VERBOSE) {
+                    std::cout << "\tblank_mat_id = " << blank_mat_id << std::endl;
+                }
+                RUN({
+                    materials(mat_id).blank_mat_id = blank_mat_id;
+                });
+            } // blank_mat_id 
+            else if (a_word.compare("erode_tension_val") == 0) {
+                double erode_tension_val = root["materials"][mat_id]["material"]["erode_tension_val"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\terode_tension_val = " << erode_tension_val << std::endl;
+                }
+                RUN({
+                    materials(mat_id).erode_tension_val = erode_tension_val;
+                });
+            } // erode_tension_val
+            else if (a_word.compare("erode_density_val") == 0) {
+                double erode_density_val = root["materials"][mat_id]["material"]["erode_density_val"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\terode_density_val = " << erode_density_val << std::endl;
+                }
+                RUN({
+                    materials(mat_id).erode_density_val = erode_density_val;
+                });
+            } // erode_density_val
+            
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
                 Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
