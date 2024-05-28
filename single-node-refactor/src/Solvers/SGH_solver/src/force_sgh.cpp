@@ -369,7 +369,7 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
 
         size_t mat_id = elem_mat_id(elem_gid);
 
-        // increment_based elastic plastic model
+        // increment_based strength model
         if (material(mat_id).strength_type == model::increment_based) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);

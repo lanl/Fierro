@@ -127,7 +127,7 @@ struct material_t
                       const DCArrayKokkos<double>& elem_state_vars,
                       const DCArrayKokkos<double>& elem_sspd,
                       const double den,
-                      const double sie);
+                      const double sie) = NULL;
 
     // Strength model type
     model::strength_type strength_type = model::no_strength_type;
@@ -147,7 +147,7 @@ struct material_t
                                  const DCArrayKokkos <double> &node_vel,
                                  const double vol,
                                  const double dt,
-                                 const double rk_alpha);
+                                 const double rk_alpha) = NULL;
 
 
 
