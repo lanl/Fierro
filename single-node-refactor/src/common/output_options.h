@@ -1,5 +1,5 @@
 /**********************************************************************************************
-Â© 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -31,4 +31,64 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
- 
+
+#ifndef FIERRO_OUTPUT_OPTIONS_H
+#define FIERRO_OUTPUT_OPTIONS_H
+#include <stdio.h>
+#include "matar.h"
+
+namespace output_options
+{
+// output file options
+enum format
+{
+    vtk = 0,
+    ensight = 1,
+};
+
+// timer output level
+enum timer_output_level
+{
+    thorough = 0,
+};
+} // end of namespace
+
+static std::map<std::string, output_options::format> output_format_map
+{
+    // { "vtk", output_options::vtk }, // Not yet supported
+    { "ensight", output_options::ensight }
+};
+
+static std::map<std::string, output_options::timer_output_level> timer_output_level_map
+{
+    { "thorough", output_options::thorough }
+};
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct output_options_t
+///
+/// \brief Output related options for a Fierro simulation
+///
+/////////////////////////////////////////////////////////////////////////////
+struct output_options_t
+{
+    output_options::format format;  ///< Format for the output files
+    output_options::timer_output_level timer_level; ///< How often to output mesh WARNING: CURRENTLY UNUSED
+
+    double graphics_time_step   = 1.0;  ///< How often to write a graphics dump in time
+    int graphics_iteration_step = 2000000;  ///< How often to write a graphics dump by iteration count
+}; // output_options_t
+
+// ----------------------------------
+// valid inputs for output options
+// ----------------------------------
+static std::vector<std::string> str_output_options_inps
+{
+    "timer_output_level",
+    "output_file_format",
+    "graphics_time_step",
+    "graphics_iteration_step"
+};
+
+#endif // end Header Guard

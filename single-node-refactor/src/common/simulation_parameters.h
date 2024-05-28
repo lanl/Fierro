@@ -1,5 +1,5 @@
 /**********************************************************************************************
-Â© 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -31,4 +31,42 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
- 
+
+#ifndef FIERRO_SIM_PARAMS_H
+#define FIERRO_SIM_PARAMS_H
+#include <stdio.h>
+#include "matar.h"
+
+#include "material.h"
+#include "region.h"
+#include "mesh_inputs.h"
+#include "solver_inputs.h"
+#include "output_options.h"
+#include "boundary_conditions.h"
+#include "dynamic_options.h"
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct simulation_parameters_t
+///
+/// \brief Struct for holding simulation metadata
+///
+/////////////////////////////////////////////////////////////////////////////
+struct simulation_parameters_t
+{
+    mesh_input_t mesh_input;    ///< Mesh input information
+
+    output_options_t output_options; ///< Simulation output information
+
+    dynamic_options_t dynamic_options;  ///< Simulation timing and dynamic options
+
+    std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
+
+    DCArrayKokkos<boundary_condition_t> boundary_conditions; ///< Simulation boundary conditions
+
+    DCArrayKokkos<reg_fill_t> region_fills;  ///< Region data for simulation mesh
+
+    DCArrayKokkos<material_t> materials; ///< Material data for simulation
+}; // simulation_parameters_t
+
+#endif // end Header Guard

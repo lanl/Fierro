@@ -1,5 +1,5 @@
 /**********************************************************************************************
-Â© 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -31,4 +31,45 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
- 
+
+#ifndef FIERRO_SOLVER_INPUT_OPTIONS_H
+#define FIERRO_SOLVER_INPUT_OPTIONS_H
+#include <stdio.h>
+#include "matar.h"
+
+namespace solver_input
+{
+// solver method
+enum method
+{
+    NONE = 0,
+    SGH = 1,
+};
+} // end of namespace
+
+static std::map<std::string, solver_input::method> solver_map
+{
+    { "SGH", solver_input::SGH }
+};
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \structsolver_input_t
+///
+/// \brief Struct for holding metadata on which solvers are used.
+///
+/////////////////////////////////////////////////////////////////////////////
+struct solver_input_t
+{
+    solver_input::method method = solver_input::NONE;
+}; // solver_input_t
+
+// ----------------------------------
+// valid inputs for solver options
+// ----------------------------------
+static std::vector<std::string> str_solver_inps
+{
+    "method"
+};
+
+#endif // end Header Guard

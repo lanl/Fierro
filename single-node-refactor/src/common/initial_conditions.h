@@ -1,5 +1,5 @@
 /**********************************************************************************************
-Â© 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -31,4 +31,38 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
- 
+#ifndef FIERRO_IC_H
+#define FIERRO_IC_H
+
+#include <map>
+
+namespace init_conds
+{
+// applying initial conditions
+enum init_velocity_conds
+{
+    // uniform
+    cartesian = 0,       // cart velocity
+    radial = 1,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+    spherical = 2,       // spherical
+
+    // linear variation
+    radial_linear = 3,         // linear variation from 0,0,0
+    spherical_linear = 4,      // linear variation from 0,0,0
+
+    // vortical initial conditions
+    tg_vortex = 5
+};
+} // end of initial conditions namespace
+
+static std::map<std::string, init_conds::init_velocity_conds> velocity_type_map
+{
+    { "cartesian", init_conds::cartesian },
+    { "radial", init_conds::radial },
+    { "spherical", init_conds::spherical },
+    { "radial_linear", init_conds::radial_linear },
+    { "spherical_linear", init_conds::spherical_linear },
+    { "tg_vortex", init_conds::tg_vortex }
+};
+
+#endif // end Header Guard

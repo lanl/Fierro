@@ -1,5 +1,5 @@
 /**********************************************************************************************
-Â© 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -31,4 +31,27 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
- 
+
+#ifndef FIERRO_SIM_STATE_H
+#define FIERRO_SIM_STATE_H
+#include <stdio.h>
+#include "matar.h"
+
+#include "state.h"
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct simulation_state_t
+///
+/// \brief Struct for holding state entities for Fierro, currently unused...
+///
+/////////////////////////////////////////////////////////////////////////////
+struct simulation_state_t
+{
+    // elem_t elem;
+    // node_t node;
+    // corner_t corner;
+    // zone_t zone;
+}; // simulation_state_t
+
+#endif // end Header Guard
