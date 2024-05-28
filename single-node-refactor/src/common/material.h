@@ -240,7 +240,7 @@ static std::vector<std::string> str_material_inps
     "eos_model",
     "eos_model_type",
     "strength_model",
-    "strength_model_type"
+    "strength_model_type",
     "q1",
     "q2",
     "q1ex",

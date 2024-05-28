@@ -1165,7 +1165,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 if (VERBOSE) {
                     std::cout << "\tq1 = " << q1 << std::endl;
                 }
-
+                std::cout << "\tq1 = " << q1 << std::endl;
                 RUN({
                     materials(mat_id).q1 = q1;
                 });
@@ -1230,8 +1230,8 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 });
             } // poisson_ratio
             //extract eos model
-            else if (a_word.compare("eos_type") == 0) {
-                std::string type = root["materials"][mat_id]["material"]["eos_type"].As<std::string>();
+            else if (a_word.compare("eos_model_type") == 0) {
+                std::string type = root["materials"][mat_id]["material"]["eos_model_type"].As<std::string>();
 
                 // set the eos type
                 if (eos_type_map.find(type) != eos_type_map.end()) {
@@ -1505,6 +1505,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     }
                 } // end loop over global vars
             } // "eos_global_vars"
+            
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
