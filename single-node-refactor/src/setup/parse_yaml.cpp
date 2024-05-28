@@ -1251,7 +1251,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                             break;
 
                         default:
-                            materials(mat_id).eos_type = model::no_eos;
+                            materials(mat_id).eos_type = model::no_eos_type;
                             break;
                     } // end switch
 
@@ -1269,11 +1269,11 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 std::string eos = root["materials"][mat_id]["material"]["eos_model"].As<std::string>();
 
                 // set the EOS
-                if (eos_map.find(eos) != eos_map.end()) {
+                if (eos_models_map.find(eos) != eos_models_map.end()) {
                     
-                    switch(eos_map[eos]){
+                    switch(eos_models_map[eos]){
 
-                        case model::no_eos:
+                        case model::no_eos_model:
                             RUN({
                                 materials(mat_id).eos_model = no_eos;
                             });

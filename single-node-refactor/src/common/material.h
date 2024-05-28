@@ -71,7 +71,7 @@ namespace model
         no_eos_model,   ///<  no model evaluation
         ideal_gas,      ///<  gamma law gas
         void_gas,       ///<  a void material, no sound speed and no pressure
-        user_eos,       ///<  an eos function defined by the user
+        user_defined_eos,       ///<  an eos function defined by the user
     };
 
     // failure model types
@@ -105,22 +105,22 @@ static std::map<std::string, model::strength_models> strength_models_map
     { "user_defined_strength", model::user_defined_strength },
 };
 
-static std::map<std::string, model::eos_tag> eos_type_map
+static std::map<std::string, model::eos_type> eos_type_map
 {
-    { "no_eos", model::no_eos },
+    { "no_eos", model::no_eos_type },
     { "coupled", model::coupled },
     { "decoupled", model::decoupled },
 };
 
-static std::map<std::string, model::eos_type> eos_map
+static std::map<std::string, model::eos_models> eos_models_map
 {
-    { "no_eos", model::no_eos },
+    { "no_eos", model::no_eos_model },
     { "ideal_gas", model::ideal_gas },
-    { "void_gas", model::void_gas }
+    { "void_gas", model::void_gas },
     { "user_defined", model::user_defined_eos},
 };
 
-static std::map<std::string, model::erosion_tag> erosion_type_map
+static std::map<std::string, model::erosion_type> erosion_type_map
 {
     { "no_erosion", model::no_erosion },
     { "erosion", model::erosion },
@@ -157,8 +157,9 @@ struct material_t
     // statev(4) = ref density
     // statev(5) = ref specific internal energy
 
-    // Type of EOS model used
-    model::eos_type eos_type;
+    // -- EOS --
+    // none, decoupled, or coupled eos 
+    model::eos_type eos_type = model::no_eos_type;
 
     // Equation of state (EOS) function pointer
     void (*eos_model)(const DCArrayKokkos<double>& elem_pres,
@@ -170,7 +171,7 @@ struct material_t
                       const double den,
                       const double sie) = NULL;
 
-    // Strength model type
+    // Strength model type: none, or increment- or state-based
     model::strength_type strength_type = model::no_strength_type;
 
     // Material strength model function pointer
@@ -189,6 +190,18 @@ struct material_t
                                  const double vol,
                                  const double dt,
                                  const double rk_alpha) = NULL;
+
+    // Material Failure: none or there is a failure model
+    model::failure_type failure_type = model::no_failure;
+
+    // -- Erosion --
+
+    // erosion model
+    model::erosion_type erosion_type;
+    size_t blank_mat_id;        ///< eroded elements get this mat_id
+    double erode_tension_val;   ///< tension threshold to initiate erosion
+    double erode_density_val;   ///< density threshold to initiate erosion
+    // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
 
 
 

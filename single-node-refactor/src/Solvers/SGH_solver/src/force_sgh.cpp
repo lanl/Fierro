@@ -240,7 +240,6 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
             } // end if mag_vel
 
             // cell divergence indicates compression or expansions
-            size_t mat_id = elem_mat_id(elem_gid);
             if (div < 0) { // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
@@ -371,9 +370,6 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
 
         // --- Update Stress ---
         // calculate the new stress at the next rk level, if it is a increment_based model
-
-        size_t mat_id = elem_mat_id(elem_gid);
-
         // increment_based strength model
         if (material(mat_id).strength_type == model::increment_based) {
             // cut out the node_gids for this element
