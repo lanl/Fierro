@@ -222,7 +222,9 @@ void Implicit_Solver::run(){
       bool yaml_supplied_bcs = (bool)(simparam.fea_module_parameters[imodule]->boundary_conditions.size());
       bool yaml_supplied_lcs = (bool)(simparam.fea_module_parameters[imodule]->loading_conditions.size());
       bool yaml_supplied_no_conditions = !yaml_supplied_bcs && !yaml_supplied_lcs;
-      if(fea_module_must_read.find(m_type) != fea_module_must_read.end() && yaml_supplied_no_conditions){
+      bool replace_import_bcs = simparam.fea_module_parameters[imodule]->replace_import_bcs;
+      bool imported_conditions = false;
+      if(fea_module_must_read.find(m_type) != fea_module_must_read.end() && !replace_import_bcs){
         if (simparam.input_options.has_value()) {
           const Input_Options& input_options = simparam.input_options.value();
           switch (input_options.mesh_file_format) {
@@ -236,19 +238,25 @@ void Implicit_Solver::run(){
             *fos << "ERROR: MESH FILE FORMAT DOESN'T SUPPORT CONDITION READ" << std::endl;
             exit_solver(0);
           }
+          imported_conditions = true;
+          fea_modules[imodule]->bcs_initialized = true;
         }
       }
-      else if(yaml_supplied_bcs&&yaml_supplied_lcs){
+      if((yaml_supplied_bcs||yaml_supplied_lcs)&&!fea_modules[imodule]->bcs_initialized){
         fea_modules[imodule]->init_boundaries();
-
+        fea_modules[imodule]->bcs_initialized = true;
+      }
+      if(yaml_supplied_bcs){
         //set boundary conditions for FEA modules
         fea_modules[imodule]->generate_bcs();
-
+      }
+      if(yaml_supplied_lcs){
         //set applied loading conditions for FEA modules
         fea_modules[imodule]->generate_applied_loads();
       }
-      else if(simparam.fea_module_parameters[imodule]->requires_conditions){
-        *fos << "ERROR: FEA MODULE " << imodule << " WAS NOT ASSIGNED EITHER LOADING OR BOUNDARY CONDTIONS" << std::endl;
+
+      if(simparam.fea_module_parameters[imodule]->requires_conditions&&yaml_supplied_no_conditions&&!imported_conditions){
+        *fos << "ERROR: FEA MODULE " << imodule << " WAS NOT ASSIGNED ANY CONDTIONS" << std::endl;
             exit_solver(0);
       }
     }
