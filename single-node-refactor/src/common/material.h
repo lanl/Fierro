@@ -279,7 +279,7 @@ static void user_eos_model(const DCArrayKokkos<double>& elem_pres,
     // -----------------------------------------------------------------------------
     // Required variables are here
     //------------------------------------------------------------------------------
-    std::cout<<"Inside user EOS model"<<std::endl;
+    
 
     // -----------------------------------------------------------------------------
     // The user must coding goes here
@@ -331,7 +331,7 @@ static void user_strength_model(const DCArrayKokkos<double>& elem_pres,
     // Required variables are here
     //------------------------------------------------------------------------------
     
-    std::cout<<"Inside user strength model"<<std::endl;
+
     // -----------------------------------------------------------------------------
     // The user must coding goes here
     //------------------------------------------------------------------------------   
