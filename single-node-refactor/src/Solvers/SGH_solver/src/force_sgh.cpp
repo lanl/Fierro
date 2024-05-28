@@ -117,6 +117,9 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
         // element volume
         double vol = elem_vol(elem_gid);
 
+        // the id for the material in this element
+        size_t mat_id = elem_mat_id(elem_gid);
+
         // create a view of the stress_matrix
         ViewCArrayKokkos<double> stress(&elem_stress(1, elem_gid, 0, 0), 3, 3);
 
@@ -165,10 +168,12 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
             } // end for
         } // end for
 
-        // add the pressure
-        for (int i = 0; i < num_dims; i++) {
-            tau(i, i) -= elem_pres(elem_gid);
-        } // end for
+        // add the pressure if a decoupled model is used
+        if(material(mat_id).eos_type == model::decoupled){
+            for (int i = 0; i < num_dims; i++) {
+                tau(i, i) -= elem_pres(elem_gid);
+            } // end for
+        }
 
         // ---- Multi-directional Approximate Riemann solver (MARS) ----
         // find the average velocity of the elem, it is an

@@ -132,15 +132,30 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
                                             rk_alpha);
         } // end logical on state_based strength model
 
-        // --- Pressure ---
-        material(mat_id).eos_model(elem_pres,
-                                   elem_stress,
-                                   elem_gid,
-                                   elem_mat_id(elem_gid),
-                                   elem_statev,
-                                   elem_sspd,
-                                   elem_den(elem_gid),
-                                   elem_sie(1, elem_gid));
+        // apply the element erosion model
+        if(material(mat_id).erosion_type == model::erosion){
+
+            // starting simple, but in the future call an erosion model
+            if(elem_pres(elem_gid) <= material(mat_id).erode_tension_val ||
+               elem_den(elem_gid)  <= material(mat_id).erode_density_val) {
+
+                elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
+
+            } // end if
+
+        } // end if
+
+        if(material(mat_id).eos_type == model::decoupled){
+            // --- Pressure ---
+            material(mat_id).eos_model(elem_pres,
+                                       elem_stress,
+                                       elem_gid,
+                                       elem_mat_id(elem_gid),
+                                       elem_statev,
+                                       elem_sspd,
+                                       elem_den(elem_gid),
+                                       elem_sie(1, elem_gid));
+        }
     }); // end parallel for
     Kokkos::fence();
 
@@ -246,14 +261,30 @@ void SGH::update_state2D(const DCArrayKokkos<material_t>& material,
         } // end logical on state_based strength model
 
         // --- Pressure ---
-        material(mat_id).eos_model(elem_pres,
-                                   elem_stress,
-                                   elem_gid,
-                                   elem_mat_id(elem_gid),
-                                   elem_statev,
-                                   elem_sspd,
-                                   elem_den(elem_gid),
-                                   elem_sie(1, elem_gid));
+        // apply the element erosion model
+        if(material(mat_id).erosion_type == model::erosion){
+
+            // starting simple, but in the future call an erosion model
+            if(elem_pres(elem_gid) <= material(mat_id).erode_tension_val ||
+               elem_den(elem_gid)  <= material(mat_id).erode_density_val) {
+
+                elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
+
+            } // end if
+
+        } // end if
+
+        if(material(mat_id).eos_type == model::decoupled){
+            // --- Pressure ---
+            material(mat_id).eos_model(elem_pres,
+                                       elem_stress,
+                                       elem_gid,
+                                       elem_mat_id(elem_gid),
+                                       elem_statev,
+                                       elem_sspd,
+                                       elem_den(elem_gid),
+                                       elem_sie(1, elem_gid));
+        }
     }); // end parallel for
     Kokkos::fence();
 
