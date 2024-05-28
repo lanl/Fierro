@@ -54,7 +54,7 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
     // Loop over boundary sets
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
-        if (boundary(bdy_set).type == boundary_conds::reflected) {
+        if (boundary.host(bdy_set).type == boundary_conds::reflected) {
             
             // Loop over boundary nodes in a boundary set
             FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
@@ -72,7 +72,7 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
             }); // end for bdy_node_lid
 
         }
-        else if (boundary(bdy_set).type == boundary_conds::fixed) {
+        else if (boundary.host(bdy_set).type == boundary_conds::fixed) {
             
             // Loop over boundary nodes in a boundary set
             FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
@@ -86,7 +86,7 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
             }); // end for bdy_node_lid
 
         } // end if
-        else if (boundary(bdy_set).type == boundary_conds::velocity) {
+        else if (boundary.host(bdy_set).type == boundary_conds::velocity) {
             
             // Loop over boundary nodes in a boundary set
             FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {

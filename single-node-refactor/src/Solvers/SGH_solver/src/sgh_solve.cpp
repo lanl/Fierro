@@ -85,6 +85,9 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     double graphics_time = 0.0; // the times for writing graphics dump
     size_t graphics_id = 0;
 
+    // Verify host side boundary types are set
+    sim_param.boundary_conditions.update_host();
+
     // printf("Writing outputs to file at %f \n", time_value);
     // mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
 
