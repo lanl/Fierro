@@ -1165,7 +1165,6 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 if (VERBOSE) {
                     std::cout << "\tq1 = " << q1 << std::endl;
                 }
-                std::cout << "\tq1 = " << q1 << std::endl;
                 RUN({
                     materials(mat_id).q1 = q1;
                 });

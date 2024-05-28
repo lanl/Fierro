@@ -355,6 +355,8 @@ void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
          (y(1) * (-z(0) + z(5)) + y(7) * (z(0) + z(3) - z(5) - z(6)) + y(3) * (z(0) - z(7)) + y(0) * (z(1) - z(3) + z(5) - z(7)) + y(6) * (-z(5) + z(7)) + y(5) * (-z(0) - z(1) + z(6) + z(7)))) *
         twelth;
 
+    elem_vol(elem_gid) = fmax(elem_vol(elem_gid), 1.0E-14);
+
     return;
 }     // end subroutine
 

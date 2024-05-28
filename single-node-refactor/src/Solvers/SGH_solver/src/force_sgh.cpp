@@ -359,13 +359,35 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
             // loop over dimension
-            for (int dim = 0; dim < num_dims; dim++) {
-                corner_force(corner_gid, dim) =
-                    area_normal(node_lid, 0) * tau(0, dim)
-                    + area_normal(node_lid, 1) * tau(1, dim)
-                    + area_normal(node_lid, 2) * tau(2, dim)
-                    + phi * muc(node_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
-            } // end loop over dimension
+
+            if(mat_id == material(mat_id).blank_mat_id){ // material(mat_id).blank_mat_id)
+                for (int dim = 0; dim < num_dims; dim++){
+                    corner_force(corner_gid, dim) = 0.0;
+                }
+            }
+            else{
+                for (int dim = 0; dim < num_dims; dim++) {
+
+
+                    // if (std::isnan(area_normal(node_lid, 0))) {std::cout<<"Bad boi = area_normal(node_lid, 0)"<<std::endl; exit(0);}
+                    // if (std::isnan(area_normal(node_lid, 1))) {std::cout<<"Bad boi = area_normal(node_lid, 1)"<<std::endl; exit(0);}
+                    // if (std::isnan(area_normal(node_lid, 2))) {std::cout<<"Bad boi = area_normal(node_lid, 2)"<<std::endl; exit(0);}
+                    // if (std::isnan(tau(0, dim))) {std::cout<<"Bad boi = tau(0, dim)"<<std::endl; exit(0);}
+                    // if (std::isnan(tau(1, dim))) {std::cout<<"Bad boi = tau(1, dim)"<<std::endl; exit(0);}
+                    // if (std::isnan(tau(2, dim))) {std::cout<<"Bad boi = tau(2, dim)"<<std::endl; exit(0);}
+                    // if (std::isnan(phi)) {std::cout<<"Bad boi = phi"<<std::endl; exit(0);}
+                    // if (std::isnan(muc(node_lid))) {std::cout<<"Bad boi = muc(node_lid)"<<std::endl; exit(0);}
+                    // if (std::isnan(vel_star(dim))) {std::cout<<"Bad boi = vel_star(dim)"<<std::endl; exit(0);}
+                    // if (std::isnan(node_vel(1, node_gid, dim))) {std::cout<<"Bad boi = node_vel(1, node_gid, dim)"<<std::endl; exit(0);} 
+
+
+                    corner_force(corner_gid, dim) =
+                        area_normal(node_lid, 0) * tau(0, dim)
+                        + area_normal(node_lid, 1) * tau(1, dim)
+                        + area_normal(node_lid, 2) * tau(2, dim)
+                        + phi * muc(node_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
+                } // end loop over dimension
+            }
         } // end for loop over nodes in elem
 
         // --- Update Stress ---
