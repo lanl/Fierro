@@ -134,6 +134,7 @@ public:
         const DCArrayKokkos<double>& elem_vol,
         const DCArrayKokkos<double>& elem_div,
         const DCArrayKokkos<size_t>& elem_mat_id,
+        const DCArrayKokkos<bool>& elem_eroded,
         DCArrayKokkos<double>& corner_force,
         const double fuzz,
         const double small,
@@ -238,6 +239,7 @@ public:
         const DCArrayKokkos<double>& elem_mass,
         const DCArrayKokkos<size_t>& elem_mat_id,
         const DCArrayKokkos<double>& elem_statev,
+        const DCArrayKokkos<bool>& elem_eroded,
         const double dt,
         const double rk_alpha) const;
 

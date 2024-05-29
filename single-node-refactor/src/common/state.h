@@ -77,8 +77,11 @@ struct elem_t
     DCArrayKokkos<double> vol;  ///< Element volume
     DCArrayKokkos<double> div;  ///< Element divergence of velocity
     DCArrayKokkos<double> mass; ///< Element mass
-    DCArrayKokkos<size_t> mat_id; ///< Element material index
     DCArrayKokkos<double> statev; ///< Element state variable
+
+    DCArrayKokkos<size_t> mat_id; ///< Element material index
+
+    DCArrayKokkos<bool> eroded; ///< Element eroded or not
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
@@ -92,6 +95,7 @@ struct elem_t
         this->div    = DCArrayKokkos<double>(num_elems, "element_div");
         this->mass   = DCArrayKokkos<double>(num_elems, "element_mass");
         this->mat_id = DCArrayKokkos<size_t>(num_elems, "element_mat_id");
+        this->eroded = DCArrayKokkos<bool>(num_elems, "element_eroded");
     }; // end method
 }; // end elem_t
 

@@ -71,6 +71,7 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
     const DCArrayKokkos<double>& elem_vol,
     const DCArrayKokkos<double>& elem_div,
     const DCArrayKokkos<size_t>& elem_mat_id,
+    const DCArrayKokkos<bool>& elem_eroded,
     DCArrayKokkos<double>& corner_force,
     const double fuzz,
     const double small,
@@ -360,7 +361,7 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
 
             // loop over dimension
 
-            if(mat_id == material(mat_id).blank_mat_id){ // material(mat_id).blank_mat_id)
+            if(elem_eroded(elem_gid) == true){ // material(mat_id).blank_mat_id)
                 for (int dim = 0; dim < num_dims; dim++){
                     corner_force(corner_gid, dim) = 0.0;
                 }

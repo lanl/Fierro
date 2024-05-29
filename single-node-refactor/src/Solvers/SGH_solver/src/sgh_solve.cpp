@@ -268,6 +268,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                           elem.vol,
                           elem.div,
                           elem.mat_id,
+                          elem.eroded,
                           corner.force,
                           fuzz,
                           small,
@@ -346,6 +347,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                              elem.mass,
                              elem.mat_id,
                              elem.statev,
+                             elem.eroded,
                              dt,
                              rk_alpha);
             }

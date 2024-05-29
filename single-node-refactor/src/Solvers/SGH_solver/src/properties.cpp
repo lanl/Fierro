@@ -70,6 +70,7 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
     const DCArrayKokkos<double>& elem_mass,
     const DCArrayKokkos<size_t>& elem_mat_id,
     const DCArrayKokkos<double>& elem_statev,
+    const DCArrayKokkos<bool>& elem_eroded,
     const double dt,
     const double rk_alpha) const
 {
@@ -140,6 +141,8 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
                elem_den(elem_gid)  <= material(mat_id).erode_density_val) {
 
                 elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
+
+                elem_eroded(elem_gid) = true;
 
             } // end if
 
