@@ -368,19 +368,6 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
             else{
                 for (int dim = 0; dim < num_dims; dim++) {
 
-
-                    // if (std::isnan(area_normal(node_lid, 0))) {std::cout<<"Bad boi = area_normal(node_lid, 0)"<<std::endl; exit(0);}
-                    // if (std::isnan(area_normal(node_lid, 1))) {std::cout<<"Bad boi = area_normal(node_lid, 1)"<<std::endl; exit(0);}
-                    // if (std::isnan(area_normal(node_lid, 2))) {std::cout<<"Bad boi = area_normal(node_lid, 2)"<<std::endl; exit(0);}
-                    // if (std::isnan(tau(0, dim))) {std::cout<<"Bad boi = tau(0, dim)"<<std::endl; exit(0);}
-                    // if (std::isnan(tau(1, dim))) {std::cout<<"Bad boi = tau(1, dim)"<<std::endl; exit(0);}
-                    // if (std::isnan(tau(2, dim))) {std::cout<<"Bad boi = tau(2, dim)"<<std::endl; exit(0);}
-                    // if (std::isnan(phi)) {std::cout<<"Bad boi = phi"<<std::endl; exit(0);}
-                    // if (std::isnan(muc(node_lid))) {std::cout<<"Bad boi = muc(node_lid)"<<std::endl; exit(0);}
-                    // if (std::isnan(vel_star(dim))) {std::cout<<"Bad boi = vel_star(dim)"<<std::endl; exit(0);}
-                    // if (std::isnan(node_vel(1, node_gid, dim))) {std::cout<<"Bad boi = node_vel(1, node_gid, dim)"<<std::endl; exit(0);} 
-
-
                     corner_force(corner_gid, dim) =
                         area_normal(node_lid, 0) * tau(0, dim)
                         + area_normal(node_lid, 1) * tau(1, dim)
