@@ -1342,6 +1342,22 @@ void FEA_Module_Elasticity::generate_bcs(){
     if(bc.type == BOUNDARY_CONDITION_TYPE::displacement){
       Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
     }
+    switch (bc.type) {
+      case BOUNDARY_CONDITION_TYPE::displacement:
+        Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
+        break;
+      case BOUNDARY_CONDITION_TYPE::displacement_x:
+        Boundary_Condition_Type_List(num_boundary_conditions) = X_DISPLACEMENT_CONDITION;
+        break;
+      case BOUNDARY_CONDITION_TYPE::displacement_y:
+        Boundary_Condition_Type_List(num_boundary_conditions) = Y_DISPLACEMENT_CONDITION;
+        break;
+      case BOUNDARY_CONDITION_TYPE::displacement_z:
+        Boundary_Condition_Type_List(num_boundary_conditions) = Z_DISPLACEMENT_CONDITION;
+        break;
+      default:
+        throw std::runtime_error("Invalid surface type: " + to_string(bc.surface.type));
+    }
     Boundary_Surface_Displacements(num_surface_disp_sets,0) = bc.value;
     Boundary_Surface_Displacements(num_surface_disp_sets,1) = bc.value;
     Boundary_Surface_Displacements(num_surface_disp_sets,2) = bc.value;
@@ -4064,13 +4080,19 @@ void FEA_Module_Elasticity::Displacement_Boundary_Conditions(){
       num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
       if(bc_option==0) {
         bc_dim_set[0]=1;
+        bc_dim_set[1]=0;
+        bc_dim_set[2]=0;
         displacement(0) = Boundary_Surface_Displacements(surface_disp_set_id,0);
       }
       else if(bc_option==1) {
+        bc_dim_set[0]=0;
         bc_dim_set[1]=1;
+        bc_dim_set[2]=0;
         displacement(1) = Boundary_Surface_Displacements(surface_disp_set_id,1);
       }
       else if(bc_option==2) {
+        bc_dim_set[0]=0;
+        bc_dim_set[1]=0;
         bc_dim_set[2]=1;
         displacement(2) = Boundary_Surface_Displacements(surface_disp_set_id,2);
       }
@@ -4118,8 +4140,8 @@ void FEA_Module_Elasticity::Displacement_Boundary_Conditions(){
               Node_DOF_Displacement_Boundary_Conditions(current_node_id*num_dim+idim) = displacement(idim);
               //counts local DOF being constrained
               if(local_flag){
-              Number_DOF_BCS++;
-              node_displacements_host(current_node_id*num_dim+idim,0) = displacement(idim);
+                Number_DOF_BCS++;
+                node_displacements_host(current_node_id*num_dim+idim,0) = displacement(idim);
               }
             }
           }

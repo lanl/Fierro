@@ -5,7 +5,7 @@
 #include "yaml-serializable.h"
 
 struct Thermo_Elasticity_Parameters 
-    : virtual ImplicitModule, FEA_Module_Parameters::Register<Thermo_Elasticity_Parameters, FEA_MODULE_TYPE::Thermo_Elastic>, Yaml::DerivedFields {
+    : virtual ImplicitModule, FEA_Module_Parameters::Register<Thermo_Elasticity_Parameters, FEA_MODULE_TYPE::Thermo_Elastic> {
     bool strain_max_flag    = false;
     bool modal_analysis     = false;
     bool anisotropic_lattice = false;
