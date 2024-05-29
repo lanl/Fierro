@@ -161,6 +161,7 @@ FEA_Module_SGH::FEA_Module_SGH(
         if(simparam->optimization_options.use_solve_checkpoints){
             max_time_steps = simparam->optimization_options.num_solve_checkpoints;
             dynamic_checkpoint_set = Teuchos::rcp(new std::set<Dynamic_Checkpoint>());
+            previous_node_velocities_distributed = Teuchos::rcp(new MV(map, simparam->num_dims));
         }
         else{
             max_time_steps = BUFFER_GROW;
@@ -1285,7 +1286,9 @@ void FEA_Module_SGH::sgh_solve()
                 }
             }
 #endif
-
+            if(use_solve_checkpoints){
+                previous_node_velocities_distributed->assign(*node_velocities_distributed);
+            }
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,
                               node_vel,
@@ -1631,26 +1634,29 @@ void FEA_Module_SGH::sgh_solve()
                     temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
                     dynamic_checkpoint_set->insert(temp);
                     num_active_checkpoints++;
+                    //initializes to the end of the set until allowed total number of checkpoints is reached
+                    last_raised_checkpoint = dynamic_checkpoint_set->end();
+                    --last_raised_checkpoint;
                 }
                 //if limit of checkpoints was reached; search for dispensable checkpoints or raise level of recent checkpoint
                 else{
                     //a dispensable checkpoint has a lower level than another checkpoint located later in time
                     //find if there is a dispenable checkpoint to remove
                     current_checkpoint = last_raised_checkpoint;
+                    --current_checkpoint; // dont need to check against itself
                     search_end = dynamic_checkpoint_set->begin();
-                    search_end++; //dont dispense of the checkpoint at t=0
                     dispensable_found = false;
                     while(current_checkpoint!=search_end){
-                        --current_checkpoint;
                         if(current_checkpoint->level<last_raised_level){
                             dispensable_checkpoint = current_checkpoint;
                             dispensable_found = true;
                             break;
                         }
+                        --current_checkpoint;
                     }
                     if(dispensable_found){
                         //add replacement checkpoint
-                        Dynamic_Checkpoint temp(3,cycle+1,time_value,0);
+                        Dynamic_Checkpoint temp(3,cycle+1,time_value);
                         //get pointers to vector buffers from the checkpoint we're about to delete
                         temp.copy_vectors(*dispensable_checkpoint);
                         //remove checkpoint at timestep = cycle
@@ -1669,7 +1675,7 @@ void FEA_Module_SGH::sgh_solve()
                         last_raised_level = current_checkpoint->level;
 
                         //add replacement checkpoint
-                        Dynamic_Checkpoint temp(3,cycle+1,time_value,last_raised_level++);
+                        Dynamic_Checkpoint temp(3,cycle+1,time_value,++last_raised_level);
                         //get pointers to vector buffers from the checkpoint we're about to delete
                         temp.copy_vectors(*current_checkpoint);
                         //remove checkpoint at timestep = cycle
@@ -1695,7 +1701,8 @@ void FEA_Module_SGH::sgh_solve()
                 const_vec_array node_velocities_interface;
                 const_vec_array previous_node_velocities_interface;
                 if(use_solve_checkpoints){
-
+                    node_velocities_interface = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    previous_node_velocities_interface = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 }
                 else{
                     node_velocities_interface = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -1805,6 +1812,14 @@ void FEA_Module_SGH::sgh_solve()
     } // end for cycle loop
 
     last_time_step = cycle;
+
+    //debug print of checkpoint timesteps
+    if(use_solve_checkpoints){
+        int count = 0;
+        for(auto it = dynamic_checkpoint_set->begin(); it != dynamic_checkpoint_set->end(); it++){
+            std::cout << "Checkpoint # " << count++ << " is at timestep " << (*it).saved_timestep << std::endl;
+        }
+    }
 
     // simple setup to just calculate KE minimize objective for now
     if (topology_optimization_on) {
