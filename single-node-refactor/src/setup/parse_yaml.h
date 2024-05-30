@@ -74,7 +74,11 @@ std::vector<double> extract_list(std::string str);
 void print_yaml(Yaml::Node root);
 
 // Read and validate user inputs
-void validate_inputs(Yaml::Node& yaml, std::vector<std::string>& user_inputs, std::vector<std::string>& str_valid_inputs);
+void validate_inputs(
+    Yaml::Node& yaml, 
+    std::vector<std::string>& user_inputs, 
+    std::vector<std::string>& str_valid_inputs,
+    std::vector<std::string>& str_required_inputs);
 
 // utility function for parsing YAML file
 void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param);

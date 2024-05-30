@@ -119,5 +119,14 @@ static std::vector<std::string> str_mesh_inps
     "num_angular_elems"
 };
 
+// ----------------------------------
+// required inputs for mesh options
+// ----------------------------------
+static std::vector<std::string> mesh_required_inps
+{
+    "source",
+    "num_dims",
+};
+
 
 #endif // end Header Guard

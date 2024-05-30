@@ -176,20 +176,20 @@ struct material_t
 
     // Material strength model function pointer
     void (*strength_model)(const DCArrayKokkos<double>& elem_pres,
-                           const DCArrayKokkos<double>& elem_stress,
-                           const size_t elem_gid,
-                           const size_t mat_id,
-                           const DCArrayKokkos<double>& elem_state_vars,
-                           const DCArrayKokkos<double>& elem_sspd,
-                           const double den,
-                           const double sie,
-                           const ViewCArrayKokkos <double> &vel_grad,
-                           const ViewCArrayKokkos <size_t> &elem_node_gids,
-                           const DCArrayKokkos <double> &node_coords,
-                           const DCArrayKokkos <double> &node_vel,
-                           const double vol,
-                           const double dt,
-                           const double rk_alpha) = NULL;
+                                 const DCArrayKokkos<double>& elem_stress,
+                                 const size_t elem_gid,
+                                 const size_t mat_id,
+                                 const DCArrayKokkos<double>& elem_state_vars,
+                                 const DCArrayKokkos<double>& elem_sspd,
+                                 const double den,
+                                 const double sie,
+                                 const ViewCArrayKokkos <double> &vel_grad,
+                                 const ViewCArrayKokkos <size_t> &elem_node_gids,
+                                 const DCArrayKokkos <double> &node_coords,
+                                 const DCArrayKokkos <double> &node_vel,
+                                 const double vol,
+                                 const double dt,
+                                 const double rk_alpha) = NULL;
 
     // Material Failure: none or there is a failure model
     model::failure_type failure_type = model::no_failure;
@@ -212,25 +212,7 @@ struct material_t
 
     size_t num_eos_state_vars = 0; ///< Number of state variables for the EOS
     size_t num_strength_state_vars  = 0; ///< Number of state variables for the strength model
-    size_t num_eos_global_vars      = 0;// Verify required inputs exits
-        std::vector<std::string> required_inps = {
-            "eos_model_type",
-            "strength_model_type"};
-
-        bool valid = false;
-        // Use std::all_of to check if all elements of required_inps are found in user_str_material_inps
-        valid = std::all_of(required_inps.begin(), required_inps.end(),[&user_str_material_inps](const std::string& str) {
-                    return std::find(user_str_material_inps.begin(), user_str_material_inps.end(), str)!= user_str_material_inps.end();
-                });
-
-        if (valid == false){
-            std::cout << "ERROR: Missing required YAML inputs for material id: " << mat_id << std::endl;
-            std::cout << "Required inputs are:" << std::endl;
-            for (const auto& inp : required_inps) {
-                std::cout << inp << std::endl;
-            }
-            throw std::runtime_error("**** Missing required material inputs ****");
-        } ///< Number of global variables for the EOS
+    size_t num_eos_global_vars      = 0; ///< Number of global variables for the EOS
     size_t num_strength_global_vars = 0; ///< Number of global variables for the strength model
 
     DCArrayKokkos<double> eos_global_vars; ///< Array of global variables for the EOS
@@ -247,11 +229,10 @@ struct material_t
     double poisson_ratio;   ///< Poisson ratio
 }; // end material_t
 
+
 // ----------------------------------
-// valid inputs for a material fill
-//
-//   materials_text_inp["words"]
-//
+// valid inputs for material options
+// ----------------------------------
 static std::vector<std::string> str_material_inps
 {
     "id",
@@ -272,14 +253,17 @@ static std::vector<std::string> str_material_inps
     "blank_mat_id",
 };
 
-static std::vector<std::string> strength_required_inps
+// ----------------------------------
+// required inputs for material options
+// ----------------------------------
+static std::vector<std::string> material_required_inps
 {
     "id",
     "eos_model",
     "eos_model_type",
-    "eos_global_vars",
-    "strength_model",
-    "strength_model_type"
+    // "eos_global_vars",
+    // "strength_model",
+    // "strength_model_type"
 };
 
 /////////////////////////////////////////////////////////////////////////////

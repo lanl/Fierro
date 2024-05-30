@@ -72,4 +72,12 @@ static std::vector<std::string> str_solver_inps
     "method"
 };
 
+// ----------------------------------
+// required inputs for solver options
+// ----------------------------------
+static std::vector<std::string> solver_required_inps
+{
+    "method"
+};
+
 #endif // end Header Guard

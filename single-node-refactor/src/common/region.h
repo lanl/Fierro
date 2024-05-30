@@ -136,4 +136,14 @@ static std::vector<std::string> str_region_inps
     "origin"
 };
 
+// ----------------------------------
+// required inputs for region options
+// ----------------------------------
+static std::vector<std::string> region_required_inps
+{
+    "type",
+    "material_id",
+};
+
+
 #endif // end Header Guard

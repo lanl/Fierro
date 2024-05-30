@@ -148,4 +148,12 @@ static std::vector<std::string> str_bc_inps
     "origin"
 };
 
+// ----------------------------------
+// required inputs for boundary condition options
+// ----------------------------------
+static std::vector<std::string> bc_required_inps
+{
+
+};
+
 #endif // end Header Guard

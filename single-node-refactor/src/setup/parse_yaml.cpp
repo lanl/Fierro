@@ -297,7 +297,11 @@ void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
 // =================================================================================
 //    Extract words from the input file and validate they are correct
 // =================================================================================
-void validate_inputs(Yaml::Node& yaml, std::vector<std::string>& user_inputs, std::vector<std::string>& str_valid_inputs)
+void validate_inputs(
+    Yaml::Node& yaml, 
+    std::vector<std::string>& user_inputs, 
+    std::vector<std::string>& str_valid_inputs,
+    std::vector<std::string>& str_required_inputs)
 {
     for (auto item = yaml.Begin(); item != yaml.End(); item++) {
         std::string var_name = (*item).first;
@@ -316,7 +320,20 @@ void validate_inputs(Yaml::Node& yaml, std::vector<std::string>& user_inputs, st
     } // end for item in this yaml input
 
     // Add checks for required inputs here
+    bool valid = false;
+    // Use std::all_of to check if all elements of str_required_inputs are found in user_inputs
+    valid = std::all_of(str_required_inputs.begin(), str_required_inputs.end(),[&user_inputs](const std::string& str) {
+                return std::find(user_inputs.begin(), user_inputs.end(), str)!= user_inputs.end();
+            });
 
+    if (valid == false){
+        std::cout << "ERROR: Missing required YAML inputs "<< std::endl;
+        std::cout << "Required inputs are:" << std::endl;
+        for (const auto& inp : str_required_inputs) {
+            std::cout << inp << std::endl;
+        }
+        throw std::runtime_error("**** Missing required inputs ****");
+    }
 
 } // end validate inputs
 
@@ -344,7 +361,7 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
         std::vector<std::string> user_inputs;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_inputs, str_solver_inps);
+        validate_inputs(inps_yaml, user_inputs, str_solver_inps, solver_required_inps);
 
         // loop over the words in the input
         for (auto& a_word : user_inputs) {
@@ -398,7 +415,7 @@ void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options)
     std::vector<std::string> user_dynamic_inps;
 
     // extract words from the input file and validate they are correct
-    validate_inputs(yaml, user_dynamic_inps, str_dyn_opts_inps);
+    validate_inputs(yaml, user_dynamic_inps, str_dyn_opts_inps, dyn_opts_required_inps);
 
     // loop over the words in the material input definition
     for (auto& a_word : user_dynamic_inps) {
@@ -492,7 +509,7 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
 
     // extract words from the input file and validate they are correct
-    validate_inputs(mesh_yaml, user_mesh_inputs, str_mesh_inps);
+    validate_inputs(mesh_yaml, user_mesh_inputs, str_mesh_inps, mesh_required_inps);
 
     // loop over the words in the material input definition
     for (auto& a_word : user_mesh_inputs) {
@@ -744,7 +761,7 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options)
     std::vector<std::string> user_inputs;
 
     // extract words from the input file and validate they are correct
-    validate_inputs(out_opts, user_inputs, str_output_options_inps);
+    validate_inputs(out_opts, user_inputs, str_output_options_inps, output_options_required_inps);
 
     // loop over the output options
     for (auto& a_word : user_inputs) {
@@ -850,7 +867,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
         std::vector<std::string> user_str_region_inps;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_str_region_inps, str_region_inps);
+        validate_inputs(inps_yaml, user_str_region_inps, str_region_inps, region_required_inps);
 
         // loop over the words in the material input definition
         for (auto& a_word : user_str_region_inps) {
@@ -1155,28 +1172,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
         std::vector<std::string> user_str_material_inps;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps);
-
-        // Verify required inputs exits
-        std::vector<std::string> required_inps = {
-            "eos_model_type",
-            "strength_model_type"};
-
-        bool valid = false;
-        // Use std::all_of to check if all elements of required_inps are found in user_str_material_inps
-        valid = std::all_of(required_inps.begin(), required_inps.end(),[&user_str_material_inps](const std::string& str) {
-                    return std::find(user_str_material_inps.begin(), user_str_material_inps.end(), str)!= user_str_material_inps.end();
-                });
-
-        if (valid == false){
-            std::cout << "ERROR: Missing required YAML inputs for material id: " << mat_id << std::endl;
-            std::cout << "Required inputs are:" << std::endl;
-            for (const auto& inp : required_inps) {
-                std::cout << inp << std::endl;
-            }
-            throw std::runtime_error("**** Missing required material inputs ****");
-        }
-
+        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_required_inps);
 
         // loop over the words in the material input definition
         for (auto& a_word : user_str_material_inps) {
@@ -1580,7 +1576,7 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
         std::vector<std::string> user_str_bc_inps;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_str_bc_inps, str_bc_inps);
+        validate_inputs(inps_yaml, user_str_bc_inps, str_bc_inps, bc_required_inps);
 
         // loop over the words in the material input definition
         for (auto& a_word : user_str_bc_inps) {
