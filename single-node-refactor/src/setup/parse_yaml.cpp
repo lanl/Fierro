@@ -314,6 +314,10 @@ void validate_inputs(Yaml::Node& yaml, std::vector<std::string>& user_inputs, st
             std::cout << "ERROR: invalid input: " << var_name << std::endl;
         } // end if variable exists
     } // end for item in this yaml input
+
+    // Add checks for required inputs here
+
+
 } // end validate inputs
 
 // =================================================================================
@@ -1131,6 +1135,8 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
     Yaml::Node& material_yaml = root["materials"];
 
     size_t num_materials = material_yaml.Size();
+    std::cout << "Number of materials =  "<< num_materials << std::endl;
+
 
     materials = DCArrayKokkos<material_t>(num_materials, "sim_param.materials");
 
@@ -1143,11 +1149,34 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
         size_t num_vars_set = inps_yaml.Size();
 
+        std::cout << "Number of vars set =  "<< num_vars_set << std::endl;
+
         // get the material variables names set by the user
         std::vector<std::string> user_str_material_inps;
 
         // extract words from the input file and validate they are correct
         validate_inputs(inps_yaml, user_str_material_inps, str_material_inps);
+
+        // Verify required inputs exits
+        std::vector<std::string> required_inps = {
+            "eos_model_type",
+            "strength_model_type"};
+
+        bool valid = false;
+        // Use std::all_of to check if all elements of required_inps are found in user_str_material_inps
+        valid = std::all_of(required_inps.begin(), required_inps.end(),[&user_str_material_inps](const std::string& str) {
+                    return std::find(user_str_material_inps.begin(), user_str_material_inps.end(), str)!= user_str_material_inps.end();
+                });
+
+        if (valid == false){
+            std::cout << "ERROR: Missing required YAML inputs for material id: " << mat_id << std::endl;
+            std::cout << "Required inputs are:" << std::endl;
+            for (const auto& inp : required_inps) {
+                std::cout << inp << std::endl;
+            }
+            throw std::runtime_error("**** Missing required material inputs ****");
+        }
+
 
         // loop over the words in the material input definition
         for (auto& a_word : user_str_material_inps) {
@@ -1238,12 +1267,14 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     // eos_type_map[type] returns enum value, e.g., model::decoupled
                     switch(eos_type_map[type]){
                         case model::decoupled:
+                            std::cout << "Setting EOS type to decoupled " << std::endl;
                             RUN({
                                 materials(mat_id).eos_type = model::decoupled;
                             });
                             break;
 
                         case model::coupled:
+                            std::cout << "Setting EOS type to coupled " << std::endl;
                             RUN({
                                 materials(mat_id).eos_type = model::coupled;
                             });
@@ -1251,6 +1282,14 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                         default:
                             materials(mat_id).eos_type = model::no_eos_type;
+                            std::cout << "ERROR: No valid EOS type input " << std::endl;
+                            std::cout << "Valid EOS types are: " << std::endl;
+                            
+                            for (const auto& pair : eos_type_map) {
+                                std::cout << pair.second << std::endl;
+                            }
+
+                            throw std::runtime_error("**** EOS Type Not Understood ****");
                             break;
                     } // end switch
 
@@ -1366,7 +1405,6 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     std::cout << "ERROR: Invalid strength model type input: " << strength_model_type << std::endl;
                     throw std::runtime_error("**** Strength model type not understood ****");
                 } // end if
-
             } // Strength model type
             
             // Set specific strength model
@@ -1405,8 +1443,8 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     std::cout << "ERROR: invalid Strength model input: " << strength_model << std::endl;
                     throw std::runtime_error("**** Strength model Not Understood ****");
                 } // end if
-
             } // Strength model
+            
             //extract erosion model
             else if (a_word.compare("erosion_type") == 0) {
                 std::string type = root["materials"][mat_id]["material"]["erosion_type"].As<std::string>();
