@@ -145,5 +145,4 @@ static std::vector<std::string> region_required_inps
     "material_id",
 };
 
-
 #endif // end Header Guard

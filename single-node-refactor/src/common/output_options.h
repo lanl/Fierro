@@ -96,7 +96,6 @@ static std::vector<std::string> str_output_options_inps
 // ----------------------------------
 static std::vector<std::string> output_options_required_inps
 {
-
 };
 
 #endif // end Header Guard

@@ -123,7 +123,7 @@ struct boundary_condition_t
     double v     = 0.0; ///< WARNING: Currently unused
     double w     = 0.0; ///< WARNING: Currently unused
 
-    DCArrayKokkos<double> origin; // 
+    DCArrayKokkos<double> origin; //
 
     // WARNING: CURRENTLY NOT PARSED OR USED
     double hydro_bc_vel_0 = 0.0;    ///< Initial velocity for timed velocity boundary condition
@@ -153,7 +153,6 @@ static std::vector<std::string> str_bc_inps
 // ----------------------------------
 static std::vector<std::string> bc_required_inps
 {
-
 };
 
 #endif // end Header Guard

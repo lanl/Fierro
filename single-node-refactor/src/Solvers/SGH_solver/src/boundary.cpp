@@ -46,19 +46,16 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_velocity(const mesh_t&     mesh,
+void SGH::boundary_velocity(const mesh_t&      mesh,
     const DCArrayKokkos<boundary_condition_t>& boundary,
     DCArrayKokkos<double>& node_vel,
     const double time_value) const
 {
     // Loop over boundary sets
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
-        
         if (boundary.host(bdy_set).type == boundary_conds::reflected) {
-            
             // Loop over boundary nodes in a boundary set
             FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
-
                 // directions with type:
                 // x_plane  = 0,
                 // y_plane  = 1,
@@ -70,13 +67,10 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
                 // Set velocity to zero in that direction
                 node_vel(1, bdy_node_gid, direction) = 0.0;
             }); // end for bdy_node_lid
-
         }
         else if (boundary.host(bdy_set).type == boundary_conds::fixed) {
-            
             // Loop over boundary nodes in a boundary set
             FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
-
                 size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
                 for (size_t dim = 0; dim < mesh.num_dims; dim++) {
@@ -84,10 +78,8 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
                     node_vel(1, bdy_node_gid, dim) = 0.0;
                 }
             }); // end for bdy_node_lid
-
         } // end if
         else if (boundary.host(bdy_set).type == boundary_conds::velocity) {
-            
             // Loop over boundary nodes in a boundary set
             FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
                 size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
@@ -116,7 +108,6 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
     return;
 } // end boundary_velocity function
 
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn boundary_velocity
@@ -129,12 +120,10 @@ void SGH::boundary_velocity(const mesh_t&     mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_contact(const mesh_t&     mesh,
+void SGH::boundary_contact(const mesh_t& mesh,
     const DCArrayKokkos<boundary_condition_t>& boundary,
     DCArrayKokkos<double>& node_vel,
     const double time_value) const
 {
-    
-
     return;
 } // end boundary_contact function

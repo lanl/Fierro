@@ -71,7 +71,7 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
     const DCArrayKokkos<double>& elem_vol,
     const DCArrayKokkos<double>& elem_div,
     const DCArrayKokkos<size_t>& elem_mat_id,
-    const DCArrayKokkos<bool>& elem_eroded,
+    const DCArrayKokkos<bool>&   elem_eroded,
     DCArrayKokkos<double>& corner_force,
     const double fuzz,
     const double small,
@@ -170,7 +170,7 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
         } // end for
 
         // add the pressure if a decoupled model is used
-        if(material(mat_id).eos_type == model::decoupled){
+        if (material(mat_id).eos_type == model::decoupled) {
             for (int i = 0; i < num_dims; i++) {
                 tau(i, i) -= elem_pres(elem_gid);
             } // end for
@@ -361,14 +361,13 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
 
             // loop over dimension
 
-            if(elem_eroded(elem_gid) == true){ // material(mat_id).blank_mat_id)
-                for (int dim = 0; dim < num_dims; dim++){
+            if (elem_eroded(elem_gid) == true) { // material(mat_id).blank_mat_id)
+                for (int dim = 0; dim < num_dims; dim++) {
                     corner_force(corner_gid, dim) = 0.0;
                 }
             }
             else{
                 for (int dim = 0; dim < num_dims; dim++) {
-
                     corner_force(corner_gid, dim) =
                         area_normal(node_lid, 0) * tau(0, dim)
                         + area_normal(node_lid, 1) * tau(1, dim)

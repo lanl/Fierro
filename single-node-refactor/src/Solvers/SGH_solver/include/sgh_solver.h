@@ -40,7 +40,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simulation_parameters.h"
 #include "solver.h"
 
-
 using namespace mtr; // matar namespace
 
 /////////////////////////////////////////////////////////////////////////////
@@ -90,7 +89,22 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) override;
 
-
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn finalize
+    ///
+    /// \brief <insert brief description>
+    ///
+    /// <Insert longer more detailed description which
+    /// can span multiple lines if needed>
+    ///
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    /// \param <function parameter description>
+    ///
+    /// \return <return type and definition description if not void>
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void finalize(simulation_parameters_t& sim_param) const override
     {
         // Any finalize goes here, remove allocated memory, etc
@@ -134,7 +148,7 @@ public:
         const DCArrayKokkos<double>& elem_vol,
         const DCArrayKokkos<double>& elem_div,
         const DCArrayKokkos<size_t>& elem_mat_id,
-        const DCArrayKokkos<bool>& elem_eroded,
+        const DCArrayKokkos<bool>&   elem_eroded,
         DCArrayKokkos<double>& corner_force,
         const double fuzz,
         const double small,
@@ -239,7 +253,7 @@ public:
         const DCArrayKokkos<double>& elem_mass,
         const DCArrayKokkos<size_t>& elem_mat_id,
         const DCArrayKokkos<double>& elem_statev,
-        const DCArrayKokkos<bool>& elem_eroded,
+        const DCArrayKokkos<bool>&   elem_eroded,
         const double dt,
         const double rk_alpha) const;
 

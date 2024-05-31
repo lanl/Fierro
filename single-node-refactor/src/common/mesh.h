@@ -949,7 +949,6 @@ struct mesh_t
                 } // k
             }); // end FOR_ALL elem_gid
         } // end if arbitrary-order element
-        
         else {
             printf("\nERROR: mesh type is not known \n");
         } // end if
@@ -961,7 +960,7 @@ struct mesh_t
         printf("done building node ordering \n");
 
         // for saving the hash keys of the patches and then the neighboring elem_gid
-        CArrayKokkos<int> hash_keys_in_elem(num_elems, num_patches_in_elem, num_nodes_in_patch, "hash_keys_in_elem");// always 4 ids in 3D
+        CArrayKokkos<int> hash_keys_in_elem(num_elems, num_patches_in_elem, num_nodes_in_patch, "hash_keys_in_elem"); // always 4 ids in 3D
 
         // for saving the adjacent patch_lid, which is the slide_lid
         // CArrayKokkos <size_t> neighboring_side_lids (num_elems, num_patches_in_elem);
@@ -1439,7 +1438,7 @@ struct mesh_t
     ///
     /// \fn init_bdy_sets
     ///
-    /// \brief Initialize memory for boundary sets 
+    /// \brief Initialize memory for boundary sets
     ///
     /////////////////////////////////////////////////////////////////////////////
     void init_bdy_sets(size_t num_bcs)

@@ -70,7 +70,7 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
     const DCArrayKokkos<double>& elem_mass,
     const DCArrayKokkos<size_t>& elem_mat_id,
     const DCArrayKokkos<double>& elem_statev,
-    const DCArrayKokkos<bool>& elem_eroded,
+    const DCArrayKokkos<bool>&   elem_eroded,
     const double dt,
     const double rk_alpha) const
 {
@@ -134,21 +134,17 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
         } // end logical on state_based strength model
 
         // apply the element erosion model
-        if(material(mat_id).erosion_type == model::erosion){
-
+        if (material(mat_id).erosion_type == model::erosion) {
             // starting simple, but in the future call an erosion model
-            if(elem_pres(elem_gid) <= material(mat_id).erode_tension_val ||
-               elem_den(elem_gid)  <= material(mat_id).erode_density_val) {
-
+            if (elem_pres(elem_gid) <= material(mat_id).erode_tension_val
+                || elem_den(elem_gid) <= material(mat_id).erode_density_val) {
                 elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
 
                 elem_eroded(elem_gid) = true;
-
             } // end if
-
         } // end if
 
-        if(material(mat_id).eos_type == model::decoupled){
+        if (material(mat_id).eos_type == model::decoupled) {
             // --- Pressure ---
             material(mat_id).eos_model(elem_pres,
                                        elem_stress,
@@ -265,19 +261,15 @@ void SGH::update_state2D(const DCArrayKokkos<material_t>& material,
 
         // --- Pressure ---
         // apply the element erosion model
-        if(material(mat_id).erosion_type == model::erosion){
-
+        if (material(mat_id).erosion_type == model::erosion) {
             // starting simple, but in the future call an erosion model
-            if(elem_pres(elem_gid) <= material(mat_id).erode_tension_val ||
-               elem_den(elem_gid)  <= material(mat_id).erode_density_val) {
-
+            if (elem_pres(elem_gid) <= material(mat_id).erode_tension_val
+                || elem_den(elem_gid) <= material(mat_id).erode_density_val) {
                 elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
-
             } // end if
-
         } // end if
 
-        if(material(mat_id).eos_type == model::decoupled){
+        if (material(mat_id).eos_type == model::decoupled) {
             // --- Pressure ---
             material(mat_id).eos_model(elem_pres,
                                        elem_stress,

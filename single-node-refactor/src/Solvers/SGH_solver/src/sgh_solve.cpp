@@ -50,14 +50,12 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
-
     double fuzz  = sim_param.dynamic_options.fuzz;
     double tiny  = sim_param.dynamic_options.tiny;
     double small = sim_param.dynamic_options.small;
 
-
     double graphics_dt_ival  = sim_param.output_options.graphics_time_step;
-    int graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
+    int    graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
 
     double time_initial = sim_param.dynamic_options.time_initial;
     double time_final   = sim_param.dynamic_options.time_final;
@@ -68,7 +66,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
     int rk_num_stages = sim_param.dynamic_options.rk_num_stages;
     int cycle_stop    = sim_param.dynamic_options.cycle_stop;
-
 
     // initialize time, time_step, and cycles
     double time_value = 0.0;
@@ -83,7 +80,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = 0.0;
     double graphics_time = 0.0; // the times for writing graphics dump
-    size_t graphics_id = 0;
+    size_t graphics_id   = 0;
 
     // Verify host side boundary types are set
     sim_param.boundary_conditions.update_host();
@@ -147,13 +144,11 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-
     std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value); // Time value = 0.0;
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
-
         // stop calculation if flag
         if (stop_calc == 1) {
             break;
@@ -288,7 +283,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
 
-
             // ---- apply contact boundary conditions to the boundary patches----
             boundary_contact(mesh, sim_param.boundary_conditions, node.vel, time_value);
 
@@ -422,7 +416,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     } // end for cycle loop
 
     auto time_2    = std::chrono::high_resolution_clock::now();
-    auto calc_time = std::chrono::duration_cast <std::chrono::nanoseconds>(time_2 - time_1).count();
+    auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();
 
     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
