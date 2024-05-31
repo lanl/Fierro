@@ -84,6 +84,8 @@ public:
 
     int solve();
 
+    void checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint);
+
     void module_cleanup();
 
     void sgh_solve();
@@ -576,15 +578,20 @@ public:
     // Global FEA data
     Teuchos::RCP<MV> node_velocities_distributed;
     Teuchos::RCP<MV> previous_node_velocities_distributed;
+    Teuchos::RCP<MV> previous_node_coords_distributed;
     Teuchos::RCP<MV> initial_node_velocities_distributed;
     Teuchos::RCP<MV> all_node_velocities_distributed;
     Teuchos::RCP<MV> all_cached_node_velocities_distributed;
     Teuchos::RCP<MV> node_masses_distributed;
     Teuchos::RCP<MV> ghost_node_masses_distributed;
-    Teuchos::RCP<MV> adjoint_vector_distributed;
-    Teuchos::RCP<MV> phi_adjoint_vector_distributed;
-    Teuchos::RCP<MV> psi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> all_adjoint_vector_distributed, adjoint_vector_distributed;
+    Teuchos::RCP<MV> all_phi_adjoint_vector_distributed, phi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> all_psi_adjoint_vector_distributed, psi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_psi_adjoint_vector_distributed;
     Teuchos::RCP<MV> element_internal_energy_distributed;
+    Teuchos::RCP<MV> previous_element_internal_energy_distributed;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_coordinate_data;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_internal_energy_data;
@@ -693,6 +700,7 @@ public:
     // optimization flags and data
     bool kinetic_energy_objective;
     Teuchos::RCP<std::set<Dynamic_Checkpoint>> dynamic_checkpoint_set;
+    Teuchos::RCP<std::vector<Dynamic_Checkpoint>> cached_dynamic_checkpoints;
     int num_active_checkpoints;
     enum vector_name { U_DATA=0, V_DATA=1, SIE_DATA=2 };
 };

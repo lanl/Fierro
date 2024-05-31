@@ -113,16 +113,18 @@ FEA_Module_SGH::FEA_Module_SGH(
     // Switch for optimization solver
     if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
-        force_gradient_velocity        = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
-        force_gradient_position        = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
-        force_gradient_design          = Teuchos::rcp(new MV(all_node_map, 1));
-        corner_value_storage           = Solver_Pointer->corner_value_storage;
-        corner_vector_storage          = Solver_Pointer->corner_vector_storage;
-        corner_gradient_storage        = Solver_Pointer->corner_gradient_storage;
-        relative_element_densities     = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
-        adjoint_vector_distributed     = Teuchos::rcp(new MV(map, simparam->num_dims));
-        phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam->num_dims));
-        psi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_element_map, 1));
+        force_gradient_velocity                = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+        force_gradient_position                = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+        force_gradient_design                  = Teuchos::rcp(new MV(all_node_map, 1));
+        corner_value_storage                   = Solver_Pointer->corner_value_storage;
+        corner_vector_storage                  = Solver_Pointer->corner_vector_storage;
+        corner_gradient_storage                = Solver_Pointer->corner_gradient_storage;
+        relative_element_densities             = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
+        all_adjoint_vector_distributed         = Teuchos::rcp(new MV(all_node_map, num_dim));
+        adjoint_vector_distributed             = Teuchos::rcp(new MV(*all_adjoint_vector_distributed, map));
+        all_phi_adjoint_vector_distributed     = Teuchos::rcp(new MV(all_node_map, num_dim));
+        phi_adjoint_vector_distributed         = Teuchos::rcp(new MV(*all_phi_adjoint_vector_distributed, map));
+        psi_adjoint_vector_distributed         = Teuchos::rcp(new MV(all_element_map, 1));
     }
 
     if (simparam->topology_optimization_on || simparam->shape_optimization_on || simparam->num_dims == 2) {
@@ -159,9 +161,17 @@ FEA_Module_SGH::FEA_Module_SGH(
 
     if (simparam->topology_optimization_on) {
         if(simparam->optimization_options.use_solve_checkpoints){
-            max_time_steps = simparam->optimization_options.num_solve_checkpoints;
-            dynamic_checkpoint_set = Teuchos::rcp(new std::set<Dynamic_Checkpoint>());
-            previous_node_velocities_distributed = Teuchos::rcp(new MV(map, simparam->num_dims));
+            max_time_steps                               = simparam->optimization_options.num_solve_checkpoints;
+            dynamic_checkpoint_set                       = Teuchos::rcp(new std::set<Dynamic_Checkpoint>());
+            cached_dynamic_checkpoints                   = Teuchos::rcp(new std::vector<Dynamic_Checkpoint>());
+            previous_node_velocities_distributed         = Teuchos::rcp(new MV(all_node_map, num_dim));
+            previous_node_coords_distributed             = Teuchos::rcp(new MV(all_node_map, num_dim));
+            previous_element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
+            all_node_velocities_distributed              = Teuchos::rcp(new MV(all_node_map, num_dim));
+            node_velocities_distributed                  = Teuchos::rcp(new MV(*all_node_velocities_distributed, map));
+            previous_adjoint_vector_distributed          = Teuchos::rcp(new MV(all_node_map, num_dim));
+            previous_phi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_node_map, num_dim));
+            previous_psi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_element_map, 1));
         }
         else{
             max_time_steps = BUFFER_GROW;
@@ -1287,7 +1297,7 @@ void FEA_Module_SGH::sgh_solve()
             }
 #endif
             if(use_solve_checkpoints){
-                previous_node_velocities_distributed->assign(*node_velocities_distributed);
+                previous_node_velocities_distributed->assign(*all_node_velocities_distributed);
             }
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,

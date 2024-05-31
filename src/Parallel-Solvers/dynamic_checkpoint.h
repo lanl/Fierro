@@ -144,6 +144,11 @@ public:
         (*state_vectors)[vector_index]->assign(*new_vector);
     }
 
+    //get pointer to contained vector
+    Teuchos::RCP<MV> get_vector_pointer(int vector_index) const{
+        return (*state_vectors)[vector_index];
+    }
+
     public:
     //checkpoint state data
     int saved_timestep;

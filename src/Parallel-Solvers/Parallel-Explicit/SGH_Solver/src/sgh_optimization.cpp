@@ -612,7 +612,31 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             const_vec_array current_element_internal_energy;
             
             if(use_solve_checkpoints){
+                std::set<Dynamic_Checkpoint>::iterator last_checkpoint = dynamic_checkpoint_set->end();
+                --last_checkpoint;
+                previous_node_velocities_distributed->assign((*last_checkpoint->get_vector_pointer(V_DATA)));
+                previous_velocity_vector = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_node_coords_distributed->assign((*last_checkpoint->get_vector_pointer(U_DATA)));
+                previous_coordinate_vector = previous_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_element_internal_energy_distributed->assign((*last_checkpoint->get_vector_pointer(SIE_DATA)));
+                previous_element_internal_energy = previous_element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
+                //remove the last checkpoint and store it for later so that we can swap its pointers to memory with a new one
+                cached_dynamic_checkpoints->push_back(*last_checkpoint);
+                dynamic_checkpoint_set->erase(last_checkpoint);
+                last_checkpoint = dynamic_checkpoint_set->end();
+                --last_checkpoint;
+                --num_active_checkpoints;
+                //if the next closest checkpoint isnt adjacent, solve up to the adjacent timestep
+                if(last_checkpoint->saved_timestep!=cycle){
+                    checkpoint_solve(last_checkpoint);
+                }
+                //if the next checkpoint is adjacent
+                else{
+                    current_velocity_vector = last_checkpoint->get_vector_pointer(V_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_coordinate_vector = last_checkpoint->get_vector_pointer(U_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_element_internal_energy = last_checkpoint->get_vector_pointer(SIE_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
             }
             else{
                 previous_velocity_vector = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -2672,3 +2696,701 @@ void FEA_Module_SGH::comm_phi_adjoint_vector(int cycle)
     // comms to get ghosts
     (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
 }
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn sgh_solve
+///
+/// \brief SGH solver loop
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint)
+{
+    Dynamic_Options dynamic_options = simparam->dynamic_options;
+
+    const int    num_dim  = simparam->num_dims;
+    const size_t rk_level = dynamic_options.rk_num_bins - 1;
+
+    const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos<material_t> material = simparam->material;
+
+    time_value = dynamic_options.time_initial;
+    time_final = dynamic_options.time_final;
+    dt_max     = dynamic_options.dt_max;
+    dt_min     = dynamic_options.dt_min;
+    dt     = dynamic_options.dt;
+    dt_cfl = dynamic_options.dt_cfl;
+
+    graphics_time    = simparam->output_options.graphics_step;
+    graphics_dt_ival = simparam->output_options.graphics_step;
+    cycle_stop     = dynamic_options.cycle_stop;
+    rk_num_stages  = dynamic_options.rk_num_stages;
+    graphics_times = simparam->output_options.graphics_times;
+    graphics_id    = simparam->output_options.graphics_id;
+
+    fuzz  = dynamic_options.fuzz;
+    tiny  = dynamic_options.tiny;
+    small = dynamic_options.small;
+
+    size_t num_bdy_nodes = mesh->num_bdy_nodes;
+    size_t cycle;
+    real_t objective_accumulation, global_objective_accumulation;
+
+    int nTO_modules;
+    int old_max_forward_buffer;
+
+    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
+    problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
+    ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
+    bool topology_optimization_on = simparam->topology_optimization_on;
+    bool shape_optimization_on    = simparam->shape_optimization_on;
+    bool use_solve_checkpoints    = simparam->optimization_options.use_solve_checkpoints;
+    int  num_solve_checkpoints    = simparam->optimization_options.num_solve_checkpoints;
+    std::set<Dynamic_Checkpoint>::iterator current_checkpoint, last_raised_checkpoint, dispensable_checkpoint, search_end;
+    int  last_raised_level = 0;
+    bool dispensable_found = false;
+    num_active_checkpoints = 0;
+
+    // reset time accumulating objective and constraints
+    /*
+    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
+    current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
+    //test if module needs reset
+    if(){
+
+    }
+    }
+    */
+
+    CArrayKokkos<double> node_extensive_mass(nall_nodes, "node_extensive_mass");
+
+    // extensive energy tallies over the mesh elements local to this MPI rank
+    double IE_t0 = 0.0;
+    double KE_t0 = 0.0;
+    double TE_t0 = 0.0;
+
+    double IE_sum = 0.0;
+    double KE_sum = 0.0;
+
+    double IE_loc_sum = 0.0;
+    double KE_loc_sum = 0.0;
+
+    // extensive energy tallies over the entire mesh
+    double global_IE_t0 = 0.0;
+    double global_KE_t0 = 0.0;
+    double global_TE_t0 = 0.0;
+
+    // ---- Calculate energy tallies ----
+    double IE_tend = 0.0;
+    double KE_tend = 0.0;
+    double TE_tend = 0.0;
+
+    double global_IE_tend = 0.0;
+    double global_KE_tend = 0.0;
+    double global_TE_tend = 0.0;
+
+    int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
+
+    // extensive IE
+    REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+        IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
+    }, IE_sum);
+    IE_t0 = IE_sum;
+
+    MPI_Allreduce(&IE_t0, &global_IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // extensive KE
+    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+        double ke = 0;
+        for (size_t dim = 0; dim < num_dim; dim++) {
+            ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
+        } // end for
+
+        if (num_dim == 2) {
+            KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+        }
+        else{
+            KE_loc_sum += node_mass(node_gid) * ke;
+        }
+    }, KE_sum);
+    Kokkos::fence();
+    KE_t0 = 0.5 * KE_sum;
+
+    MPI_Allreduce(&KE_t0, &global_KE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // extensive TE
+    global_TE_t0 = global_IE_t0 + global_KE_t0;
+    TE_t0 = global_TE_t0;
+    KE_t0 = global_KE_t0;
+    IE_t0 = global_IE_t0;
+
+    // save the nodal mass
+    FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
+        double radius = 1.0;
+        if (num_dim == 2) {
+            radius = node_coords(rk_level, node_gid, 1);
+        }
+        node_extensive_mass(node_gid) = node_mass(node_gid) * radius;
+    }); // end parallel for
+
+    // a flag to exit the calculation
+    size_t stop_calc = 0;
+
+    auto time_1 = std::chrono::high_resolution_clock::now();
+
+    // loop over the max number of time integration cycles
+    for (cycle = 0; cycle < cycle_stop; cycle++) {
+        // get the step
+        if (num_dim == 2) {
+            get_timestep2D(*mesh,
+                           node_coords,
+                           node_vel,
+                           elem_sspd,
+                           elem_vol);
+        }
+        else{
+            get_timestep(*mesh,
+                         node_coords,
+                         node_vel,
+                         elem_sspd,
+                         elem_vol);
+        } // end if 2D
+
+        double global_dt;
+        MPI_Allreduce(&dt, &global_dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        dt = global_dt;
+
+        // stop calculation if flag
+        // if (stop_calc == 1) break;
+
+        if (simparam->dynamic_options.output_time_sequence_level >= TIME_OUTPUT_LEVEL::high) {
+            if (cycle == 0) {
+                if (myrank == 0) {
+                    printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
+                }
+            }
+            // print time step every 10 cycles
+            else if (cycle % 20 == 0) {
+                if (myrank == 0) {
+                    printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
+                }
+            } // end if
+        }
+
+        // ---------------------------------------------------------------------
+        //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
+        // ---------------------------------------------------------------------
+
+        // save the values at t_n
+        rk_init(node_coords,
+                node_vel,
+                elem_sie,
+                elem_stress,
+                rnum_elem,
+                nall_nodes);
+
+        // integrate solution forward in time
+        for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
+            // ---- RK coefficient ----
+            double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
+
+            // ---- Calculate velocity diveregence for the element ----
+            if (num_dim == 2) {
+                get_divergence2D(elem_div,
+                                 node_coords,
+                                 node_vel,
+                                 elem_vol);
+            }
+            else{
+                get_divergence(elem_div,
+                               node_coords,
+                               node_vel,
+                               elem_vol);
+            } // end if 2D
+
+            // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
+            if (num_dim == 2) {
+                get_force_sgh2D(material,
+                                *mesh,
+                                node_coords,
+                                node_vel,
+                                elem_den,
+                                elem_sie,
+                                elem_pres,
+                                elem_stress,
+                                elem_sspd,
+                                elem_vol,
+                                elem_div,
+                                elem_mat_id,
+                                corner_force,
+                                rk_alpha,
+                                cycle);
+            }
+            else{
+                get_force_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              rk_alpha,
+                              cycle);
+            }
+
+#ifdef DEBUG
+            if (myrank == 1) {
+                std::cout << "rk_alpha = " << rk_alpha << ", dt = " << dt << std::endl;
+                for (int i = 0; i < nall_nodes; i++) {
+                    double node_force[3];
+                    for (size_t dim = 0; dim < num_dim; dim++) {
+                        node_force[dim] = 0.0;
+                    } // end for dim
+
+                    // loop over all corners around the node and calculate the nodal force
+                    for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(i); corner_lid++) {
+                        // Get corner gid
+                        size_t corner_gid = mesh.corners_in_node(i, corner_lid);
+                        std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << corner_gid << " " << corner_force(corner_gid, 0) << " " << corner_force(corner_gid,
+                        1) << " " << corner_force(corner_gid, 2) << std::endl;
+                        // loop over dimension
+                        for (size_t dim = 0; dim < num_dim; dim++) {
+                            node_force[dim] += corner_force(corner_gid, dim);
+                        } // end for dim
+                    } // end for corner_lid
+                }
+            }
+
+            // debug print vector values on a rank
+
+            if (myrank == 0) {
+                for (int i = 0; i < nall_nodes; i++) {
+                    std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(rk_level, i, 0) << " " << node_vel(rk_level, i, 1) << " " << node_vel(rk_level, i,
+                    2) << std::endl;
+                }
+            }
+#endif
+            // ---- Update nodal velocities ---- //
+            update_velocity_sgh(rk_alpha,
+                              node_vel,
+                              node_mass,
+                              corner_force);
+
+            if (have_loading_conditions) {
+                applied_forces(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              node_mass,
+                              elem_den,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              rk_alpha,
+                              cycle);
+            }
+
+            // ---- apply force boundary conditions to the boundary patches----
+            boundary_velocity(*mesh, boundary, node_vel);
+
+            // current interface has differing velocity arrays; this equates them until we unify memory
+            // first comm time interval point
+            double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
+            // view scope
+            {
+                vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
+                    }
+              }); // end parallel for
+            } // end view scope
+            Kokkos::fence();
+
+            // active view scope
+            {
+                const_host_vec_array node_velocities_host = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+            }
+            double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+            Explicit_Solver_Pointer_->dev2host_time += comm_time2 - comm_time1;
+            // communicate ghost velocities
+            Explicit_Solver_Pointer_->comm_velocities();
+
+            double comm_time3 = Explicit_Solver_Pointer_->CPU_Time();
+            // this is forcing a copy to the device
+            // view scope
+            {
+                vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        node_vel(rk_level, node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
+                    }
+              }); // end parallel for
+            } // end view scope
+            Kokkos::fence();
+
+            double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
+            Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
+            Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
+
+#ifdef DEBUG
+            // debug print vector values on a rank
+            if (myrank == 0) {
+                for (int i = 0; i < nall_nodes; i++) {
+                    std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(rk_level, i, 0) << " " << node_vel(rk_level, i, 1) << " " << node_vel(rk_level, i,
+                    2) << std::endl;
+                }
+            }
+#endif
+            // ---- Update specific internal energy in the elements ----
+            update_energy_sgh(rk_alpha,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
+
+            // ---- Update nodal positions ----
+            update_position_sgh(rk_alpha,
+                                nall_nodes,
+                                node_coords,
+                                node_vel);
+
+            // ---- Calculate cell volume for next time step ----
+            get_vol();
+
+            // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+            if (num_dim == 2) {
+                update_state2D(material,
+                               *mesh,
+                               node_coords,
+                               node_vel,
+                               elem_den,
+                               elem_pres,
+                               elem_stress,
+                               elem_sspd,
+                               elem_sie,
+                               elem_vol,
+                               elem_mass,
+                               elem_mat_id,
+                               rk_alpha,
+                               cycle);
+            }
+            else{
+                update_state(material,
+                             *mesh,
+                             node_coords,
+                             node_vel,
+                             elem_den,
+                             elem_pres,
+                             elem_stress,
+                             elem_sspd,
+                             elem_sie,
+                             elem_vol,
+                             elem_mass,
+                             elem_mat_id,
+                             rk_alpha,
+                             cycle);
+            }
+            // ----
+            // Notes on strength:
+            //    1) hyper-elastic strength models are called in update_state
+            //    2) hypo-elastic strength models are called in get_force
+            //    3) strength models must be added by the user in user_mat.cpp
+
+            // calculate the new corner masses if 2D
+            if (num_dim == 2) {
+                // calculate the nodal areal mass
+                FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
+                    node_mass(node_gid) = 0.0;
+
+                    if (node_coords(rk_level, node_gid, 1) > tiny) {
+                        node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(rk_level, node_gid, 1);
+                    }
+                    // if(cycle==0&&node_gid==1&&myrank==0)
+                    // std::cout << "index " << node_gid << " on rank " << myrank << " node vel " << node_vel(rk_level,node_gid,0) << "  " << node_mass(node_gid) << std::endl << std::flush;
+                }); // end parallel for over node_gid
+                Kokkos::fence();
+
+                // current interface has differing density arrays; this equates them until we unify memory
+                // view scope
+                {
+                    vec_array node_mass_interface = node_masses_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                        node_mass_interface(node_gid, 0) = node_mass(node_gid);
+                  }); // end parallel for
+                } // end view scope
+                Kokkos::fence();
+                // communicate ghost densities
+                comm_node_masses();
+
+                // this is forcing a copy to the device
+                // view scope
+                {
+                    vec_array ghost_node_mass_interface = ghost_node_masses_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+
+                    FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
+                        node_mass(node_gid) = ghost_node_mass_interface(node_gid - nlocal_nodes, 0);
+                  }); // end parallel for
+                } // end view scope
+                Kokkos::fence();
+
+                // -----------------------------------------------
+                // Calcualte the areal mass for nodes on the axis
+                // -----------------------------------------------
+                // The node order of the 2D element is
+                //
+                //   J
+                //   |
+                // 3---2
+                // |   |  -- I
+                // 0---1
+                /*
+                FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+
+                    // loop over the corners of the element and calculate the mass
+                    for (size_t node_lid=0; node_lid<4; node_lid++){
+
+                        size_t node_gid = nodes_in_elem(elem_gid, node_lid);
+                        size_t node_minus_gid;
+                        size_t node_plus_gid;
+
+
+                        if (node_coords(rk_level,node_gid,1) < tiny){
+                            // node is on the axis
+
+                            // minus node
+                            if (node_lid==0){
+                                node_minus_gid = nodes_in_elem(elem_gid, 3);
+                            } else {
+                                node_minus_gid = nodes_in_elem(elem_gid, node_lid-1);
+                            }
+
+                            // plus node
+                            if (node_lid==3){
+                                node_plus_gid = nodes_in_elem(elem_gid, 0);
+                            } else {
+                                node_plus_gid = nodes_in_elem(elem_gid, node_lid+1);
+                            }
+
+                            node_mass(node_gid) = fmax(node_mass(node_plus_gid), node_mass(node_minus_gid))/2.0;
+
+                        } // end if
+
+                    } // end for over corners
+
+                }); // end parallel for over elem_gid
+                Kokkos::fence();
+                 */
+
+                FOR_ALL_CLASS(node_bdy_gid, 0, num_bdy_nodes, {
+                    // FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    size_t node_gid = bdy_nodes(node_bdy_gid);
+
+                    if (node_coords(rk_level, node_gid, 1) < tiny) {
+                        // node is on the axis
+
+                        for (size_t node_lid = 0; node_lid < num_nodes_in_node(node_gid); node_lid++) {
+                            size_t node_neighbor_gid = nodes_in_node(node_gid, node_lid);
+
+                            // if the node is off the axis, use it's areal mass on the boundary
+                            if (node_coords(rk_level, node_neighbor_gid, 1) > tiny) {
+                                node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid) / 2.0);
+                            }
+                        } // end for over neighboring nodes
+                    } // end if
+                }); // end parallel for over elem_gid
+            } // end of if 2D-RZ
+        } // end of RK loop
+
+        // increment the time
+        Explicit_Solver_Pointer_->time_value = simparam->dynamic_options.time_value = time_value += dt;
+
+        // assign current velocity data to multivector
+        // view scope
+        {
+            vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array node_coords_interface     = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                for (int idim = 0; idim < num_dim; idim++) {
+                    node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
+                    node_coords_interface(node_gid, idim)     = node_coords(rk_level, node_gid, idim);
+                }
+            });
+        } // end view scope
+        Kokkos::fence();
+
+        // communicate ghosts
+        double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
+
+        // active view scope; triggers host comms from updated data on device
+        {
+            const_host_vec_array node_velocities_host = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+            const_host_vec_array node_coords_host     = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+        }
+        double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+        Explicit_Solver_Pointer_->dev2host_time += comm_time2 - comm_time1;
+
+        // communicate ghost velocities
+        Explicit_Solver_Pointer_->comm_velocities();
+        Explicit_Solver_Pointer_->comm_coordinates();
+
+        double comm_time3 = Explicit_Solver_Pointer_->CPU_Time();
+
+        // view scope
+        {
+            const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array element_internal_energy     = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                for (int idim = 0; idim < num_dim; idim++) {
+                    all_node_velocities_interface(node_gid, idim) = node_velocities_interface(node_gid, idim);
+                    all_node_coords_interface(node_gid, idim)     = node_coords_interface(node_gid, idim);
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
+                for (int idim = 0; idim < num_dim; idim++) {
+                    all_node_velocities_interface(node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
+                    all_node_coords_interface(node_gid, idim)     = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // interface for element internal energies
+            FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+                element_internal_energy(elem_gid, 0) = elem_sie(rk_level, elem_gid);
+            }); // end parallel for
+            Kokkos::fence();
+        } // end view scope
+
+        double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
+        Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
+        Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
+
+        if(use_solve_checkpoints){
+            //add level 0 checkpoints sequentially until requested total limit is reached
+            if(num_active_checkpoints < num_solve_checkpoints){
+                Dynamic_Checkpoint temp(3,cycle+1,time_value);
+                temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[num_active_checkpoints + 1]);
+                temp.change_vector(V_DATA, (*forward_solve_velocity_data)[num_active_checkpoints + 1]);
+                temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[num_active_checkpoints + 1]);
+                temp.assign_vector(U_DATA,all_node_coords_distributed);
+                temp.assign_vector(V_DATA,all_node_velocities_distributed);
+                temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
+                dynamic_checkpoint_set->insert(temp);
+                num_active_checkpoints++;
+                //initializes to the end of the set until allowed total number of checkpoints is reached
+                last_raised_checkpoint = dynamic_checkpoint_set->end();
+                --last_raised_checkpoint;
+            }
+            //if limit of checkpoints was reached; search for dispensable checkpoints or raise level of recent checkpoint
+            else{
+                //a dispensable checkpoint has a lower level than another checkpoint located later in time
+                //find if there is a dispenable checkpoint to remove
+                current_checkpoint = last_raised_checkpoint;
+                --current_checkpoint; // dont need to check against itself
+                search_end = dynamic_checkpoint_set->begin();
+                dispensable_found = false;
+                while(current_checkpoint!=search_end){
+                    if(current_checkpoint->level<last_raised_level){
+                        dispensable_checkpoint = current_checkpoint;
+                        dispensable_found = true;
+                        break;
+                    }
+                    --current_checkpoint;
+                }
+                if(dispensable_found){
+                    //add replacement checkpoint
+                    Dynamic_Checkpoint temp(3,cycle+1,time_value);
+                    //get pointers to vector buffers from the checkpoint we're about to delete
+                    temp.copy_vectors(*dispensable_checkpoint);
+                    //remove checkpoint at timestep = cycle
+                    dynamic_checkpoint_set->erase(dispensable_checkpoint);
+                    //assign current phase data to vector buffers
+                    temp.assign_vector(U_DATA,all_node_coords_distributed);
+                    temp.assign_vector(V_DATA,all_node_velocities_distributed);
+                    temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
+                    dynamic_checkpoint_set->insert(temp);
+
+                }
+                else{
+                    //since no dispensable checkpoints were found, raise level of new one to be one higher than previous checkpoint
+                    current_checkpoint = dynamic_checkpoint_set->end();
+                    --current_checkpoint; //reduce iterator by 1 so it doesnt point to the sentinel past the last element
+                    last_raised_level = current_checkpoint->level;
+
+                    //add replacement checkpoint
+                    Dynamic_Checkpoint temp(3,cycle+1,time_value,++last_raised_level);
+                    //get pointers to vector buffers from the checkpoint we're about to delete
+                    temp.copy_vectors(*current_checkpoint);
+                    //remove checkpoint at timestep = cycle
+                    dynamic_checkpoint_set->erase(current_checkpoint);
+                    //assign current phase data to vector buffers
+                    temp.assign_vector(U_DATA,all_node_coords_distributed);
+                    temp.assign_vector(V_DATA,all_node_velocities_distributed);
+                    temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
+                    dynamic_checkpoint_set->insert(temp);
+                    last_raised_checkpoint = dynamic_checkpoint_set->end();
+                    --last_raised_checkpoint; //save iterator for this checkpoint to expedite dispensable search
+                }
+            }
+        }
+        
+        //retained to keep matching timesteps on resolve
+        size_t write = 0;
+        if ((cycle + 1) % graphics_cyc_ival == 0 && cycle > 0) {
+            write = 1;
+        }
+        else if (cycle == cycle_stop) {
+            write = 1;
+        }
+        else if (time_value >= time_final && simparam->output_options.write_final) {
+            write = 1;
+        }
+        else if (time_value >= graphics_time) {
+            write = 1;
+        }
+
+        // write outputs
+        if (write == 1) {
+
+            if (myrank == 0) {
+                printf("Writing outputs to file at %f \n", graphics_time);
+            }
+
+            graphics_time = time_value + graphics_dt_ival;
+        } // end if
+
+        // end of calculation
+        if (time_value >= time_final) {
+            break;
+        }
+    } // end for cycle loop
+
+    last_time_step = cycle;
+
+
+    auto time_2 = std::chrono::high_resolution_clock::now();
+    auto time_difference = time_2 - time_1;
+    // double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
+    double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_difference).count();
+    if (myrank == 0) {
+        printf("\nCalculation time in seconds: %f \n", calc_time * 1e-09);
+    }
+
+    return;
+} // end of SGH solve
