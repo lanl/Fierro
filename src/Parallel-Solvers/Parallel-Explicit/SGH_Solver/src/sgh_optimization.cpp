@@ -629,7 +629,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                 --num_active_checkpoints;
                 //if the next closest checkpoint isnt adjacent, solve up to the adjacent timestep
                 if(last_checkpoint->saved_timestep!=cycle){
-                    checkpoint_solve(last_checkpoint);
+                    checkpoint_solve(last_checkpoint, cycle);
                 }
                 //if the next checkpoint is adjacent
                 else{
@@ -2704,7 +2704,7 @@ void FEA_Module_SGH::comm_phi_adjoint_vector(int cycle)
 /// \brief SGH solver loop
 ///
 /////////////////////////////////////////////////////////////////////////////
-void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint)
+void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint, size_t bounding_timestep)
 {
     Dynamic_Options dynamic_options = simparam->dynamic_options;
 
@@ -2714,16 +2714,16 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
 
-    time_value = dynamic_options.time_initial;
+    time_value = start_checkpoint->saved_time;
     time_final = dynamic_options.time_final;
     dt_max     = dynamic_options.dt_max;
     dt_min     = dynamic_options.dt_min;
-    dt     = dynamic_options.dt;
+    dt     = start_checkpoint->saved_dt;
     dt_cfl = dynamic_options.dt_cfl;
 
     graphics_time    = simparam->output_options.graphics_step;
     graphics_dt_ival = simparam->output_options.graphics_step;
-    cycle_stop     = dynamic_options.cycle_stop;
+    cycle_stop     = bounding_timestep;
     rk_num_stages  = dynamic_options.rk_num_stages;
     graphics_times = simparam->output_options.graphics_times;
     graphics_id    = simparam->output_options.graphics_id;
@@ -2734,95 +2734,39 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
 
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
     size_t cycle;
-    real_t objective_accumulation, global_objective_accumulation;
 
-    int nTO_modules;
-    int old_max_forward_buffer;
-
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
-    problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
-    ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
-    bool topology_optimization_on = simparam->topology_optimization_on;
-    bool shape_optimization_on    = simparam->shape_optimization_on;
-    bool use_solve_checkpoints    = simparam->optimization_options.use_solve_checkpoints;
     int  num_solve_checkpoints    = simparam->optimization_options.num_solve_checkpoints;
     std::set<Dynamic_Checkpoint>::iterator current_checkpoint, last_raised_checkpoint, dispensable_checkpoint, search_end;
     int  last_raised_level = 0;
     bool dispensable_found = false;
     num_active_checkpoints = 0;
 
-    // reset time accumulating objective and constraints
-    /*
-    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
-    current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
-    //test if module needs reset
-    if(){
-
-    }
-    }
-    */
-
     CArrayKokkos<double> node_extensive_mass(nall_nodes, "node_extensive_mass");
 
-    // extensive energy tallies over the mesh elements local to this MPI rank
-    double IE_t0 = 0.0;
-    double KE_t0 = 0.0;
-    double TE_t0 = 0.0;
+    //set sgh nodal variables from checkpoint data
+    { //view scope
+        const_vec_array current_velocity_vector;
+        const_vec_array current_coordinate_vector;
+        const_vec_array current_element_internal_energy;
 
-    double IE_sum = 0.0;
-    double KE_sum = 0.0;
+        current_velocity_vector = start_checkpoint->get_vector_pointer(V_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        current_coordinate_vector = start_checkpoint->get_vector_pointer(U_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        current_element_internal_energy = start_checkpoint->get_vector_pointer(SIE_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        
+        
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+            for (int idim = 0; idim < num_dim; idim++) {
+                node_vel(rk_level, node_gid, idim)    = current_velocity_vector(node_gid, idim);
+                node_coords(rk_level, node_gid, idim) = current_coordinate_vector(node_gid, idim);
+            }
+        });
+        Kokkos::fence();
 
-    double IE_loc_sum = 0.0;
-    double KE_loc_sum = 0.0;
-
-    // extensive energy tallies over the entire mesh
-    double global_IE_t0 = 0.0;
-    double global_KE_t0 = 0.0;
-    double global_TE_t0 = 0.0;
-
-    // ---- Calculate energy tallies ----
-    double IE_tend = 0.0;
-    double KE_tend = 0.0;
-    double TE_tend = 0.0;
-
-    double global_IE_tend = 0.0;
-    double global_KE_tend = 0.0;
-    double global_TE_tend = 0.0;
-
-    int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
-
-    // extensive IE
-    REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
-        IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
-    }, IE_sum);
-    IE_t0 = IE_sum;
-
-    MPI_Allreduce(&IE_t0, &global_IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-    // extensive KE
-    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
-        double ke = 0;
-        for (size_t dim = 0; dim < num_dim; dim++) {
-            ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
-        } // end for
-
-        if (num_dim == 2) {
-            KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
-        }
-        else{
-            KE_loc_sum += node_mass(node_gid) * ke;
-        }
-    }, KE_sum);
-    Kokkos::fence();
-    KE_t0 = 0.5 * KE_sum;
-
-    MPI_Allreduce(&KE_t0, &global_KE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-    // extensive TE
-    global_TE_t0 = global_IE_t0 + global_KE_t0;
-    TE_t0 = global_TE_t0;
-    KE_t0 = global_KE_t0;
-    IE_t0 = global_IE_t0;
+        FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+            elem_sie(rk_level, elem_gid) = current_element_internal_energy(elem_gid, 0);
+        });
+        Kokkos::fence();
+    }
 
     // save the nodal mass
     FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
@@ -2839,7 +2783,7 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     // loop over the max number of time integration cycles
-    for (cycle = 0; cycle < cycle_stop; cycle++) {
+    for (cycle = start_checkpoint->saved_timestep; cycle < cycle_stop; cycle++) {
         // get the step
         if (num_dim == 2) {
             get_timestep2D(*mesh,
@@ -3281,74 +3225,73 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
         Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
         Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
 
-        if(use_solve_checkpoints){
-            //add level 0 checkpoints sequentially until requested total limit is reached
-            if(num_active_checkpoints < num_solve_checkpoints){
-                Dynamic_Checkpoint temp(3,cycle+1,time_value);
-                temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[num_active_checkpoints + 1]);
-                temp.change_vector(V_DATA, (*forward_solve_velocity_data)[num_active_checkpoints + 1]);
-                temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[num_active_checkpoints + 1]);
+        //add level 0 checkpoints sequentially until requested total limit is reached
+        if(num_active_checkpoints < num_solve_checkpoints){
+            Dynamic_Checkpoint temp(3,cycle+1,time_value, dt);
+            temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[num_active_checkpoints + 1]);
+            temp.change_vector(V_DATA, (*forward_solve_velocity_data)[num_active_checkpoints + 1]);
+            temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[num_active_checkpoints + 1]);
+            temp.assign_vector(U_DATA,all_node_coords_distributed);
+            temp.assign_vector(V_DATA,all_node_velocities_distributed);
+            temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
+            dynamic_checkpoint_set->insert(temp);
+            num_active_checkpoints++;
+            //initializes to the end of the set until allowed total number of checkpoints is reached
+            last_raised_checkpoint = dynamic_checkpoint_set->end();
+            --last_raised_checkpoint;
+        }
+        //if limit of checkpoints was reached; search for dispensable checkpoints or raise level of recent checkpoint
+        else{
+            //a dispensable checkpoint has a lower level than another checkpoint located later in time
+            //find if there is a dispenable checkpoint to remove
+            current_checkpoint = last_raised_checkpoint;
+            --current_checkpoint; // dont need to check against itself
+            search_end = dynamic_checkpoint_set->begin();
+            dispensable_found = false;
+            while(current_checkpoint!=search_end){
+                if(current_checkpoint->level<last_raised_level){
+                    dispensable_checkpoint = current_checkpoint;
+                    dispensable_found = true;
+                    break;
+                }
+                --current_checkpoint;
+            }
+            if(dispensable_found){
+                //add replacement checkpoint
+                Dynamic_Checkpoint temp(3,cycle+1,time_value, dt);
+                //get pointers to vector buffers from the checkpoint we're about to delete
+                temp.copy_vectors(*dispensable_checkpoint);
+                //remove checkpoint at timestep = cycle
+                dynamic_checkpoint_set->erase(dispensable_checkpoint);
+                //assign current phase data to vector buffers
                 temp.assign_vector(U_DATA,all_node_coords_distributed);
                 temp.assign_vector(V_DATA,all_node_velocities_distributed);
                 temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
                 dynamic_checkpoint_set->insert(temp);
-                num_active_checkpoints++;
-                //initializes to the end of the set until allowed total number of checkpoints is reached
-                last_raised_checkpoint = dynamic_checkpoint_set->end();
-                --last_raised_checkpoint;
+
             }
-            //if limit of checkpoints was reached; search for dispensable checkpoints or raise level of recent checkpoint
             else{
-                //a dispensable checkpoint has a lower level than another checkpoint located later in time
-                //find if there is a dispenable checkpoint to remove
-                current_checkpoint = last_raised_checkpoint;
-                --current_checkpoint; // dont need to check against itself
-                search_end = dynamic_checkpoint_set->begin();
-                dispensable_found = false;
-                while(current_checkpoint!=search_end){
-                    if(current_checkpoint->level<last_raised_level){
-                        dispensable_checkpoint = current_checkpoint;
-                        dispensable_found = true;
-                        break;
-                    }
-                    --current_checkpoint;
-                }
-                if(dispensable_found){
-                    //add replacement checkpoint
-                    Dynamic_Checkpoint temp(3,cycle+1,time_value);
-                    //get pointers to vector buffers from the checkpoint we're about to delete
-                    temp.copy_vectors(*dispensable_checkpoint);
-                    //remove checkpoint at timestep = cycle
-                    dynamic_checkpoint_set->erase(dispensable_checkpoint);
-                    //assign current phase data to vector buffers
-                    temp.assign_vector(U_DATA,all_node_coords_distributed);
-                    temp.assign_vector(V_DATA,all_node_velocities_distributed);
-                    temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
-                    dynamic_checkpoint_set->insert(temp);
+                //since no dispensable checkpoints were found, raise level of new one to be one higher than previous checkpoint
+                current_checkpoint = dynamic_checkpoint_set->end();
+                --current_checkpoint; //reduce iterator by 1 so it doesnt point to the sentinel past the last element
+                last_raised_level = current_checkpoint->level;
 
-                }
-                else{
-                    //since no dispensable checkpoints were found, raise level of new one to be one higher than previous checkpoint
-                    current_checkpoint = dynamic_checkpoint_set->end();
-                    --current_checkpoint; //reduce iterator by 1 so it doesnt point to the sentinel past the last element
-                    last_raised_level = current_checkpoint->level;
-
-                    //add replacement checkpoint
-                    Dynamic_Checkpoint temp(3,cycle+1,time_value,++last_raised_level);
-                    //get pointers to vector buffers from the checkpoint we're about to delete
-                    temp.copy_vectors(*current_checkpoint);
-                    //remove checkpoint at timestep = cycle
-                    dynamic_checkpoint_set->erase(current_checkpoint);
-                    //assign current phase data to vector buffers
-                    temp.assign_vector(U_DATA,all_node_coords_distributed);
-                    temp.assign_vector(V_DATA,all_node_velocities_distributed);
-                    temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
-                    dynamic_checkpoint_set->insert(temp);
-                    last_raised_checkpoint = dynamic_checkpoint_set->end();
-                    --last_raised_checkpoint; //save iterator for this checkpoint to expedite dispensable search
-                }
+                //add replacement checkpoint
+                Dynamic_Checkpoint temp(3,cycle+1,time_value, dt, ++last_raised_level);
+                //get pointers to vector buffers from the checkpoint we're about to delete
+                temp.copy_vectors(*current_checkpoint);
+                //remove checkpoint at timestep = cycle
+                dynamic_checkpoint_set->erase(current_checkpoint);
+                //assign current phase data to vector buffers
+                temp.assign_vector(U_DATA,all_node_coords_distributed);
+                temp.assign_vector(V_DATA,all_node_velocities_distributed);
+                temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
+                dynamic_checkpoint_set->insert(temp);
+                last_raised_checkpoint = dynamic_checkpoint_set->end();
+                --last_raised_checkpoint; //save iterator for this checkpoint to expedite dispensable search
             }
         }
+        
         
         //retained to keep matching timesteps on resolve
         size_t write = 0;
@@ -3381,8 +3324,6 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
         }
     } // end for cycle loop
 
-    last_time_step = cycle;
-
 
     auto time_2 = std::chrono::high_resolution_clock::now();
     auto time_difference = time_2 - time_1;
@@ -3393,4 +3334,4 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     }
 
     return;
-} // end of SGH solve
+} // end of checkpoint SGH solve

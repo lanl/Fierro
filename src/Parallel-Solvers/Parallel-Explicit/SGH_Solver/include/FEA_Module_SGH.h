@@ -84,7 +84,7 @@ public:
 
     int solve();
 
-    void checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint);
+    void checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint, size_t bounding_timestep);
 
     void module_cleanup();
 

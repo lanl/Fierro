@@ -1142,7 +1142,7 @@ void FEA_Module_SGH::sgh_solve()
 
         if(use_solve_checkpoints){
             //always assign t=0 as a checkpoint
-            Dynamic_Checkpoint temp(3,0,time_value, std::numeric_limits<int>::max());
+            Dynamic_Checkpoint temp(3,0,time_value, dt, std::numeric_limits<int>::max());
             temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[0]);
             temp.change_vector(V_DATA, (*forward_solve_velocity_data)[0]);
             temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[0]);
@@ -1635,7 +1635,7 @@ void FEA_Module_SGH::sgh_solve()
             if(use_solve_checkpoints){
                 //add level 0 checkpoints sequentially until requested total limit is reached
                 if(num_active_checkpoints < num_solve_checkpoints){
-                    Dynamic_Checkpoint temp(3,cycle+1,time_value);
+                    Dynamic_Checkpoint temp(3,cycle+1,time_value, dt);
                     temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[num_active_checkpoints + 1]);
                     temp.change_vector(V_DATA, (*forward_solve_velocity_data)[num_active_checkpoints + 1]);
                     temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[num_active_checkpoints + 1]);
@@ -1666,7 +1666,7 @@ void FEA_Module_SGH::sgh_solve()
                     }
                     if(dispensable_found){
                         //add replacement checkpoint
-                        Dynamic_Checkpoint temp(3,cycle+1,time_value);
+                        Dynamic_Checkpoint temp(3,cycle+1,time_value, dt);
                         //get pointers to vector buffers from the checkpoint we're about to delete
                         temp.copy_vectors(*dispensable_checkpoint);
                         //remove checkpoint at timestep = cycle
@@ -1685,7 +1685,7 @@ void FEA_Module_SGH::sgh_solve()
                         last_raised_level = current_checkpoint->level;
 
                         //add replacement checkpoint
-                        Dynamic_Checkpoint temp(3,cycle+1,time_value,++last_raised_level);
+                        Dynamic_Checkpoint temp(3,cycle+1,time_value, dt, ++last_raised_level);
                         //get pointers to vector buffers from the checkpoint we're about to delete
                         temp.copy_vectors(*current_checkpoint);
                         //remove checkpoint at timestep = cycle
