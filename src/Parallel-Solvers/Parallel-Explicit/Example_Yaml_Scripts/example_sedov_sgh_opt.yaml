@@ -1,6 +1,6 @@
 num_dims: 3
 dynamic_options:
-  time_final: 0.5
+  time_final: 1.0
   dt_min: 1.e-8
   dt_max: 1.e-3
   dt_start: 1.e-5
@@ -70,7 +70,7 @@ materials:
     q1: 1.0
     q2: 1.33
     q1ex: 1.0
-    q2ex: 0.0
+    q2ex: 0
     eos_global_vars:
       - 1.666666666666667
       - 1.0E-14
@@ -105,6 +105,14 @@ regions:
 optimization_options:
     optimization_process: topology_optimization
     optimization_objective: minimize_kinetic_energy
+    objective_regions:
+      - type: box
+        x1: 0.4
+        x2: 0.8
+        y1: 0.4
+        y2: 0.8
+        z1: 0.4
+        z2: 0.8
     density_epsilon: 0.1
     variable_outer_shell: true
     constraints:

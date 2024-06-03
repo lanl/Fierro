@@ -101,18 +101,21 @@ struct Optimization_Options: Yaml::DerivedFields {
   DCArrayKokkos<Optimization_Bound_Constraint_Region> optimization_bound_constraint_volumes;
   std::vector<Volume> objective_regions;
   DCArrayKokkos<Volume> optimization_objective_regions;
-  bool method_of_moving_asymptotes = false;
-  double simp_penalty_power = 3.0;
-  bool thick_condition_boundary = true;
-  bool retain_outer_shell = false;
-  bool variable_outer_shell = false;
-  int optimization_output_freq = 200;
-  DENSITY_FILTER density_filter = DENSITY_FILTER::none; 
-  double density_epsilon = 0.001;
-  double minimum_density = 0;
-  double maximum_density = 1;
-  double shell_density = 1;
-  real_t objective_normalization_constant = 0;
+  bool method_of_moving_asymptotes = false;                   //optimization algorithm that approximates curvature
+  double simp_penalty_power = 3.0;                            //TO option; bigger value means less intermediate density
+  bool thick_condition_boundary = true;                       //constrains element density if a patch is attached to BC/LC
+  bool retain_outer_shell = false;                            //every patch on the outer surface will be constrained to rho=1
+  bool variable_outer_shell = false;                          //allows any patch to vary even when LC/BC is applied
+  int optimization_output_freq = 200;                         //number of steps between graphics dump for optimization runs
+  DENSITY_FILTER density_filter = DENSITY_FILTER::none;       //option to set a filter on the TO process such as hemholtz or projection
+  double density_epsilon = 0.001;                             //minimum allowed density; shouldnt be 0 for conditions numbers
+  double minimum_density = 0;                                 //lower constraint value for a selected volume
+  double maximum_density = 1;                                 //upper constraint value for a selected volume
+  double shell_density = 1;                                   //contraint value for outer shell of model
+  real_t objective_normalization_constant = 0;                //allows a user specified normalization of the objective; default is initial value
+  size_t num_solve_checkpoints = 10;                          //number of checkpoints to store explicit solve solutions for adjoint solves
+  bool use_solve_checkpoints = false;                         //when false; all timesteps of explicit solves are stored for adjoint solves; expensive
+  bool use_gradient_tally = false;                            //tallies gradient in tandem with the time sequence solving for the adjoint vectors
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
   std::vector<MultiObjectiveModule> multi_objective_modules;
@@ -123,6 +126,9 @@ struct Optimization_Options: Yaml::DerivedFields {
     }
     if(objective_regions.size()>=1){
       mtr::from_vector(optimization_objective_regions, objective_regions);
+    }
+    if(use_solve_checkpoints){
+      use_gradient_tally = true;
     }
   }
 };
@@ -135,5 +141,6 @@ IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options,
   simp_penalty_power, density_epsilon, thick_condition_boundary,
   optimization_output_freq, density_filter, minimum_density, maximum_density,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
-  variable_outer_shell, shell_density, objective_normalization_constant
+  variable_outer_shell, shell_density, objective_normalization_constant,
+  num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally
 )

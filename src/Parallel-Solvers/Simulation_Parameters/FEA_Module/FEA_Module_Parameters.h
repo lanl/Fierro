@@ -30,6 +30,7 @@ struct FEA_Module_Parameters
     std::vector<Boundary_Condition> boundary_conditions;
     std::vector<std::shared_ptr<Loading_Condition>> loading_conditions;
     bool requires_conditions = true;
+    bool replace_import_bcs = false;
     // Non-serialized Fields
     DCArrayKokkos <loading_t>  loading;
     DCArrayKokkos <boundary_t> boundary;
@@ -59,7 +60,8 @@ struct FEA_Module_Parameters
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(FEA_Module_Parameters, type, material_id)
 IMPL_YAML_SERIALIZABLE_FOR(FEA_Module_Parameters, type,
-    material_id, boundary_conditions, loading_conditions
+    material_id, boundary_conditions, loading_conditions,
+    replace_import_bcs
 )
 
 #endif
