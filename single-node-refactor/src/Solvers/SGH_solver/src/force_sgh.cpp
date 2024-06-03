@@ -1,36 +1,36 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
- This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
- National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
- Department of Energy/National Nuclear Security Administration. All rights in the program are
- reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
- Security Administration. The Government is granted for itself and others acting on its behalf a
- nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
- derivative works, distribute copies to the public, perform publicly and display publicly, and
- to permit others to do so.
- This program is open source under the BSD-3 License.
- Redistribution and use in source and binary forms, with or without modification, are permitted
- provided that the following conditions are met:
- 1.  Redistributions of source code must retain the above copyright notice, this list of
- conditions and the following disclaimer.
- 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
- conditions and the following disclaimer in the documentation and/or other materials
- provided with the distribution.
- 3.  Neither the name of the copyright holder nor the names of its contributors may be used
- to endorse or promote products derived from this software without specific prior
- written permission.
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- **********************************************************************************************/
+© 2020. Triad National Security, LLC. All rights reserved.
+This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+Department of Energy/National Nuclear Security Administration. All rights in the program are
+reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+Security Administration. The Government is granted for itself and others acting on its behalf a
+nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+derivative works, distribute copies to the public, perform publicly and display publicly, and
+to permit others to do so.
+This program is open source under the BSD-3 License.
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+1.  Redistributions of source code must retain the above copyright notice, this list of
+conditions and the following disclaimer.
+2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+conditions and the following disclaimer in the documentation and/or other materials
+provided with the distribution.
+3.  Neither the name of the copyright holder nor the names of its contributors may be used
+to endorse or promote products derived from this software without specific prior
+written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********************************************************************************************/
 
 #include "sgh_solver.h"
 
@@ -71,6 +71,7 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
     const DCArrayKokkos<double>& elem_vol,
     const DCArrayKokkos<double>& elem_div,
     const DCArrayKokkos<size_t>& elem_mat_id,
+    const DCArrayKokkos<bool>&   elem_eroded,
     DCArrayKokkos<double>& corner_force,
     const double fuzz,
     const double small,
@@ -116,6 +117,9 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
 
         // element volume
         double vol = elem_vol(elem_gid);
+
+        // the id for the material in this element
+        size_t mat_id = elem_mat_id(elem_gid);
 
         // create a view of the stress_matrix
         ViewCArrayKokkos<double> stress(&elem_stress(1, elem_gid, 0, 0), 3, 3);
@@ -165,10 +169,12 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
             } // end for
         } // end for
 
-        // add the pressure
-        for (int i = 0; i < num_dims; i++) {
-            tau(i, i) -= elem_pres(elem_gid);
-        } // end for
+        // add the pressure if a decoupled model is used
+        if (material(mat_id).eos_type == model::decoupled) {
+            for (int i = 0; i < num_dims; i++) {
+                tau(i, i) -= elem_pres(elem_gid);
+            } // end for
+        }
 
         // ---- Multi-directional Approximate Riemann solver (MARS) ----
         // find the average velocity of the elem, it is an
@@ -235,7 +241,6 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
             } // end if mag_vel
 
             // cell divergence indicates compression or expansions
-            size_t mat_id = elem_mat_id(elem_gid);
             if (div < 0) { // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
@@ -355,41 +360,46 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
             // loop over dimension
-            for (int dim = 0; dim < num_dims; dim++) {
-                corner_force(corner_gid, dim) =
-                    area_normal(node_lid, 0) * tau(0, dim)
-                    + area_normal(node_lid, 1) * tau(1, dim)
-                    + area_normal(node_lid, 2) * tau(2, dim)
-                    + phi * muc(node_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
-            } // end loop over dimension
+
+            if (elem_eroded(elem_gid) == true) { // material(mat_id).blank_mat_id)
+                for (int dim = 0; dim < num_dims; dim++) {
+                    corner_force(corner_gid, dim) = 0.0;
+                }
+            }
+            else{
+                for (int dim = 0; dim < num_dims; dim++) {
+                    corner_force(corner_gid, dim) =
+                        area_normal(node_lid, 0) * tau(0, dim)
+                        + area_normal(node_lid, 1) * tau(1, dim)
+                        + area_normal(node_lid, 2) * tau(2, dim)
+                        + phi * muc(node_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
+                } // end loop over dimension
+            }
         } // end for loop over nodes in elem
 
         // --- Update Stress ---
         // calculate the new stress at the next rk level, if it is a increment_based model
-
-        size_t mat_id = elem_mat_id(elem_gid);
-
-        // increment_based elastic plastic model
+        // increment_based strength model
         if (material(mat_id).strength_type == model::increment_based) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
             // --- call strength model ---
-            // material(mat_id).strength_model(elem_pres,
-            //                                 elem_stress,
-            //                                 elem_gid,
-            //                                 mat_id,
-            //                                 elem_statev,
-            //                                 elem_sspd,
-            //                                 elem_den(elem_gid),
-            //                                 elem_sie(elem_gid),
-            //                                 vel_grad,
-            //                                 elem_node_gids,
-            //                                 node_coords,
-            //                                 node_vel,
-            //                                 elem_vol(elem_gid),
-            //                                 dt,
-            //                                 rk_alpha);
+            material(mat_id).strength_model(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            mat_id,
+                                            elem_statev,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(elem_gid),
+                                            vel_grad,
+                                            elem_node_gids,
+                                            node_coords,
+                                            node_vel,
+                                            elem_vol(elem_gid),
+                                            dt,
+                                            rk_alpha);
         } // end logical on increment_based strength model
     }); // end parallel for loop over elements
 

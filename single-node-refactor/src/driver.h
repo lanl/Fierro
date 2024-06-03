@@ -226,6 +226,9 @@ public:
             // parallel loop over elements in mesh
             FOR_ALL_CLASS(elem_gid, 0, num_elems, {
                 for (int rk_level = 0; rk_level < 2; rk_level++) {
+
+                    // Set erosion flag to false
+                    elem.eroded(elem_gid) = false;
                     
                     // calculate the coordinates and radius of the element
                     double elem_coords[3]; // note:initialization with a list won't work

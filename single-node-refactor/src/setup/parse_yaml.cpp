@@ -1,36 +1,36 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
- This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
- National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
- Department of Energy/National Nuclear Security Administration. All rights in the program are
- reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
- Security Administration. The Government is granted for itself and others acting on its behalf a
- nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
- derivative works, distribute copies to the public, perform publicly and display publicly, and
- to permit others to do so.
- This program is open source under the BSD-3 License.
- Redistribution and use in source and binary forms, with or without modification, are permitted
- provided that the following conditions are met:
- 1.  Redistributions of source code must retain the above copyright notice, this list of
- conditions and the following disclaimer.
- 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
- conditions and the following disclaimer in the documentation and/or other materials
- provided with the distribution.
- 3.  Neither the name of the copyright holder nor the names of its contributors may be used
- to endorse or promote products derived from this software without specific prior
- written permission.
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- **********************************************************************************************/
+© 2020. Triad National Security, LLC. All rights reserved.
+This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+Department of Energy/National Nuclear Security Administration. All rights in the program are
+reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+Security Administration. The Government is granted for itself and others acting on its behalf a
+nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+derivative works, distribute copies to the public, perform publicly and display publicly, and
+to permit others to do so.
+This program is open source under the BSD-3 License.
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+1.  Redistributions of source code must retain the above copyright notice, this list of
+conditions and the following disclaimer.
+2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+conditions and the following disclaimer in the documentation and/or other materials
+provided with the distribution.
+3.  Neither the name of the copyright holder nor the names of its contributors may be used
+to endorse or promote products derived from this software without specific prior
+written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********************************************************************************************/
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -54,7 +54,7 @@ bool VERBOSE = false;
 // ==============================================================================
 //   Function Definitions
 // ==============================================================================
-// modified code from stackover flow for string delimiter parsing
+// modified code from stack over./flow for string delimiter parsing
 std::vector<std::string> exact_array_values(std::string s, std::string delimiter)
 {
     size_t pos_start = 0, pos_end, delim_len = delimiter.length();
@@ -297,7 +297,11 @@ void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
 // =================================================================================
 //    Extract words from the input file and validate they are correct
 // =================================================================================
-void validate_inputs(Yaml::Node& yaml, std::vector<std::string>& user_inputs, std::vector<std::string>& str_valid_inputs)
+void validate_inputs(
+    Yaml::Node& yaml, 
+    std::vector<std::string>& user_inputs, 
+    std::vector<std::string>& str_valid_inputs,
+    std::vector<std::string>& str_required_inputs)
 {
     for (auto item = yaml.Begin(); item != yaml.End(); item++) {
         std::string var_name = (*item).first;
@@ -314,6 +318,23 @@ void validate_inputs(Yaml::Node& yaml, std::vector<std::string>& user_inputs, st
             std::cout << "ERROR: invalid input: " << var_name << std::endl;
         } // end if variable exists
     } // end for item in this yaml input
+
+    // Add checks for required inputs here
+    bool valid = false;
+    // Use std::all_of to check if all elements of str_required_inputs are found in user_inputs
+    valid = std::all_of(str_required_inputs.begin(), str_required_inputs.end(),[&user_inputs](const std::string& str) {
+                return std::find(user_inputs.begin(), user_inputs.end(), str)!= user_inputs.end();
+            });
+
+    if (valid == false){
+        std::cout << "ERROR: Missing required YAML inputs "<< std::endl;
+        std::cout << "Required inputs are:" << std::endl;
+        for (const auto& inp : str_required_inputs) {
+            std::cout << inp << std::endl;
+        }
+        throw std::runtime_error("**** Missing required inputs ****");
+    }
+
 } // end validate inputs
 
 // =================================================================================
@@ -340,7 +361,7 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
         std::vector<std::string> user_inputs;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_inputs, str_solver_inps);
+        validate_inputs(inps_yaml, user_inputs, str_solver_inps, solver_required_inps);
 
         // loop over the words in the input
         for (auto& a_word : user_inputs) {
@@ -394,7 +415,7 @@ void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options)
     std::vector<std::string> user_dynamic_inps;
 
     // extract words from the input file and validate they are correct
-    validate_inputs(yaml, user_dynamic_inps, str_dyn_opts_inps);
+    validate_inputs(yaml, user_dynamic_inps, str_dyn_opts_inps, dyn_opts_required_inps);
 
     // loop over the words in the material input definition
     for (auto& a_word : user_dynamic_inps) {
@@ -488,7 +509,7 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
 
     // extract words from the input file and validate they are correct
-    validate_inputs(mesh_yaml, user_mesh_inputs, str_mesh_inps);
+    validate_inputs(mesh_yaml, user_mesh_inputs, str_mesh_inps, mesh_required_inps);
 
     // loop over the words in the material input definition
     for (auto& a_word : user_mesh_inputs) {
@@ -740,7 +761,7 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options)
     std::vector<std::string> user_inputs;
 
     // extract words from the input file and validate they are correct
-    validate_inputs(out_opts, user_inputs, str_output_options_inps);
+    validate_inputs(out_opts, user_inputs, str_output_options_inps, output_options_required_inps);
 
     // loop over the output options
     for (auto& a_word : user_inputs) {
@@ -846,7 +867,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
         std::vector<std::string> user_str_region_inps;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_str_region_inps, str_region_inps);
+        validate_inputs(inps_yaml, user_str_region_inps, str_region_inps, region_required_inps);
 
         // loop over the words in the material input definition
         for (auto& a_word : user_str_region_inps) {
@@ -1131,6 +1152,8 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
     Yaml::Node& material_yaml = root["materials"];
 
     size_t num_materials = material_yaml.Size();
+    std::cout << "Number of materials =  "<< num_materials << std::endl;
+
 
     materials = DCArrayKokkos<material_t>(num_materials, "sim_param.materials");
 
@@ -1143,11 +1166,13 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
         size_t num_vars_set = inps_yaml.Size();
 
+        std::cout << "Number of vars set =  "<< num_vars_set << std::endl;
+
         // get the material variables names set by the user
         std::vector<std::string> user_str_material_inps;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps);
+        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_required_inps);
 
         // loop over the words in the material input definition
         for (auto& a_word : user_str_material_inps) {
@@ -1165,7 +1190,6 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 if (VERBOSE) {
                     std::cout << "\tq1 = " << q1 << std::endl;
                 }
-
                 RUN({
                     materials(mat_id).q1 = q1;
                 });
@@ -1229,48 +1253,258 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     materials(mat_id).poisson_ratio = poisson_ratio;
                 });
             } // poisson_ratio
+            //extract eos model
+            else if (a_word.compare("eos_model_type") == 0) {
+                std::string type = root["materials"][mat_id]["material"]["eos_model_type"].As<std::string>();
+
+                // set the eos type
+                if (eos_type_map.find(type) != eos_type_map.end()) {
+
+                    // eos_type_map[type] returns enum value, e.g., model::decoupled
+                    switch(eos_type_map[type]){
+                        case model::decoupled:
+                            std::cout << "Setting EOS type to decoupled " << std::endl;
+                            RUN({
+                                materials(mat_id).eos_type = model::decoupled;
+                            });
+                            break;
+
+                        case model::coupled:
+                            std::cout << "Setting EOS type to coupled " << std::endl;
+                            RUN({
+                                materials(mat_id).eos_type = model::coupled;
+                            });
+                            break;
+
+                        default:
+                            materials(mat_id).eos_type = model::no_eos_type;
+                            std::cout << "ERROR: No valid EOS type input " << std::endl;
+                            std::cout << "Valid EOS types are: " << std::endl;
+                            
+                            for (const auto& pair : eos_type_map) {
+                                std::cout << pair.second << std::endl;
+                            }
+
+                            throw std::runtime_error("**** EOS Type Not Understood ****");
+                            break;
+                    } // end switch
+
+                    if (VERBOSE) {
+                        std::cout << "\teos = " << type << std::endl;
+                    }
+                } 
+                else{
+                    std::cout << "ERROR: invalid eos type input: " << type << std::endl;
+                } // end if
+            }
+
+
             else if (a_word.compare("eos_model") == 0) {
                 std::string eos = root["materials"][mat_id]["material"]["eos_model"].As<std::string>();
 
                 // set the EOS
-                if (eos_map.find(eos) != eos_map.end()) {
+                if (eos_models_map.find(eos) != eos_models_map.end()) {
                     
-                    eos_type eos_model = eos_map[eos];
+                    switch(eos_models_map[eos]){
 
-                    if(eos == "ideal_gas"){
-                        RUN({
-                            materials(mat_id).eos_model = &ideal_gas;
-                        });
-                    }
-                    if (VERBOSE) {
-                        std::cout << "\teos_model = " << eos << std::endl;
-                    }
+                        case model::no_eos_model:
+                            RUN({
+                                materials(mat_id).eos_model = no_eos;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
+                            break;
+
+                        case model::ideal_gas:
+                            RUN({
+                                materials(mat_id).eos_model = ideal_gas;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
+                            break;
+
+                        case model::void_gas:
+                            RUN({
+                                materials(mat_id).eos_model = void_gas;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
+                            break;
+
+                        case model::user_defined_eos:
+                            RUN({
+                                materials(mat_id).eos_model = user_eos_model;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
+                            break;
+                        default:
+                            std::cout << "ERROR: invalid input: " << eos << std::endl;
+                            throw std::runtime_error("**** EOS Not Understood ****");
+                            break;
+                    } // end switch on EOS type
                 }
                 else{
-                    std::cout << "ERROR: invalid input: " << eos << std::endl;
+                    std::cout << "ERROR: invalid EOS input: " << eos << std::endl;
+                    throw std::runtime_error("**** EOS Not Understood ****");
                 } // end if
             } // EOS model
+
+            // Type of strength model
+            else if (a_word.compare("strength_model_type") == 0) {
+                std::string strength_model_type = root["materials"][mat_id]["material"]["strength_model_type"].As<std::string>();
+
+                // set the EOS
+                if (strength_type_map.find(strength_model_type) != strength_type_map.end()) {
+                    
+                    switch(strength_type_map[strength_model_type]){
+
+                        case model::no_strength_type:
+                            RUN({
+                                materials(mat_id).strength_type = model::no_strength_type;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model_type_type = " << strength_model_type << std::endl;
+                            }
+                            break;
+
+                        case model::increment_based:
+                            RUN({
+                                materials(mat_id).strength_type = model::increment_based;
+                            });
+                            
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model_type = " << strength_model_type << std::endl;
+                            }
+                            break;
+                        case model::state_based:
+                            RUN({
+                                materials(mat_id).strength_type = model::state_based;
+                            });
+                            std::cout << "ERROR: state_based models not yet defined: " << std::endl;
+                            throw std::runtime_error("**** ERROR: state_based models not yet defined ****");
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model_type = " << strength_model_type << std::endl;
+                            }
+                            break;
+                        default:
+                            std::cout << "ERROR: invalid strength type input: " << strength_model_type << std::endl;
+                            throw std::runtime_error("**** Strength Model Type Not Understood ****");
+                            break;
+                    } // end switch on EOS type
+                }
+                else{
+                    std::cout << "ERROR: Invalid strength model type input: " << strength_model_type << std::endl;
+                    throw std::runtime_error("**** Strength model type not understood ****");
+                } // end if
+            } // Strength model type
+            
+            // Set specific strength model
             else if (a_word.compare("strength_model") == 0) {
                 std::string strength_model = root["materials"][mat_id]["material"]["strength_model"].As<std::string>();
 
-                // set the strength_model
-                if (strength_map.find(strength_model) != strength_map.end()) {
-                    auto strength = strength_map[strength_model];
+                // set the EOS
+                if (strength_models_map.find(strength_model) != strength_models_map.end()) {
+                    
+                    switch(strength_models_map[strength_model]){
 
-                    std::cout << "WARNING: STRENGTH MODELS NOT YET SUPPORTED" << strength_model << std::endl;
-                    // RUN({
-                    //     materials(mat_id).strength_model = strength;
-                    //     materials(mat_id).strength_model(0., 1.); // WARNING BUG HERE, replace with real strength model
-                    // });
+                        case model::no_strength_model:
+                            RUN({
+                                materials(mat_id).strength_model = no_strength;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model = " << strength_model << std::endl;
+                            }
+                            break;
 
-                    if (VERBOSE) {
-                        std::cout << "\tstrength_model = " << strength_model << std::endl;
-                    }
+                        case model::user_defined_strength:
+                            RUN({
+                                materials(mat_id).strength_model = user_strength_model;
+                            });
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model = " << strength_model << std::endl;
+                            }
+                            break;
+                        default:
+                            std::cout << "ERROR: invalid strength input: " << strength_model << std::endl;
+                            throw std::runtime_error("**** Strength model Not Understood ****");
+                            break;
+                    } // end switch on EOS type
                 }
                 else{
-                    std::cout << "ERROR: invalid input: " << strength_model << std::endl;
+                    std::cout << "ERROR: invalid Strength model input: " << strength_model << std::endl;
+                    throw std::runtime_error("**** Strength model Not Understood ****");
                 } // end if
-            } // EOS model
+            } // Strength model
+            
+            //extract erosion model
+            else if (a_word.compare("erosion_type") == 0) {
+                std::string type = root["materials"][mat_id]["material"]["erosion_type"].As<std::string>();
+
+                // set the erosion type
+                if (erosion_type_map.find(type) != erosion_type_map.end()) {
+
+                    // erosion_type_map[type] returns enum value, e.g., model::erosion
+                    switch(erosion_type_map[type]){
+                        case model::erosion:
+                            RUN({
+                                materials(mat_id).erosion_type = model::erosion;
+                            });
+                            break;
+                        case model::erosion_contact:
+                            RUN({
+                                materials(mat_id).erosion_type = model::erosion_contact;
+                            });
+                            break;
+                        default:
+                            RUN({
+                                materials(mat_id).erosion_type = model::no_erosion;
+                            });
+                            break;
+                    } // end switch
+
+                    if (VERBOSE) {
+                        std::cout << "\terosion = " << type << std::endl;
+                    }
+
+                } 
+                else{
+                    std::cout << "ERROR: invalid erosion type input: " << type << std::endl;
+                } // end if
+
+            } // erosion model variables
+            else if (a_word.compare("blank_mat_id") == 0) {
+                double blank_mat_id = root["materials"][mat_id]["material"]["blank_mat_id"].As<size_t>();
+                if (VERBOSE) {
+                    std::cout << "\tblank_mat_id = " << blank_mat_id << std::endl;
+                }
+                RUN({
+                    materials(mat_id).blank_mat_id = blank_mat_id;
+                });
+            } // blank_mat_id 
+            else if (a_word.compare("erode_tension_val") == 0) {
+                double erode_tension_val = root["materials"][mat_id]["material"]["erode_tension_val"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\terode_tension_val = " << erode_tension_val << std::endl;
+                }
+                RUN({
+                    materials(mat_id).erode_tension_val = erode_tension_val;
+                });
+            } // erode_tension_val
+            else if (a_word.compare("erode_density_val") == 0) {
+                double erode_density_val = root["materials"][mat_id]["material"]["erode_density_val"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\terode_density_val = " << erode_density_val << std::endl;
+                }
+                RUN({
+                    materials(mat_id).erode_density_val = erode_density_val;
+                });
+            } // erode_density_val
+            
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
                 Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
@@ -1304,6 +1538,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     }
                 } // end loop over global vars
             } // "eos_global_vars"
+            
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
@@ -1341,7 +1576,7 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
         std::vector<std::string> user_str_bc_inps;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_str_bc_inps, str_bc_inps);
+        validate_inputs(inps_yaml, user_str_bc_inps, str_bc_inps, bc_required_inps);
 
         // loop over the words in the material input definition
         for (auto& a_word : user_str_bc_inps) {
