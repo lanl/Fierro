@@ -2777,6 +2777,14 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
         node_extensive_mass(node_gid) = node_mass(node_gid) * radius;
     }); // end parallel for
 
+    //initialize the last raised checkpoint for later; search for first non-zero level checkpoint
+    current_checkpoint = dynamic_checkpoint_set->end();
+    --current_checkpoint; // point to last element before sentinel iterator
+    last_raised_checkpoint = dynamic_checkpoint_set->begin(); //initialize
+    for(auto it = current_checkpoint; it != dynamic_checkpoint_set->begin(); --it){
+        if(it->level) last_raised_checkpoint = it;
+    }
+
     // a flag to exit the calculation
     size_t stop_calc = 0;
 
@@ -3228,33 +3236,35 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
         //add level 0 checkpoints sequentially until requested total limit is reached
         if(num_active_checkpoints < num_solve_checkpoints){
             Dynamic_Checkpoint temp(3,cycle+1,time_value, dt);
-            temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[num_active_checkpoints + 1]);
-            temp.change_vector(V_DATA, (*forward_solve_velocity_data)[num_active_checkpoints + 1]);
-            temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[num_active_checkpoints + 1]);
+            //point to existing buffers
+            int ncached_checkpoints = cached_dynamic_checkpoints->size();
+            temp.change_vector(U_DATA, (*cached_dynamic_checkpoints)[ncached_checkpoints].get_vector_pointer(U_DATA));
+            temp.change_vector(V_DATA, (*cached_dynamic_checkpoints)[ncached_checkpoints].get_vector_pointer(V_DATA));
+            temp.change_vector(SIE_DATA,  (*cached_dynamic_checkpoints)[ncached_checkpoints].get_vector_pointer(SIE_DATA));
+            cached_dynamic_checkpoints->pop_back();
             temp.assign_vector(U_DATA,all_node_coords_distributed);
             temp.assign_vector(V_DATA,all_node_velocities_distributed);
             temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
             dynamic_checkpoint_set->insert(temp);
             num_active_checkpoints++;
-            //initializes to the end of the set until allowed total number of checkpoints is reached
-            last_raised_checkpoint = dynamic_checkpoint_set->end();
-            --last_raised_checkpoint;
         }
         //if limit of checkpoints was reached; search for dispensable checkpoints or raise level of recent checkpoint
         else{
             //a dispensable checkpoint has a lower level than another checkpoint located later in time
             //find if there is a dispenable checkpoint to remove
+            dispensable_found = false;
             current_checkpoint = last_raised_checkpoint;
             --current_checkpoint; // dont need to check against itself
             search_end = dynamic_checkpoint_set->begin();
-            dispensable_found = false;
-            while(current_checkpoint!=search_end){
-                if(current_checkpoint->level<last_raised_level){
-                    dispensable_checkpoint = current_checkpoint;
-                    dispensable_found = true;
-                    break;
+            if(last_raised_checkpoint!=search_end){
+                while(current_checkpoint!=search_end){
+                    if(current_checkpoint->level<last_raised_level){
+                        dispensable_checkpoint = current_checkpoint;
+                        dispensable_found = true;
+                        break;
+                    }
+                    --current_checkpoint;
                 }
-                --current_checkpoint;
             }
             if(dispensable_found){
                 //add replacement checkpoint
