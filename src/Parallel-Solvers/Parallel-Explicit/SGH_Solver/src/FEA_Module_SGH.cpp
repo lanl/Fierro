@@ -172,6 +172,9 @@ FEA_Module_SGH::FEA_Module_SGH(
             previous_adjoint_vector_distributed          = Teuchos::rcp(new MV(all_node_map, num_dim));
             previous_phi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_node_map, num_dim));
             previous_psi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_element_map, 1));
+            midpoint_adjoint_vector_distributed          = Teuchos::rcp(new MV(all_node_map, num_dim));
+            midpoint_phi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_node_map, num_dim));
+            midpoint_psi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_element_map, 1));
         }
         else{
             max_time_steps = BUFFER_GROW;

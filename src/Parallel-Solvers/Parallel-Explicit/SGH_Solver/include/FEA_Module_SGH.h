@@ -587,9 +587,9 @@ public:
     Teuchos::RCP<MV> all_adjoint_vector_distributed, adjoint_vector_distributed;
     Teuchos::RCP<MV> all_phi_adjoint_vector_distributed, phi_adjoint_vector_distributed;
     Teuchos::RCP<MV> all_psi_adjoint_vector_distributed, psi_adjoint_vector_distributed;
-    Teuchos::RCP<MV> previous_adjoint_vector_distributed;
-    Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed;
-    Teuchos::RCP<MV> previous_psi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_adjoint_vector_distributed, midpoint_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed, midpoint_phi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_psi_adjoint_vector_distributed, midpoint_psi_adjoint_vector_distributed;
     Teuchos::RCP<MV> element_internal_energy_distributed;
     Teuchos::RCP<MV> previous_element_internal_energy_distributed;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
