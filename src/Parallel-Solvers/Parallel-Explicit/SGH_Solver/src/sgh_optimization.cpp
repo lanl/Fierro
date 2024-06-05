@@ -633,6 +633,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                     last_checkpoint = dynamic_checkpoint_set->end();
                     --last_checkpoint;
                 }
+                all_node_velocities_distributed->assign(*(last_checkpoint->get_vector_pointer(V_DATA)));
+                all_node_coords_distributed->assign(*(last_checkpoint->get_vector_pointer(U_DATA)));
+                element_internal_energy_distributed->assign(*(last_checkpoint->get_vector_pointer(SIE_DATA)));
                 current_velocity_vector = last_checkpoint->get_vector_pointer(V_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 current_coordinate_vector = last_checkpoint->get_vector_pointer(U_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 current_element_internal_energy = last_checkpoint->get_vector_pointer(SIE_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -1745,8 +1748,16 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
             // compute initial condition contribution from velocities
             // view scope
             {
-                const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array current_adjoint_vector  = (*adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array current_velocity_vector;
+                const_vec_array current_adjoint_vector;
+                if(use_solve_checkpoints){
+                    current_velocity_vector = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_adjoint_vector  = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
+                else{   
+                    current_velocity_vector = (*forward_solve_velocity_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_adjoint_vector  = (*adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
 
                 FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                     real_t lambda_dot;
@@ -1796,8 +1807,16 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
             // compute initial condition contribution from internal energies
             // view scope
             {
-                const_vec_array current_element_internal_energy = (*forward_solve_internal_energy_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array current_psi_adjoint_vector = (*psi_adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array current_element_internal_energy;
+                const_vec_array current_psi_adjoint_vector;
+                if(use_solve_checkpoints){
+                    current_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
+                else{   
+                    current_element_internal_energy = (*forward_solve_internal_energy_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_psi_adjoint_vector = (*psi_adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
 
                 // (*psi_adjoint_vector_data)[100]->describe(*fos,Teuchos::VERB_EXTREME);
                 FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
@@ -1838,7 +1857,16 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
         //compute terms with gradient of force and gradient of specific internal energy w.r.t design density
         // view scope
         {
-            const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array current_adjoint_vector;
+            const_vec_array current_psi_adjoint_vector;
+            if(use_solve_checkpoints){
+                current_adjoint_vector = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+            else{   
+                current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
             global_dt = time_data[cycle + 1] - time_data[cycle];
             // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
@@ -1873,8 +1901,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 }
             }); // end parallel for
             Kokkos::fence();
-
-            const_vec_array current_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
             // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
