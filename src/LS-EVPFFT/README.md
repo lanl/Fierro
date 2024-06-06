@@ -29,6 +29,7 @@ conda install cxx-compiler -c conda-forge
 conda install cmake
 conda install "fftw=*=mpi_openmpi*" -c conda-forge
 conda install "hdf5=*=mpi_openmpi*" -c conda-forge
+conda install openmpi-mpicxx -c conda-forge 
 ```
 
 3. Run the build script as:
