@@ -137,7 +137,7 @@ public:
     std::vector<FEA_MODULE_TYPE> valid_fea_modules; // modules that may interface with this objective function
     FEA_MODULE_TYPE set_module_type;
     // std::string my_fea_module = "SGH";
-    real_t objective_accumulation;
+    real_t objective_accumulation, objective_sign;
 
     KineticEnergyMinimize_TopOpt(Explicit_Solver* Explicit_Solver_Pointer, bool nodal_density_flag)
         : useLC_(true)
@@ -147,7 +147,7 @@ public:
         valid_fea_modules.push_back(FEA_MODULE_TYPE::SGH);
         valid_fea_modules.push_back(FEA_MODULE_TYPE::Dynamic_Elasticity);
         nvalid_modules = valid_fea_modules.size();
-
+        objective_sign = 1;
         const Simulation_Parameters& simparam = Explicit_Solver_Pointer_->simparam;
         for (const auto& fea_module : Explicit_Solver_Pointer_->fea_modules) {
             for (int ivalid = 0; ivalid < nvalid_modules; ivalid++) {
@@ -166,7 +166,9 @@ public:
         current_step      = 0;
         time_accumulation = true;
         objective_accumulation = 0;
-
+        if(Explicit_Solver_Pointer_->simparam.optimization_options.maximize_flag){
+            objective_sign = -1;
+        }
         // ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
         if (set_module_type == FEA_MODULE_TYPE::SGH) {
             ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_SGH_->node_velocities_distributed);
@@ -376,7 +378,7 @@ public:
         }
 
         // std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
-        return objective_accumulation;
+        return objective_sign*objective_accumulation;
     }
 
   /* --------------------------------------------------------------------------------------
@@ -401,6 +403,7 @@ public:
         if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
             FEM_Dynamic_Elasticity_->compute_topology_optimization_gradient_full(zp, gp);
         }
+        gp->scale(objective_sign);
         // debug print of gradient
         // std::ostream &out = std::cout;
         // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));

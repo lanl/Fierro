@@ -29,7 +29,9 @@ SERIALIZABLE_ENUM(TO_MODULE_TYPE,
 
 
 SERIALIZABLE_ENUM(OPTIMIZATION_PROCESS, none, topology_optimization, shape_optimization)
-SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, none, minimize_kinetic_energy, multi_objective, minimize_compliance, minimize_thermal_resistance)
+SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, none, minimize_kinetic_energy, multi_objective,
+                  minimize_compliance, minimize_thermal_resistance, maximize_compliance,
+                  maximize_kinetic_energy, maximize_thermal_resistance)
 SERIALIZABLE_ENUM(CONSTRAINT_TYPE, mass, moment_of_inertia, center_of_mass, displacement)
 SERIALIZABLE_ENUM(RELATION, equality)
 SERIALIZABLE_ENUM(DENSITY_FILTER, none, helmholtz_filter)
@@ -101,6 +103,7 @@ struct Optimization_Options: Yaml::DerivedFields {
   DCArrayKokkos<Optimization_Bound_Constraint_Region> optimization_bound_constraint_volumes;
   std::vector<Volume> objective_regions;
   DCArrayKokkos<Volume> optimization_objective_regions;
+  bool maximize_flag = false;
   bool method_of_moving_asymptotes = false;                   //optimization algorithm that approximates curvature
   double simp_penalty_power = 3.0;                            //TO option; bigger value means less intermediate density
   bool thick_condition_boundary = true;                       //constrains element density if a patch is attached to BC/LC
