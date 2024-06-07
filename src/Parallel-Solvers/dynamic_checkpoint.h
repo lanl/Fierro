@@ -81,6 +81,8 @@ public:
         num_state_vectors = copied_checkpoint.num_state_vectors;
         state_vectors = copied_checkpoint.state_vectors;
         level = copied_checkpoint.level;
+        saved_time = copied_checkpoint.saved_time;
+        saved_dt = copied_checkpoint.saved_dt;
     }
 
     // Destructor
@@ -92,6 +94,8 @@ public:
         num_state_vectors = assigned_checkpoint.num_state_vectors;
         state_vectors = assigned_checkpoint.state_vectors;
         level = assigned_checkpoint.level;
+        saved_time = assigned_checkpoint.saved_time;
+        saved_dt = assigned_checkpoint.saved_dt;
         return *this;
     }
 

@@ -184,11 +184,11 @@ FEA_Module_SGH::FEA_Module_SGH(
     }
 
     if (simparam->topology_optimization_on) {
-        time_data.resize(max_time_steps + 1);
         forward_solve_velocity_data   = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_internal_energy_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         if(!simparam->optimization_options.use_solve_checkpoints){
+            time_data.resize(max_time_steps + 1);
             adjoint_vector_data     = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
             phi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
             psi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
@@ -909,6 +909,7 @@ void FEA_Module_SGH::sgh_solve()
     dt_min     = dynamic_options.dt_min;
     dt     = dynamic_options.dt;
     dt_cfl = dynamic_options.dt_cfl;
+    int print_cycle = dynamic_options.print_cycle;
 
     graphics_time    = simparam->output_options.graphics_step;
     graphics_dt_ival = simparam->output_options.graphics_step;
@@ -1193,7 +1194,7 @@ void FEA_Module_SGH::sgh_solve()
                 }
             }
             // print time step every 10 cycles
-            else if (cycle % 20 == 0) {
+            else if (cycle % print_cycle == 0) {
                 if (myrank == 0) {
                     printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
                 }
@@ -1830,7 +1831,7 @@ void FEA_Module_SGH::sgh_solve()
     if(use_solve_checkpoints){
         int count = 0;
         for(auto it = dynamic_checkpoint_set->begin(); it != dynamic_checkpoint_set->end(); it++){
-            std::cout << "Checkpoint # " << count++ << " is at timestep " << (*it).saved_timestep << std::endl;
+            *fos << "Checkpoint # " << count++ << " is at timestep " << (*it).saved_timestep << " with timestep " << (*it).saved_dt << std::endl;
         }
     }
 

@@ -502,7 +502,8 @@ public:
 
     void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
 
-    void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed, unsigned long cycle);
+    void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
+                                                      unsigned long cycle, real_t global_dt);
 
     void boundary_adjoint(const mesh_t& mesh,
                           const DCArrayKokkos<boundary_t>& boundary,
