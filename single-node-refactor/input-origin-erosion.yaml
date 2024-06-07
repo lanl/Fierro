@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 1.0
+    time_final: 4.25
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
@@ -24,7 +24,7 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     output_file_format: ensight
-    graphics_time_step: 0.25
+    graphics_time_step: 0.1
     # graphics_iteration_step: 10
 
 solver_options:
@@ -47,7 +47,7 @@ boundary_conditions:
         w: 1.0
         type: reflected
 
-            
+
     # Tag Y plane
     - boundary_condition:
         solver: SGH
@@ -63,7 +63,7 @@ boundary_conditions:
         direction: z_dir
         value: 0.0
         type: reflected
-  
+
 materials:
     - material:
         id: 0
@@ -78,19 +78,28 @@ materials:
             - 1.666666666666667
             - 1.0E-14
             - 1.0
+        erosion_type: erosion
+        void_mat_id: 1   
+        erode_tension_val: 0.00003
+        erode_density_val: 0.02
+
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        eos_model: void_eos
 
 regions:
     - fill_volume:
         type: global
         material_id: 0
         den: 1.0
-        sie: 1.e-10
+        sie: 0.001
         velocity: cartesian
         u: 0.0
         v: 0.0
         w: 0.0
 
-    
+
 
     # energy source initial conditions
     - fill_volume:
@@ -106,5 +115,3 @@ regions:
         u: 0.0
         v: 0.0
         w: 0.0
-
-

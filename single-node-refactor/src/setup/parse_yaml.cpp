@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -399,6 +399,8 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
                 for (const auto& element : str_solver_inps) {
                     std::cout << element << std::endl;
                 }
+
+                throw std::runtime_error("**** Solver Inputs Not Understood ****");
             }
         } // end loop over solver options
     } // end loop over solvers
@@ -489,6 +491,7 @@ void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options)
             for (const auto& element : str_dyn_opts_inps) {
                 std::cout << element << std::endl;
             }
+            throw std::runtime_error("**** User Dynamics Not Understood ****");
         }
     } // end for words in dynamic options
 } // end of function to parse region
@@ -746,6 +749,7 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             for (const auto& element : str_mesh_inps) {
                 std::cout << element << std::endl;
             }
+            throw std::runtime_error("**** Mesh Not Understood ****");
         }
     } // end user_mesh_inputs
 } // end of parse mesh options
@@ -833,10 +837,12 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options)
         } // graphics_iteration_step
         else {
             std::cout << "ERROR: invalid input: " << a_word << std::endl;
+            
             std::cout << "Valid options are: " << std::endl;
             for (const auto& element : str_output_options_inps) {
                 std::cout << element << std::endl;
             }
+            throw std::runtime_error("**** Graphics Not Understood ****");
         }
     } // end user_inputs
 } // end of parse mesh options
@@ -1082,6 +1088,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                 }
                 else{
                     std::cout << "ERROR: invalid input: " << type << std::endl;
+                    throw std::runtime_error("**** Volume Fill Not Understood ****");
                 } // end if
             } // end volume fill type
             else if (a_word.compare("velocity") == 0) {
@@ -1105,6 +1112,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                 }
                 else{
                     std::cout << "ERROR: invalid input: " << type << std::endl;
+                    throw std::runtime_error("**** Velocity Fill Not Understood ****");
                 } // end if
             } // end velocity
             else if (a_word.compare("origin") == 0) {
@@ -1139,6 +1147,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                 for (const auto& element : str_region_inps) {
                     std::cout << element << std::endl;
                 }
+                throw std::runtime_error("**** Region Not Understood ****");
             }
         } // end for words in material
     } // end loop over regions
@@ -1309,7 +1318,8 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                         case model::no_eos_model:
                             RUN({
-                                materials(mat_id).eos_model = no_eos;
+                                materials(mat_id).calc_pressure    = &NoEOSModel::calc_pressure;
+                                materials(mat_id).calc_sound_speed = &NoEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
@@ -1318,16 +1328,18 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                         case model::ideal_gas:
                             RUN({
-                                materials(mat_id).eos_model = ideal_gas;
+                                materials(mat_id).calc_pressure    = &IdealGasEOSModel::calc_pressure;
+                                materials(mat_id).calc_sound_speed = &IdealGasEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
                             break;
 
-                        case model::void_gas:
+                        case model::voidEOS:
                             RUN({
-                                materials(mat_id).eos_model = void_gas;
+                                materials(mat_id).calc_pressure    = &VoidEOSModel::calc_pressure;
+                                materials(mat_id).calc_sound_speed = &VoidEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
@@ -1336,7 +1348,8 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                         case model::user_defined_eos:
                             RUN({
-                                materials(mat_id).eos_model = user_eos_model;
+                                materials(mat_id).calc_pressure    = &UserDefinedEOSModel::calc_pressure;
+                                materials(mat_id).calc_sound_speed = &UserDefinedEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
@@ -1414,7 +1427,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                         case model::no_strength_model:
                             RUN({
-                                materials(mat_id).strength_model = no_strength;
+                                materials(mat_id).calc_stress = &NoStrengthModel::calc_stress;
                             });
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
@@ -1423,7 +1436,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                         case model::user_defined_strength:
                             RUN({
-                                materials(mat_id).strength_model = user_strength_model;
+                                materials(mat_id).calc_stress = &UserDefinedStrengthModel::calc_stress;
                             });
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
@@ -1477,13 +1490,13 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 } // end if
 
             } // erosion model variables
-            else if (a_word.compare("blank_mat_id") == 0) {
-                double blank_mat_id = root["materials"][mat_id]["material"]["blank_mat_id"].As<size_t>();
+            else if (a_word.compare("void_mat_id") == 0) {
+                double void_mat_id = root["materials"][mat_id]["material"]["void_mat_id"].As<size_t>();
                 if (VERBOSE) {
-                    std::cout << "\tblank_mat_id = " << blank_mat_id << std::endl;
+                    std::cout << "\tvoid_mat_id = " << void_mat_id << std::endl;
                 }
                 RUN({
-                    materials(mat_id).blank_mat_id = blank_mat_id;
+                    materials(mat_id).void_mat_id = void_mat_id;
                 });
             } // blank_mat_id 
             else if (a_word.compare("erode_tension_val") == 0) {
@@ -1542,9 +1555,11 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
+            
                 for (const auto& element : str_material_inps) {
                     std::cout << element << std::endl;
                 }
+                throw std::runtime_error("**** Material Input Not Understood ****");
             }
         } // end for words in material
     } // end loop over materials
@@ -1749,6 +1764,7 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 for (const auto& element : str_bc_inps) {
                     std::cout << element << std::endl;
                 }
+                throw std::runtime_error("**** Boundary Conditions Not Understood ****");
             }
         } // end for words in material
     } // end loop over regions

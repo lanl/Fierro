@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -116,21 +116,21 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
                         elem_gid);
 
             // --- call strength model ---
-            material(mat_id).strength_model(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            mat_id,
-                                            elem_statev,
-                                            elem_sspd,
-                                            elem_den(elem_gid),
-                                            elem_sie(elem_gid),
-                                            vel_grad,
-                                            elem_node_gids,
-                                            node_coords,
-                                            node_vel,
-                                            elem_vol(elem_gid),
-                                            dt,
-                                            rk_alpha);
+            material(mat_id).calc_stress(elem_pres,
+                                         elem_stress,
+                                         elem_gid,
+                                         mat_id,
+                                         elem_statev,
+                                         elem_sspd,
+                                         elem_den(elem_gid),
+                                         elem_sie(elem_gid),
+                                         vel_grad,
+                                         elem_node_gids,
+                                         node_coords,
+                                         node_vel,
+                                         elem_vol(elem_gid),
+                                         dt,
+                                         rk_alpha);
         } // end logical on state_based strength model
 
         // apply the element erosion model
@@ -138,22 +138,32 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
             // starting simple, but in the future call an erosion model
             if (elem_pres(elem_gid) <= material(mat_id).erode_tension_val
                 || elem_den(elem_gid) <= material(mat_id).erode_density_val) {
-                elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
+                elem_mat_id(elem_gid) = material(mat_id).void_mat_id;
 
                 elem_eroded(elem_gid) = true;
             } // end if
         } // end if
 
         if (material(mat_id).eos_type == model::decoupled) {
+
             // --- Pressure ---
-            material(mat_id).eos_model(elem_pres,
-                                       elem_stress,
-                                       elem_gid,
-                                       elem_mat_id(elem_gid),
-                                       elem_statev,
-                                       elem_sspd,
-                                       elem_den(elem_gid),
-                                       elem_sie(1, elem_gid));
+            material(mat_id).calc_pressure(elem_pres,
+                                           elem_stress,
+                                           elem_gid,
+                                           elem_mat_id(elem_gid),
+                                           elem_statev,
+                                           elem_sspd,
+                                           elem_den(elem_gid),
+                                           elem_sie(1, elem_gid));   
+            // --- Sound Speed ---                               
+            material(mat_id).calc_sound_speed(elem_pres,
+                                              elem_stress,
+                                              elem_gid,
+                                              elem_mat_id(elem_gid),
+                                              elem_statev,
+                                              elem_sspd,
+                                              elem_den(elem_gid),
+                                              elem_sie(1, elem_gid));
         }
     }); // end parallel for
     Kokkos::fence();
@@ -265,20 +275,30 @@ void SGH::update_state2D(const DCArrayKokkos<material_t>& material,
             // starting simple, but in the future call an erosion model
             if (elem_pres(elem_gid) <= material(mat_id).erode_tension_val
                 || elem_den(elem_gid) <= material(mat_id).erode_density_val) {
-                elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
+                elem_mat_id(elem_gid) = material(mat_id).void_mat_id;
             } // end if
         } // end if
 
         if (material(mat_id).eos_type == model::decoupled) {
+            
             // --- Pressure ---
-            material(mat_id).eos_model(elem_pres,
-                                       elem_stress,
-                                       elem_gid,
-                                       elem_mat_id(elem_gid),
-                                       elem_statev,
-                                       elem_sspd,
-                                       elem_den(elem_gid),
-                                       elem_sie(1, elem_gid));
+            material(mat_id).calc_pressure(elem_pres,
+                                           elem_stress,
+                                           elem_gid,
+                                           elem_mat_id(elem_gid),
+                                           elem_statev,
+                                           elem_sspd,
+                                           elem_den(elem_gid),
+                                           elem_sie(1, elem_gid));   
+            // --- Sound Speed ---                               
+            material(mat_id).calc_sound_speed(elem_pres,
+                                              elem_stress,
+                                              elem_gid,
+                                              elem_mat_id(elem_gid),
+                                              elem_statev,
+                                              elem_sspd,
+                                              elem_den(elem_gid),
+                                              elem_sie(1, elem_gid));
         }
     }); // end parallel for
     Kokkos::fence();

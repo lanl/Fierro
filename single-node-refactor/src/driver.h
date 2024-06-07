@@ -370,14 +370,25 @@ public:
                         }  // end for
 
                         // --- Pressure and stress ---
-                        sim_param.materials(mat_id).eos_model(elem.pres,
-                                                   elem.stress,
-                                                   elem_gid,
-                                                   elem.mat_id(elem_gid),
-                                                   elem.statev,
-                                                   elem.sspd,
-                                                   elem.den(elem_gid),
-                                                   elem.sie(rk_level, elem_gid));
+
+                        // --- Pressure ---
+                        sim_param.materials(mat_id).calc_pressure(elem.pres,
+                                                                  elem.stress,
+                                                                  elem_gid,
+                                                                  elem.mat_id(elem_gid),
+                                                                  elem.statev,
+                                                                  elem.sspd,
+                                                                  elem.den(elem_gid),
+                                                                  elem.sie(1, elem_gid));   
+                        // --- Sound Speed ---                               
+                        sim_param.materials(mat_id).calc_sound_speed(elem.pres,
+                                                                     elem.stress,
+                                                                     elem_gid,
+                                                                     elem.mat_id(elem_gid),
+                                                                     elem.statev,
+                                                                     elem.sspd,
+                                                                     elem.den(elem_gid),
+                                                                     elem.sie(1, elem_gid));
 
                         // loop over the nodes of this element and apply velocity
                         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
