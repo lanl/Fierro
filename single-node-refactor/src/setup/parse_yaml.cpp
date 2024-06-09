@@ -1271,22 +1271,22 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                     // eos_type_map[type] returns enum value, e.g., model::decoupled
                     switch(eos_type_map[type]){
-                        case model::decoupled:
+                        case model::decoupledEOSType:
                             std::cout << "Setting EOS type to decoupled " << std::endl;
                             RUN({
-                                materials(mat_id).eos_type = model::decoupled;
+                                materials(mat_id).EOSType = model::decoupledEOSType;
                             });
                             break;
 
-                        case model::coupled:
+                        case model::coupledEOSType:
                             std::cout << "Setting EOS type to coupled " << std::endl;
                             RUN({
-                                materials(mat_id).eos_type = model::coupled;
+                                materials(mat_id).EOSType = model::coupledEOSType;
                             });
                             break;
 
                         default:
-                            materials(mat_id).eos_type = model::no_eos_type;
+                            materials(mat_id).EOSType = model::noEOSType;
                             std::cout << "ERROR: No valid EOS type input " << std::endl;
                             std::cout << "Valid EOS types are: " << std::endl;
                             

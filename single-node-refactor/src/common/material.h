@@ -57,15 +57,15 @@ namespace model
     };
 
     // EOS model types
-    enum eos_type
+    enum EOSType
     {
-        no_eos_type,        ///< No EOS used
-        decoupled,          ///<  only an EOS, or an EOS plus deviatoric stress model
-        coupled,            ///<  EOS is part of a full stress tensor evolution model
+        noEOSType,          ///< No EOS used
+        decoupledEOSType,   ///< only an EOS, or an EOS plus deviatoric stress model
+        coupledEOSType,     ///< EOS is part of a full stress tensor evolution model
     };
 
     // The names of the eos models
-    enum eos_models
+    enum EOSModels
     {
         noEOS,              ///<  no model evaluation
         gammaLawGasEOS,     ///<  gamma law gas
@@ -103,19 +103,19 @@ static std::map<std::string, model::strength_models> strength_models_map
     { "user_defined_strength", model::user_defined_strength },
 };
 
-static std::map<std::string, model::eos_type> eos_type_map
+static std::map<std::string, model::EOSType> eos_type_map
 {
-    { "no_eos", model::no_eos_type },
-    { "coupled", model::coupled },
-    { "decoupled", model::decoupled },
+    { "no_eos",    model::noEOSType },
+    { "coupled",   model::coupledEOSType },
+    { "decoupled", model::decoupledEOSType },
 };
 
-static std::map<std::string, model::eos_models> eos_models_map
+static std::map<std::string, model::EOSModels> eos_models_map
 {
-    { "no_eos",     model::noEOS },
-    { "gamma_law_gas",  model::gammaLawGasEOS },
-    { "void",      model::voidEOS },
-    { "user_defined", model::userDefinedEOS },
+    { "no_eos",        model::noEOS },
+    { "gamma_law_gas", model::gammaLawGasEOS },
+    { "void",          model::voidEOS },
+    { "user_defined",  model::userDefinedEOS },
 };
 
 static std::map<std::string, model::erosion_type> erosion_type_map
@@ -148,7 +148,7 @@ struct material_t
 
     // -- EOS --
     // none, decoupled, or coupled eos
-    model::eos_type eos_type = model::no_eos_type;
+    model::EOSType EOSType = model::noEOSType;
 
     // Equation of state (EOS) function pointers
     void (*calc_pressure)(const DCArrayKokkos<double>& elem_pres,
