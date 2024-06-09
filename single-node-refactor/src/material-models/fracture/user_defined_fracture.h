@@ -32,14 +32,14 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef EROSION_H
-#define EROSION_H
+#ifndef USER_DEFINED_FRACTURE_H
+#define USER_DEFINED_FRACTURE_H
 
 
 // -----------------------------------------------------------------------------
-// This is place holder for basic element Erosion
+// This is place holder for farcture model
 // ------------------------------------------------------------------------------
-namespace SomeErosionModel {
+namespace SomeFractureModel {
     
 
 } // end namespace

@@ -32,17 +32,65 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef EROSION_H
-#define EROSION_H
+#ifndef VOID_EOS_H
+#define VOID_EOS_H
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn VoidEOSModel
+///
+/// \brief void eos
+///
+/// This is a void, as in a vacuum, eos
+///
+/// \param Element pressure
+/// \param Element stress
+/// \param Global ID for the element
+/// \param Material ID for the element
+/// \param Element state variables
+/// \param Element Sound speed
+/// \param Material density
+/// \param Material specific internal energy
+///
+/////////////////////////////////////////////////////////////////////////////
+namespace VoidEOSModel {
 
-// -----------------------------------------------------------------------------
-// This is place holder for basic element Erosion
-// ------------------------------------------------------------------------------
-namespace SomeErosionModel {
-    
+    KOKKOS_FUNCTION
+    static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
+        const DCArrayKokkos<double>& elem_stress,
+        const size_t elem_gid,
+        const size_t mat_id,
+        const DCArrayKokkos<double>& elem_state_vars,
+        const DCArrayKokkos<double>& elem_sspd,
+        const double den,
+        const double sie)
+    {
+        // pressure of a void is 0
+        elem_pres(elem_gid) = 0.0;
+
+        return;
+    } // end func
+
+    KOKKOS_FUNCTION
+    static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
+        const DCArrayKokkos<double>& elem_stress,
+        const size_t elem_gid,
+        const size_t mat_id,
+        const DCArrayKokkos<double>& elem_state_vars,
+        const DCArrayKokkos<double>& elem_sspd,
+        const double den,
+        const double sie)
+    {
+
+        // sound speed of a void is 0, machine small must be used for CFL calculation
+        elem_sspd(elem_gid) = 1.0e-32;
+
+        return;
+    } // end func
 
 } // end namespace
+
+
 
 
 

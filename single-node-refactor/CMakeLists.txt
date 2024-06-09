@@ -40,16 +40,18 @@ add_subdirectory(../lib/Elements/matar cbin)
 # include_directories(Mesh-Builder)
 # add_subdirectory(Mesh-Builder)
 
-
-include_directories(src)
-include_directories(src/common)
-include_directories(src/setup)
-add_subdirectory(src/setup)
 include_directories(src/material-models/artificial-viscosity)
 include_directories(src/material-models/eos)
 include_directories(src/material-models/erosion)
 include_directories(src/material-models/fracture)
 include_directories(src/material-models/strength)
+
+
+include_directories(src)
+include_directories(src/common)
+include_directories(src/setup)
+add_subdirectory(src/setup)
+
 
 include_directories(src/Solvers/SGH_solver)
 add_subdirectory(src/Solvers/SGH_solver)

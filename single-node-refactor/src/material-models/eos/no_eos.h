@@ -32,19 +32,57 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef EROSION_H
-#define EROSION_H
+#ifndef NO_EOS_H
+#define NO_EOS_H
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn NoEOSModel
+///
+/// \brief no eos model, it does nothing
+///
+/// This is the no eos (empty function)
+///
+/// \param Element pressure
+/// \param Element stress
+/// \param Global ID for the element
+/// \param Material ID for the element
+/// \param Element state variables
+/// \param Element Sound speed
+/// \param Material density
+/// \param Material specific internal energy
+///
+/////////////////////////////////////////////////////////////////////////////
+namespace NoEOSModel {
 
-// -----------------------------------------------------------------------------
-// This is place holder for basic element Erosion
-// ------------------------------------------------------------------------------
-namespace SomeErosionModel {
-    
+    KOKKOS_FUNCTION
+    static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
+        const DCArrayKokkos<double>& elem_stress,
+        const size_t elem_gid,
+        const size_t mat_id,
+        const DCArrayKokkos<double>& elem_state_vars,
+        const DCArrayKokkos<double>& elem_sspd,
+        const double den,
+        const double sie)
+    {
+        return;
+    } // end func
+
+    KOKKOS_FUNCTION
+    static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
+        const DCArrayKokkos<double>& elem_stress,
+        const size_t elem_gid,
+        const size_t mat_id,
+        const DCArrayKokkos<double>& elem_state_vars,
+        const DCArrayKokkos<double>& elem_sspd,
+        const double den,
+        const double sie)
+    {
+
+        return;
+    } // end func
 
 } // end namespace
-
-
 
 
 #endif // end Header Guard

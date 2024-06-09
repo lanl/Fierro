@@ -32,14 +32,19 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef GAMMA_LAW_EOS_H
-#define GAMMA_LAW_EOS_H
+#ifndef USER_DEFINED_EOS_H
+#define USER_DEFINED_EOS_H
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn GammaLawGasEOSModel
+/// \fn UserDefinedEOSModel
 ///
-/// \brief gamma law eos
+/// \brief user defined EOS model
+///
+/// This is the user material model function for the equation of state
+/// An eos function must be supplied or the code will fail to run.
+/// The pressure and sound speed can be calculated from an analytic eos.
+/// The pressure can also be calculated using p = -1/3 Trace(Stress)
 ///
 /// \param Element pressure
 /// \param Element stress
@@ -50,6 +55,57 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Material density
 /// \param Material specific internal energy
 ///
+/////////////////////////////////////////////////////////////////////////////
+namespace UserDefinedEOSModel
+{
+
+    KOKKOS_FUNCTION
+    static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
+        const DCArrayKokkos<double>& elem_stress,
+        const size_t elem_gid,
+        const size_t mat_id,
+        const DCArrayKokkos<double>& elem_state_vars,
+        const DCArrayKokkos<double>& elem_sspd,
+        const double den,
+        const double sie)
+    {
+        // -----------------------------------------------------------------------------
+        // Required variables are here
+        // ------------------------------------------------------------------------------
+
+        // -----------------------------------------------------------------------------
+        // The user must coding goes here
+        // ------------------------------------------------------------------------------
+
+        return;
+    } // end for user_eos_model
+
+    KOKKOS_FUNCTION
+    static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
+        const DCArrayKokkos<double>& elem_stress,
+        const size_t elem_gid,
+        const size_t mat_id,
+        const DCArrayKokkos<double>& elem_state_vars,
+        const DCArrayKokkos<double>& elem_sspd,
+        const double den,
+        const double sie)
+    {
+        
+        // -----------------------------------------------------------------------------
+        // Required variables are here
+        // ------------------------------------------------------------------------------
+
+        // -----------------------------------------------------------------------------
+        // The user must coding goes here
+        // ------------------------------------------------------------------------------
+
+        return;
+    } // end func
+
+} // end namespace
+
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn fcn_name
@@ -66,24 +122,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \return <return type and definition description if not void>
 ///
 /////////////////////////////////////////////////////////////////////////////
-
-namespace GammaLawGasEOSModel {
-
-    // statev(0) = gamma
-    // statev(1) = minimum sound speed
-    // statev(2) = specific heat c_v
-    // statev(3) = ref temperature
-    // statev(4) = ref density
-    // statev(5) = ref specific internal energy
-    enum VarNames
-    {
-        gamma = 0,
-        min_sound_speed = 1,
-        c_v = 2,
-        ref_temp = 3,
-        ref_density = 4,
-        ref_sie = 5
-    };
+// -----------------------------------------------------------------------------
+// This is a place holder EOS interface to add another user defined EOS
+// ------------------------------------------------------------------------------
+namespace NotionalEOSModel {
 
     KOKKOS_FUNCTION
     static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
@@ -95,16 +137,11 @@ namespace GammaLawGasEOSModel {
         const double den,
         const double sie)
     {
-
-        double gamma = elem_state_vars(elem_gid, VarNames::gamma);
-        double csmin = elem_state_vars(elem_gid, VarNames::min_sound_speed);
-
-        // pressure
-        elem_pres(elem_gid) = (gamma - 1.0) * sie * den;
+        // pressure of a void is 0
+        elem_pres(elem_gid) = 0.0;
 
         return;
     } // end func
-
 
     KOKKOS_FUNCTION
     static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
@@ -117,17 +154,8 @@ namespace GammaLawGasEOSModel {
         const double sie)
     {
 
-        double gamma = elem_state_vars(elem_gid, VarNames::gamma);
-        double csmin = elem_state_vars(elem_gid, VarNames::min_sound_speed);
-
-
-        // sound speed
-        elem_sspd(elem_gid) = sqrt(gamma * (gamma - 1.0) * sie);
-
-        // ensure soundspeed is great than min specified
-        if (elem_sspd(elem_gid) < csmin) {
-            elem_sspd(elem_gid) = csmin;
-        } // end if
+        // sound speed of a void is 0, machine small must be used for CFL calculation
+        elem_sspd(elem_gid) = 1.0e-32;
 
         return;
     } // end func

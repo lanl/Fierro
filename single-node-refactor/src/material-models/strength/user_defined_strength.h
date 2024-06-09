@@ -32,14 +32,18 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef GAMMA_LAW_EOS_H
-#define GAMMA_LAW_EOS_H
+#ifndef USER_DEFINED_STRENGTH_H
+#define USER_DEFINED_STRENGTH_H
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn GammaLawGasEOSModel
+/// \fn UserDefinedStrengthModel
 ///
-/// \brief gamma law eos
+/// \brief user defined strength model
+///
+///  This is the user material model function for the stress tensor
 ///
 /// \param Element pressure
 /// \param Element stress
@@ -49,7 +53,49 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Element Sound speed
 /// \param Material density
 /// \param Material specific internal energy
+/// \param Element velocity gradient
+/// \param Element nodes IDs in the element
+/// \param Node node coordinates
+/// \param Noe velocity 
+/// \param Element volume
+/// \param Time time step
+/// \param Time coefficient in the Runge Kutta time integration step
 ///
+/////////////////////////////////////////////////////////////////////////////
+namespace UserDefinedStrengthModel {
+
+    KOKKOS_FUNCTION
+    static void calc_stress(const DCArrayKokkos<double>& elem_pres,
+        const DCArrayKokkos<double>& elem_stress,
+        const size_t elem_gid,
+        const size_t mat_id,
+        const DCArrayKokkos<double>& elem_state_vars,
+        const DCArrayKokkos<double>& elem_sspd,
+        const double den,
+        const double sie,
+        const ViewCArrayKokkos<double>& vel_grad,
+        const ViewCArrayKokkos<size_t>& elem_node_gids,
+        const DCArrayKokkos<double>&    node_coords,
+        const DCArrayKokkos<double>&    node_vel,
+        const double vol,
+        const double dt,
+        const double rk_alpha)
+    {
+        // -----------------------------------------------------------------------------
+        // Required variables are here
+        // ------------------------------------------------------------------------------
+
+        // -----------------------------------------------------------------------------
+        // The user must coding goes here
+        // ------------------------------------------------------------------------------
+
+        return;
+    } // end of user mat
+
+} // end namespace
+
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn fcn_name
@@ -66,73 +112,34 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \return <return type and definition description if not void>
 ///
 /////////////////////////////////////////////////////////////////////////////
-
-namespace GammaLawGasEOSModel {
-
-    // statev(0) = gamma
-    // statev(1) = minimum sound speed
-    // statev(2) = specific heat c_v
-    // statev(3) = ref temperature
-    // statev(4) = ref density
-    // statev(5) = ref specific internal energy
-    enum VarNames
-    {
-        gamma = 0,
-        min_sound_speed = 1,
-        c_v = 2,
-        ref_temp = 3,
-        ref_density = 4,
-        ref_sie = 5
-    };
-
+// -----------------------------------------------------------------------------
+// This is place holder for another user strength model
+// ------------------------------------------------------------------------------
+namespace NotionalStrengthModel {
+    
     KOKKOS_FUNCTION
-    static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
+    static void calc_stress(const DCArrayKokkos<double>& elem_pres,
         const DCArrayKokkos<double>& elem_stress,
         const size_t elem_gid,
         const size_t mat_id,
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
         const double den,
-        const double sie)
+        const double sie,
+        const ViewCArrayKokkos<double>& vel_grad,
+        const ViewCArrayKokkos<size_t>& elem_node_gids,
+        const DCArrayKokkos<double>&    node_coords,
+        const DCArrayKokkos<double>&    node_vel,
+        const double vol,
+        const double dt,
+        const double rk_alpha)
     {
-
-        double gamma = elem_state_vars(elem_gid, VarNames::gamma);
-        double csmin = elem_state_vars(elem_gid, VarNames::min_sound_speed);
-
-        // pressure
-        elem_pres(elem_gid) = (gamma - 1.0) * sie * den;
-
         return;
-    } // end func
-
-
-    KOKKOS_FUNCTION
-    static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie)
-    {
-
-        double gamma = elem_state_vars(elem_gid, VarNames::gamma);
-        double csmin = elem_state_vars(elem_gid, VarNames::min_sound_speed);
-
-
-        // sound speed
-        elem_sspd(elem_gid) = sqrt(gamma * (gamma - 1.0) * sie);
-
-        // ensure soundspeed is great than min specified
-        if (elem_sspd(elem_gid) < csmin) {
-            elem_sspd(elem_gid) = csmin;
-        } // end if
-
-        return;
-    } // end func
+    } // end of user mat
 
 } // end namespace
+
+
 
 
 #endif // end Header Guard
