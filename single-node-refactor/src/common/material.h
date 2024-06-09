@@ -233,14 +233,16 @@ struct MaterialModelValues_t{
     ///<enums can be implemented in the model namespaces telling how to unpack physics_global_vars
 
     CArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
+    CArrayKokkos<double> eos_state_vars;       ///< Array of state (in each element) variables for the EOS
 
     CArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
+    CArrayKokkos<double> strength_state_vars;  ///< Array of state (in each element) variables for the strength
+    
+    CArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
 
-    // CArrayKokkos<double> failure_global_vars;
+    CArrayKokkos<double> erosion_global_vars; ///< Array of global variables for the erosion model
 
-    // CArrayKokkos<double> erosion_global_vars;
-
-    // CArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
+    CArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
 
     // ...
 
