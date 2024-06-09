@@ -68,7 +68,7 @@ materials:
     - material:
         id: 0
         eos_model_type: decoupled
-        eos_model: ideal_gas
+        eos_model: gamma_law_gas
         # strength_model: none
         q1: 1.0
         q2: 1.333

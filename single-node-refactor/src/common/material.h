@@ -218,8 +218,6 @@ struct material_t
     double q2   = 1.0;      ///< linear coefficient in Riemann solver for compression
     double q2ex = 1.3333;   ///< linear coefficient in Riemann solver for expansion
 
-    double elastic_modulus; ///< Young's modulus
-    double poisson_ratio;   ///< Poisson ratio
 }; // end material_t
 
 // ----------------------------------
@@ -237,8 +235,6 @@ static std::vector<std::string> str_material_inps
     "q1ex",
     "q2ex",
     "eos_global_vars",
-    "elastic_modulus",
-    "poisson_ratio",
     "erosion_type",
     "erode_tension_val",
     "erode_density_val",

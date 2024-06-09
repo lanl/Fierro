@@ -1244,24 +1244,6 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     materials(mat_id).id = m_id;
                 });
             } // id
-            else if (a_word.compare("elastic_modulus") == 0) {
-                double elastic_modulus = root["materials"][mat_id]["material"]["elastic_modulus"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\telastic_modulus = " << elastic_modulus << std::endl;
-                }
-                RUN({
-                    materials(mat_id).elastic_modulus = elastic_modulus;
-                });
-            } // elastic_modulus
-            else if (a_word.compare("poisson_ratio") == 0) {
-                double poisson_ratio = root["materials"][mat_id]["material"]["poisson_ratio"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tpoisson_ratio = " << poisson_ratio << std::endl;
-                }
-                RUN({
-                    materials(mat_id).poisson_ratio = poisson_ratio;
-                });
-            } // poisson_ratio
             //extract eos model
             else if (a_word.compare("eos_model_type") == 0) {
                 std::string type = root["materials"][mat_id]["material"]["eos_model_type"].As<std::string>();

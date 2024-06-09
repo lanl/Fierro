@@ -59,7 +59,7 @@ materials:
     - material:
         id: 0
         eos_model_type: decoupled
-        eos_model: ideal_gas
+        eos_model: gamma_law_gas
         # strength_model: none
         q1: 1.0
         q2: 1.333
@@ -74,7 +74,7 @@ materials:
     - material:
         id: 1
         eos_model_type: decoupled
-        eos_model: ideal_gas
+        eos_model: gamma_law_gas
         # strength_model: none
         q1: 1.0
         q2: 1.333
@@ -93,14 +93,14 @@ materials:
     - material:
         id: 2
         eos_model_type: decoupled
-        eos_model: void_eos
+        eos_model: void
     
 
     # background air
     - material:
         id: 3
         eos_model_type: decoupled
-        eos_model: ideal_gas
+        eos_model: gamma_law_gas
         # strength_model: none
         q1: 1.0
         q2: 1.333
