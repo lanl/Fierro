@@ -141,6 +141,7 @@ enum strength_setup_tag
 ///
 /// \brief  Material models
 ///
+/// In the code: CArrayKokkos <Material_t> Material;
 /////////////////////////////////////////////////////////////////////////////
 struct material_t
 {
@@ -230,7 +231,7 @@ struct material_t
 /////////////////////////////////////////////////////////////////////////////
 struct MaterialModelValues_t{
 
-    ///<enums can be implemented in the model namespaces telling how to unpack physics_global_vars
+    ///<enums can be implemented in the model namespaces to unpack e.g., physics_global_vars
 
     CArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
     CArrayKokkos<double> eos_state_vars;       ///< Array of state (in each element) variables for the EOS
@@ -240,13 +241,15 @@ struct MaterialModelValues_t{
     
     CArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
 
-    CArrayKokkos<double> erosion_global_vars; ///< Array of global variables for the erosion model
+    CArrayKokkos<double> erosion_global_vars;  ///< Array of global variables for the erosion model
 
     CArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
 
     // ...
 
 }; // end MaterialModelValues_t
+// The above struct eliminates all the variables in material_t, making material_t a collection of function ptrs
+
 
 // ----------------------------------
 // valid inputs for material options
