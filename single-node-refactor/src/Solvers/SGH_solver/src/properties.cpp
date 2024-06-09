@@ -279,7 +279,7 @@ void SGH::update_state2D(const DCArrayKokkos<material_t>& material,
             } // end if
         } // end if
 
-        if (material(mat_id).eos_type == model::decoupled) {
+        if (material(mat_id).EOSType == model::decoupledEOSType) {
 
             // --- Pressure ---
             material(mat_id).calc_pressure(elem_pres,

@@ -170,7 +170,7 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
         } // end for
 
         // add the pressure if a decoupled model is used
-        if (material(mat_id).eos_type == model::decoupled) {
+        if (material(mat_id).EOSType == model::decoupledEOSType) {
             for (int i = 0; i < num_dims; i++) {
                 tau(i, i) -= elem_pres(elem_gid);
             } // end for
