@@ -1520,6 +1520,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     std::cout << "num global eos vars = " << num_global_vars << std::endl;
                 }
 
+                // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double eos_var = root["materials"][mat_id]["material"]["eos_global_vars"][global_var_id].As<double>();
                     

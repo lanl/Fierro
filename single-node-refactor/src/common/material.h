@@ -139,7 +139,7 @@ enum strength_setup_tag
 ///
 /// \struct material_t
 ///
-/// \brief  Material model parameters
+/// \brief  Material models
 ///
 /////////////////////////////////////////////////////////////////////////////
 struct material_t
@@ -219,6 +219,32 @@ struct material_t
     double q2ex = 1.3333;   ///< linear coefficient in Riemann solver for expansion
 
 }; // end material_t
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct material_model_values_t
+///
+/// \brief  Material model state, parameters, and values 
+///
+/// In the code: CArray <MaterialModelValues_t> MaterialModelValues;
+/////////////////////////////////////////////////////////////////////////////
+struct MaterialModelValues_t{
+
+    ///<enums can be implemented in the model namespaces telling how to unpack physics_global_vars
+
+    CArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
+
+    CArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
+
+    // CArrayKokkos<double> failure_global_vars;
+
+    // CArrayKokkos<double> erosion_global_vars;
+
+    // CArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
+
+    // ...
+
+}; // end MaterialModelValues_t
 
 // ----------------------------------
 // valid inputs for material options
