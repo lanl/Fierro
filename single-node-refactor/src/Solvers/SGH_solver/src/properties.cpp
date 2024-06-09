@@ -89,7 +89,7 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
 
         // --- Stress ---
         // state_based elastic plastic model
-        if (material(mat_id).strength_type == model::state_based) {
+        if (material(mat_id).StrengthType == model::stateBased) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
@@ -225,7 +225,7 @@ void SGH::update_state2D(const DCArrayKokkos<material_t>& material,
 
         // --- Stress ---
         // state_based elastic plastic model
-        if (material(mat_id).strength_type == model::state_based) {
+        if (material(mat_id).StrengthType == model::stateBased) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 

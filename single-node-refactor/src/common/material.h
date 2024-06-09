@@ -59,18 +59,18 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace model
 {
     // strength model types
-    enum strength_type
+    enum StrengthType
     {
-        no_strength_type,
-        increment_based,        ///<  Model evaluation is inline with the time integration
-        state_based,            ///<  Model is based on the state after each stage of the time step
+        noStrengthType,
+        incrementBased,        ///<  Model evaluation is inline with the time integration
+        stateBased,            ///<  Model is based on the state after each stage of the time step
     };
 
     // Specific strength models
-    enum strength_models
+    enum StrengthModels
     {
-        no_strength_model,
-        user_defined_strength,
+        noStrengthModel,
+        userDefinedStrength,
     };
 
     // EOS model types
@@ -107,17 +107,17 @@ namespace model
     };
 } // end model namespace
 
-static std::map<std::string, model::strength_type> strength_type_map
+static std::map<std::string, model::StrengthType> strength_type_map
 {
-    { "no_strength", model::no_strength_type },
-    { "increment_based", model::increment_based },
-    { "state_based", model::state_based },
+    { "no_strength",     model::noStrengthType },
+    { "increment_based", model::incrementBased },
+    { "state_based",     model::stateBased },
 };
 
-static std::map<std::string, model::strength_models> strength_models_map
+static std::map<std::string, model::StrengthModels> strength_models_map
 {
-    { "no_strength", model::no_strength_model },
-    { "user_defined_strength", model::user_defined_strength },
+    { "no_strength",           model::noStrengthModel },
+    { "user_defined_strength", model::userDefinedStrength },
 };
 
 static std::map<std::string, model::EOSType> eos_type_map
@@ -188,7 +188,7 @@ struct material_t
                              const double sie) = NULL;
 
     // Strength model type: none, or increment- or state-based
-    model::strength_type strength_type = model::no_strength_type;
+    model::StrengthType StrengthType = model::noStrengthType;
 
     // Material strength model function pointers
     void (*calc_stress)(const DCArrayKokkos<double>& elem_pres,
@@ -301,7 +301,6 @@ static std::vector<std::string> material_required_inps
     // "strength_model",
     // "strength_model_type"
 };
-
 
 
 

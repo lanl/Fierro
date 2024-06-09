@@ -51,22 +51,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Material specific internal energy
 ///
 /////////////////////////////////////////////////////////////////////////////
-///
-/// \fn fcn_name
-///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
-///
-/////////////////////////////////////////////////////////////////////////////
-
 namespace GammaLawGasEOSModel {
 
     // statev(0) = gamma

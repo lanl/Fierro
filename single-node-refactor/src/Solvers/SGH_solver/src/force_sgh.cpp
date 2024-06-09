@@ -380,7 +380,7 @@ void SGH::get_force(const DCArrayKokkos<material_t>& material,
         // --- Update Stress ---
         // calculate the new stress at the next rk level, if it is a increment_based model
         // increment_based strength model
-        if (material(mat_id).strength_type == model::increment_based) {
+        if (material(mat_id).StrengthType == model::incrementBased) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
@@ -753,7 +753,7 @@ void SGH::get_force_2D(const DCArrayKokkos<material_t>& material,
         size_t mat_id = elem_mat_id(elem_gid);
 
         // increment_based elastic plastic model
-        if (material(mat_id).strength_type == model::increment_based) {
+        if (material(mat_id).StrengthType == model::incrementBased) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
 

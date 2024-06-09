@@ -1358,27 +1358,27 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     
                     switch(strength_type_map[strength_model_type]){
 
-                        case model::no_strength_type:
+                        case model::noStrengthType:
                             RUN({
-                                materials(mat_id).strength_type = model::no_strength_type;
+                                materials(mat_id).StrengthType = model::noStrengthType;
                             });
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model_type_type = " << strength_model_type << std::endl;
                             }
                             break;
 
-                        case model::increment_based:
+                        case model::incrementBased:
                             RUN({
-                                materials(mat_id).strength_type = model::increment_based;
+                                materials(mat_id).StrengthType = model::incrementBased;
                             });
                             
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model_type = " << strength_model_type << std::endl;
                             }
                             break;
-                        case model::state_based:
+                        case model::stateBased:
                             RUN({
-                                materials(mat_id).strength_type = model::state_based;
+                                materials(mat_id).StrengthType = model::stateBased;
                             });
                             std::cout << "ERROR: state_based models not yet defined: " << std::endl;
                             throw std::runtime_error("**** ERROR: state_based models not yet defined ****");
@@ -1407,7 +1407,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     
                     switch(strength_models_map[strength_model]){
 
-                        case model::no_strength_model:
+                        case model::noStrengthModel:
                             RUN({
                                 materials(mat_id).calc_stress = &NoStrengthModel::calc_stress;
                             });
@@ -1416,7 +1416,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                             }
                             break;
 
-                        case model::user_defined_strength:
+                        case model::userDefinedStrength:
                             RUN({
                                 materials(mat_id).calc_stress = &UserDefinedStrengthModel::calc_stress;
                             });
