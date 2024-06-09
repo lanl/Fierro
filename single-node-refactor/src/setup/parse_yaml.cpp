@@ -837,7 +837,7 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options)
         } // graphics_iteration_step
         else {
             std::cout << "ERROR: invalid input: " << a_word << std::endl;
-            
+
             std::cout << "Valid options are: " << std::endl;
             for (const auto& element : str_output_options_inps) {
                 std::cout << element << std::endl;
@@ -1316,7 +1316,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     
                     switch(eos_models_map[eos]){
 
-                        case model::no_eos_model:
+                        case model::noEOS:
                             RUN({
                                 materials(mat_id).calc_pressure    = &NoEOSModel::calc_pressure;
                                 materials(mat_id).calc_sound_speed = &NoEOSModel::calc_sound_speed;
@@ -1326,10 +1326,10 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                             }
                             break;
 
-                        case model::ideal_gas:
+                        case model::gammaLawGasEOS:
                             RUN({
-                                materials(mat_id).calc_pressure    = &IdealGasEOSModel::calc_pressure;
-                                materials(mat_id).calc_sound_speed = &IdealGasEOSModel::calc_sound_speed;
+                                materials(mat_id).calc_pressure    = &GammaLawGasEOSModel::calc_pressure;
+                                materials(mat_id).calc_sound_speed = &GammaLawGasEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
@@ -1346,7 +1346,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                             }
                             break;
 
-                        case model::user_defined_eos:
+                        case model::userDefinedEOS:
                             RUN({
                                 materials(mat_id).calc_pressure    = &UserDefinedEOSModel::calc_pressure;
                                 materials(mat_id).calc_sound_speed = &UserDefinedEOSModel::calc_sound_speed;

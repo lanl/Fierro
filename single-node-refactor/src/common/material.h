@@ -67,10 +67,10 @@ namespace model
     // The names of the eos models
     enum eos_models
     {
-        no_eos_model,       ///<  no model evaluation
-        ideal_gas,          ///<  gamma law gas
-        voidEOS,           ///<  a void material, no sound speed and no pressure
-        user_defined_eos,   ///<  an eos function defined by the user
+        noEOS,              ///<  no model evaluation
+        gammaLawGasEOS,     ///<  gamma law gas
+        voidEOS,            ///<  a void material, no sound speed and no pressure
+        userDefinedEOS,     ///<  an eos function defined by the user
     };
 
     // failure model types
@@ -112,10 +112,10 @@ static std::map<std::string, model::eos_type> eos_type_map
 
 static std::map<std::string, model::eos_models> eos_models_map
 {
-    { "no_eos",     model::no_eos_model },
-    { "ideal_gas",  model::ideal_gas },
-    { "void_eos",      model::voidEOS },
-    { "user_defined", model::user_defined_eos },
+    { "no_eos",     model::noEOS },
+    { "gamma_law_gas",  model::gammaLawGasEOS },
+    { "void",      model::voidEOS },
+    { "user_defined", model::userDefinedEOS },
 };
 
 static std::map<std::string, model::erosion_type> erosion_type_map
@@ -290,7 +290,7 @@ static std::vector<std::string> material_required_inps
 ///
 /////////////////////////////////////////////////////////////////////////////
 
-namespace IdealGasEOSModel {
+namespace GammaLawGasEOSModel {
 
     // statev(0) = gamma
     // statev(1) = minimum sound speed
