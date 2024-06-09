@@ -287,9 +287,9 @@ static std::vector<std::string> material_required_inps
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn ideal_gas
+/// \fn GammaLawGasEOSModel
 ///
-/// \brief Ideal gas model, gamma law
+/// \brief gamma law eos
 ///
 /// \param Element pressure
 /// \param Element stress
