@@ -672,7 +672,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                 Kokkos::fence();
 
                 // set state according to phase data at this timestep
-
                 get_vol();
 
                 // ---- Calculate velocity diveregence for the element ----
@@ -2836,6 +2835,7 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
 
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
     size_t cycle;
+    size_t start_timestep = start_checkpoint->saved_timestep;
 
     int  num_solve_checkpoints    = simparam->optimization_options.num_solve_checkpoints;
     std::set<Dynamic_Checkpoint>::iterator current_checkpoint, last_raised_checkpoint, dispensable_checkpoint, search_end;
@@ -2859,6 +2859,10 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
             for (int idim = 0; idim < num_dim; idim++) {
                 node_vel(rk_level, node_gid, idim)    = current_velocity_vector(node_gid, idim);
                 node_coords(rk_level, node_gid, idim) = current_coordinate_vector(node_gid, idim);
+                
+                // if(std::isnan(node_vel(rk_level, node_gid, idim))){
+                //         std::cout << " NAN VALUES at start" << node_vel(rk_level, node_gid, idim) << " " << start_checkpoint->saved_timestep << std::endl;
+                // }
             }
         });
         Kokkos::fence();
@@ -2867,6 +2871,58 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
             elem_sie(rk_level, elem_gid) = current_element_internal_energy(elem_gid, 0);
         });
         Kokkos::fence();
+    }
+
+    //repeat parts of setup that are necessary here like volume reset!!!!!!!!!!!
+    // set state according to phase data at this timestep
+    get_vol();
+
+    // ---- Calculate velocity diveregence for the element ----
+    if (num_dim == 2) {
+        get_divergence2D(elem_div,
+                node_coords,
+                node_vel,
+                elem_vol);
+    }
+    else{
+        get_divergence(elem_div,
+                node_coords,
+                node_vel,
+                elem_vol);
+    } // end if 2D
+
+    // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+    if (num_dim == 2) {
+        update_state2D(material,
+                *mesh,
+                node_coords,
+                node_vel,
+                elem_den,
+                elem_pres,
+                elem_stress,
+                elem_sspd,
+                elem_sie,
+                elem_vol,
+                elem_mass,
+                elem_mat_id,
+                1.0,
+                cycle);
+    }
+    else{
+        update_state(material,
+                *mesh,
+                node_coords,
+                node_vel,
+                elem_den,
+                elem_pres,
+                elem_stress,
+                elem_sspd,
+                elem_sie,
+                elem_vol,
+                elem_mass,
+                elem_mat_id,
+                1.0,
+                cycle);
     }
 
     // save the nodal mass
@@ -2891,8 +2947,68 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
+    // // extensive energy tallies over the mesh elements local to this MPI rank
+    // double IE_t0 = 0.0;
+    // double KE_t0 = 0.0;
+    // double TE_t0 = 0.0;
+
+    // double IE_sum = 0.0;
+    // double KE_sum = 0.0;
+
+    // double IE_loc_sum = 0.0;
+    // double KE_loc_sum = 0.0;
+
+    // // extensive energy tallies over the entire mesh
+    // double global_IE_t0 = 0.0;
+    // double global_KE_t0 = 0.0;
+    // double global_TE_t0 = 0.0;
+
+    // // ---- Calculate energy tallies ----
+    // double IE_tend = 0.0;
+    // double KE_tend = 0.0;
+    // double TE_tend = 0.0;
+
+    // double global_IE_tend = 0.0;
+    // double global_KE_tend = 0.0;
+    // double global_TE_tend = 0.0;
+
+    // int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
+
+    // // extensive IE
+    // REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+    //     IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
+    // }, IE_sum);
+    // IE_t0 = IE_sum;
+
+    // MPI_Allreduce(&IE_t0, &global_IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // // extensive KE
+    // REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+    //     double ke = 0;
+    //     for (size_t dim = 0; dim < num_dim; dim++) {
+    //         ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
+    //     } // end for
+
+    //     if (num_dim == 2) {
+    //         KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+    //     }
+    //     else{
+    //         KE_loc_sum += node_mass(node_gid) * ke;
+    //     }
+    // }, KE_sum);
+    // Kokkos::fence();
+    // KE_t0 = 0.5 * KE_sum;
+
+    // MPI_Allreduce(&KE_t0, &global_KE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // // extensive TE
+    // global_TE_t0 = global_IE_t0 + global_KE_t0;
+    // TE_t0 = global_TE_t0;
+    // KE_t0 = global_KE_t0;
+    // IE_t0 = global_IE_t0;
+
     // loop over the max number of time integration cycles
-    for (cycle = start_checkpoint->saved_timestep; cycle < cycle_stop; cycle++) {
+    for (cycle = start_timestep; cycle < cycle_stop; cycle++) {
         // get the step
         if (num_dim == 2) {
             get_timestep2D(*mesh,
@@ -3445,6 +3561,60 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     if (myrank == 0) {
         printf("\nCalculation time in seconds: %f \n", calc_time * 1e-09);
     }
+
+    // IE_loc_sum = 0.0;
+    // KE_loc_sum = 0.0;
+    // IE_sum     = 0.0;
+    // KE_sum     = 0.0;
+
+    // // extensive IE
+    // REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+    //     IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
+    // }, IE_sum);
+    // IE_tend = IE_sum;
+
+    // // reduce over MPI ranks
+    // MPI_Allreduce(&IE_tend, &global_IE_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // // extensive KE
+    // REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+    //     double ke = 0;
+    //     for (size_t dim = 0; dim < num_dim; dim++) {
+    //         ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
+    //     } // end for
+
+    //     if (num_dim == 2) {
+    //         KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+    //     }
+    //     else{
+    //         KE_loc_sum += node_mass(node_gid) * ke;
+    //     }
+    // }, KE_sum);
+    // Kokkos::fence();
+    // KE_tend = 0.5 * KE_sum;
+
+    // // reduce over MPI ranks
+    // MPI_Allreduce(&KE_tend, &global_KE_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // // extensive TE
+    // TE_tend = IE_tend + KE_tend;
+    // KE_tend = global_KE_tend;
+    // IE_tend = global_IE_tend;
+
+    // // extensive TE
+    // TE_tend = IE_tend + KE_tend;
+
+    // // reduce over MPI ranks
+
+    // if (myrank == 0) {
+    //     printf("Time=0:   KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_t0, IE_t0, TE_t0);
+    // }
+    // if (myrank == 0) {
+    //     printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
+    // }
+    // if (myrank == 0) {
+    //     printf("total energy conservation error = %e \n\n", 100 * (TE_tend - TE_t0) / TE_t0);
+    // }
 
     return;
 } // end of checkpoint SGH solve
