@@ -50,7 +50,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "user_defined_strength.h"
 
 // erosion files
-#include "erosion.h"
+#include "basic_erosion.h"
+#include "no_erosion.h"
 
 // fracture files
 #include "user_defined_fracture.h"
@@ -90,21 +91,21 @@ namespace model
         userDefinedEOS,     ///<  an eos function defined by the user
     };
 
-    // failure model types
-    enum failure_type
+    // failure models
+    enum FailureModels
     {
-        no_failure,
-        brittle_failure,        ///< Material fails after exceeding yield stress
-        ductile_failure,        ///< Material grows voids that lead to complete failure
+        noFailure,
+        brittleFailure,        ///< Material fails after exceeding yield stress
+        ductileFailure,        ///< Material grows voids that lead to complete failure
     };
 
-    // erosion model types
-    enum erosion_type
+    // erosion model t
+    enum ErosionModels
     {
-        no_erosion,
-        erosion,            ///<  element erosion
-        erosion_contact,    ///<  element erosion and apply contact enforcement
+        noErosion,
+        basicErosion,      ///<  basic element erosion
     };
+
 } // end model namespace
 
 static std::map<std::string, model::StrengthType> strength_type_map
@@ -135,11 +136,10 @@ static std::map<std::string, model::EOSModels> eos_models_map
     { "user_defined",  model::userDefinedEOS },
 };
 
-static std::map<std::string, model::erosion_type> erosion_type_map
+static std::map<std::string, model::ErosionModels> erosion_model_map
 {
-    { "no_erosion", model::no_erosion },
-    { "erosion", model::erosion },
-    { "erosion_contact", model::erosion_contact },
+    { "no_erosion", model::noErosion },
+    { "basic", model::basicErosion},
 };
 
 namespace model_init
@@ -207,17 +207,25 @@ struct material_t
                         const double dt,
                         const double rk_alpha) = NULL;
 
-    // Material Failure: none or there is a failure model
-    model::failure_type failure_type = model::no_failure;
 
     // -- Erosion --
 
-    // erosion model
-    model::erosion_type erosion_type = model::no_erosion;
     size_t void_mat_id;        ///< eroded elements get this mat_id
     double erode_tension_val;   ///< tension threshold to initiate erosion
     double erode_density_val;   ///< density threshold to initiate erosion
     // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
+    void (*erode)(const DCArrayKokkos<double>& elem_pres,
+                  const DCArrayKokkos<double>& elem_stress,
+                  const DCArrayKokkos<bool>& elem_eroded,
+                  const DCArrayKokkos<size_t>& elem_mat_id,
+                  const size_t elem_gid,
+                  const size_t void_mat_id,
+                  const double erode_tension_val,
+                  const double erode_density_val,
+                  const DCArrayKokkos<double>& elem_sspd,
+                  const DCArrayKokkos<double>& elem_den,
+                  const double sie) = NULL;
+
 
     // setup the strength model via the input file for via a user_setup
     model_init::strength_setup_tag strength_setup = model_init::input;
@@ -283,7 +291,7 @@ static std::vector<std::string> str_material_inps
     "q1ex",
     "q2ex",
     "eos_global_vars",
-    "erosion_type",
+    "erosion_model",
     "erode_tension_val",
     "erode_density_val",
     "void_mat_id",

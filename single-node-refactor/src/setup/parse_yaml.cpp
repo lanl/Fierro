@@ -1437,38 +1437,39 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
             } // Strength model
             
             //extract erosion model
-            else if (a_word.compare("erosion_type") == 0) {
-                std::string type = root["materials"][mat_id]["material"]["erosion_type"].As<std::string>();
+            else if (a_word.compare("erosion_model") == 0) {
+                std::string erosion_model = root["materials"][mat_id]["material"]["erosion_model"].As<std::string>();
 
-                // set the erosion type
-                if (erosion_type_map.find(type) != erosion_type_map.end()) {
+                // set the erosion model
+                if (erosion_model_map.find(erosion_model) != erosion_model_map.end()) {
 
-                    // erosion_type_map[type] returns enum value, e.g., model::erosion
-                    switch(erosion_type_map[type]){
-                        case model::erosion:
+                    // erosion_model_map[erosion_model] returns enum value, e.g., model::erosion
+                    switch(erosion_model_map[erosion_model]){
+                        case model::basicErosion:
                             RUN({
-                                materials(mat_id).erosion_type = model::erosion;
+                                materials(mat_id).erode = &BasicErosionModel::erode;
                             });
                             break;
-                        case model::erosion_contact:
+                        case model::noErosion:
                             RUN({
-                                materials(mat_id).erosion_type = model::erosion_contact;
+                                materials(mat_id).erode = &NoErosionModel::erode;
                             });
                             break;
                         default:
-                            RUN({
-                                materials(mat_id).erosion_type = model::no_erosion;
-                            });
+                            std::cout << "ERROR: invalid erosion input: " << erosion_model << std::endl;
+                            throw std::runtime_error("**** Erosion model Not Understood ****");
                             break;
                     } // end switch
 
                     if (VERBOSE) {
-                        std::cout << "\terosion = " << type << std::endl;
+                        std::cout << "\terosion = " << erosion_model << std::endl;
                     }
 
                 } 
                 else{
-                    std::cout << "ERROR: invalid erosion type input: " << type << std::endl;
+                    std::cout << "ERROR: invalid erosion type input: " << erosion_model<< std::endl;
+                    throw std::runtime_error("**** Erosion model Not Understood ****");
+                    break;
                 } // end if
 
             } // erosion model variables

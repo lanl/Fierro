@@ -134,14 +134,31 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
         } // end logical on state_based strength model
 
         // apply the element erosion model
-        if (material(mat_id).erosion_type == model::erosion) {
-            // starting simple, but in the future call an erosion model
-            if (elem_pres(elem_gid) <= material(mat_id).erode_tension_val
-                || elem_den(elem_gid) <= material(mat_id).erode_density_val) {
-                elem_mat_id(elem_gid) = material(mat_id).void_mat_id;
+        //if (material(mat_id).erosion_type == model::erosion) {
+        //    // starting simple, but in the future call an erosion model
+        //    if (elem_pres(elem_gid) <= material(mat_id).erode_tension_val
+        //        || elem_den(elem_gid) <= material(mat_id).erode_density_val) {
+        //        elem_mat_id(elem_gid) = material(mat_id).void_mat_id;
+        //
+        //        elem_eroded(elem_gid) = true;
+        //    } // end if
+        //} // end if
+        if (material(mat_id).erode != NULL) {
+            
 
-                elem_eroded(elem_gid) = true;
-            } // end if
+            // --- Element erosion model ---
+            material(mat_id).erode(elem_pres,
+                                   elem_stress,
+                                   elem_eroded,
+                                   elem_mat_id,
+                                   elem_gid,
+                                   material(mat_id).void_mat_id,
+                                   material(mat_id).erode_tension_val,
+                                   material(mat_id).erode_density_val,
+                                   elem_sspd,
+                                   elem_den,
+                                   elem_sie(1, elem_gid));
+
         } // end if
 
         if (material(mat_id).EOSType == model::decoupledEOSType) {
@@ -269,16 +286,25 @@ void SGH::update_state2D(const DCArrayKokkos<material_t>& material,
             //                                 rk_alpha);
         } // end logical on state_based strength model
 
-        // --- Pressure ---
+        // --- Erosion ---
         // apply the element erosion model
-        if (material(mat_id).erosion_type == model::erosion) {
-            // starting simple, but in the future call an erosion model
-            if (elem_pres(elem_gid) <= material(mat_id).erode_tension_val
-                || elem_den(elem_gid) <= material(mat_id).erode_density_val) {
-                elem_mat_id(elem_gid) = material(mat_id).void_mat_id;
-            } // end if
-        } // end if
+        //if (material(mat_id).erode != NULL) {
+        //
+        //    // --- Element erosion model ---
+        //    material(mat_id).erode(elem_pres,
+        //                           elem_stress,
+        //                           elem_eroded,
+        //                           elem_mat_id,
+        //                           elem_gid,
+        //                           material(mat_id).void_mat_id,
+        //                           material(mat_id).erode_tension_val,
+        //                           material(mat_id).erode_density_val,
+        //                           elem_sspd,
+        //                           elem_den,
+        //                           elem_sie(1, elem_gid));
+        //} // end if
 
+        // --- Pressure ---
         if (material(mat_id).EOSType == model::decoupledEOSType) {
 
             // --- Pressure ---

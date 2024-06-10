@@ -84,7 +84,7 @@ materials:
             - 1.666666666666667
             - 1.0E-4
             - 1.0
-        erosion_type: erosion
+        erosion_model: basic
         void_mat_id: 2   
         erode_tension_val: 2.0e-7
         erode_density_val: 0.01

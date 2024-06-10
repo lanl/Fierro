@@ -32,18 +32,33 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef EROSION_H
-#define EROSION_H
+#ifndef NO_EROSION_H
+#define NO_EROSION_H
 
 
 // -----------------------------------------------------------------------------
-// This is place holder for basic element Erosion
+// This does nothing
 // ------------------------------------------------------------------------------
-namespace SomeErosionModel {
-    
+namespace NoErosionModel {
+
+        KOKKOS_FUNCTION
+        static void erode (const DCArrayKokkos<double>& elem_pres,
+                           const DCArrayKokkos<double>& elem_stress,
+                           const DCArrayKokkos<bool>& elem_eroded,
+                           const DCArrayKokkos<size_t>& elem_mat_id,
+                           const size_t elem_gid,
+                           const size_t void_mat_id,
+                           const double erode_tension_val,
+                           const double erode_density_val,
+                           const DCArrayKokkos<double>& elem_sspd,
+                           const DCArrayKokkos<double>& elem_den,
+                           const double sie)
+        {
+
+            return;
+        }
 
 } // end namespace
-
 
 
 
