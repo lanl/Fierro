@@ -167,8 +167,6 @@ FEA_Module_SGH::FEA_Module_SGH(
             previous_node_velocities_distributed         = Teuchos::rcp(new MV(all_node_map, num_dim));
             previous_node_coords_distributed             = Teuchos::rcp(new MV(all_node_map, num_dim));
             previous_element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
-            all_node_velocities_distributed              = Teuchos::rcp(new MV(all_node_map, num_dim));
-            node_velocities_distributed                  = Teuchos::rcp(new MV(*all_node_velocities_distributed, map));
             previous_adjoint_vector_distributed          = Teuchos::rcp(new MV(all_node_map, num_dim));
             previous_phi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_node_map, num_dim));
             previous_psi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_element_map, 1));
@@ -1075,10 +1073,7 @@ void FEA_Module_SGH::sgh_solve()
 
     // save initial data
     if (topology_optimization_on || shape_optimization_on) {
-        if(use_solve_checkpoints){
-
-        }
-        else{
+        if(!use_solve_checkpoints){
             time_data[0] = 0;
         }
         // assign current velocity data to multivector
@@ -1213,6 +1208,10 @@ void FEA_Module_SGH::sgh_solve()
                 rnum_elem,
                 nall_nodes);
 
+        if(use_solve_checkpoints){
+                previous_node_velocities_distributed->assign(*all_node_velocities_distributed);
+        }
+
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
             // ---- RK coefficient ----
@@ -1300,9 +1299,7 @@ void FEA_Module_SGH::sgh_solve()
                 }
             }
 #endif
-            if(use_solve_checkpoints){
-                previous_node_velocities_distributed->assign(*all_node_velocities_distributed);
-            }
+
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,
                               node_vel,
