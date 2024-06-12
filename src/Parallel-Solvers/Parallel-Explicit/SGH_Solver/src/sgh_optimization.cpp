@@ -976,8 +976,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
 
             // save data from half time-step completion
             if(use_solve_checkpoints){
-                midpoint_adjoint_vector_distributed->assign(*all_phi_adjoint_vector_distributed);
-                midpoint_phi_adjoint_vector_distributed->assign(*all_adjoint_vector_distributed);
+                midpoint_adjoint_vector_distributed->assign(*all_adjoint_vector_distributed);
+                midpoint_phi_adjoint_vector_distributed->assign(*all_phi_adjoint_vector_distributed);
                 midpoint_psi_adjoint_vector_distributed->assign(*psi_adjoint_vector_distributed);
             }
             else{
@@ -1470,8 +1470,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
 
         if(use_solve_checkpoints){
             //store current solution in the previous vector storage for the next timestep
-            previous_adjoint_vector_distributed->assign(*all_phi_adjoint_vector_distributed);
-            previous_phi_adjoint_vector_distributed->assign(*all_adjoint_vector_distributed);
+            previous_adjoint_vector_distributed->assign(*all_adjoint_vector_distributed);
+            previous_phi_adjoint_vector_distributed->assign(*all_phi_adjoint_vector_distributed);
             previous_psi_adjoint_vector_distributed->assign(*psi_adjoint_vector_distributed);
         }
 
@@ -1511,12 +1511,13 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
 
             // view scope
             {   
-                
+            
                 const_vec_array current_velocity_vector;
                 const_vec_array next_velocity_vector;
                 if(use_solve_checkpoints){
-                    current_velocity_vector = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                    next_velocity_vector    = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    //note that these are assigned backwards because the adjoint loop progresses backwards
+                    current_velocity_vector = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_velocity_vector    = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 }
                 else{   
                     current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -1626,10 +1627,11 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 const_vec_array current_adjoint_vector;
                 const_vec_array next_adjoint_vector;
                 if(use_solve_checkpoints){
-                    current_velocity_vector = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                    current_adjoint_vector  = previous_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                    next_velocity_vector    = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                    next_adjoint_vector     = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    //note that these are assigned backwards because the adjoint loop progresses backwards
+                    current_velocity_vector = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_adjoint_vector  = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_velocity_vector    = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_adjoint_vector     = previous_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 }
                 else{   
                     current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -1695,10 +1697,11 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 const_vec_array next_element_internal_energy;
                 const_vec_array next_psi_adjoint_vector;
                 if(use_solve_checkpoints){
-                    current_element_internal_energy = previous_element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                    current_psi_adjoint_vector   = previous_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                    next_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                    next_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    //note that these are assigned backwards because the adjoint loop progresses backwards
+                    current_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_psi_adjoint_vector   = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_element_internal_energy = previous_element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_psi_adjoint_vector = previous_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 }
                 else{   
                     current_element_internal_energy = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
