@@ -1,36 +1,36 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
- This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
- National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
- Department of Energy/National Nuclear Security Administration. All rights in the program are
- reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
- Security Administration. The Government is granted for itself and others acting on its behalf a
- nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
- derivative works, distribute copies to the public, perform publicly and display publicly, and
- to permit others to do so.
- This program is open source under the BSD-3 License.
- Redistribution and use in source and binary forms, with or without modification, are permitted
- provided that the following conditions are met:
- 1.  Redistributions of source code must retain the above copyright notice, this list of
- conditions and the following disclaimer.
- 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
- conditions and the following disclaimer in the documentation and/or other materials
- provided with the distribution.
- 3.  Neither the name of the copyright holder nor the names of its contributors may be used
- to endorse or promote products derived from this software without specific prior
- written permission.
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- **********************************************************************************************/
+© 2020. Triad National Security, LLC. All rights reserved.
+This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+Department of Energy/National Nuclear Security Administration. All rights in the program are
+reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+Security Administration. The Government is granted for itself and others acting on its behalf a
+nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+derivative works, distribute copies to the public, perform publicly and display publicly, and
+to permit others to do so.
+This program is open source under the BSD-3 License.
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+1.  Redistributions of source code must retain the above copyright notice, this list of
+conditions and the following disclaimer.
+2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+conditions and the following disclaimer in the documentation and/or other materials
+provided with the distribution.
+3.  Neither the name of the copyright holder nor the names of its contributors may be used
+to endorse or promote products derived from this software without specific prior
+written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********************************************************************************************/
 
 #include "state.h"
 #include "mesh.h"
@@ -50,14 +50,12 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
-
     double fuzz  = sim_param.dynamic_options.fuzz;
     double tiny  = sim_param.dynamic_options.tiny;
     double small = sim_param.dynamic_options.small;
 
-
     double graphics_dt_ival  = sim_param.output_options.graphics_time_step;
-    int graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
+    int    graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
 
     double time_initial = sim_param.dynamic_options.time_initial;
     double time_final   = sim_param.dynamic_options.time_final;
@@ -68,7 +66,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
     int rk_num_stages = sim_param.dynamic_options.rk_num_stages;
     int cycle_stop    = sim_param.dynamic_options.cycle_stop;
-
 
     // initialize time, time_step, and cycles
     double time_value = 0.0;
@@ -83,7 +80,10 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = 0.0;
     double graphics_time = 0.0; // the times for writing graphics dump
-    size_t graphics_id = 0;
+    size_t graphics_id   = 0;
+
+    // Verify host side boundary types are set
+    sim_param.boundary_conditions.update_host();
 
     // printf("Writing outputs to file at %f \n", time_value);
     // mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
@@ -144,13 +144,11 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-
     std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value); // Time value = 0.0;
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
-
         // stop calculation if flag
         if (stop_calc == 1) {
             break;
@@ -265,6 +263,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                           elem.vol,
                           elem.div,
                           elem.mat_id,
+                          elem.eroded,
                           corner.force,
                           fuzz,
                           small,
@@ -283,7 +282,6 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
             // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
-
 
             // ---- apply contact boundary conditions to the boundary patches----
             boundary_contact(mesh, sim_param.boundary_conditions, node.vel, time_value);
@@ -343,6 +341,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                              elem.mass,
                              elem.mat_id,
                              elem.statev,
+                             elem.eroded,
                              dt,
                              rk_alpha);
             }
@@ -417,7 +416,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     } // end for cycle loop
 
     auto time_2    = std::chrono::high_resolution_clock::now();
-    auto calc_time = std::chrono::duration_cast <std::chrono::nanoseconds>(time_2 - time_1).count();
+    auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();
 
     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 

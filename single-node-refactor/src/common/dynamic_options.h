@@ -81,7 +81,16 @@ static std::vector<std::string> str_dyn_opts_inps
     "tiny",
     "small",
     "rk_num_stages",
-    "rk_num_bins"
+    "rk_num_bins",
+};
+
+// ----------------------------------
+// required inputs for dynamic options
+// ----------------------------------
+static std::vector<std::string> dyn_opts_required_inps
+{
+    "time_final",
+    "cycle_stop",
 };
 
 #endif // end Header Guard

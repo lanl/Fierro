@@ -1,36 +1,36 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
- This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
- National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
- Department of Energy/National Nuclear Security Administration. All rights in the program are
- reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
- Security Administration. The Government is granted for itself and others acting on its behalf a
- nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
- derivative works, distribute copies to the public, perform publicly and display publicly, and
- to permit others to do so.
- This program is open source under the BSD-3 License.
- Redistribution and use in source and binary forms, with or without modification, are permitted
- provided that the following conditions are met:
- 1.  Redistributions of source code must retain the above copyright notice, this list of
- conditions and the following disclaimer.
- 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
- conditions and the following disclaimer in the documentation and/or other materials
- provided with the distribution.
- 3.  Neither the name of the copyright holder nor the names of its contributors may be used
- to endorse or promote products derived from this software without specific prior
- written permission.
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- **********************************************************************************************/
+© 2020. Triad National Security, LLC. All rights reserved.
+This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+Department of Energy/National Nuclear Security Administration. All rights in the program are
+reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+Security Administration. The Government is granted for itself and others acting on its behalf a
+nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+derivative works, distribute copies to the public, perform publicly and display publicly, and
+to permit others to do so.
+This program is open source under the BSD-3 License.
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+1.  Redistributions of source code must retain the above copyright notice, this list of
+conditions and the following disclaimer.
+2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+conditions and the following disclaimer in the documentation and/or other materials
+provided with the distribution.
+3.  Neither the name of the copyright holder nor the names of its contributors may be used
+to endorse or promote products derived from this software without specific prior
+written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********************************************************************************************/
 
 #include "sgh_solver.h"
 
@@ -70,6 +70,7 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
     const DCArrayKokkos<double>& elem_mass,
     const DCArrayKokkos<size_t>& elem_mat_id,
     const DCArrayKokkos<double>& elem_statev,
+    const DCArrayKokkos<bool>&   elem_eroded,
     const double dt,
     const double rk_alpha) const
 {
@@ -115,32 +116,45 @@ void SGH::update_state(const DCArrayKokkos<material_t>& material,
                         elem_gid);
 
             // --- call strength model ---
-            // material(mat_id).strength_model(elem_pres,
-            //                                 elem_stress,
-            //                                 elem_gid,
-            //                                 mat_id,
-            //                                 elem_statev,
-            //                                 elem_sspd,
-            //                                 elem_den(elem_gid),
-            //                                 elem_sie(elem_gid),
-            //                                 vel_grad,
-            //                                 elem_node_gids,
-            //                                 node_coords,
-            //                                 node_vel,
-            //                                 elem_vol(elem_gid),
-            //                                 dt,
-            //                                 rk_alpha);
+            material(mat_id).strength_model(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            mat_id,
+                                            elem_statev,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(elem_gid),
+                                            vel_grad,
+                                            elem_node_gids,
+                                            node_coords,
+                                            node_vel,
+                                            elem_vol(elem_gid),
+                                            dt,
+                                            rk_alpha);
         } // end logical on state_based strength model
 
-        // --- Pressure ---
-        material(mat_id).eos_model(elem_pres,
-                                   elem_stress,
-                                   elem_gid,
-                                   elem_mat_id(elem_gid),
-                                   elem_statev,
-                                   elem_sspd,
-                                   elem_den(elem_gid),
-                                   elem_sie(1, elem_gid));
+        // apply the element erosion model
+        if (material(mat_id).erosion_type == model::erosion) {
+            // starting simple, but in the future call an erosion model
+            if (elem_pres(elem_gid) <= material(mat_id).erode_tension_val
+                || elem_den(elem_gid) <= material(mat_id).erode_density_val) {
+                elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
+
+                elem_eroded(elem_gid) = true;
+            } // end if
+        } // end if
+
+        if (material(mat_id).eos_type == model::decoupled) {
+            // --- Pressure ---
+            material(mat_id).eos_model(elem_pres,
+                                       elem_stress,
+                                       elem_gid,
+                                       elem_mat_id(elem_gid),
+                                       elem_statev,
+                                       elem_sspd,
+                                       elem_den(elem_gid),
+                                       elem_sie(1, elem_gid));
+        }
     }); // end parallel for
     Kokkos::fence();
 
@@ -246,14 +260,26 @@ void SGH::update_state2D(const DCArrayKokkos<material_t>& material,
         } // end logical on state_based strength model
 
         // --- Pressure ---
-        // material(mat_id).eos_model(elem_pres,
-        //                            elem_stress,
-        //                            elem_gid,
-        //                            elem_mat_id(elem_gid),
-        //                            elem_statev,
-        //                            elem_sspd,
-        //                            elem_den(elem_gid),
-        //                            elem_sie(1, elem_gid));
+        // apply the element erosion model
+        if (material(mat_id).erosion_type == model::erosion) {
+            // starting simple, but in the future call an erosion model
+            if (elem_pres(elem_gid) <= material(mat_id).erode_tension_val
+                || elem_den(elem_gid) <= material(mat_id).erode_density_val) {
+                elem_mat_id(elem_gid) = material(mat_id).blank_mat_id;
+            } // end if
+        } // end if
+
+        if (material(mat_id).eos_type == model::decoupled) {
+            // --- Pressure ---
+            material(mat_id).eos_model(elem_pres,
+                                       elem_stress,
+                                       elem_gid,
+                                       elem_mat_id(elem_gid),
+                                       elem_statev,
+                                       elem_sspd,
+                                       elem_den(elem_gid),
+                                       elem_sie(1, elem_gid));
+        }
     }); // end parallel for
     Kokkos::fence();
 

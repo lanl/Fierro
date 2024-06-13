@@ -91,4 +91,11 @@ static std::vector<std::string> str_output_options_inps
     "graphics_iteration_step"
 };
 
+// ----------------------------------
+// required inputs for output options
+// ----------------------------------
+static std::vector<std::string> output_options_required_inps
+{
+};
+
 #endif // end Header Guard
