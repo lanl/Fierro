@@ -120,7 +120,6 @@ struct Simulation_Parameters
             break;
         case OPTIMIZATION_OBJECTIVE::multi_objective:
             add_TO_module(TO_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});
-            optimization_options.maximize_flag = true;
             derive_multi_objectives();
             break;
         default:
