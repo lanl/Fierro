@@ -14,7 +14,7 @@
    <string>Fierro</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="Icons/IconResourceFile.qrc">
+   <iconset>
     <normaloff>:/Logos/Logos/FIERRO.png</normaloff>:/Logos/Logos/FIERRO.png</iconset>
   </property>
   <property name="autoFillBackground">
@@ -243,7 +243,7 @@
                         <string/>
                        </property>
                        <property name="icon">
-                        <iconset resource="Icons/IconResourceFile.qrc">
+                        <iconset>
                          <normaloff>:/Blue Icons/Blue Icons/mesh.svg</normaloff>:/Blue Icons/Blue Icons/mesh.svg</iconset>
                        </property>
                        <property name="iconSize">
@@ -312,7 +312,7 @@
                         <string/>
                        </property>
                        <property name="icon">
-                        <iconset resource="Icons/IconResourceFile.qrc">
+                        <iconset>
                          <normaloff>:/Blue Icons/Blue Icons/DownloadCube.svg</normaloff>:/Blue Icons/Blue Icons/DownloadCube.svg</iconset>
                        </property>
                        <property name="iconSize">
@@ -381,7 +381,7 @@
                         <string/>
                        </property>
                        <property name="icon">
-                        <iconset resource="Icons/IconResourceFile.qrc">
+                        <iconset>
                          <normaloff>:/Blue Icons/Blue Icons/Shapes.svg</normaloff>:/Blue Icons/Blue Icons/Shapes.svg</iconset>
                        </property>
                        <property name="iconSize">
@@ -515,7 +515,7 @@
                         <string/>
                        </property>
                        <property name="icon">
-                        <iconset resource="Icons/IconResourceFile.qrc">
+                        <iconset resource="../../../../../../MAESTRO/maestro/MAESTRO-GUI/maestro_gui/Icons/IconResourceFile.qrc">
                          <normaloff>:/Blue Icons/Blue Icons/mine.svg</normaloff>:/Blue Icons/Blue Icons/mine.svg</iconset>
                        </property>
                        <property name="iconSize">
@@ -584,7 +584,7 @@
                         <string/>
                        </property>
                        <property name="icon">
-                        <iconset resource="Icons/IconResourceFile.qrc">
+                        <iconset>
                          <normaloff>:/Blue Icons/Blue Icons/Clipboard.svg</normaloff>:/Blue Icons/Blue Icons/Clipboard.svg</iconset>
                        </property>
                        <property name="iconSize">
@@ -697,7 +697,7 @@
                      <string/>
                     </property>
                     <property name="icon">
-                     <iconset resource="Icons/IconResourceFile.qrc">
+                     <iconset resource="../../../../../../MAESTRO/maestro/MAESTRO-GUI/maestro_gui/Icons/IconResourceFile.qrc">
                       <normaloff>:/Blue Icons/Blue Icons/brick.svg</normaloff>:/Blue Icons/Blue Icons/brick.svg</iconset>
                     </property>
                     <property name="iconSize">
@@ -843,7 +843,7 @@
                         <string/>
                        </property>
                        <property name="icon">
-                        <iconset resource="Icons/IconResourceFile.qrc">
+                        <iconset resource="../../../../../../MAESTRO/maestro/MAESTRO-GUI/maestro_gui/Icons/IconResourceFile.qrc">
                          <normaloff>:/Blue Icons/Blue Icons/gear.svg</normaloff>:/Blue Icons/Blue Icons/gear.svg</iconset>
                        </property>
                        <property name="iconSize">
@@ -912,7 +912,7 @@
                         <string/>
                        </property>
                        <property name="icon">
-                        <iconset resource="Icons/IconResourceFile.qrc">
+                        <iconset resource="../../../../../../MAESTRO/maestro/MAESTRO-GUI/maestro_gui/Icons/IconResourceFile.qrc">
                          <normaloff>:/Blue Icons/Blue Icons/Play.svg</normaloff>:/Blue Icons/Blue Icons/Play.svg</iconset>
                        </property>
                        <property name="iconSize">
@@ -981,7 +981,7 @@
                         <string/>
                        </property>
                        <property name="icon">
-                        <iconset resource="Icons/IconResourceFile.qrc">
+                        <iconset resource="../../../../../../MAESTRO/maestro/MAESTRO-GUI/maestro_gui/Icons/IconResourceFile.qrc">
                          <normaloff>:/Blue Icons/Blue Icons/magnify.svg</normaloff>:/Blue Icons/Blue Icons/magnify.svg</iconset>
                        </property>
                        <property name="iconSize">
@@ -1222,7 +1222,7 @@
                         <string/>
                        </property>
                        <property name="icon">
-                        <iconset resource="Icons/IconResourceFile.qrc">
+                        <iconset resource="../../../../../../MAESTRO/maestro/MAESTRO-GUI/maestro_gui/Icons/IconResourceFile.qrc">
                          <normaloff>:/Blue Icons/Blue Icons/Cube.svg</normaloff>:/Blue Icons/Blue Icons/Cube.svg</iconset>
                        </property>
                        <property name="iconSize">
@@ -1359,7 +1359,7 @@
                            <string/>
                           </property>
                           <property name="icon">
-                           <iconset resource="Icons/IconResourceFile.qrc">
+                           <iconset resource="../../../../../../MAESTRO/maestro/MAESTRO-GUI/maestro_gui/Icons/IconResourceFile.qrc">
                             <normaloff>:/Blue Icons/Blue Icons/mine.svg</normaloff>:/Blue Icons/Blue Icons/mine.svg</iconset>
                           </property>
                           <property name="iconSize">
@@ -1508,7 +1508,7 @@
                            <string/>
                           </property>
                           <property name="icon">
-                           <iconset resource="Icons/IconResourceFile.qrc">
+                           <iconset resource="../../../../../../MAESTRO/maestro/MAESTRO-GUI/maestro_gui/Icons/IconResourceFile.qrc">
                             <normaloff>:/Blue Icons/Blue Icons/Play.svg</normaloff>:/Blue Icons/Blue Icons/Play.svg</iconset>
                           </property>
                           <property name="iconSize">
@@ -1584,7 +1584,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <string/>
                           </property>
                           <property name="icon">
-                           <iconset resource="Icons/IconResourceFile.qrc">
+                           <iconset resource="../../../../../../MAESTRO/maestro/MAESTRO-GUI/maestro_gui/Icons/IconResourceFile.qrc">
                             <normaloff>:/Blue Icons/Blue Icons/magnify.svg</normaloff>:/Blue Icons/Blue Icons/magnify.svg</iconset>
                           </property>
                           <property name="iconSize">
@@ -1799,7 +1799,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="Icons/IconResourceFile.qrc">:/Logos/Logos/LANL Logo Ultramarine.png</pixmap>
+               <pixmap>:/Logos/Logos/LANL Logo Ultramarine.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>true</bool>
@@ -1837,7 +1837,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="Icons/IconResourceFile.qrc">:/Logos/Logos/FIERRO.png</pixmap>
+               <pixmap>:/Logos/Logos/FIERRO.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>true</bool>
@@ -1935,7 +1935,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      <string/>
                     </property>
                     <property name="pixmap">
-                     <pixmap resource="Icons/IconResourceFile.qrc">:/Logos/Logos/MATAR_logo2.png</pixmap>
+                     <pixmap>:/Logos/Logos/MATAR_logo2.png</pixmap>
                     </property>
                     <property name="scaledContents">
                      <bool>true</bool>
@@ -1954,7 +1954,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      <string/>
                     </property>
                     <property name="pixmap">
-                     <pixmap resource="Icons/IconResourceFile.qrc">:/Logos/Logos/ParaView_logo.png</pixmap>
+                     <pixmap resource="../../../../../../MAESTRO/maestro/MAESTRO-GUI/maestro_gui/Icons/IconResourceFile.qrc">:/Logos/Logos/ParaView_logo.png</pixmap>
                     </property>
                     <property name="scaledContents">
                      <bool>true</bool>
@@ -6281,7 +6281,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <string>...</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="Icons/IconResourceFile.qrc">
+                  <iconset>
                    <normaloff>:/Blue Icons/Blue Icons/FirstFrame.svg</normaloff>:/Blue Icons/Blue Icons/FirstFrame.svg</iconset>
                  </property>
                  <property name="iconSize">
@@ -6310,7 +6310,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <string>...</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="Icons/IconResourceFile.qrc">
+                  <iconset>
                    <normaloff>:/Blue Icons/Blue Icons/PreviousFrame.svg</normaloff>:/Blue Icons/Blue Icons/PreviousFrame.svg</iconset>
                  </property>
                  <property name="iconSize">
@@ -6327,7 +6327,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <string>...</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="Icons/IconResourceFile.qrc">
+                  <iconset>
                    <normaloff>:/Blue Icons/Blue Icons/NextFrame.svg</normaloff>:/Blue Icons/Blue Icons/NextFrame.svg</iconset>
                  </property>
                  <property name="iconSize">
@@ -6344,7 +6344,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <string>...</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="Icons/IconResourceFile.qrc">
+                  <iconset>
                    <normaloff>:/Blue Icons/Blue Icons/LastFrame.svg</normaloff>:/Blue Icons/Blue Icons/LastFrame.svg</iconset>
                  </property>
                  <property name="iconSize">
@@ -6399,7 +6399,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <string>threshold</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="Icons/IconResourceFile.qrc">
+                  <iconset>
                    <normaloff>:/Blue Icons/Blue Icons/crop.svg</normaloff>:/Blue Icons/Blue Icons/crop.svg</iconset>
                  </property>
                  <property name="iconSize">
@@ -6624,7 +6624,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <x>0</x>
      <y>0</y>
      <width>1156</width>
-     <height>37</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">
