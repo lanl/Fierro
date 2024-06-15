@@ -104,6 +104,7 @@ struct Optimization_Options: Yaml::DerivedFields {
   std::vector<Volume> objective_regions;
   DCArrayKokkos<Volume> optimization_objective_regions;
   bool maximize_flag = false;
+  bool normalized_objective = false;
   bool method_of_moving_asymptotes = false;                   //optimization algorithm that approximates curvature
   double simp_penalty_power = 3.0;                            //TO option; bigger value means less intermediate density
   bool thick_condition_boundary = true;                       //constrains element density if a patch is attached to BC/LC
