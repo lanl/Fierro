@@ -254,21 +254,21 @@ struct material_t
 ///
 /// In the code: CArray <MaterialModelValues_t> MaterialModelValues;
 /////////////////////////////////////////////////////////////////////////////
-struct MaterialModelValues_t{
+struct MaterialModelVars_t{
 
     ///<enums can be implemented in the model namespaces to unpack e.g., physics_global_vars
 
-    CArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
-    CArrayKokkos<double> eos_state_vars;       ///< Array of state (in each element) variables for the EOS
+    DCArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
+    DCArrayKokkos<double> eos_state_vars;       ///< Array of state (in each element) variables for the EOS
 
-    CArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
-    CArrayKokkos<double> strength_state_vars;  ///< Array of state (in each element) variables for the strength
+    DCArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
+    DCArrayKokkos<double> strength_state_vars;  ///< Array of state (in each element) variables for the strength
     
-    CArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
+    DCArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
 
-    CArrayKokkos<double> erosion_global_vars;  ///< Array of global variables for the erosion model
+    DCArrayKokkos<double> erosion_global_vars;  ///< Array of global variables for the erosion model
 
-    CArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
+    DCArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
 
     // ...
 
@@ -291,25 +291,45 @@ static std::vector<std::string> str_material_inps
     "q1ex",
     "q2ex",
     "eos_global_vars",
+    "strength_global_vars",
     "erosion_model",
     "erode_tension_val",
     "erode_density_val",
     "void_mat_id",
 };
 
-// ----------------------------------
-// required inputs for material options
-// ----------------------------------
-static std::vector<std::string> material_required_inps
+// ---------------------------------------------------------------
+// required inputs for material options are specified here.
+// The requirements vary depending on the problem type and solver
+// ---------------------------------------------------------------
+static std::vector<std::string> material_hydrodynamics_required_inps
 {
     "id",
     "eos_model",
     "eos_model_type",
-    // "eos_global_vars",
-    // "strength_model",
-    // "strength_model_type"
+};
+// required inputs are only required for eos problems
+
+static std::vector<std::string> material_solid_dynamics_required_inps
+{
+    "id",
+    "strength_model",
+    "strength_model_type"
 };
 
+
+static std::vector<std::string> material_solid_statics_required_inps
+{
+    "id",
+    "strength_global_vars"
+};
+
+
+static std::vector<std::string> material_thermal_statics_required_inps
+{
+    "id",
+    "thermal_global_vars"
+};
 
 
 #endif // end Header Guard

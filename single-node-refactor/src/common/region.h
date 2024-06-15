@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -107,7 +107,7 @@ struct reg_fill_t
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
 
-    DCArrayKokkos<double> origin; ///< Origin for region
+    double origin[3]; ///< Origin for region
 };
 
 // ----------------------------------

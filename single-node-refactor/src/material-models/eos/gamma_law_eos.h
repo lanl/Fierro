@@ -81,7 +81,6 @@ namespace GammaLawGasEOSModel {
     {
 
         double gamma = elem_state_vars(elem_gid, VarNames::gamma);
-        double csmin = elem_state_vars(elem_gid, VarNames::min_sound_speed);
 
         // pressure
         elem_pres(elem_gid) = (gamma - 1.0) * sie * den;

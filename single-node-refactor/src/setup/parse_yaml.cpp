@@ -506,9 +506,9 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
     // get the mesh variables names set by the user
     std::vector<std::string> user_mesh_inputs;
 
-    mesh_input.origin = DCArrayKokkos<double> (3, "mesh_input.origin");
-    mesh_input.length = DCArrayKokkos<double> (3, "mesh_input.length");
-    mesh_input.num_elems = DCArrayKokkos<int> (3, "mesh_input.num_elems");
+    //mesh_input.origin = DCArrayKokkos<double> (3, "mesh_input.origin");
+    //mesh_input.length = DCArrayKokkos<double> (3, "mesh_input.length");
+    //mesh_input.num_elems = DCArrayKokkos<int> (3, "mesh_input.num_elems");
 
 
     // extract words from the input file and validate they are correct
@@ -611,7 +611,16 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
             double x1 = std::stod(numbers[0]);
             double y1 = std::stod(numbers[1]);
-            double z1 = std::stod(numbers[2]);
+            double z1;
+
+            if(numbers.size()==3){ 
+                // 3D
+                z1 = std::stod(numbers[2]);
+            }
+            else {
+                // 2D
+                z1 = 0.0;
+            } // end if
 
             if (VERBOSE) {
                 std::cout << "\tx1 = " << x1 << std::endl;
@@ -620,11 +629,9 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             }
 
             // storing the origin values as
-            RUN({
-                mesh_input.origin(0) = x1;
-                mesh_input.origin(1) = y1;
-                mesh_input.origin(2) = z1;
-            });
+            mesh_input.origin[0] = x1;
+            mesh_input.origin[1] = y1;
+            mesh_input.origin[2] = z1;
         }
         // Extents of the mesh
         else if (a_word.compare("length") == 0) {
@@ -637,7 +644,17 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
             double l1 = std::stod(numbers[0]);
             double l2 = std::stod(numbers[1]);
-            double l3 = std::stod(numbers[2]);
+            double l3;
+
+            if(numbers.size()==3){ 
+                // 3D
+                l3 = std::stod(numbers[2]);
+            }
+            else {
+                // 2D
+                l3 = 0.0;
+            } // end if
+
 
             if (VERBOSE) {
                 std::cout << "\tl1 = " << l1 << std::endl;
@@ -646,11 +663,9 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             }
 
             // storing the length values
-            RUN({
-                mesh_input.length(0) = l1;
-                mesh_input.length(1) = l2;
-                mesh_input.length(2) = l3;
-            });
+            mesh_input.length[0] = l1;
+            mesh_input.length[1] = l2;
+            mesh_input.length[2] = l3;
         }
         // Number of elements per direction
         else if (a_word.compare("num_elems") == 0) {
@@ -664,7 +679,17 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
             int n1 = std::stod(numbers[0]);
             int n2 = std::stod(numbers[1]);
-            int n3 = std::stod(numbers[2]);
+            int n3;
+
+            if(numbers.size()==3){ 
+                // 3D
+                n3 = std::stod(numbers[2]);
+            }
+            else {
+                // 2D
+                n3 = 0;
+            } // end if
+
 
             if (VERBOSE) {
                 std::cout << "\tn1 = " << n1 << std::endl;
@@ -673,11 +698,9 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             }
 
             // storing the number of elements
-            RUN({
-                mesh_input.num_elems(0) = n1;
-                mesh_input.num_elems(1) = n2;
-                mesh_input.num_elems(2) = n3;
-            });
+            mesh_input.num_elems[0] = n1;
+            mesh_input.num_elems[1] = n2;
+            mesh_input.num_elems[2] = n3;
         }
         // Polynomial order for the mesh
         else if (a_word.compare("polynomial_order") == 0) {
@@ -858,11 +881,12 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 
     region_fills = DCArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
 
-    for(int i=0; i< num_regions; i++){
-        region_fills.host(i).origin = DCArrayKokkos<double> (3, "region_fills.origin");
-        region_fills.host(i).origin.update_device();
-    }
-    region_fills.update_device();
+    // origin is static size 3
+    //for(int i=0; i< num_regions; i++){
+    //    region_fills.host(i).origin = DCArrayKokkos<double> (3, "region_fills.origin");
+    //    region_fills.host(i).origin.update_device();
+    //}
+    //region_fills.update_device();
 
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {
@@ -951,7 +975,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                 // y-component of velocity
                 double v = root["regions"][reg_id]["fill_volume"]["v"].As<double>();
                 if (VERBOSE) {
-                    std::cout << "\tie = " << v << std::endl;
+                    std::cout << "\tv = " << v << std::endl;
                 }
 
                 RUN({
@@ -1126,7 +1150,16 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 
                 double x1 = std::stod(numbers[0]);
                 double y1 = std::stod(numbers[1]);
-                double z1 = std::stod(numbers[2]);
+                double z1;
+
+                if(numbers.size()==3){ 
+                    // 3D
+                    z1 = std::stod(numbers[2]);
+                }
+                else {
+                    // 2D
+                    z1 = 0.0;
+                } //
 
                 if (VERBOSE) {
                     std::cout << "\tx1 = " << x1 << std::endl;
@@ -1136,9 +1169,9 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 
                 // storing the origin values as (x1,y1,z1)
                 RUN({
-                    region_fills(reg_id).origin(0) = x1;
-                    region_fills(reg_id).origin(1) = y1;
-                    region_fills(reg_id).origin(2) = z1;
+                    region_fills(reg_id).origin[0] = x1;
+                    region_fills(reg_id).origin[1] = y1;
+                    region_fills(reg_id).origin[2] = z1;
                 });
             } // origin
             else {
@@ -1181,7 +1214,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
         std::vector<std::string> user_str_material_inps;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_required_inps);
+        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_hydrodynamics_required_inps);
 
         // loop over the words in the material input definition
         for (auto& a_word : user_str_material_inps) {
@@ -1532,6 +1565,40 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                     if (VERBOSE) {
                         std::cout << "\t var = " << eos_var << std::endl;
+                    }
+                } // end loop over global vars
+            } // "eos_global_vars"
+            
+            // exact the strength_global_vars
+            else if (a_word.compare("strength_global_vars") == 0) {
+                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+
+                size_t num_global_vars = mat_global_vars_yaml.Size();
+
+                std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
+                
+
+                materials.host(mat_id).strength_global_vars = DCArrayKokkos<double>(num_global_vars, "material.strength_global_vars");
+                materials.host(mat_id).strength_global_vars.update_device();
+                RUN({
+                    materials(mat_id).num_strength_global_vars = num_global_vars;
+                });
+                materials.update_device();
+
+                if (VERBOSE) {
+                    std::cout << "num global strength vars = " << num_global_vars << std::endl;
+                }
+
+                // store the global eos model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double strength_var = root["materials"][mat_id]["material"]["strength_global_vars"][global_var_id].As<double>();
+                    
+                    RUN({
+                        materials(mat_id).strength_global_vars(global_var_id) = strength_var;
+                    });
+
+                    if (VERBOSE) {
+                        std::cout << "\t var = " << strength_var << std::endl;
                     }
                 } // end loop over global vars
             } // "eos_global_vars"
