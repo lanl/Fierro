@@ -1140,6 +1140,9 @@ void FEA_Module_SGH::sgh_solve()
         } // end view scope
 
         if(use_solve_checkpoints){
+            //reset containers
+            dynamic_checkpoint_set->clear();
+            cached_dynamic_checkpoints->clear();
             //always assign t=0 as a checkpoint
             Dynamic_Checkpoint temp(3,0,time_value, dt, std::numeric_limits<int>::max());
             temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[0]);

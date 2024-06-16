@@ -3035,7 +3035,7 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
         // stop calculation if flag
         // if (stop_calc == 1) break;
 
-        if (simparam->dynamic_options.output_time_sequence_level >= TIME_OUTPUT_LEVEL::high) {
+        if (simparam->dynamic_options.output_time_sequence_level >= TIME_OUTPUT_LEVEL::extreme) {
             if (cycle == 0) {
                 if (myrank == 0) {
                     printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
@@ -3561,9 +3561,9 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     auto time_difference = time_2 - time_1;
     // double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
     double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_difference).count();
-    if (myrank == 0) {
-        printf("\nCalculation time in seconds: %f \n", calc_time * 1e-09);
-    }
+    // if (myrank == 0) {
+    //     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-09);
+    // }
 
     // IE_loc_sum = 0.0;
     // KE_loc_sum = 0.0;
