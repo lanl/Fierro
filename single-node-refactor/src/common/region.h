@@ -44,16 +44,17 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ==============================================================================
 namespace region
 {
-// for tagging boundary faces
-enum vol_tag
-{
-    global = 0,         // tag every elements in the mesh
-    box = 1,            // tag all elements inside a box
-    cylinder = 2,       // tag all elements inside a cylinder
-    sphere = 3,         // tag all elements inside a sphere
-    readVoxelFile = 4,  // tag all elements in a voxel mesh input WARING: Currently unimplemented
-    planes = 5,         // tag all elements between two planes
-};
+    // for tagging boundary faces
+    enum vol_tag
+    {
+        no_volume = 0,
+        global = 1,         // tag every elements in the mesh
+        box = 2,            // tag all elements inside a box
+        cylinder = 3,       // tag all elements inside a cylinder
+        sphere = 4,         // tag all elements inside a sphere
+        readVoxelFile = 5,  // tag all elements in a voxel mesh input WARING: Currently unimplemented
+        planes = 6,         // tag all elements between two planes
+    };
 } // end of namespace
 
 static std::map<std::string, region::vol_tag> region_type_map
