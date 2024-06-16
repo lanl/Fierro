@@ -76,6 +76,7 @@ void setup(const CArrayKokkos <material_t> &material,
            const DViewCArrayKokkos <double> &mat_pt_mass,
            const DViewCArrayKokkos <size_t> &elem_mat_id,
            const DViewCArrayKokkos <double> &elem_statev,
+           CArrayKokkos <double> &mat_pt_statev,
            const CArrayKokkos <double> &state_vars,
            const DViewCArrayKokkos <double> &corner_mass,
            const size_t num_fills,
@@ -134,7 +135,7 @@ void setup(const CArrayKokkos <material_t> &material,
     Kokkos::fence();
     
     // the state_vars from the file
-    DCArrayKokkos <double> file_state_vars(num_materials,mesh.num_elems,num_state_vars);
+    DCArrayKokkos <double> file_state_vars(num_materials, mesh.num_elems, num_state_vars);
     for (size_t mat_id=0; mat_id<num_materials; mat_id++){
         
         if (read_from_file.host(mat_id) == model_init::user_init){
@@ -310,8 +311,13 @@ void setup(const CArrayKokkos <material_t> &material,
                 else{
                     // use the values in the input file
                     // set state vars for the region where mat_id resides
+                    //printf("before assign mat_pt_statev \n");
                     for (size_t var=0; var<material(mat_id).num_state_vars; var++){
-                        elem_statev(elem_gid,var) = state_vars(mat_id,var);
+                        elem_statev(elem_gid,var) = state_vars(mat_id, var);
+                        // for (int gauss_lid = 0; gauss_lid < mat_pt.num_leg_pts; gauss_lid++){
+                        //     int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+                        //     mat_pt_statev(gauss_gid, var) = elem_statev(elem_gid,var);
+                        // }
                     } // end for
                     
                 } // end logical on type
@@ -562,8 +568,7 @@ void setup(const CArrayKokkos <material_t> &material,
                         interp_sie += ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*zone_sie(1, T_dof_gid);
                     }
                     mat_pt_sie(leg_gid) = interp_sie;
-                    // -- FIX make over legendre points
-                    // --- Pressure and stress ---
+                    
                     material(mat_id).eos_model(mat_pt_pres,
                                             mat_pt_stress,
                                             elem_gid,

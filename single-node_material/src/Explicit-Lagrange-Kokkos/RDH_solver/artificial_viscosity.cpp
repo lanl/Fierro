@@ -34,11 +34,18 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
         // Tr(grad^s u) //
         CArrayKokkos <double> div_u(mesh.num_elems*mesh.num_leg_gauss_in_elem, "div_u");
 
+        CArrayKokkos <double> u_star(mesh.num_elems, mesh.num_dims, "u star");
+
+
         CArrayKokkos <double> mu1(mesh.num_elems*mesh.num_leg_gauss_in_elem, "mu_1");
         CArrayKokkos <double> mu2(mesh.num_elems*mesh.num_leg_gauss_in_elem, "mu_2");
         CArrayKokkos <double> mu(mesh.num_elems*mesh.num_leg_gauss_in_elem, "mu");
 
         FOR_ALL(elem_gid, 0, mesh.num_elems,{
+            u_star(elem_gid, 0) = 0.0;
+            u_star(elem_gid, 1) = 0.0;
+            u_star(elem_gid, 2) = 0.0;
+
             for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
                 int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
 
@@ -140,7 +147,19 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
         });// elem_gid
         Kokkos::fence(); 
 
-        
+        // fill u star
+        FOR_ALL(elem_gid, 0, mesh.num_elems,{
+            for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
+                int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+                for(int i = 0; i < mesh.num_dims; i++){
+                    u_star(elem_gid, i) += mat_pt_vel(gauss_gid, i);
+                }// i
+            }// gauss_lid
+            u_star(elem_gid, 0) = u_star(elem_gid, 0)/mesh.num_leg_gauss_in_elem;
+            u_star(elem_gid, 1) = u_star(elem_gid, 1)/mesh.num_leg_gauss_in_elem;
+            u_star(elem_gid, 2) = u_star(elem_gid, 2)/mesh.num_leg_gauss_in_elem;
+
+        });
 
         // fill div_u
         FOR_ALL(elem_gid, 0, mesh.num_elems,{
@@ -188,7 +207,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 for(int i = 0; i < mesh.num_dims; i++){
                     double temp = 0.0;
                     for (int j = 0; j < mesh.num_dims; j++){
-                        temp += JJ0Inv(gauss_gid, i, j)*mat_pt_vel(gauss_gid, j);
+                        temp += JJ0Inv(gauss_gid, i, j)*(mat_pt_vel(gauss_gid, j)-u_star(elem_gid, j));
                     }// j
                     JJ0Inv_dot_u(gauss_gid, i) = temp;
                     //printf(" JJ0Inv_dot_u : %f \n", mat_pt_vel(gauss_gid, i));
@@ -205,7 +224,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 for(int i = 0; i < mesh.num_dims; i++){
                     
                     l2_JJ0Inv_dot_u(gauss_gid) += JJ0Inv_dot_u(gauss_gid, i)*JJ0Inv_dot_u(gauss_gid, i);
-                    l2_vel_inv(gauss_gid) += mat_pt_vel(gauss_gid, i)*mat_pt_vel(gauss_gid, i);
+                    l2_vel_inv(gauss_gid) += (mat_pt_vel(gauss_gid, i) - u_star(elem_gid, i))*(mat_pt_vel(gauss_gid, i) - u_star(elem_gid, i));
 
                 }// i
             }// gauss_lid
@@ -230,10 +249,10 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 for(int i = 0; i < mesh.num_dims; i++){
                     double temp2 = 0.0;
                     for (int j = 0; j < mesh.num_dims; j++){
-                        temp2 += grad_u(gauss_gid, i, j)*mat_pt_vel(gauss_gid, j);
+                        temp2 += grad_u(gauss_gid, i, j)*(mat_pt_vel(gauss_gid, j)-u_star(elem_gid, j));
                     }// j
 
-                    temp1 += mat_pt_vel(gauss_gid, i)*temp2;
+                    temp1 += (mat_pt_vel(gauss_gid, i)-u_star(elem_gid, i))*temp2;
                 }// i
                 Delta_u(gauss_gid) = temp1*l2_vel_inv(gauss_gid);
             }// gauss_lid
@@ -254,7 +273,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 
                 mat_pt_h(gauss_gid) = pow( vol(elem_gid), 1.0/mesh.num_dims )/mesh.num_leg_gauss_in_elem;
 
-                double coeff = 1.0/( 1.0 + exp( div_u(gauss_gid) ) );
+                double coeff = 1.0/( 1.0 + exp( Delta_u(gauss_gid) ));//div_u(gauss_gid) ) );
 
                 double phi_curl = 1.0;
 
@@ -274,7 +293,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
 
                 mu(gauss_gid) = coeff*phi_curl*den(gauss_gid)*h_pert*sspd(gauss_gid);
 
-                mu(gauss_gid) += coeff*den(gauss_gid)*h_pert*h_pert*abs( div_u(gauss_gid) );
+                mu(gauss_gid) += coeff*phi_curl*den(gauss_gid)*h_pert*h_pert*abs( Delta_u(gauss_gid) );//div_u(gauss_gid) );
 
             }// gauss_lid
         });// elem_gid

@@ -55,14 +55,14 @@ void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
             //printf("NEGATIVE INTERNAL ENERGY %f \n", zone_sie( 1, zone_gid_1 ));
             // printf("Switching to lumped mass at thermo dof %d \n", zone_gid_1);
 
-            // zone_sie(1, zone_gid_1) = 0.0;
-            // zone_sie(1, zone_gid_1) = zone_sie( 0, zone_gid_1 ) + dt*F_dot_u(zone_gid_1)/lumped_mass(zone_gid_1);
-            // //zone_sie(1, zone_gid_1) += dt*0.5*(source(stage, zone_gid_1) + source(0, zone_gid_1))/lumped_mass(zone_gid_1);
+            zone_sie(1, zone_gid_1) = 0.0;
+            zone_sie(1, zone_gid_1) = zone_sie( 0, zone_gid_1 ) + dt*F_dot_u(zone_gid_1)/lumped_mass(zone_gid_1);
+            //zone_sie(1, zone_gid_1) += dt*0.5*(source(stage, zone_gid_1) + source(0, zone_gid_1))/lumped_mass(zone_gid_1);
 
 
-            // if (zone_sie( 1, zone_gid_1 ) <= 0.0){
-            //     printf("INTERNAL ENERGY IS NEGATIVE AFTER MASS LUMPING%f \n", zone_sie( 1, zone_gid_1 ));
-            // }
+            if (zone_sie( 1, zone_gid_1 ) <= 0.0){
+                printf("INTERNAL ENERGY IS NEGATIVE AFTER MASS LUMPING%f \n", zone_sie( 1, zone_gid_1 ));
+            }
         }
 
     });//end for all

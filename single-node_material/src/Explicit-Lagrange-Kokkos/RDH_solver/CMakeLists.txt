@@ -18,7 +18,7 @@ add_executable(FierroRDH driver.cpp read_mesh.cpp eos.cpp outputs.cpp time_integ
                 user_mat.cpp user_mat_init.cpp input.cpp setup.cpp geometry.cpp boundary.cpp
                 momentum.cpp internal_energy.cpp rdh_solve.cpp stress_tensor.cpp force_tensor.cpp L2_operator.cpp
                 Thermo_L2_operator.cpp kinematic_mass_matrix.cpp thermodynamic_mass_matrix.cpp sie_source.cpp
-                artificial_viscosity.cpp invert_matrix.cpp sie_correction.cpp)
+                artificial_viscosity.cpp invert_matrix.cpp sie_correction.cpp correct_force_tensor.cpp)
 
 if (CUDA)
   add_definitions(-DHAVE_CUDA=1)

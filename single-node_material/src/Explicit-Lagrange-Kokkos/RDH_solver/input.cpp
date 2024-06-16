@@ -84,7 +84,7 @@ void input(CArrayKokkos <material_t> &material,
 
     // ---- graphics information ----
     graphics_cyc_ival = 1000000;
-    graphics_dt_ival  = 0.01;//time_final;
+    graphics_dt_ival  = 0.1;//1.0;//time_final;
 
     
     // --- number of material regions ---
@@ -98,16 +98,16 @@ void input(CArrayKokkos <material_t> &material,
     
     
     // --- number of fill regions ---
-    num_fills = 1;  // =2 for Sedov,Sod; =3 for Triple point; =1 Noh3D,TGV, material (box)
+    num_fills = 2;  // =2 for Sedov,Sod; =3 for Triple point; =1 Noh3D,TGV, material (box)
     mat_fill = CArrayKokkos <mat_fill_t> (num_fills); // create fills
     
     
     // --- number of boundary conditions ---
-    num_bcs= 1;  // =6 for Sedov, Triple, TGV, Sod; =3 Noh3D; 1 for material (box)
+    num_bcs = 6;  // =6 for Sedov, Triple, TGV, Sod; =3 Noh3D; 1 for material (box)
     boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---
-    test_problem = test::box;//test::Sedov3D;//test::TaylorGreen;//test::TriplePoint;//test::Noh3D;//test::TaylorAnvil;//
+    test_problem = test::Sedov3D;//test::TaylorGreen;//test::TriplePoint;//test::Noh3D;//test::TaylorAnvil;//test::box;//
     
     
     // ---- fill instructions and intial conditions ---- //
@@ -157,7 +157,7 @@ void input(CArrayKokkos <material_t> &material,
             mat_fill(1).volume = region::sphere; // fill a sphere
             mat_fill(1).mat_id = 0;              // material id
             mat_fill(1).radius1 = 0.0;           // inner radius of fill region
-            mat_fill(1).radius2 = 1.2/8.0;//16.0;//32.0;//30.0;//      // outer radius of fill region
+            mat_fill(1).radius2 = 1.2/16.0;//16.0;//32.0;//30.0;//      // outer radius of fill region
             mat_fill(1).den = 1.0;               // initial density
             mat_fill(1).sie = (963.652344*pow((1.2/30.0),3))/pow((mat_fill(1).radius2),3);
             
@@ -667,10 +667,10 @@ void input(CArrayKokkos <material_t> &material,
         RUN({
             
             
-            material(0).eos_model = ideal_gas;//user_eos_model;// EOS model is required
+            material(0).eos_model = user_eos_model;//ideal_gas;// EOS model is required
             
-            material(0).strength_type =  model::none; //model::hypo; // 
-            material(0).strength_model = NULL;//user_strength_model;// 
+            material(0).strength_type =  model::hypo; //model::none; // 
+            material(0).strength_model = user_strength_model; //NULL;// 
             
             material(0).q1        = 0.1;       // accoustic coefficient
             material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver

@@ -33,6 +33,11 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                DViewCArrayKokkos <double> &mat_pt_h,
                DViewCArrayKokkos <size_t> &elem_mat_id,
                DViewCArrayKokkos <double> &elem_statev,
+               CArrayKokkos <double> &mat_pt_statev,
+               CArrayKokkos <double> &grad_vel,
+               CArrayKokkos <double> &sym_grad_vel,
+               CArrayKokkos <double> &anti_sym_grad_vel,
+               CArrayKokkos <double> &div_vel,
                double &time_value,
                const double time_final,
                const double dt_max,
@@ -129,7 +134,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
     FOR_ALL( i, 0, mesh.num_elems,{
         for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
             int gauss_gid = mesh.legendre_in_elem(i, gauss_lid);
-            char_length_t0(gauss_gid) = pow(elem_vol(i), 1/mesh.num_dims);///mesh.num_leg_gauss_in_elem;
+            char_length_t0(gauss_gid) = pow( elem_vol(i), 1/mesh.num_dims )/mesh.Pn;
         }
     });
     Kokkos::fence();
@@ -173,12 +178,14 @@ void rdh_solve(CArrayKokkos <material_t> &material,
         init_tn(mesh,
                 node_coords,
                 node_vel,
-                zone_sie);
+                zone_sie,
+                mat_pt_stress);
         //printf("Values at t_n initialized \n");
 	    
         
         CArrayKokkos <double> force_tensor(rk_num_stages, mesh.num_nodes, mesh.num_zones, mesh.num_dims, "F");
         CArrayKokkos <double> sigma_a(rk_num_stages, mat_pt.num_leg_pts, mesh.num_dims, mesh.num_dims, "sigma_a");
+        CArrayKokkos <double> deviatoric_stress_rhs(rk_num_stages, mat_pt.num_leg_pts, mesh.num_dims, mesh.num_dims, "sigma_dev");
         CArrayKokkos <double> L2(rk_num_stages, mesh.num_nodes, mesh.num_dims, "L2");
 
         FOR_ALL(i, 0, mesh.num_nodes,
@@ -206,7 +213,8 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                     
                     sigma_a(0,j,k,l) = 0.0;
                     sigma_a(1,j,k,l) = 0.0;
-
+                    deviatoric_stress_rhs(0,j,k,l) = 0.0;
+                    deviatoric_stress_rhs(1,j,k,l) = 0.0;
         });
         Kokkos::fence();
 
@@ -237,12 +245,61 @@ void rdh_solve(CArrayKokkos <material_t> &material,
         
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
             
-            
+            get_grad_vel(grad_vel,
+                              node_vel,
+                              mat_pt.gauss_legendre_jacobian_inverse,
+                              mesh,
+                              ref_elem,
+                              rk_stage);
 
+            get_sym_grad_vel(sym_grad_vel,
+                              node_vel,
+                              mat_pt.gauss_legendre_jacobian_inverse,
+                              mesh,
+                              ref_elem,
+                              rk_stage);
+
+            get_anti_sym_grad_vel(anti_sym_grad_vel,
+                                  node_vel,
+                                  mat_pt.gauss_legendre_jacobian_inverse,
+                                  mesh,
+                                  ref_elem,
+                                  rk_stage);
+
+            get_div_vel(div_vel,
+                        node_vel,
+                        mat_pt.gauss_legendre_jacobian_inverse,
+                        mesh,
+                        ref_elem,
+                        rk_stage);
+            
 
             // build stress tensor at the current stage
             //printf("Building stress tensor at stage %lu in cycle %lu \n", rk_stage, cycle);
-            get_stress_tensor(mat_pt_stress, rk_stage, mesh, mat_pt_pres);
+            //if(material(0).strength_type == model::hypo){
+                //FOR_ALL(gauss_gid, 0, mat_pt.num_leg_pts,{
+            // material(0).strength_model(deviatoric_stress_rhs,
+            //         mat_pt_stress,
+            //         mat_pt_statev,
+            //         sym_grad_vel,
+            //         anti_sym_grad_vel,
+            //         div_vel,
+            //         mat_pt.num_leg_pts,
+            //         rk_stage);
+            //     //});
+            // // //     //Kokkos::fence();
+                
+            // get_deviatoric_stress_tensor( mat_pt_stress,
+            //                                 rk_stage,
+            //                                 mesh,
+            //                                 deviatoric_stress_rhs,
+            //                                 mat_pt.statev,
+            //                                 dt );
+
+            // }
+            // else{
+            get_stress_tensor( mat_pt_stress, rk_stage, mesh, mat_pt_pres );
+            // }
             //printf("Stress tensor built \n");
 
             
@@ -345,6 +402,9 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                     }// dim
                 }// gauss_lid
             });// for_all
+            if (rk_stage == 1){
+                correct_force_tensor(force_tensor, rk_stage, mesh, L2, M_V, lumped_mass, F_dot_ones);
+            }
             
             CArrayKokkos <double> Thermo_L2(mesh.num_zones,"Thermo_L2");
             CArrayKokkos <double> M_dot_e(mesh.num_zones,"M delta e");
@@ -472,6 +532,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             //printf("elem_vol updated \n");
             FOR_ALL(elem_gid,  0, mesh.num_elems, {
                 size_t mat_id = elem_mat_id(elem_gid);
+                //printf("mat id  : %d \n", mat_id);
                 for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
                     int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
                     // density

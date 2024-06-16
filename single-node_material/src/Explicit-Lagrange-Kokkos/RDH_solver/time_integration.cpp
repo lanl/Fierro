@@ -365,7 +365,8 @@ void get_timestep_HexN(mesh_t &mesh,
 void init_tn(const mesh_t &mesh,
              DViewCArrayKokkos <double> &node_coords,
              DViewCArrayKokkos <double> &node_vel,
-             DViewCArrayKokkos <double> &zone_sie){
+             DViewCArrayKokkos <double> &zone_sie,
+             DViewCArrayKokkos <double> &stress){
 
     // save elem quantities
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -385,6 +386,15 @@ void init_tn(const mesh_t &mesh,
             node_coords(0,node_gid,i) = node_coords(1,node_gid,i);
             node_vel(0,node_gid,i) = node_vel(1,node_gid,i);
         }
+    }); // end parallel for
+    Kokkos::fence();
+
+    FOR_ALL(gauss_gid, 0, mesh.num_elems*mesh.num_leg_gauss_in_elem, {
+        for(size_t i=0; i<mesh.num_dims; i++){
+            for(size_t j=0; j<mesh.num_dims; j++){
+                stress(0,gauss_gid,i,j) = stress(1,gauss_gid,i,j);
+            }
+        }  // end for
     }); // end parallel for
     Kokkos::fence();
     

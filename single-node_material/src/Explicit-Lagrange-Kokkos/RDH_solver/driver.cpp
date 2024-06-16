@@ -46,7 +46,7 @@ double time_final = 1.e16;
 double dt = 1.e-8;
 double dt_max = 1.0e-2;
 double dt_min = 1.0e-8;
-double fe_order = 2.0;
+double fe_order = 1.0;
 double dt_cfl = 1.0/(2.0*fe_order+1.0);
 double dt_start = 1.0e-8;
 
@@ -186,21 +186,11 @@ int main(int argc, char *argv[]){
         const size_t num_leg_pts_per_elem = ref_elem.num_gauss_leg_in_elem;
         // printf(" num_leg_pts_per_elem = %d\n", num_leg_pts_per_elem);
         //printf(" num_zones_in_elem = %zu and num_zones = %zu \n", mesh.num_zones_in_elem, num_zones);
+        
         // allocate elem_statev
         elem.statev = CArray <double> (num_elems, num_state_vars);
-
-        // --- make dual views of data on CPU and GPU ---
-        //  Notes:
-        //     Instead of using a struct of dual types like the mesh type, 
-        //     individual dual views will be made for all the state 
-        //     variables.  The motivation is to reduce memory movement 
-        //     when passing state into a function.  Passing a struct by 
-        //     reference will copy the meta data and pointers for the 
-        //     variables held inside the struct.  Since all the mesh 
-        //     variables are typically used by most functions, a single 
-        //     mesh struct or passing the arrays will be roughly equivalent 
-        //     for memory movement.
-
+        mat_pt.statev = CArrayKokkos <double> (num_leg_pts, num_state_vars);
+        
         
         // create Dual Views of the individual node struct variables
         DViewCArrayKokkos <double> node_coords(&node.coords(0,0,0),
@@ -368,6 +358,7 @@ int main(int argc, char *argv[]){
               mat_pt_mass,
               elem_mat_id,
               elem_statev,
+              mat_pt.statev,
               state_vars,
               corner_mass,
               num_fills,
@@ -376,6 +367,7 @@ int main(int argc, char *argv[]){
               num_materials,
               num_state_vars);
         Kokkos::fence();
+        printf("after setup \n");
         // intialize time, time_step, and cycles
         time_value = 0.0;
         dt = dt_start;
@@ -463,6 +455,7 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //   Calculate the RDH solution
         // ---------------------------------------------------------------------
+        printf("before solve \n");
         rdh_solve(material,
                   boundary,
                   mesh,
@@ -492,6 +485,11 @@ int main(int argc, char *argv[]){
                   mat_pt_h,
                   elem_mat_id,
                   elem_statev,
+                  mat_pt.statev,
+                  mat_pt.grad_vel,
+                  mat_pt.sym_grad_vel,
+                  mat_pt.anti_sym_grad_vel,
+                  mat_pt.div_vel,
                   time_value,
                   time_final,
                   dt_max,
@@ -508,6 +506,8 @@ int main(int argc, char *argv[]){
                   small,
                   graphics_times,
                   graphics_id);
+        Kokkos::fence();
+        printf("after solve \n");
 
 
         // calculate total energy at time=t_end
