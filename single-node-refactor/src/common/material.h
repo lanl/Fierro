@@ -250,10 +250,16 @@ struct MaterialModelVars_t{
     ///<enums can be implemented in the model namespaces to unpack e.g., physics_global_vars
 
     DCArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
+    size_t num_eos_global_vars;
+
     DCArrayKokkos<double> eos_state_vars;       ///< Array of state (in each element) variables for the EOS
+    size_t num_eos_state_vars;
 
     DCArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
+    size_t num_strength_global_vars;
+
     DCArrayKokkos<double> strength_state_vars;  ///< Array of state (in each element) variables for the strength
+    size_t num_strength_state_vars;
     
     DCArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
 

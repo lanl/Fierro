@@ -130,8 +130,13 @@ public:
 
         // Create memory for state variables
         // look and remove all materials.update_host();
-        // CArray<MaterialModelValues_t>& MaterialModelVars
-        elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.MaterialModelVars(0).eos_global_vars.size()); // WARNING: HACK
+        // CArray<MaterialModelVars_t>& MaterialModelVars
+        size_t max_num_vars = 0;
+        size_t num_materials = sim_param.MaterialModelVars.size();
+        for (size_t mat_id=0; mat_id<num_materials; mat_id++){
+            max_num_vars = fmax(max_num_vars, sim_param.MaterialModelVars(mat_id).eos_global_vars.size());
+        }
+        elem.statev = DCArrayKokkos<double>(mesh.num_elems, max_num_vars); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
         Kokkos::fence();
@@ -369,15 +374,15 @@ public:
                         else{
                             // use the values in the input file
                             // set state vars for the region where mat_id resides
-                            printf("hello! \n");
+                            
                             int num_eos_global_vars = sim_param.MaterialModelVars(mat_id).eos_global_vars.size();
-                            printf("ok that worked \n");
+                            
 
                             for (size_t var = 0; var < num_eos_global_vars; var++) {
                                 elem.statev(elem_gid, var) = sim_param.MaterialModelVars(mat_id).eos_global_vars(var); // state_vars(mat_id, var); // WARNING: HACK
                             } // end for
 
-                            printf("wow, I made it hear \n");
+                            
                         } // end logical on type
 
                         // --- stress tensor ---

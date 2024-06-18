@@ -1678,7 +1678,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArr
                 
 
                 MaterialModelVars(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars, "MaterialModelVars.eos_global_vars");
-                
+                MaterialModelVars(mat_id).num_eos_global_vars = num_global_vars;
 
                 if (VERBOSE) {
                     std::cout << "num global eos vars = " << num_global_vars << std::endl;
@@ -1709,6 +1709,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArr
                 
 
                 MaterialModelVars(mat_id).strength_global_vars = DCArrayKokkos<double>(num_global_vars, "MaterialModelVars.strength_global_vars");
+                MaterialModelVars(mat_id).strength_global_vars = num_global_vars;
 
 
                 if (VERBOSE) {
