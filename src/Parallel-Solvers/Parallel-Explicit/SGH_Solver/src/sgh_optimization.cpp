@@ -2827,9 +2827,9 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     dt_min     = dynamic_options.dt_min;
     dt     = start_checkpoint->saved_dt;
     dt_cfl = dynamic_options.dt_cfl;
-
     graphics_time    = simparam->output_options.graphics_step;
     graphics_dt_ival = simparam->output_options.graphics_step;
+    graphics_time    = int(time_value/graphics_time)*graphics_time + graphics_time;
     cycle_stop     = bounding_timestep;
     rk_num_stages  = dynamic_options.rk_num_stages;
     graphics_times = simparam->output_options.graphics_times;
@@ -2842,7 +2842,7 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
     size_t cycle;
     size_t start_timestep = start_checkpoint->saved_timestep;
-
+    
     int  num_solve_checkpoints    = simparam->optimization_options.num_solve_checkpoints;
     std::set<Dynamic_Checkpoint>::iterator current_checkpoint, last_raised_checkpoint, dispensable_checkpoint, search_end;
     int  last_raised_level = 0;
@@ -3545,11 +3545,6 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
 
         // write outputs
         if (write == 1) {
-
-            if (myrank == 0) {
-                printf("Writing outputs to file at %f \n", graphics_time);
-            }
-
             graphics_time = time_value + graphics_dt_ival;
         } // end if
 

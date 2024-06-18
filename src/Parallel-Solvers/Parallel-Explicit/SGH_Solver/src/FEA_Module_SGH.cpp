@@ -1829,12 +1829,13 @@ void FEA_Module_SGH::sgh_solve()
     last_time_step = cycle;
 
     //debug print of checkpoint timesteps
-    if(use_solve_checkpoints){
-        int count = 0;
-        for(auto it = dynamic_checkpoint_set->begin(); it != dynamic_checkpoint_set->end(); it++){
-            *fos << "Checkpoint # " << count++ << " is at timestep " << (*it).saved_timestep << " with timestep " << (*it).saved_dt << std::endl;
-        }
-    }
+    // if(use_solve_checkpoints){
+    //     int count = 0;
+    //     for(auto it = dynamic_checkpoint_set->begin(); it != dynamic_checkpoint_set->end(); it++){
+    //         *fos << "Checkpoint # " << count++ << " is at timestep " << (*it).saved_timestep << " with timestep "
+    //          << (*it).saved_dt << " at time " << (*it).saved_time << std::endl;
+    //     }
+    // }
 
     // simple setup to just calculate KE minimize objective for now
     if (topology_optimization_on) {
