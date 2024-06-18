@@ -43,6 +43,10 @@
 // Physical state data
 #include "state.h"
 
+
+void fill_regions(simulation_parameters_t, mesh_t, node_t, elem_t, corner_t);
+
+
 class Driver
 {
 public:
@@ -130,8 +134,13 @@ public:
 
         // --- apply the fill instructions over the Elements---//
         Kokkos::fence();
-        fill_regions();
+        
+        
+        //fill_regions();
+        fill_regions(sim_param, mesh, node, elem, corner);
 
+
+        // --- Move the following sovler setup to yaml parsing routine
         // Create solvers
         for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
             if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
@@ -140,7 +149,8 @@ public:
                 solvers.push_back(sgh_solver);
             }
         }
-    }
+
+    } // end initialize
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -196,14 +206,17 @@ public:
         }
     }
 
-    /////////////////////////////////////////////////////////////////////////////
+    
+}; // end driver class
+
+/////////////////////////////////////////////////////////////////////////////
     ///
     /// \fn fill_regions
     ///
     /// \brief Fills mesh regions based on YAML input
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void fill_regions()
+    void fill_regions(simulation_parameters_t sim_param, mesh_t mesh, node_t node, elem_t elem, corner_t corner)
     {
         int num_fills = sim_param.region_fills.size();
         printf("Num Fills's = %d\n", num_fills);
@@ -224,7 +237,7 @@ public:
 
             int num_elems = mesh.num_elems;
             // parallel loop over elements in mesh
-            FOR_ALL_CLASS(elem_gid, 0, num_elems, {
+            FOR_ALL(elem_gid, 0, num_elems, {
                 for (int rk_level = 0; rk_level < 2; rk_level++) {
 
                     // Set erosion flag to false
@@ -379,7 +392,7 @@ public:
                                                                   elem.statev,
                                                                   elem.sspd,
                                                                   elem.den(elem_gid),
-                                                                  elem.sie(1, elem_gid));   
+                                                                  elem.sie(rk_level, elem_gid));   
                         // --- Sound Speed ---                               
                         sim_param.materials(mat_id).calc_sound_speed(elem.pres,
                                                                      elem.stress,
@@ -388,7 +401,7 @@ public:
                                                                      elem.statev,
                                                                      elem.sspd,
                                                                      elem.den(elem_gid),
-                                                                     elem.sie(1, elem_gid));
+                                                                     elem.sie(rk_level, elem_gid));
 
                         // loop over the nodes of this element and apply velocity
                         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -529,7 +542,7 @@ public:
         // } // end of
 
         // calculate the nodal mass
-        FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
+        FOR_ALL(node_gid, 0, mesh.num_nodes, {
             node.mass(node_gid) = 0.0;
 
             if (mesh.num_dims == 3) {
@@ -549,5 +562,5 @@ public:
             } // end else
         }); // end FOR_ALL
         Kokkos::fence();
+
     } // end fill regions
-};
