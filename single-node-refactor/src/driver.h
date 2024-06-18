@@ -129,8 +129,9 @@ public:
         geometry::get_vol(elem.vol, node.coords, mesh);
 
         // Create memory for state variables
-        sim_param.materials.update_host();
-        elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials.host(0).eos_global_vars.size()); // WARNING: HACK
+        // look and remove all materials.update_host();
+        // CArray<MaterialModelValues_t>& MaterialModelVars
+        elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.MaterialModelVars(0).eos_global_vars.size()); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
         Kokkos::fence();
@@ -209,7 +210,7 @@ public:
     
 }; // end driver class
 
-/////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
     ///
     /// \fn fill_regions
     ///
@@ -368,10 +369,15 @@ public:
                         else{
                             // use the values in the input file
                             // set state vars for the region where mat_id resides
-                            int num_eos_global_vars = sim_param.materials(mat_id).eos_global_vars.size();
-                            for (size_t var = 0; var < sim_param.materials(mat_id).eos_global_vars.size(); var++) {
-                                elem.statev(elem_gid, var) = sim_param.materials(mat_id).eos_global_vars(var); // state_vars(mat_id, var);
+                            printf("hello! \n");
+                            int num_eos_global_vars = sim_param.MaterialModelVars(mat_id).eos_global_vars.size();
+                            printf("ok that worked \n");
+
+                            for (size_t var = 0; var < num_eos_global_vars; var++) {
+                                elem.statev(elem_gid, var) = sim_param.MaterialModelVars(mat_id).eos_global_vars(var); // state_vars(mat_id, var); // WARNING: HACK
                             } // end for
+
+                            printf("wow, I made it hear \n");
                         } // end logical on type
 
                         // --- stress tensor ---

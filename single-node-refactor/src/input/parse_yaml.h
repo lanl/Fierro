@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -51,6 +51,7 @@ struct solver_input_t;
 struct mesh_input_t;
 struct reg_fill_t;
 struct material_t;
+struct MaterialModelVars_t;
 struct output_options_t;
 struct boundary_condition_t;
 struct dynamic_options_t;
@@ -99,7 +100,7 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options);
 void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills);
 
 // parse the region text
-void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials);
+void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArray<MaterialModelVars_t>& MaterialModelVars);
 
 // parse the boundary condition text
 void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_conditions);

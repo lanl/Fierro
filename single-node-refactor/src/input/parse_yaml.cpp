@@ -291,7 +291,7 @@ void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
         std::cout << "Parsing YAML materials:" << std::endl;
     }
     // parse the material yaml text into a vector of materials
-    parse_materials(root, sim_param.materials);
+    parse_materials(root, sim_param.materials, sim_param.MaterialModelVars);
 }
 
 // =================================================================================
@@ -1320,7 +1320,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
+void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArray<MaterialModelVars_t>& MaterialModelVars)
 {
     Yaml::Node& material_yaml = root["materials"];
 
@@ -1328,9 +1328,10 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
     std::cout << "Number of materials =  "<< num_materials << std::endl;
 
 
-    materials = DCArrayKokkos<material_t>(num_materials, "sim_param.materials");
+    materials = CArrayKokkos<material_t>(num_materials, "sim_param.materials");
+    MaterialModelVars = CArray<MaterialModelVars_t>(num_materials);
 
-    // allocate room for each material to store eos_global_vars
+    
 
     // loop over the materials specified
     for (int mat_id = 0; mat_id < num_materials; mat_id++) {
@@ -1676,12 +1677,8 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
 
-                materials.host(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars, "material.eos_global_vars");
-                materials.host(mat_id).eos_global_vars.update_device();
-                RUN({
-                    materials(mat_id).num_eos_global_vars = num_global_vars;
-                });
-                materials.update_device();
+                MaterialModelVars(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars, "MaterialModelVars.eos_global_vars");
+                
 
                 if (VERBOSE) {
                     std::cout << "num global eos vars = " << num_global_vars << std::endl;
@@ -1693,7 +1690,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     
 
                     RUN({
-                        materials(mat_id).eos_global_vars(global_var_id) = eos_var;
+                        MaterialModelVars(mat_id).eos_global_vars(global_var_id) = eos_var;
                     });
 
                     if (VERBOSE) {
@@ -1711,12 +1708,8 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
 
-                materials.host(mat_id).strength_global_vars = DCArrayKokkos<double>(num_global_vars, "material.strength_global_vars");
-                materials.host(mat_id).strength_global_vars.update_device();
-                RUN({
-                    materials(mat_id).num_strength_global_vars = num_global_vars;
-                });
-                materials.update_device();
+                MaterialModelVars(mat_id).strength_global_vars = DCArrayKokkos<double>(num_global_vars, "MaterialModelVars.strength_global_vars");
+
 
                 if (VERBOSE) {
                     std::cout << "num global strength vars = " << num_global_vars << std::endl;
@@ -1727,7 +1720,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     double strength_var = root["materials"][mat_id]["material"]["strength_global_vars"][global_var_id].As<double>();
                     
                     RUN({
-                        materials(mat_id).strength_global_vars(global_var_id) = strength_var;
+                        MaterialModelVars(mat_id).strength_global_vars(global_var_id) = strength_var;
                     });
 
                     if (VERBOSE) {

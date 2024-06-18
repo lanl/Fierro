@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -66,7 +66,10 @@ struct simulation_parameters_t
 
     DCArrayKokkos<reg_fill_t> region_fills;  ///< Region data for simulation mesh
 
-    DCArrayKokkos<material_t> materials; ///< Material data for simulation
+    CArrayKokkos<material_t> materials; ///< Material func pointers for simulation
+
+    CArray<MaterialModelVars_t> MaterialModelVars; ///< Material data for simulation
+
 }; // simulation_parameters_t
 
 #endif // end Header Guard

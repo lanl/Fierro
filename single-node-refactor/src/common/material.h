@@ -62,48 +62,48 @@ namespace model
     // strength model types
     enum StrengthType
     {
-        noStrengthType,
-        incrementBased,        ///<  Model evaluation is inline with the time integration
-        stateBased,            ///<  Model is based on the state after each stage of the time step
+        noStrengthType = 0,
+        incrementBased = 1,        ///<  Model evaluation is inline with the time integration
+        stateBased = 2,            ///<  Model is based on the state after each stage of the time step
     };
 
     // Specific strength models
     enum StrengthModels
     {
-        noStrengthModel,
-        userDefinedStrength,
+        noStrengthModel = 0,
+        userDefinedStrength = 1,
     };
 
     // EOS model types
     enum EOSType
     {
-        noEOSType,          ///< No EOS used
-        decoupledEOSType,   ///< only an EOS, or an EOS plus deviatoric stress model
-        coupledEOSType,     ///< EOS is part of a full stress tensor evolution model
+        noEOSType = 0,          ///< No EOS used
+        decoupledEOSType = 1,   ///< only an EOS, or an EOS plus deviatoric stress model
+        coupledEOSType = 2,     ///< EOS is part of a full stress tensor evolution model
     };
 
     // The names of the eos models
     enum EOSModels
     {
-        noEOS,              ///<  no model evaluation
-        gammaLawGasEOS,     ///<  gamma law gas
-        voidEOS,            ///<  a void material, no sound speed and no pressure
-        userDefinedEOS,     ///<  an eos function defined by the user
+        noEOS = 0,              ///<  no model evaluation
+        gammaLawGasEOS = 1,     ///<  gamma law gas
+        voidEOS = 2,            ///<  a void material, no sound speed and no pressure
+        userDefinedEOS = 3,     ///<  an eos function defined by the user
     };
 
     // failure models
     enum FailureModels
     {
-        noFailure,
-        brittleFailure,        ///< Material fails after exceeding yield stress
-        ductileFailure,        ///< Material grows voids that lead to complete failure
+        noFailure = 0,
+        brittleFailure = 1,        ///< Material fails after exceeding yield stress
+        ductileFailure = 2,        ///< Material grows voids that lead to complete failure
     };
 
     // erosion model t
     enum ErosionModels
     {
-        noErosion,
-        basicErosion,      ///<  basic element erosion
+        noErosion = 1,
+        basicErosion = 2,      ///<  basic element erosion
     };
 
 } // end model namespace
@@ -230,15 +230,6 @@ struct material_t
     // setup the strength model via the input file for via a user_setup
     model_init::strength_setup_tag strength_setup = model_init::input;
 
-    size_t num_eos_state_vars = 0; ///< Number of state variables for the EOS
-    size_t num_strength_state_vars  = 0; ///< Number of state variables for the strength model
-    size_t num_eos_global_vars      = 0; ///< Number of global variables for the EOS
-    size_t num_strength_global_vars = 0; ///< Number of global variables for the strength model
-
-    DCArrayKokkos<double> eos_global_vars; ///< Array of global variables for the EOS
-
-    DCArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
-
     double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression
     double q1ex = 1.3333;   ///< acoustic coefficient in Riemann solver for expansion
     double q2   = 1.0;      ///< linear coefficient in Riemann solver for compression
@@ -272,7 +263,7 @@ struct MaterialModelVars_t{
 
     // ...
 
-}; // end MaterialModelValues_t
+}; // end MaterialModelVars_t
 // The above struct eliminates all the variables in material_t, making material_t a collection of function ptrs
 
 
