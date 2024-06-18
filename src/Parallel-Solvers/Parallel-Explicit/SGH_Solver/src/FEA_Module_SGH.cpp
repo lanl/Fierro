@@ -112,6 +112,7 @@ FEA_Module_SGH::FEA_Module_SGH(
 
     // Switch for optimization solver
     if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+        cached_design_gradients_distributed    = Teuchos::rcp(new MV(map, 1));
         all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_velocity                = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_position                = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));

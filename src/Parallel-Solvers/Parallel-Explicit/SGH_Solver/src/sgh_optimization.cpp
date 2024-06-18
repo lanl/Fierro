@@ -544,7 +544,7 @@ double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const C
 /// \brief Coupled adjoint problem for the kinetic energy minimization problem
 ///
 /////////////////////////////////////////////////////////////////////////////
-void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed)
+void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     size_t num_bdy_nodes  = mesh->num_bdy_nodes;
@@ -557,6 +557,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
     size_t    current_data_index, next_data_index;
     int print_cycle = simparam->dynamic_options.print_cycle;
 
+    //initialize tally storage of gradient vector
+    cached_design_gradients_distributed->putScalar(0);
     // initialize first adjoint vector at last_time_step to 0 as the terminal value
     if(use_solve_checkpoints){
         previous_adjoint_vector_distributed->putScalar(0);
@@ -1465,7 +1467,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                             corner_force,
                             elem_power_dgradients);
 
-            compute_topology_optimization_gradient_tally(design_densities_distributed, design_gradients_distributed, cycle, global_dt);
+            compute_topology_optimization_gradient_tally(design_densities_distributed, cached_design_gradients_distributed, cycle, global_dt);
         }
 
         if(use_solve_checkpoints){
@@ -1957,12 +1959,13 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     }
 
     //initialize design gradient vector
-    design_gradients_distributed->putScalar(0);
-
-    compute_topology_optimization_adjoint_full(design_densities_distributed, design_gradients_distributed);
-
-    if(use_gradient_tally){ 
+    if(use_gradient_tally){
+        //set ROL gradient vector to cached gradient vector
+        design_gradients_distributed->assign(*cached_design_gradients_distributed);
         return;
+    }
+    else{
+        design_gradients_distributed->putScalar(0);
     }
     { // view scope
         vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);

@@ -266,7 +266,7 @@ public:
         Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
 
         current_step++;
-        ROL::Ptr<const MV>   zp = getVector(z);
+        ROL::Ptr<const MV>   zp = getVector(z); //tpetra multivector wrapper on design vector
         const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
         if (type == ROL::UpdateType::Initial) {
@@ -277,11 +277,15 @@ public:
 
             FEM_SGH_->comm_variables(zp);
             FEM_SGH_->update_forward_solve(zp);
+            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
             // initial design density data was already communicated for ghost nodes in init_design()
             // decide to output current optimization state
             // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
         }
         else if (type == ROL::UpdateType::Accept) {
+            if (Explicit_Solver_Pointer_->myrank == 0) {
+                *fos << "called Accept" << std::endl;
+            }
         }
         else if (type == ROL::UpdateType::Revert) {
             // u_ was set to u=S(x) during a trial update
@@ -294,19 +298,18 @@ public:
             FEM_SGH_->comm_variables(zp);
             // update deformation variables
             FEM_SGH_->update_forward_solve(zp);
-            if (Explicit_Solver_Pointer_->myrank == 0) {
-                *fos << "called Revert" << std::endl;
-            }
+            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
         }
         else if (type == ROL::UpdateType::Trial) {
             // This is a new value of x
+            if (Explicit_Solver_Pointer_->myrank == 0) {
+                *fos << "called Trial" << std::endl;
+            }
             // communicate density variables for ghosts
             FEM_SGH_->comm_variables(zp);
             // update deformation variables
             FEM_SGH_->update_forward_solve(zp);
-            if (Explicit_Solver_Pointer_->myrank == 0) {
-                *fos << "called Trial" << std::endl;
-            }
+            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
 
             // decide to output current optimization state
             // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
@@ -319,6 +322,7 @@ public:
             }
             FEM_SGH_->comm_variables(zp);
             FEM_SGH_->update_forward_solve(zp);
+            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
         }
     }
 
