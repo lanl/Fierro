@@ -49,8 +49,8 @@ include_directories(src/material-models/strength)
 
 include_directories(src)
 include_directories(src/common)
-include_directories(src/setup)
-add_subdirectory(src/setup)
+include_directories(src/input)
+add_subdirectory(src/input)
 
 
 include_directories(src/Solvers/SGH_solver)
