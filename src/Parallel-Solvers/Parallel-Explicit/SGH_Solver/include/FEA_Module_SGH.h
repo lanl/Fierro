@@ -422,7 +422,7 @@ public:
 
     void grow_boundary_sets(int num_boundary_sets);
 
-    virtual void update_forward_solve(Teuchos::RCP<const MV> zp);
+    virtual void update_forward_solve(Teuchos::RCP<const MV> zp, bool print_design=false);
 
     void comm_node_masses();
 

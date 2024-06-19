@@ -79,7 +79,7 @@
 /// \param  Current density value vector chosen by the optimizer
 ///
 /////////////////////////////////////////////////////////////////////////////
-void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
+void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_design)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     // local variable for host view in the dual view
@@ -511,8 +511,18 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     elem_pres.update_host();
     elem_sspd.update_host();
 
+    //output model before deformation
+    if(simparam->optimization_options.disable_forward_solve_output&&print_design){
+        Explicit_Solver_Pointer_->write_outputs();
+    }
+
     // execute solve
     sgh_solve();
+
+    //output model after deformation
+    if(simparam->optimization_options.disable_forward_solve_output&&print_design){
+        Explicit_Solver_Pointer_->write_outputs();
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2838,6 +2848,7 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     fuzz  = dynamic_options.fuzz;
     tiny  = dynamic_options.tiny;
     small = dynamic_options.small;
+    int print_cycle = simparam->dynamic_options.print_cycle;
 
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
     size_t cycle;
@@ -3045,7 +3056,7 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
                 }
             }
             // print time step every 10 cycles
-            else if (cycle % 1 == 0) {
+            else if (cycle % print_cycle == 0) {
                 if (myrank == 0) {
                     printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
                 }

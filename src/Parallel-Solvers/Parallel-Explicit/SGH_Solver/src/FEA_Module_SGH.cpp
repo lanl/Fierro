@@ -940,6 +940,12 @@ void FEA_Module_SGH::sgh_solve()
     bool dispensable_found = false;
     num_active_checkpoints = 0;
 
+    
+    if(simparam->optimization_options.disable_forward_solve_output){
+        //sets the value large enough to not write during the sgh loop
+        graphics_time = time_final + graphics_time;
+    }
+
     // reset time accumulating objective and constraints
     /*
     for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
@@ -985,7 +991,7 @@ void FEA_Module_SGH::sgh_solve()
     }
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if (simparam->output_options.write_initial) {
+    if (simparam->output_options.write_initial&&!simparam->optimization_options.disable_forward_solve_output) {
         if (myrank == 0) {
             printf("Writing outputs to file at %f \n", time_value);
         }

@@ -111,6 +111,7 @@ struct Optimization_Options: Yaml::DerivedFields {
   bool retain_outer_shell = false;                            //every patch on the outer surface will be constrained to rho=1
   bool variable_outer_shell = false;                          //allows any patch to vary even when LC/BC is applied
   int optimization_output_freq = 200;                         //number of steps between graphics dump for optimization runs
+  bool disable_forward_solve_output = false;                  //prevents explicit graphics output during the forward solve.
   DENSITY_FILTER density_filter = DENSITY_FILTER::none;       //option to set a filter on the TO process such as hemholtz or projection
   double density_epsilon = 0.001;                             //minimum allowed density; shouldnt be 0 for conditions numbers
   double minimum_density = 0;                                 //lower constraint value for a selected volume
@@ -146,5 +147,5 @@ IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options,
   optimization_output_freq, density_filter, minimum_density, maximum_density,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
   variable_outer_shell, shell_density, objective_normalization_constant,
-  num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally
+  num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally, disable_forward_solve_output
 )
