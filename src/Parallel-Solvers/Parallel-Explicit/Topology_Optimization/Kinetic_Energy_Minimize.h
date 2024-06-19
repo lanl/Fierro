@@ -302,7 +302,7 @@ public:
             // Revert to cached value
             // This is a new value of x
             // communicate density variables for ghosts
-            if (Explicit_Solver_Pointer_->myrank == 0) { *fos << "called SGH Revert" << std::endl; }
+            if (Explicit_Solver_Pointer_->myrank == 0) { *fos << "called Revert" << std::endl; }
             objective_accumulation = previous_objective_accumulation;
             FEM_SGH_->cached_design_gradients_distributed->assign(*previous_gradients);
 
@@ -333,7 +333,7 @@ public:
             // This is a new value of x used for,
             // e.g., finite-difference checks
             if (Explicit_Solver_Pointer_->myrank == 0) {
-                *fos << "called SGH Temp" << std::endl;
+                *fos << "called Temp" << std::endl;
             }
             FEM_SGH_->comm_variables(zp);
             FEM_SGH_->update_forward_solve(zp);

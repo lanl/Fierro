@@ -1851,9 +1851,9 @@ void FEA_Module_SGH::sgh_solve()
         MPI_Allreduce(&objective_accumulation, &global_objective_accumulation, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         kinetic_energy_minimize_function.objective_accumulation = global_objective_accumulation;
 
-        if (myrank == 0) {
-            std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << global_objective_accumulation << std::endl;
-        }
+        // if (myrank == 0) {
+        //     std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << global_objective_accumulation << std::endl;
+        // }
     }
 
     auto time_2 = std::chrono::high_resolution_clock::now();
@@ -1907,15 +1907,16 @@ void FEA_Module_SGH::sgh_solve()
     TE_tend = IE_tend + KE_tend;
 
     // reduce over MPI ranks
-
-    if (myrank == 0) {
-        printf("Time=0:   KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_t0, IE_t0, TE_t0);
-    }
-    if (myrank == 0) {
-        printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
-    }
-    if (myrank == 0) {
-        printf("total energy conservation error = %e \n\n", 100 * (TE_tend - TE_t0) / TE_t0);
+    if (simparam->dynamic_options.output_time_sequence_level >= TIME_OUTPUT_LEVEL::low) {
+        if (myrank == 0) {
+            printf("Time=0:   KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_t0, IE_t0, TE_t0);
+        }
+        if (myrank == 0) {
+            printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
+        }
+        if (myrank == 0) {
+            printf("total energy conservation error = %e \n\n", 100 * (TE_tend - TE_t0) / TE_t0);
+        }
     }
 
     return;
