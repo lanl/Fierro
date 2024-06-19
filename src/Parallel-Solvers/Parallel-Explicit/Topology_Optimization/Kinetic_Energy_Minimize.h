@@ -94,7 +94,9 @@ private:
     ROL::Ptr<ROL_MV> ROL_Force;
     ROL::Ptr<ROL_MV> ROL_Velocities;
     ROL::Ptr<ROL_MV> ROL_Gradients;
+    Teuchos::RCP<MV> previous_gradients;
     real_t initial_kinetic_energy;
+    real_t previous_objective_accumulation, objective_sign;
 
     bool useLC_; // Use linear form of energy.  Otherwise use quadratic form.
 
@@ -137,7 +139,7 @@ public:
     std::vector<FEA_MODULE_TYPE> valid_fea_modules; // modules that may interface with this objective function
     FEA_MODULE_TYPE set_module_type;
     // std::string my_fea_module = "SGH";
-    real_t objective_accumulation, objective_sign;
+    real_t objective_accumulation;
 
     KineticEnergyMinimize_TopOpt(Explicit_Solver* Explicit_Solver_Pointer, bool nodal_density_flag)
         : useLC_(true)
@@ -166,6 +168,8 @@ public:
         current_step      = 0;
         time_accumulation = true;
         objective_accumulation = 0;
+        
+        previous_gradients = Teuchos::rcp(new MV(Explicit_Solver_Pointer_->map, 1));
         if(Explicit_Solver_Pointer_->simparam.optimization_options.maximize_flag){
             objective_sign = -1;
         }
@@ -217,6 +221,7 @@ public:
             FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
         }
         else if (type == ROL::UpdateType::Accept) {
+
         }
         else if (type == ROL::UpdateType::Revert) {
             // u_ was set to u=S(x) during a trial update
@@ -264,8 +269,7 @@ public:
         // debug
         std::ostream& out = std::cout;
         Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-
-        current_step++;
+        bool print_flag = false;
         ROL::Ptr<const MV>   zp = getVector(z); //tpetra multivector wrapper on design vector
         const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
@@ -278,6 +282,8 @@ public:
             FEM_SGH_->comm_variables(zp);
             FEM_SGH_->update_forward_solve(zp);
             FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
+            previous_objective_accumulation = objective_accumulation;
+            previous_gradients->assign(*(FEM_SGH_->cached_design_gradients_distributed));
             // initial design density data was already communicated for ghost nodes in init_design()
             // decide to output current optimization state
             // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
@@ -286,6 +292,9 @@ public:
             if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called Accept" << std::endl;
             }
+            
+            previous_objective_accumulation = objective_accumulation;
+            previous_gradients->assign(*(FEM_SGH_->cached_design_gradients_distributed));
         }
         else if (type == ROL::UpdateType::Revert) {
             // u_ was set to u=S(x) during a trial update
@@ -294,21 +303,27 @@ public:
             // This is a new value of x
             // communicate density variables for ghosts
             if (Explicit_Solver_Pointer_->myrank == 0) { *fos << "called SGH Revert" << std::endl; }
+            objective_accumulation = previous_objective_accumulation;
+            FEM_SGH_->cached_design_gradients_distributed->assign(*previous_gradients);
 
-            FEM_SGH_->comm_variables(zp);
-            // update deformation variables
-            FEM_SGH_->update_forward_solve(zp);
-            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
+            // FEM_SGH_->comm_variables(zp);
+            // // update deformation variables
+            // FEM_SGH_->update_forward_solve(zp);
+            // FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
         }
         else if (type == ROL::UpdateType::Trial) {
             // This is a new value of x
+            current_step++;
+            if(current_step%FEM_SGH_->simparam->optimization_options.optimization_output_freq==0){
+                print_flag = true;
+            }
             if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called Trial" << std::endl;
             }
             // communicate density variables for ghosts
             FEM_SGH_->comm_variables(zp);
             // update deformation variables
-            FEM_SGH_->update_forward_solve(zp);
+            FEM_SGH_->update_forward_solve(zp, print_flag);
             FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
 
             // decide to output current optimization state
