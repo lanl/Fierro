@@ -58,6 +58,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_state(const CArrayKokkos<material_t>& material,
+    const CArray<MaterialModelVars_t> &MaterialModelVars,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -212,6 +213,7 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_state2D(const CArrayKokkos<material_t>& material,
+    const CArray<MaterialModelVars_t> &MaterialModelVars,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,

@@ -137,6 +137,7 @@ public:
     // **** Functions defined in force_sgh.cpp **** //
     void get_force(
         const CArrayKokkos<material_t>& material,
+        const CArray<MaterialModelVars_t> &MaterialModelVars,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
@@ -158,6 +159,7 @@ public:
 
     void get_force_2D(
         const CArrayKokkos<material_t>& material,
+        const CArray<MaterialModelVars_t> &MaterialModelVars,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
@@ -241,6 +243,7 @@ public:
     // **** Functions defined in properties.cpp **** //
     void update_state(
         const CArrayKokkos<material_t>& material,
+        const CArray<MaterialModelVars_t> &MaterialModelVars,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
@@ -259,6 +262,7 @@ public:
 
     void update_state2D(
         const CArrayKokkos<material_t>& material,
+        const CArray<MaterialModelVars_t> &MaterialModelVars,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,

@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -232,6 +232,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             if (mesh.num_dims == 2) {
                 get_force_2D(sim_param.materials,
+                             sim_param.MaterialModelVars,
                              mesh,
                              node.coords,
                              node.vel,
@@ -252,6 +253,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             }
             else{
                 get_force(sim_param.materials,
+                          sim_param.MaterialModelVars,
                           mesh,
                           node.coords,
                           node.vel,
@@ -312,6 +314,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
             if (mesh.num_dims == 2) {
                 update_state2D(sim_param.materials,
+                               sim_param.MaterialModelVars,
                                mesh,
                                node.coords,
                                node.vel,
@@ -329,6 +332,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             }
             else{
                 update_state(sim_param.materials,
+                             sim_param.MaterialModelVars,
                              mesh,
                              node.coords,
                              node.vel,
