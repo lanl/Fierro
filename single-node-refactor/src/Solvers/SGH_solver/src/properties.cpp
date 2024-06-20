@@ -58,7 +58,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_state(const CArrayKokkos<material_t>& material,
-    const CArray<MaterialModelVars_t> &MaterialModelVars,
+    const MaterialModelVars_t &MaterialModelVars,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -172,7 +172,8 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
                                            elem_statev,
                                            elem_sspd,
                                            elem_den(elem_gid),
-                                           elem_sie(1, elem_gid));   
+                                           elem_sie(1, elem_gid),
+                                           MaterialModelVars.eos_global_vars);   
             // --- Sound Speed ---                               
             material(mat_id).calc_sound_speed(elem_pres,
                                               elem_stress,
@@ -181,7 +182,8 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
                                               elem_statev,
                                               elem_sspd,
                                               elem_den(elem_gid),
-                                              elem_sie(1, elem_gid));
+                                              elem_sie(1, elem_gid),
+                                              MaterialModelVars.eos_global_vars);
         }
     }); // end parallel for
     Kokkos::fence();
@@ -213,7 +215,7 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_state2D(const CArrayKokkos<material_t>& material,
-    const CArray<MaterialModelVars_t> &MaterialModelVars,
+    const MaterialModelVars_t &MaterialModelVars,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -317,7 +319,8 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
                                            elem_statev,
                                            elem_sspd,
                                            elem_den(elem_gid),
-                                           elem_sie(1, elem_gid));   
+                                           elem_sie(1, elem_gid),
+                                           MaterialModelVars.eos_global_vars);   
             // --- Sound Speed ---                               
             material(mat_id).calc_sound_speed(elem_pres,
                                               elem_stress,
@@ -326,7 +329,8 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
                                               elem_statev,
                                               elem_sspd,
                                               elem_den(elem_gid),
-                                              elem_sie(1, elem_gid));
+                                              elem_sie(1, elem_gid),
+                                              MaterialModelVars.eos_global_vars);
         }
     }); // end parallel for
     Kokkos::fence();

@@ -68,7 +68,7 @@ struct simulation_parameters_t
 
     CArrayKokkos<material_t> materials; ///< Material func pointers for simulation
 
-    CArray<MaterialModelVars_t> MaterialModelVars; ///< Material data for simulation
+    MaterialModelVars_t MaterialModelVars; ///< Material data for simulation
 
 }; // simulation_parameters_t
 

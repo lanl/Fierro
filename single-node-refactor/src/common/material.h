@@ -176,7 +176,8 @@ struct material_t
                           const DCArrayKokkos<double>& elem_state_vars,
                           const DCArrayKokkos<double>& elem_sspd,
                           const double den,
-                          const double sie) = NULL;
+                          const double sie,
+                          const RaggedRightArrayKokkos<double> &eos_global_vars) = NULL;
 
     void (*calc_sound_speed)(const DCArrayKokkos<double>& elem_pres,
                              const DCArrayKokkos<double>& elem_stress,
@@ -185,7 +186,8 @@ struct material_t
                              const DCArrayKokkos<double>& elem_state_vars,
                              const DCArrayKokkos<double>& elem_sspd,
                              const double den,
-                             const double sie) = NULL;
+                             const double sie,
+                             const RaggedRightArrayKokkos<double> &eos_global_vars) = NULL;
 
     // Strength model type: none, or increment- or state-based
     model::StrengthType StrengthType = model::noStrengthType;
@@ -249,23 +251,23 @@ struct MaterialModelVars_t{
 
     ///<enums can be implemented in the model namespaces to unpack e.g., physics_global_vars
 
-    DCArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
-    size_t num_eos_global_vars;
+    RaggedRightArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
+    CArrayKokkos<size_t> num_eos_global_vars;
 
-    DCArrayKokkos<double> eos_state_vars;       ///< Array of state (in each element) variables for the EOS
-    size_t num_eos_state_vars;
+    RaggedRightArrayKokkos<double> eos_state_vars;       ///< Array of state (in each element) variables for the EOS
+    CArrayKokkos<size_t> num_eos_state_vars;
 
-    DCArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
-    size_t num_strength_global_vars;
+    RaggedRightArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
+    CArrayKokkos<size_t> num_strength_global_vars;
 
-    DCArrayKokkos<double> strength_state_vars;  ///< Array of state (in each element) variables for the strength
-    size_t num_strength_state_vars;
+    RaggedRightArrayKokkos<double> strength_state_vars;  ///< Array of state (in each element) variables for the strength
+    CArrayKokkos<size_t> num_strength_state_vars;
     
-    DCArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
+    RaggedRightArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
 
-    DCArrayKokkos<double> erosion_global_vars;  ///< Array of global variables for the erosion model
+    RaggedRightArrayKokkos<double> erosion_global_vars;  ///< Array of global variables for the erosion model
 
-    DCArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
+    RaggedRightArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
 
     // ...
 

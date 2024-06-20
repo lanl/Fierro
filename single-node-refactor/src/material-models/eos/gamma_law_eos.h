@@ -71,16 +71,17 @@ namespace GammaLawGasEOSModel {
 
     KOKKOS_FUNCTION
     static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie)
+                              const DCArrayKokkos<double>& elem_stress,
+                              const size_t elem_gid,
+                              const size_t mat_id,
+                              const DCArrayKokkos<double>& elem_state_vars,
+                              const DCArrayKokkos<double>& elem_sspd,
+                              const double den,
+                              const double sie,
+                              const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
 
-        double gamma = elem_state_vars(elem_gid, VarNames::gamma);
+        double gamma = eos_global_vars(mat_id, VarNames::gamma);
 
         // pressure
         elem_pres(elem_gid) = (gamma - 1.0) * sie * den;
@@ -91,17 +92,18 @@ namespace GammaLawGasEOSModel {
 
     KOKKOS_FUNCTION
     static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie)
+                                 const DCArrayKokkos<double>& elem_stress,
+                                 const size_t elem_gid,
+                                 const size_t mat_id,
+                                 const DCArrayKokkos<double>& elem_state_vars,
+                                 const DCArrayKokkos<double>& elem_sspd,
+                                 const double den,
+                                 const double sie,
+                                 const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
 
-        double gamma = elem_state_vars(elem_gid, VarNames::gamma);
-        double csmin = elem_state_vars(elem_gid, VarNames::min_sound_speed);
+        double gamma = eos_global_vars(mat_id, VarNames::gamma);
+        double csmin = eos_global_vars(mat_id, VarNames::min_sound_speed);
 
 
         // sound speed

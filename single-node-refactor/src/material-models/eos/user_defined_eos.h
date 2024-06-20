@@ -61,13 +61,14 @@ namespace UserDefinedEOSModel
 
     KOKKOS_FUNCTION
     static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie)
+                              const DCArrayKokkos<double>& elem_stress,
+                              const size_t elem_gid,
+                              const size_t mat_id,
+                              const DCArrayKokkos<double>& elem_state_vars,
+                              const DCArrayKokkos<double>& elem_sspd,
+                              const double den,
+                              const double sie,
+                              const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
         // -----------------------------------------------------------------------------
         // Required variables are here
@@ -82,13 +83,14 @@ namespace UserDefinedEOSModel
 
     KOKKOS_FUNCTION
     static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie)
+                                 const DCArrayKokkos<double>& elem_stress,
+                                 const size_t elem_gid,
+                                 const size_t mat_id,
+                                 const DCArrayKokkos<double>& elem_state_vars,
+                                 const DCArrayKokkos<double>& elem_sspd,
+                                 const double den,
+                                 const double sie,
+                                 const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
         
         // -----------------------------------------------------------------------------
@@ -135,7 +137,8 @@ namespace NotionalEOSModel {
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
         const double den,
-        const double sie)
+        const double sie,
+        const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
         // pressure of a void is 0
         elem_pres(elem_gid) = 0.0;
@@ -151,7 +154,8 @@ namespace NotionalEOSModel {
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
         const double den,
-        const double sie)
+        const double sie,
+        const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
 
         // sound speed of a void is 0, machine small must be used for CFL calculation

@@ -100,7 +100,7 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options);
 void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills);
 
 // parse the region text
-void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArray<MaterialModelVars_t>& MaterialModelVars);
+void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, MaterialModelVars_t & MaterialModelVars);
 
 // parse the boundary condition text
 void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_conditions);

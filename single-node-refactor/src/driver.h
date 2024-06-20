@@ -129,14 +129,12 @@ public:
         geometry::get_vol(elem.vol, node.coords, mesh);
 
         // Create memory for state variables
-        // look and remove all materials.update_host();
-        // CArray<MaterialModelVars_t>& MaterialModelVars
-        size_t max_num_vars = 0;
-        size_t num_materials = sim_param.MaterialModelVars.size();
-        for (size_t mat_id=0; mat_id<num_materials; mat_id++){
-            max_num_vars = fmax(max_num_vars, sim_param.MaterialModelVars(mat_id).eos_global_vars.size());
-        }
-        elem.statev = DCArrayKokkos<double>(mesh.num_elems, max_num_vars); // WARNING: HACK
+        //size_t max_num_vars = 0;
+        //size_t num_materials = sim_param.MaterialModelVars.num_eos_global_vars.size();
+        //for (size_t mat_id=0; mat_id<num_materials; mat_id++){
+        //    max_num_vars = fmax(max_num_vars, sim_param.MaterialModelVars.num_eos_global_vars(mat_id));
+        //}
+        //elem.statev = DCArrayKokkos<double>(mesh.num_elems, max_num_vars); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
         Kokkos::fence();
@@ -375,12 +373,12 @@ public:
                             // use the values in the input file
                             // set state vars for the region where mat_id resides
                             
-                            int num_eos_global_vars = sim_param.MaterialModelVars(mat_id).eos_global_vars.size();
+                            //int num_eos_global_vars = sim_param.MaterialModelVars.eos_global_vars.stride(mat_id); // ragged-right storage
                             
 
-                            for (size_t var = 0; var < num_eos_global_vars; var++) {
-                                elem.statev(elem_gid, var) = sim_param.MaterialModelVars(mat_id).eos_global_vars(var); // state_vars(mat_id, var); // WARNING: HACK
-                            } // end for
+                            //for (size_t var = 0; var < num_eos_global_vars; var++) {
+                            //    elem.statev(elem_gid, var) = sim_param.MaterialModelVars.eos_global_vars(mat_id,var); // state_vars(mat_id, var); // WARNING: HACK
+                            //} // end for
 
                             
                         } // end logical on type
@@ -403,7 +401,8 @@ public:
                                                                   elem.statev,
                                                                   elem.sspd,
                                                                   elem.den(elem_gid),
-                                                                  elem.sie(rk_level, elem_gid));   
+                                                                  elem.sie(rk_level, elem_gid),
+                                                                  sim_param.MaterialModelVars.eos_global_vars);   
                         // --- Sound Speed ---                               
                         sim_param.materials(mat_id).calc_sound_speed(elem.pres,
                                                                      elem.stress,
@@ -412,7 +411,8 @@ public:
                                                                      elem.statev,
                                                                      elem.sspd,
                                                                      elem.den(elem_gid),
-                                                                     elem.sie(rk_level, elem_gid));
+                                                                     elem.sie(rk_level, elem_gid),
+                                                                     sim_param.MaterialModelVars.eos_global_vars);
 
                         // loop over the nodes of this element and apply velocity
                         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -522,11 +522,11 @@ public:
                             elem.pres(elem_gid) = 0.25 * (cos(2.0 * PI * elem_coords[0]) + cos(2.0 * PI * elem_coords[1]) ) + 1.0;
 
                             // p = rho*ie*(gamma - 1)
-                            // size_t mat_id = f_id;
-                            double gamma  = elem.statev(elem_gid, 4); // gamma value WARNING: BUG HERE
+                            double gamma  = sim_param.MaterialModelVars.eos_global_vars(mat_id,0); // makes sure it matches the gamma in the gamma law function 
                             elem.sie(rk_level, elem_gid) =
                                 elem.pres(elem_gid) / (sim_param.region_fills(f_id).den * (gamma - 1.0));
                         } // end if
+                        
                     } // end if fill
                 } // end RK loop
             }); // end FOR_ALL element loop

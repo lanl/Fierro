@@ -63,7 +63,8 @@ namespace VoidEOSModel {
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
         const double den,
-        const double sie)
+        const double sie,
+        const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
         // pressure of a void is 0
         elem_pres(elem_gid) = 0.0;
@@ -79,7 +80,8 @@ namespace VoidEOSModel {
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
         const double den,
-        const double sie)
+        const double sie,
+        const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
 
         // sound speed of a void is 0, machine small must be used for CFL calculation

@@ -63,7 +63,8 @@ namespace NoEOSModel {
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
         const double den,
-        const double sie)
+        const double sie,
+        const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
         return;
     } // end func
@@ -76,7 +77,8 @@ namespace NoEOSModel {
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
         const double den,
-        const double sie)
+        const double sie,
+        const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
 
         return;

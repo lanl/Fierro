@@ -1320,18 +1320,22 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArray<MaterialModelVars_t>& MaterialModelVars)
+void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, MaterialModelVars_t& MaterialModelVars)
 {
     Yaml::Node& material_yaml = root["materials"];
 
     size_t num_materials = material_yaml.Size();
     std::cout << "Number of materials =  "<< num_materials << std::endl;
 
-
+    // allocate memory for the material struct that holds the function pointers
     materials = CArrayKokkos<material_t>(num_materials, "sim_param.materials");
-    MaterialModelVars = CArray<MaterialModelVars_t>(num_materials);
 
-    
+    // these are temp arrays to store global variables given in the yaml input file for each material, 100 vars is the max allowable
+    DCArrayKokkos<double> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
+    DCArrayKokkos<double> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
+
+    MaterialModelVars.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials);
+    MaterialModelVars.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials);
 
     // loop over the materials specified
     for (int mat_id = 0; mat_id < num_materials; mat_id++) {
@@ -1676,10 +1680,11 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArr
 
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
-
-                MaterialModelVars(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars, "MaterialModelVars.eos_global_vars");
-                MaterialModelVars(mat_id).num_eos_global_vars = num_global_vars;
-
+                MaterialModelVars.num_eos_global_vars(mat_id) = num_global_vars;
+                if(num_global_vars>100){
+                    throw std::runtime_error("**** Per material, the code only supports up to 100 global vars in the input file ****");
+                } // end check on num_global_vars
+               
                 if (VERBOSE) {
                     std::cout << "num global eos vars = " << num_global_vars << std::endl;
                 }
@@ -1690,7 +1695,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArr
                     
 
                     RUN({
-                        MaterialModelVars(mat_id).eos_global_vars(global_var_id) = eos_var;
+                        tempGlobalEOSVars(mat_id, global_var_id) = eos_var;
                     });
 
                     if (VERBOSE) {
@@ -1708,8 +1713,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArr
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
 
-                MaterialModelVars(mat_id).strength_global_vars = DCArrayKokkos<double>(num_global_vars, "MaterialModelVars.strength_global_vars");
-                MaterialModelVars(mat_id).strength_global_vars = num_global_vars;
+                MaterialModelVars.num_strength_global_vars(mat_id) = num_global_vars;
 
 
                 if (VERBOSE) {
@@ -1721,7 +1725,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArr
                     double strength_var = root["materials"][mat_id]["material"]["strength_global_vars"][global_var_id].As<double>();
                     
                     RUN({
-                        MaterialModelVars(mat_id).strength_global_vars(global_var_id) = strength_var;
+                        tempGlobalStrengthVars(mat_id,global_var_id) = strength_var;
                     });
 
                     if (VERBOSE) {
@@ -1741,6 +1745,24 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, CArr
             }
         } // end for words in material
     } // end loop over materials
+
+    // allocate ragged rigght memory to hold the model global variables
+    MaterialModelVars.eos_global_vars = RaggedRightArrayKokkos <double> (MaterialModelVars.num_eos_global_vars, "MaterialModelVars.eos_global_vars");
+    MaterialModelVars.strength_global_vars = RaggedRightArrayKokkos <double> (MaterialModelVars.num_strength_global_vars, "MaterialModelVars.strength_global_vars");
+
+    // save the global variables
+    for (int mat_id = 0; mat_id < num_materials; mat_id++) {
+        
+        for (size_t var_lid=0; var_lid<MaterialModelVars.num_eos_global_vars(mat_id); var_lid++){
+            MaterialModelVars.eos_global_vars(mat_id, var_lid) = tempGlobalEOSVars(mat_id, var_lid);
+        } // end for eos var_lid
+
+        for (size_t var_lid=0; var_lid<MaterialModelVars.num_strength_global_vars(mat_id); var_lid++){
+            MaterialModelVars.strength_global_vars(mat_id, var_lid) = tempGlobalStrengthVars(mat_id, var_lid);
+        } // end for strength var_lid
+
+    } // end for loop over materials
+
 } // end of function to parse material information
 
 // =================================================================================
@@ -1753,12 +1775,6 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
     size_t num_bcs = bc_yaml.Size();
 
     boundary_conditions = DCArrayKokkos<boundary_condition_t>(num_bcs, "sim_param.boundary_conditions");
-
-    for(int i=0; i< num_bcs; i++){
-        boundary_conditions.host(i).origin = DCArrayKokkos<double> (3, "boundary_conditions.origin");
-        boundary_conditions.host(i).origin.update_device();
-    }
-    boundary_conditions.update_device();
 
     // loop over the fill regions specified
     for (int bc_id = 0; bc_id < num_bcs; bc_id++) {
@@ -1922,7 +1938,17 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
 
                 double x1 = std::stod(numbers[0]);
                 double y1 = std::stod(numbers[1]);
-                double z1 = std::stod(numbers[2]);
+                double z1;
+
+                if(numbers.size()==3){ 
+                    // 3D
+                    z1 = std::stod(numbers[2]);
+                }
+                else {
+                    // 2D
+                    z1 = 0.0;
+                } //
+
                 if (VERBOSE) {
                     std::cout << "\tx1 = " << x1 << std::endl;
                     std::cout << "\ty1 = " << y1 << std::endl;
@@ -1931,9 +1957,9 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 // storing the origin values as (x1,y1,z1)
 
                 RUN({
-                    boundary_conditions(bc_id).origin(0) = x1;
-                    boundary_conditions(bc_id).origin(1) = y1;
-                    boundary_conditions(bc_id).origin(2) = z1;
+                    boundary_conditions(bc_id).origin[0] = x1;
+                    boundary_conditions(bc_id).origin[1] = y1;
+                    boundary_conditions(bc_id).origin[2] = z1;
                 });
             } // origin
             else {

@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -123,7 +123,7 @@ struct boundary_condition_t
     double v     = 0.0; ///< WARNING: Currently unused
     double w     = 0.0; ///< WARNING: Currently unused
 
-    DCArrayKokkos<double> origin; //
+    double origin[3]; //
 
     // WARNING: CURRENTLY NOT PARSED OR USED
     double hydro_bc_vel_0 = 0.0;    ///< Initial velocity for timed velocity boundary condition
