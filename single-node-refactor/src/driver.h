@@ -323,6 +323,7 @@ public:
                                 }
                                 break;
                             }
+
                         case region::readVoxelFile:
                             {
                                 fill_this = 0; // default is no, don't fill it
@@ -345,6 +346,19 @@ public:
                                 //     fill_this = voxel_elem_values(elem_id0); // values from file
                                 // } // end if
                             } // end case
+                        case region::no_volume:
+                            {
+                                fill_this = 0; // default is no, don't fill it
+
+                                break;
+                            }
+                        default:
+                            {
+                                fill_this = 0; // default is no, don't fill it
+                                
+                                break;
+                            }
+
                     } // end of switch
 
                     // paint the material state on the element
@@ -515,6 +529,29 @@ public:
 
                                         break;
                                     }
+
+                                case init_conds::no_ic_vel:
+                                    {
+                                        // no velocity
+                                        node.vel(rk_level, node_gid, 0) = 0.0;
+                                        node.vel(rk_level, node_gid, 1) = 0.0;
+                                        if (mesh.num_dims == 3) {
+                                            node.vel(rk_level, node_gid, 2) = 0.0;
+                                        }
+
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        // no velocity
+                                        node.vel(rk_level, node_gid, 0) = 0.0;
+                                        node.vel(rk_level, node_gid, 1) = 0.0;
+                                        if (mesh.num_dims == 3) {
+                                            node.vel(rk_level, node_gid, 2) = 0.0;
+                                        }
+
+                                        break;
+                                    }
                             } // end of switch
                         } // end loop over nodes of element
 
@@ -526,7 +563,7 @@ public:
                             elem.sie(rk_level, elem_gid) =
                                 elem.pres(elem_gid) / (sim_param.region_fills(f_id).den * (gamma - 1.0));
                         } // end if
-                        
+
                     } // end if fill
                 } // end RK loop
             }); // end FOR_ALL element loop

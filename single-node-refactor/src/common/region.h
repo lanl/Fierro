@@ -53,7 +53,6 @@ namespace region
         cylinder = 3,       // tag all elements inside a cylinder
         sphere = 4,         // tag all elements inside a sphere
         readVoxelFile = 5,  // tag all elements in a voxel mesh input WARING: Currently unimplemented
-        planes = 6,         // tag all elements between two planes
     };
 } // end of namespace
 
@@ -62,7 +61,6 @@ static std::map<std::string, region::vol_tag> region_type_map
     { "global", region::global },
     { "box", region::box },
     { "sphere", region::sphere },
-    { "planes", region::planes },
     { "cylinder", region::cylinder },
     { "readVoxelFile", region::readVoxelFile }
 };

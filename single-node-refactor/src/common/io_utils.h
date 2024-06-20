@@ -1011,6 +1011,8 @@ public:
         //  ---------------------------------------------------------------------------
         FILE* out[20];   // the output files that are written to
         char  filename[128];
+        int max_len = sizeof filename;
+        int str_output_len;
 
         struct stat st;
 
@@ -1025,12 +1027,16 @@ public:
         //  ---------------------------------------------------------------------------
         //  Write the Geometry file
         //  ---------------------------------------------------------------------------
-        sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
+        //sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
+        str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.geo", name, graphics_id);
         // filename has the full string
+        if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
 
         out[0] = fopen(filename, "w");
 
+
         fprintf(out[0], "A graphics dump by Fierro \n");
+
         fprintf(out[0], "%s", "EnSight Gold geometry\n");
         fprintf(out[0], "%s", "node id assign\n");
         fprintf(out[0], "%s", "element id assign\n");
@@ -1042,6 +1048,8 @@ public:
         // --- vertices ---
         fprintf(out[0], "coordinates\n");
         fprintf(out[0], "%10lu\n", num_nodes);
+
+        
 
         // write all components of the point coordinates
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
@@ -1087,7 +1095,9 @@ public:
         // ensight_vars = (den, pres,...)
         for (int var = 0; var < num_scalar_vars; var++) {
             // write a scalar value
-            sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+            //sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+            str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
 
             out[0] = fopen(filename, "w");
 
@@ -1114,7 +1124,11 @@ public:
 
         // ensight vector vars = (position, velocity, force)
         for (int var = 0; var < num_vec_vars; var++) {
-            sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+
+            // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+            str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+            
 
             out[0] = fopen(filename, "w");
             // fprintf(out[0],"Per_node vector values\n");
@@ -1146,28 +1160,35 @@ public:
         // Write the case file
         // ---------------------------------------------------------------------------
 
-        sprintf(filename, "ensight/%s.case", name);
+        //sprintf(filename, "ensight/%s.case", name);
+        str_output_len = snprintf(filename, max_len, "ensight/%s.case", name);
+        if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+        
         out[0] = fopen(filename, "w");
 
         fprintf(out[0], "FORMAT\n");
         fprintf(out[0], "type: ensight gold\n");
         fprintf(out[0], "GEOMETRY\n");
 
-        sprintf(filename, "model: data/%s.*****.geo\n", name);
+        //sprintf(filename, "model: data/%s.*****.geo\n", name);
+        str_output_len = snprintf(filename, max_len, "model: data/%s.*****.geo\n", name);
+        if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+
         fprintf(out[0], "%s", filename);
         fprintf(out[0], "VARIABLE\n");
 
         for (int var = 0; var < num_scalar_vars; var++) {
-            sprintf(filename,
-                    "scalar per element: %s data/%s.*****.%s\n",
-                    scalar_var_names[var], name, scalar_var_names[var]);
+            //sprintf(filename, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
+            str_output_len = snprintf(filename, max_len, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
+            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+
             fprintf(out[0], "%s", filename);
         }
 
         for (int var = 0; var < num_vec_vars; var++) {
-            sprintf(filename,
-                    "vector per node: %s data/%s.*****.%s\n",
-                    vec_var_names[var], name, vec_var_names[var]);
+            //sprintf(filename, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
+            str_output_len = snprintf(filename, max_len, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
+            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
             fprintf(out[0], "%s", filename);
         }
 

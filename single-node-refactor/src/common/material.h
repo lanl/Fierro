@@ -245,7 +245,6 @@ struct material_t
 ///
 /// \brief  Material model state, parameters, and values 
 ///
-/// In the code: CArray <MaterialModelValues_t> MaterialModelValues;
 /////////////////////////////////////////////////////////////////////////////
 struct MaterialModelVars_t{
 

@@ -1231,13 +1231,6 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                             });
                             break;
 
-                        case region::planes:
-                            std::cout << "Setting volume fill type to planes " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::planes;
-                            });
-                            break;
-
                         case region::no_volume:
                             std::cout << "Setting volume fill type to none " << std::endl;
                             RUN({
