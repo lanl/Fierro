@@ -40,6 +40,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simulation_parameters.h"
 #include "solver.h"
 
+
+
 using namespace mtr; // matar namespace
 
 /////////////////////////////////////////////////////////////////////////////
@@ -113,13 +115,13 @@ public:
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(
         const mesh_t& mesh,
-        const DCArrayKokkos<boundary_condition_t>& boundary,
+        const BoundaryCondition_t& boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value) const;
 
     void boundary_contact(
         const mesh_t& mesh,
-        const DCArrayKokkos<boundary_condition_t>& boundary,
+        const BoundaryCondition_t& boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value) const;
 

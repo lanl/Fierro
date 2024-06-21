@@ -40,12 +40,13 @@ add_subdirectory(../lib/Elements/matar cbin)
 # include_directories(Mesh-Builder)
 # add_subdirectory(Mesh-Builder)
 
-include_directories(src/material-models/artificial-viscosity)
-include_directories(src/material-models/eos)
-include_directories(src/material-models/erosion)
-include_directories(src/material-models/fracture)
-include_directories(src/material-models/strength)
+include_directories(src/material_models/artificial_viscosity)
+include_directories(src/material_models/eos)
+include_directories(src/material_models/erosion)
+include_directories(src/material_models/fracture)
+include_directories(src/material_models/strength)
 
+include_directories(src/boundary_conditions/velocity)
 
 include_directories(src)
 include_directories(src/common)
@@ -58,6 +59,8 @@ add_subdirectory(src/Solvers/SGH_solver)
 
 
 add_subdirectory(src)
+
+
 
 
 # Add uninstall target

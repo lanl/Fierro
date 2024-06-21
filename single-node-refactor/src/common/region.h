@@ -106,7 +106,7 @@ struct reg_fill_t
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
 
-    double origin[3]; ///< Origin for region
+    double origin[3] = {0.0, 0.0, 0.0}; ///< Origin for region
 };
 
 // ----------------------------------

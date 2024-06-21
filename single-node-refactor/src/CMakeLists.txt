@@ -75,6 +75,5 @@ endif()
 
 include_directories(common)
 
-
 add_executable(Fierro main.cpp solver.cpp )
 target_link_libraries(Fierro PRIVATE matar parse_yaml sgh_solver Kokkos::kokkos)

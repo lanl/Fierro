@@ -46,6 +46,35 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 #include "parse_yaml.h"
 #include "simulation_parameters.h"
+#include "boundary_conditions.h"
+
+// velocity bc files
+#include "Boundary_velocity_constant.h"
+#include "Boundary_velocity_fixed.h"
+#include "Boundary_velocity_none.h"
+#include "Boundary_velocity_reflected.h"
+#include "Boundary_velocity_time_varying.h"
+#include "Boundary_velocity_user_defined.h"
+
+
+
+// eos files
+#include "gamma_law_eos.h"
+#include "no_eos.h"
+#include "user_defined_eos.h"
+#include "void_eos.h"
+
+// strength
+#include "no_strength.h"
+#include "user_defined_strength.h"
+
+// erosion files
+#include "basic_erosion.h"
+#include "no_erosion.h"
+
+// fracture files
+#include "user_defined_fracture.h"
+
 
 #define PI 3.141592653589793
 
@@ -277,7 +306,7 @@ void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
         printf("\n");
         std::cout << "Parsing YAML boundary condition options:" << std::endl;
     }
-    parse_bcs(root, sim_param.boundary_conditions);
+    parse_bcs(root, sim_param.BoundaryConditions);
 
     if (VERBOSE) {
         printf("\n");
@@ -505,10 +534,6 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
     // get the mesh variables names set by the user
     std::vector<std::string> user_mesh_inputs;
-
-    //mesh_input.origin = DCArrayKokkos<double> (3, "mesh_input.origin");
-    //mesh_input.length = DCArrayKokkos<double> (3, "mesh_input.length");
-    //mesh_input.num_elems = DCArrayKokkos<int> (3, "mesh_input.num_elems");
 
 
     // extract words from the input file and validate they are correct
@@ -881,12 +906,6 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 
     region_fills = DCArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
 
-    // origin is static size 3
-    //for(int i=0; i< num_regions; i++){
-    //    region_fills.host(i).origin = DCArrayKokkos<double> (3, "region_fills.origin");
-    //    region_fills.host(i).origin.update_device();
-    //}
-    //region_fills.update_device();
 
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {
@@ -1758,18 +1777,33 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
 
 } // end of function to parse material information
 
+
+
 // =================================================================================
 //    Parse Boundary Conditions
 // =================================================================================
-void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_conditions)
+void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
 {
     Yaml::Node& bc_yaml = root["boundary_conditions"];
 
     size_t num_bcs = bc_yaml.Size();
 
-    boundary_conditions = DCArrayKokkos<boundary_condition_t>(num_bcs, "sim_param.boundary_conditions");
+    BoundaryConditions.num_bcs = num_bcs;
 
-    // loop over the fill regions specified
+    BoundaryConditions.BoundaryConditionSetup = CArrayKokkos <BoundaryConditionSetup_t>(num_bcs, "bc_setup_vars");
+
+    // device functions
+    BoundaryConditions.BoundaryConditionFunctions = CArrayKokkos <BoundaryConditionFunctions_t>(num_bcs, "bc_fcns");
+
+    // enums to select options with boundary conditions
+    BoundaryConditions.BoundaryConditionEnums  = DCArrayKokkos<BoundaryConditionEnums_t> (num_bcs,"bc_enums");  
+
+    // the state for boundary conditions
+    BoundaryConditions.bc_global_vars = DCArrayKokkos<double>(num_bcs, 4, "bc_global_values"); // increase 4 for more params
+    BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
+
+
+    // loop over the BC specified
     for (int bc_id = 0; bc_id < num_bcs; bc_id++) {
         // read the variables names
         Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"];
@@ -1799,7 +1833,7 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                     solver_input::method bc_solver = map[solver];
 
                     RUN({
-                        boundary_conditions(bc_id).solver = bc_solver;
+                        BoundaryConditions.BoundaryConditionEnums(bc_id).solver = bc_solver;
                     });
 
                     if (VERBOSE) {
@@ -1824,9 +1858,65 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 // set the type
                 if (map.find(type) != map.end()) {
                     auto bc_type = map[type];
-                    RUN({
-                        boundary_conditions(bc_id).type = bc_type;
-                    });
+
+                    // bc_type_map[type] returns enum value, e.g., boundary_conds::velocity_constant
+                    switch(map[type]){
+
+                        case boundary_conds::velocity_constant:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::velocity_constant;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &BoundaryVelocityConstant::velocity;
+                            });
+                            break;
+
+                        case boundary_conds::velocity_vs_time:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::velocity_vs_time;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &BoundaryVelocityTimeVarying::velocity;
+                            });
+                            break;
+                        
+                        case boundary_conds::velocity_reflected:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::velocity_reflected;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &BoundaryVelocityReflected::velocity;
+                            });
+                            break;
+
+                        case boundary_conds::velocity_fixed:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::velocity_fixed;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &BoundaryVelocityFixed::velocity;
+                            });
+                            break;
+                        case boundary_conds::velocity_user_defined:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::velocity_user_defined;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &BoundaryVelocityUserDefined::velocity;
+                            });
+                            break;
+                        
+                        default:
+                            
+                            std::cout << "Setting velocity bc " << std::endl;
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::free_surface;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &NoBoundaryVelocity::velocity;
+                            });
+                            // a free surface is default
+                            break;
+                        
+                    } // end switch
 
                     if (VERBOSE) {
                         std::cout << "\ttype = " << type << std::endl;
@@ -1851,7 +1941,7 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 if (map.find(direction) != map.end()) {
                     auto bc_direction = map[direction];
                     RUN({
-                        boundary_conditions(bc_id).direction = bc_direction;
+                        BoundaryConditions.BoundaryConditionEnums(bc_id).direction = bc_direction;
                     });
                     if (VERBOSE) {
                         std::cout << "\tdirection = " << direction << std::endl;
@@ -1876,7 +1966,7 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 if (map.find(geometry) != map.end()) {
                     auto bc_geometry = map[geometry];
                     RUN({
-                        boundary_conditions(bc_id).geometry = bc_geometry;
+                        BoundaryConditions.BoundaryConditionSetup(bc_id).geometry = bc_geometry;
                     });
 
                     if (VERBOSE) {
@@ -1896,30 +1986,58 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
             else if (a_word.compare("value") == 0) {
                 double value = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
                 RUN({
-                    boundary_conditions(bc_id).value = value;
+                    BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                 });
             } // value
             // set the u
             else if (a_word.compare("u") == 0) {
                 double u = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
                 RUN({
-                    boundary_conditions(bc_id).u = u;
+                    BoundaryConditions.bc_global_vars(bc_id,0) = u;
                 });
             } // u
             // set the v
             else if (a_word.compare("v") == 0) {
                 double v = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
                 RUN({
-                    boundary_conditions(bc_id).v = v;
+                    BoundaryConditions.bc_global_vars(bc_id,1) = v;
                 });
             } // v
             // set the w
             else if (a_word.compare("w") == 0) {
                 double w = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
                 RUN({
-                    boundary_conditions(bc_id).w = w;
+                    BoundaryConditions.bc_global_vars(bc_id,2) = w;
                 });
             } // w
+            // set the bc_vel_0
+            else if (a_word.compare("hydro_bc_vel_0") == 0) {
+                double hydro_bc_vel_0 = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    BoundaryConditions.bc_global_vars(bc_id,0) = hydro_bc_vel_0;
+                });
+            } // 
+            // set the bc_vel_1
+            else if (a_word.compare("hydro_bc_vel_1") == 0) {
+                double hydro_bc_vel_1 = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    BoundaryConditions.bc_global_vars(bc_id,1) = hydro_bc_vel_1;
+                });
+            } // 
+            // set the bc_vel_start
+            else if (a_word.compare("hydro_bc_vel_t_start") == 0) {
+                double hydro_bc_vel_t_start = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    BoundaryConditions.bc_global_vars(bc_id,2) = hydro_bc_vel_t_start;
+                });
+            } // 
+            // set the bc_vel_end
+            else if (a_word.compare("hydro_bc_vel_t_end") == 0) {
+                double hydro_bc_vel_t_end = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    BoundaryConditions.bc_global_vars(bc_id,3) = hydro_bc_vel_t_end;
+                });
+            } // 
             else if (a_word.compare("origin") == 0) {
                 std::string origin = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
                 if (VERBOSE) {
@@ -1950,10 +2068,11 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 // storing the origin values as (x1,y1,z1)
 
                 RUN({
-                    boundary_conditions(bc_id).origin[0] = x1;
-                    boundary_conditions(bc_id).origin[1] = y1;
-                    boundary_conditions(bc_id).origin[2] = z1;
+                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[0] = x1;
+                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[1] = y1;
+                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[2] = z1;
                 });
+
             } // origin
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
@@ -1964,5 +2083,10 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 throw std::runtime_error("**** Boundary Conditions Not Understood ****");
             }
         } // end for words in material
-    } // end loop over regions
+
+    } // end loop over BCs specified
+
+    // copy the enum values to the host 
+    BoundaryConditions.BoundaryConditionEnums.update_host();
+
 } // end of function to parse region

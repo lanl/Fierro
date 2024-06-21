@@ -82,9 +82,9 @@ struct mesh_input_t
     std::string file_path     = ""; ///< Absolute path of mesh file
     mesh_input::type type;  ///< Type of mesh to generate if
 
-    double origin[3]; ///< Mesh origin for generating a mesh
-    double length[3]; ///< x,y,z length of generated mesh
-    size_t num_elems[3]; ///< Number of elements along x,y, z for generating a mesh.
+    double origin[3] = {0.0, 0.0, 0.0}; ///< Mesh origin for generating a mesh
+    double length[3] = {0.0, 0.0, 0.0}; ///< x,y,z length of generated mesh
+    size_t num_elems[3] = {1, 1, 1}; ///< Number of elements along x,y, z for generating a mesh.
 
     size_t p_order = 1;
 

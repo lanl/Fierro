@@ -53,7 +53,10 @@ struct reg_fill_t;
 struct material_t;
 struct MaterialModelVars_t;
 struct output_options_t;
-struct boundary_condition_t;
+struct BoundaryCondition_t;
+struct BoundaryConditionEnums_t;
+struct BoundaryConditionFunctions_t;
+struct BoundaryConditionSetup_t;
 struct dynamic_options_t;
 
 using namespace mtr;
@@ -103,6 +106,6 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills);
 void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, MaterialModelVars_t & MaterialModelVars);
 
 // parse the boundary condition text
-void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_conditions);
+void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions);
 
 #endif // end Header Guard

@@ -39,22 +39,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "matar.h"
 
-// eos files
-#include "gamma_law_eos.h"
-#include "no_eos.h"
-#include "user_defined_eos.h"
-#include "void_eos.h"
-
-// strength
-#include "no_strength.h"
-#include "user_defined_strength.h"
-
-// erosion files
-#include "basic_erosion.h"
-#include "no_erosion.h"
-
-// fracture files
-#include "user_defined_fracture.h"
 
 
 namespace model

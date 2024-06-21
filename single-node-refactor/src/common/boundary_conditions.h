@@ -36,7 +36,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "solver_inputs.h"
 
+#include "matar.h"
+
+#include "mesh.h"
+
 #include <map>
+
+
+
 
 namespace boundary_conds
 {
@@ -54,15 +61,25 @@ enum bdy_tag
 // types of boundary conditions
 // WARNING: Currently only velocity is supported
 enum bdy_hydro_conds
+{   
+    free_surface          = 0,
+    velocity_constant     = 1,
+    velocity_vs_time      = 2,
+    velocity_reflected    = 3,
+    velocity_fixed        = 4,
+    velocity_user_defined = 5   
+};
+// future options:
+//    displacement          = 6,
+//    acceleration          = 7,
+//    pressure              = 8,
+//    temperature           = 9,
+//    contact               = 10  
+
+enum bc_function_location
 {
-    displacement = 0,
-    velocity = 1,
-    acceleration = 2,
-    reflected = 3,
-    fixed = 4,
-    pressure = 5,
-    temperature = 6,
-    contact = 7
+    host = 0,
+    device = 1
 };
 
 // Direction to apply boundary conditions
@@ -86,15 +103,19 @@ static std::map<std::string, boundary_conds::bdy_tag> bc_geometry_map
 
 static std::map<std::string, boundary_conds::bdy_hydro_conds> bc_type_map
 {
-    { "displacement", boundary_conds::displacement },
-    { "velocity", boundary_conds::velocity },
-    { "acceleration", boundary_conds::acceleration },
-    { "reflected", boundary_conds::reflected },
-    { "fixed", boundary_conds::fixed },
-    { "pressure", boundary_conds::pressure },
-    { "temperature", boundary_conds::temperature },
-    { "contact", boundary_conds::contact }
+    { "free_surface",          boundary_conds::free_surface          },
+    { "constant_velocity",     boundary_conds::velocity_constant     },
+    { "velocity_vs_time",      boundary_conds::velocity_vs_time      },
+    { "reflected_velocity",    boundary_conds::velocity_reflected    },
+    { "zero_velocity",        boundary_conds::velocity_fixed         },
+    { "user_defined_velocity", boundary_conds::velocity_user_defined },
 };
+// future options
+//    { "displacement",          boundary_conds::displacement          },
+//    { "acceleration",          boundary_conds::acceleration          },
+//    { "pressure",              boundary_conds::pressure              },
+//    { "temperature",           boundary_conds::temperature           },
+//    { "contact",               boundary_conds::contact               }
 
 static std::map<std::string, boundary_conds::bdy_direction> bc_direction_map
 {
@@ -103,34 +124,102 @@ static std::map<std::string, boundary_conds::bdy_direction> bc_direction_map
     { "z_dir", boundary_conds::z_dir }
 };
 
+
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct boundary_condition_t
+/// \struct BoundaryConditionSetup_t
 ///
-/// \brief Stored boundary condition data
+/// \brief The boundary condition routines to setup the simulation
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct boundary_condition_t
+struct BoundaryConditionSetup_t
 {
+    boundary_conds::bdy_tag geometry;   ///< Geometry boundary condition is applied to, e.g., sphere, plane   
+    double origin[3] = {0.0, 0.0, 0.0}; ///< origin of surface being tagged, e.g., sphere or cylinder surface   
+    double value = 0.0;                 ///< value = position, radius, etc. defining the geometric shape
+
+}; // end boundary condition setup
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct BoundaryConditionEnums_t
+///
+/// \brief Stores boundary condition settings
+///
+/////////////////////////////////////////////////////////////////////////////
+struct BoundaryConditionEnums_t
+{
+
     solver_input::method solver = solver_input::NONE; ///< Numerical solver method
-    boundary_conds::bdy_hydro_conds type; ///< Type of boundary condition
-    boundary_conds::bdy_tag geometry; ///< Geometry boundary condition is applied to
+
+    boundary_conds::bdy_hydro_conds type;    ///< Type of boundary condition
 
     boundary_conds::bdy_direction direction; ///< Boundary condition direction
 
-    double value = 0.0; ///< Magnitude of BC WARNING: Currently unused
-    double u     = 0.0; ///< WARNING: Currently unused
-    double v     = 0.0; ///< WARNING: Currently unused
-    double w     = 0.0; ///< WARNING: Currently unused
+    boundary_conds::bc_function_location location=boundary_conds::device; // host or device BC function
 
-    double origin[3]; //
+}; // end boundary condition enums
 
-    // WARNING: CURRENTLY NOT PARSED OR USED
-    double hydro_bc_vel_0 = 0.0;    ///< Initial velocity for timed velocity boundary condition
-    double hydro_bc_vel_1 = 0.0;    ///< Final velocity for timed velocity boundary condition
-    double hydro_bc_vel_t_start = 0.0;  ///< Start time for velocity boundary condition
-    double hydro_bc_vel_t_end   = 0.0;  ///< End time for velocity boundary condition
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct BoundaryConditionFunctions_t
+///
+/// \brief The boundary condition routines on the device
+///
+/////////////////////////////////////////////////////////////////////////////
+struct BoundaryConditionFunctions_t
+{
+
+        // function pointer for velocity BC's
+        void (*velocity) (const mesh_t& mesh,
+                          const DCArrayKokkos <BoundaryConditionEnums_t>& BoundaryConditionEnums,
+                          const DCArrayKokkos<double>& bc_global_vars,
+                          const DCArrayKokkos<double>& bc_state_vars,
+                          const DCArrayKokkos<double>& node_vel,
+                          const double time_value,
+                          const size_t bdy_node_gid,
+                          const size_t bdy_set) = NULL;
+
+        // add function pointer for pressure BC's
+                                                    
+
+}; // end boundary condition fcns
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct BoundaryCondition_t
+///
+/// \brief A container to hold boundary condition information
+///
+/////////////////////////////////////////////////////////////////////////////
+struct BoundaryCondition_t
+{
+    size_t num_bcs; // the number of boundary conditions
+
+    CArrayKokkos <BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs
+
+    // device functions and associated data
+    CArrayKokkos <BoundaryConditionFunctions_t> BoundaryConditionFunctions; // struct with function pointers
+
+    // enums to select BC capabilities, some enums are needed on the host side and device side
+    DCArrayKokkos <BoundaryConditionEnums_t> BoundaryConditionEnums; 
+
+    // global vars for boundary condition models
+    DCArrayKokkos<double> bc_global_vars; // it is only 4 values, so ragged doesn't make sense now
+
+    // statevars for boundary conditions
+    DCArrayKokkos<double> bc_state_vars;
+
 }; // end boundary conditions
+
+
 
 // -------------------------------------
 // valid inputs for boundary conditions
@@ -145,7 +234,11 @@ static std::vector<std::string> str_bc_inps
     "u",
     "v",
     "w",
-    "origin"
+    "origin",
+    "hydro_bc_vel_0",
+    "hydro_bc_vel_1",
+    "hydro_bc_vel_t_start",
+    "hydro_bc_vel_t_end"
 };
 
 // ----------------------------------

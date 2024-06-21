@@ -117,13 +117,13 @@ public:
         }
 
         // Build boundary conditions
-        int num_bcs = sim_param.boundary_conditions.size();
+        int num_bcs = sim_param.BoundaryConditions.num_bcs;
         printf("Num BC's = %d\n", num_bcs);
 
         // --- calculate bdy sets ---//
         mesh.init_bdy_sets(num_bcs);
-        tag_bdys(sim_param.boundary_conditions, mesh, node.coords);
-        mesh.build_boundry_node_sets(sim_param.boundary_conditions, mesh);
+        tag_bdys(sim_param.BoundaryConditions, mesh, node.coords);
+        mesh.build_boundry_node_sets(mesh);
 
         // Calculate element volume
         geometry::get_vol(elem.vol, node.coords, mesh);
@@ -263,19 +263,24 @@ public:
                         else{
                             elem_coords[2] = 0.0;
                         }
-                    } // end loop over nodes in element (NOTE: Translating using origin so below check works)
-                    elem_coords[0] = (elem_coords[0] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[0];
-                    elem_coords[1] = (elem_coords[1] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[1];
-                    elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin[2];
+                    } // end loop over nodes in element 
+                    elem_coords[0] = (elem_coords[0] / mesh.num_nodes_in_elem);
+                    elem_coords[1] = (elem_coords[1] / mesh.num_nodes_in_elem);
+                    elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem);
+                    
+                    // for shapes with an origin (e.g., sphere and circle), accounting for the origin
+                    double dist_x = elem_coords[0] - sim_param.region_fills(f_id).origin[0];
+                    double dist_y = elem_coords[1] - sim_param.region_fills(f_id).origin[1];
+                    double dist_z = elem_coords[2] - sim_param.region_fills(f_id).origin[2];
 
                     // spherical radius 
-                    double radius = sqrt(elem_coords[0] * elem_coords[0] +
-                                          elem_coords[1] * elem_coords[1] +
-                                          elem_coords[2] * elem_coords[2]);
+                    double radius = sqrt(dist_x * dist_x +
+                                         dist_y * dist_y +
+                                         dist_z * dist_z);
 
                     // cylindrical radius
-                    double radius_cyl = sqrt(elem_coords[0] * elem_coords[0] +
-                                              elem_coords[1] * elem_coords[1]);
+                    double radius_cyl = sqrt(dist_x * dist_x +
+                                             dist_y * dist_y);
 
                     // default is not to fill the element
                     size_t fill_this = 0;
@@ -355,7 +360,7 @@ public:
                         default:
                             {
                                 fill_this = 0; // default is no, don't fill it
-                                
+
                                 break;
                             }
 
