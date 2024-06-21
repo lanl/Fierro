@@ -84,7 +84,7 @@ public:
 
     int solve();
 
-    void checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint);
+    void checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint, size_t bounding_timestep);
 
     void module_cleanup();
 
@@ -422,7 +422,7 @@ public:
 
     void grow_boundary_sets(int num_boundary_sets);
 
-    virtual void update_forward_solve(Teuchos::RCP<const MV> zp);
+    virtual void update_forward_solve(Teuchos::RCP<const MV> zp, bool print_design=false);
 
     void comm_node_masses();
 
@@ -498,11 +498,12 @@ public:
 
     void node_density_constraints(host_vec_array node_densities_lower_bound);
 
-    void compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed); // Force depends on node coords, velocity, and sie
+    void compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed); // Force depends on node coords, velocity, and sie
 
     void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
 
-    void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed, unsigned long cycle);
+    void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
+                                                      unsigned long cycle, real_t global_dt);
 
     void boundary_adjoint(const mesh_t& mesh,
                           const DCArrayKokkos<boundary_t>& boundary,
@@ -583,13 +584,14 @@ public:
     Teuchos::RCP<MV> all_node_velocities_distributed;
     Teuchos::RCP<MV> all_cached_node_velocities_distributed;
     Teuchos::RCP<MV> node_masses_distributed;
+    Teuchos::RCP<MV> cached_design_gradients_distributed;
     Teuchos::RCP<MV> ghost_node_masses_distributed;
     Teuchos::RCP<MV> all_adjoint_vector_distributed, adjoint_vector_distributed;
     Teuchos::RCP<MV> all_phi_adjoint_vector_distributed, phi_adjoint_vector_distributed;
     Teuchos::RCP<MV> all_psi_adjoint_vector_distributed, psi_adjoint_vector_distributed;
-    Teuchos::RCP<MV> previous_adjoint_vector_distributed;
-    Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed;
-    Teuchos::RCP<MV> previous_psi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_adjoint_vector_distributed, midpoint_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed, midpoint_phi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_psi_adjoint_vector_distributed, midpoint_psi_adjoint_vector_distributed;
     Teuchos::RCP<MV> element_internal_energy_distributed;
     Teuchos::RCP<MV> previous_element_internal_energy_distributed;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;

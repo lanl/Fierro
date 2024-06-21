@@ -93,7 +93,7 @@ private:
   ROL::Ptr<ROL_MV> ROL_Displacements;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> all_node_displacements_distributed_temp;
-  real_t initial_strain_energy;
+  real_t initial_strain_energy, objective_sign;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
 
@@ -116,7 +116,7 @@ public:
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
       current_step = 0;
-      
+      objective_sign = 1;
       //deep copy solve data into the cache variable
       FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
       all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
@@ -135,6 +135,9 @@ public:
       //save initial normalization value for restart data
       if(FEM_->simparam->output_options.optimization_restart_file){
         FEM_->simparam->optimization_options.objective_normalization_constant = initial_strain_energy;
+      }
+      if(FEM_->simparam->optimization_options.maximize_flag){
+        objective_sign = -1;
       }
       std::cout.precision(10);
       if(FEM_->myrank==0)
@@ -251,7 +254,7 @@ public:
     std::cout << "CURRENT NORMALIZED STRAIN ENERGY " << current_strain_energy/initial_strain_energy << std::endl;
 
     //std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
-    return current_strain_energy/initial_strain_energy;
+    return objective_sign*current_strain_energy/initial_strain_energy;
   }
 
   /* --------------------------------------------------------------------------------------
@@ -283,7 +286,7 @@ public:
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
-    gp->scale(1/initial_strain_energy);
+    gp->scale(objective_sign/initial_strain_energy);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -330,7 +333,7 @@ public:
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
-    hvp->scale(1/initial_strain_energy);
+    hvp->scale(objective_sign/initial_strain_energy);
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);

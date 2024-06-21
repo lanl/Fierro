@@ -112,6 +112,7 @@ FEA_Module_SGH::FEA_Module_SGH(
 
     // Switch for optimization solver
     if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+        cached_design_gradients_distributed    = Teuchos::rcp(new MV(map, 1));
         all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_velocity                = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_position                = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -167,11 +168,12 @@ FEA_Module_SGH::FEA_Module_SGH(
             previous_node_velocities_distributed         = Teuchos::rcp(new MV(all_node_map, num_dim));
             previous_node_coords_distributed             = Teuchos::rcp(new MV(all_node_map, num_dim));
             previous_element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
-            all_node_velocities_distributed              = Teuchos::rcp(new MV(all_node_map, num_dim));
-            node_velocities_distributed                  = Teuchos::rcp(new MV(*all_node_velocities_distributed, map));
             previous_adjoint_vector_distributed          = Teuchos::rcp(new MV(all_node_map, num_dim));
             previous_phi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_node_map, num_dim));
             previous_psi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_element_map, 1));
+            midpoint_adjoint_vector_distributed          = Teuchos::rcp(new MV(all_node_map, num_dim));
+            midpoint_phi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_node_map, num_dim));
+            midpoint_psi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_element_map, 1));
         }
         else{
             max_time_steps = BUFFER_GROW;
@@ -181,11 +183,11 @@ FEA_Module_SGH::FEA_Module_SGH(
     }
 
     if (simparam->topology_optimization_on) {
-        time_data.resize(max_time_steps + 1);
         forward_solve_velocity_data   = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_internal_energy_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         if(!simparam->optimization_options.use_solve_checkpoints){
+            time_data.resize(max_time_steps + 1);
             adjoint_vector_data     = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
             phi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
             psi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
@@ -906,6 +908,7 @@ void FEA_Module_SGH::sgh_solve()
     dt_min     = dynamic_options.dt_min;
     dt     = dynamic_options.dt;
     dt_cfl = dynamic_options.dt_cfl;
+    int print_cycle = dynamic_options.print_cycle;
 
     graphics_time    = simparam->output_options.graphics_step;
     graphics_dt_ival = simparam->output_options.graphics_step;
@@ -936,6 +939,12 @@ void FEA_Module_SGH::sgh_solve()
     int  last_raised_level = 0;
     bool dispensable_found = false;
     num_active_checkpoints = 0;
+
+    
+    if(simparam->optimization_options.disable_forward_solve_output){
+        //sets the value large enough to not write during the sgh loop
+        graphics_time = time_final + graphics_time;
+    }
 
     // reset time accumulating objective and constraints
     /*
@@ -982,7 +991,7 @@ void FEA_Module_SGH::sgh_solve()
     }
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if (simparam->output_options.write_initial) {
+    if (simparam->output_options.write_initial&&!simparam->optimization_options.disable_forward_solve_output) {
         if (myrank == 0) {
             printf("Writing outputs to file at %f \n", time_value);
         }
@@ -1071,10 +1080,7 @@ void FEA_Module_SGH::sgh_solve()
 
     // save initial data
     if (topology_optimization_on || shape_optimization_on) {
-        if(use_solve_checkpoints){
-
-        }
-        else{
+        if(!use_solve_checkpoints){
             time_data[0] = 0;
         }
         // assign current velocity data to multivector
@@ -1141,8 +1147,11 @@ void FEA_Module_SGH::sgh_solve()
         } // end view scope
 
         if(use_solve_checkpoints){
+            //reset containers
+            dynamic_checkpoint_set->clear();
+            cached_dynamic_checkpoints->clear();
             //always assign t=0 as a checkpoint
-            Dynamic_Checkpoint temp(3,0,time_value, std::numeric_limits<int>::max());
+            Dynamic_Checkpoint temp(3,0,time_value, dt, std::numeric_limits<int>::max());
             temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[0]);
             temp.change_vector(V_DATA, (*forward_solve_velocity_data)[0]);
             temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[0]);
@@ -1190,7 +1199,7 @@ void FEA_Module_SGH::sgh_solve()
                 }
             }
             // print time step every 10 cycles
-            else if (cycle % 20 == 0) {
+            else if (cycle % print_cycle == 0) {
                 if (myrank == 0) {
                     printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
                 }
@@ -1208,6 +1217,10 @@ void FEA_Module_SGH::sgh_solve()
                 elem_stress,
                 rnum_elem,
                 nall_nodes);
+
+        if(use_solve_checkpoints){
+                previous_node_velocities_distributed->assign(*all_node_velocities_distributed);
+        }
 
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
@@ -1296,9 +1309,7 @@ void FEA_Module_SGH::sgh_solve()
                 }
             }
 #endif
-            if(use_solve_checkpoints){
-                previous_node_velocities_distributed->assign(*all_node_velocities_distributed);
-            }
+
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,
                               node_vel,
@@ -1635,7 +1646,7 @@ void FEA_Module_SGH::sgh_solve()
             if(use_solve_checkpoints){
                 //add level 0 checkpoints sequentially until requested total limit is reached
                 if(num_active_checkpoints < num_solve_checkpoints){
-                    Dynamic_Checkpoint temp(3,cycle+1,time_value);
+                    Dynamic_Checkpoint temp(3,cycle+1,time_value, dt);
                     temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[num_active_checkpoints + 1]);
                     temp.change_vector(V_DATA, (*forward_solve_velocity_data)[num_active_checkpoints + 1]);
                     temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[num_active_checkpoints + 1]);
@@ -1666,7 +1677,7 @@ void FEA_Module_SGH::sgh_solve()
                     }
                     if(dispensable_found){
                         //add replacement checkpoint
-                        Dynamic_Checkpoint temp(3,cycle+1,time_value);
+                        Dynamic_Checkpoint temp(3,cycle+1,time_value, dt);
                         //get pointers to vector buffers from the checkpoint we're about to delete
                         temp.copy_vectors(*dispensable_checkpoint);
                         //remove checkpoint at timestep = cycle
@@ -1685,7 +1696,7 @@ void FEA_Module_SGH::sgh_solve()
                         last_raised_level = current_checkpoint->level;
 
                         //add replacement checkpoint
-                        Dynamic_Checkpoint temp(3,cycle+1,time_value,++last_raised_level);
+                        Dynamic_Checkpoint temp(3,cycle+1,time_value, dt, ++last_raised_level);
                         //get pointers to vector buffers from the checkpoint we're about to delete
                         temp.copy_vectors(*current_checkpoint);
                         //remove checkpoint at timestep = cycle
@@ -1824,12 +1835,13 @@ void FEA_Module_SGH::sgh_solve()
     last_time_step = cycle;
 
     //debug print of checkpoint timesteps
-    if(use_solve_checkpoints){
-        int count = 0;
-        for(auto it = dynamic_checkpoint_set->begin(); it != dynamic_checkpoint_set->end(); it++){
-            std::cout << "Checkpoint # " << count++ << " is at timestep " << (*it).saved_timestep << std::endl;
-        }
-    }
+    // if(use_solve_checkpoints){
+    //     int count = 0;
+    //     for(auto it = dynamic_checkpoint_set->begin(); it != dynamic_checkpoint_set->end(); it++){
+    //         *fos << "Checkpoint # " << count++ << " is at timestep " << (*it).saved_timestep << " with timestep "
+    //          << (*it).saved_dt << " at time " << (*it).saved_time << std::endl;
+    //     }
+    // }
 
     // simple setup to just calculate KE minimize objective for now
     if (topology_optimization_on) {
@@ -1839,9 +1851,9 @@ void FEA_Module_SGH::sgh_solve()
         MPI_Allreduce(&objective_accumulation, &global_objective_accumulation, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         kinetic_energy_minimize_function.objective_accumulation = global_objective_accumulation;
 
-        if (myrank == 0) {
-            std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << global_objective_accumulation << std::endl;
-        }
+        // if (myrank == 0) {
+        //     std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << global_objective_accumulation << std::endl;
+        // }
     }
 
     auto time_2 = std::chrono::high_resolution_clock::now();
@@ -1895,15 +1907,16 @@ void FEA_Module_SGH::sgh_solve()
     TE_tend = IE_tend + KE_tend;
 
     // reduce over MPI ranks
-
-    if (myrank == 0) {
-        printf("Time=0:   KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_t0, IE_t0, TE_t0);
-    }
-    if (myrank == 0) {
-        printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
-    }
-    if (myrank == 0) {
-        printf("total energy conservation error = %e \n\n", 100 * (TE_tend - TE_t0) / TE_t0);
+    if (simparam->dynamic_options.output_time_sequence_level >= TIME_OUTPUT_LEVEL::low) {
+        if (myrank == 0) {
+            printf("Time=0:   KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_t0, IE_t0, TE_t0);
+        }
+        if (myrank == 0) {
+            printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
+        }
+        if (myrank == 0) {
+            printf("total energy conservation error = %e \n\n", 100 * (TE_tend - TE_t0) / TE_t0);
+        }
     }
 
     return;

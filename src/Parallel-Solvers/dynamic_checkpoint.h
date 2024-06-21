@@ -66,10 +66,11 @@ public:
     Dynamic_Checkpoint(){}
 
     // Argument Constructor
-    Dynamic_Checkpoint(int vector_count, int timestep, real_t time, int pass_level=0) {
+    Dynamic_Checkpoint(int vector_count, int timestep, real_t time, real_t dt, int pass_level=0) {
         num_state_vectors = vector_count;
         saved_timestep = timestep;
         saved_time = time;
+        saved_dt = dt;
         state_vectors = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(num_state_vectors));
         level = pass_level;
     }
@@ -80,6 +81,8 @@ public:
         num_state_vectors = copied_checkpoint.num_state_vectors;
         state_vectors = copied_checkpoint.state_vectors;
         level = copied_checkpoint.level;
+        saved_time = copied_checkpoint.saved_time;
+        saved_dt = copied_checkpoint.saved_dt;
     }
 
     // Destructor
@@ -91,6 +94,8 @@ public:
         num_state_vectors = assigned_checkpoint.num_state_vectors;
         state_vectors = assigned_checkpoint.state_vectors;
         level = assigned_checkpoint.level;
+        saved_time = assigned_checkpoint.saved_time;
+        saved_dt = assigned_checkpoint.saved_dt;
         return *this;
     }
 
@@ -152,6 +157,7 @@ public:
     public:
     //checkpoint state data
     int saved_timestep;
+    real_t saved_dt;
     real_t saved_time;
     int num_state_vectors;
     int level;

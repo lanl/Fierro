@@ -140,7 +140,7 @@ public:
 
     virtual void read_mesh_abaqus_inp(const char* MESH); //abaqus inp format reader
 
-    virtual void repartition_nodes();
+    virtual void repartition_nodes(bool repartition_node_densities=true);
 
     virtual void comm_importer_setup();
 

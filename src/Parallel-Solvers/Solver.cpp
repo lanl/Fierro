@@ -1212,7 +1212,7 @@ void Solver::read_mesh_vtk(const char* MESH)
         }
     } // end of coordinate readin
     // repartition node distribution
-    repartition_nodes();
+    repartition_nodes(false);
 
     // synchronize device data
     // dual_node_coords.sync_device();
@@ -1732,7 +1732,7 @@ void Solver::read_mesh_vtk(const char* MESH)
         }
 
         //Find initial objective value to normalize by
-        if (myrank == 0)
+        if (myrank == 0 && simparam.optimization_options.normalized_objective)
         {
             bool found = false;
             while (found == false&&in->good()) {
@@ -3067,7 +3067,7 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
    Rebalance the initial node decomposition with Zoltan2
 ------------------------------------------------------------------------- */
 
-void Solver::repartition_nodes()
+void Solver::repartition_nodes(bool repartition_node_densities)
 {
     char ch;
 
@@ -3160,7 +3160,7 @@ void Solver::repartition_nodes()
     partitioned_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(*partitioned_map_one_to_one));
 
     // migrate density vector if this is a restart file read
-    if (simparam.restart_file)
+    if (simparam.restart_file&&repartition_node_densities)
     {
         Teuchos::RCP<MV> partitioned_node_densities_distributed = Teuchos::rcp(new MV(partitioned_map, 1));
 
