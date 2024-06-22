@@ -46,7 +46,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "Yaml.hpp"
 
-struct simulation_parameters_t;
+struct SimulationParameters_t;
 struct solver_input_t;
 struct mesh_input_t;
 struct reg_fill_t;
@@ -90,7 +90,7 @@ void validate_inputs(
     std::vector<std::string>& str_required_inputs);
 
 // utility function for parsing YAML file
-void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary);
+void parse_yaml(Yaml::Node& root, SimulationParameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary);
 
 // Parse the solver related data
 void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_input);

@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \brief Struct for holding simulation metadata
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct simulation_parameters_t
+struct SimulationParameters_t
 {
     mesh_input_t mesh_input;    ///< Mesh input information
 

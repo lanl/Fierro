@@ -268,7 +268,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
+    void build_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, SimulationParameters_t& sim_param)
     {
         if (sim_param.mesh_input.num_dims == 2) {
             if (sim_param.mesh_input.type == mesh_input::Cylinder) {
@@ -308,7 +308,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
+    void build_2d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, SimulationParameters_t& sim_param) const
     {
         printf(" Creating a 2D box mesh \n");
 
@@ -435,7 +435,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_polar(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
+    void build_2d_polar(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, SimulationParameters_t& sim_param) const
     {
         printf(" Creating a 2D polar mesh \n");
 
@@ -565,7 +565,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
+    void build_3d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, SimulationParameters_t& sim_param) const
     {
         printf(" Creating a 3D box mesh \n");
 
@@ -712,7 +712,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_HexN_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
+    void build_3d_HexN_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, SimulationParameters_t& sim_param) const
     {
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
     }
@@ -849,7 +849,7 @@ public:
     elem_t&   elem,
     node_t&   node,
     corner_t& corner,
-    simulation_parameters_t& sim_param,
+    SimulationParameters_t& sim_param,
     double time_value,
     CArray<double> graphics_times)
     {
@@ -891,7 +891,7 @@ public:
     elem_t&   elem,
     node_t&   node,
     corner_t& corner,
-    simulation_parameters_t& sim_param,
+    SimulationParameters_t& sim_param,
     double time_value,
     CArray<double> graphics_times)
     {
@@ -1238,7 +1238,7 @@ public:
     elem_t&   elem,
     node_t&   node,
     corner_t& corner,
-    simulation_parameters_t& sim_param,
+    SimulationParameters_t& sim_param,
     double time_value,
     CArray<double> graphics_times)
     {

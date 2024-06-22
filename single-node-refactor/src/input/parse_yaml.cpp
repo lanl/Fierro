@@ -269,7 +269,7 @@ void print_yaml(Yaml::Node root)
 // =================================================================================
 //    Parse YAML file
 // =================================================================================
-void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary)
+void parse_yaml(Yaml::Node& root, SimulationParameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary)
 {
     // if (VERBOSE) {
     //     printf("\n");

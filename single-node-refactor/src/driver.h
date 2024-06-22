@@ -44,7 +44,7 @@
 #include "state.h"
 
 
-void fill_regions(simulation_parameters_t, Material_t, mesh_t, node_t, elem_t, corner_t);
+void fill_regions(SimulationParameters_t, Material_t, mesh_t, node_t, elem_t, corner_t);
 
 
 class Driver
@@ -61,7 +61,7 @@ public:
     MeshReader  mesh_reader;
     MeshBuilder mesh_builder;
 
-    simulation_parameters_t sim_param; ///< the input simulation parameters
+    SimulationParameters_t sim_param; ///< the input simulation parameters
 
     // ---------------------------------------------------------------------
     //    Material and Boundary declarations
@@ -232,7 +232,7 @@ public:
     /// \brief Fills mesh regions based on YAML input
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void fill_regions(simulation_parameters_t sim_param, Material_t Materials, mesh_t mesh, node_t node, elem_t elem, corner_t corner)
+    void fill_regions(SimulationParameters_t sim_param, Material_t Materials, mesh_t mesh, node_t node, elem_t elem, corner_t corner)
     {
         int num_fills = sim_param.region_fills.size();
         printf("Num Fills's = %d\n", num_fills);

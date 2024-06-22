@@ -46,7 +46,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::execute(simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& BoundaryConditions, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
+void SGH::execute(SimulationParameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& BoundaryConditions, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
