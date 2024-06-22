@@ -45,14 +45,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-namespace boundary_conds
+namespace boundary_conditions
 {
 // supported geometry for boundary conditions
-enum bdy_tag
+enum BdyTag
 {
-    x_plane = 0,    // tag an x-plane
-    y_plane = 1,    // tag an y-plane
-    z_plane = 2,    // tag an z-plane
+    xPlane = 0,    // tag an x-plane
+    yPlane = 1,    // tag an y-plane
+    zPlane = 2,    // tag an z-plane
     cylinder = 3,   // tag an cylindrical surface
     sphere = 4      // tag a spherical surface
              // read_file = 5   // read from a file currently unsupported
@@ -60,14 +60,15 @@ enum bdy_tag
 
 // types of boundary conditions
 // WARNING: Currently only velocity is supported
-enum bdy_hydro_conds
+enum BCHydro
 {   
-    free_surface          = 0,
-    velocity_constant     = 1,
-    velocity_vs_time      = 2,
-    velocity_reflected    = 3,
-    velocity_fixed        = 4,
-    velocity_user_defined = 5   
+    noVelocityBC           = 0,
+    constantVelocityBC     = 1,
+    timeVaringVelocityBC   = 2,
+    reflectedVelocityBC    = 3,
+    zeroVelocityBC         = 4,
+    userDefinedVelocityBC  = 5,
+    pistonVelocityBC       = 6   
 };
 // future options:
 //    displacement          = 6,
@@ -76,52 +77,53 @@ enum bdy_hydro_conds
 //    temperature           = 9,
 //    contact               = 10  
 
-enum bc_function_location
+enum BCFcnLocation
 {
     host = 0,
     device = 1
 };
 
 // Direction to apply boundary conditions
-enum bdy_direction
+enum BCDirection
 {
-    x_dir = 0,
-    y_dir = 1,
-    z_dir = 2
+    xDir = 0,
+    yDir = 1,
+    zDir = 2
 };
 } // end of boundary conditions namespace
 
-static std::map<std::string, boundary_conds::bdy_tag> bc_geometry_map
+static std::map<std::string, boundary_conditions::BdyTag> bc_geometry_map
 {
-    { "x_plane", boundary_conds::x_plane },
-    { "y_plane", boundary_conds::y_plane },
-    { "z_plane", boundary_conds::z_plane },
-    { "cylinder", boundary_conds::cylinder },
-    { "sphere", boundary_conds::sphere }
-    // { "read_file", boundary_conds::read_file }
+    { "x_plane", boundary_conditions::xPlane },
+    { "y_plane", boundary_conditions::yPlane },
+    { "z_plane", boundary_conditions::zPlane },
+    { "cylinder", boundary_conditions::cylinder },
+    { "sphere", boundary_conditions::sphere }
+    // { "read_file", boundary_conditions::read_file }
 };
 
-static std::map<std::string, boundary_conds::bdy_hydro_conds> bc_type_map
+static std::map<std::string, boundary_conditions::BCHydro> bc_type_map
 {
-    { "free_surface",          boundary_conds::free_surface          },
-    { "constant_velocity",     boundary_conds::velocity_constant     },
-    { "velocity_vs_time",      boundary_conds::velocity_vs_time      },
-    { "reflected_velocity",    boundary_conds::velocity_reflected    },
-    { "zero_velocity",        boundary_conds::velocity_fixed         },
-    { "user_defined_velocity", boundary_conds::velocity_user_defined },
+    { "no_velocity",           boundary_conditions::noVelocityBC          },
+    { "constant_velocity",     boundary_conditions::constantVelocityBC    },
+    { "velocity_vs_time",      boundary_conditions::timeVaringVelocityBC     },
+    { "reflected_velocity",    boundary_conditions::reflectedVelocityBC   },
+    { "zero_velocity",         boundary_conditions::zeroVelocityBC        },
+    { "user_defined_velocity", boundary_conditions::userDefinedVelocityBC},
+    { "piston_velocity",       boundary_conditions::pistonVelocityBC      }   
 };
 // future options
-//    { "displacement",          boundary_conds::displacement          },
-//    { "acceleration",          boundary_conds::acceleration          },
-//    { "pressure",              boundary_conds::pressure              },
-//    { "temperature",           boundary_conds::temperature           },
-//    { "contact",               boundary_conds::contact               }
+//    { "displacement",          boundary_conditions::displacement          },
+//    { "acceleration",          boundary_conditions::acceleration          },
+//    { "pressure",              boundary_conditions::pressure              },
+//    { "temperature",           boundary_conditions::temperature           },
+//    { "contact",               boundary_conditions::contact               }
 
-static std::map<std::string, boundary_conds::bdy_direction> bc_direction_map
+static std::map<std::string, boundary_conditions::BCDirection> bc_direction_map
 {
-    { "x_dir", boundary_conds::x_dir },
-    { "y_dir", boundary_conds::y_dir },
-    { "z_dir", boundary_conds::z_dir }
+    { "x_dir", boundary_conditions::xDir },
+    { "y_dir", boundary_conditions::yDir },
+    { "z_dir", boundary_conditions::zDir }
 };
 
 
@@ -136,7 +138,7 @@ static std::map<std::string, boundary_conds::bdy_direction> bc_direction_map
 /////////////////////////////////////////////////////////////////////////////
 struct BoundaryConditionSetup_t
 {
-    boundary_conds::bdy_tag geometry;   ///< Geometry boundary condition is applied to, e.g., sphere, plane   
+    boundary_conditions::BdyTag geometry;   ///< Geometry boundary condition is applied to, e.g., sphere, plane   
     double origin[3] = {0.0, 0.0, 0.0}; ///< origin of surface being tagged, e.g., sphere or cylinder surface   
     double value = 0.0;                 ///< value = position, radius, etc. defining the geometric shape
 
@@ -156,11 +158,11 @@ struct BoundaryConditionEnums_t
 
     solver_input::method solver = solver_input::NONE; ///< Numerical solver method
 
-    boundary_conds::bdy_hydro_conds type;    ///< Type of boundary condition
+    boundary_conditions::BCHydro type;    ///< Type of boundary condition
 
-    boundary_conds::bdy_direction direction; ///< Boundary condition direction
+    boundary_conditions::BCDirection direction; ///< Boundary condition direction
 
-    boundary_conds::bc_function_location location=boundary_conds::device; // host or device BC function
+    boundary_conditions::BCFcnLocation location=boundary_conditions::device; // host or device BC function
 
 }; // end boundary condition enums
 

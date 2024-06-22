@@ -49,13 +49,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.h"
 
 // velocity bc files
-#include "Boundary_velocity_constant.h"
-#include "Boundary_velocity_fixed.h"
-#include "Boundary_velocity_none.h"
-#include "Boundary_velocity_reflected.h"
-#include "Boundary_velocity_time_varying.h"
-#include "Boundary_velocity_user_defined.h"
-
+#include "constant_velocity_bc.h"
+#include "no_velocity_bc.h"
+#include "piston_velocity_bc.h"
+#include "reflected_velocity_bc.h"
+#include "time_varying_velocity_bc.h"
+#include "user_defined_velocity_bc.h"
+#include "zero_velocity_bc.h"
 
 
 // eos files
@@ -1859,61 +1859,68 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                 if (map.find(type) != map.end()) {
                     auto bc_type = map[type];
 
-                    // bc_type_map[type] returns enum value, e.g., boundary_conds::velocity_constant
+                    // bc_type_map[type] returns enum value, e.g., boundary_conditions::velocity_constant
                     switch(map[type]){
 
-                        case boundary_conds::velocity_constant:
+                        case boundary_conditions::constantVelocityBC :
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::velocity_constant;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &BoundaryVelocityConstant::velocity;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conditions::constantVelocityBC ;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ConstantVelocityBC::velocity;
                             });
                             break;
 
-                        case boundary_conds::velocity_vs_time:
+                        case boundary_conditions::timeVaringVelocityBC:
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::velocity_vs_time;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &BoundaryVelocityTimeVarying::velocity;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conditions::timeVaringVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &TimeVaryingVelocityBC::velocity;
                             });
                             break;
                         
-                        case boundary_conds::velocity_reflected:
+                        case boundary_conditions::reflectedVelocityBC:
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::velocity_reflected;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &BoundaryVelocityReflected::velocity;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conditions::reflectedVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ReflectedVelocityBC::velocity;
                             });
                             break;
 
-                        case boundary_conds::velocity_fixed:
+                        case boundary_conditions::zeroVelocityBC:
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::velocity_fixed;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &BoundaryVelocityFixed::velocity;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conditions::zeroVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ZeroVelocityBC::velocity;
                             });
                             break;
-                        case boundary_conds::velocity_user_defined:
+                        case boundary_conditions::userDefinedVelocityBC:
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::velocity_user_defined;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &BoundaryVelocityUserDefined::velocity;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conditions::userDefinedVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
                             });
                             break;
-                        
+                        case boundary_conditions::pistonVelocityBC:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conditions::pistonVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
+                            });
+                            break;                        
                         default:
                             
                             std::cout << "Setting velocity bc " << std::endl;
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conds::free_surface;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &NoBoundaryVelocity::velocity;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).type = boundary_conditions::noVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &NoVelocityBC::velocity;
                             });
-                            // a free surface is default
+                            // no velocity specified is default
                             break;
                         
                     } // end switch

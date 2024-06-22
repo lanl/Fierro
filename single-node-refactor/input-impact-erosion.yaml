@@ -43,7 +43,7 @@ boundary_conditions:
         geometry: y_plane
         direction: y_dir
         value: 0.0
-        type: reflected
+        type: reflected_velocity
 
     # Tag z plane
     - boundary_condition:
@@ -51,7 +51,7 @@ boundary_conditions:
         geometry: z_plane
         direction: z_dir
         value: 0.0
-        type: reflected
+        type: reflected_velocity
   
 materials:
 
