@@ -41,13 +41,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \brief Evolves the boundary according to a give velocity
 ///
 /// \param The simulation mesh
-/// \param BoundaryCondition_t contain arrays of information about BCs
+/// \param Boundary contain arrays of information about BCs
 /// \param A view into the nodal velocity array
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_velocity(const mesh_t&      mesh,
-                            const BoundaryCondition_t& boundary,
+                            const BoundaryCondition_t& BoundaryConditions,
                             DCArrayKokkos<double>& node_vel,
                             const double time_value) const
 {
@@ -62,10 +62,10 @@ void SGH::boundary_velocity(const mesh_t&      mesh,
             size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
             // evaluate velocity on this boundary node
-            boundary.BoundaryConditionFunctions(bdy_set).velocity(mesh,
-                                                                  boundary.BoundaryConditionEnums,
-                                                                  boundary.bc_global_vars,
-                                                                  boundary.bc_state_vars,
+            BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(mesh,
+                                                                  BoundaryConditions.BoundaryConditionEnums,
+                                                                  BoundaryConditions.bc_global_vars,
+                                                                  BoundaryConditions.bc_state_vars,
                                                                   node_vel,
                                                                   time_value,
                                                                   bdy_node_gid,
@@ -93,7 +93,7 @@ void SGH::boundary_velocity(const mesh_t&      mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_contact(const mesh_t& mesh,
-                           const BoundaryCondition_t& boundary,
+                           const BoundaryCondition_t& BoundaryConditions,
                            DCArrayKokkos<double>& node_vel,
                            const double time_value) const
 {

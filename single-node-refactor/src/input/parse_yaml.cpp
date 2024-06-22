@@ -269,7 +269,7 @@ void print_yaml(Yaml::Node root)
 // =================================================================================
 //    Parse YAML file
 // =================================================================================
-void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
+void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary)
 {
     // if (VERBOSE) {
     //     printf("\n");
@@ -306,7 +306,7 @@ void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
         printf("\n");
         std::cout << "Parsing YAML boundary condition options:" << std::endl;
     }
-    parse_bcs(root, sim_param.BoundaryConditions);
+    parse_bcs(root, Boundary);
 
     if (VERBOSE) {
         printf("\n");
@@ -320,7 +320,7 @@ void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
         std::cout << "Parsing YAML materials:" << std::endl;
     }
     // parse the material yaml text into a vector of materials
-    parse_materials(root, sim_param.Materials);
+    parse_materials(root, Materials);
 }
 
 // =================================================================================

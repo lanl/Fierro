@@ -54,10 +54,10 @@ public:
     Solver();
     virtual ~Solver();
 
-    virtual void initialize(simulation_parameters_t& sim_param) const = 0;
-    virtual void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) const = 0;
-    virtual void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) = 0;
-    virtual void finalize(simulation_parameters_t& sim_param) const = 0;
+    virtual void initialize(simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary) const = 0;
+    virtual void setup(simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) const = 0;
+    virtual void execute(simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) = 0;
+    virtual void finalize(simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary) const = 0;
 
     // debug and system functions/variables
     double CPU_Time();

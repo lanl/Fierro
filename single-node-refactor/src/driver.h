@@ -44,7 +44,7 @@
 #include "state.h"
 
 
-void fill_regions(simulation_parameters_t, mesh_t, node_t, elem_t, corner_t);
+void fill_regions(simulation_parameters_t, Material_t, mesh_t, node_t, elem_t, corner_t);
 
 
 class Driver
@@ -54,9 +54,21 @@ public:
     char* mesh_file;
     char* yaml_file;
 
+    // ---------------------------------------------------------------------
+    //    input type declarations
+    // ---------------------------------------------------------------------
+
     MeshReader  mesh_reader;
     MeshBuilder mesh_builder;
-    simulation_parameters_t sim_param;
+
+    simulation_parameters_t sim_param; ///< the input simulation parameters
+
+    // ---------------------------------------------------------------------
+    //    Material and Boundary declarations
+    // ---------------------------------------------------------------------
+
+    Material_t Materials;                   ///< Material data for simulation
+    BoundaryCondition_t BoundaryConditions; ///< Simulation boundary conditions
 
     int num_dims = 3;
 
@@ -99,7 +111,7 @@ public:
             exit(0);
         }
 
-        parse_yaml(root, sim_param);
+        parse_yaml(root, sim_param, Materials, BoundaryConditions);
         std::cout << "Finished  parsing YAML file" << std::endl;
 
         if (sim_param.mesh_input.source == mesh_input::file) {
@@ -117,12 +129,12 @@ public:
         }
 
         // Build boundary conditions
-        int num_bcs = sim_param.BoundaryConditions.num_bcs;
+        int num_bcs = BoundaryConditions.num_bcs;
         printf("Num BC's = %d\n", num_bcs);
 
         // --- calculate bdy sets ---//
         mesh.init_bdy_sets(num_bcs);
-        tag_bdys(sim_param.BoundaryConditions, mesh, node.coords);
+        tag_bdys(BoundaryConditions, mesh, node.coords);
         mesh.build_boundry_node_sets(mesh);
 
         // Calculate element volume
@@ -130,9 +142,9 @@ public:
 
         // Create memory for state variables
         //size_t max_num_vars = 0;
-        //size_t num_materials = sim_param.Materials.num_eos_global_vars.size();
+        //size_t num_materials = Materials.num_eos_global_vars.size();
         //for (size_t mat_id=0; mat_id<num_materials; mat_id++){
-        //    max_num_vars = fmax(max_num_vars, sim_param.Materials.num_eos_global_vars(mat_id));
+        //    max_num_vars = fmax(max_num_vars, Materials.num_eos_global_vars(mat_id));
         //}
         //elem.statev = DCArrayKokkos<double>(mesh.num_elems, max_num_vars); // WARNING: HACK
 
@@ -141,7 +153,7 @@ public:
         
         
         //fill_regions();
-        fill_regions(sim_param, mesh, node, elem, corner);
+        fill_regions(sim_param, Materials, mesh, node, elem, corner);
 
 
         // --- Move the following sovler setup to yaml parsing routine
@@ -149,7 +161,7 @@ public:
         for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
             if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
                 SGH* sgh_solver = new SGH(); // , mesh, node, elem, corner
-                sgh_solver->initialize(sim_param);
+                sgh_solver->initialize(sim_param, Materials, BoundaryConditions);
                 solvers.push_back(sgh_solver);
             }
         }
@@ -167,7 +179,7 @@ public:
     {
         std::cout << "Inside driver setup" << std::endl;
         for (auto& solver : solvers) {
-            solver->setup(sim_param, mesh, node, elem, corner);
+            solver->setup(sim_param, Materials, BoundaryConditions, mesh, node, elem, corner);
         }
     }
 
@@ -182,7 +194,7 @@ public:
     {
         std::cout << "Inside driver run" << std::endl;
         for (auto& solver : solvers) {
-            solver->execute(sim_param, mesh, node, elem, corner);
+            solver->execute(sim_param, Materials, BoundaryConditions, mesh, node, elem, corner);
         }
     }
 
@@ -200,7 +212,7 @@ public:
         std::cout << "Inside driver finalize" << std::endl;
         for (auto& solver : solvers) {
             if (solver->finalize_flag) {
-                solver->finalize(sim_param);
+                solver->finalize(sim_param, Materials, BoundaryConditions);
             }
         }
         // destroy FEA modules
@@ -220,7 +232,7 @@ public:
     /// \brief Fills mesh regions based on YAML input
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void fill_regions(simulation_parameters_t sim_param, mesh_t mesh, node_t node, elem_t elem, corner_t corner)
+    void fill_regions(simulation_parameters_t sim_param, Material_t Materials, mesh_t mesh, node_t node, elem_t elem, corner_t corner)
     {
         int num_fills = sim_param.region_fills.size();
         printf("Num Fills's = %d\n", num_fills);
@@ -382,9 +394,9 @@ public:
                         size_t mat_id = elem.mat_id(elem_gid); // short name
 
                         // get state_vars from the input file or read them in
-                        if (false) { // sim_param.materials(mat_id).strength_setup == model_init::user_init) {
+                        if (false) { // Materials.MaterialEnums(mat_id).strength_setup == model_init::user_init) {
                             // use the values read from a file to get elem state vars
-                            // for (size_t var = 0; var < sim_param.Materials.num_eos_state_vars(mat_id); var++) {
+                            // for (size_t var = 0; var < Materials.num_eos_state_vars(mat_id); var++) {
                             //     elem.statev(elem_gid, var) = file_state_vars(mat_id, elem_gid, var);
                             // } // end for
                         }
@@ -392,11 +404,11 @@ public:
                             // use the values in the input file
                             // set state vars for the region where mat_id resides
                             
-                            //int num_eos_global_vars = sim_param.Materials.eos_global_vars.stride(mat_id); // ragged-right storage
+                            //int num_eos_global_vars = Materials.eos_global_vars.stride(mat_id); // ragged-right storage
                             
 
                             //for (size_t var = 0; var < num_eos_global_vars; var++) {
-                            //    elem.statev(elem_gid, var) = sim_param.Materials.eos_global_vars(mat_id,var); // state_vars(mat_id, var); // WARNING: HACK
+                            //    elem.statev(elem_gid, var) = Materials.eos_global_vars(mat_id,var); // state_vars(mat_id, var); // WARNING: HACK
                             //} // end for
 
                             
@@ -413,7 +425,7 @@ public:
                         // --- Calculate Pressure and Stress ---
 
                         // --- Pressure ---
-                        sim_param.Materials.MaterialFunctions(mat_id).calc_pressure(
+                        Materials.MaterialFunctions(mat_id).calc_pressure(
                                                         elem.pres,
                                                         elem.stress,
                                                         elem_gid,
@@ -422,10 +434,10 @@ public:
                                                         elem.sspd,
                                                         elem.den(elem_gid),
                                                         elem.sie(rk_level, elem_gid),
-                                                        sim_param.Materials.eos_global_vars);   
+                                                        Materials.eos_global_vars);   
 
                         // --- Sound Speed ---                               
-                        sim_param.Materials.MaterialFunctions(mat_id).calc_sound_speed(
+                        Materials.MaterialFunctions(mat_id).calc_sound_speed(
                                                         elem.pres,
                                                         elem.stress,
                                                         elem_gid,
@@ -434,7 +446,7 @@ public:
                                                         elem.sspd,
                                                         elem.den(elem_gid),
                                                         elem.sie(rk_level, elem_gid),
-                                                        sim_param.Materials.eos_global_vars);
+                                                        Materials.eos_global_vars);
 
                         // loop over the nodes of this element and apply velocity
                         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -567,7 +579,7 @@ public:
                             elem.pres(elem_gid) = 0.25 * (cos(2.0 * PI * elem_coords[0]) + cos(2.0 * PI * elem_coords[1]) ) + 1.0;
 
                             // p = rho*ie*(gamma - 1)
-                            double gamma  = sim_param.Materials.eos_global_vars(mat_id,0); // makes sure it matches the gamma in the gamma law function 
+                            double gamma  = Materials.eos_global_vars(mat_id,0); // makes sure it matches the gamma in the gamma law function 
                             elem.sie(rk_level, elem_gid) =
                                 elem.pres(elem_gid) / (sim_param.region_fills(f_id).den * (gamma - 1.0));
                         } // end if

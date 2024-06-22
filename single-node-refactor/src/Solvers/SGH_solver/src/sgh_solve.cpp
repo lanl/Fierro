@@ -46,7 +46,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
+void SGH::execute(simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& BoundaryConditions, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
@@ -144,7 +144,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     std::cout << "Applying initial boundary conditions" << std::endl;
-    boundary_velocity(mesh, sim_param.BoundaryConditions, node.vel, time_value); // Time value = 0.0;
+    boundary_velocity(mesh, BoundaryConditions, node.vel, time_value); // Time value = 0.0;
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -230,7 +230,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             if (mesh.num_dims == 2) {
-                get_force_2D(sim_param.Materials,
+                get_force_2D(Materials,
                              mesh,
                              node.coords,
                              node.vel,
@@ -250,7 +250,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                              rk_alpha);
             }
             else{
-                get_force(sim_param.Materials,
+                get_force(Materials,
                           mesh,
                           node.coords,
                           node.vel,
@@ -280,10 +280,10 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                             corner.force);
 
             // ---- apply velocity boundary conditions to the boundary patches----
-            boundary_velocity(mesh, sim_param.BoundaryConditions, node.vel, time_value);
+            boundary_velocity(mesh, BoundaryConditions, node.vel, time_value);
 
             // ---- apply contact boundary conditions to the boundary patches----
-            boundary_contact(mesh, sim_param.BoundaryConditions, node.vel, time_value);
+            boundary_contact(mesh, BoundaryConditions, node.vel, time_value);
 
             // mpi_coms();
 
@@ -310,7 +310,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
             if (mesh.num_dims == 2) {
-                update_state2D(sim_param.Materials,
+                update_state2D(Materials,
                                mesh,
                                node.coords,
                                node.vel,
@@ -327,7 +327,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                                rk_alpha);
             }
             else{
-                update_state(sim_param.Materials,
+                update_state(Materials,
                              mesh,
                              node.coords,
                              node.vel,

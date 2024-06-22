@@ -38,6 +38,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.h"
 #include "matar.h"
 #include "simulation_parameters.h"
+#include "boundary_conditions.h"
+#include "material.h"
 #include "solver.h"
 
 
@@ -66,7 +68,7 @@ public:
     ~SGH() = default;
 
     // Initialize data specific to the SGH solver
-    void initialize(simulation_parameters_t& sim_param) const override
+    void initialize(simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary) const override
     {
     }
 
@@ -77,7 +79,7 @@ public:
     /// \brief Calls setup_sgh, which initializes state, and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) const override
+    void setup(simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) const override
     {
     }
 
@@ -89,7 +91,7 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) override;
+    void execute(simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -107,7 +109,7 @@ public:
     /// \return <return type and definition description if not void>
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void finalize(simulation_parameters_t& sim_param) const override
+    void finalize(simulation_parameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary) const override
     {
         // Any finalize goes here, remove allocated memory, etc
     }
@@ -115,13 +117,13 @@ public:
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(
         const mesh_t& mesh,
-        const BoundaryCondition_t& boundary,
+        const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value) const;
 
     void boundary_contact(
         const mesh_t& mesh,
-        const BoundaryCondition_t& boundary,
+        const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value) const;
 
