@@ -136,21 +136,56 @@ enum strength_setup_tag
 };
 } // end of namespace
 
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct material_t
+/// \struct MaterialSetup_t
 ///
-/// \brief  Material models
+/// \brief The material routines to setup the simulation
 ///
-/// In the code: CArrayKokkos <Material_t> Material;
 /////////////////////////////////////////////////////////////////////////////
-struct material_t
+struct MaterialSetup_t
 {
-    size_t id;
+    // setup the strength model via the input file for via a user_setup
+    model_init::strength_setup_tag strength_setup = model_init::input;
+
+}; // end boundary condition setup
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct MaterialEnums_t
+///
+/// \brief Stores material model settings
+///
+/////////////////////////////////////////////////////////////////////////////
+struct MaterialEnums_t
+{
 
     // -- EOS --
     // none, decoupled, or coupled eos
     model::EOSType EOSType = model::noEOSType;
+
+    // Strength model type: none, or increment- or state-based
+    model::StrengthType StrengthType = model::noStrengthType;
+
+}; // end boundary condition enums
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct MaterialFunctions_t
+///
+/// \brief  Material model functions
+///
+/// In the material object: CArrayKokkos <MaterialFunctions_t> MaterialFunctions;
+/////////////////////////////////////////////////////////////////////////////
+struct MaterialFunctions_t
+{
+    size_t id;
+
+    // -- EOS --
 
     // Equation of state (EOS) function pointers
     void (*calc_pressure)(const DCArrayKokkos<double>& elem_pres,
@@ -173,8 +208,7 @@ struct material_t
                              const double sie,
                              const RaggedRightArrayKokkos<double> &eos_global_vars) = NULL;
 
-    // Strength model type: none, or increment- or state-based
-    model::StrengthType StrengthType = model::noStrengthType;
+    // -- Strength --
 
     // Material strength model function pointers
     void (*calc_stress)(const DCArrayKokkos<double>& elem_pres,
@@ -196,7 +230,7 @@ struct material_t
 
     // -- Erosion --
 
-    size_t void_mat_id;        ///< eroded elements get this mat_id
+    size_t void_mat_id;         ///< eroded elements get this mat_id
     double erode_tension_val;   ///< tension threshold to initiate erosion
     double erode_density_val;   ///< density threshold to initiate erosion
     // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
@@ -212,10 +246,6 @@ struct material_t
                   const DCArrayKokkos<double>& elem_den,
                   const double sie) = NULL;
 
-
-    // setup the strength model via the input file for via a user_setup
-    model_init::strength_setup_tag strength_setup = model_init::input;
-
     double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression
     double q1ex = 1.3333;   ///< acoustic coefficient in Riemann solver for expansion
     double q2   = 1.0;      ///< linear coefficient in Riemann solver for compression
@@ -225,12 +255,27 @@ struct material_t
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct material_model_values_t
+/// \struct material_t
 ///
-/// \brief  Material model state, parameters, and values 
+/// \brief  A container to hold boundary condition information.  This holds
+///         material functions, and model state, parameters, and values 
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct MaterialModelVars_t{
+struct Material_t{
+
+    size_t num_mats;  // num materials in the problem
+
+    DCArrayKokkos <MaterialSetup_t> MaterialSetup;  // vars to setup and initialize the material
+
+    // device functions and associated data
+    CArrayKokkos <MaterialFunctions_t> MaterialFunctions; // struct with function pointers
+
+    // note: host functions are launched via enums
+
+    // enums to select model options, some enums are needed on the host side and device side
+    DCArrayKokkos <MaterialEnums_t> MaterialEnums;
+
+    // --- material physics model variables ---
 
     ///<enums can be implemented in the model namespaces to unpack e.g., physics_global_vars
 
@@ -255,7 +300,7 @@ struct MaterialModelVars_t{
     // ...
 
 }; // end MaterialModelVars_t
-// The above struct eliminates all the variables in material_t, making material_t a collection of function ptrs
+
 
 
 // ----------------------------------

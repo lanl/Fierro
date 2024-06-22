@@ -50,13 +50,18 @@ struct simulation_parameters_t;
 struct solver_input_t;
 struct mesh_input_t;
 struct reg_fill_t;
-struct material_t;
-struct MaterialModelVars_t;
 struct output_options_t;
+
+struct Material_t;
+struct MaterialSetup_t;
+struct MaterialFunctions_t;
+struct MaterialEnums_t;
+
 struct BoundaryCondition_t;
+struct BoundaryConditionSetup_t;
 struct BoundaryConditionEnums_t;
 struct BoundaryConditionFunctions_t;
-struct BoundaryConditionSetup_t;
+
 struct dynamic_options_t;
 
 using namespace mtr;
@@ -103,7 +108,7 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options);
 void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills);
 
 // parse the region text
-void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, MaterialModelVars_t & MaterialModelVars);
+void parse_materials(Yaml::Node& root, Material_t& Materials);
 
 // parse the boundary condition text
 void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions);

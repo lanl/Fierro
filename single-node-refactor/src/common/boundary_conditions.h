@@ -217,6 +217,8 @@ struct BoundaryCondition_t
     // device functions and associated data
     CArrayKokkos <BoundaryConditionFunctions_t> BoundaryConditionFunctions; // struct with function pointers
 
+    // note: host functions are launched via enums
+
     // enums to select BC capabilities, some enums are needed on the host side and device side
     DCArrayKokkos <BoundaryConditionEnums_t> BoundaryConditionEnums; 
 

@@ -230,8 +230,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             if (mesh.num_dims == 2) {
-                get_force_2D(sim_param.materials,
-                             sim_param.MaterialModelVars,
+                get_force_2D(sim_param.Materials,
                              mesh,
                              node.coords,
                              node.vel,
@@ -251,8 +250,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                              rk_alpha);
             }
             else{
-                get_force(sim_param.materials,
-                          sim_param.MaterialModelVars,
+                get_force(sim_param.Materials,
                           mesh,
                           node.coords,
                           node.vel,
@@ -312,8 +310,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
             if (mesh.num_dims == 2) {
-                update_state2D(sim_param.materials,
-                               sim_param.MaterialModelVars,
+                update_state2D(sim_param.Materials,
                                mesh,
                                node.coords,
                                node.vel,
@@ -330,8 +327,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                                rk_alpha);
             }
             else{
-                update_state(sim_param.materials,
-                             sim_param.MaterialModelVars,
+                update_state(sim_param.Materials,
                              mesh,
                              node.coords,
                              node.vel,

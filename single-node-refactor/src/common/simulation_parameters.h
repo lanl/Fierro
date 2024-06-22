@@ -66,9 +66,7 @@ struct simulation_parameters_t
 
     DCArrayKokkos<reg_fill_t> region_fills;  ///< Region data for simulation mesh
 
-    CArrayKokkos<material_t> materials; ///< Material func pointers for simulation
-
-    MaterialModelVars_t MaterialModelVars; ///< Material data for simulation
+    Material_t Materials; ///< Material data for simulation
 
 }; // simulation_parameters_t
 

@@ -40,7 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// \brief This calls the models to update state
 ///
-/// \param An array of material_t that contains material specific data
+/// \param Material that contains material specific data
 /// \param The simulation mesh
 /// \param A view into the nodal position array
 /// \param A view into the nodal velocity array
@@ -57,8 +57,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::update_state(const CArrayKokkos<material_t>& material,
-    const MaterialModelVars_t &MaterialModelVars,
+void SGH::update_state(const Material_t& Materials,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -90,7 +89,7 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
 
         // --- Stress ---
         // state_based elastic plastic model
-        if (material(mat_id).StrengthType == model::stateBased) {
+        if (Materials.MaterialEnums(mat_id).StrengthType == model::stateBased) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
@@ -117,7 +116,8 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
                         elem_gid);
 
             // --- call strength model ---
-            material(mat_id).calc_stress(elem_pres,
+            Materials.MaterialFunctions(mat_id).calc_stress(
+                                         elem_pres,
                                          elem_stress,
                                          elem_gid,
                                          mat_id,
@@ -144,28 +144,30 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
         //        elem_eroded(elem_gid) = true;
         //    } // end if
         //} // end if
-        if (material(mat_id).erode != NULL) {
+        if (Materials.MaterialFunctions(mat_id).erode != NULL) {
             
 
             // --- Element erosion model ---
-            material(mat_id).erode(elem_pres,
+            Materials.MaterialFunctions(mat_id).erode(
+                                   elem_pres,
                                    elem_stress,
                                    elem_eroded,
                                    elem_mat_id,
                                    elem_gid,
-                                   material(mat_id).void_mat_id,
-                                   material(mat_id).erode_tension_val,
-                                   material(mat_id).erode_density_val,
+                                   Materials.MaterialFunctions(mat_id).void_mat_id,
+                                   Materials.MaterialFunctions(mat_id).erode_tension_val,
+                                   Materials.MaterialFunctions(mat_id).erode_density_val,
                                    elem_sspd,
                                    elem_den,
                                    elem_sie(1, elem_gid));
 
         } // end if
 
-        if (material(mat_id).EOSType == model::decoupledEOSType) {
+        if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
 
             // --- Pressure ---
-            material(mat_id).calc_pressure(elem_pres,
+            Materials.MaterialFunctions(mat_id).calc_pressure(
+                                           elem_pres,
                                            elem_stress,
                                            elem_gid,
                                            elem_mat_id(elem_gid),
@@ -173,9 +175,10 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
                                            elem_sspd,
                                            elem_den(elem_gid),
                                            elem_sie(1, elem_gid),
-                                           MaterialModelVars.eos_global_vars);   
+                                           Materials.eos_global_vars);   
             // --- Sound Speed ---                               
-            material(mat_id).calc_sound_speed(elem_pres,
+            Materials.MaterialFunctions(mat_id).calc_sound_speed(
+                                              elem_pres,
                                               elem_stress,
                                               elem_gid,
                                               elem_mat_id(elem_gid),
@@ -183,7 +186,7 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
                                               elem_sspd,
                                               elem_den(elem_gid),
                                               elem_sie(1, elem_gid),
-                                              MaterialModelVars.eos_global_vars);
+                                              Materials.eos_global_vars);
         }
     }); // end parallel for
     Kokkos::fence();
@@ -214,8 +217,7 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::update_state2D(const CArrayKokkos<material_t>& material,
-    const MaterialModelVars_t &MaterialModelVars,
+void SGH::update_state2D(const Material_t& Materials,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -246,7 +248,7 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
 
         // --- Stress ---
         // state_based elastic plastic model
-        if (material(mat_id).StrengthType == model::stateBased) {
+        if (Materials.MaterialEnums(mat_id).StrengthType == model::stateBased) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
@@ -273,7 +275,7 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
                         elem_gid);
 
             // --- call strength model ---
-            // material(mat_id).strength_model(elem_pres,
+            // Material.MaterialFunctions(mat_id).strength_model(elem_pres,
             //                                 elem_stress,
             //                                 elem_gid,
             //                                 mat_id,
@@ -292,10 +294,10 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
 
         // --- Erosion ---
         // apply the element erosion model
-        //if (material(mat_id).erode != NULL) {
+        //if (Materials.MaterialFunctions(mat_id).erode != NULL) {
         //
         //    // --- Element erosion model ---
-        //    material(mat_id).erode(elem_pres,
+        //    material.MaterialFunctions(mat_id).erode(elem_pres,
         //                           elem_stress,
         //                           elem_eroded,
         //                           elem_mat_id,
@@ -309,10 +311,11 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
         //} // end if
 
         // --- Pressure ---
-        if (material(mat_id).EOSType == model::decoupledEOSType) {
+        if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
 
             // --- Pressure ---
-            material(mat_id).calc_pressure(elem_pres,
+            Materials.MaterialFunctions(mat_id).calc_pressure(
+                                           elem_pres,
                                            elem_stress,
                                            elem_gid,
                                            elem_mat_id(elem_gid),
@@ -320,9 +323,10 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
                                            elem_sspd,
                                            elem_den(elem_gid),
                                            elem_sie(1, elem_gid),
-                                           MaterialModelVars.eos_global_vars);   
+                                           Materials.eos_global_vars);   
             // --- Sound Speed ---                               
-            material(mat_id).calc_sound_speed(elem_pres,
+            Materials.MaterialFunctions(mat_id).calc_sound_speed(
+                                              elem_pres,
                                               elem_stress,
                                               elem_gid,
                                               elem_mat_id(elem_gid),
@@ -330,7 +334,7 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
                                               elem_sspd,
                                               elem_den(elem_gid),
                                               elem_sie(1, elem_gid),
-                                              MaterialModelVars.eos_global_vars);
+                                              Materials.eos_global_vars);
         }
     }); // end parallel for
     Kokkos::fence();

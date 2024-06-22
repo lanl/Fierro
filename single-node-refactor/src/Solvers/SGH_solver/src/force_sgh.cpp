@@ -40,7 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// \brief This function calculates the corner forces and the evolves stress
 ///
-/// \param An array of material_t that contains material specific data
+/// \param Material that contains material specific data
 /// \param The simulation mesh
 /// \param A view into the nodal position array
 /// \param A view into the nodal velocity array
@@ -59,8 +59,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_force(const CArrayKokkos<material_t>& material,
-    const MaterialModelVars_t &MaterialModelVars,
+void SGH::get_force(const Material_t& Materials,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -171,7 +170,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
         } // end for
 
         // add the pressure if a decoupled model is used
-        if (material(mat_id).EOSType == model::decoupledEOSType) {
+        if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
             for (int i = 0; i < num_dims; i++) {
                 tau(i, i) -= elem_pres(elem_gid);
             } // end for
@@ -244,11 +243,13 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
             // cell divergence indicates compression or expansions
             if (div < 0) { // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
-                                (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
+                                (Materials.MaterialFunctions(mat_id).q1 * elem_sspd(elem_gid) + 
+                                 Materials.MaterialFunctions(mat_id).q2 * mag_vel);
             }
             else{  // element in expansion
                 muc(node_lid) = elem_den(elem_gid) *
-                                (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
+                                (Materials.MaterialFunctions(mat_id).q1ex * elem_sspd(elem_gid) + 
+                                 Materials.MaterialFunctions(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
 
             size_t use_shock_dir = 0;
@@ -381,12 +382,12 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
         // --- Update Stress ---
         // calculate the new stress at the next rk level, if it is a increment_based model
         // increment_based strength model
-        if (material(mat_id).StrengthType == model::incrementBased) {
+        if (Materials.MaterialEnums(mat_id).StrengthType == model::incrementBased) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
             // --- call strength model ---
-            material(mat_id).calc_stress(elem_pres,
+            Materials.MaterialFunctions(mat_id).calc_stress(elem_pres,
                                          elem_stress,
                                          elem_gid,
                                          mat_id,
@@ -413,7 +414,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
 ///
 /// \brief This function calculates the corner forces and the evolves stress
 ///
-/// \param An array of material_t that contains material specific data
+/// \param Material that contains material specific data
 /// \param The simulation mesh
 /// \param A view into the nodal position array
 /// \param A view into the nodal velocity array
@@ -432,8 +433,7 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
-    const MaterialModelVars_t &MaterialModelVars,
+void SGH::get_force_2D(const Material_t& Materials,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -614,11 +614,13 @@ void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
             size_t mat_id = elem_mat_id(elem_gid);
             if (div < 0) { // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
-                                (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
+                                (Materials.MaterialFunctions(mat_id).q1 * elem_sspd(elem_gid) + 
+                                 Materials.MaterialFunctions(mat_id).q2 * mag_vel);
             }
             else{  // element in expansion
                 muc(node_lid) = elem_den(elem_gid) *
-                                (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
+                                (Materials.MaterialFunctions(mat_id).q1ex * elem_sspd(elem_gid) + 
+                                 Materials.MaterialFunctions(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
 
             size_t use_shock_dir = 0;
@@ -755,12 +757,12 @@ void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
         size_t mat_id = elem_mat_id(elem_gid);
 
         // increment_based elastic plastic model
-        if (material(mat_id).StrengthType == model::incrementBased) {
+        if (Materials.MaterialEnums(mat_id).StrengthType == model::incrementBased) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
 
             // --- call strength model ---
-            // material(mat_id).strength_model(elem_pres,
+            // Materials.MaterialFunctions(mat_id).strength_model(elem_pres,
             //                                 elem_stress,
             //                                 elem_gid,
             //                                 mat_id,

@@ -320,7 +320,7 @@ void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
         std::cout << "Parsing YAML materials:" << std::endl;
     }
     // parse the material yaml text into a vector of materials
-    parse_materials(root, sim_param.materials, sim_param.MaterialModelVars);
+    parse_materials(root, sim_param.Materials);
 }
 
 // =================================================================================
@@ -1332,22 +1332,32 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, MaterialModelVars_t& MaterialModelVars)
+void parse_materials(Yaml::Node& root, Material_t& Materials)
 {
     Yaml::Node& material_yaml = root["materials"];
 
     size_t num_materials = material_yaml.Size();
     std::cout << "Number of materials =  "<< num_materials << std::endl;
 
-    // allocate memory for the material struct that holds the function pointers
-    materials = CArrayKokkos<material_t>(num_materials, "sim_param.materials");
+    Materials.num_mats = num_materials;
+
+    // --- allocate memory for arrays inside material struct ---
+
+    // setup
+    Materials.MaterialSetup = DCArrayKokkos<MaterialSetup_t>(num_materials, "material_setup");
+
+    // function pointers to material models
+    Materials.MaterialFunctions = CArrayKokkos<MaterialFunctions_t>(num_materials, "material_functions");
+
+    // enums
+    Materials.MaterialEnums = DCArrayKokkos<MaterialEnums_t>(num_materials, "material_enums");
 
     // these are temp arrays to store global variables given in the yaml input file for each material, 100 vars is the max allowable
     DCArrayKokkos<double> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
     DCArrayKokkos<double> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
 
-    MaterialModelVars.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials);
-    MaterialModelVars.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials);
+    Materials.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials);
+    Materials.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials);
 
     // loop over the materials specified
     for (int mat_id = 0; mat_id < num_materials; mat_id++) {
@@ -1381,7 +1391,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                     std::cout << "\tq1 = " << q1 << std::endl;
                 }
                 RUN({
-                    materials(mat_id).q1 = q1;
+                    Materials.MaterialFunctions(mat_id).q1 = q1;
                 });
             } // q1
             else if (a_word.compare("q1ex") == 0) {
@@ -1390,7 +1400,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                     std::cout << "\tq1ex = " << q1ex << std::endl;
                 }
                 RUN({
-                    materials(mat_id).q1ex = q1ex;
+                    Materials.MaterialFunctions(mat_id).q1ex = q1ex;
                 });
             } // q1ex
             else if (a_word.compare("q2") == 0) {
@@ -1402,7 +1412,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                 }
 
                 RUN({
-                    materials(mat_id).q2 = q2;
+                    Materials.MaterialFunctions(mat_id).q2 = q2;
                 });
             } // q2
             else if (a_word.compare("q2ex") == 0) {
@@ -1413,7 +1423,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                     std::cout << "\tq2ex = " << q2ex << std::endl;
                 }
                 RUN({
-                    materials(mat_id).q2ex = q2ex;
+                    Materials.MaterialFunctions(mat_id).q2ex = q2ex;
                 });
             } // q1ex
             else if (a_word.compare("id") == 0) {
@@ -1422,7 +1432,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                     std::cout << "\tid = " << m_id << std::endl;
                 }
                 RUN({
-                    materials(mat_id).id = m_id;
+                    Materials.MaterialFunctions(mat_id).id = m_id;
                 });
             } // id
             //extract eos model
@@ -1437,20 +1447,20 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                         case model::decoupledEOSType:
                             std::cout << "Setting EOS type to decoupled " << std::endl;
                             RUN({
-                                materials(mat_id).EOSType = model::decoupledEOSType;
+                                Materials.MaterialEnums(mat_id).EOSType = model::decoupledEOSType;
                             });
                             break;
 
                         case model::coupledEOSType:
                             std::cout << "Setting EOS type to coupled " << std::endl;
                             RUN({
-                                materials(mat_id).EOSType = model::coupledEOSType;
+                                Materials.MaterialEnums(mat_id).EOSType = model::coupledEOSType;
                             });
                             break;
 
                         default:
                             RUN({ 
-                                materials(mat_id).EOSType = model::noEOSType;
+                                Materials.MaterialEnums(mat_id).EOSType = model::noEOSType;
                             });
                             std::cout << "ERROR: No valid EOS type input " << std::endl;
                             std::cout << "Valid EOS types are: " << std::endl;
@@ -1483,8 +1493,8 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
 
                         case model::noEOS:
                             RUN({
-                                materials(mat_id).calc_pressure    = &NoEOSModel::calc_pressure;
-                                materials(mat_id).calc_sound_speed = &NoEOSModel::calc_sound_speed;
+                                Materials.MaterialFunctions(mat_id).calc_pressure    = &NoEOSModel::calc_pressure;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &NoEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
@@ -1493,8 +1503,8 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
 
                         case model::gammaLawGasEOS:
                             RUN({
-                                materials(mat_id).calc_pressure    = &GammaLawGasEOSModel::calc_pressure;
-                                materials(mat_id).calc_sound_speed = &GammaLawGasEOSModel::calc_sound_speed;
+                                Materials.MaterialFunctions(mat_id).calc_pressure    = &GammaLawGasEOSModel::calc_pressure;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &GammaLawGasEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
@@ -1503,8 +1513,8 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
 
                         case model::voidEOS:
                             RUN({
-                                materials(mat_id).calc_pressure    = &VoidEOSModel::calc_pressure;
-                                materials(mat_id).calc_sound_speed = &VoidEOSModel::calc_sound_speed;
+                                Materials.MaterialFunctions(mat_id).calc_pressure    = &VoidEOSModel::calc_pressure;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &VoidEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
@@ -1513,8 +1523,8 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
 
                         case model::userDefinedEOS:
                             RUN({
-                                materials(mat_id).calc_pressure    = &UserDefinedEOSModel::calc_pressure;
-                                materials(mat_id).calc_sound_speed = &UserDefinedEOSModel::calc_sound_speed;
+                                Materials.MaterialFunctions(mat_id).calc_pressure    = &UserDefinedEOSModel::calc_pressure;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &UserDefinedEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
@@ -1543,7 +1553,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
 
                         case model::noStrengthType:
                             RUN({
-                                materials(mat_id).StrengthType = model::noStrengthType;
+                                Materials.MaterialEnums(mat_id).StrengthType = model::noStrengthType;
                             });
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model_type_type = " << strength_model_type << std::endl;
@@ -1552,7 +1562,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
 
                         case model::incrementBased:
                             RUN({
-                                materials(mat_id).StrengthType = model::incrementBased;
+                                Materials.MaterialEnums(mat_id).StrengthType = model::incrementBased;
                             });
                             
                             if (VERBOSE) {
@@ -1561,7 +1571,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                             break;
                         case model::stateBased:
                             RUN({
-                                materials(mat_id).StrengthType = model::stateBased;
+                                Materials.MaterialEnums(mat_id).StrengthType = model::stateBased;
                             });
                             std::cout << "ERROR: state_based models not yet defined: " << std::endl;
                             throw std::runtime_error("**** ERROR: state_based models not yet defined ****");
@@ -1592,7 +1602,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
 
                         case model::noStrengthModel:
                             RUN({
-                                materials(mat_id).calc_stress = &NoStrengthModel::calc_stress;
+                                Materials.MaterialFunctions(mat_id).calc_stress = &NoStrengthModel::calc_stress;
                             });
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
@@ -1601,7 +1611,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
 
                         case model::userDefinedStrength:
                             RUN({
-                                materials(mat_id).calc_stress = &UserDefinedStrengthModel::calc_stress;
+                                Materials.MaterialFunctions(mat_id).calc_stress = &UserDefinedStrengthModel::calc_stress;
                             });
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
@@ -1630,12 +1640,12 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                     switch(erosion_model_map[erosion_model]){
                         case model::basicErosion:
                             RUN({
-                                materials(mat_id).erode = &BasicErosionModel::erode;
+                                Materials.MaterialFunctions(mat_id).erode = &BasicErosionModel::erode;
                             });
                             break;
                         case model::noErosion:
                             RUN({
-                                materials(mat_id).erode = &NoErosionModel::erode;
+                                Materials.MaterialFunctions(mat_id).erode = &NoErosionModel::erode;
                             });
                             break;
                         default:
@@ -1662,7 +1672,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                     std::cout << "\tvoid_mat_id = " << void_mat_id << std::endl;
                 }
                 RUN({
-                    materials(mat_id).void_mat_id = void_mat_id;
+                    Materials.MaterialFunctions(mat_id).void_mat_id = void_mat_id;
                 });
             } // blank_mat_id 
             else if (a_word.compare("erode_tension_val") == 0) {
@@ -1671,7 +1681,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                     std::cout << "\terode_tension_val = " << erode_tension_val << std::endl;
                 }
                 RUN({
-                    materials(mat_id).erode_tension_val = erode_tension_val;
+                    Materials.MaterialFunctions(mat_id).erode_tension_val = erode_tension_val;
                 });
             } // erode_tension_val
             else if (a_word.compare("erode_density_val") == 0) {
@@ -1680,7 +1690,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                     std::cout << "\terode_density_val = " << erode_density_val << std::endl;
                 }
                 RUN({
-                    materials(mat_id).erode_density_val = erode_density_val;
+                    Materials.MaterialFunctions(mat_id).erode_density_val = erode_density_val;
                 });
             } // erode_density_val
             
@@ -1692,7 +1702,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
 
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
-                MaterialModelVars.num_eos_global_vars(mat_id) = num_global_vars;
+                Materials.num_eos_global_vars(mat_id) = num_global_vars;
                 if(num_global_vars>100){
                     throw std::runtime_error("**** Per material, the code only supports up to 100 global vars in the input file ****");
                 } // end check on num_global_vars
@@ -1725,7 +1735,7 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
 
-                MaterialModelVars.num_strength_global_vars(mat_id) = num_global_vars;
+                Materials.num_strength_global_vars(mat_id) = num_global_vars;
 
 
                 if (VERBOSE) {
@@ -1759,18 +1769,18 @@ void parse_materials(Yaml::Node& root, CArrayKokkos<material_t>& materials, Mate
     } // end loop over materials
 
     // allocate ragged rigght memory to hold the model global variables
-    MaterialModelVars.eos_global_vars = RaggedRightArrayKokkos <double> (MaterialModelVars.num_eos_global_vars, "MaterialModelVars.eos_global_vars");
-    MaterialModelVars.strength_global_vars = RaggedRightArrayKokkos <double> (MaterialModelVars.num_strength_global_vars, "MaterialModelVars.strength_global_vars");
+    Materials.eos_global_vars = RaggedRightArrayKokkos <double> (Materials.num_eos_global_vars, "Materials.eos_global_vars");
+    Materials.strength_global_vars = RaggedRightArrayKokkos <double> (Materials.num_strength_global_vars, "Materials.strength_global_vars");
 
     // save the global variables
     for (int mat_id = 0; mat_id < num_materials; mat_id++) {
         
-        for (size_t var_lid=0; var_lid<MaterialModelVars.num_eos_global_vars(mat_id); var_lid++){
-            MaterialModelVars.eos_global_vars(mat_id, var_lid) = tempGlobalEOSVars(mat_id, var_lid);
+        for (size_t var_lid=0; var_lid<Materials.num_eos_global_vars(mat_id); var_lid++){
+            Materials.eos_global_vars(mat_id, var_lid) = tempGlobalEOSVars(mat_id, var_lid);
         } // end for eos var_lid
 
-        for (size_t var_lid=0; var_lid<MaterialModelVars.num_strength_global_vars(mat_id); var_lid++){
-            MaterialModelVars.strength_global_vars(mat_id, var_lid) = tempGlobalStrengthVars(mat_id, var_lid);
+        for (size_t var_lid=0; var_lid<Materials.num_strength_global_vars(mat_id); var_lid++){
+            Materials.strength_global_vars(mat_id, var_lid) = tempGlobalStrengthVars(mat_id, var_lid);
         } // end for strength var_lid
 
     } // end for loop over materials
@@ -2115,7 +2125,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                 }
                 throw std::runtime_error("**** Boundary Conditions Not Understood ****");
             }
-        } // end for words in material
+        } // end for words in boundary conditions
 
     } // end loop over BCs specified
 
