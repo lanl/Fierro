@@ -269,7 +269,7 @@ void print_yaml(Yaml::Node root)
 // =================================================================================
 //    Parse YAML file
 // =================================================================================
-void parse_yaml(Yaml::Node& root, SimulationParameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary)
+void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary)
 {
     // if (VERBOSE) {
     //     printf("\n");
@@ -282,25 +282,25 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& sim_param, Material_t&
         printf("\n");
         std::cout << "Parsing YAML meshing options:" << std::endl;
     }
-    parse_mesh_input(root, sim_param.mesh_input);
+    parse_mesh_input(root, SimulationParamaters.mesh_input);
 
     if (VERBOSE) {
         printf("\n");
         std::cout << "Parsing YAML dynamic options:" << std::endl;
     }
-    parse_dynamic_options(root, sim_param.dynamic_options);
+    parse_dynamic_options(root, SimulationParamaters.dynamic_options);
 
     if (VERBOSE) {
         printf("\n");
         std::cout << "Parsing YAML output options:" << std::endl;
     }
-    parse_output_options(root, sim_param.output_options);
+    parse_output_options(root, SimulationParamaters.output_options);
 
     if (VERBOSE) {
         printf("\n");
         std::cout << "Parsing YAML solver options:" << std::endl;
     }
-    parse_solver_input(root, sim_param.solver_inputs);
+    parse_solver_input(root, SimulationParamaters.solver_inputs);
 
     if (VERBOSE) {
         printf("\n");
@@ -313,7 +313,7 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& sim_param, Material_t&
         std::cout << "Parsing YAML regions:" << std::endl;
     }
     // parse the region yaml text into a vector of region_fills
-    parse_regions(root, sim_param.region_fills);
+    parse_regions(root, SimulationParamaters.region_fills);
 
     if (VERBOSE) {
         printf("\n");

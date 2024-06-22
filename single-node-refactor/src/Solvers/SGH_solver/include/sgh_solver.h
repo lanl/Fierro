@@ -68,7 +68,7 @@ public:
     ~SGH() = default;
 
     // Initialize data specific to the SGH solver
-    void initialize(SimulationParameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary) const override
+    void initialize(SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary) const override
     {
     }
 
@@ -79,7 +79,7 @@ public:
     /// \brief Calls setup_sgh, which initializes state, and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void setup(SimulationParameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) const override
+    void setup(SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) const override
     {
     }
 
@@ -91,7 +91,7 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void execute(SimulationParameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) override;
+    void execute(SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -109,7 +109,7 @@ public:
     /// \return <return type and definition description if not void>
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void finalize(SimulationParameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary) const override
+    void finalize(SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary) const override
     {
         // Any finalize goes here, remove allocated memory, etc
     }

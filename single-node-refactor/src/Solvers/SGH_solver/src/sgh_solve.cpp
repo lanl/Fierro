@@ -46,26 +46,26 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::execute(SimulationParameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& BoundaryConditions, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
+void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& BoundaryConditions, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
-    double fuzz  = sim_param.dynamic_options.fuzz;
-    double tiny  = sim_param.dynamic_options.tiny;
-    double small = sim_param.dynamic_options.small;
+    double fuzz  = SimulationParamaters.dynamic_options.fuzz;
+    double tiny  = SimulationParamaters.dynamic_options.tiny;
+    double small = SimulationParamaters.dynamic_options.small;
 
-    double graphics_dt_ival  = sim_param.output_options.graphics_time_step;
-    int    graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
+    double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
+    int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
 
-    double time_initial = sim_param.dynamic_options.time_initial;
-    double time_final   = sim_param.dynamic_options.time_final;
-    double dt_min   = sim_param.dynamic_options.dt_min;
-    double dt_max   = sim_param.dynamic_options.dt_max;
-    double dt_start = sim_param.dynamic_options.dt_start;
-    double dt_cfl   = sim_param.dynamic_options.dt_cfl;
+    double time_initial = SimulationParamaters.dynamic_options.time_initial;
+    double time_final   = SimulationParamaters.dynamic_options.time_final;
+    double dt_min   = SimulationParamaters.dynamic_options.dt_min;
+    double dt_max   = SimulationParamaters.dynamic_options.dt_max;
+    double dt_start = SimulationParamaters.dynamic_options.dt_start;
+    double dt_cfl   = SimulationParamaters.dynamic_options.dt_cfl;
 
-    int rk_num_stages = sim_param.dynamic_options.rk_num_stages;
-    int cycle_stop    = sim_param.dynamic_options.cycle_stop;
+    int rk_num_stages = SimulationParamaters.dynamic_options.rk_num_stages;
+    int cycle_stop    = SimulationParamaters.dynamic_options.cycle_stop;
 
     // initialize time, time_step, and cycles
     double time_value = 0.0;
@@ -85,7 +85,7 @@ void SGH::execute(SimulationParameters_t& sim_param, Material_t& Materials, Boun
 
 
     // printf("Writing outputs to file at %f \n", time_value);
-    // mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
+    // mesh_writer.write_mesh(mesh, elem, node, corner, SimulationParamaters, time_value, graphics_times);
 
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
@@ -401,7 +401,7 @@ void SGH::execute(SimulationParameters_t& sim_param, Material_t& Materials, Boun
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
-            mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
+            mesh_writer.write_mesh(mesh, elem, node, corner, SimulationParamaters, time_value, graphics_times);
 
             graphics_time = time_value + graphics_dt_ival;
 

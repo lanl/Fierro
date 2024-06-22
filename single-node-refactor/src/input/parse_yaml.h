@@ -90,7 +90,7 @@ void validate_inputs(
     std::vector<std::string>& str_required_inputs);
 
 // utility function for parsing YAML file
-void parse_yaml(Yaml::Node& root, SimulationParameters_t& sim_param, Material_t& Materials, BoundaryCondition_t& Boundary);
+void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary);
 
 // Parse the solver related data
 void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_input);

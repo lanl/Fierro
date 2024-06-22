@@ -61,7 +61,7 @@ public:
     MeshReader  mesh_reader;
     MeshBuilder mesh_builder;
 
-    SimulationParameters_t sim_param; ///< the input simulation parameters
+    SimulationParameters_t SimulationParamaters; ///< the input simulation parameters
 
     // ---------------------------------------------------------------------
     //    Material and Boundary declarations
@@ -111,17 +111,17 @@ public:
             exit(0);
         }
 
-        parse_yaml(root, sim_param, Materials, BoundaryConditions);
+        parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
         std::cout << "Finished  parsing YAML file" << std::endl;
 
-        if (sim_param.mesh_input.source == mesh_input::file) {
+        if (SimulationParamaters.mesh_input.source == mesh_input::file) {
             // Create and/or read mesh
-            std::cout << "Mesh file path: " << sim_param.mesh_input.file_path << std::endl;
-            mesh_reader.set_mesh_file(sim_param.mesh_input.file_path.data());
-            mesh_reader.read_mesh(mesh, elem, node, corner, num_dims, sim_param.dynamic_options.rk_num_bins);
+            std::cout << "Mesh file path: " << SimulationParamaters.mesh_input.file_path << std::endl;
+            mesh_reader.set_mesh_file(SimulationParamaters.mesh_input.file_path.data());
+            mesh_reader.read_mesh(mesh, elem, node, corner, num_dims, SimulationParamaters.dynamic_options.rk_num_bins);
         }
-        else if (sim_param.mesh_input.source == mesh_input::generate) {
-            mesh_builder.build_mesh(mesh, elem, node, corner, sim_param);
+        else if (SimulationParamaters.mesh_input.source == mesh_input::generate) {
+            mesh_builder.build_mesh(mesh, elem, node, corner, SimulationParamaters);
         }
         else{
             throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
@@ -153,15 +153,15 @@ public:
         
         
         //fill_regions();
-        fill_regions(sim_param, Materials, mesh, node, elem, corner);
+        fill_regions(SimulationParamaters, Materials, mesh, node, elem, corner);
 
 
         // --- Move the following sovler setup to yaml parsing routine
         // Create solvers
-        for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
-            if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
+        for (int solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
+            if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH) {
                 SGH* sgh_solver = new SGH(); // , mesh, node, elem, corner
-                sgh_solver->initialize(sim_param, Materials, BoundaryConditions);
+                sgh_solver->initialize(SimulationParamaters, Materials, BoundaryConditions);
                 solvers.push_back(sgh_solver);
             }
         }
@@ -179,7 +179,7 @@ public:
     {
         std::cout << "Inside driver setup" << std::endl;
         for (auto& solver : solvers) {
-            solver->setup(sim_param, Materials, BoundaryConditions, mesh, node, elem, corner);
+            solver->setup(SimulationParamaters, Materials, BoundaryConditions, mesh, node, elem, corner);
         }
     }
 
@@ -194,7 +194,7 @@ public:
     {
         std::cout << "Inside driver run" << std::endl;
         for (auto& solver : solvers) {
-            solver->execute(sim_param, Materials, BoundaryConditions, mesh, node, elem, corner);
+            solver->execute(SimulationParamaters, Materials, BoundaryConditions, mesh, node, elem, corner);
         }
     }
 
@@ -212,7 +212,7 @@ public:
         std::cout << "Inside driver finalize" << std::endl;
         for (auto& solver : solvers) {
             if (solver->finalize_flag) {
-                solver->finalize(sim_param, Materials, BoundaryConditions);
+                solver->finalize(SimulationParamaters, Materials, BoundaryConditions);
             }
         }
         // destroy FEA modules
@@ -232,9 +232,9 @@ public:
     /// \brief Fills mesh regions based on YAML input
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void fill_regions(SimulationParameters_t sim_param, Material_t Materials, mesh_t mesh, node_t node, elem_t elem, corner_t corner)
+    void fill_regions(SimulationParameters_t SimulationParamaters, Material_t Materials, mesh_t mesh, node_t node, elem_t elem, corner_t corner)
     {
-        int num_fills = sim_param.region_fills.size();
+        int num_fills = SimulationParamaters.region_fills.size();
         printf("Num Fills's = %d\n", num_fills);
 
         for (int f_id = 0; f_id < num_fills; f_id++) {
@@ -281,9 +281,9 @@ public:
                     elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem);
                     
                     // for shapes with an origin (e.g., sphere and circle), accounting for the origin
-                    double dist_x = elem_coords[0] - sim_param.region_fills(f_id).origin[0];
-                    double dist_y = elem_coords[1] - sim_param.region_fills(f_id).origin[1];
-                    double dist_z = elem_coords[2] - sim_param.region_fills(f_id).origin[2];
+                    double dist_x = elem_coords[0] - SimulationParamaters.region_fills(f_id).origin[0];
+                    double dist_y = elem_coords[1] - SimulationParamaters.region_fills(f_id).origin[1];
+                    double dist_z = elem_coords[2] - SimulationParamaters.region_fills(f_id).origin[2];
 
                     // spherical radius 
                     double radius = sqrt(dist_x * dist_x +
@@ -298,7 +298,7 @@ public:
                     size_t fill_this = 0;
 
                     // check to see if this element should be filled
-                    switch (sim_param.region_fills(f_id).volume) {
+                    switch (SimulationParamaters.region_fills(f_id).volume) {
                         case region::global:
                             {
                                 fill_this = 1;
@@ -307,14 +307,14 @@ public:
                         case region::box:
                             {
 
-                                double x_lower_bound = sim_param.region_fills(f_id).x1;
-                                double x_upper_bound = sim_param.region_fills(f_id).x2;
+                                double x_lower_bound = SimulationParamaters.region_fills(f_id).x1;
+                                double x_upper_bound = SimulationParamaters.region_fills(f_id).x2;
 
-                                double y_lower_bound = sim_param.region_fills(f_id).y1;
-                                double y_upper_bound = sim_param.region_fills(f_id).y2;
+                                double y_lower_bound = SimulationParamaters.region_fills(f_id).y1;
+                                double y_upper_bound = SimulationParamaters.region_fills(f_id).y2;
 
-                                double z_lower_bound = sim_param.region_fills(f_id).z1;
-                                double z_upper_bound = sim_param.region_fills(f_id).z2;
+                                double z_lower_bound = SimulationParamaters.region_fills(f_id).z1;
+                                double z_upper_bound = SimulationParamaters.region_fills(f_id).z2;
 
 
                                 if (elem_coords[0] >= x_lower_bound && elem_coords[0] <= x_upper_bound &&
@@ -326,16 +326,16 @@ public:
                             }
                         case region::cylinder:
                             {
-                                if (radius_cyl >= sim_param.region_fills(f_id).radius1
-                                    && radius_cyl <= sim_param.region_fills(f_id).radius2) {
+                                if (radius_cyl >= SimulationParamaters.region_fills(f_id).radius1
+                                    && radius_cyl <= SimulationParamaters.region_fills(f_id).radius2) {
                                     fill_this = 1;
                                 }
                                 break;
                             }
                         case region::sphere:
                             {
-                                if (radius >= sim_param.region_fills(f_id).radius1
-                                    && radius <= sim_param.region_fills(f_id).radius2) {
+                                if (radius >= SimulationParamaters.region_fills(f_id).radius1
+                                    && radius <= SimulationParamaters.region_fills(f_id).radius2) {
                                     fill_this = 1;
                                 }
                                 break;
@@ -381,15 +381,15 @@ public:
                     // paint the material state on the element
                     if (fill_this == 1) {
                         // density
-                        elem.den(elem_gid) = sim_param.region_fills(f_id).den;
+                        elem.den(elem_gid) = SimulationParamaters.region_fills(f_id).den;
 
                         // mass
                         elem.mass(elem_gid) = elem.den(elem_gid) * elem.vol(elem_gid);
 
                         // specific internal energy
-                        elem.sie(rk_level, elem_gid) = sim_param.region_fills(f_id).sie;
+                        elem.sie(rk_level, elem_gid) = SimulationParamaters.region_fills(f_id).sie;
 
-                        elem.mat_id(elem_gid) = sim_param.region_fills(f_id).material_id;
+                        elem.mat_id(elem_gid) = SimulationParamaters.region_fills(f_id).material_id;
 
                         size_t mat_id = elem.mat_id(elem_gid); // short name
 
@@ -454,13 +454,13 @@ public:
                             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
                             // --- Velocity ---
-                            switch (sim_param.region_fills(f_id).velocity) {
+                            switch (SimulationParamaters.region_fills(f_id).velocity) {
                                 case init_conds::cartesian:
                                     {
-                                        node.vel(rk_level, node_gid, 0) = sim_param.region_fills(f_id).u;
-                                        node.vel(rk_level, node_gid, 1) = sim_param.region_fills(f_id).v;
+                                        node.vel(rk_level, node_gid, 0) = SimulationParamaters.region_fills(f_id).u;
+                                        node.vel(rk_level, node_gid, 1) = SimulationParamaters.region_fills(f_id).v;
                                         if (mesh.num_dims == 3) {
-                                            node.vel(rk_level, node_gid, 2) = sim_param.region_fills(f_id).w;
+                                            node.vel(rk_level, node_gid, 2) = SimulationParamaters.region_fills(f_id).w;
                                         }
 
                                         break;
@@ -489,8 +489,8 @@ public:
                                             }
                                         } // end for
 
-                                        node.vel(rk_level, node_gid, 0) = sim_param.region_fills(f_id).speed * dir[0];
-                                        node.vel(rk_level, node_gid, 1) = sim_param.region_fills(f_id).speed * dir[1];
+                                        node.vel(rk_level, node_gid, 0) = SimulationParamaters.region_fills(f_id).speed * dir[0];
+                                        node.vel(rk_level, node_gid, 1) = SimulationParamaters.region_fills(f_id).speed * dir[1];
                                         if (mesh.num_dims == 3) {
                                             node.vel(rk_level, node_gid, 2) = 0.0;
                                         }
@@ -521,10 +521,10 @@ public:
                                             }
                                         } // end for
 
-                                        node.vel(rk_level, node_gid, 0) = sim_param.region_fills(f_id).speed * dir[0];
-                                        node.vel(rk_level, node_gid, 1) = sim_param.region_fills(f_id).speed * dir[1];
+                                        node.vel(rk_level, node_gid, 0) = SimulationParamaters.region_fills(f_id).speed * dir[0];
+                                        node.vel(rk_level, node_gid, 1) = SimulationParamaters.region_fills(f_id).speed * dir[1];
                                         if (mesh.num_dims == 3) {
-                                            node.vel(rk_level, node_gid, 2) = sim_param.region_fills(f_id).speed * dir[2];
+                                            node.vel(rk_level, node_gid, 2) = SimulationParamaters.region_fills(f_id).speed * dir[2];
                                         }
 
                                         break;
@@ -575,13 +575,13 @@ public:
                             } // end of switch
                         } // end loop over nodes of element
 
-                        if (sim_param.region_fills(f_id).velocity == init_conds::tg_vortex) {
+                        if (SimulationParamaters.region_fills(f_id).velocity == init_conds::tg_vortex) {
                             elem.pres(elem_gid) = 0.25 * (cos(2.0 * PI * elem_coords[0]) + cos(2.0 * PI * elem_coords[1]) ) + 1.0;
 
                             // p = rho*ie*(gamma - 1)
                             double gamma  = Materials.eos_global_vars(mat_id,0); // makes sure it matches the gamma in the gamma law function 
                             elem.sie(rk_level, elem_gid) =
-                                elem.pres(elem_gid) / (sim_param.region_fills(f_id).den * (gamma - 1.0));
+                                elem.pres(elem_gid) / (SimulationParamaters.region_fills(f_id).den * (gamma - 1.0));
                         } // end if
 
                     } // end if fill
