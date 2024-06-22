@@ -90,7 +90,9 @@ enum BCDirection
     yDir = 1,
     zDir = 2
 };
+
 } // end of boundary conditions namespace
+
 
 static std::map<std::string, boundary_conditions::BdyTag> bc_geometry_map
 {
@@ -126,6 +128,11 @@ static std::map<std::string, boundary_conditions::BCDirection> bc_direction_map
     { "z_dir", boundary_conditions::zDir }
 };
 
+static std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
+{
+    { "host", boundary_conditions::host },
+    { "device", boundary_conditions::device }
+};
 
 
 
@@ -158,11 +165,11 @@ struct BoundaryConditionEnums_t
 
     solver_input::method solver = solver_input::NONE; ///< Numerical solver method
 
-    boundary_conditions::BCHydro type;    ///< Type of boundary condition
+    boundary_conditions::BCHydro BCHydroType;    ///< Type of boundary condition
 
-    boundary_conditions::BCDirection direction; ///< Boundary condition direction
+    boundary_conditions::BCDirection Direction; ///< Boundary condition direction
 
-    boundary_conditions::BCFcnLocation location=boundary_conditions::device; // host or device BC function
+    boundary_conditions::BCFcnLocation Location=boundary_conditions::device; // host or device BC function
 
 }; // end boundary condition enums
 
