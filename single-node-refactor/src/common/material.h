@@ -188,22 +188,22 @@ struct MaterialFunctions_t
     // -- EOS --
 
     // Equation of state (EOS) function pointers
-    void (*calc_pressure)(const DCArrayKokkos<double>& elem_pres,
-                          const DCArrayKokkos<double>& elem_stress,
-                          const size_t elem_gid,
+    void (*calc_pressure)(const DCArrayKokkos<double>& MaterialPoints_pres,
+                          const DCArrayKokkos<double>& MaterialPoints_stress,
+                          const size_t MaterialPoints_gid,
                           const size_t mat_id,
-                          const DCArrayKokkos<double>& elem_state_vars,
-                          const DCArrayKokkos<double>& elem_sspd,
+                          const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                          const DCArrayKokkos<double>& MaterialPoints_sspd,
                           const double den,
                           const double sie,
                           const RaggedRightArrayKokkos<double> &eos_global_vars) = NULL;
 
-    void (*calc_sound_speed)(const DCArrayKokkos<double>& elem_pres,
-                             const DCArrayKokkos<double>& elem_stress,
-                             const size_t elem_gid,
+    void (*calc_sound_speed)(const DCArrayKokkos<double>& MaterialPoints_pres,
+                             const DCArrayKokkos<double>& MaterialPoints_stress,
+                             const size_t MaterialPoints_gid,
                              const size_t mat_id,
-                             const DCArrayKokkos<double>& elem_state_vars,
-                             const DCArrayKokkos<double>& elem_sspd,
+                             const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                             const DCArrayKokkos<double>& MaterialPoints_sspd,
                              const double den,
                              const double sie,
                              const RaggedRightArrayKokkos<double> &eos_global_vars) = NULL;
@@ -211,16 +211,16 @@ struct MaterialFunctions_t
     // -- Strength --
 
     // Material strength model function pointers
-    void (*calc_stress)(const DCArrayKokkos<double>& elem_pres,
-                        const DCArrayKokkos<double>& elem_stress,
-                        const size_t elem_gid,
+    void (*calc_stress)(const DCArrayKokkos<double>& MaterialPoints_pres,
+                        const DCArrayKokkos<double>& MaterialPoints_stress,
+                        const size_t MaterialPoints_gid,
                         const size_t mat_id,
-                        const DCArrayKokkos<double>& elem_state_vars,
-                        const DCArrayKokkos<double>& elem_sspd,
+                        const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                        const DCArrayKokkos<double>& MaterialPoints_sspd,
                         const double den,
                         const double sie,
                         const ViewCArrayKokkos<double>& vel_grad,
-                        const ViewCArrayKokkos<size_t>& elem_node_gids,
+                        const ViewCArrayKokkos<size_t>& MaterialPoints_node_gids,
                         const DCArrayKokkos<double>&    node_coords,
                         const DCArrayKokkos<double>&    node_vel,
                         const double vol,
@@ -234,16 +234,16 @@ struct MaterialFunctions_t
     double erode_tension_val;   ///< tension threshold to initiate erosion
     double erode_density_val;   ///< density threshold to initiate erosion
     // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
-    void (*erode)(const DCArrayKokkos<double>& elem_pres,
-                  const DCArrayKokkos<double>& elem_stress,
-                  const DCArrayKokkos<bool>& elem_eroded,
-                  const DCArrayKokkos<size_t>& elem_mat_id,
-                  const size_t elem_gid,
+    void (*erode)(const DCArrayKokkos<double>& MaterialPoints_pres,
+                  const DCArrayKokkos<double>& MaterialPoints_stress,
+                  const DCArrayKokkos<bool>& MaterialPoints_eroded,
+                  const DCArrayKokkos<size_t>& MaterialPoints_mat_id,
+                  const size_t MaterialPoints_gid,
                   const size_t void_mat_id,
                   const double erode_tension_val,
                   const double erode_density_val,
-                  const DCArrayKokkos<double>& elem_sspd,
-                  const DCArrayKokkos<double>& elem_den,
+                  const DCArrayKokkos<double>& MaterialPoints_sspd,
+                  const DCArrayKokkos<double>& MaterialPoints_den,
                   const double sie) = NULL;
 
     double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression

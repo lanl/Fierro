@@ -61,16 +61,16 @@ void SGH::update_state(const Material_t& Materials,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& elem_den,
-    DCArrayKokkos<double>& elem_pres,
-    DCArrayKokkos<double>& elem_stress,
-    DCArrayKokkos<double>& elem_sspd,
-    const DCArrayKokkos<double>& elem_sie,
-    const DCArrayKokkos<double>& elem_vol,
-    const DCArrayKokkos<double>& elem_mass,
-    const DCArrayKokkos<size_t>& elem_mat_id,
-    const DCArrayKokkos<double>& elem_statev,
-    const DCArrayKokkos<bool>&   elem_eroded,
+    DCArrayKokkos<double>& MaterialPoints_den,
+    DCArrayKokkos<double>& MaterialPoints_pres,
+    DCArrayKokkos<double>& MaterialPoints_stress,
+    DCArrayKokkos<double>& MaterialPoints_sspd,
+    const DCArrayKokkos<double>& MaterialPoints_sie,
+    const DCArrayKokkos<double>& GaussPoints_vol,
+    const DCArrayKokkos<double>& MaterialPoints_mass,
+    const DCArrayKokkos<size_t>& GaussPoints_mat_id,
+    const DCArrayKokkos<double>& MaterialPoints_statev,
+    const DCArrayKokkos<bool>&   GaussPoints_eroded,
     const double dt,
     const double rk_alpha) const
 {
@@ -83,9 +83,9 @@ void SGH::update_state(const Material_t& Materials,
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
         // --- Density ---
-        elem_den(elem_gid) = elem_mass(elem_gid) / elem_vol(elem_gid);
+        MaterialPoints_den(elem_gid) = MaterialPoints_mass(elem_gid) / GaussPoints_vol(elem_gid);
 
-        size_t mat_id = elem_mat_id(elem_gid);
+        size_t mat_id = GaussPoints_mat_id(elem_gid);
 
         // --- Stress ---
         // state_based elastic plastic model
@@ -94,7 +94,7 @@ void SGH::update_state(const Material_t& Materials,
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
             // --- Density ---
-            elem_den(elem_gid) = elem_mass(elem_gid) / elem_vol(elem_gid);
+            MaterialPoints_den(elem_gid) = MaterialPoints_mass(elem_gid) / GaussPoints_vol(elem_gid);
 
             // corner area normals
             double area_array[24];
@@ -112,24 +112,24 @@ void SGH::update_state(const Material_t& Materials,
                         elem_node_gids,
                         node_vel,
                         area,
-                        elem_vol(elem_gid),
+                        GaussPoints_vol(elem_gid),
                         elem_gid);
 
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(
-                                         elem_pres,
-                                         elem_stress,
+                                         MaterialPoints_pres,
+                                         MaterialPoints_stress,
                                          elem_gid,
                                          mat_id,
-                                         elem_statev,
-                                         elem_sspd,
-                                         elem_den(elem_gid),
-                                         elem_sie(elem_gid),
+                                         MaterialPoints_statev,
+                                         MaterialPoints_sspd,
+                                         MaterialPoints_den(elem_gid),
+                                         MaterialPoints_sie(elem_gid),
                                          vel_grad,
                                          elem_node_gids,
                                          node_coords,
                                          node_vel,
-                                         elem_vol(elem_gid),
+                                         GaussPoints_vol(elem_gid),
                                          dt,
                                          rk_alpha);
         } // end logical on state_based strength model
@@ -137,11 +137,11 @@ void SGH::update_state(const Material_t& Materials,
         // apply the element erosion model
         //if (material(mat_id).erosion_type == model::erosion) {
         //    // starting simple, but in the future call an erosion model
-        //    if (elem_pres(elem_gid) <= material(mat_id).erode_tension_val
-        //        || elem_den(elem_gid) <= material(mat_id).erode_density_val) {
-        //        elem_mat_id(elem_gid) = material(mat_id).void_mat_id;
+        //    if (MaterialPoints_pres(elem_gid) <= material(mat_id).erode_tension_val
+        //        || MaterialPoints_den(elem_gid) <= material(mat_id).erode_density_val) {
+        //        GaussPoints_mat_id(elem_gid) = material(mat_id).void_mat_id;
         //
-        //        elem_eroded(elem_gid) = true;
+        //        GaussPoints_eroded(elem_gid) = true;
         //    } // end if
         //} // end if
         if (Materials.MaterialFunctions(mat_id).erode != NULL) {
@@ -149,17 +149,17 @@ void SGH::update_state(const Material_t& Materials,
 
             // --- Element erosion model ---
             Materials.MaterialFunctions(mat_id).erode(
-                                   elem_pres,
-                                   elem_stress,
-                                   elem_eroded,
-                                   elem_mat_id,
+                                   MaterialPoints_pres,
+                                   MaterialPoints_stress,
+                                   GaussPoints_eroded,
+                                   GaussPoints_mat_id,
                                    elem_gid,
                                    Materials.MaterialFunctions(mat_id).void_mat_id,
                                    Materials.MaterialFunctions(mat_id).erode_tension_val,
                                    Materials.MaterialFunctions(mat_id).erode_density_val,
-                                   elem_sspd,
-                                   elem_den,
-                                   elem_sie(1, elem_gid));
+                                   MaterialPoints_sspd,
+                                   MaterialPoints_den,
+                                   MaterialPoints_sie(1, elem_gid));
 
         } // end if
 
@@ -167,25 +167,25 @@ void SGH::update_state(const Material_t& Materials,
 
             // --- Pressure ---
             Materials.MaterialFunctions(mat_id).calc_pressure(
-                                           elem_pres,
-                                           elem_stress,
+                                           MaterialPoints_pres,
+                                           MaterialPoints_stress,
                                            elem_gid,
-                                           elem_mat_id(elem_gid),
-                                           elem_statev,
-                                           elem_sspd,
-                                           elem_den(elem_gid),
-                                           elem_sie(1, elem_gid),
+                                           GaussPoints_mat_id(elem_gid),
+                                           MaterialPoints_statev,
+                                           MaterialPoints_sspd,
+                                           MaterialPoints_den(elem_gid),
+                                           MaterialPoints_sie(1, elem_gid),
                                            Materials.eos_global_vars);   
             // --- Sound Speed ---                               
             Materials.MaterialFunctions(mat_id).calc_sound_speed(
-                                              elem_pres,
-                                              elem_stress,
+                                              MaterialPoints_pres,
+                                              MaterialPoints_stress,
                                               elem_gid,
-                                              elem_mat_id(elem_gid),
-                                              elem_statev,
-                                              elem_sspd,
-                                              elem_den(elem_gid),
-                                              elem_sie(1, elem_gid),
+                                              GaussPoints_mat_id(elem_gid),
+                                              MaterialPoints_statev,
+                                              MaterialPoints_sspd,
+                                              MaterialPoints_den(elem_gid),
+                                              MaterialPoints_sie(1, elem_gid),
                                               Materials.eos_global_vars);
         }
     }); // end parallel for
@@ -221,15 +221,15 @@ void SGH::update_state2D(const Material_t& Materials,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& elem_den,
-    DCArrayKokkos<double>& elem_pres,
-    DCArrayKokkos<double>& elem_stress,
-    DCArrayKokkos<double>& elem_sspd,
-    const DCArrayKokkos<double>& elem_sie,
-    const DCArrayKokkos<double>& elem_vol,
-    const DCArrayKokkos<double>& elem_mass,
-    const DCArrayKokkos<size_t>& elem_mat_id,
-    const DCArrayKokkos<double>& elem_statev,
+    DCArrayKokkos<double>& MaterialPoints_den,
+    DCArrayKokkos<double>& MaterialPoints_pres,
+    DCArrayKokkos<double>& MaterialPoints_stress,
+    DCArrayKokkos<double>& MaterialPoints_sspd,
+    const DCArrayKokkos<double>& MaterialPoints_sie,
+    const DCArrayKokkos<double>& GaussPoints_vol,
+    const DCArrayKokkos<double>& MaterialPoints_mass,
+    const DCArrayKokkos<size_t>& GaussPoints_mat_id,
+    const DCArrayKokkos<double>& MaterialPoints_statev,
     const double dt,
     const double rk_alpha) const
 {
@@ -242,9 +242,9 @@ void SGH::update_state2D(const Material_t& Materials,
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
         // --- Density ---
-        elem_den(elem_gid) = elem_mass(elem_gid) / elem_vol(elem_gid);
+        MaterialPoints_den(elem_gid) = MaterialPoints_mass(elem_gid) / GaussPoints_vol(elem_gid);
 
-        size_t mat_id = elem_mat_id(elem_gid);
+        size_t mat_id = GaussPoints_mat_id(elem_gid);
 
         // --- Stress ---
         // state_based elastic plastic model
@@ -253,7 +253,7 @@ void SGH::update_state2D(const Material_t& Materials,
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
             // --- Density ---
-            elem_den(elem_gid) = elem_mass(elem_gid) / elem_vol(elem_gid);
+            MaterialPoints_den(elem_gid) = MaterialPoints_mass(elem_gid) / GaussPoints_vol(elem_gid);
 
             // corner area normals
             double area_array[8];
@@ -271,23 +271,23 @@ void SGH::update_state2D(const Material_t& Materials,
                         elem_node_gids,
                         node_vel,
                         area,
-                        elem_vol(elem_gid),
+                        GaussPoints_vol(elem_gid),
                         elem_gid);
 
             // --- call strength model ---
-            // Material.MaterialFunctions(mat_id).strength_model(elem_pres,
-            //                                 elem_stress,
+            // Material.MaterialFunctions(mat_id).strength_model(MaterialPoints_pres,
+            //                                 MaterialPoints_stress,
             //                                 elem_gid,
             //                                 mat_id,
-            //                                 elem_statev,
-            //                                 elem_sspd,
-            //                                 elem_den(elem_gid),
-            //                                 elem_sie(elem_gid),
+            //                                 MaterialPoints_statev,
+            //                                 MaterialPoints_sspd,
+            //                                 MaterialPoints_den(elem_gid),
+            //                                 MaterialPoints_sie(elem_gid),
             //                                 vel_grad,
             //                                 elem_node_gids,
             //                                 node_coords,
             //                                 node_vel,
-            //                                 elem_vol(elem_gid),
+            //                                 GaussPoints_vol(elem_gid),
             //                                 dt,
             //                                 rk_alpha);
         } // end logical on state_based strength model
@@ -297,17 +297,17 @@ void SGH::update_state2D(const Material_t& Materials,
         //if (Materials.MaterialFunctions(mat_id).erode != NULL) {
         //
         //    // --- Element erosion model ---
-        //    material.MaterialFunctions(mat_id).erode(elem_pres,
-        //                           elem_stress,
-        //                           elem_eroded,
-        //                           elem_mat_id,
+        //    material.MaterialFunctions(mat_id).erode(MaterialPoints_pres,
+        //                           MaterialPoints_stress,
+        //                           GaussPoints_eroded,
+        //                           GaussPoints_mat_id,
         //                           elem_gid,
         //                           material(mat_id).void_mat_id,
         //                           material(mat_id).erode_tension_val,
         //                           material(mat_id).erode_density_val,
-        //                           elem_sspd,
-        //                           elem_den,
-        //                           elem_sie(1, elem_gid));
+        //                           MaterialPoints_sspd,
+        //                           MaterialPoints_den,
+        //                           MaterialPoints_sie(1, elem_gid));
         //} // end if
 
         // --- Pressure ---
@@ -315,25 +315,25 @@ void SGH::update_state2D(const Material_t& Materials,
 
             // --- Pressure ---
             Materials.MaterialFunctions(mat_id).calc_pressure(
-                                           elem_pres,
-                                           elem_stress,
+                                           MaterialPoints_pres,
+                                           MaterialPoints_stress,
                                            elem_gid,
-                                           elem_mat_id(elem_gid),
-                                           elem_statev,
-                                           elem_sspd,
-                                           elem_den(elem_gid),
-                                           elem_sie(1, elem_gid),
+                                           GaussPoints_mat_id(elem_gid),
+                                           MaterialPoints_statev,
+                                           MaterialPoints_sspd,
+                                           MaterialPoints_den(elem_gid),
+                                           MaterialPoints_sie(1, elem_gid),
                                            Materials.eos_global_vars);   
             // --- Sound Speed ---                               
             Materials.MaterialFunctions(mat_id).calc_sound_speed(
-                                              elem_pres,
-                                              elem_stress,
+                                              MaterialPoints_pres,
+                                              MaterialPoints_stress,
                                               elem_gid,
-                                              elem_mat_id(elem_gid),
-                                              elem_statev,
-                                              elem_sspd,
-                                              elem_den(elem_gid),
-                                              elem_sie(1, elem_gid),
+                                              GaussPoints_mat_id(elem_gid),
+                                              MaterialPoints_statev,
+                                              MaterialPoints_sspd,
+                                              MaterialPoints_den(elem_gid),
+                                              MaterialPoints_sie(1, elem_gid),
                                               Materials.eos_global_vars);
         }
     }); // end parallel for

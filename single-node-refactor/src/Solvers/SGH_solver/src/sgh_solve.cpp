@@ -46,7 +46,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& BoundaryConditions, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
+void SGH::execute(SimulationParameters_t& SimulationParamaters, 
+                  Material_t& Materials, 
+                  BoundaryCondition_t& BoundaryConditions, 
+                  mesh_t& mesh, 
+                  node_t& node, 
+                  MaterialPoint_t& MaterialPoints, 
+                  GaussPoint_t& GaussPoints, 
+                  corner_t& corner)
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
@@ -85,7 +92,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
 
 
     // printf("Writing outputs to file at %f \n", time_value);
-    // mesh_writer.write_mesh(mesh, elem, node, corner, SimulationParamaters, time_value, graphics_times);
+    // mesh_writer.write_mesh(mesh, MaterialPoints, node, corner, SimulationParamaters, time_value, graphics_times);
 
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
@@ -113,7 +120,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
 
     // extensive IE
     REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
-        IE_loc_sum += elem.mass(elem_gid) * elem.sie(1, elem_gid);
+        IE_loc_sum += MaterialPoints.mass(elem_gid) * MaterialPoints.sie(1, elem_gid);
     }, IE_sum);
     IE_t0 = IE_sum;
 
@@ -159,8 +166,8 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
             get_timestep2D(mesh,
                            node.coords,
                            node.vel,
-                           elem.sspd,
-                           elem.vol,
+                           MaterialPoints.sspd,
+                           GaussPoints.vol,
                            time_value,
                            graphics_time,
                            time_final,
@@ -174,8 +181,8 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
             get_timestep(mesh,
                          node.coords,
                          node.vel,
-                         elem.sspd,
-                         elem.vol,
+                         MaterialPoints.sspd,
+                         GaussPoints.vol,
                          time_value,
                          graphics_time,
                          time_final,
@@ -201,8 +208,8 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
         // save the values at t_n
         rk_init(node.coords,
                 node.vel,
-                elem.sie,
-                elem.stress,
+                MaterialPoints.sie,
+                MaterialPoints.stress,
                 mesh.num_dims,
                 mesh.num_elems,
                 mesh.num_nodes);
@@ -214,18 +221,18 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
 
             // ---- Calculate velocity divergence for the element ----
             if (mesh.num_dims == 2) {
-                get_divergence2D(elem.div,
+                get_divergence2D(GaussPoints.div,
                                  mesh,
                                  node.coords,
                                  node.vel,
-                                 elem.vol);
+                                 GaussPoints.vol);
             }
             else{
-                get_divergence(elem.div,
+                get_divergence(GaussPoints.div,
                                mesh,
                                node.coords,
                                node.vel,
-                               elem.vol);
+                               GaussPoints.vol);
             } // end if 2D
 
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
@@ -234,18 +241,18 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
                              mesh,
                              node.coords,
                              node.vel,
-                             elem.den,
-                             elem.sie,
-                             elem.pres,
-                             elem.stress,
-                             elem.sspd,
-                             elem.vol,
-                             elem.div,
-                             elem.mat_id,
+                             MaterialPoints.den,
+                             MaterialPoints.sie,
+                             MaterialPoints.pres,
+                             MaterialPoints.stress,
+                             MaterialPoints.sspd,
+                             GaussPoints.vol,
+                             GaussPoints.div,
+                             GaussPoints.mat_id,
                              corner.force,
                              fuzz,
                              small,
-                             elem.statev,
+                             MaterialPoints.statev,
                              dt,
                              rk_alpha);
             }
@@ -254,19 +261,19 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
                           mesh,
                           node.coords,
                           node.vel,
-                          elem.den,
-                          elem.sie,
-                          elem.pres,
-                          elem.stress,
-                          elem.sspd,
-                          elem.vol,
-                          elem.div,
-                          elem.mat_id,
-                          elem.eroded,
+                          MaterialPoints.den,
+                          MaterialPoints.sie,
+                          MaterialPoints.pres,
+                          MaterialPoints.stress,
+                          MaterialPoints.sspd,
+                          GaussPoints.vol,
+                          GaussPoints.div,
+                          GaussPoints.mat_id,
+                          GaussPoints.eroded,
                           corner.force,
                           fuzz,
                           small,
-                          elem.statev,
+                          MaterialPoints.statev,
                           dt,
                           rk_alpha);
             }
@@ -293,8 +300,8 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
                           mesh,
                           node.vel,
                           node.coords,
-                          elem.sie,
-                          elem.mass,
+                          MaterialPoints.sie,
+                          MaterialPoints.mass,
                           corner.force);
 
             // ---- Update nodal positions ----
@@ -306,23 +313,23 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
                             node.vel);
 
             // ---- Calculate cell volume for next time step ----
-            geometry::get_vol(elem.vol, node.coords, mesh);
+            geometry::get_vol(GaussPoints.vol, node.coords, mesh);
 
-            // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+            // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
             if (mesh.num_dims == 2) {
                 update_state2D(Materials,
                                mesh,
                                node.coords,
                                node.vel,
-                               elem.den,
-                               elem.pres,
-                               elem.stress,
-                               elem.sspd,
-                               elem.sie,
-                               elem.vol,
-                               elem.mass,
-                               elem.mat_id,
-                               elem.statev,
+                               MaterialPoints.den,
+                               MaterialPoints.pres,
+                               MaterialPoints.stress,
+                               MaterialPoints.sspd,
+                               MaterialPoints.sie,
+                               GaussPoints.vol,
+                               MaterialPoints.mass,
+                               GaussPoints.mat_id,
+                               MaterialPoints.statev,
                                dt,
                                rk_alpha);
             }
@@ -331,16 +338,16 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
                              mesh,
                              node.coords,
                              node.vel,
-                             elem.den,
-                             elem.pres,
-                             elem.stress,
-                             elem.sspd,
-                             elem.sie,
-                             elem.vol,
-                             elem.mass,
-                             elem.mat_id,
-                             elem.statev,
-                             elem.eroded,
+                             MaterialPoints.den,
+                             MaterialPoints.pres,
+                             MaterialPoints.stress,
+                             MaterialPoints.sspd,
+                             MaterialPoints.sie,
+                             GaussPoints.vol,
+                             MaterialPoints.mass,
+                             GaussPoints.mat_id,
+                             MaterialPoints.statev,
+                             GaussPoints.eroded,
                              dt,
                              rk_alpha);
             }
@@ -401,7 +408,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
-            mesh_writer.write_mesh(mesh, elem, node, corner, SimulationParamaters, time_value, graphics_times);
+            mesh_writer.write_mesh(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
 
             graphics_time = time_value + graphics_dt_ival;
 
@@ -431,7 +438,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters, Material_t& Mate
 
     // extensive IE
     REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
-        IE_loc_sum += elem.mass(elem_gid) * elem.sie(1, elem_gid);
+        IE_loc_sum += MaterialPoints.mass(elem_gid) * MaterialPoints.sie(1, elem_gid);
     }, IE_sum);
     IE_tend = IE_sum;
 

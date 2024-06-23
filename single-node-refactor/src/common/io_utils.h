@@ -96,7 +96,13 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, int num_dims, int rk_num_bins)
+    void read_mesh(mesh_t& mesh, 
+                   MaterialPoint_t& MaterialPoints, 
+                   GaussPoint_t& GaussPoints, 
+                   node_t& node, 
+                   corner_t& corner, 
+                   int num_dims, 
+                   int rk_num_bins)
     {
         if (mesh_file_ == NULL) {
             printf("No mesh given\n");
@@ -105,7 +111,7 @@ public:
 
         // Check mesh file extension
         // and read based on extension
-        read_ensight_mesh(mesh, elem, node, corner, num_dims, rk_num_bins);
+        read_ensight_mesh(mesh, MaterialPoints, GaussPoints, node, corner, num_dims, rk_num_bins);
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -122,7 +128,13 @@ public:
     /// \param Number of RK bins
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_ensight_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, int num_dims, int rk_num_bins)
+    void read_ensight_mesh(mesh_t& mesh, 
+                           MaterialPoint_t& MaterialPoints, 
+                           GaussPoint_t& GaussPoints, 
+                           node_t& node, 
+                           corner_t& corner, 
+                           int num_dims, 
+                           int rk_num_bins)
     {
         const size_t rk_level = 0;
 
@@ -196,7 +208,8 @@ public:
 
         // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
-        elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
+        MaterialPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
+        GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
 
         // for each cell read the list of associated nodes
         for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
@@ -268,14 +281,19 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, SimulationParameters_t& SimulationParamaters)
+    void build_mesh(mesh_t& mesh, 
+                    MaterialPoint_t& MaterialPoints, 
+                    GaussPoint_t& GaussPoints,
+                    node_t& node, 
+                    corner_t& corner, 
+                    SimulationParameters_t& SimulationParamaters)
     {
         if (SimulationParamaters.mesh_input.num_dims == 2) {
             if (SimulationParamaters.mesh_input.type == mesh_input::Cylinder) {
-                build_2d_polar(mesh, elem, node, corner, SimulationParamaters);
+                build_2d_polar(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
             }
             else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {
-                build_2d_box(mesh, elem, node, corner, SimulationParamaters);
+                build_2d_box(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
             }
             else{
                 std::cout << "**** 2D MESH TYPE NOT SUPPORTED **** " << std::endl;
@@ -288,7 +306,7 @@ public:
             }
         }
         else if (SimulationParamaters.mesh_input.num_dims == 3) {
-            build_3d_box(mesh, elem, node, corner, SimulationParamaters);
+            build_3d_box(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
@@ -308,7 +326,12 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, SimulationParameters_t& SimulationParamaters) const
+    void build_2d_box(mesh_t& mesh, 
+                      MaterialPoint_t& MaterialPoints, 
+                      GaussPoint_t& GaussPoints,
+                      node_t& node, 
+                      corner_t& corner, 
+                      SimulationParameters_t& SimulationParamaters) const
     {
         printf(" Creating a 2D box mesh \n");
 
@@ -379,7 +402,8 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
+        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -435,7 +459,12 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_polar(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, SimulationParameters_t& SimulationParamaters) const
+    void build_2d_polar(mesh_t& mesh, 
+                        MaterialPoint_t& MaterialPoints, 
+                        GaussPoint_t& GaussPoints,
+                        node_t& node, 
+                        corner_t& corner, 
+                        SimulationParameters_t& SimulationParamaters) const
     {
         printf(" Creating a 2D polar mesh \n");
 
@@ -509,7 +538,8 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
+        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -565,7 +595,12 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, SimulationParameters_t& SimulationParamaters) const
+    void build_3d_box(mesh_t& mesh, 
+                      MaterialPoint_t& MaterialPoints, 
+                      GaussPoint_t& GaussPoints,
+                      node_t& node, 
+                      corner_t& corner, 
+                      SimulationParameters_t& SimulationParamaters) const
     {
         printf(" Creating a 3D box mesh \n");
 
@@ -650,7 +685,8 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
+        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // --- Build elems  ---
 
@@ -712,7 +748,12 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_HexN_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, SimulationParameters_t& SimulationParamaters) const
+    void build_3d_HexN_box(mesh_t& mesh, 
+                           MaterialPoint_t& MaterialPoints, 
+                           GaussPoint_t& GaussPoints,
+                           node_t& node, 
+                           corner_t& corner, 
+                           SimulationParameters_t& SimulationParamaters) const
     {
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
     }
@@ -844,20 +885,20 @@ public:
     /// \param Simulation input parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_mesh(
-    mesh_t&   mesh,
-    elem_t&   elem,
-    node_t&   node,
-    corner_t& corner,
-    SimulationParameters_t& SimulationParamaters,
-    double time_value,
-    CArray<double> graphics_times)
+    void write_mesh(mesh_t&   mesh,
+                    MaterialPoint_t&   MaterialPoints,
+                    GaussPoint_t& GaussPoints,
+                    node_t&   node,
+                    corner_t& corner,
+                    SimulationParameters_t& SimulationParamaters,
+                    double time_value,
+                    CArray<double> graphics_times)
     {
         if (SimulationParamaters.output_options.format == output_options::vtk) {
-            write_vtk(mesh, elem, node, corner, SimulationParamaters, time_value, graphics_times);
+            write_vtk(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
         }
         else if (SimulationParamaters.output_options.format == output_options::ensight) {
-            write_ensight(mesh, elem, node, corner, SimulationParamaters, time_value, graphics_times);
+            write_ensight(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
         }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
@@ -886,24 +927,24 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_ensight(
-    mesh_t&   mesh,
-    elem_t&   elem,
-    node_t&   node,
-    corner_t& corner,
-    SimulationParameters_t& SimulationParamaters,
-    double time_value,
-    CArray<double> graphics_times)
+    void write_ensight(mesh_t&   mesh,
+                       MaterialPoint_t& MaterialPoints,
+                       GaussPoint_t& GaussPoints,
+                       node_t&   node,
+                       corner_t& corner,
+                       SimulationParameters_t& SimulationParamaters,
+                       double time_value,
+                       CArray<double> graphics_times)
     {
         // Update host data
-        elem.den.update_host();
-        elem.pres.update_host();
-        elem.stress.update_host();
-        elem.sspd.update_host();
-        elem.sie.update_host();
-        elem.vol.update_host();
-        elem.mass.update_host();
-        elem.mat_id.update_host();
+        MaterialPoints.den.update_host();
+        MaterialPoints.pres.update_host();
+        MaterialPoints.stress.update_host();
+        MaterialPoints.sspd.update_host();
+        MaterialPoints.sie.update_host();
+        GaussPoints.vol.update_host();
+        MaterialPoints.mass.update_host();
+        GaussPoints.mat_id.update_host();
 
         node.coords.update_host();
         node.vel.update_host();
@@ -969,14 +1010,14 @@ public:
         double e_switch = 1;
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             // save outputs
-            elem_fields(elem_gid, 0) = elem.den.host(elem_gid);
-            elem_fields(elem_gid, 1) = elem.pres.host(elem_gid);
-            elem_fields(elem_gid, 2) = elem.sie.host(1, elem_gid);
-            elem_fields(elem_gid, 3) = elem.vol.host(elem_gid);
-            elem_fields(elem_gid, 4) = elem.mass.host(elem_gid);
-            elem_fields(elem_gid, 5) = elem.sspd.host(elem_gid);
+            elem_fields(elem_gid, 0) = MaterialPoints.den.host(elem_gid);
+            elem_fields(elem_gid, 1) = MaterialPoints.pres.host(elem_gid);
+            elem_fields(elem_gid, 2) = MaterialPoints.sie.host(1, elem_gid);
+            elem_fields(elem_gid, 3) = GaussPoints.vol.host(elem_gid);
+            elem_fields(elem_gid, 4) = MaterialPoints.mass.host(elem_gid);
+            elem_fields(elem_gid, 5) = MaterialPoints.sspd.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
-            elem_fields(elem_gid, 7) = (double)elem.mat_id.host(elem_gid);
+            elem_fields(elem_gid, 7) = (double)GaussPoints.mat_id.host(elem_gid);
             elem_fields(elem_gid, 8) = e_switch;
             elem_switch *= -1;
         } // end for elements
@@ -1233,14 +1274,14 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_vtk(
-    mesh_t&   mesh,
-    elem_t&   elem,
-    node_t&   node,
-    corner_t& corner,
-    SimulationParameters_t& SimulationParamaters,
-    double time_value,
-    CArray<double> graphics_times)
+    void write_vtk(mesh_t&   mesh,
+                   MaterialPoint_t& MaterialPoints,
+                   GaussPoint_t& GaussPoints,
+                   node_t&   node,
+                   corner_t& corner,
+                   SimulationParameters_t& SimulationParamaters,
+                   double time_value,
+                   CArray<double> graphics_times)
     {
         // Not yet supported
         throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
