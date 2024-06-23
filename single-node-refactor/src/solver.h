@@ -61,8 +61,9 @@ public:
     virtual void setup(SimulationParameters_t& SimulationParamaters, 
                        Material_t& Materials, 
                        BoundaryCondition_t& Boundary, 
-                       mesh_t& mesh, node_t& node, 
-                       MaterialPoint_t& elem, 
+                       mesh_t& mesh, 
+                       node_t& node, 
+                       MaterialPoint_t& MaterialPoints, 
                        GaussPoint_t& GaussPoints,
                        corner_t& corner) const = 0;
 
@@ -71,7 +72,7 @@ public:
                          BoundaryCondition_t& Boundary, 
                          mesh_t& mesh, 
                          node_t& node, 
-                         MaterialPoint_t& elem, 
+                         MaterialPoint_t& MaterialPoints, 
                          GaussPoint_t& GaussPoints,
                          corner_t& corner) = 0;
 
