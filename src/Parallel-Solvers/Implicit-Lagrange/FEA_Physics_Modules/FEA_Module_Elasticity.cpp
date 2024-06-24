@@ -6255,9 +6255,15 @@ void FEA_Module_Elasticity::linear_solver_parameters(){
   }
   else{
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("MueLu"));
-    std::string xmlFileName = "elasticity3D.xml";
-    //std::string xmlFileName = "simple_test.xml";
-    Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
+    if(module_params->muelu_parameters_xml_file){
+      std::string xmlFileName = module_params->xml_parameters_file_name;
+      //std::string xmlFileName = "simple_test.xml";
+      Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
+    }
+    else{
+      Linear_Solve_Params->sublist("smoother: params");
+      Linear_Solve_Params->sublist("repartition: params");
+    }
   }
 }
 
