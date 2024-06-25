@@ -1132,17 +1132,21 @@ void Explicit_Solver::setup_optimization_problem(){
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
-  std::string filename = "optimization_parameters.xml";
 
-  //check if parameter file exists
-  std::ifstream param_file_check("optimization_parameters.xml");
-  if (!param_file_check.is_open()) {
-      *fos << "Unable to find xml parameter file required for optimization with the ROL library"  << std::endl;
-      exit_solver(0);
+  Teuchos::RCP<Teuchos::ParameterList> parlist;
+  if(simparam.optimization_options.optimization_parameters_xml_file){
+    std::string xmlFileName = simparam.optimization_options.xml_parameters_file_name;
+    
+    //check if parameter file exists
+    std::ifstream param_file_check(xmlFileName);
+    if (!param_file_check.is_open()) {
+        *fos << "Unable to find xml parameter file required for optimization with the ROL library"  << std::endl;
+        exit_solver(0);
+    }
+    param_file_check.close();
+
+    parlist = ROL::getParametersFromXmlFile(xmlFileName);
   }
-  param_file_check.close();
-
-  auto parlist = ROL::getParametersFromXmlFile( filename );
   //ROL::ParameterList parlist;
 
   ROL::Ptr<ROL::BoundConstraint<real_t> > bnd, mma_bnd;

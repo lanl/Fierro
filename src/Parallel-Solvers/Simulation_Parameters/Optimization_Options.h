@@ -121,6 +121,8 @@ struct Optimization_Options: Yaml::DerivedFields {
   size_t num_solve_checkpoints = 10;                          //number of checkpoints to store explicit solve solutions for adjoint solves
   bool use_solve_checkpoints = false;                         //when false; all timesteps of explicit solves are stored for adjoint solves; expensive
   bool use_gradient_tally = false;                            //tallies gradient in tandem with the time sequence solving for the adjoint vectors
+  bool optimization_parameters_xml_file = true;
+  std::string xml_parameters_file_name = "optimization_parameters.xml";
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
   std::vector<MultiObjectiveModule> multi_objective_modules;
@@ -147,5 +149,6 @@ IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options,
   optimization_output_freq, density_filter, minimum_density, maximum_density,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
   variable_outer_shell, shell_density, objective_normalization_constant,
-  num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally, disable_forward_solve_output
+  num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally, disable_forward_solve_output,
+  optimization_parameters_xml_file, xml_parameters_file_name
 )
