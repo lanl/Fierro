@@ -8,7 +8,7 @@ struct Heat_Conduction_Parameters
     : virtual ImplicitModule, FEA_Module_Parameters::Register<Heat_Conduction_Parameters, FEA_MODULE_TYPE::Heat_Conduction> {
     bool thermal_flag = false;
     bool flux_max_flag = false;
-    bool muelu_parameters_xml_file = true;
+    bool muelu_parameters_xml_file = false;
     std::string xml_parameters_file_name = "MueLu_Thermal_3D_Params.xml";
 
     Heat_Conduction_Parameters() : FEA_Module_Parameters({

@@ -16,7 +16,7 @@ struct Elasticity_Parameters
     real_t constant_pressure = 0;
     real_t constant_stress[6];
     bool constant_stress_flag = false;
-    bool muelu_parameters_xml_file = true;
+    bool muelu_parameters_xml_file = false;
     std::string xml_parameters_file_name = "elasticity3D.xml";
 
     Elasticity_Parameters() : FEA_Module_Parameters({
