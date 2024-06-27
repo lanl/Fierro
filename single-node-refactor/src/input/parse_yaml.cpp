@@ -1359,6 +1359,13 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
     Materials.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials, "num_eos_global_vars");
     Materials.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials, "num_strength_global_vars");
 
+
+    // initialize the num of global vars to 0 for all models
+    FOR_ALL(mat_id, 0, num_materials, {
+        Materials.num_eos_global_vars(mat_id) = 0;
+        Materials.num_strength_global_vars(mat_id) = 0;
+    });
+
     // loop over the materials specified
     for (int mat_id = 0; mat_id < num_materials; mat_id++) {
         // read the variables names

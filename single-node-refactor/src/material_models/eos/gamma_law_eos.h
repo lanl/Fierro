@@ -125,12 +125,8 @@ namespace GammaLawGasEOSModel {
 
 
         // sound speed
-        elem_sspd(elem_gid) = sqrt(gamma * (gamma - 1.0) * sie);
+        elem_sspd(elem_gid) = fmax(sqrt(gamma * (gamma - 1.0) * sie), csmin);
 
-        // ensure soundspeed is great than min specified
-        if (elem_sspd(elem_gid) < csmin) {
-            elem_sspd(elem_gid) = csmin;
-        } // end if
 
         return;
     } // end func

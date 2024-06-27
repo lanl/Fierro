@@ -171,7 +171,7 @@ public:
         const DCArrayKokkos<double>& GaussPoints_div,
         const DCArrayKokkos<size_t>& GaussPoints_mat_id,
         const DCArrayKokkos<bool>&   MaterialPoints_eroded,
-        DCArrayKokkos<double>& corner_force,
+        const DCArrayKokkos<double>& corner_force,
         const double fuzz,
         const double small,
         const DCArrayKokkos<double>& MaterialPoints_statev,

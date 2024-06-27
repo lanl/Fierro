@@ -44,7 +44,7 @@
 #include "state.h"
 
 
-void fill_regions(SimulationParameters_t, 
+void fill_regions(DCArrayKokkos<reg_fill_t>&, 
                   Material_t, 
                   mesh_t, 
                   node_t, 
@@ -171,7 +171,7 @@ public:
         
         
         //fill_regions();
-        fill_regions(SimulationParamaters, 
+        fill_regions(SimulationParamaters.region_fills, 
                      Materials, 
                      mesh, 
                      node, 
@@ -272,7 +272,7 @@ public:
     /// \brief Fills mesh regions based on YAML input
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void fill_regions(SimulationParameters_t SimulationParamaters, 
+    void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills, 
                       Material_t Materials, 
                       mesh_t mesh, 
                       node_t node, 
@@ -280,7 +280,7 @@ public:
                       GaussPoint_t GaussPoints,
                       corner_t corner)
     {
-        int num_fills = SimulationParamaters.region_fills.size();
+        int num_fills = region_fills.size();
         printf("Num Fills's = %d\n", num_fills);
 
         for (int f_id = 0; f_id < num_fills; f_id++) {
@@ -327,9 +327,9 @@ public:
                     elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem);
                     
                     // for shapes with an origin (e.g., sphere and circle), accounting for the origin
-                    double dist_x = elem_coords[0] - SimulationParamaters.region_fills(f_id).origin[0];
-                    double dist_y = elem_coords[1] - SimulationParamaters.region_fills(f_id).origin[1];
-                    double dist_z = elem_coords[2] - SimulationParamaters.region_fills(f_id).origin[2];
+                    double dist_x = elem_coords[0] - region_fills(f_id).origin[0];
+                    double dist_y = elem_coords[1] - region_fills(f_id).origin[1];
+                    double dist_z = elem_coords[2] - region_fills(f_id).origin[2];
 
                     // spherical radius 
                     double radius = sqrt(dist_x * dist_x +
@@ -344,7 +344,7 @@ public:
                     size_t fill_this = 0;
 
                     // check to see if this element should be filled
-                    switch (SimulationParamaters.region_fills(f_id).volume) {
+                    switch (region_fills(f_id).volume) {
                         case region::global:
                             {
                                 fill_this = 1;
@@ -353,14 +353,14 @@ public:
                         case region::box:
                             {
 
-                                double x_lower_bound = SimulationParamaters.region_fills(f_id).x1;
-                                double x_upper_bound = SimulationParamaters.region_fills(f_id).x2;
+                                double x_lower_bound = region_fills(f_id).x1;
+                                double x_upper_bound = region_fills(f_id).x2;
 
-                                double y_lower_bound = SimulationParamaters.region_fills(f_id).y1;
-                                double y_upper_bound = SimulationParamaters.region_fills(f_id).y2;
+                                double y_lower_bound = region_fills(f_id).y1;
+                                double y_upper_bound = region_fills(f_id).y2;
 
-                                double z_lower_bound = SimulationParamaters.region_fills(f_id).z1;
-                                double z_upper_bound = SimulationParamaters.region_fills(f_id).z2;
+                                double z_lower_bound = region_fills(f_id).z1;
+                                double z_upper_bound = region_fills(f_id).z2;
 
 
                                 if (elem_coords[0] >= x_lower_bound && elem_coords[0] <= x_upper_bound &&
@@ -372,16 +372,16 @@ public:
                             }
                         case region::cylinder:
                             {
-                                if (radius_cyl >= SimulationParamaters.region_fills(f_id).radius1
-                                    && radius_cyl <= SimulationParamaters.region_fills(f_id).radius2) {
+                                if (radius_cyl >= region_fills(f_id).radius1
+                                    && radius_cyl <= region_fills(f_id).radius2) {
                                     fill_this = 1;
                                 }
                                 break;
                             }
                         case region::sphere:
                             {
-                                if (radius >= SimulationParamaters.region_fills(f_id).radius1
-                                    && radius <= SimulationParamaters.region_fills(f_id).radius2) {
+                                if (radius >= region_fills(f_id).radius1
+                                    && radius <= region_fills(f_id).radius2) {
                                     fill_this = 1;
                                 }
                                 break;
@@ -427,15 +427,15 @@ public:
                     // paint the material state on the element
                     if (fill_this == 1) {
                         // density
-                        MaterialPoints.den(elem_gid) = SimulationParamaters.region_fills(f_id).den;
+                        MaterialPoints.den(elem_gid) = region_fills(f_id).den;
 
                         // mass
                         MaterialPoints.mass(elem_gid) = MaterialPoints.den(elem_gid) * GaussPoints.vol(elem_gid);
 
                         // specific internal energy
-                        MaterialPoints.sie(rk_level, elem_gid) = SimulationParamaters.region_fills(f_id).sie;
+                        MaterialPoints.sie(rk_level, elem_gid) = region_fills(f_id).sie;
 
-                        GaussPoints.mat_id(elem_gid) = SimulationParamaters.region_fills(f_id).material_id;
+                        GaussPoints.mat_id(elem_gid) = region_fills(f_id).material_id;
 
                         size_t mat_id = GaussPoints.mat_id(elem_gid); // short name
 
@@ -500,13 +500,13 @@ public:
                             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
                             // --- Velocity ---
-                            switch (SimulationParamaters.region_fills(f_id).velocity) {
+                            switch (region_fills(f_id).velocity) {
                                 case init_conds::cartesian:
                                     {
-                                        node.vel(rk_level, node_gid, 0) = SimulationParamaters.region_fills(f_id).u;
-                                        node.vel(rk_level, node_gid, 1) = SimulationParamaters.region_fills(f_id).v;
+                                        node.vel(rk_level, node_gid, 0) = region_fills(f_id).u;
+                                        node.vel(rk_level, node_gid, 1) = region_fills(f_id).v;
                                         if (mesh.num_dims == 3) {
-                                            node.vel(rk_level, node_gid, 2) = SimulationParamaters.region_fills(f_id).w;
+                                            node.vel(rk_level, node_gid, 2) = region_fills(f_id).w;
                                         }
 
                                         break;
@@ -535,8 +535,8 @@ public:
                                             }
                                         } // end for
 
-                                        node.vel(rk_level, node_gid, 0) = SimulationParamaters.region_fills(f_id).speed * dir[0];
-                                        node.vel(rk_level, node_gid, 1) = SimulationParamaters.region_fills(f_id).speed * dir[1];
+                                        node.vel(rk_level, node_gid, 0) = region_fills(f_id).speed * dir[0];
+                                        node.vel(rk_level, node_gid, 1) = region_fills(f_id).speed * dir[1];
                                         if (mesh.num_dims == 3) {
                                             node.vel(rk_level, node_gid, 2) = 0.0;
                                         }
@@ -567,10 +567,10 @@ public:
                                             }
                                         } // end for
 
-                                        node.vel(rk_level, node_gid, 0) = SimulationParamaters.region_fills(f_id).speed * dir[0];
-                                        node.vel(rk_level, node_gid, 1) = SimulationParamaters.region_fills(f_id).speed * dir[1];
+                                        node.vel(rk_level, node_gid, 0) = region_fills(f_id).speed * dir[0];
+                                        node.vel(rk_level, node_gid, 1) = region_fills(f_id).speed * dir[1];
                                         if (mesh.num_dims == 3) {
-                                            node.vel(rk_level, node_gid, 2) = SimulationParamaters.region_fills(f_id).speed * dir[2];
+                                            node.vel(rk_level, node_gid, 2) = region_fills(f_id).speed * dir[2];
                                         }
 
                                         break;
@@ -621,13 +621,13 @@ public:
                             } // end of switch
                         } // end loop over nodes of element
 
-                        if (SimulationParamaters.region_fills(f_id).velocity == init_conds::tg_vortex) {
+                        if (region_fills(f_id).velocity == init_conds::tg_vortex) {
                             MaterialPoints.pres(elem_gid) = 0.25 * (cos(2.0 * PI * elem_coords[0]) + cos(2.0 * PI * elem_coords[1]) ) + 1.0;
 
                             // p = rho*ie*(gamma - 1)
                             double gamma  = Materials.eos_global_vars(mat_id,0); // makes sure it matches the gamma in the gamma law function 
                             MaterialPoints.sie(rk_level, elem_gid) =
-                                MaterialPoints.pres(elem_gid) / (SimulationParamaters.region_fills(f_id).den * (gamma - 1.0));
+                                MaterialPoints.pres(elem_gid) / (region_fills(f_id).den * (gamma - 1.0));
                         } // end if
 
                     } // end if fill
