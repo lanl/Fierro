@@ -1162,6 +1162,107 @@ void Implicit_Solver::setup_optimization_problem(){
 
     parlist = ROL::getParametersFromXmlFile(xmlFileName);
   }
+  else{
+    //set defaults here
+    parlist->sublist("General").set("Variable Objective Function", false);
+    parlist->sublist("General").set("Scale for Epsilon Active Sets", (double) 1.0);
+    parlist->sublist("General").set("Output Level", (int) 1);
+    parlist->sublist("General").set("Inexact Objective Function", false);
+    parlist->sublist("General").set("Inexact Gradient", false);
+    parlist->sublist("General").set("Inexact Hessian-Times-A-Vector", false);
+    parlist->sublist("General").set("Projected Gradient Criticality Measure", false);
+
+  // <ParameterList name="General">
+  //   <Parameter name="Variable Objective Function"            type="bool"   value="false" />
+  //   <Parameter name="Scale for Epsilon Active Sets"          type="double" value="1.0"   />
+  //   <Parameter name="Output Level"                           type="int"    value="1"     />
+  //   <!-- ===========  USE INEXACT OBJECTIVE OR DERIVATIVES  =========== -->
+  //   <Parameter name="Inexact Objective Function"             type="bool" value="false" />
+  //   <Parameter name="Inexact Gradient"                       type="bool" value="false" />
+  //   <Parameter name="Inexact Hessian-Times-A-Vector"         type="bool" value="false" />
+  //   <!-- ===========  BOUND CONSTRAINED CRITICALITY MEASURE  =========== -->
+  //   <Parameter name="Projected Gradient Criticality Measure" type="bool" value="false" />
+
+  //   <!-- ===========  SECANT INPUTS  =========== -->
+  //   <ParameterList name="Secant">
+  //     <Parameter name="Type"                   type="string" value="Limited-Memory BFGS" />
+  //     <Parameter name="Use as Preconditioner"  type="bool"   value="false"               />
+  //     <Parameter name="Use as Hessian"         type="bool"   value="false"               />
+  //     <Parameter name="Maximum Storage"        type="int"    value="5"                   />
+  //     <Parameter name="Use Default Scaling"    type="bool"   value="false"               />
+  //     <Parameter name="Initial Hessian Scale"  type="double" value="1e-16"               />
+  //     <Parameter name="Barzilai-Borwein Type"  type="int"    value="1"                   />
+  //   </ParameterList>
+
+  //   <!-- ===========  KRYLOV INPUTS  =========== -->
+  //   <ParameterList name="Krylov">
+  //     <Parameter name="Type"               type="string" value="Conjugate Gradients" />
+  //     <Parameter name="Absolute Tolerance" type="double" value="1.e-4"               />
+  //     <Parameter name="Relative Tolerance" type="double" value="1.e-2"               />
+  //     <Parameter name="Iteration Limit"    type="int"    value="50"                  />
+  //   </ParameterList>
+
+  //   <!-- ===========  POLYHEDRAL PROJECTION INPUTS  =========== -->
+  //   <ParameterList name="Polyhedral Projection">
+  //     <Parameter name="Type"               type="string" value="Dai-Fletcher" />
+  //     <Parameter name="Iteration Limit"    type="int"    value="1000"         />
+  //     <!--
+  //     <Parameter name="Absolute Tolerance" type="double" value="1.e-4"   />
+  //     <Parameter name="Relative Tolerance" type="double" value="1.e-2"   />
+  //     -->
+  //   </ParameterList>
+  // </ParameterList>
+
+    parlist->sublist("Step").sublist("Line Search").set("Function Evaluation Limit", (int) 20);
+    parlist->sublist("Step").sublist("Line Search").set("Sufficient Decrease Tolerance", (double) 1.e-2);
+    parlist->sublist("Step").sublist("Line Search").set("Initial Step Size", (double) 5e0);
+    parlist->sublist("Step").sublist("Line Search").set("User Defined Initial Step Size", true);
+    parlist->sublist("Step").sublist("Line Search").set("Normalize Initial Step Size", false);
+    parlist->sublist("Step").sublist("Line Search").set("Accept Last Alpha", false);
+    parlist->sublist("Step").sublist("Line Search").set("Use Previous Step Length as Initial Guess", false);
+    parlist->sublist("Step").sublist("Line Search").set("Maximum Step Size", (double) 5e3);
+    parlist->sublist("Step").sublist("Line Search").set("Use Adaptive Step Size Selection", true);
+
+    parlist->sublist("Step").sublist("Line Search").sublist("Descent Method").set("Type", "Quasi-Newton Method");
+    parlist->sublist("Step").sublist("Line Search").sublist("Descent Method").set("Nonlinear CG Type", "Hestenes-Stiefel");
+
+    parlist->sublist("Step").sublist("Line Search").sublist("Curvature Condition").set("Type", "Strong Wolfe Conditions");
+    parlist->sublist("Step").sublist("Line Search").sublist("Curvature Condition").set("General Parameter", (double) 0.9);
+    parlist->sublist("Step").sublist("Line Search").sublist("Curvature Condition").set("Generalized Wolfe Parameter", (double) 0.6);
+
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Type", "Cubic Interpolation");
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Increase Rate", (double) "5e0");
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Backtracking Rate" , (double) "0.5");
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Bracketing Tolerance" , (double) "1.e-8");
+
+
+  //   <!-- ===========  DESCENT ALGORITHM SPECIFICATION  =========== -->
+  //   <ParameterList name="Descent Method">
+  //     <Parameter name="Type"              type="string" value="Quasi-Newton Method" />
+  //     <Parameter name="Nonlinear CG Type" type="string" value="Hestenes-Stiefel" />
+  //   </ParameterList>
+
+  //   <!-- ===========  CURVATURE CONDITION SPECIFICATION  =========== -->
+  //   <ParameterList name="Curvature Condition">
+  //     <Parameter name="Type"                        type="string" value="Strong Wolfe Conditions" />
+  //     <Parameter name="General Parameter"           type="double" value="0.9"                     />
+  //     <Parameter name="Generalized Wolfe Parameter" type="double" value="0.6"                     />
+  //   </ParameterList>
+
+  //   <!-- ===========  LINE-SEARCH ALGORITHM SPECIFICATION  =========== -->
+  //   <ParameterList name="Line-Search Method">
+  //     <Parameter name="Type"                         type="string" value="Cubic Interpolation" />
+  //     <Parameter name="Increase Rate"                type="double" value="5e0"                 />
+  //     <Parameter name="Backtracking Rate"            type="double" value="0.5"                 />
+  //     <Parameter name="Bracketing Tolerance"         type="double" value="1.e-8"               />
+
+  //     <!-- ===========  PATH-BASED TARGET LEVEL  =========== -->
+  //     <ParameterList name="Path-Based Target Level">
+  //       <Parameter name="Target Relaxation Parameter" type="double" value="1.0" />
+  //       <Parameter name="Upper Bound on Path Length"  type="double" value="1.0" />
+  //     </ParameterList>
+  //   </ParameterList>
+  }
 
   //ROL::ParameterList parlist;
 
