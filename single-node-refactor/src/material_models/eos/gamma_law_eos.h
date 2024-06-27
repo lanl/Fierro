@@ -35,6 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef GAMMA_LAW_EOS_H
 #define GAMMA_LAW_EOS_H
 
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn GammaLawGasEOSModel
@@ -68,6 +69,23 @@ namespace GammaLawGasEOSModel {
         ref_density = 4,
         ref_sie = 5
     };
+
+    // host side function
+    static void initialize(const DCArrayKokkos<double>& elem_pres,
+                           const DCArrayKokkos<double>& elem_stress,
+                           const size_t elem_gid,
+                           const size_t mat_id,
+                           const DCArrayKokkos<double>& elem_sspd,
+                           const double den,
+                           const double sie,
+                           const RaggedRightArrayKokkos<double> &eos_global_vars,
+                           const size_t num_vars)
+    {
+
+
+
+        return;
+    } // end func
 
     KOKKOS_FUNCTION
     static void calc_pressure(const DCArrayKokkos<double>& elem_pres,

@@ -1356,8 +1356,8 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
     DCArrayKokkos<double> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
     DCArrayKokkos<double> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
 
-    Materials.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials);
-    Materials.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials);
+    Materials.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials, "num_eos_global_vars");
+    Materials.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials, "num_strength_global_vars");
 
     // loop over the materials specified
     for (int mat_id = 0; mat_id < num_materials; mat_id++) {
@@ -1702,7 +1702,10 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
 
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
-                Materials.num_eos_global_vars(mat_id) = num_global_vars;
+                RUN({ 
+                    Materials.num_eos_global_vars(mat_id) = num_global_vars;
+                });
+
                 if(num_global_vars>100){
                     throw std::runtime_error("**** Per material, the code only supports up to 100 global vars in the input file ****");
                 } // end check on num_global_vars
@@ -1734,8 +1737,9 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
 
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
-
-                Materials.num_strength_global_vars(mat_id) = num_global_vars;
+                RUN({ 
+                    Materials.num_strength_global_vars(mat_id) = num_global_vars;
+                });
 
 
                 if (VERBOSE) {
@@ -1772,8 +1776,10 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
     Materials.eos_global_vars = RaggedRightArrayKokkos <double> (Materials.num_eos_global_vars, "Materials.eos_global_vars");
     Materials.strength_global_vars = RaggedRightArrayKokkos <double> (Materials.num_strength_global_vars, "Materials.strength_global_vars");
 
+
+
     // save the global variables
-    for (int mat_id = 0; mat_id < num_materials; mat_id++) {
+    FOR_ALL(mat_id, 0, num_materials, {
         
         for (size_t var_lid=0; var_lid<Materials.num_eos_global_vars(mat_id); var_lid++){
             Materials.eos_global_vars(mat_id, var_lid) = tempGlobalEOSVars(mat_id, var_lid);
@@ -1783,7 +1789,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
             Materials.strength_global_vars(mat_id, var_lid) = tempGlobalStrengthVars(mat_id, var_lid);
         } // end for strength var_lid
 
-    } // end for loop over materials
+    }); // end for loop over materials
 
 } // end of function to parse material information
 

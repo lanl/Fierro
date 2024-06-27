@@ -62,6 +62,27 @@ struct node_t
 
 /////////////////////////////////////////////////////////////////////////////
 ///
+/// \struct Zone_t
+///
+/// \brief Stores state information associated with zone index space
+///
+/////////////////////////////////////////////////////////////////////////////
+struct Zone_t
+{
+    DCArrayKokkos<double> sie; ///< coefficients for the sie polynomial field
+
+    // initialization method (num_rk_storage_bins, num_nodes, num_dims)
+    void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
+    {
+        this->sie = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "zone_sie");
+    }; // end method
+
+}; // end zone_t
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
 /// \struct GaussPoint_t
 ///
 /// \brief Stores state information associated with the Gauss point
@@ -112,7 +133,7 @@ struct MaterialPoint_t
         this->pres   = DCArrayKokkos<double>(num_elems, "material_point_pressure");
         this->stress = DCArrayKokkos<double>(num_rk, num_elems, num_dims, num_dims, "material_point_stress");
         this->sspd   = DCArrayKokkos<double>(num_elems, "material_point_sspd");
-        this->sie    = DCArrayKokkos<double>(num_rk, num_elems, "material_point_sie");
+        this->sie    = DCArrayKokkos<double>(num_rk, num_elems, "material_point_sie");  // only used with DG
         this->mass   = DCArrayKokkos<double>(num_elems, "material_point_mass");
     }; // end method
 
