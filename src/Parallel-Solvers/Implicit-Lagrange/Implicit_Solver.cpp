@@ -1172,47 +1172,25 @@ void Implicit_Solver::setup_optimization_problem(){
     parlist->sublist("General").set("Inexact Hessian-Times-A-Vector", false);
     parlist->sublist("General").set("Projected Gradient Criticality Measure", false);
 
-  // <ParameterList name="General">
-  //   <Parameter name="Variable Objective Function"            type="bool"   value="false" />
-  //   <Parameter name="Scale for Epsilon Active Sets"          type="double" value="1.0"   />
-  //   <Parameter name="Output Level"                           type="int"    value="1"     />
-  //   <!-- ===========  USE INEXACT OBJECTIVE OR DERIVATIVES  =========== -->
-  //   <Parameter name="Inexact Objective Function"             type="bool" value="false" />
-  //   <Parameter name="Inexact Gradient"                       type="bool" value="false" />
-  //   <Parameter name="Inexact Hessian-Times-A-Vector"         type="bool" value="false" />
-  //   <!-- ===========  BOUND CONSTRAINED CRITICALITY MEASURE  =========== -->
-  //   <Parameter name="Projected Gradient Criticality Measure" type="bool" value="false" />
+    parlist->sublist("General").sublist("Secant").set("Type", "Limited-Memory BFGS");
+    parlist->sublist("General").sublist("Secant").set("Use as Preconditioner", false);
+    parlist->sublist("General").sublist("Secant").set("Use as Hessian", false);
+    parlist->sublist("General").sublist("Secant").set("Maximum Storage", (int) 5);
+    parlist->sublist("General").sublist("Secant").set("Use Default Scaling", false);
+    parlist->sublist("General").sublist("Secant").set("Initial Hessian Scale", (double) 1e-16);
+    parlist->sublist("General").sublist("Secant").set("Barzilai-Borwein Type", (int) 1);
 
-  //   <!-- ===========  SECANT INPUTS  =========== -->
-  //   <ParameterList name="Secant">
-  //     <Parameter name="Type"                   type="string" value="Limited-Memory BFGS" />
-  //     <Parameter name="Use as Preconditioner"  type="bool"   value="false"               />
-  //     <Parameter name="Use as Hessian"         type="bool"   value="false"               />
-  //     <Parameter name="Maximum Storage"        type="int"    value="5"                   />
-  //     <Parameter name="Use Default Scaling"    type="bool"   value="false"               />
-  //     <Parameter name="Initial Hessian Scale"  type="double" value="1e-16"               />
-  //     <Parameter name="Barzilai-Borwein Type"  type="int"    value="1"                   />
-  //   </ParameterList>
+    parlist->sublist("General").sublist("Krylov").set("Type", "Conjugate Gradients");
+    parlist->sublist("General").sublist("Krylov").set("Absolute Tolerance", (double) 1.e-4);
+    parlist->sublist("General").sublist("Krylov").set("Relative Tolerance", (double) 1.e-2);
+    parlist->sublist("General").sublist("Krylov").set("Iteration Limit", (int) 50);
 
-  //   <!-- ===========  KRYLOV INPUTS  =========== -->
-  //   <ParameterList name="Krylov">
-  //     <Parameter name="Type"               type="string" value="Conjugate Gradients" />
-  //     <Parameter name="Absolute Tolerance" type="double" value="1.e-4"               />
-  //     <Parameter name="Relative Tolerance" type="double" value="1.e-2"               />
-  //     <Parameter name="Iteration Limit"    type="int"    value="50"                  />
-  //   </ParameterList>
+    parlist->sublist("General").sublist("Polyhedral Projection").set("Type", "Dai-Fletcher");
+    parlist->sublist("General").sublist("Polyhedral Projection").set("Iteration Limit", (int) 1000);
+    parlist->sublist("General").sublist("Polyhedral Projection").set("Absolute Tolerance", (double) 1.e-4);
+    parlist->sublist("General").sublist("Polyhedral Projection").set("Relative Tolerance", (double) 1.e-2);
 
-  //   <!-- ===========  POLYHEDRAL PROJECTION INPUTS  =========== -->
-  //   <ParameterList name="Polyhedral Projection">
-  //     <Parameter name="Type"               type="string" value="Dai-Fletcher" />
-  //     <Parameter name="Iteration Limit"    type="int"    value="1000"         />
-  //     <!--
-  //     <Parameter name="Absolute Tolerance" type="double" value="1.e-4"   />
-  //     <Parameter name="Relative Tolerance" type="double" value="1.e-2"   />
-  //     -->
-  //   </ParameterList>
-  // </ParameterList>
-
+    //Line search settings
     parlist->sublist("Step").sublist("Line Search").set("Function Evaluation Limit", (int) 20);
     parlist->sublist("Step").sublist("Line Search").set("Sufficient Decrease Tolerance", (double) 1.e-2);
     parlist->sublist("Step").sublist("Line Search").set("Initial Step Size", (double) 5e0);
@@ -1231,37 +1209,71 @@ void Implicit_Solver::setup_optimization_problem(){
     parlist->sublist("Step").sublist("Line Search").sublist("Curvature Condition").set("Generalized Wolfe Parameter", (double) 0.6);
 
     parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Type", "Cubic Interpolation");
-    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Increase Rate", (double) "5e0");
-    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Backtracking Rate" , (double) "0.5");
-    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Bracketing Tolerance" , (double) "1.e-8");
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Increase Rate", (double) 5e0);
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Backtracking Rate" , (double) 0.5);
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Bracketing Tolerance" , (double) 1.e-8);
 
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").sublist("Path-Based Target Level").set("Target Relaxation Parameter" , (double) 1.0);
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").sublist("Path-Based Target Level").set("Upper Bound on Path Length" , (double) 1.0);
 
-  //   <!-- ===========  DESCENT ALGORITHM SPECIFICATION  =========== -->
-  //   <ParameterList name="Descent Method">
-  //     <Parameter name="Type"              type="string" value="Quasi-Newton Method" />
-  //     <Parameter name="Nonlinear CG Type" type="string" value="Hestenes-Stiefel" />
-  //   </ParameterList>
-
-  //   <!-- ===========  CURVATURE CONDITION SPECIFICATION  =========== -->
-  //   <ParameterList name="Curvature Condition">
-  //     <Parameter name="Type"                        type="string" value="Strong Wolfe Conditions" />
-  //     <Parameter name="General Parameter"           type="double" value="0.9"                     />
-  //     <Parameter name="Generalized Wolfe Parameter" type="double" value="0.6"                     />
-  //   </ParameterList>
-
-  //   <!-- ===========  LINE-SEARCH ALGORITHM SPECIFICATION  =========== -->
-  //   <ParameterList name="Line-Search Method">
-  //     <Parameter name="Type"                         type="string" value="Cubic Interpolation" />
-  //     <Parameter name="Increase Rate"                type="double" value="5e0"                 />
-  //     <Parameter name="Backtracking Rate"            type="double" value="0.5"                 />
-  //     <Parameter name="Bracketing Tolerance"         type="double" value="1.e-8"               />
-
-  //     <!-- ===========  PATH-BASED TARGET LEVEL  =========== -->
-  //     <ParameterList name="Path-Based Target Level">
-  //       <Parameter name="Target Relaxation Parameter" type="double" value="1.0" />
-  //       <Parameter name="Upper Bound on Path Length"  type="double" value="1.0" />
-  //     </ParameterList>
-  //   </ParameterList>
+    //Trust region settings
+    parlist->sublist("Step").sublist("Trust Region").set("Subproblem Solver", "Truncated CG");
+    parlist->sublist("Step").sublist("Trust Region").set("Subproblem Model", "SPG");
+    parlist->sublist("Step").sublist("Trust Region").set("Initial Radius", (double) 2e1);
+    parlist->sublist("Step").sublist("Trust Region").set("Maximum Radius", (double) 5.e8);
+    parlist->sublist("Step").sublist("Trust Region").set("Step Acceptance Threshold", (double) 0.05);
+    parlist->sublist("Step").sublist("Trust Region").set("Radius Shrinking Threshold", (double) 0.05);
+    parlist->sublist("Step").sublist("Trust Region").set("Radius Growing Threshold", (double) 0.9);
+    parlist->sublist("Step").sublist("Trust Region").set("Radius Shrinking Rate (Negative rho)", (double) 0.0625);
+    parlist->sublist("Step").sublist("Trust Region").set("Radius Shrinking Rate (Positive rho)", (double) 0.25);
+    parlist->sublist("Step").sublist("Trust Region").set("Radius Growing Rate", (double) 2.5);
+    parlist->sublist("Step").sublist("Trust Region").set("Safeguard Size", (double) 1.e1);
+    
+//       <Parameter name="Safeguard Size"                       type="double" value="1.e1"         />
+//       <ParameterList name="Lin-More">
+//         <Parameter name="Maximum Number of Minor Iterations" type="int"    value="10"   />
+//         <Parameter name="Sufficient Decrease Parameter"      type="double" value="1e-2" />
+//         <Parameter name="Relative Tolerance Exponent"        type="double" value="1.1"  />
+//         <ParameterList name="Cauchy Point">
+//           <Parameter name="Maximum Number of Reduction Steps" type="int"    value="10"    />
+//           <Parameter name="Maximum Number of Expansion Steps" type="int"    value="10"    />
+//           <Parameter name="Initial Step Size"                 type="double" value="1.0"   />
+//           <Parameter name="Normalize Initial Step Size"       type="bool"   value="true"  />
+//           <Parameter name="Reduction Rate"                    type="double" value="0.1"   />
+//           <Parameter name="Expansion Rate"                    type="double" value="5.0"   />
+//           <Parameter name="Decrease Tolerance"                type="double" value="1e-8"  />
+//         </ParameterList>
+//         <ParameterList name="Projected Search">
+//           <Parameter name="Backtracking Rate"       type="double" value="0.5"  />
+//           <Parameter name="Maximum Number of Steps" type="int"    value="20"   />
+//         </ParameterList>
+//       </ParameterList>
+//       <ParameterList name="SPG">
+//         <Parameter name="Use Nonmonotone Trust Region" type="bool" value="false" />
+//         <Parameter name="Maximum Storage Size"         type="int"  value="10"    />
+//         <ParameterList name="Solver">
+//           <Parameter name="Iteration Limit"            type="int"    value="25"    />
+//           <Parameter name="Minimum Spectral Step Size" type="double" value="1e-12" />
+//           <Parameter name="Maximum Spectral Step Size" type="double" value="1e12"  />
+//           <Parameter name="Use Smallest Model Iterate" type="bool"   value="false" />
+//         </ParameterList>
+//       </ParameterList>
+//       <!-- ===========  CONTROLS FOR INEXACTNESS  =========== -->
+//       <ParameterList name="Inexact">
+//         <!-- ===========  INEXACT OBJECTIVE VALUE UPDATE  =========== -->
+//         <ParameterList name="Value">
+//           <Parameter name="Tolerance Scaling"                 type="double" value="1.e-1" />
+//           <Parameter name="Exponent"                          type="double" value="0.9"   />
+//           <Parameter name="Forcing Sequence Initial Value"    type="double" value="1.0"   />
+//           <Parameter name="Forcing Sequence Update Frequency" type="int"    value="10"    />
+//           <Parameter name="Forcing Sequence Reduction Factor" type="double" value="0.1"   />
+//         </ParameterList>
+//         <!-- ===========  INEXACT GRADIENT UPDATE  =========== -->
+//         <ParameterList name="Gradient">
+//           <Parameter name="Tolerance Scaling"  type="double" value="1.e-1" />
+//           <Parameter name="Relative Tolerance" type="double" value="2.0"   />
+//         </ParameterList>
+//       </ParameterList>
   }
 
   //ROL::ParameterList parlist;
