@@ -3988,7 +3988,7 @@ void Solver::set_rol_params(Teuchos::RCP<Teuchos::ParameterList> parlist)
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Objective Scaling", (double) 1e0);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Constraint Scaling", (double) 1e0);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Use Default Initial Penalty Parameter", false);
-    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Initial Penalty Parameter", (double) 1e1);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Initial Penalty Parameter", simparam.optimization_options.rol_params.initial_constraint_penalty);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Penalty Parameter Growth Factor", (double) 1e1);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Minimum Penalty Parameter Reciprocal", (double) 0.1);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Initial Optimality Tolerance", (double) 1.0);
@@ -4000,7 +4000,7 @@ void Solver::set_rol_params(Teuchos::RCP<Teuchos::ParameterList> parlist)
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Feasibility Tolerance Decrease Exponent", (double) 0.9);
     
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Print Intermediate Optimization History", false);
-    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Step Type", "Trust Region");
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Step Type", simparam.optimization_options.rol_params.subproblem_algorithm_string);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Iteration Limit", (int) 20);
     
     parlist->sublist("Step").sublist("Moreau-Yosida Penalty").set("Initial Penalty Parameter", (double) 1e-9);
@@ -4024,10 +4024,10 @@ void Solver::set_rol_params(Teuchos::RCP<Teuchos::ParameterList> parlist)
     parlist->sublist("Step").sublist("Bundle").set("Cutting Plane Iteration Limit", (int) 1000);
 
     
-    parlist->sublist("Status Test").set("Gradient Tolerance", (double) 1e-5);
-    parlist->sublist("Status Test").set("Constraint Tolerance", (double) 1e-5);
-    parlist->sublist("Status Test").set("Step Tolerance", (double) 1e-5);
-    parlist->sublist("Status Test").set("Iteration Limit", (int) 100);
+    parlist->sublist("Status Test").set("Gradient Tolerance", simparam.optimization_options.rol_params.gradient_tolerance);
+    parlist->sublist("Status Test").set("Constraint Tolerance", simparam.optimization_options.rol_params.constraint_tolerance);
+    parlist->sublist("Status Test").set("Step Tolerance", simparam.optimization_options.rol_params.step_tolerance);
+    parlist->sublist("Status Test").set("Iteration Limit", simparam.optimization_options.rol_params.iteration_limit);
     parlist->sublist("Status Test").set("Use Relative Tolerances", true);
 }
 

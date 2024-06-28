@@ -29,6 +29,7 @@ SERIALIZABLE_ENUM(TO_MODULE_TYPE,
 
 
 SERIALIZABLE_ENUM(OPTIMIZATION_PROCESS, none, topology_optimization, shape_optimization)
+SERIALIZABLE_ENUM(ROL_SUBPROBLEM_ALGORITHM, trust_region, line_search)
 SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, none, minimize_kinetic_energy, multi_objective,
                   minimize_compliance, minimize_thermal_resistance, maximize_compliance,
                   maximize_kinetic_energy, maximize_thermal_resistance)
@@ -95,6 +96,42 @@ struct MultiObjectiveModule {
 YAML_ADD_REQUIRED_FIELDS_FOR(MultiObjectiveModule, type, weight_coefficient)
 IMPL_YAML_SERIALIZABLE_FOR(MultiObjectiveModule, type, weight_coefficient)
 
+//ROL options read in struct
+struct ROL_Params: Yaml::DerivedFields {
+  ROL_SUBPROBLEM_ALGORITHM subproblem_algorithm = ROL_SUBPROBLEM_ALGORITHM::trust_region;
+  double initial_constraint_penalty = 1e1;
+  double step_tolerance = 1e-5;
+  double gradient_tolerance = 1e-5;
+  double constraint_tolerance = 1e-5;
+  int iteration_limit = 100;
+
+  std::string subproblem_algorithm_string;
+
+  void validate() {
+    if (iteration_limit<=0) {
+      throw Yaml::ConfigurationException("iteration limit setting cannot be less than or equal to 0");
+    }
+  }
+
+  void derive() {
+    switch(subproblem_algorithm) {
+    case ROL_SUBPROBLEM_ALGORITHM::line_search:
+      subproblem_algorithm_string = "Line Search";
+      break;
+    case ROL_SUBPROBLEM_ALGORITHM::trust_region:
+      subproblem_algorithm_string = "Trust Region";
+      break;
+    default:
+      throw std::runtime_error("Unsupported rol subproblem algorithm through yaml; try xml input");
+  }
+  }
+};
+
+IMPL_YAML_SERIALIZABLE_FOR(ROL_Params, 
+  subproblem_algorithm, initial_constraint_penalty, step_tolerance, constraint_tolerance,
+  gradient_tolerance, iteration_limit
+)
+
 struct Optimization_Options: Yaml::DerivedFields {
   OPTIMIZATION_PROCESS optimization_process = OPTIMIZATION_PROCESS::none;
   OPTIMIZATION_OBJECTIVE optimization_objective = OPTIMIZATION_OBJECTIVE::none;
@@ -102,6 +139,7 @@ struct Optimization_Options: Yaml::DerivedFields {
   std::vector<Optimization_Bound_Constraint_Region> volume_bound_constraints;
   DCArrayKokkos<Optimization_Bound_Constraint_Region> optimization_bound_constraint_volumes;
   std::vector<Volume> objective_regions;
+  ROL_Params rol_params;
   DCArrayKokkos<Volume> optimization_objective_regions;
   bool maximize_flag = false;
   bool normalized_objective = false;
@@ -119,9 +157,9 @@ struct Optimization_Options: Yaml::DerivedFields {
   double shell_density = 1;                                   //contraint value for outer shell of model
   real_t objective_normalization_constant = 0;                //allows a user specified normalization of the objective; default is initial value
   size_t num_solve_checkpoints = 10;                          //number of checkpoints to store explicit solve solutions for adjoint solves
-  bool use_solve_checkpoints = false;                         //when false; all timesteps of explicit solves are stored for adjoint solves; expensive
+  bool use_solve_checkpoints = true;                         //when false; all timesteps of explicit solves are stored for adjoint solves; expensive
   bool use_gradient_tally = false;                            //tallies gradient in tandem with the time sequence solving for the adjoint vectors
-  bool optimization_parameters_xml_file = true;
+  bool optimization_parameters_xml_file = false;
   std::string xml_parameters_file_name = "optimization_parameters.xml";
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
@@ -150,5 +188,5 @@ IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
   variable_outer_shell, shell_density, objective_normalization_constant,
   num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally, disable_forward_solve_output,
-  optimization_parameters_xml_file, xml_parameters_file_name
+  optimization_parameters_xml_file, xml_parameters_file_name, rol_params
 )
