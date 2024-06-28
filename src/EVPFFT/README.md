@@ -12,7 +12,7 @@ EVPFFT depends on the following to build:
 4. [HeFFTe](https://github.com/icl-utk-edu/heffte) (FFTW,CUFFT,ROCFFT)
 5. [HDF5](https://www.hdfgroup.org/solutions/hdf5/)
 
-To make it easy to build EVPFFT, we have included `scripts/build-scripts/build_evpfft.sh` which when executed will download and install all required dependencies and EVPFFT. It is important to note that EVPFFT depends on three main libraries which can be time consuming to download from scratch namely, MPI, FFTW (MPI version), and HDF5 (MPI version). Therefore the user is advised to download these packages themselves either using `sudo apt install` of Anaconda package manager.
+To make it easy to build EVPFFT, we have included `scripts/build_scripts/build_evpfft.sh` which when executed will download and install all required dependencies and EVPFFT. It is important to note that EVPFFT depends on three main libraries which can be time consuming to download from scratch namely, MPI, FFTW (MPI version), and HDF5 (MPI version). Therefore the user is advised to download these packages themselves either using `sudo apt install` of Anaconda package manager.
 
 ## Building EVPFFT with Anaconda
 It is advised to use Anaconda package manager to build EVPFFT as follows:
@@ -115,7 +115,7 @@ Also, input files for each material should be defined as `evpfft1.in`, `evpfft2.
 
 These information are for users interested in more customization of the build process. You can add to the `cmake` options in `build_evpfft.sh` as needed.
 
-Scripts for building each dependency are available in the `install-scripts` folder and can be run individually.
+Scripts for building each dependency are available in the `install_scripts` folder and can be run individually.
 
 Note that MATAR is used as an include header file.
 

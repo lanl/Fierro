@@ -28,10 +28,9 @@ fi
 #check if Trilinos library files were installed, install them otherwise.
 [ -d "${TRILINOS_BUILD_DIR}/lib" ] && echo "Directory ${TRILINOS_BUILD_DIR}/lib exists, assuming successful installation; delete build folder and run build script again if there was an environment error that has been corrected."
 
-#check if Trilinos cmake was already configured.
-[ -e "${TRILINOS_BUILD_DIR}/CMakeCache.txt" ] && echo "CMake build exists, skipping cmake configure"
-if [ ! -e "${TRILINOS_BUILD_DIR}/CMakeCache.txt" ]
+if [ ! -d "${TRILINOS_BUILD_DIR}/lib" ]
 then
+  echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
 
 CUDA_ADDITIONS=(
 -D TPL_ENABLE_CUDA=ON
@@ -131,23 +130,19 @@ elif [ "$kokkos_build_type" = "hip" ]; then
     )
 fi
 
-if [ ! -d "${TRILINOS_BUILD_DIR}/lib" ]
-then
-  echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
-  # Print CMake options for reference
-  echo "CMake Options: ${cmake_options[@]}"
+# Print CMake options for reference
+echo "CMake Options: ${cmake_options[@]}"
 
-  # Configure Trilinos
-  cmake "${cmake_options[@]}" -B "${TRILINOS_BUILD_DIR}" -S "${TRILINOS_SOURCE_DIR}"
+# Configure Trilinos
+cmake "${cmake_options[@]}" -B "${TRILINOS_BUILD_DIR}" -S "${TRILINOS_SOURCE_DIR}"
 
-  # Build Trilinos
-  echo "Building Trilinos..."
-  make -C "${TRILINOS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
+# Build Trilinos
+echo "Building Trilinos..."
+make -C "${TRILINOS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
 
-  # Install Trilinos
-  echo "Installing Trilinos..."
-  make -C "${TRILINOS_BUILD_DIR}" install all
+# Install Trilinos
+echo "Installing Trilinos..."
+make -C "${TRILINOS_BUILD_DIR}" install all
 
-  echo "Trilinos installation complete."
-fi
+echo "Trilinos installation complete."
 fi

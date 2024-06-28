@@ -121,21 +121,21 @@ build_fftw_option=""
 if [ "$build_fftw" -eq 1 ]; then
   build_fftw_option="--build_fftw"
 fi
-HEFFTE_INSTALL_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_heffte.sh"
+HEFFTE_INSTALL_SCRIPT="$PARENT_DIR/scripts/install_scripts/install_heffte.sh"
 source "$HEFFTE_INSTALL_SCRIPT" --heffte_build_type=$heffte_build_type --num_jobs=$num_jobs $build_fftw_option
 
 # --------building kokkos
-KOKKOS_INSTALL_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_kokkos.sh"
+KOKKOS_INSTALL_SCRIPT="$PARENT_DIR/scripts/install_scripts/install_kokkos.sh"
 source "$KOKKOS_INSTALL_SCRIPT" --kokkos_build_type=$kokkos_build_type --num_jobs=$num_jobs
 
 # --------building hdf5
 if [ "$build_hdf5" -eq 1 ]; then
-  HDF5_INSTALL_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_hdf5.sh"
+  HDF5_INSTALL_SCRIPT="$PARENT_DIR/scripts/install_scripts/install_hdf5.sh"
   source "$HDF5_INSTALL_SCRIPT" --num_jobs=$num_jobs
 fi
 
 # --------building matar
-MATAR_INSTALL_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_matar.sh"
+MATAR_INSTALL_SCRIPT="$PARENT_DIR/scripts/install_scripts/install_matar.sh"
 source "$MATAR_INSTALL_SCRIPT"  --kokkos_build_type=$kokkos_build_type --num_jobs=$num_jobs
 
 # --------building EVPFFT
