@@ -1163,6 +1163,7 @@ void Implicit_Solver::setup_optimization_problem(){
     parlist = ROL::getParametersFromXmlFile(xmlFileName);
   }
   else{
+    parlist = Teuchos::rcp(new Teuchos::ParameterList("Inputs"));
     set_rol_params(parlist);
   }
 

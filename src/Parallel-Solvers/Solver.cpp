@@ -3988,7 +3988,7 @@ void Solver::set_rol_params(Teuchos::RCP<Teuchos::ParameterList> parlist)
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Objective Scaling", (double) 1e0);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Constraint Scaling", (double) 1e0);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Use Default Initial Penalty Parameter", false);
-    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Initial Penalty Parameter", (double) 2e3);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Initial Penalty Parameter", (double) 1e1);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Penalty Parameter Growth Factor", (double) 1e1);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Minimum Penalty Parameter Reciprocal", (double) 0.1);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Initial Optimality Tolerance", (double) 1.0);
