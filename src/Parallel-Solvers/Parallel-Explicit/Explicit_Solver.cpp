@@ -1147,6 +1147,9 @@ void Explicit_Solver::setup_optimization_problem(){
 
     parlist = ROL::getParametersFromXmlFile(xmlFileName);
   }
+  else{
+    set_rol_params(parlist);
+  }
   //ROL::ParameterList parlist;
 
   ROL::Ptr<ROL::BoundConstraint<real_t> > bnd, mma_bnd;
