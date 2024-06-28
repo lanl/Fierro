@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -43,7 +43,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace mtr;
 
-struct boundary_condition_t;
 
 namespace mesh_init
 {
@@ -112,15 +111,15 @@ void bubble_sort(size_t arr[], const size_t num)
     } // end for i
 } // end function
 
-struct zones_in_elem_t
+struct zones_in_MaterialPoint_t
 {
     private:
         size_t num_zones_in_elem_;
     public:
-        zones_in_elem_t() {
+        zones_in_MaterialPoint_t() {
         };
 
-        zones_in_elem_t(const size_t num_zones_in_elem_inp) {
+        zones_in_MaterialPoint_t(const size_t num_zones_in_elem_inp) {
             this->num_zones_in_elem_ = num_zones_in_elem_inp;
         };
 
@@ -139,15 +138,15 @@ struct zones_in_elem_t
 };
 
 // if material points are defined strictly internal to the element.
-struct legendre_in_elem_t
+struct legendre_in_MaterialPoint_t
 {
     private:
         size_t num_leg_gauss_in_elem_;
     public:
-        legendre_in_elem_t() {
+        legendre_in_MaterialPoint_t() {
         };
 
-        legendre_in_elem_t(const size_t num_leg_gauss_in_elem_inp) {
+        legendre_in_MaterialPoint_t(const size_t num_leg_gauss_in_elem_inp) {
                 this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
         };
 
@@ -166,15 +165,15 @@ struct legendre_in_elem_t
 };
 
 /// if material points are defined at element interfaces
-struct lobatto_in_elem_t
+struct lobatto_in_MaterialPoint_t
 {
     private:
         size_t num_lob_gauss_in_elem_;
     public:
-        lobatto_in_elem_t() {
+        lobatto_in_MaterialPoint_t() {
         };
 
-        lobatto_in_elem_t(const size_t num_lob_gauss_in_elem_inp) {
+        lobatto_in_MaterialPoint_t(const size_t num_lob_gauss_in_elem_inp) {
                 this->num_lob_gauss_in_elem_ = num_lob_gauss_in_elem_inp;
         };
 
@@ -250,9 +249,9 @@ struct mesh_t
     CArrayKokkos<size_t> surfs_in_elem; ///< Surfaces on an element
 
     // CArrayKokkos <size_t> zones_in_elem; ///< Zones in an element
-    zones_in_elem_t zones_in_elem; ///< Zones in an element
-    lobatto_in_elem_t lobatto_in_elem; ///< Gauss Lobatto points in an element
-    legendre_in_elem_t legendre_in_elem; ///< Gauss Legendre points in an element
+    zones_in_MaterialPoint_t zones_in_elem; ///< Zones in an element
+    lobatto_in_MaterialPoint_t lobatto_in_elem; ///< Gauss Lobatto points in an element
+    legendre_in_MaterialPoint_t legendre_in_elem; ///< Gauss Legendre points in an element
 
     // ---- Node Data Definitions ---- //
     size_t num_nodes; ///< Number of nodes in the mesh
@@ -349,10 +348,10 @@ struct mesh_t
 
         nodes_in_elem    = DCArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.nodes_in_elem");
         corners_in_elem  = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
-        zones_in_elem    = zones_in_elem_t(num_zones_in_elem);
+        zones_in_elem    = zones_in_MaterialPoint_t(num_zones_in_elem);
         surfs_in_elem    = CArrayKokkos<size_t>(num_elems, num_surfs_in_elem, "mesh.surfs_in_zone");
         nodes_in_zone    = CArrayKokkos<size_t>(num_zones, num_nodes_in_zone, "mesh.nodes_in_zone");
-        legendre_in_elem = legendre_in_elem_t(num_leg_gauss_in_elem);
+        legendre_in_elem = legendre_in_MaterialPoint_t(num_leg_gauss_in_elem);
 
         return;
     }; // end method
@@ -1460,8 +1459,7 @@ struct mesh_t
     /// \brief Build sets of boundary nodes
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_boundry_node_sets(const DCArrayKokkos<boundary_condition_t>& boundary,
-        mesh_t& mesh)
+    void build_boundry_node_sets(mesh_t& mesh)
     {
         // build boundary nodes in each boundary set
 

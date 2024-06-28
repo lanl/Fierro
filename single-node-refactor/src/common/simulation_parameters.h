@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \brief Struct for holding simulation metadata
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct simulation_parameters_t
+struct SimulationParameters_t
 {
     mesh_input_t mesh_input;    ///< Mesh input information
 
@@ -62,11 +62,8 @@ struct simulation_parameters_t
 
     std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
 
-    DCArrayKokkos<boundary_condition_t> boundary_conditions; ///< Simulation boundary conditions
+    DCArrayKokkos<reg_fill_t> region_fills;  ///< Region data for simulation mesh, set the initial conditions
 
-    DCArrayKokkos<reg_fill_t> region_fills;  ///< Region data for simulation mesh
-
-    DCArrayKokkos<material_t> materials; ///< Material data for simulation
 }; // simulation_parameters_t
 
 #endif // end Header Guard
