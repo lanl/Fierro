@@ -45,12 +45,68 @@
 
 
 void fill_regions(DCArrayKokkos<reg_fill_t>&, 
-                  Material_t, 
-                  mesh_t, 
-                  node_t, 
-                  MaterialPoint_t, 
-                  GaussPoint_t, 
-                  corner_t);
+                  Material_t&, 
+                  mesh_t&, 
+                  node_t&, 
+                  MaterialPoint_t&, 
+                  GaussPoint_t&, 
+                  corner_t&);
+
+// ==============================================================================
+//   Functions to read voxel mesh
+// ==============================================================================
+void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
+                     double& dx,
+                     double& dy,
+                     double& dz,
+                     double& orig_x,
+                     double& orig_y,
+                     double& orig_z,
+                     size_t& voxel_num_i,
+                     size_t& voxel_num_j,
+                     size_t& voxel_num_k,
+                     double scale_x,
+                     double scale_y,
+                     double scale_z,
+                     std::string mesh_file);
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_id_device
+///
+/// \brief This gives the index value of the point or the elem
+///
+/// Assumes that the grid has an i,j,k structure
+/// the elem = i + (j)*(num_points_i-1) + (k)*(num_points_i-1)*(num_points_j-1)
+/// the point = i + (j)*num_points_i + (k)*num_points_i*num_points_j
+///
+/// \param i index
+/// \param j index
+/// \param k index
+/// \param Number of i indices
+/// \param Number of j indices
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+int get_id_device(int i, int j, int k, int num_i, int num_j)
+{
+    return i + j * num_i + k * num_i * num_j;
+}
+
+// for string delimiter parsing
+std::vector<std::string> split(std::string s, std::string delimiter);
+
+// retrieves multiple values between [ ]
+std::vector<double> extract_list(std::string str);
+
+const std::string WHITESPACE = " ";
+
+std::string ltrim(const std::string& s);
+
+std::string rtrim(const std::string& s);
+
+std::string trim(const std::string& s);
+
 
 
 class Driver
@@ -273,29 +329,64 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills, 
-                      Material_t Materials, 
-                      mesh_t mesh, 
-                      node_t node, 
-                      MaterialPoint_t MaterialPoints, 
-                      GaussPoint_t GaussPoints,
-                      corner_t corner)
+                      Material_t& Materials, 
+                      mesh_t& mesh, 
+                      node_t& node, 
+                      MaterialPoint_t& MaterialPoints, 
+                      GaussPoint_t& GaussPoints,
+                      corner_t& corner)
     {
         int num_fills = region_fills.size();
         printf("Num Fills's = %d\n", num_fills);
 
-        for (int f_id = 0; f_id < num_fills; f_id++) {
-            // // voxel mesh setup
-            // if (read_voxel_file.host(f_id) == 1)
-            // {
-            //     // read voxel mesh
-            //     user_voxel_init(voxel_elem_values,
-            //                     voxel_dx, voxel_dy, voxel_dz,
-            //                     orig_x, orig_y, orig_z,
-            //                     voxel_num_i, voxel_num_j, voxel_num_k);
+        // ---------------------------------------------
+        // variables from a voxel file
+        // ---------------------------------------------
+        DCArrayKokkos<size_t> voxel_elem_mat_id;      // 1 or 0 if material exist, or it is the material_id
+        double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
+        double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
+        size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
+        
+        DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
+        FOR_ALL(f_id, 0, num_fills, {
+            if (region_fills(f_id).volume == region::readVoxelFile)
+            {
+                read_voxel_file(f_id) = region::readVoxelFile;  // read the  voxel file
+            }
+            // add other mesh voxel files
+            else
+            {
+                read_voxel_file(f_id) = 0;
+            }
+        }); // end parallel for
+        read_voxel_file.update_host(); // copy to CPU if code is to read a file
+        Kokkos::fence();
+        // ---------------------------------------------
 
-            //     // copy values read from file to device
-            //     voxel_elem_values.update_device();
-            // } // endif
+
+
+        for (int f_id = 0; f_id < num_fills; f_id++) {
+
+            // ----
+            // voxel mesh setup
+            if (read_voxel_file.host(f_id) == region::readVoxelFile)
+            {
+                // read voxel mesh to get the values in the fcn interface
+                user_voxel_init(voxel_elem_mat_id,
+                                voxel_dx, voxel_dy, voxel_dz,
+                                orig_x, orig_y, orig_z,
+                                voxel_num_i, voxel_num_j, voxel_num_k,
+                                region_fills(f_id).scale_x,
+                                region_fills(f_id).scale_y,
+                                region_fills(f_id).scale_z,
+                                region_fills(f_id).file_path);
+
+                // copy values read from file to device
+                voxel_elem_mat_id.update_device();
+            } // endif
+            // add else if for other mesh reads including STL-2-voxel
+
+
 
             int num_elems = mesh.num_elems;
             // parallel loop over elements in mesh
@@ -389,25 +480,32 @@ public:
 
                         case region::readVoxelFile:
                             {
+
                                 fill_this = 0; // default is no, don't fill it
 
-                                // // find the closest element in the voxel mesh to this element
-                                // double i0_real = (elem_coords[0] - orig_x) / (voxel_dx);
-                                // double j0_real = (elem_coords[1] - orig_y) / (voxel_dy);
-                                // double k0_real = (elem_coords[2] - orig_z) / (voxel_dz);
+                                // find the closest element in the voxel mesh to this element
+                                double i0_real = (elem_coords[0] - orig_x - region_fills(f_id).origin[0]) / (voxel_dx);
+                                double j0_real = (elem_coords[1] - orig_y - region_fills(f_id).origin[1]) / (voxel_dy);
+                                double k0_real = (elem_coords[2] - orig_z - region_fills(f_id).origin[2]) / (voxel_dz);
 
-                                // int i0 = (int)i0_real;
-                                // int j0 = (int)j0_real;
-                                // int k0 = (int)k0_real;
+                                int i0 = (int)i0_real;
+                                int j0 = (int)j0_real;
+                                int k0 = (int)k0_real;
 
-                                // // look for the closest element in the voxel mesh
-                                // int elem_id0 = get_id(i0, j0, k0, voxel_num_i, voxel_num_j);
+                                // look for the closest element in the voxel mesh
+                                int elem_id0 = get_id_device(i0, j0, k0, voxel_num_i, voxel_num_j);
 
-                                // // if voxel mesh overlaps this mesh, then fill it if =1
-                                // if (elem_id0 < voxel_elem_values.size() && elem_id0 >= 0) {
-                                //     // voxel mesh elem values = 0 or 1
-                                //     fill_this = voxel_elem_values(elem_id0); // values from file
-                                // } // end if
+                                // if voxel mesh overlaps this mesh, then fill it if =1
+                                if (elem_id0 < voxel_elem_mat_id.size() && elem_id0 >= 0 &&
+                                    i0 >= 0 && j0 >= 0 && k0 >= 0 &&
+                                    i0 < voxel_num_i && j0 < voxel_num_j && k0 < voxel_num_k) {
+                                    // voxel mesh elem values = 0 or 1
+                                    fill_this = voxel_elem_mat_id(elem_id0); // values from file
+
+                                } // end if
+
+                                break;
+
                             } // end case
                         case region::no_volume:
                             {
@@ -678,3 +776,379 @@ public:
         Kokkos::fence();
 
     } // end fill regions
+
+
+// -----------------------------------------------------------------------------
+// The function to read a voxel vtk file from Dream3d and intialize the mesh
+// ------------------------------------------------------------------------------
+void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
+                     double& dx,
+                     double& dy,
+                     double& dz,
+                     double& orig_x,
+                     double& orig_y,
+                     double& orig_z,
+                     size_t& num_elems_i,
+                     size_t& num_elems_j,
+                     size_t& num_elems_k,
+                     double scale_x,
+                     double scale_y,
+                     double scale_z,
+                     std::string mesh_file)
+{
+    std::string MESH = mesh_file; // user specified
+
+    std::ifstream in;  // FILE *in;
+    in.open(MESH);
+
+    // check to see of a mesh was supplied when running the code
+    if (in)
+    {
+        printf("\nReading the 3D voxel mesh: ");
+        std::cout << MESH << std::endl;
+    }
+    else
+    {
+        std::cout << "\n\n**********************************\n\n";
+        std::cout << " ERROR:\n";
+        std::cout << " Voxel vtk input does not exist \n";
+        std::cout << "**********************************\n\n" << std::endl;
+        std::exit(EXIT_FAILURE);
+    } // end if
+
+    size_t i;           // used for writing information to file
+    size_t point_id;    // the global id for the point
+    size_t elem_id;     // the global id for the elem
+    size_t this_point;   // a local id for a point in a elem (0:7 for a Hexahedral elem)
+
+    size_t num_points_i;
+    size_t num_points_j;
+    size_t num_points_k;
+
+    size_t num_dims = 3;
+
+    std::string token;
+
+    bool found = false;
+
+    // look for POINTS
+    i = 0;
+    while (found == false) {
+        std::string str;
+        std::string delimiter = " ";
+        std::getline(in, str);
+        std::vector<std::string> v = split(str, delimiter);
+
+        // looking for the following text:
+        //      POINTS %d float
+        if (v[0] == "DIMENSIONS")
+        {
+            num_points_i = std::stoi(v[1]);
+            num_points_j = std::stoi(v[2]);
+            num_points_k = std::stoi(v[3]);
+            printf("Num voxel nodes read in = %zu, %zu, %zu\n", num_points_i, num_points_j, num_points_k);
+
+            found = true;
+        } // end if
+
+        if (i > 1000)
+        {
+            printf("ERROR: Failed to find POINTS \n");
+            break;
+        } // end if
+
+        i++;
+    } // end while
+
+    found = false;
+
+    int            num_points = num_points_i * num_points_j * num_points_k;
+    CArray<double> pt_coords_x(num_points_i);
+    CArray<double> pt_coords_y(num_points_j);
+    CArray<double> pt_coords_z(num_points_k);
+
+    while (found == false) {
+        std::string str;
+        std::string str0;
+        std::string delimiter = " ";
+        std::getline(in, str);
+        std::vector<std::string> v = split(str, delimiter);
+
+        // looking for the following text:
+        if (v[0] == "X_COORDINATES")
+        {
+            size_t num_saved = 0;
+
+            while (num_saved < num_points_i - 1) {
+                // get next line
+                std::getline(in, str0);
+
+                // remove starting and trailing spaces
+                str = trim(str0);
+                std::vector<std::string> v_coords = split(str, delimiter);
+
+                // loop over the contents of the vector v_coords
+                for (size_t this_point = 0; this_point < v_coords.size(); this_point++)
+                {
+                    pt_coords_x(num_saved) = scale_x*std::stod(v_coords[this_point]);
+                    num_saved++;
+                } // end for
+            } // end while
+
+            found = true;
+        } // end if
+
+        if (i > 1000)
+        {
+            printf("ERROR: Failed to find X_COORDINATES \n");
+            break;
+        } // end if
+
+        i++;
+    } // end while
+    found = false;
+
+    while (found == false) {
+        std::string str;
+        std::string str0;
+        std::string delimiter = " ";
+        std::getline(in, str);
+        std::vector<std::string> v = split(str, delimiter);
+
+        // looking for the following text:
+        if (v[0] == "Y_COORDINATES")
+        {
+            size_t num_saved = 0;
+
+            while (num_saved < num_points_j - 1) {
+                // get next line
+                std::getline(in, str0);
+
+                // remove starting and trailing spaces
+                str = trim(str0);
+                std::vector<std::string> v_coords = split(str, delimiter);
+
+                // loop over the contents of the vector v_coords
+                for (size_t this_point = 0; this_point < v_coords.size(); this_point++)
+                {
+                    pt_coords_y(num_saved) = scale_y*std::stod(v_coords[this_point]);
+                    num_saved++;
+                } // end for
+            } // end while
+
+            found = true;
+        } // end if
+
+        if (i > 1000)
+        {
+            printf("ERROR: Failed to find Y_COORDINATES \n");
+            break;
+        } // end if
+
+        i++;
+    } // end while
+    found = false;
+
+    while (found == false) {
+        std::string str;
+        std::string str0;
+        std::string delimiter = " ";
+        std::getline(in, str);
+        std::vector<std::string> v = split(str, delimiter);
+
+        // looking for the following text:
+        if (v[0] == "Z_COORDINATES")
+        {
+            size_t num_saved = 0;
+
+            while (num_saved < num_points_k - 1) {
+                // get next line
+                std::getline(in, str0);
+
+                // remove starting and trailing spaces
+                str = trim(str0);
+                std::vector<std::string> v_coords = split(str, delimiter);
+
+                // loop over the contents of the vector v_coords
+                for (size_t this_point = 0; this_point < v_coords.size(); this_point++)
+                {
+                    pt_coords_z(num_saved) = scale_z*std::stod(v_coords[this_point]);
+                    num_saved++;
+                } // end for
+            } // end while
+
+            found = true;
+        } // end if
+
+        if (i > 1000)
+        {
+            printf("ERROR: Failed to find Z_COORDINATES \n");
+            break;
+        } // end if
+
+        i++;
+    } // end while
+    found = false;
+
+    size_t num_elems;
+    num_elems_i = num_points_i - 1;
+    num_elems_j = num_points_j - 1;
+    num_elems_k = num_points_k - 1;
+
+    // center to center distance between first and last elem along each edge
+    double Lx = (pt_coords_x(num_points_i - 2) - pt_coords_x(0));
+    double Ly = (pt_coords_y(num_points_j - 2) - pt_coords_y(0));
+    double Lz = (pt_coords_z(num_points_k - 2) - pt_coords_z(0));
+
+    // spacing between elems
+    dx = Lx / ((double) num_elems_i);
+    dy = Ly / ((double) num_elems_j);
+    dz = Lz / ((double) num_elems_k);
+
+    // element mesh origin
+    orig_x = 0.5 * (pt_coords_x(0) + pt_coords_x(1)),
+    orig_y = 0.5 * (pt_coords_y(0) + pt_coords_y(1)),
+    orig_z = 0.5 * (pt_coords_z(0) + pt_coords_z(1)),
+
+    // look for CELLS
+    i = 0;
+    while (found == false) {
+        std::string str;
+        std::getline(in, str);
+
+        std::string              delimiter = " ";
+        std::vector<std::string> v = split(str, delimiter);
+
+        // looking for the following text:
+        //      CELLS num_elems size
+        if (v[0] == "CELL_DATA")
+        {
+            num_elems = std::stoi(v[1]);
+            printf("Num voxel elements read in %zu\n", num_elems);
+
+            found = true;
+        } // end if
+
+        if (i > 1000)
+        {
+            printf("ERROR: Failed to find CELL_DATA \n");
+            break;
+        } // end if
+
+        i++;
+    } // end while
+    found = false;
+
+    // allocate memory for element voxel values
+    elem_values = DCArrayKokkos<size_t>(num_elems);
+
+    // reading the cell data
+    while (found == false) {
+        std::string str;
+        std::string str0;
+
+        std::string delimiter = " ";
+        std::getline(in, str);
+        std::vector<std::string> v = split(str, delimiter);
+
+        // looking for the following text:
+        if (v[0] == "LOOKUP_TABLE")
+        {
+            size_t num_saved = 0;
+
+            while (num_saved < num_elems - 1) {
+                // get next line
+                std::getline(in, str0);
+
+                // remove starting and trailing spaces
+                str = trim(str0);
+                std::vector<std::string> v_values = split(str, delimiter);
+
+                // loop over the contents of the vector v_coords
+                for (size_t this_elem = 0; this_elem < v_values.size(); this_elem++)
+                {
+                    // save integers (0 or 1) to host side
+                    elem_values.host(num_saved) = std::stoi(v_values[this_elem]);
+                    num_saved++;
+                } // end for
+
+                // printf(" done with one row of data \n");
+            } // end while
+
+            found = true;
+        } // end if
+
+        if (i > 1000)
+        {
+            printf("ERROR: Failed to find LOOKUP_TABLE data \n");
+            break;
+        } // end if
+
+        i++;
+    } // end while
+    found = false;
+
+    printf("\n");
+
+    in.close();
+} // end routine
+
+
+// Code from stackover flow for string delimiter parsing
+std::vector<std::string> split(std::string s, std::string delimiter)
+{
+    size_t                   pos_start = 0, pos_end, delim_len = delimiter.length();
+    std::string              token;
+    std::vector<std::string> res;
+
+    while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
+        token     = s.substr(pos_start, pos_end - pos_start);
+        pos_start = pos_end + delim_len;
+        res.push_back(token);
+    }
+
+    res.push_back(s.substr(pos_start));
+    return res;
+} // end of split
+
+
+// retrieves multiple values between [ ]
+std::vector<double> extract_list(std::string str)
+{
+    // replace '[' with a space and ']' with a space
+    std::replace(str.begin(), str.end(), '[', ' ');
+    std::replace(str.begin(), str.end(), ']', ' ');
+
+    std::vector<std::string> str_values;
+    std::vector<double>      values;
+
+    // exact the str values into a vector
+    str_values = split(str, ",");
+
+    // convert the text values into double values
+    for (auto& word : str_values)
+    {
+        values.push_back(atof(word.c_str()) );
+    } // end for
+
+    return values;
+}  // end of extract_list
+
+
+std::string ltrim(const std::string& s)
+{
+    size_t start = s.find_first_not_of(WHITESPACE);
+    return (start == std::string::npos) ? "" : s.substr(start);
+}
+
+
+std::string rtrim(const std::string& s)
+{
+    size_t end = s.find_last_not_of(WHITESPACE);
+    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+}
+
+std::string trim(const std::string& s)
+{
+    return rtrim(ltrim(s));
+}

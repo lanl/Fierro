@@ -44,7 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ==============================================================================
 namespace region
 {
-    // for tagging boundary faces
+    // for tagging volumes to paint material onto the mesh
     enum vol_tag
     {
         no_volume = 0,
@@ -52,7 +52,10 @@ namespace region
         box = 2,            // tag all elements inside a box
         cylinder = 3,       // tag all elements inside a cylinder
         sphere = 4,         // tag all elements inside a sphere
-        readVoxelFile = 5,  // tag all elements in a voxel mesh input WARING: Currently unimplemented
+        readVoxelFile = 5,  // tag all elements in a voxel mesh (structured VTK)
+        readPolycrystalFile = 6, // tag all elements in a polycrystallince voxel mesh (structured VTK)
+        readSTLFile = 7,    // read a STL file and voxelize it
+        readVTKFile = 8,    // tag all elements in a VTK mesh (unstructured mesh)
     };
 } // end of namespace
 
@@ -62,7 +65,7 @@ static std::map<std::string, region::vol_tag> region_type_map
     { "box", region::box },
     { "sphere", region::sphere },
     { "cylinder", region::cylinder },
-    { "readVoxelFile", region::readVoxelFile }
+    { "voxel_file", region::readVoxelFile }
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -76,6 +79,8 @@ struct reg_fill_t
 {
     // type
     region::vol_tag volume; ///< Type of volume for this region eg. global, box, sphere, planes, etc.
+
+    std::string file_path     = ""; ///< Absolute path of mesh file
 
     // material id
     size_t material_id; ///< Material ID for this region
@@ -91,6 +96,11 @@ struct reg_fill_t
     // radius
     double radius1 = 0.0;   ///< Inner radius to fill for sphere
     double radius2 = 0.0;   ///< Outer radius to fill for sphere
+
+    // scale parameters for mesh files
+    double scale_x = 1.0;
+    double scale_y = 1.0;
+    double scale_z = 1.0;
 
     // initial conditions
     init_conds::init_velocity_conds velocity;  ///< Initial conditions for this region WARNING: Currently unimplemented
@@ -115,6 +125,7 @@ struct reg_fill_t
 static std::vector<std::string> str_region_inps
 {
     "type",
+    "file_path",
     "material_id",
     "x1",
     "x2",
@@ -124,6 +135,9 @@ static std::vector<std::string> str_region_inps
     "z2",
     "radius1",
     "radius2",
+    "scale_x",
+    "scale_y",
+    "scale_z",
     "velocity",
     "u",
     "v",

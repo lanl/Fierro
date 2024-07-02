@@ -1109,6 +1109,42 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                     region_fills(reg_id).z2 = z2;
                 });
             } // z2
+            else if (a_word.compare("scale_x") == 0) {
+                // outer plane
+
+                double scale_x = root["regions"][reg_id]["fill_volume"]["scale_x"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\tscale_x = " << scale_x << std::endl;
+                }
+
+                RUN({
+                    region_fills(reg_id).scale_x = scale_x;
+                });
+            } // scale_x
+            else if (a_word.compare("scale_y") == 0) {
+                // outer plane
+
+                double scale_y = root["regions"][reg_id]["fill_volume"]["scale_y"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\tscale_y = " << scale_y << std::endl;
+                }
+
+                RUN({
+                    region_fills(reg_id).scale_y = scale_y;
+                });
+            } // scale_y
+            else if (a_word.compare("scale_z") == 0) {
+                // outer plane
+
+                double scale_z = root["regions"][reg_id]["fill_volume"]["scale_z"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\tscale_z = " << scale_z << std::endl;
+                }
+
+                RUN({
+                    region_fills(reg_id).scale_z = scale_z;
+                });
+            } // scale_z
             else if (a_word.compare("velocity") == 0) {
 
                 // velocity fill region type
@@ -1256,7 +1292,6 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                                 region_fills(reg_id).volume = region::no_volume;
                             });
                             break;
-
                         default:
 
                             RUN({ 
@@ -1273,13 +1308,26 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                             throw std::runtime_error("**** Region Volume Fill Type Not Understood ****");
                             break;
                     } // end switch
-                } 
+                }
+                 
                 else{
                     std::cout << "ERROR: invalid input: " << type << std::endl;
                     throw std::runtime_error("**** Volume Fill Not Understood ****");
                 } // end if
 
             } // end volume fill type
+            // Get mesh file path
+            else if (a_word.compare("file_path") == 0) {
+                // region volume fill type
+                std::string path = root["regions"][reg_id]["fill_volume"]["file_path"].As<std::string>();
+
+                if (VERBOSE) {
+                    std::cout << "\tfile_path = " << path << std::endl;
+                }
+
+                region_fills(reg_id).file_path = path;   // saving the absolute file path
+
+            } // end file path
             //
             else if (a_word.compare("origin") == 0) {
                 std::string origin = root["regions"][reg_id]["fill_volume"]["origin"].As<std::string>();
@@ -1326,6 +1374,27 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
             }
         } // end for words in material
 
+        // -----------------------------------------------
+        // check for consistency in input settings
+            
+        // if the following is true, stop simulation; must add all mesh read options
+        if (region_fills(reg_id).volume == region::readVoxelFile && region_fills(reg_id).file_path.empty()) {
+            std::cout << "ERROR: When using a file to initialize a region, a file_path must be set to point to the mesh file" << std::endl;
+        }
+
+        // add all mesh read options here
+        if (region_fills(reg_id).volume != region::readVoxelFile ) {
+            // this means it is a geometric definition of the region
+
+            // check to see if a file path was set
+            if(region_fills(reg_id).file_path.size()>0){
+                std::cout << "ERROR: When a geometric entity defines the region, a mesh file cannot be passed to set the region" << std::endl;
+                exit(0);
+            }
+        }
+        // -----------------------------------------------
+
+        
     } // end loop over regions
 } // end of function to parse region
 
@@ -1706,8 +1775,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                 Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
 
                 size_t num_global_vars = mat_global_vars_yaml.Size();
-
-                std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
                 RUN({ 
                     Materials.num_eos_global_vars(mat_id) = num_global_vars;
@@ -1741,8 +1808,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                 Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
 
                 size_t num_global_vars = mat_global_vars_yaml.Size();
-
-                std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
                 RUN({ 
                     Materials.num_strength_global_vars(mat_id) = num_global_vars;
