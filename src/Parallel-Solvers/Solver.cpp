@@ -374,7 +374,7 @@ void Solver::read_mesh_ensight(const char* MESH)
         // old swage method
         // mesh->init_nodes(local_nrows); // add 1 for index starting at 1
 
-        std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+        //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
         // read the initial mesh coordinates
         // x-coords
@@ -1107,7 +1107,7 @@ void Solver::read_mesh_vtk(const char* MESH)
         // old swage method
         // mesh->init_nodes(local_nrows); // add 1 for index starting at 1
 
-        std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+        //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
         // read the initial mesh coordinates
         // x-coords
@@ -1900,7 +1900,7 @@ void Solver::read_mesh_tecplot(const char* MESH)
         // old swage method
         // mesh->init_nodes(local_nrows); // add 1 for index starting at 1
 
-        std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+        //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
         // read the initial mesh coordinates
         // x-coords
@@ -2541,7 +2541,7 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
     
-  std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+  //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
   // read the initial mesh coordinates
   // x-coords

@@ -184,8 +184,19 @@ void Implicit_Solver::run(){
     //equate pointers for this solver
     initial_node_coords_distributed = node_coords_distributed;
     all_initial_node_coords_distributed = all_node_coords_distributed;
+
+    //print element imbalance stats
+    int rnum_global_sum = 0;
+    MPI_Allreduce(&rnum_elem, &rnum_global_sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    double local_imbalance, max_imbalance, avg_elem;
+    max_imbalance = 0;
+    avg_elem = rnum_global_sum/((double) nranks);
+    local_imbalance = rnum_elem/avg_elem;
+    MPI_Allreduce(&local_imbalance, &max_imbalance, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+    *fos << "Element imbalance: " << max_imbalance << std::endl;
     
-    std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
+    //std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
     
     init_clock();
 
@@ -497,7 +508,7 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
     
-  std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+  //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
   // read the initial mesh coordinates
   // x-coords
@@ -1677,7 +1688,7 @@ void Implicit_Solver::init_boundaries(){
     std::cout << "Starting boundary patch setup" << std::endl <<std::flush;
   Get_Boundary_Patches();
   //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
-  std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
+  //std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
   
   //disable for now
   if(0) {
