@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -46,26 +46,33 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner)
+void SGH::execute(SimulationParameters_t& SimulationParamaters, 
+                  Material_t& Materials, 
+                  BoundaryCondition_t& BoundaryConditions, 
+                  mesh_t& mesh, 
+                  node_t& node, 
+                  MaterialPoint_t& MaterialPoints, 
+                  GaussPoint_t& GaussPoints, 
+                  corner_t& corner)
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
-    double fuzz  = sim_param.dynamic_options.fuzz;
-    double tiny  = sim_param.dynamic_options.tiny;
-    double small = sim_param.dynamic_options.small;
+    double fuzz  = SimulationParamaters.dynamic_options.fuzz;
+    double tiny  = SimulationParamaters.dynamic_options.tiny;
+    double small = SimulationParamaters.dynamic_options.small;
 
-    double graphics_dt_ival  = sim_param.output_options.graphics_time_step;
-    int    graphics_cyc_ival = sim_param.output_options.graphics_iteration_step;
+    double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
+    int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
 
-    double time_initial = sim_param.dynamic_options.time_initial;
-    double time_final   = sim_param.dynamic_options.time_final;
-    double dt_min   = sim_param.dynamic_options.dt_min;
-    double dt_max   = sim_param.dynamic_options.dt_max;
-    double dt_start = sim_param.dynamic_options.dt_start;
-    double dt_cfl   = sim_param.dynamic_options.dt_cfl;
+    double time_initial = SimulationParamaters.dynamic_options.time_initial;
+    double time_final   = SimulationParamaters.dynamic_options.time_final;
+    double dt_min   = SimulationParamaters.dynamic_options.dt_min;
+    double dt_max   = SimulationParamaters.dynamic_options.dt_max;
+    double dt_start = SimulationParamaters.dynamic_options.dt_start;
+    double dt_cfl   = SimulationParamaters.dynamic_options.dt_cfl;
 
-    int rk_num_stages = sim_param.dynamic_options.rk_num_stages;
-    int cycle_stop    = sim_param.dynamic_options.cycle_stop;
+    int rk_num_stages = SimulationParamaters.dynamic_options.rk_num_stages;
+    int cycle_stop    = SimulationParamaters.dynamic_options.cycle_stop;
 
     // initialize time, time_step, and cycles
     double time_value = 0.0;
@@ -82,11 +89,10 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     double graphics_time = 0.0; // the times for writing graphics dump
     size_t graphics_id   = 0;
 
-    // Verify host side boundary types are set
-    sim_param.boundary_conditions.update_host();
+
 
     // printf("Writing outputs to file at %f \n", time_value);
-    // mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
+    // mesh_writer.write_mesh(mesh, MaterialPoints, node, corner, SimulationParamaters, time_value, graphics_times);
 
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
@@ -114,7 +120,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
     // extensive IE
     REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
-        IE_loc_sum += elem.mass(elem_gid) * elem.sie(1, elem_gid);
+        IE_loc_sum += MaterialPoints.mass(elem_gid) * MaterialPoints.sie(1, elem_gid);
     }, IE_sum);
     IE_t0 = IE_sum;
 
@@ -145,7 +151,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     std::cout << "Applying initial boundary conditions" << std::endl;
-    boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value); // Time value = 0.0;
+    boundary_velocity(mesh, BoundaryConditions, node.vel, time_value); // Time value = 0.0;
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -160,8 +166,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             get_timestep2D(mesh,
                            node.coords,
                            node.vel,
-                           elem.sspd,
-                           elem.vol,
+                           MaterialPoints.sspd,
+                           GaussPoints.vol,
                            time_value,
                            graphics_time,
                            time_final,
@@ -175,8 +181,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
             get_timestep(mesh,
                          node.coords,
                          node.vel,
-                         elem.sspd,
-                         elem.vol,
+                         MaterialPoints.sspd,
+                         GaussPoints.vol,
                          time_value,
                          graphics_time,
                          time_final,
@@ -202,8 +208,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
         // save the values at t_n
         rk_init(node.coords,
                 node.vel,
-                elem.sie,
-                elem.stress,
+                MaterialPoints.sie,
+                MaterialPoints.stress,
                 mesh.num_dims,
                 mesh.num_elems,
                 mesh.num_nodes);
@@ -215,59 +221,59 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
             // ---- Calculate velocity divergence for the element ----
             if (mesh.num_dims == 2) {
-                get_divergence2D(elem.div,
+                get_divergence2D(GaussPoints.div,
                                  mesh,
                                  node.coords,
                                  node.vel,
-                                 elem.vol);
+                                 GaussPoints.vol);
             }
             else{
-                get_divergence(elem.div,
+                get_divergence(GaussPoints.div,
                                mesh,
                                node.coords,
                                node.vel,
-                               elem.vol);
+                               GaussPoints.vol);
             } // end if 2D
 
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             if (mesh.num_dims == 2) {
-                get_force_2D(sim_param.materials,
+                get_force_2D(Materials,
                              mesh,
                              node.coords,
                              node.vel,
-                             elem.den,
-                             elem.sie,
-                             elem.pres,
-                             elem.stress,
-                             elem.sspd,
-                             elem.vol,
-                             elem.div,
-                             elem.mat_id,
+                             MaterialPoints.den,
+                             MaterialPoints.sie,
+                             MaterialPoints.pres,
+                             MaterialPoints.stress,
+                             MaterialPoints.sspd,
+                             GaussPoints.vol,
+                             GaussPoints.div,
+                             GaussPoints.mat_id,
                              corner.force,
                              fuzz,
                              small,
-                             elem.statev,
+                             MaterialPoints.statev,
                              dt,
                              rk_alpha);
             }
             else{
-                get_force(sim_param.materials,
+                get_force(Materials,
                           mesh,
                           node.coords,
                           node.vel,
-                          elem.den,
-                          elem.sie,
-                          elem.pres,
-                          elem.stress,
-                          elem.sspd,
-                          elem.vol,
-                          elem.div,
-                          elem.mat_id,
-                          elem.eroded,
+                          MaterialPoints.den,
+                          MaterialPoints.sie,
+                          MaterialPoints.pres,
+                          MaterialPoints.stress,
+                          MaterialPoints.sspd,
+                          GaussPoints.vol,
+                          GaussPoints.div,
+                          GaussPoints.mat_id,
+                          GaussPoints.eroded,
                           corner.force,
                           fuzz,
                           small,
-                          elem.statev,
+                          MaterialPoints.statev,
                           dt,
                           rk_alpha);
             }
@@ -281,10 +287,10 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                             corner.force);
 
             // ---- apply velocity boundary conditions to the boundary patches----
-            boundary_velocity(mesh, sim_param.boundary_conditions, node.vel, time_value);
+            boundary_velocity(mesh, BoundaryConditions, node.vel, time_value);
 
             // ---- apply contact boundary conditions to the boundary patches----
-            boundary_contact(mesh, sim_param.boundary_conditions, node.vel, time_value);
+            boundary_contact(mesh, BoundaryConditions, node.vel, time_value);
 
             // mpi_coms();
 
@@ -294,8 +300,8 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                           mesh,
                           node.vel,
                           node.coords,
-                          elem.sie,
-                          elem.mass,
+                          MaterialPoints.sie,
+                          MaterialPoints.mass,
                           corner.force);
 
             // ---- Update nodal positions ----
@@ -307,41 +313,41 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
                             node.vel);
 
             // ---- Calculate cell volume for next time step ----
-            geometry::get_vol(elem.vol, node.coords, mesh);
+            geometry::get_vol(GaussPoints.vol, node.coords, mesh);
 
-            // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+            // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
             if (mesh.num_dims == 2) {
-                update_state2D(sim_param.materials,
+                update_state2D(Materials,
                                mesh,
                                node.coords,
                                node.vel,
-                               elem.den,
-                               elem.pres,
-                               elem.stress,
-                               elem.sspd,
-                               elem.sie,
-                               elem.vol,
-                               elem.mass,
-                               elem.mat_id,
-                               elem.statev,
+                               MaterialPoints.den,
+                               MaterialPoints.pres,
+                               MaterialPoints.stress,
+                               MaterialPoints.sspd,
+                               MaterialPoints.sie,
+                               GaussPoints.vol,
+                               MaterialPoints.mass,
+                               GaussPoints.mat_id,
+                               MaterialPoints.statev,
                                dt,
                                rk_alpha);
             }
             else{
-                update_state(sim_param.materials,
+                update_state(Materials,
                              mesh,
                              node.coords,
                              node.vel,
-                             elem.den,
-                             elem.pres,
-                             elem.stress,
-                             elem.sspd,
-                             elem.sie,
-                             elem.vol,
-                             elem.mass,
-                             elem.mat_id,
-                             elem.statev,
-                             elem.eroded,
+                             MaterialPoints.den,
+                             MaterialPoints.pres,
+                             MaterialPoints.stress,
+                             MaterialPoints.sspd,
+                             MaterialPoints.sie,
+                             GaussPoints.vol,
+                             MaterialPoints.mass,
+                             GaussPoints.mat_id,
+                             MaterialPoints.statev,
+                             GaussPoints.eroded,
                              dt,
                              rk_alpha);
             }
@@ -402,7 +408,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
-            mesh_writer.write_mesh(mesh, elem, node, corner, sim_param, time_value, graphics_times);
+            mesh_writer.write_mesh(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
 
             graphics_time = time_value + graphics_dt_ival;
 
@@ -432,7 +438,7 @@ void SGH::execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node
 
     // extensive IE
     REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
-        IE_loc_sum += elem.mass(elem_gid) * elem.sie(1, elem_gid);
+        IE_loc_sum += MaterialPoints.mass(elem_gid) * MaterialPoints.sie(1, elem_gid);
     }, IE_sum);
     IE_tend = IE_sum;
 

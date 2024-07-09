@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -42,6 +42,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 #include "mesh.h"
 #include "boundary_conditions.h"
+
+struct BoundaryConditionEnums_t;
+struct BoundaryConditionSetup_t;
 
 namespace geometry
 {
@@ -707,7 +710,7 @@ size_t check_bdy(const size_t patch_gid,
 /// \param Nodal coordinates
 ///
 /////////////////////////////////////////////////////////////////////////////
-inline void tag_bdys(const DCArrayKokkos<boundary_condition_t>& boundary,
+inline void tag_bdys(const BoundaryCondition_t& boundary,
     mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords)
 {
@@ -719,8 +722,8 @@ inline void tag_bdys(const DCArrayKokkos<boundary_condition_t>& boundary,
 
     FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
         // tag boundaries
-        int bc_tag_id = boundary(bdy_set).geometry;
-        double val    = boundary(bdy_set).value;
+        int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).geometry;
+        double val    = boundary.BoundaryConditionSetup(bdy_set).value;
 
         // save the boundary patches to this set that are on the plane, spheres, etc.
         for (size_t bdy_patch_lid = 0; bdy_patch_lid < mesh.num_bdy_patches; bdy_patch_lid++) {

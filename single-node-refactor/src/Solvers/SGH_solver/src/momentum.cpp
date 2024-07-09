@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -427,14 +427,9 @@ void SGH::get_divergence2D(DCArrayKokkos<double>& elem_div,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void SGH::decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
-    ViewCArrayKokkos<double>& W_tensor,
-    const ViewCArrayKokkos<double>& vel_grad,
-    const ViewCArrayKokkos<size_t>& elem_node_gids,
-    const size_t elem_gid,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
-    const double vol) const
+void SGH::decompose_vel_grad(const ViewCArrayKokkos<double>& D_tensor,
+                             const ViewCArrayKokkos<double>& W_tensor,
+                             const ViewCArrayKokkos<double>& vel_grad) const
 {
     // --- Calculate the velocity gradient ---
 

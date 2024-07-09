@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -55,13 +55,13 @@ void SGH::update_energy(double rk_alpha,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& elem_sie,
-    const DCArrayKokkos<double>& elem_mass,
+    DCArrayKokkos<double>& MaterialPoints_sie,
+    const DCArrayKokkos<double>& MaterialPoints_mass,
     const DCArrayKokkos<double>& corner_force) const
 {
     // loop over all the elements in the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
-        double elem_power = 0.0;
+        double MaterialPoints_power = 0.0;
 
         // --- tally the contribution from each corner to the element ---
 
@@ -83,13 +83,13 @@ void SGH::update_energy(double rk_alpha,
             // calculate the Power=F dot V for this corner
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
-                elem_power += corner_force(corner_gid, dim) * node_radius * half_vel;
+                MaterialPoints_power += corner_force(corner_gid, dim) * node_radius * half_vel;
             } // end for dim
         } // end for node_lid
 
         // update the specific energy
-        elem_sie(1, elem_gid) = elem_sie(0, elem_gid) -
-                                rk_alpha * dt / elem_mass(elem_gid) * elem_power;
+        MaterialPoints_sie(1, elem_gid) = MaterialPoints_sie(0, elem_gid) -
+                                rk_alpha * dt / MaterialPoints_mass(elem_gid) * MaterialPoints_power;
     }); // end parallel loop over the elements
 
     return;

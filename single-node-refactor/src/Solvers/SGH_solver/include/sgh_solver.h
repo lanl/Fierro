@@ -38,7 +38,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.h"
 #include "matar.h"
 #include "simulation_parameters.h"
+#include "boundary_conditions.h"
+#include "material.h"
 #include "solver.h"
+
+
 
 using namespace mtr; // matar namespace
 
@@ -64,7 +68,9 @@ public:
     ~SGH() = default;
 
     // Initialize data specific to the SGH solver
-    void initialize(simulation_parameters_t& sim_param) const override
+    void initialize(SimulationParameters_t& SimulationParamaters, 
+                    Material_t& Materials, 
+                    BoundaryCondition_t& Boundary) const override
     {
     }
 
@@ -75,7 +81,14 @@ public:
     /// \brief Calls setup_sgh, which initializes state, and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) const override
+    void setup(SimulationParameters_t& SimulationParamaters, 
+               Material_t& Materials, 
+               BoundaryCondition_t& Boundary, 
+               mesh_t& mesh, 
+               node_t& node, 
+               MaterialPoint_t& MaterialPoints, 
+               GaussPoint_t& GaussPoints,
+               corner_t& corner) const override
     {
     }
 
@@ -87,7 +100,14 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) override;
+    void execute(SimulationParameters_t& SimulationParamaters, 
+                 Material_t& Materials, 
+                 BoundaryCondition_t& Boundary, 
+                 mesh_t& mesh, 
+                 node_t& node, 
+                 MaterialPoint_t& MaterialPoints, 
+                 GaussPoint_t& GaussPoints,
+                 corner_t& corner) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -105,7 +125,9 @@ public:
     /// \return <return type and definition description if not void>
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void finalize(simulation_parameters_t& sim_param) const override
+    void finalize(SimulationParameters_t& SimulationParamaters, 
+                  Material_t& Materials, 
+                  BoundaryCondition_t& Boundary) const override
     {
         // Any finalize goes here, remove allocated memory, etc
     }
@@ -113,13 +135,13 @@ public:
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(
         const mesh_t& mesh,
-        const DCArrayKokkos<boundary_condition_t>& boundary,
+        const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value) const;
 
     void boundary_contact(
         const mesh_t& mesh,
-        const DCArrayKokkos<boundary_condition_t>& boundary,
+        const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value) const;
 
@@ -130,49 +152,49 @@ public:
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& elem_sie,
-        const DCArrayKokkos<double>& elem_mass,
+        DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& corner_force) const;
 
     // **** Functions defined in force_sgh.cpp **** //
     void get_force(
-        const DCArrayKokkos<material_t>& material,
+        const Material_t& Materials,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& elem_den,
-        const DCArrayKokkos<double>& elem_sie,
-        const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const DCArrayKokkos<double>& elem_sspd,
-        const DCArrayKokkos<double>& elem_vol,
-        const DCArrayKokkos<double>& elem_div,
-        const DCArrayKokkos<size_t>& elem_mat_id,
-        const DCArrayKokkos<bool>&   elem_eroded,
-        DCArrayKokkos<double>& corner_force,
+        const DCArrayKokkos<double>& MaterialPoints_den,
+        const DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_pres,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const DCArrayKokkos<double>& GaussPoints_div,
+        const DCArrayKokkos<size_t>& GaussPoints_mat_id,
+        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+        const DCArrayKokkos<double>& corner_force,
         const double fuzz,
         const double small,
-        const DCArrayKokkos<double>& elem_statev,
+        const DCArrayKokkos<double>& MaterialPoints_statev,
         const double dt,
         const double rk_alpha) const;
 
     void get_force_2D(
-        const DCArrayKokkos<material_t>& material,
+        const Material_t& Materials,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& elem_den,
-        const DCArrayKokkos<double>& elem_sie,
-        const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const DCArrayKokkos<double>& elem_sspd,
-        const DCArrayKokkos<double>& elem_vol,
-        const DCArrayKokkos<double>& elem_div,
-        const DCArrayKokkos<size_t>& elem_mat_id,
+        const DCArrayKokkos<double>& MaterialPoints_den,
+        const DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_pres,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const DCArrayKokkos<double>& GaussPoints_div,
+        const DCArrayKokkos<size_t>& GaussPoints_mat_id,
         DCArrayKokkos<double>& corner_force,
         const double fuzz,
         const double small,
-        const DCArrayKokkos<double>& elem_statev,
+        const DCArrayKokkos<double>& MaterialPoints_statev,
         const double dt,
         const double rk_alpha) const;
 
@@ -200,7 +222,7 @@ public:
         const ViewCArrayKokkos<size_t>& elem_node_gids,
         const DCArrayKokkos<double>&    node_vel,
         const ViewCArrayKokkos<double>& b_matrix,
-        const double elem_vol,
+        const double GaussPoints_vol,
         const size_t elem_gid) const;
 
     KOKKOS_FUNCTION
@@ -209,68 +231,63 @@ public:
         const ViewCArrayKokkos<size_t>& elem_node_gids,
         const DCArrayKokkos<double>&    node_vel,
         const ViewCArrayKokkos<double>& b_matrix,
-        const double elem_vol,
+        const double GaussPoints_vol,
         const double elem_area,
         const size_t elem_gid) const;
 
     void get_divergence(
-        DCArrayKokkos<double>& elem_div,
+        DCArrayKokkos<double>& GaussPoints_div,
         const mesh_t mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& elem_vol) const;
+        const DCArrayKokkos<double>& GaussPoints_vol) const;
 
     void get_divergence2D(
-        DCArrayKokkos<double>& elem_div,
+        DCArrayKokkos<double>& GaussPoints_div,
         const mesh_t mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& elem_vol) const;
+        const DCArrayKokkos<double>& GaussPoints_vol) const;
 
     KOKKOS_FUNCTION
     void decompose_vel_grad(
-        ViewCArrayKokkos<double>& D_tensor,
-        ViewCArrayKokkos<double>& W_tensor,
-        const ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const size_t elem_gid,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
-        const double vol) const;
+        const ViewCArrayKokkos<double>& D_tensor,
+        const ViewCArrayKokkos<double>& W_tensor,
+        const ViewCArrayKokkos<double>& vel_grad) const;
 
     // **** Functions defined in properties.cpp **** //
     void update_state(
-        const DCArrayKokkos<material_t>& material,
+        const Material_t& Materials,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& elem_den,
-        DCArrayKokkos<double>& elem_pres,
-        DCArrayKokkos<double>& elem_stress,
-        DCArrayKokkos<double>& elem_sspd,
-        const DCArrayKokkos<double>& elem_sie,
-        const DCArrayKokkos<double>& elem_vol,
-        const DCArrayKokkos<double>& elem_mass,
-        const DCArrayKokkos<size_t>& elem_mat_id,
-        const DCArrayKokkos<double>& elem_statev,
-        const DCArrayKokkos<bool>&   elem_eroded,
+        DCArrayKokkos<double>& MaterialPoints_den,
+        DCArrayKokkos<double>& MaterialPoints_pres,
+        DCArrayKokkos<double>& MaterialPoints_stress,
+        DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const DCArrayKokkos<double>& MaterialPoints_mass,
+        const DCArrayKokkos<size_t>& GaussPoints_mat_id,
+        const DCArrayKokkos<double>& MaterialPoints_statev,
+        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
         const double dt,
         const double rk_alpha) const;
 
     void update_state2D(
-        const DCArrayKokkos<material_t>& material,
+        const Material_t& Materials,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& elem_den,
-        DCArrayKokkos<double>& elem_pres,
-        DCArrayKokkos<double>& elem_stress,
-        DCArrayKokkos<double>& elem_sspd,
-        const DCArrayKokkos<double>& elem_sie,
-        const DCArrayKokkos<double>& elem_vol,
-        const DCArrayKokkos<double>& elem_mass,
-        const DCArrayKokkos<size_t>& elem_mat_id,
-        const DCArrayKokkos<double>& elem_statev,
+        DCArrayKokkos<double>& MaterialPoints_den,
+        DCArrayKokkos<double>& MaterialPoints_pres,
+        DCArrayKokkos<double>& MaterialPoints_stress,
+        DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const DCArrayKokkos<double>& MaterialPoints_mass,
+        const DCArrayKokkos<size_t>& GaussPoints_mat_id,
+        const DCArrayKokkos<double>& MaterialPoints_statev,
         const double dt,
         const double rk_alpha) const;
 
@@ -279,8 +296,8 @@ public:
     void rk_init(
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& elem_sie,
-        DCArrayKokkos<double>& elem_stress,
+        DCArrayKokkos<double>& MaterialPoints_sie,
+        DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,
         const size_t num_elems,
         const size_t num_nodes) const;
@@ -289,8 +306,8 @@ public:
         mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& elem_sspd,
-        DCArrayKokkos<double>& elem_vol,
+        DCArrayKokkos<double>& MaterialPoints_sspd,
+        DCArrayKokkos<double>& GaussPoints_vol,
         double time_value,
         const double graphics_time,
         const double time_final,
@@ -304,8 +321,8 @@ public:
         mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& elem_sspd,
-        DCArrayKokkos<double>& elem_vol,
+        DCArrayKokkos<double>& MaterialPoints_sspd,
+        DCArrayKokkos<double>& GaussPoints_vol,
         double time_value,
         const double graphics_time,
         const double time_final,
@@ -319,23 +336,23 @@ public:
     // NOTE: Pull up into high level
     KOKKOS_FUNCTION
     void user_eos_model(
-        const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
+        const DCArrayKokkos<double>& MaterialPoints_pres,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t elem_gid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
+        const DCArrayKokkos<double>& MaterialPoints_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie);
 
     KOKKOS_FUNCTION
     void user_strength_model(
-        const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
+        const DCArrayKokkos<double>& MaterialPoints_pres,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t elem_gid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
+        const DCArrayKokkos<double>& MaterialPoints_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
         const ViewCArrayKokkos<double>& vel_grad,

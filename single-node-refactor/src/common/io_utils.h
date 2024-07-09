@@ -96,7 +96,13 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, int num_dims, int rk_num_bins)
+    void read_mesh(mesh_t& mesh, 
+                   MaterialPoint_t& MaterialPoints, 
+                   GaussPoint_t& GaussPoints, 
+                   node_t& node, 
+                   corner_t& corner, 
+                   int num_dims, 
+                   int rk_num_bins)
     {
         if (mesh_file_ == NULL) {
             printf("No mesh given\n");
@@ -105,7 +111,7 @@ public:
 
         // Check mesh file extension
         // and read based on extension
-        read_ensight_mesh(mesh, elem, node, corner, num_dims, rk_num_bins);
+        read_ensight_mesh(mesh, MaterialPoints, GaussPoints, node, corner, num_dims, rk_num_bins);
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -122,7 +128,13 @@ public:
     /// \param Number of RK bins
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_ensight_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, int num_dims, int rk_num_bins)
+    void read_ensight_mesh(mesh_t& mesh, 
+                           MaterialPoint_t& MaterialPoints, 
+                           GaussPoint_t& GaussPoints, 
+                           node_t& node, 
+                           corner_t& corner, 
+                           int num_dims, 
+                           int rk_num_bins)
     {
         const size_t rk_level = 0;
 
@@ -196,7 +208,8 @@ public:
 
         // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
-        elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
+        MaterialPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
+        GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
 
         // for each cell read the list of associated nodes
         for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
@@ -268,14 +281,19 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_mesh(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param)
+    void build_mesh(mesh_t& mesh, 
+                    MaterialPoint_t& MaterialPoints, 
+                    GaussPoint_t& GaussPoints,
+                    node_t& node, 
+                    corner_t& corner, 
+                    SimulationParameters_t& SimulationParamaters)
     {
-        if (sim_param.mesh_input.num_dims == 2) {
-            if (sim_param.mesh_input.type == mesh_input::Cylinder) {
-                build_2d_polar(mesh, elem, node, corner, sim_param);
+        if (SimulationParamaters.mesh_input.num_dims == 2) {
+            if (SimulationParamaters.mesh_input.type == mesh_input::Cylinder) {
+                build_2d_polar(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
             }
-            else if (sim_param.mesh_input.type == mesh_input::Box) {
-                build_2d_box(mesh, elem, node, corner, sim_param);
+            else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {
+                build_2d_box(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
             }
             else{
                 std::cout << "**** 2D MESH TYPE NOT SUPPORTED **** " << std::endl;
@@ -287,8 +305,8 @@ public:
                 throw std::runtime_error("**** 2D MESH TYPE NOT SUPPORTED ****");
             }
         }
-        else if (sim_param.mesh_input.num_dims == 3) {
-            build_3d_box(mesh, elem, node, corner, sim_param);
+        else if (SimulationParamaters.mesh_input.num_dims == 3) {
+            build_3d_box(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
@@ -308,17 +326,22 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
+    void build_2d_box(mesh_t& mesh, 
+                      MaterialPoint_t& MaterialPoints, 
+                      GaussPoint_t& GaussPoints,
+                      node_t& node, 
+                      corner_t& corner, 
+                      SimulationParameters_t& SimulationParamaters) const
     {
         printf(" Creating a 2D box mesh \n");
 
         const int num_dim = 2;
 
-        const double lx = sim_param.mesh_input.length.host(0);
-        const double ly = sim_param.mesh_input.length.host(1);
+        const double lx = SimulationParamaters.mesh_input.length[0];
+        const double ly = SimulationParamaters.mesh_input.length[1];
 
-        const int num_elems_i = sim_param.mesh_input.num_elems.host(0);
-        const int num_elems_j = sim_param.mesh_input.num_elems.host(1);
+        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
+        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -331,8 +354,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        sim_param.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = sim_param.mesh_input.origin.host(i); }
+        //SimulationParamaters.mesh_input.origin.update_host();
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -349,7 +372,7 @@ public:
         convert_point_number_in_quad(2) = 3;
         convert_point_number_in_quad(3) = 2;
 
-        int rk_num_bins = sim_param.dynamic_options.rk_num_bins;
+        int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
@@ -379,7 +402,8 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
+        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -435,21 +459,26 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_polar(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
+    void build_2d_polar(mesh_t& mesh, 
+                        MaterialPoint_t& MaterialPoints, 
+                        GaussPoint_t& GaussPoints,
+                        node_t& node, 
+                        corner_t& corner, 
+                        SimulationParameters_t& SimulationParamaters) const
     {
         printf(" Creating a 2D polar mesh \n");
 
         int num_dim     = 2;
-        int rk_num_bins = sim_param.dynamic_options.rk_num_bins;
+        int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
-        const double inner_radius = sim_param.mesh_input.inner_radius;
-        const double outer_radius = sim_param.mesh_input.outer_radius;
+        const double inner_radius = SimulationParamaters.mesh_input.inner_radius;
+        const double outer_radius = SimulationParamaters.mesh_input.outer_radius;
 
-        const double start_angle = PI / 180.0 * sim_param.mesh_input.starting_angle;
-        const double end_angle   = PI / 180.0 * sim_param.mesh_input.ending_angle;
+        const double start_angle = PI / 180.0 * SimulationParamaters.mesh_input.starting_angle;
+        const double end_angle   = PI / 180.0 * SimulationParamaters.mesh_input.ending_angle;
 
-        const int num_elems_i = sim_param.mesh_input.num_radial_elems;
-        const int num_elems_j = sim_param.mesh_input.num_angular_elems;
+        const int num_elems_i = SimulationParamaters.mesh_input.num_radial_elems;
+        const int num_elems_j = SimulationParamaters.mesh_input.num_angular_elems;
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -462,8 +491,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        sim_param.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = sim_param.mesh_input.origin.host(i); }
+        //SimulationParamaters.mesh_input.origin.update_host();
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -509,7 +538,8 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
+        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -565,21 +595,26 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
+    void build_3d_box(mesh_t& mesh, 
+                      MaterialPoint_t& MaterialPoints, 
+                      GaussPoint_t& GaussPoints,
+                      node_t& node, 
+                      corner_t& corner, 
+                      SimulationParameters_t& SimulationParamaters) const
     {
         printf(" Creating a 3D box mesh \n");
 
         const int num_dim = 3;
 
-        sim_param.mesh_input.length.update_host();
-        const double lx = sim_param.mesh_input.length.host(0);
-        const double ly = sim_param.mesh_input.length.host(1);
-        const double lz = sim_param.mesh_input.length.host(2);
+        //SimulationParamaters.mesh_input.length.update_host();
+        const double lx = SimulationParamaters.mesh_input.length[0];
+        const double ly = SimulationParamaters.mesh_input.length[1];
+        const double lz = SimulationParamaters.mesh_input.length[2];
 
-        sim_param.mesh_input.num_elems.update_host();
-        const int num_elems_i = sim_param.mesh_input.num_elems.host(0);
-        const int num_elems_j = sim_param.mesh_input.num_elems.host(1);
-        const int num_elems_k = sim_param.mesh_input.num_elems.host(2);
+        //SimulationParamaters.mesh_input.num_elems.update_host();
+        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
+        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
+        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -594,8 +629,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j * num_elems_k;
 
         std::vector<double> origin(num_dim);
-        sim_param.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = sim_param.mesh_input.origin.host(i); }
+        //SimulationParamaters.mesh_input.origin.update_host();
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 3D parameters ---
         // const int num_faces_in_elem  = 6;  // number of faces in elem
@@ -616,7 +651,7 @@ public:
         convert_point_number_in_Hex(6) = 7;
         convert_point_number_in_Hex(7) = 6;
 
-        int rk_num_bins = sim_param.dynamic_options.rk_num_bins;
+        int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
@@ -650,7 +685,8 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
+        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // --- Build elems  ---
 
@@ -712,7 +748,12 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_HexN_box(mesh_t& mesh, elem_t& elem, node_t& node, corner_t& corner, simulation_parameters_t& sim_param) const
+    void build_3d_HexN_box(mesh_t& mesh, 
+                           MaterialPoint_t& MaterialPoints, 
+                           GaussPoint_t& GaussPoints,
+                           node_t& node, 
+                           corner_t& corner, 
+                           SimulationParameters_t& SimulationParamaters) const
     {
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
     }
@@ -844,20 +885,20 @@ public:
     /// \param Simulation input parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_mesh(
-    mesh_t&   mesh,
-    elem_t&   elem,
-    node_t&   node,
-    corner_t& corner,
-    simulation_parameters_t& sim_param,
-    double time_value,
-    CArray<double> graphics_times)
+    void write_mesh(mesh_t&   mesh,
+                    MaterialPoint_t&   MaterialPoints,
+                    GaussPoint_t& GaussPoints,
+                    node_t&   node,
+                    corner_t& corner,
+                    SimulationParameters_t& SimulationParamaters,
+                    double time_value,
+                    CArray<double> graphics_times)
     {
-        if (sim_param.output_options.format == output_options::vtk) {
-            write_vtk(mesh, elem, node, corner, sim_param, time_value, graphics_times);
+        if (SimulationParamaters.output_options.format == output_options::vtk) {
+            write_vtk(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
         }
-        else if (sim_param.output_options.format == output_options::ensight) {
-            write_ensight(mesh, elem, node, corner, sim_param, time_value, graphics_times);
+        else if (SimulationParamaters.output_options.format == output_options::ensight) {
+            write_ensight(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
         }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
@@ -886,24 +927,24 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_ensight(
-    mesh_t&   mesh,
-    elem_t&   elem,
-    node_t&   node,
-    corner_t& corner,
-    simulation_parameters_t& sim_param,
-    double time_value,
-    CArray<double> graphics_times)
+    void write_ensight(mesh_t&   mesh,
+                       MaterialPoint_t& MaterialPoints,
+                       GaussPoint_t& GaussPoints,
+                       node_t&   node,
+                       corner_t& corner,
+                       SimulationParameters_t& SimulationParamaters,
+                       double time_value,
+                       CArray<double> graphics_times)
     {
         // Update host data
-        elem.den.update_host();
-        elem.pres.update_host();
-        elem.stress.update_host();
-        elem.sspd.update_host();
-        elem.sie.update_host();
-        elem.vol.update_host();
-        elem.mass.update_host();
-        elem.mat_id.update_host();
+        MaterialPoints.den.update_host();
+        MaterialPoints.pres.update_host();
+        MaterialPoints.stress.update_host();
+        MaterialPoints.sspd.update_host();
+        MaterialPoints.sie.update_host();
+        GaussPoints.vol.update_host();
+        MaterialPoints.mass.update_host();
+        GaussPoints.mat_id.update_host();
 
         node.coords.update_host();
         node.vel.update_host();
@@ -969,14 +1010,14 @@ public:
         double e_switch = 1;
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             // save outputs
-            elem_fields(elem_gid, 0) = elem.den.host(elem_gid);
-            elem_fields(elem_gid, 1) = elem.pres.host(elem_gid);
-            elem_fields(elem_gid, 2) = elem.sie.host(1, elem_gid);
-            elem_fields(elem_gid, 3) = elem.vol.host(elem_gid);
-            elem_fields(elem_gid, 4) = elem.mass.host(elem_gid);
-            elem_fields(elem_gid, 5) = elem.sspd.host(elem_gid);
+            elem_fields(elem_gid, 0) = MaterialPoints.den.host(elem_gid);
+            elem_fields(elem_gid, 1) = MaterialPoints.pres.host(elem_gid);
+            elem_fields(elem_gid, 2) = MaterialPoints.sie.host(1, elem_gid);
+            elem_fields(elem_gid, 3) = GaussPoints.vol.host(elem_gid);
+            elem_fields(elem_gid, 4) = MaterialPoints.mass.host(elem_gid);
+            elem_fields(elem_gid, 5) = MaterialPoints.sspd.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
-            elem_fields(elem_gid, 7) = (double)elem.mat_id.host(elem_gid);
+            elem_fields(elem_gid, 7) = (double)GaussPoints.mat_id.host(elem_gid);
             elem_fields(elem_gid, 8) = e_switch;
             elem_switch *= -1;
         } // end for elements
@@ -1011,6 +1052,8 @@ public:
         //  ---------------------------------------------------------------------------
         FILE* out[20];   // the output files that are written to
         char  filename[128];
+        int max_len = sizeof filename;
+        int str_output_len;
 
         struct stat st;
 
@@ -1025,12 +1068,16 @@ public:
         //  ---------------------------------------------------------------------------
         //  Write the Geometry file
         //  ---------------------------------------------------------------------------
-        sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
+        //sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
+        str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.geo", name, graphics_id);
         // filename has the full string
+        if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
 
         out[0] = fopen(filename, "w");
 
+
         fprintf(out[0], "A graphics dump by Fierro \n");
+
         fprintf(out[0], "%s", "EnSight Gold geometry\n");
         fprintf(out[0], "%s", "node id assign\n");
         fprintf(out[0], "%s", "element id assign\n");
@@ -1042,6 +1089,8 @@ public:
         // --- vertices ---
         fprintf(out[0], "coordinates\n");
         fprintf(out[0], "%10lu\n", num_nodes);
+
+        
 
         // write all components of the point coordinates
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
@@ -1087,7 +1136,9 @@ public:
         // ensight_vars = (den, pres,...)
         for (int var = 0; var < num_scalar_vars; var++) {
             // write a scalar value
-            sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+            //sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+            str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
 
             out[0] = fopen(filename, "w");
 
@@ -1114,7 +1165,11 @@ public:
 
         // ensight vector vars = (position, velocity, force)
         for (int var = 0; var < num_vec_vars; var++) {
-            sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+
+            // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+            str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+            
 
             out[0] = fopen(filename, "w");
             // fprintf(out[0],"Per_node vector values\n");
@@ -1146,28 +1201,35 @@ public:
         // Write the case file
         // ---------------------------------------------------------------------------
 
-        sprintf(filename, "ensight/%s.case", name);
+        //sprintf(filename, "ensight/%s.case", name);
+        str_output_len = snprintf(filename, max_len, "ensight/%s.case", name);
+        if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+        
         out[0] = fopen(filename, "w");
 
         fprintf(out[0], "FORMAT\n");
         fprintf(out[0], "type: ensight gold\n");
         fprintf(out[0], "GEOMETRY\n");
 
-        sprintf(filename, "model: data/%s.*****.geo\n", name);
+        //sprintf(filename, "model: data/%s.*****.geo\n", name);
+        str_output_len = snprintf(filename, max_len, "model: data/%s.*****.geo\n", name);
+        if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+
         fprintf(out[0], "%s", filename);
         fprintf(out[0], "VARIABLE\n");
 
         for (int var = 0; var < num_scalar_vars; var++) {
-            sprintf(filename,
-                    "scalar per element: %s data/%s.*****.%s\n",
-                    scalar_var_names[var], name, scalar_var_names[var]);
+            //sprintf(filename, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
+            str_output_len = snprintf(filename, max_len, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
+            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+
             fprintf(out[0], "%s", filename);
         }
 
         for (int var = 0; var < num_vec_vars; var++) {
-            sprintf(filename,
-                    "vector per node: %s data/%s.*****.%s\n",
-                    vec_var_names[var], name, vec_var_names[var]);
+            //sprintf(filename, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
+            str_output_len = snprintf(filename, max_len, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
+            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
             fprintf(out[0], "%s", filename);
         }
 
@@ -1212,14 +1274,14 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_vtk(
-    mesh_t&   mesh,
-    elem_t&   elem,
-    node_t&   node,
-    corner_t& corner,
-    simulation_parameters_t& sim_param,
-    double time_value,
-    CArray<double> graphics_times)
+    void write_vtk(mesh_t&   mesh,
+                   MaterialPoint_t& MaterialPoints,
+                   GaussPoint_t& GaussPoints,
+                   node_t&   node,
+                   corner_t& corner,
+                   SimulationParameters_t& SimulationParamaters,
+                   double time_value,
+                   CArray<double> graphics_times)
     {
         // Not yet supported
         throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");

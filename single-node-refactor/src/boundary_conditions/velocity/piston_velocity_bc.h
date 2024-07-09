@@ -32,72 +32,59 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver.h"
+
+#ifndef BOUNDARY_VEL_CONST_H
+#define BOUNDARY_VEL_CONST_H
+
+#include "boundary_conditions.h"
+
+struct BoundaryConditionEnums_t;
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn boundary_velocity
+/// \fn Boundary velocity is constant in one direction,
 ///
-/// \brief Evolves the boundary according to a give velocity
+/// \brief This is a function to set the velocity in one direction to a
+///        specified velocity.  The other components can freely slide on 
+///        the piston
 ///
-/// \param The simulation mesh
-/// \param Boundary contain arrays of information about BCs
-/// \param A view into the nodal velocity array
-/// \param The current simulation time
-///
-/////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_velocity(const mesh_t&      mesh,
-                            const BoundaryCondition_t& BoundaryConditions,
-                            DCArrayKokkos<double>& node_vel,
-                            const double time_value) const
-{
-
-    // Loop over boundary sets
-    for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
-        
-        // Loop over boundary nodes in a boundary set
-        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
-
-            // get the global index for this node on the boundary
-            size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
-
-            // evaluate velocity on this boundary node
-            BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(mesh,
-                                                                  BoundaryConditions.BoundaryConditionEnums,
-                                                                  BoundaryConditions.bc_global_vars,
-                                                                  BoundaryConditions.bc_state_vars,
-                                                                  node_vel,
-                                                                  time_value,
-                                                                  bdy_node_gid,
-                                                                  bdy_set);
-                
-        }); // end for bdy_node_lid
-
-        
-    } // end for bdy_set
-
-    return;
-} // end boundary_velocity function
-
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn boundary_velocity
-///
-/// \brief Evolves the boundary according to a give velocity
-///
-/// \param The simulation mesh
-/// \param An array of BoundaryCondition_t that contain information about BCs
-/// \param A view into the nodal velocity array
-/// \param The current simulation time
+/// \param Mesh object
+/// \param Boundary condition enums to select options 
+/// \param Boundary condition global variables array
+/// \param Boundary condition state variables array
+/// \param Node velocity
+/// \param Time of the simulation
+/// \param Boundary global index for the surface node
+/// \param Boundary set local id 
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_contact(const mesh_t& mesh,
-                           const BoundaryCondition_t& BoundaryConditions,
-                           DCArrayKokkos<double>& node_vel,
-                           const double time_value) const
-{
-    return;
-} // end boundary_contact function
+namespace PistonVelocityBC {
 
 
+
+    KOKKOS_FUNCTION
+    static void velocity(const mesh_t& mesh,
+                         const DCArrayKokkos <BoundaryConditionEnums_t>& BoundaryConditionEnums,
+                         const DCArrayKokkos<double>& bc_global_vars,
+                         const DCArrayKokkos<double>& bc_state_vars,
+                         const DCArrayKokkos<double>& node_vel,
+                         const double time_value,
+                         const size_t bdy_node_gid,
+                         const size_t bdy_set)
+    {
+
+        // directions are:
+        // x_plane  = 0,
+        // y_plane  = 1,
+        // z_plane  = 2,
+
+        // Set velocity to the specified value
+        node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) = 
+                        bc_global_vars(bdy_set, BoundaryConditionEnums(bdy_set).Direction);
+
+        return;
+    } // end func
+
+} // end namespace
+
+#endif // end Header Guard
