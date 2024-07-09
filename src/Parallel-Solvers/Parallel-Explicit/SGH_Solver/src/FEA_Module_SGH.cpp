@@ -938,6 +938,7 @@ void FEA_Module_SGH::sgh_solve()
     std::set<Dynamic_Checkpoint>::iterator current_checkpoint, last_raised_checkpoint, dispensable_checkpoint, search_end;
     int  last_raised_level = 0;
     bool dispensable_found = false;
+    bool optimization_on = simparam->topology_optimization_on||simparam->shape_optimization_on;
     num_active_checkpoints = 0;
 
     
@@ -1218,7 +1219,7 @@ void FEA_Module_SGH::sgh_solve()
                 rnum_elem,
                 nall_nodes);
 
-        if(use_solve_checkpoints){
+        if(use_solve_checkpoints&&optimization_on){
                 previous_node_velocities_distributed->assign(*all_node_velocities_distributed);
         }
 
