@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -51,8 +51,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH::rk_init(DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& elem_sie,
-    DCArrayKokkos<double>& elem_stress,
+    DCArrayKokkos<double>& MaterialPoints_sie,
+    DCArrayKokkos<double>& MaterialPoints_stress,
     const size_t num_dims,
     const size_t num_elems,
     const size_t num_nodes) const
@@ -62,11 +62,11 @@ void SGH::rk_init(DCArrayKokkos<double>& node_coords,
         // stress is always 3D even with 2D-RZ
         for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 3; j++) {
-                elem_stress(0, elem_gid, i, j) = elem_stress(1, elem_gid, i, j);
+                MaterialPoints_stress(0, elem_gid, i, j) = MaterialPoints_stress(1, elem_gid, i, j);
             }
         }  // end for
 
-        elem_sie(0, elem_gid) = elem_sie(1, elem_gid);
+        MaterialPoints_sie(0, elem_gid) = MaterialPoints_sie(1, elem_gid);
     }); // end parallel for
 
     // save nodal quantities
@@ -102,8 +102,8 @@ void SGH::rk_init(DCArrayKokkos<double>& node_coords,
 void SGH::get_timestep(mesh_t& mesh,
     DCArrayKokkos<double>&     node_coords,
     DCArrayKokkos<double>&     node_vel,
-    DCArrayKokkos<double>&     elem_sspd,
-    DCArrayKokkos<double>&     elem_vol,
+    DCArrayKokkos<double>&     MaterialPoints_sspd,
+    DCArrayKokkos<double>&     GaussPoints_vol,
     double time_value,
     const double graphics_time,
     const double time_final,
@@ -168,7 +168,7 @@ void SGH::get_timestep(mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_lcl_ = dt_cfl * dist_min / (elem_sspd(elem_gid) + fuzz);
+        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(elem_gid) + fuzz);
 
         // make dt be in bounds
         dt_lcl_ = fmin(dt_lcl_, dt_max);               // make dt small than dt_max
@@ -212,8 +212,8 @@ void SGH::get_timestep(mesh_t& mesh,
 void SGH::get_timestep2D(mesh_t& mesh,
     DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& elem_sspd,
-    DCArrayKokkos<double>& elem_vol,
+    DCArrayKokkos<double>& MaterialPoints_sspd,
+    DCArrayKokkos<double>& GaussPoints_vol,
     double time_value,
     const double graphics_time,
     const double time_final,
@@ -263,7 +263,7 @@ void SGH::get_timestep2D(mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_lcl_ = dt_cfl * dist_min / (elem_sspd(elem_gid) + fuzz);
+        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(elem_gid) + fuzz);
 
         // make dt be in bounds
         dt_lcl_ = fmin(dt_lcl_, dt_max);    // make dt small than dt_max

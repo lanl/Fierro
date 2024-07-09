@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -62,42 +62,82 @@ struct node_t
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct elem_t
+/// \struct Zone_t
 ///
-/// \brief Stores state information associated with an element
+/// \brief Stores state information associated with zone index space
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct elem_t
+struct Zone_t
 {
-    DCArrayKokkos<double> den;  ///< Element density
-    DCArrayKokkos<double> pres; ///< Element pressure
-    DCArrayKokkos<double> stress; ///< Element stress
-    DCArrayKokkos<double> sspd; ///< Element sound speed
-    DCArrayKokkos<double> sie;  ///< Element specific internal energy
-    DCArrayKokkos<double> vol;  ///< Element volume
-    DCArrayKokkos<double> div;  ///< Element divergence of velocity
-    DCArrayKokkos<double> mass; ///< Element mass
-    DCArrayKokkos<double> statev; ///< Element state variable
+    DCArrayKokkos<double> sie; ///< coefficients for the sie polynomial field
 
-    DCArrayKokkos<size_t> mat_id; ///< Element material index
+    // initialization method (num_rk_storage_bins, num_nodes, num_dims)
+    void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
+    {
+        this->sie = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "zone_sie");
+    }; // end method
 
-    DCArrayKokkos<bool> eroded; ///< Element eroded or not
+}; // end zone_t
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct GaussPoint_t
+///
+/// \brief Stores state information associated with the Gauss point
+///
+/////////////////////////////////////////////////////////////////////////////
+struct GaussPoint_t
+{
+    DCArrayKokkos<double> vol;  ///< GAussPoint volume
+    DCArrayKokkos<double> div;  ///< GAussPoint divergence of velocity
+
+    DCArrayKokkos<size_t> mat_id; ///< MaterialPoint material index
+
+    DCArrayKokkos<bool> eroded; ///< MaterialPoint eroded or not
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
     {
-        this->den    = DCArrayKokkos<double>(num_elems, "element_density");
-        this->pres   = DCArrayKokkos<double>(num_elems, "element_pressure");
-        this->stress = DCArrayKokkos<double>(num_rk, num_elems, num_dims, num_dims, "element_stress");
-        this->sspd   = DCArrayKokkos<double>(num_elems, "element_sspd");
-        this->sie    = DCArrayKokkos<double>(num_rk, num_elems, "element_sie");
-        this->vol    = DCArrayKokkos<double>(num_elems, "element_volume");
-        this->div    = DCArrayKokkos<double>(num_elems, "element_div");
-        this->mass   = DCArrayKokkos<double>(num_elems, "element_mass");
-        this->mat_id = DCArrayKokkos<size_t>(num_elems, "element_mat_id");
-        this->eroded = DCArrayKokkos<bool>(num_elems, "element_eroded");
+        this->vol    = DCArrayKokkos<double>(num_elems, "gauss_point_volume");
+        this->div    = DCArrayKokkos<double>(num_elems, "gauss_point_div");
+        this->mat_id = DCArrayKokkos<size_t>(num_elems, "gauss_point_mat_id");
+        this->eroded = DCArrayKokkos<bool>(num_elems, "gauss_point_eroded");
     }; // end method
-}; // end elem_t
+
+};  // end GuassPoint_t
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct MaterialPoint_t
+///
+/// \brief Stores state information associated with the material
+///
+/////////////////////////////////////////////////////////////////////////////
+struct MaterialPoint_t
+{
+    DCArrayKokkos<double> den;    ///< MaterialPoint density
+    DCArrayKokkos<double> pres;   ///< MaterialPoint pressure
+    DCArrayKokkos<double> stress; ///< MaterialPoint stress
+    DCArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
+    DCArrayKokkos<double> sie;    ///< MaterialPoint specific internal energy
+    DCArrayKokkos<double> mass;   ///< MaterialPoint mass
+    DCArrayKokkos<double> statev; ///< MaterialPoint state variable
+
+    // initialization method (num_rk_storage_bins, num_cells, num_dims)
+    void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
+    {
+        this->den    = DCArrayKokkos<double>(num_elems, "material_point_density");
+        this->pres   = DCArrayKokkos<double>(num_elems, "material_point_pressure");
+        this->stress = DCArrayKokkos<double>(num_rk, num_elems, num_dims, num_dims, "material_point_stress");
+        this->sspd   = DCArrayKokkos<double>(num_elems, "material_point_sspd");
+        this->sie    = DCArrayKokkos<double>(num_rk, num_elems, "material_point_sie");  // only used with DG
+        this->mass   = DCArrayKokkos<double>(num_elems, "material_point_mass");
+    }; // end method
+
+}; // end MaterialPoint
 
 /////////////////////////////////////////////////////////////////////////////
 ///

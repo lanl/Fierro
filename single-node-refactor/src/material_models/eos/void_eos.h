@@ -32,65 +32,69 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_DYNAMIC_OPTIONS_H
-#define FIERRO_DYNAMIC_OPTIONS_H
-#include <stdio.h>
-#include "matar.h"
+#ifndef VOID_EOS_H
+#define VOID_EOS_H
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct dynamic_options_t
+/// \fn VoidEOSModel
 ///
-/// \brief Stores time and cycle options
+/// \brief void eos
+///
+/// This is a void, as in a vacuum, eos
+///
+/// \param Element pressure
+/// \param Element stress
+/// \param Global ID for the element
+/// \param Material ID for the element
+/// \param Element state variables
+/// \param Element Sound speed
+/// \param Material density
+/// \param Material specific internal energy
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct dynamic_options_t
-{
-    unsigned long cycle_stop = 2000000;
+namespace VoidEOSModel {
 
-    double time_initial = 1e-10; ///< Starting time
-    double time_final   = 1.0;  ///< Final simulation time
-    double dt_min   = 1e-8;     ///< Minimum time step
-    double dt_max   = 1e-2;     ///< Maximum time step
-    double dt_start = 1e-5;     ///< Starting time step
-    double dt_cfl   = 0.4;      ///< CFL multiplier for time step calculation
+    KOKKOS_FUNCTION
+    static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
+        const DCArrayKokkos<double>& elem_stress,
+        const size_t elem_gid,
+        const size_t mat_id,
+        const DCArrayKokkos<double>& elem_state_vars,
+        const DCArrayKokkos<double>& elem_sspd,
+        const double den,
+        const double sie,
+        const RaggedRightArrayKokkos<double> &eos_global_vars)
+    {
+        // pressure of a void is 0
+        elem_pres(elem_gid) = 0.0;
 
-    double fuzz  = 1e-16;       ///< machine precision
-    double tiny  = 1e-12;       ///< very very small (between real_t and single)
-    double small = 1e-8;        ///< single precision
+        return;
+    } // end func
 
-    int rk_num_stages = 2;      ///< Number of RK stages
-    int rk_num_bins   = 2;      ///< Number of memory bins for time integration
+    KOKKOS_FUNCTION
+    static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
+        const DCArrayKokkos<double>& elem_stress,
+        const size_t elem_gid,
+        const size_t mat_id,
+        const DCArrayKokkos<double>& elem_state_vars,
+        const DCArrayKokkos<double>& elem_sspd,
+        const double den,
+        const double sie,
+        const RaggedRightArrayKokkos<double> &eos_global_vars)
+    {
 
-    // Unparsed internal variables
-}; // output_options_t
+        // sound speed of a void is 0, machine small must be used for CFL calculation
+        elem_sspd(elem_gid) = 1.0e-32;
 
-// ----------------------------------
-// valid inputs for dynamic options
-// ----------------------------------
-static std::vector<std::string> str_dyn_opts_inps
-{
-    "time_initial",
-    "time_final",
-    "dt_min",
-    "dt_max",
-    "dt_start",
-    "dt_cfl",
-    "cycle_stop",
-    "fuzz",
-    "tiny",
-    "small",
-    "rk_num_stages",
-    "rk_num_bins",
-};
+        return;
+    } // end func
 
-// ----------------------------------
-// required inputs for dynamic options
-// ----------------------------------
-static std::vector<std::string> dyn_opts_required_inps
-{
-    "time_final",
-    "cycle_stop",
-};
+} // end namespace
+
+
+
+
+
 
 #endif // end Header Guard

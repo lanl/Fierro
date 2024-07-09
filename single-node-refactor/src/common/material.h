@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -39,90 +39,91 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "matar.h"
 
+
+
 namespace model
 {
-// strength model types
-enum strength_type
-{
-    no_strength_type,
-    increment_based,        ///<  Model evaluation is inline with the time integration
-    state_based,            ///<  Model is based on the state after each stage of the time step
-};
+    // strength model types
+    enum StrengthType
+    {
+        noStrengthType = 0,
+        incrementBased = 1,        ///<  Model evaluation is inline with the time integration
+        stateBased = 2,            ///<  Model is based on the state after each stage of the time step
+    };
 
-// Specific strength models
-enum strength_models
-{
-    no_strength_model,
-    user_defined_strength,
-};
+    // Specific strength models
+    enum StrengthModels
+    {
+        noStrengthModel = 0,
+        userDefinedStrength = 1,
+    };
 
-// EOS model types
-enum eos_type
-{
-    no_eos_type,        ///< No EOS used
-    decoupled,          ///<  only an EOS, or an EOS plus deviatoric stress model
-    coupled,            ///<  EOS is part of a full stress tensor evolution model
-};
+    // EOS model types
+    enum EOSType
+    {
+        noEOSType = 0,          ///< No EOS used
+        decoupledEOSType = 1,   ///< only an EOS, or an EOS plus deviatoric stress model
+        coupledEOSType = 2,     ///< EOS is part of a full stress tensor evolution model
+    };
 
-// The names of the eos models
-enum eos_models
-{
-    no_eos_model,       ///<  no model evaluation
-    ideal_gas,          ///<  gamma law gas
-    void_gas,           ///<  a void material, no sound speed and no pressure
-    user_defined_eos,           ///<  an eos function defined by the user
-};
+    // The names of the eos models
+    enum EOSModels
+    {
+        noEOS = 0,              ///<  no model evaluation
+        gammaLawGasEOS = 1,     ///<  gamma law gas
+        voidEOS = 2,            ///<  a void material, no sound speed and no pressure
+        userDefinedEOS = 3,     ///<  an eos function defined by the user
+    };
 
-// failure model types
-enum failure_type
-{
-    no_failure,
-    brittle_failure,        ///< Material fails after exceeding yield stress
-    ductile_failure,        ///< Material grows voids that lead to complete failure
-};
+    // failure models
+    enum FailureModels
+    {
+        noFailure = 0,
+        brittleFailure = 1,        ///< Material fails after exceeding yield stress
+        ductileFailure = 2,        ///< Material grows voids that lead to complete failure
+    };
 
-// erosion model types
-enum erosion_type
-{
-    no_erosion,
-    erosion,            ///<  element erosion
-    erosion_contact,    ///<  element erosion and apply contact enforcement
-};
+    // erosion model t
+    enum ErosionModels
+    {
+        noErosion = 1,
+        basicErosion = 2,      ///<  basic element erosion
+    };
+
 } // end model namespace
 
-static std::map<std::string, model::strength_type> strength_type_map
+static std::map<std::string, model::StrengthType> strength_type_map
 {
-    { "no_strength", model::no_strength_type },
-    { "increment_based", model::increment_based },
-    { "state_based", model::state_based },
+    { "no_strength",     model::noStrengthType },
+    { "increment_based", model::incrementBased },
+    { "state_based",     model::stateBased },
 };
 
-static std::map<std::string, model::strength_models> strength_models_map
+static std::map<std::string, model::StrengthModels> strength_models_map
 {
-    { "no_strength", model::no_strength_model },
-    { "user_defined_strength", model::user_defined_strength },
+    { "no_strength",           model::noStrengthModel },
+    { "user_defined_strength", model::userDefinedStrength },
 };
 
-static std::map<std::string, model::eos_type> eos_type_map
+static std::map<std::string, model::EOSType> eos_type_map
 {
-    { "no_eos", model::no_eos_type },
-    { "coupled", model::coupled },
-    { "decoupled", model::decoupled },
+    { "no_eos",    model::noEOSType },
+    { "coupled",   model::coupledEOSType },
+    { "decoupled", model::decoupledEOSType },
 };
 
-static std::map<std::string, model::eos_models> eos_models_map
+static std::map<std::string, model::EOSModels> eos_models_map
 {
-    { "no_eos", model::no_eos_model },
-    { "ideal_gas", model::ideal_gas },
-    { "void_gas", model::void_gas },
-    { "user_defined", model::user_defined_eos },
+    { "no_eos",        model::noEOS },
+    { "gamma_law_gas", model::gammaLawGasEOS },
+    { "void",          model::voidEOS },
+    { "user_defined",  model::userDefinedEOS },
 };
 
-static std::map<std::string, model::erosion_type> erosion_type_map
+static std::map<std::string, model::ErosionModels> erosion_model_map
 {
-    { "no_erosion", model::no_erosion },
-    { "erosion", model::erosion },
-    { "erosion_contact", model::erosion_contact },
+    { "no_erosion", model::noErosion },
+    { "basic", model::basicErosion},
 };
 
 namespace model_init
@@ -135,90 +136,172 @@ enum strength_setup_tag
 };
 } // end of namespace
 
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct material_t
+/// \struct MaterialSetup_t
 ///
-/// \brief  Material model parameters
+/// \brief The material routines to setup the simulation
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct material_t
+struct MaterialSetup_t
 {
-    size_t id;
-
-    // statev(0) = gamma
-    // statev(1) = minimum sound speed
-    // statev(2) = specific heat c_v
-    // statev(3) = ref temperature
-    // statev(4) = ref density
-    // statev(5) = ref specific internal energy
-
-    // -- EOS --
-    // none, decoupled, or coupled eos
-    model::eos_type eos_type = model::no_eos_type;
-
-    // Equation of state (EOS) function pointer
-    void (*eos_model)(const DCArrayKokkos<double>& elem_pres,
-                      const DCArrayKokkos<double>& elem_stress,
-                      const size_t elem_gid,
-                      const size_t mat_id,
-                      const DCArrayKokkos<double>& elem_state_vars,
-                      const DCArrayKokkos<double>& elem_sspd,
-                      const double den,
-                      const double sie) = NULL;
-
-    // Strength model type: none, or increment- or state-based
-    model::strength_type strength_type = model::no_strength_type;
-
-    // Material strength model function pointer
-    void (*strength_model)(const DCArrayKokkos<double>& elem_pres,
-                           const DCArrayKokkos<double>& elem_stress,
-                           const size_t elem_gid,
-                           const size_t mat_id,
-                           const DCArrayKokkos<double>& elem_state_vars,
-                           const DCArrayKokkos<double>& elem_sspd,
-                           const double den,
-                           const double sie,
-                           const ViewCArrayKokkos<double>& vel_grad,
-                           const ViewCArrayKokkos<size_t>& elem_node_gids,
-                           const DCArrayKokkos<double>&    node_coords,
-                           const DCArrayKokkos<double>&    node_vel,
-                           const double vol,
-                           const double dt,
-                           const double rk_alpha) = NULL;
-
-    // Material Failure: none or there is a failure model
-    model::failure_type failure_type = model::no_failure;
-
-    // -- Erosion --
-
-    // erosion model
-    model::erosion_type erosion_type;
-    size_t blank_mat_id;        ///< eroded elements get this mat_id
-    double erode_tension_val;   ///< tension threshold to initiate erosion
-    double erode_density_val;   ///< density threshold to initiate erosion
-    // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
-
     // setup the strength model via the input file for via a user_setup
     model_init::strength_setup_tag strength_setup = model_init::input;
 
-    size_t num_eos_state_vars = 0; ///< Number of state variables for the EOS
-    size_t num_strength_state_vars  = 0; ///< Number of state variables for the strength model
-    size_t num_eos_global_vars      = 0; ///< Number of global variables for the EOS
-    size_t num_strength_global_vars = 0; ///< Number of global variables for the strength model
+}; // end boundary condition setup
 
-    DCArrayKokkos<double> eos_global_vars; ///< Array of global variables for the EOS
 
-    DCArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct MaterialEnums_t
+///
+/// \brief Stores material model settings
+///
+/////////////////////////////////////////////////////////////////////////////
+struct MaterialEnums_t
+{
+
+    // -- EOS --
+    // none, decoupled, or coupled eos
+    model::EOSType EOSType = model::noEOSType;
+
+    // Strength model type: none, or increment- or state-based
+    model::StrengthType StrengthType = model::noStrengthType;
+
+}; // end boundary condition enums
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct MaterialFunctions_t
+///
+/// \brief  Material model functions
+///
+/// In the material object: CArrayKokkos <MaterialFunctions_t> MaterialFunctions;
+/////////////////////////////////////////////////////////////////////////////
+struct MaterialFunctions_t
+{
+    size_t id;
+
+    // -- EOS --
+
+    // Equation of state (EOS) function pointers
+    void (*calc_pressure)(const DCArrayKokkos<double>& MaterialPoints_pres,
+                          const DCArrayKokkos<double>& MaterialPoints_stress,
+                          const size_t MaterialPoints_gid,
+                          const size_t mat_id,
+                          const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                          const DCArrayKokkos<double>& MaterialPoints_sspd,
+                          const double den,
+                          const double sie,
+                          const RaggedRightArrayKokkos<double> &eos_global_vars) = NULL;
+
+    void (*calc_sound_speed)(const DCArrayKokkos<double>& MaterialPoints_pres,
+                             const DCArrayKokkos<double>& MaterialPoints_stress,
+                             const size_t MaterialPoints_gid,
+                             const size_t mat_id,
+                             const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                             const DCArrayKokkos<double>& MaterialPoints_sspd,
+                             const double den,
+                             const double sie,
+                             const RaggedRightArrayKokkos<double> &eos_global_vars) = NULL;
+
+    // -- Strength --
+
+    // Material strength model function pointers
+    void (*calc_stress)(const DCArrayKokkos<double>& MaterialPoints_pres,
+                        const DCArrayKokkos<double>& MaterialPoints_stress,
+                        const size_t MaterialPoints_gid,
+                        const size_t mat_id,
+                        const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                        const DCArrayKokkos<double>& MaterialPoints_sspd,
+                        const double den,
+                        const double sie,
+                        const ViewCArrayKokkos<double>& vel_grad,
+                        const ViewCArrayKokkos<size_t>& MaterialPoints_node_gids,
+                        const DCArrayKokkos<double>&    node_coords,
+                        const DCArrayKokkos<double>&    node_vel,
+                        const double vol,
+                        const double dt,
+                        const double rk_alpha) = NULL;
+
+
+    // -- Erosion --
+
+    size_t void_mat_id;         ///< eroded elements get this mat_id
+    double erode_tension_val;   ///< tension threshold to initiate erosion
+    double erode_density_val;   ///< density threshold to initiate erosion
+    // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
+    void (*erode)(const DCArrayKokkos<double>& MaterialPoints_pres,
+                  const DCArrayKokkos<double>& MaterialPoints_stress,
+                  const DCArrayKokkos<bool>& MaterialPoints_eroded,
+                  const DCArrayKokkos<size_t>& MaterialPoints_mat_id,
+                  const size_t MaterialPoints_gid,
+                  const size_t void_mat_id,
+                  const double erode_tension_val,
+                  const double erode_density_val,
+                  const DCArrayKokkos<double>& MaterialPoints_sspd,
+                  const DCArrayKokkos<double>& MaterialPoints_den,
+                  const double sie) = NULL;
 
     double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression
     double q1ex = 1.3333;   ///< acoustic coefficient in Riemann solver for expansion
     double q2   = 1.0;      ///< linear coefficient in Riemann solver for compression
     double q2ex = 1.3333;   ///< linear coefficient in Riemann solver for expansion
 
-    double elastic_modulus; ///< Young's modulus
-    double poisson_ratio;   ///< Poisson ratio
 }; // end material_t
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct material_t
+///
+/// \brief  A container to hold boundary condition information.  This holds
+///         material functions, and model state, parameters, and values 
+///
+/////////////////////////////////////////////////////////////////////////////
+struct Material_t{
+
+    size_t num_mats;  // num materials in the problem
+
+    DCArrayKokkos <MaterialSetup_t> MaterialSetup;  // vars to setup and initialize the material
+
+    // device functions and associated data
+    CArrayKokkos <MaterialFunctions_t> MaterialFunctions; // struct with function pointers
+
+    // note: host functions are launched via enums
+
+    // enums to select model options, some enums are needed on the host side and device side
+    DCArrayKokkos <MaterialEnums_t> MaterialEnums;
+
+    // --- material physics model variables ---
+
+    ///<enums can be implemented in the model namespaces to unpack e.g., physics_global_vars
+
+    RaggedRightArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
+    CArrayKokkos<size_t> num_eos_global_vars;
+
+    RaggedRightArrayKokkos<double> eos_state_vars;       ///< Array of state (in each element) variables for the EOS
+    CArrayKokkos<size_t> num_eos_state_vars;
+
+    RaggedRightArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
+    CArrayKokkos<size_t> num_strength_global_vars;
+
+    RaggedRightArrayKokkos<double> strength_state_vars;  ///< Array of state (in each element) variables for the strength
+    CArrayKokkos<size_t> num_strength_state_vars;
+    
+    RaggedRightArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
+
+    RaggedRightArrayKokkos<double> erosion_global_vars;  ///< Array of global variables for the erosion model
+
+    RaggedRightArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
+
+    // ...
+
+}; // end MaterialModelVars_t
+
+
 
 // ----------------------------------
 // valid inputs for material options
@@ -235,222 +318,45 @@ static std::vector<std::string> str_material_inps
     "q1ex",
     "q2ex",
     "eos_global_vars",
-    "elastic_modulus",
-    "poisson_ratio",
-    "erosion_type",
+    "strength_global_vars",
+    "erosion_model",
     "erode_tension_val",
     "erode_density_val",
-    "blank_mat_id",
+    "void_mat_id",
 };
 
-// ----------------------------------
-// required inputs for material options
-// ----------------------------------
-static std::vector<std::string> material_required_inps
+// ---------------------------------------------------------------
+// required inputs for material options are specified here.
+// The requirements vary depending on the problem type and solver
+// ---------------------------------------------------------------
+static std::vector<std::string> material_hydrodynamics_required_inps
 {
     "id",
     "eos_model",
     "eos_model_type",
-    // "eos_global_vars",
-    // "strength_model",
-    // "strength_model_type"
+};
+// required inputs are only required for eos problems
+
+static std::vector<std::string> material_solid_dynamics_required_inps
+{
+    "id",
+    "strength_model",
+    "strength_model_type"
 };
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn ideal_gas
-///
-/// \brief Ideal gas model, gamma law
-///
-/// \param Element pressure
-/// \param Element stress
-/// \param Global ID for the element
-/// \param Material ID for the element
-/// \param Element state variables
-/// \param Element Sound speed
-/// \param Material density
-/// \param Material specific internal energy
-///
-/////////////////////////////////////////////////////////////////////////////
-namespace ideal_gas_state_var
+
+static std::vector<std::string> material_solid_statics_required_inps
 {
-enum var_names
-{
-    gamma = 0,
-    min_sound_speed = 1,
-    c_v = 2,
-    ref_temp = 3,
-    ref_density = 4,
-    ref_sie = 5
+    "id",
+    "strength_global_vars"
 };
-} // namespace ideal_gas_state_var
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn ideal_gas
-///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
-///
-/////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-static void ideal_gas(const DCArrayKokkos<double>& elem_pres,
-    const DCArrayKokkos<double>& elem_stress,
-    const size_t elem_gid,
-    const size_t mat_id,
-    const DCArrayKokkos<double>& elem_state_vars,
-    const DCArrayKokkos<double>& elem_sspd,
-    const double den,
-    const double sie)
+
+
+static std::vector<std::string> material_thermal_statics_required_inps
 {
-    // statev(0) = gamma
-    // statev(1) = minimum sound speed
-    // statev(2) = specific heat c_v
-    // statev(3) = ref temperature
-    // statev(4) = ref density
-    // statev(5) = ref specific internal energy
+    "id",
+    "thermal_global_vars"
+};
 
-    double gamma = elem_state_vars(elem_gid, 0);
-    double csmin = elem_state_vars(elem_gid, 1);
-
-    // pressure
-    elem_pres(elem_gid) = (gamma - 1.0) * sie * den;
-
-    // sound speed
-    elem_sspd(elem_gid) = sqrt(gamma * (gamma - 1.0) * sie);
-
-    // ensure soundspeed is great than min specified
-    if (elem_sspd(elem_gid) < csmin) {
-        elem_sspd(elem_gid) = csmin;
-    } // end if
-
-    return;
-} // end of ideal_gas
-
-// -----------------------------------------------------------------------------
-// This is the void_gas EOS
-// ------------------------------------------------------------------------------
-KOKKOS_FUNCTION
-static void void_gas(const DCArrayKokkos<double>& elem_pres,
-    const DCArrayKokkos<double>& elem_stress,
-    const size_t elem_gid,
-    const size_t mat_id,
-    const DCArrayKokkos<double>& elem_state_vars,
-    const DCArrayKokkos<double>& elem_sspd,
-    const double den,
-    const double sie)
-{
-    // pressure of a void is 0
-    elem_pres(elem_gid) = 0.0;
-
-    // sound speed of a void is 0, machine small must be used for CFL calculation
-    elem_sspd(elem_gid) = 1.0e-32;
-
-    return;
-} // end of void_gas
-
-// -----------------------------------------------------------------------------
-// This is the no_eos (empty function)
-// ------------------------------------------------------------------------------
-KOKKOS_FUNCTION
-static void no_eos(const DCArrayKokkos<double>& elem_pres,
-    const DCArrayKokkos<double>& elem_stress,
-    const size_t elem_gid,
-    const size_t mat_id,
-    const DCArrayKokkos<double>& elem_state_vars,
-    const DCArrayKokkos<double>& elem_sspd,
-    const double den,
-    const double sie)
-{
-    return;
-} // end of no_eos
-
-// -----------------------------------------------------------------------------
-// This is the user material model function for the equation of state
-// An eos function must be supplied or the code will fail to run.
-// The pressure and sound speed can be calculated from an analytic eos.
-// The pressure can also be calculated using p = -1/3 Trace(Stress)
-// ------------------------------------------------------------------------------
-KOKKOS_FUNCTION
-static void user_eos_model(const DCArrayKokkos<double>& elem_pres,
-    const DCArrayKokkos<double>& elem_stress,
-    const size_t elem_gid,
-    const size_t mat_id,
-    const DCArrayKokkos<double>& elem_state_vars,
-    const DCArrayKokkos<double>& elem_sspd,
-    const double den,
-    const double sie)
-{
-    // -----------------------------------------------------------------------------
-    // Required variables are here
-    // ------------------------------------------------------------------------------
-
-    // -----------------------------------------------------------------------------
-    // The user must coding goes here
-    // ------------------------------------------------------------------------------
-
-    return;
-} // end for user_eos_model
-
-// -----------------------------------------------------------------------------
-// This is the user material model function for the stress tensor
-// ------------------------------------------------------------------------------
-KOKKOS_FUNCTION
-static void user_strength_model(const DCArrayKokkos<double>& elem_pres,
-    const DCArrayKokkos<double>& elem_stress,
-    const size_t elem_gid,
-    const size_t mat_id,
-    const DCArrayKokkos<double>& elem_state_vars,
-    const DCArrayKokkos<double>& elem_sspd,
-    const double den,
-    const double sie,
-    const ViewCArrayKokkos<double>& vel_grad,
-    const ViewCArrayKokkos<size_t>& elem_node_gids,
-    const DCArrayKokkos<double>&    node_coords,
-    const DCArrayKokkos<double>&    node_vel,
-    const double vol,
-    const double dt,
-    const double rk_alpha)
-{
-    // -----------------------------------------------------------------------------
-    // Required variables are here
-    // ------------------------------------------------------------------------------
-
-    // -----------------------------------------------------------------------------
-    // The user must coding goes here
-    // ------------------------------------------------------------------------------
-
-    return;
-} // end of user mat
-
-// -----------------------------------------------------------------------------
-// This is the user material model function for the stress tensor
-// ------------------------------------------------------------------------------
-KOKKOS_FUNCTION
-static void no_strength(const DCArrayKokkos<double>& elem_pres,
-    const DCArrayKokkos<double>& elem_stress,
-    const size_t elem_gid,
-    const size_t mat_id,
-    const DCArrayKokkos<double>& elem_state_vars,
-    const DCArrayKokkos<double>& elem_sspd,
-    const double den,
-    const double sie,
-    const ViewCArrayKokkos<double>& vel_grad,
-    const ViewCArrayKokkos<size_t>& elem_node_gids,
-    const DCArrayKokkos<double>&    node_coords,
-    const DCArrayKokkos<double>&    node_vel,
-    const double vol,
-    const double dt,
-    const double rk_alpha)
-{
-    return;
-} // end of user mat
 
 #endif // end Header Guard

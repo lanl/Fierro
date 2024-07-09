@@ -43,6 +43,16 @@
 // Physical state data
 #include "state.h"
 
+
+void fill_regions(DCArrayKokkos<reg_fill_t>&, 
+                  Material_t, 
+                  mesh_t, 
+                  node_t, 
+                  MaterialPoint_t, 
+                  GaussPoint_t, 
+                  corner_t);
+
+
 class Driver
 {
 public:
@@ -50,9 +60,21 @@ public:
     char* mesh_file;
     char* yaml_file;
 
+    // ---------------------------------------------------------------------
+    //    input type declarations
+    // ---------------------------------------------------------------------
+
     MeshReader  mesh_reader;
     MeshBuilder mesh_builder;
-    simulation_parameters_t sim_param;
+
+    SimulationParameters_t SimulationParamaters; ///< the input simulation parameters
+
+    // ---------------------------------------------------------------------
+    //    Material and Boundary declarations
+    // ---------------------------------------------------------------------
+
+    Material_t Materials;                   ///< Material data for simulation
+    BoundaryCondition_t BoundaryConditions; ///< Simulation boundary conditions
 
     int num_dims = 3;
 
@@ -65,7 +87,8 @@ public:
     //    state data type declarations
     // ---------------------------------------------------------------------
     node_t   node;
-    elem_t   elem;
+    GaussPoint_t GaussPoints;
+    MaterialPoint_t MaterialPoints;
     corner_t corner;
 
     int num_solvers = 0;
@@ -95,17 +118,28 @@ public:
             exit(0);
         }
 
-        parse_yaml(root, sim_param);
+        parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
         std::cout << "Finished  parsing YAML file" << std::endl;
 
-        if (sim_param.mesh_input.source == mesh_input::file) {
+        if (SimulationParamaters.mesh_input.source == mesh_input::file) {
             // Create and/or read mesh
-            std::cout << "Mesh file path: " << sim_param.mesh_input.file_path << std::endl;
-            mesh_reader.set_mesh_file(sim_param.mesh_input.file_path.data());
-            mesh_reader.read_mesh(mesh, elem, node, corner, num_dims, sim_param.dynamic_options.rk_num_bins);
+            std::cout << "Mesh file path: " << SimulationParamaters.mesh_input.file_path << std::endl;
+            mesh_reader.set_mesh_file(SimulationParamaters.mesh_input.file_path.data());
+            mesh_reader.read_mesh(mesh, 
+                                  MaterialPoints, 
+                                  GaussPoints, 
+                                  node, 
+                                  corner, 
+                                  num_dims, 
+                                  SimulationParamaters.dynamic_options.rk_num_bins);
         }
-        else if (sim_param.mesh_input.source == mesh_input::generate) {
-            mesh_builder.build_mesh(mesh, elem, node, corner, sim_param);
+        else if (SimulationParamaters.mesh_input.source == mesh_input::generate) {
+            mesh_builder.build_mesh(mesh, 
+                                    MaterialPoints, 
+                                    GaussPoints, 
+                                    node, 
+                                    corner, 
+                                    SimulationParamaters);
         }
         else{
             throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
@@ -113,34 +147,50 @@ public:
         }
 
         // Build boundary conditions
-        int num_bcs = sim_param.boundary_conditions.size();
+        int num_bcs = BoundaryConditions.num_bcs;
         printf("Num BC's = %d\n", num_bcs);
 
         // --- calculate bdy sets ---//
         mesh.init_bdy_sets(num_bcs);
-        tag_bdys(sim_param.boundary_conditions, mesh, node.coords);
-        mesh.build_boundry_node_sets(sim_param.boundary_conditions, mesh);
+        tag_bdys(BoundaryConditions, mesh, node.coords);
+        mesh.build_boundry_node_sets(mesh);
 
         // Calculate element volume
-        geometry::get_vol(elem.vol, node.coords, mesh);
+        geometry::get_vol(GaussPoints.vol, node.coords, mesh);
 
         // Create memory for state variables
-        sim_param.materials.update_host();
-        elem.statev = DCArrayKokkos<double>(mesh.num_elems, sim_param.materials.host(0).eos_global_vars.size()); // WARNING: HACK
+        //size_t max_num_vars = 0;
+        //size_t num_materials = Materials.num_eos_global_vars.size();
+        //for (size_t mat_id=0; mat_id<num_materials; mat_id++){
+        //    max_num_vars = fmax(max_num_vars, Materials.num_eos_global_vars(mat_id));
+        //}
+        //MaterialPoints.statev = DCArrayKokkos<double>(mesh.num_elems, max_num_vars); // WARNING: HACK
 
         // --- apply the fill instructions over the Elements---//
         Kokkos::fence();
-        fill_regions();
+        
+        
+        //fill_regions();
+        fill_regions(SimulationParamaters.region_fills, 
+                     Materials, 
+                     mesh, 
+                     node, 
+                     MaterialPoints, 
+                     GaussPoints,
+                     corner);
 
+
+        // --- Move the following sovler setup to yaml parsing routine
         // Create solvers
-        for (int solver_id = 0; solver_id < sim_param.solver_inputs.size(); solver_id++) {
-            if (sim_param.solver_inputs[solver_id].method == solver_input::SGH) {
-                SGH* sgh_solver = new SGH(); // , mesh, node, elem, corner
-                sgh_solver->initialize(sim_param);
+        for (int solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
+            if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH) {
+                SGH* sgh_solver = new SGH(); // , mesh, node, MaterialPoints, corner
+                sgh_solver->initialize(SimulationParamaters, Materials, BoundaryConditions);
                 solvers.push_back(sgh_solver);
             }
         }
-    }
+
+    } // end initialize
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -153,7 +203,14 @@ public:
     {
         std::cout << "Inside driver setup" << std::endl;
         for (auto& solver : solvers) {
-            solver->setup(sim_param, mesh, node, elem, corner);
+            solver->setup(SimulationParamaters, 
+                          Materials, 
+                          BoundaryConditions, 
+                          mesh, 
+                          node, 
+                          MaterialPoints, 
+                          GaussPoints, 
+                          corner);
         }
     }
 
@@ -168,7 +225,14 @@ public:
     {
         std::cout << "Inside driver run" << std::endl;
         for (auto& solver : solvers) {
-            solver->execute(sim_param, mesh, node, elem, corner);
+            solver->execute(SimulationParamaters, 
+                            Materials, 
+                            BoundaryConditions, 
+                            mesh, 
+                            node, 
+                            MaterialPoints, 
+                            GaussPoints, 
+                            corner);
         }
     }
 
@@ -186,7 +250,9 @@ public:
         std::cout << "Inside driver finalize" << std::endl;
         for (auto& solver : solvers) {
             if (solver->finalize_flag) {
-                solver->finalize(sim_param);
+                solver->finalize(SimulationParamaters, 
+                                 Materials, 
+                                 BoundaryConditions);
             }
         }
         // destroy FEA modules
@@ -196,6 +262,9 @@ public:
         }
     }
 
+    
+}; // end driver class
+
     /////////////////////////////////////////////////////////////////////////////
     ///
     /// \fn fill_regions
@@ -203,9 +272,15 @@ public:
     /// \brief Fills mesh regions based on YAML input
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void fill_regions()
+    void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills, 
+                      Material_t Materials, 
+                      mesh_t mesh, 
+                      node_t node, 
+                      MaterialPoint_t MaterialPoints, 
+                      GaussPoint_t GaussPoints,
+                      corner_t corner)
     {
-        int num_fills = sim_param.region_fills.size();
+        int num_fills = region_fills.size();
         printf("Num Fills's = %d\n", num_fills);
 
         for (int f_id = 0; f_id < num_fills; f_id++) {
@@ -224,11 +299,11 @@ public:
 
             int num_elems = mesh.num_elems;
             // parallel loop over elements in mesh
-            FOR_ALL_CLASS(elem_gid, 0, num_elems, {
+            FOR_ALL(elem_gid, 0, num_elems, {
                 for (int rk_level = 0; rk_level < 2; rk_level++) {
 
                     // Set erosion flag to false
-                    elem.eroded(elem_gid) = false;
+                    GaussPoints.eroded(elem_gid) = false;
                     
                     // calculate the coordinates and radius of the element
                     double elem_coords[3]; // note:initialization with a list won't work
@@ -246,25 +321,30 @@ public:
                         else{
                             elem_coords[2] = 0.0;
                         }
-                    } // end loop over nodes in element (NOTE: Translating using origin so below check works)
-                    elem_coords[0] = (elem_coords[0] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin(0);
-                    elem_coords[1] = (elem_coords[1] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin(1);
-                    elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem) - sim_param.region_fills(f_id).origin(2);
+                    } // end loop over nodes in element 
+                    elem_coords[0] = (elem_coords[0] / mesh.num_nodes_in_elem);
+                    elem_coords[1] = (elem_coords[1] / mesh.num_nodes_in_elem);
+                    elem_coords[2] = (elem_coords[2] / mesh.num_nodes_in_elem);
+                    
+                    // for shapes with an origin (e.g., sphere and circle), accounting for the origin
+                    double dist_x = elem_coords[0] - region_fills(f_id).origin[0];
+                    double dist_y = elem_coords[1] - region_fills(f_id).origin[1];
+                    double dist_z = elem_coords[2] - region_fills(f_id).origin[2];
 
                     // spherical radius 
-                    double radius = sqrt(elem_coords[0] * elem_coords[0] +
-                                          elem_coords[1] * elem_coords[1] +
-                                          elem_coords[2] * elem_coords[2]);
+                    double radius = sqrt(dist_x * dist_x +
+                                         dist_y * dist_y +
+                                         dist_z * dist_z);
 
                     // cylindrical radius
-                    double radius_cyl = sqrt(elem_coords[0] * elem_coords[0] +
-                                              elem_coords[1] * elem_coords[1]);
+                    double radius_cyl = sqrt(dist_x * dist_x +
+                                             dist_y * dist_y);
 
                     // default is not to fill the element
                     size_t fill_this = 0;
 
                     // check to see if this element should be filled
-                    switch (sim_param.region_fills(f_id).volume) {
+                    switch (region_fills(f_id).volume) {
                         case region::global:
                             {
                                 fill_this = 1;
@@ -273,14 +353,14 @@ public:
                         case region::box:
                             {
 
-                                double x_lower_bound = sim_param.region_fills(f_id).x1;
-                                double x_upper_bound = sim_param.region_fills(f_id).x2;
+                                double x_lower_bound = region_fills(f_id).x1;
+                                double x_upper_bound = region_fills(f_id).x2;
 
-                                double y_lower_bound = sim_param.region_fills(f_id).y1;
-                                double y_upper_bound = sim_param.region_fills(f_id).y2;
+                                double y_lower_bound = region_fills(f_id).y1;
+                                double y_upper_bound = region_fills(f_id).y2;
 
-                                double z_lower_bound = sim_param.region_fills(f_id).z1;
-                                double z_upper_bound = sim_param.region_fills(f_id).z2;
+                                double z_lower_bound = region_fills(f_id).z1;
+                                double z_upper_bound = region_fills(f_id).z2;
 
 
                                 if (elem_coords[0] >= x_lower_bound && elem_coords[0] <= x_upper_bound &&
@@ -292,20 +372,21 @@ public:
                             }
                         case region::cylinder:
                             {
-                                if (radius_cyl >= sim_param.region_fills(f_id).radius1
-                                    && radius_cyl <= sim_param.region_fills(f_id).radius2) {
+                                if (radius_cyl >= region_fills(f_id).radius1
+                                    && radius_cyl <= region_fills(f_id).radius2) {
                                     fill_this = 1;
                                 }
                                 break;
                             }
                         case region::sphere:
                             {
-                                if (radius >= sim_param.region_fills(f_id).radius1
-                                    && radius <= sim_param.region_fills(f_id).radius2) {
+                                if (radius >= region_fills(f_id).radius1
+                                    && radius <= region_fills(f_id).radius2) {
                                     fill_this = 1;
                                 }
                                 break;
                             }
+
                         case region::readVoxelFile:
                             {
                                 fill_this = 0; // default is no, don't fill it
@@ -328,56 +409,90 @@ public:
                                 //     fill_this = voxel_elem_values(elem_id0); // values from file
                                 // } // end if
                             } // end case
+                        case region::no_volume:
+                            {
+                                fill_this = 0; // default is no, don't fill it
+
+                                break;
+                            }
+                        default:
+                            {
+                                fill_this = 0; // default is no, don't fill it
+
+                                break;
+                            }
+
                     } // end of switch
 
                     // paint the material state on the element
                     if (fill_this == 1) {
                         // density
-                        elem.den(elem_gid) = sim_param.region_fills(f_id).den;
+                        MaterialPoints.den(elem_gid) = region_fills(f_id).den;
 
                         // mass
-                        elem.mass(elem_gid) = elem.den(elem_gid) * elem.vol(elem_gid);
+                        MaterialPoints.mass(elem_gid) = MaterialPoints.den(elem_gid) * GaussPoints.vol(elem_gid);
 
                         // specific internal energy
-                        elem.sie(rk_level, elem_gid) = sim_param.region_fills(f_id).sie;
+                        MaterialPoints.sie(rk_level, elem_gid) = region_fills(f_id).sie;
 
-                        elem.mat_id(elem_gid) = sim_param.region_fills(f_id).material_id;
+                        GaussPoints.mat_id(elem_gid) = region_fills(f_id).material_id;
 
-                        size_t mat_id = elem.mat_id(elem_gid); // short name
+                        size_t mat_id = GaussPoints.mat_id(elem_gid); // short name
 
                         // get state_vars from the input file or read them in
-                        if (false) { // sim_param.materials(mat_id).strength_setup == model_init::user_init) {
+                        if (false) { // Materials.MaterialEnums(mat_id).strength_setup == model_init::user_init) {
                             // use the values read from a file to get elem state vars
-                            // for (size_t var = 0; var < sim_param.materials(mat_id).num_eos_state_vars; var++) {
-                            //     elem.statev(elem_gid, var) = file_state_vars(mat_id, elem_gid, var);
+                            // for (size_t var = 0; var < Materials.num_eos_state_vars(mat_id); var++) {
+                            //     MaterialPoints.statev(elem_gid, var) = file_state_vars(mat_id, elem_gid, var);
                             // } // end for
                         }
                         else{
                             // use the values in the input file
                             // set state vars for the region where mat_id resides
-                            int num_eos_global_vars = sim_param.materials(mat_id).eos_global_vars.size();
-                            for (size_t var = 0; var < sim_param.materials(mat_id).eos_global_vars.size(); var++) {
-                                elem.statev(elem_gid, var) = sim_param.materials(mat_id).eos_global_vars(var); // state_vars(mat_id, var);
-                            } // end for
+                            
+                            //int num_eos_global_vars = Materials.eos_global_vars.stride(mat_id); // ragged-right storage
+                            
+
+                            //for (size_t var = 0; var < num_eos_global_vars; var++) {
+                            //    MaterialPoints.statev(elem_gid, var) = Materials.eos_global_vars(mat_id,var); // state_vars(mat_id, var); // WARNING: HACK
+                            //} // end for
+
+                            
                         } // end logical on type
 
                         // --- stress tensor ---
                         // always 3D even for 2D-RZ
                         for (size_t i = 0; i < 3; i++) {
                             for (size_t j = 0; j < 3; j++) {
-                                elem.stress(rk_level, elem_gid, i, j) = 0.0;
+                                MaterialPoints.stress(rk_level, elem_gid, i, j) = 0.0;
                             }
                         }  // end for
 
-                        // --- Pressure and stress ---
-                        sim_param.materials(mat_id).eos_model(elem.pres,
-                                                   elem.stress,
-                                                   elem_gid,
-                                                   elem.mat_id(elem_gid),
-                                                   elem.statev,
-                                                   elem.sspd,
-                                                   elem.den(elem_gid),
-                                                   elem.sie(rk_level, elem_gid));
+                        // --- Calculate Pressure and Stress ---
+
+                        // --- Pressure ---
+                        Materials.MaterialFunctions(mat_id).calc_pressure(
+                                                        MaterialPoints.pres,
+                                                        MaterialPoints.stress,
+                                                        elem_gid,
+                                                        GaussPoints.mat_id(elem_gid),
+                                                        MaterialPoints.statev,
+                                                        MaterialPoints.sspd,
+                                                        MaterialPoints.den(elem_gid),
+                                                        MaterialPoints.sie(rk_level, elem_gid),
+                                                        Materials.eos_global_vars);   
+
+                        // --- Sound Speed ---                               
+                        Materials.MaterialFunctions(mat_id).calc_sound_speed(
+                                                        MaterialPoints.pres,
+                                                        MaterialPoints.stress,
+                                                        elem_gid,
+                                                        GaussPoints.mat_id(elem_gid),
+                                                        MaterialPoints.statev,
+                                                        MaterialPoints.sspd,
+                                                        MaterialPoints.den(elem_gid),
+                                                        MaterialPoints.sie(rk_level, elem_gid),
+                                                        Materials.eos_global_vars);
 
                         // loop over the nodes of this element and apply velocity
                         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -385,13 +500,13 @@ public:
                             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
                             // --- Velocity ---
-                            switch (sim_param.region_fills(f_id).velocity) {
+                            switch (region_fills(f_id).velocity) {
                                 case init_conds::cartesian:
                                     {
-                                        node.vel(rk_level, node_gid, 0) = sim_param.region_fills(f_id).u;
-                                        node.vel(rk_level, node_gid, 1) = sim_param.region_fills(f_id).v;
+                                        node.vel(rk_level, node_gid, 0) = region_fills(f_id).u;
+                                        node.vel(rk_level, node_gid, 1) = region_fills(f_id).v;
                                         if (mesh.num_dims == 3) {
-                                            node.vel(rk_level, node_gid, 2) = sim_param.region_fills(f_id).w;
+                                            node.vel(rk_level, node_gid, 2) = region_fills(f_id).w;
                                         }
 
                                         break;
@@ -420,8 +535,8 @@ public:
                                             }
                                         } // end for
 
-                                        node.vel(rk_level, node_gid, 0) = sim_param.region_fills(f_id).speed * dir[0];
-                                        node.vel(rk_level, node_gid, 1) = sim_param.region_fills(f_id).speed * dir[1];
+                                        node.vel(rk_level, node_gid, 0) = region_fills(f_id).speed * dir[0];
+                                        node.vel(rk_level, node_gid, 1) = region_fills(f_id).speed * dir[1];
                                         if (mesh.num_dims == 3) {
                                             node.vel(rk_level, node_gid, 2) = 0.0;
                                         }
@@ -452,10 +567,10 @@ public:
                                             }
                                         } // end for
 
-                                        node.vel(rk_level, node_gid, 0) = sim_param.region_fills(f_id).speed * dir[0];
-                                        node.vel(rk_level, node_gid, 1) = sim_param.region_fills(f_id).speed * dir[1];
+                                        node.vel(rk_level, node_gid, 0) = region_fills(f_id).speed * dir[0];
+                                        node.vel(rk_level, node_gid, 1) = region_fills(f_id).speed * dir[1];
                                         if (mesh.num_dims == 3) {
-                                            node.vel(rk_level, node_gid, 2) = sim_param.region_fills(f_id).speed * dir[2];
+                                            node.vel(rk_level, node_gid, 2) = region_fills(f_id).speed * dir[2];
                                         }
 
                                         break;
@@ -480,18 +595,41 @@ public:
 
                                         break;
                                     }
+
+                                case init_conds::no_ic_vel:
+                                    {
+                                        // no velocity
+                                        node.vel(rk_level, node_gid, 0) = 0.0;
+                                        node.vel(rk_level, node_gid, 1) = 0.0;
+                                        if (mesh.num_dims == 3) {
+                                            node.vel(rk_level, node_gid, 2) = 0.0;
+                                        }
+
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        // no velocity
+                                        node.vel(rk_level, node_gid, 0) = 0.0;
+                                        node.vel(rk_level, node_gid, 1) = 0.0;
+                                        if (mesh.num_dims == 3) {
+                                            node.vel(rk_level, node_gid, 2) = 0.0;
+                                        }
+
+                                        break;
+                                    }
                             } // end of switch
                         } // end loop over nodes of element
 
-                        if (sim_param.region_fills(f_id).velocity == init_conds::tg_vortex) {
-                            elem.pres(elem_gid) = 0.25 * (cos(2.0 * PI * elem_coords[0]) + cos(2.0 * PI * elem_coords[1]) ) + 1.0;
+                        if (region_fills(f_id).velocity == init_conds::tg_vortex) {
+                            MaterialPoints.pres(elem_gid) = 0.25 * (cos(2.0 * PI * elem_coords[0]) + cos(2.0 * PI * elem_coords[1]) ) + 1.0;
 
                             // p = rho*ie*(gamma - 1)
-                            // size_t mat_id = f_id;
-                            double gamma  = elem.statev(elem_gid, 4); // gamma value WARNING: BUG HERE
-                            elem.sie(rk_level, elem_gid) =
-                                elem.pres(elem_gid) / (sim_param.region_fills(f_id).den * (gamma - 1.0));
+                            double gamma  = Materials.eos_global_vars(mat_id,0); // makes sure it matches the gamma in the gamma law function 
+                            MaterialPoints.sie(rk_level, elem_gid) =
+                                MaterialPoints.pres(elem_gid) / (region_fills(f_id).den * (gamma - 1.0));
                         } // end if
+
                     } // end if fill
                 } // end RK loop
             }); // end FOR_ALL element loop
@@ -512,19 +650,19 @@ public:
         //         // loop over the corners of the element and calculate the mass
         //         for (size_t corner_lid = 0; corner_lid < 4; corner_lid++) {
         //             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-        //             corner_mass(corner_gid) = corner_areas(corner_lid) * elem_den(elem_gid); // node radius is added later
+        //             corner_mass(corner_gid) = corner_areas(corner_lid) * MaterialPoints.den(elem_gid); // node radius is added later
         //         } // end for over corners
         //     });
         // } // end of
 
         // calculate the nodal mass
-        FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
+        FOR_ALL(node_gid, 0, mesh.num_nodes, {
             node.mass(node_gid) = 0.0;
 
             if (mesh.num_dims == 3) {
                 for (size_t elem_lid = 0; elem_lid < mesh.num_corners_in_node(node_gid); elem_lid++) {
                     size_t elem_gid      = mesh.elems_in_node(node_gid, elem_lid);
-                    node.mass(node_gid) += 1.0 / 8.0 * elem.mass(elem_gid);
+                    node.mass(node_gid) += 1.0 / 8.0 * MaterialPoints.mass(elem_gid);
                 } // end for elem_lid
             } // end if dims=3
             else{
@@ -538,5 +676,5 @@ public:
             } // end else
         }); // end FOR_ALL
         Kokkos::fence();
+
     } // end fill regions
-};

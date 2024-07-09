@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -46,13 +46,22 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "Yaml.hpp"
 
-struct simulation_parameters_t;
+struct SimulationParameters_t;
 struct solver_input_t;
 struct mesh_input_t;
 struct reg_fill_t;
-struct material_t;
 struct output_options_t;
-struct boundary_condition_t;
+
+struct Material_t;
+struct MaterialSetup_t;
+struct MaterialFunctions_t;
+struct MaterialEnums_t;
+
+struct BoundaryCondition_t;
+struct BoundaryConditionSetup_t;
+struct BoundaryConditionEnums_t;
+struct BoundaryConditionFunctions_t;
+
 struct dynamic_options_t;
 
 using namespace mtr;
@@ -81,7 +90,7 @@ void validate_inputs(
     std::vector<std::string>& str_required_inputs);
 
 // utility function for parsing YAML file
-void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param);
+void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary);
 
 // Parse the solver related data
 void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_input);
@@ -99,9 +108,9 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options);
 void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills);
 
 // parse the region text
-void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials);
+void parse_materials(Yaml::Node& root, Material_t& Materials);
 
 // parse the boundary condition text
-void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_conditions);
+void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions);
 
 #endif // end Header Guard

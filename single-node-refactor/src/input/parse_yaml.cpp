@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -46,6 +46,35 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 #include "parse_yaml.h"
 #include "simulation_parameters.h"
+#include "boundary_conditions.h"
+
+// velocity bc files
+#include "constant_velocity_bc.h"
+#include "no_velocity_bc.h"
+#include "piston_velocity_bc.h"
+#include "reflected_velocity_bc.h"
+#include "time_varying_velocity_bc.h"
+#include "user_defined_velocity_bc.h"
+#include "zero_velocity_bc.h"
+
+
+// eos files
+#include "gamma_law_eos.h"
+#include "no_eos.h"
+#include "user_defined_eos.h"
+#include "void_eos.h"
+
+// strength
+#include "no_strength.h"
+#include "user_defined_strength.h"
+
+// erosion files
+#include "basic_erosion.h"
+#include "no_erosion.h"
+
+// fracture files
+#include "user_defined_fracture.h"
+
 
 #define PI 3.141592653589793
 
@@ -240,7 +269,7 @@ void print_yaml(Yaml::Node root)
 // =================================================================================
 //    Parse YAML file
 // =================================================================================
-void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
+void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary)
 {
     // if (VERBOSE) {
     //     printf("\n");
@@ -253,45 +282,45 @@ void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param)
         printf("\n");
         std::cout << "Parsing YAML meshing options:" << std::endl;
     }
-    parse_mesh_input(root, sim_param.mesh_input);
+    parse_mesh_input(root, SimulationParamaters.mesh_input);
 
     if (VERBOSE) {
         printf("\n");
         std::cout << "Parsing YAML dynamic options:" << std::endl;
     }
-    parse_dynamic_options(root, sim_param.dynamic_options);
+    parse_dynamic_options(root, SimulationParamaters.dynamic_options);
 
     if (VERBOSE) {
         printf("\n");
         std::cout << "Parsing YAML output options:" << std::endl;
     }
-    parse_output_options(root, sim_param.output_options);
+    parse_output_options(root, SimulationParamaters.output_options);
 
     if (VERBOSE) {
         printf("\n");
         std::cout << "Parsing YAML solver options:" << std::endl;
     }
-    parse_solver_input(root, sim_param.solver_inputs);
+    parse_solver_input(root, SimulationParamaters.solver_inputs);
 
     if (VERBOSE) {
         printf("\n");
         std::cout << "Parsing YAML boundary condition options:" << std::endl;
     }
-    parse_bcs(root, sim_param.boundary_conditions);
+    parse_bcs(root, Boundary);
 
     if (VERBOSE) {
         printf("\n");
         std::cout << "Parsing YAML regions:" << std::endl;
     }
     // parse the region yaml text into a vector of region_fills
-    parse_regions(root, sim_param.region_fills);
+    parse_regions(root, SimulationParamaters.region_fills);
 
     if (VERBOSE) {
         printf("\n");
         std::cout << "Parsing YAML materials:" << std::endl;
     }
     // parse the material yaml text into a vector of materials
-    parse_materials(root, sim_param.materials);
+    parse_materials(root, Materials);
 }
 
 // =================================================================================
@@ -399,6 +428,8 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
                 for (const auto& element : str_solver_inps) {
                     std::cout << element << std::endl;
                 }
+
+                throw std::runtime_error("**** Solver Inputs Not Understood ****");
             }
         } // end loop over solver options
     } // end loop over solvers
@@ -489,6 +520,7 @@ void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options)
             for (const auto& element : str_dyn_opts_inps) {
                 std::cout << element << std::endl;
             }
+            throw std::runtime_error("**** User Dynamics Not Understood ****");
         }
     } // end for words in dynamic options
 } // end of function to parse region
@@ -502,10 +534,6 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
     // get the mesh variables names set by the user
     std::vector<std::string> user_mesh_inputs;
-
-    mesh_input.origin = DCArrayKokkos<double> (3, "mesh_input.origin");
-    mesh_input.length = DCArrayKokkos<double> (3, "mesh_input.length");
-    mesh_input.num_elems = DCArrayKokkos<int> (3, "mesh_input.num_elems");
 
 
     // extract words from the input file and validate they are correct
@@ -608,7 +636,16 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
             double x1 = std::stod(numbers[0]);
             double y1 = std::stod(numbers[1]);
-            double z1 = std::stod(numbers[2]);
+            double z1;
+
+            if(numbers.size()==3){ 
+                // 3D
+                z1 = std::stod(numbers[2]);
+            }
+            else {
+                // 2D
+                z1 = 0.0;
+            } // end if
 
             if (VERBOSE) {
                 std::cout << "\tx1 = " << x1 << std::endl;
@@ -617,11 +654,9 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             }
 
             // storing the origin values as
-            RUN({
-                mesh_input.origin(0) = x1;
-                mesh_input.origin(1) = y1;
-                mesh_input.origin(2) = z1;
-            });
+            mesh_input.origin[0] = x1;
+            mesh_input.origin[1] = y1;
+            mesh_input.origin[2] = z1;
         }
         // Extents of the mesh
         else if (a_word.compare("length") == 0) {
@@ -634,7 +669,17 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
             double l1 = std::stod(numbers[0]);
             double l2 = std::stod(numbers[1]);
-            double l3 = std::stod(numbers[2]);
+            double l3;
+
+            if(numbers.size()==3){ 
+                // 3D
+                l3 = std::stod(numbers[2]);
+            }
+            else {
+                // 2D
+                l3 = 0.0;
+            } // end if
+
 
             if (VERBOSE) {
                 std::cout << "\tl1 = " << l1 << std::endl;
@@ -643,11 +688,9 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             }
 
             // storing the length values
-            RUN({
-                mesh_input.length(0) = l1;
-                mesh_input.length(1) = l2;
-                mesh_input.length(2) = l3;
-            });
+            mesh_input.length[0] = l1;
+            mesh_input.length[1] = l2;
+            mesh_input.length[2] = l3;
         }
         // Number of elements per direction
         else if (a_word.compare("num_elems") == 0) {
@@ -661,7 +704,17 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
             int n1 = std::stod(numbers[0]);
             int n2 = std::stod(numbers[1]);
-            int n3 = std::stod(numbers[2]);
+            int n3;
+
+            if(numbers.size()==3){ 
+                // 3D
+                n3 = std::stod(numbers[2]);
+            }
+            else {
+                // 2D
+                n3 = 0;
+            } // end if
+
 
             if (VERBOSE) {
                 std::cout << "\tn1 = " << n1 << std::endl;
@@ -670,11 +723,9 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             }
 
             // storing the number of elements
-            RUN({
-                mesh_input.num_elems(0) = n1;
-                mesh_input.num_elems(1) = n2;
-                mesh_input.num_elems(2) = n3;
-            });
+            mesh_input.num_elems[0] = n1;
+            mesh_input.num_elems[1] = n2;
+            mesh_input.num_elems[2] = n3;
         }
         // Polynomial order for the mesh
         else if (a_word.compare("polynomial_order") == 0) {
@@ -746,6 +797,7 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             for (const auto& element : str_mesh_inps) {
                 std::cout << element << std::endl;
             }
+            throw std::runtime_error("**** Mesh Not Understood ****");
         }
     } // end user_mesh_inputs
 } // end of parse mesh options
@@ -833,10 +885,12 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options)
         } // graphics_iteration_step
         else {
             std::cout << "ERROR: invalid input: " << a_word << std::endl;
+
             std::cout << "Valid options are: " << std::endl;
             for (const auto& element : str_output_options_inps) {
                 std::cout << element << std::endl;
             }
+            throw std::runtime_error("**** Graphics Not Understood ****");
         }
     } // end user_inputs
 } // end of parse mesh options
@@ -852,11 +906,6 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 
     region_fills = DCArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
 
-    for(int i=0; i< num_regions; i++){
-        region_fills.host(i).origin = DCArrayKokkos<double> (3, "region_fills.origin");
-        region_fills.host(i).origin.update_device();
-    }
-    region_fills.update_device();
 
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {
@@ -945,7 +994,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                 // y-component of velocity
                 double v = root["regions"][reg_id]["fill_volume"]["v"].As<double>();
                 if (VERBOSE) {
-                    std::cout << "\tie = " << v << std::endl;
+                    std::cout << "\tv = " << v << std::endl;
                 }
 
                 RUN({
@@ -1060,53 +1109,178 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                     region_fills(reg_id).z2 = z2;
                 });
             } // z2
+            else if (a_word.compare("velocity") == 0) {
+
+                // velocity fill region type
+                std::string type = root["regions"][reg_id]["fill_volume"]["velocity"].As<std::string>();
+
+                if (VERBOSE) {
+                    std::cout << "\tvelocity = " << type << std::endl;
+                }
+                // set the volume tag type
+                if (velocity_type_map.find(type) != velocity_type_map.end()) {
+                 
+                    // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
+                    switch(velocity_type_map[type]){
+
+                        case init_conds::cartesian:
+                            std::cout << "Setting velocity initial conditions type to cartesian " << std::endl;
+                            RUN({
+                                region_fills(reg_id).velocity = init_conds::cartesian;
+                            });
+                            break;
+
+                         case init_conds::radial:
+                            std::cout << "Setting velocity initial conditions type to radial " << std::endl;
+                            RUN({
+                                region_fills(reg_id).velocity = init_conds::radial;
+                            });
+                            break;
+
+                         case init_conds::spherical:
+                            std::cout << "Setting velocity initial conditions type to spherical " << std::endl;
+                            RUN({
+                                region_fills(reg_id).velocity = init_conds::spherical;
+                            });
+                            break;
+
+                         case init_conds::radial_linear:
+                            std::cout << "Setting velocity initial conditions type to radial_linear " << std::endl;
+                            RUN({
+                                region_fills(reg_id).velocity = init_conds::radial_linear;
+                            });
+                            break;
+
+                         case init_conds::spherical_linear:
+                            std::cout << "Setting velocity initial conditions type to spherical_linear " << std::endl;
+                            RUN({
+                                region_fills(reg_id).velocity = init_conds::spherical_linear;
+                            });
+                            break;
+
+                         case init_conds::tg_vortex:
+                            std::cout << "Setting velocity initial conditions type to tg_vortex " << std::endl;
+                            RUN({
+                                region_fills(reg_id).velocity = init_conds::tg_vortex;
+                            });
+                            break;
+
+                         case init_conds::no_ic_vel:
+                            std::cout << "Setting velocity initial conditions type to no velocity" << std::endl;
+                            RUN({ 
+                                region_fills(reg_id).velocity = init_conds::no_ic_vel;
+                            });
+                            break;
+
+                        default:
+
+                            RUN({ 
+                                region_fills(reg_id).velocity = init_conds::no_ic_vel;
+                            });
+
+                            std::cout << "ERROR: No valid velocity intial conditions type input " << std::endl;
+                            std::cout << "Valid IC types are: " << std::endl;
+                            
+                            for (const auto& pair : velocity_type_map) {
+                                std::cout << pair.second << std::endl;
+                            }
+
+                            throw std::runtime_error("**** Velocity Initial Conditions Type Not Understood ****");
+                            break;
+                    } // end switch
+
+                    if (VERBOSE) {
+                        std::cout << "\tvolume_fill = " << type << std::endl;
+                    } // end if
+
+                }
+                else{
+                    std::cout << "ERROR: invalid input: " << type << std::endl;
+                    throw std::runtime_error("**** Velocity IC Not Understood ****");
+                } // end if
+            } // end velocity fill type
+            //
             else if (a_word.compare("type") == 0) {
+
+                // region volume fill type
                 std::string type = root["regions"][reg_id]["fill_volume"]["type"].As<std::string>();
+
                 if (VERBOSE) {
                     std::cout << "\ttype = " << type << std::endl;
                 }
 
-                // set the volume tag type
+                // set the velocity tag type
                 if (region_type_map.find(type) != region_type_map.end()) {
-                    auto vol = region_type_map[type];
+                 
+                    // region_type_map[type] returns enum value, e.g., init_conds::velocity 
+                    switch(region_type_map[type]){
 
-                    RUN({
-                        region_fills(reg_id).volume = vol;
-                    });
-                    if (VERBOSE) {
-                        std::cout << "\tvolume_fill = " << type << std::endl;
-                    }
-                    if (VERBOSE) {
-                        std::cout << vol << std::endl;
-                    }
-                }
+                        case region::global:
+                            std::cout << "Setting volume fill type to global " << std::endl;
+                            RUN({
+                                region_fills(reg_id).volume = region::global;
+                            });
+                            break;
+
+                        case region::box:
+                            std::cout << "Setting volume fill type to box " << std::endl;
+                            RUN({
+                                region_fills(reg_id).volume = region::box;
+                            });
+                            break;
+
+                        case region::cylinder:
+                            std::cout << "Setting volume fill type to cylinder " << std::endl;
+                            RUN({
+                                region_fills(reg_id).volume = region::cylinder;
+                            });
+                            break;
+
+                        case region::sphere:
+                            std::cout << "Setting volume fill type to sphere " << std::endl;
+                            RUN({
+                                region_fills(reg_id).volume = region::sphere;
+                            });
+                            break;
+
+                        case region::readVoxelFile:
+                            std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
+                            RUN({
+                                region_fills(reg_id).volume = region::readVoxelFile;
+                            });
+                            break;
+
+                        case region::no_volume:
+                            std::cout << "Setting volume fill type to none " << std::endl;
+                            RUN({
+                                region_fills(reg_id).volume = region::no_volume;
+                            });
+                            break;
+
+                        default:
+
+                            RUN({ 
+                                region_fills(reg_id).volume = region::no_volume;
+                            });
+
+                            std::cout << "ERROR: No valid region volume fill type input " << std::endl;
+                            std::cout << "Valid IC volume fill types are: " << std::endl;
+                            
+                            for (const auto& pair : region_type_map) {
+                                std::cout << pair.second << std::endl;
+                            }
+
+                            throw std::runtime_error("**** Region Volume Fill Type Not Understood ****");
+                            break;
+                    } // end switch
+                } 
                 else{
                     std::cout << "ERROR: invalid input: " << type << std::endl;
+                    throw std::runtime_error("**** Volume Fill Not Understood ****");
                 } // end if
+
             } // end volume fill type
-            else if (a_word.compare("velocity") == 0) {
-                std::string type = root["regions"][reg_id]["fill_volume"]["velocity"].As<std::string>();
-                if (VERBOSE) {
-                    std::cout << "\tvelocity = " << type << std::endl;
-                }
-
-                // set the volume tag type
-                if (velocity_type_map.find(type) != velocity_type_map.end()) {
-                    auto vel = velocity_type_map[type];
-
-                    RUN({
-                        region_fills(reg_id).velocity = vel;
-                    });
-
-                    if (VERBOSE) {
-                        std::cout << "\tvelocity_fill = " << type << std::endl;
-                        std::cout << vel << std::endl;
-                    }
-                }
-                else{
-                    std::cout << "ERROR: invalid input: " << type << std::endl;
-                } // end if
-            } // end velocity
+            //
             else if (a_word.compare("origin") == 0) {
                 std::string origin = root["regions"][reg_id]["fill_volume"]["origin"].As<std::string>();
                 if (VERBOSE) {
@@ -1118,7 +1292,16 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 
                 double x1 = std::stod(numbers[0]);
                 double y1 = std::stod(numbers[1]);
-                double z1 = std::stod(numbers[2]);
+                double z1;
+
+                if(numbers.size()==3){ 
+                    // 3D
+                    z1 = std::stod(numbers[2]);
+                }
+                else {
+                    // 2D
+                    z1 = 0.0;
+                } //
 
                 if (VERBOSE) {
                     std::cout << "\tx1 = " << x1 << std::endl;
@@ -1128,9 +1311,9 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 
                 // storing the origin values as (x1,y1,z1)
                 RUN({
-                    region_fills(reg_id).origin(0) = x1;
-                    region_fills(reg_id).origin(1) = y1;
-                    region_fills(reg_id).origin(2) = z1;
+                    region_fills(reg_id).origin[0] = x1;
+                    region_fills(reg_id).origin[1] = y1;
+                    region_fills(reg_id).origin[2] = z1;
                 });
             } // origin
             else {
@@ -1139,25 +1322,49 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                 for (const auto& element : str_region_inps) {
                     std::cout << element << std::endl;
                 }
+                throw std::runtime_error("**** Region Not Understood ****");
             }
         } // end for words in material
+
     } // end loop over regions
 } // end of function to parse region
 
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
+void parse_materials(Yaml::Node& root, Material_t& Materials)
 {
     Yaml::Node& material_yaml = root["materials"];
 
     size_t num_materials = material_yaml.Size();
     std::cout << "Number of materials =  "<< num_materials << std::endl;
 
+    Materials.num_mats = num_materials;
 
-    materials = DCArrayKokkos<material_t>(num_materials, "sim_param.materials");
+    // --- allocate memory for arrays inside material struct ---
 
-    // allocate room for each material to store eos_global_vars
+    // setup
+    Materials.MaterialSetup = DCArrayKokkos<MaterialSetup_t>(num_materials, "material_setup");
+
+    // function pointers to material models
+    Materials.MaterialFunctions = CArrayKokkos<MaterialFunctions_t>(num_materials, "material_functions");
+
+    // enums
+    Materials.MaterialEnums = DCArrayKokkos<MaterialEnums_t>(num_materials, "material_enums");
+
+    // these are temp arrays to store global variables given in the yaml input file for each material, 100 vars is the max allowable
+    DCArrayKokkos<double> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
+    DCArrayKokkos<double> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
+
+    Materials.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials, "num_eos_global_vars");
+    Materials.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials, "num_strength_global_vars");
+
+
+    // initialize the num of global vars to 0 for all models
+    FOR_ALL(mat_id, 0, num_materials, {
+        Materials.num_eos_global_vars(mat_id) = 0;
+        Materials.num_strength_global_vars(mat_id) = 0;
+    });
 
     // loop over the materials specified
     for (int mat_id = 0; mat_id < num_materials; mat_id++) {
@@ -1172,7 +1379,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
         std::vector<std::string> user_str_material_inps;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_required_inps);
+        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_hydrodynamics_required_inps);
 
         // loop over the words in the material input definition
         for (auto& a_word : user_str_material_inps) {
@@ -1191,7 +1398,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     std::cout << "\tq1 = " << q1 << std::endl;
                 }
                 RUN({
-                    materials(mat_id).q1 = q1;
+                    Materials.MaterialFunctions(mat_id).q1 = q1;
                 });
             } // q1
             else if (a_word.compare("q1ex") == 0) {
@@ -1200,7 +1407,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     std::cout << "\tq1ex = " << q1ex << std::endl;
                 }
                 RUN({
-                    materials(mat_id).q1ex = q1ex;
+                    Materials.MaterialFunctions(mat_id).q1ex = q1ex;
                 });
             } // q1ex
             else if (a_word.compare("q2") == 0) {
@@ -1212,7 +1419,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 }
 
                 RUN({
-                    materials(mat_id).q2 = q2;
+                    Materials.MaterialFunctions(mat_id).q2 = q2;
                 });
             } // q2
             else if (a_word.compare("q2ex") == 0) {
@@ -1223,7 +1430,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     std::cout << "\tq2ex = " << q2ex << std::endl;
                 }
                 RUN({
-                    materials(mat_id).q2ex = q2ex;
+                    Materials.MaterialFunctions(mat_id).q2ex = q2ex;
                 });
             } // q1ex
             else if (a_word.compare("id") == 0) {
@@ -1232,27 +1439,9 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     std::cout << "\tid = " << m_id << std::endl;
                 }
                 RUN({
-                    materials(mat_id).id = m_id;
+                    Materials.MaterialFunctions(mat_id).id = m_id;
                 });
             } // id
-            else if (a_word.compare("elastic_modulus") == 0) {
-                double elastic_modulus = root["materials"][mat_id]["material"]["elastic_modulus"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\telastic_modulus = " << elastic_modulus << std::endl;
-                }
-                RUN({
-                    materials(mat_id).elastic_modulus = elastic_modulus;
-                });
-            } // elastic_modulus
-            else if (a_word.compare("poisson_ratio") == 0) {
-                double poisson_ratio = root["materials"][mat_id]["material"]["poisson_ratio"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tpoisson_ratio = " << poisson_ratio << std::endl;
-                }
-                RUN({
-                    materials(mat_id).poisson_ratio = poisson_ratio;
-                });
-            } // poisson_ratio
             //extract eos model
             else if (a_word.compare("eos_model_type") == 0) {
                 std::string type = root["materials"][mat_id]["material"]["eos_model_type"].As<std::string>();
@@ -1262,22 +1451,24 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                     // eos_type_map[type] returns enum value, e.g., model::decoupled
                     switch(eos_type_map[type]){
-                        case model::decoupled:
+                        case model::decoupledEOSType:
                             std::cout << "Setting EOS type to decoupled " << std::endl;
                             RUN({
-                                materials(mat_id).eos_type = model::decoupled;
+                                Materials.MaterialEnums(mat_id).EOSType = model::decoupledEOSType;
                             });
                             break;
 
-                        case model::coupled:
+                        case model::coupledEOSType:
                             std::cout << "Setting EOS type to coupled " << std::endl;
                             RUN({
-                                materials(mat_id).eos_type = model::coupled;
+                                Materials.MaterialEnums(mat_id).EOSType = model::coupledEOSType;
                             });
                             break;
 
                         default:
-                            materials(mat_id).eos_type = model::no_eos_type;
+                            RUN({ 
+                                Materials.MaterialEnums(mat_id).EOSType = model::noEOSType;
+                            });
                             std::cout << "ERROR: No valid EOS type input " << std::endl;
                             std::cout << "Valid EOS types are: " << std::endl;
                             
@@ -1307,36 +1498,40 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     
                     switch(eos_models_map[eos]){
 
-                        case model::no_eos_model:
+                        case model::noEOS:
                             RUN({
-                                materials(mat_id).eos_model = no_eos;
+                                Materials.MaterialFunctions(mat_id).calc_pressure    = &NoEOSModel::calc_pressure;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &NoEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
                             break;
 
-                        case model::ideal_gas:
+                        case model::gammaLawGasEOS:
                             RUN({
-                                materials(mat_id).eos_model = ideal_gas;
+                                Materials.MaterialFunctions(mat_id).calc_pressure    = &GammaLawGasEOSModel::calc_pressure;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &GammaLawGasEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
                             break;
 
-                        case model::void_gas:
+                        case model::voidEOS:
                             RUN({
-                                materials(mat_id).eos_model = void_gas;
+                                Materials.MaterialFunctions(mat_id).calc_pressure    = &VoidEOSModel::calc_pressure;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &VoidEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
                             break;
 
-                        case model::user_defined_eos:
+                        case model::userDefinedEOS:
                             RUN({
-                                materials(mat_id).eos_model = user_eos_model;
+                                Materials.MaterialFunctions(mat_id).calc_pressure    = &UserDefinedEOSModel::calc_pressure;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &UserDefinedEOSModel::calc_sound_speed;
                             });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
@@ -1363,27 +1558,27 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     
                     switch(strength_type_map[strength_model_type]){
 
-                        case model::no_strength_type:
+                        case model::noStrengthType:
                             RUN({
-                                materials(mat_id).strength_type = model::no_strength_type;
+                                Materials.MaterialEnums(mat_id).StrengthType = model::noStrengthType;
                             });
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model_type_type = " << strength_model_type << std::endl;
                             }
                             break;
 
-                        case model::increment_based:
+                        case model::incrementBased:
                             RUN({
-                                materials(mat_id).strength_type = model::increment_based;
+                                Materials.MaterialEnums(mat_id).StrengthType = model::incrementBased;
                             });
                             
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model_type = " << strength_model_type << std::endl;
                             }
                             break;
-                        case model::state_based:
+                        case model::stateBased:
                             RUN({
-                                materials(mat_id).strength_type = model::state_based;
+                                Materials.MaterialEnums(mat_id).StrengthType = model::stateBased;
                             });
                             std::cout << "ERROR: state_based models not yet defined: " << std::endl;
                             throw std::runtime_error("**** ERROR: state_based models not yet defined ****");
@@ -1412,18 +1607,18 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     
                     switch(strength_models_map[strength_model]){
 
-                        case model::no_strength_model:
+                        case model::noStrengthModel:
                             RUN({
-                                materials(mat_id).strength_model = no_strength;
+                                Materials.MaterialFunctions(mat_id).calc_stress = &NoStrengthModel::calc_stress;
                             });
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
                             }
                             break;
 
-                        case model::user_defined_strength:
+                        case model::userDefinedStrength:
                             RUN({
-                                materials(mat_id).strength_model = user_strength_model;
+                                Materials.MaterialFunctions(mat_id).calc_stress = &UserDefinedStrengthModel::calc_stress;
                             });
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
@@ -1442,48 +1637,49 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
             } // Strength model
             
             //extract erosion model
-            else if (a_word.compare("erosion_type") == 0) {
-                std::string type = root["materials"][mat_id]["material"]["erosion_type"].As<std::string>();
+            else if (a_word.compare("erosion_model") == 0) {
+                std::string erosion_model = root["materials"][mat_id]["material"]["erosion_model"].As<std::string>();
 
-                // set the erosion type
-                if (erosion_type_map.find(type) != erosion_type_map.end()) {
+                // set the erosion model
+                if (erosion_model_map.find(erosion_model) != erosion_model_map.end()) {
 
-                    // erosion_type_map[type] returns enum value, e.g., model::erosion
-                    switch(erosion_type_map[type]){
-                        case model::erosion:
+                    // erosion_model_map[erosion_model] returns enum value, e.g., model::erosion
+                    switch(erosion_model_map[erosion_model]){
+                        case model::basicErosion:
                             RUN({
-                                materials(mat_id).erosion_type = model::erosion;
+                                Materials.MaterialFunctions(mat_id).erode = &BasicErosionModel::erode;
                             });
                             break;
-                        case model::erosion_contact:
+                        case model::noErosion:
                             RUN({
-                                materials(mat_id).erosion_type = model::erosion_contact;
+                                Materials.MaterialFunctions(mat_id).erode = &NoErosionModel::erode;
                             });
                             break;
                         default:
-                            RUN({
-                                materials(mat_id).erosion_type = model::no_erosion;
-                            });
+                            std::cout << "ERROR: invalid erosion input: " << erosion_model << std::endl;
+                            throw std::runtime_error("**** Erosion model Not Understood ****");
                             break;
                     } // end switch
 
                     if (VERBOSE) {
-                        std::cout << "\terosion = " << type << std::endl;
+                        std::cout << "\terosion = " << erosion_model << std::endl;
                     }
 
                 } 
                 else{
-                    std::cout << "ERROR: invalid erosion type input: " << type << std::endl;
+                    std::cout << "ERROR: invalid erosion type input: " << erosion_model<< std::endl;
+                    throw std::runtime_error("**** Erosion model Not Understood ****");
+                    break;
                 } // end if
 
             } // erosion model variables
-            else if (a_word.compare("blank_mat_id") == 0) {
-                double blank_mat_id = root["materials"][mat_id]["material"]["blank_mat_id"].As<size_t>();
+            else if (a_word.compare("void_mat_id") == 0) {
+                double void_mat_id = root["materials"][mat_id]["material"]["void_mat_id"].As<size_t>();
                 if (VERBOSE) {
-                    std::cout << "\tblank_mat_id = " << blank_mat_id << std::endl;
+                    std::cout << "\tvoid_mat_id = " << void_mat_id << std::endl;
                 }
                 RUN({
-                    materials(mat_id).blank_mat_id = blank_mat_id;
+                    Materials.MaterialFunctions(mat_id).void_mat_id = void_mat_id;
                 });
             } // blank_mat_id 
             else if (a_word.compare("erode_tension_val") == 0) {
@@ -1492,7 +1688,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     std::cout << "\terode_tension_val = " << erode_tension_val << std::endl;
                 }
                 RUN({
-                    materials(mat_id).erode_tension_val = erode_tension_val;
+                    Materials.MaterialFunctions(mat_id).erode_tension_val = erode_tension_val;
                 });
             } // erode_tension_val
             else if (a_word.compare("erode_density_val") == 0) {
@@ -1501,7 +1697,7 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                     std::cout << "\terode_density_val = " << erode_density_val << std::endl;
                 }
                 RUN({
-                    materials(mat_id).erode_density_val = erode_density_val;
+                    Materials.MaterialFunctions(mat_id).erode_density_val = erode_density_val;
                 });
             } // erode_density_val
             
@@ -1513,24 +1709,25 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
 
                 std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
                 
-
-                materials.host(mat_id).eos_global_vars = DCArrayKokkos<double>(num_global_vars, "material.eos_global_vars");
-                materials.host(mat_id).eos_global_vars.update_device();
-                RUN({
-                    materials(mat_id).num_eos_global_vars = num_global_vars;
+                RUN({ 
+                    Materials.num_eos_global_vars(mat_id) = num_global_vars;
                 });
-                materials.update_device();
 
+                if(num_global_vars>100){
+                    throw std::runtime_error("**** Per material, the code only supports up to 100 global vars in the input file ****");
+                } // end check on num_global_vars
+               
                 if (VERBOSE) {
                     std::cout << "num global eos vars = " << num_global_vars << std::endl;
                 }
 
+                // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double eos_var = root["materials"][mat_id]["material"]["eos_global_vars"][global_var_id].As<double>();
                     
 
                     RUN({
-                        materials(mat_id).eos_global_vars(global_var_id) = eos_var;
+                        tempGlobalEOSVars(mat_id, global_var_id) = eos_var;
                     });
 
                     if (VERBOSE) {
@@ -1539,35 +1736,97 @@ void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials)
                 } // end loop over global vars
             } // "eos_global_vars"
             
+            // exact the strength_global_vars
+            else if (a_word.compare("strength_global_vars") == 0) {
+                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+
+                size_t num_global_vars = mat_global_vars_yaml.Size();
+
+                std::cout << "*** parsing num global eos vars = " << num_global_vars << std::endl;
+                
+                RUN({ 
+                    Materials.num_strength_global_vars(mat_id) = num_global_vars;
+                });
+
+
+                if (VERBOSE) {
+                    std::cout << "num global strength vars = " << num_global_vars << std::endl;
+                }
+
+                // store the global eos model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double strength_var = root["materials"][mat_id]["material"]["strength_global_vars"][global_var_id].As<double>();
+                    
+                    RUN({
+                        tempGlobalStrengthVars(mat_id,global_var_id) = strength_var;
+                    });
+
+                    if (VERBOSE) {
+                        std::cout << "\t var = " << strength_var << std::endl;
+                    }
+                } // end loop over global vars
+            } // "eos_global_vars"
+            
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
+            
                 for (const auto& element : str_material_inps) {
                     std::cout << element << std::endl;
                 }
+                throw std::runtime_error("**** Material Input Not Understood ****");
             }
         } // end for words in material
     } // end loop over materials
+
+    // allocate ragged rigght memory to hold the model global variables
+    Materials.eos_global_vars = RaggedRightArrayKokkos <double> (Materials.num_eos_global_vars, "Materials.eos_global_vars");
+    Materials.strength_global_vars = RaggedRightArrayKokkos <double> (Materials.num_strength_global_vars, "Materials.strength_global_vars");
+
+
+
+    // save the global variables
+    FOR_ALL(mat_id, 0, num_materials, {
+        
+        for (size_t var_lid=0; var_lid<Materials.num_eos_global_vars(mat_id); var_lid++){
+            Materials.eos_global_vars(mat_id, var_lid) = tempGlobalEOSVars(mat_id, var_lid);
+        } // end for eos var_lid
+
+        for (size_t var_lid=0; var_lid<Materials.num_strength_global_vars(mat_id); var_lid++){
+            Materials.strength_global_vars(mat_id, var_lid) = tempGlobalStrengthVars(mat_id, var_lid);
+        } // end for strength var_lid
+
+    }); // end for loop over materials
+
 } // end of function to parse material information
+
+
 
 // =================================================================================
 //    Parse Boundary Conditions
 // =================================================================================
-void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_conditions)
+void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
 {
     Yaml::Node& bc_yaml = root["boundary_conditions"];
 
     size_t num_bcs = bc_yaml.Size();
 
-    boundary_conditions = DCArrayKokkos<boundary_condition_t>(num_bcs, "sim_param.boundary_conditions");
+    BoundaryConditions.num_bcs = num_bcs;
 
-    for(int i=0; i< num_bcs; i++){
-        boundary_conditions.host(i).origin = DCArrayKokkos<double> (3, "boundary_conditions.origin");
-        boundary_conditions.host(i).origin.update_device();
-    }
-    boundary_conditions.update_device();
+    BoundaryConditions.BoundaryConditionSetup = CArrayKokkos <BoundaryConditionSetup_t>(num_bcs, "bc_setup_vars");
 
-    // loop over the fill regions specified
+    // device functions
+    BoundaryConditions.BoundaryConditionFunctions = CArrayKokkos <BoundaryConditionFunctions_t>(num_bcs, "bc_fcns");
+
+    // enums to select options with boundary conditions
+    BoundaryConditions.BoundaryConditionEnums  = DCArrayKokkos<BoundaryConditionEnums_t> (num_bcs,"bc_enums");  
+
+    // the state for boundary conditions
+    BoundaryConditions.bc_global_vars = DCArrayKokkos<double>(num_bcs, 4, "bc_global_values"); // increase 4 for more params
+    BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
+
+
+    // loop over the BC specified
     for (int bc_id = 0; bc_id < num_bcs; bc_id++) {
         // read the variables names
         Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"];
@@ -1597,7 +1856,7 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                     solver_input::method bc_solver = map[solver];
 
                     RUN({
-                        boundary_conditions(bc_id).solver = bc_solver;
+                        BoundaryConditions.BoundaryConditionEnums(bc_id).solver = bc_solver;
                     });
 
                     if (VERBOSE) {
@@ -1622,9 +1881,72 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 // set the type
                 if (map.find(type) != map.end()) {
                     auto bc_type = map[type];
-                    RUN({
-                        boundary_conditions(bc_id).type = bc_type;
-                    });
+
+                    // bc_type_map[type] returns enum value, e.g., boundary_conditions::velocity_constant
+                    switch(map[type]){
+
+                        case boundary_conditions::constantVelocityBC :
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::constantVelocityBC ;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ConstantVelocityBC::velocity;
+                            });
+                            break;
+
+                        case boundary_conditions::timeVaringVelocityBC:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::timeVaringVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &TimeVaryingVelocityBC::velocity;
+                            });
+                            break;
+                        
+                        case boundary_conditions::reflectedVelocityBC:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::reflectedVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ReflectedVelocityBC::velocity;
+                            });
+                            break;
+
+                        case boundary_conditions::zeroVelocityBC:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::zeroVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ZeroVelocityBC::velocity;
+                            });
+                            break;
+                        case boundary_conditions::userDefinedVelocityBC:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::userDefinedVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
+                            });
+                            break;
+                        case boundary_conditions::pistonVelocityBC:
+                            std::cout << "Setting velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::pistonVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
+                            });
+                            break;                        
+                        default:
+                            
+                            std::cout << "Setting velocity bc " << std::endl;
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::noVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &NoVelocityBC::velocity;
+                            });
+                            // no velocity specified is default
+                            break;
+                        
+                    } // end switch
 
                     if (VERBOSE) {
                         std::cout << "\ttype = " << type << std::endl;
@@ -1640,6 +1962,32 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 } // end if
             } // type
             // get boundary condition direction
+            else if (a_word.compare("location") == 0) {
+                std::string location = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_location_map;
+
+                // set the direction
+                if (map.find(location) != map.end()) {
+                    auto bc_location = map[location];
+                    RUN({
+                        BoundaryConditions.BoundaryConditionEnums(bc_id).Location = bc_location;
+                    });
+                    if (VERBOSE) {
+                        std::cout << "\tlocation = " << location << std::endl;
+                    }
+                }
+                else{
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << location << std::endl;
+                    std::cout << "Valid options are: " << std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+                } // end if
+            } // direction
+            // get boundary condition geometry
+            // get boundary condition direction
             else if (a_word.compare("direction") == 0) {
                 std::string direction = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
@@ -1649,7 +1997,7 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 if (map.find(direction) != map.end()) {
                     auto bc_direction = map[direction];
                     RUN({
-                        boundary_conditions(bc_id).direction = bc_direction;
+                        BoundaryConditions.BoundaryConditionEnums(bc_id).Direction = bc_direction;
                     });
                     if (VERBOSE) {
                         std::cout << "\tdirection = " << direction << std::endl;
@@ -1674,7 +2022,7 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 if (map.find(geometry) != map.end()) {
                     auto bc_geometry = map[geometry];
                     RUN({
-                        boundary_conditions(bc_id).geometry = bc_geometry;
+                        BoundaryConditions.BoundaryConditionSetup(bc_id).geometry = bc_geometry;
                     });
 
                     if (VERBOSE) {
@@ -1694,30 +2042,58 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
             else if (a_word.compare("value") == 0) {
                 double value = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
                 RUN({
-                    boundary_conditions(bc_id).value = value;
+                    BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                 });
             } // value
             // set the u
             else if (a_word.compare("u") == 0) {
                 double u = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
                 RUN({
-                    boundary_conditions(bc_id).u = u;
+                    BoundaryConditions.bc_global_vars(bc_id,0) = u;
                 });
             } // u
             // set the v
             else if (a_word.compare("v") == 0) {
                 double v = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
                 RUN({
-                    boundary_conditions(bc_id).v = v;
+                    BoundaryConditions.bc_global_vars(bc_id,1) = v;
                 });
             } // v
             // set the w
             else if (a_word.compare("w") == 0) {
                 double w = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
                 RUN({
-                    boundary_conditions(bc_id).w = w;
+                    BoundaryConditions.bc_global_vars(bc_id,2) = w;
                 });
             } // w
+            // set the bc_vel_0
+            else if (a_word.compare("hydro_bc_vel_0") == 0) {
+                double hydro_bc_vel_0 = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    BoundaryConditions.bc_global_vars(bc_id,0) = hydro_bc_vel_0;
+                });
+            } // 
+            // set the bc_vel_1
+            else if (a_word.compare("hydro_bc_vel_1") == 0) {
+                double hydro_bc_vel_1 = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    BoundaryConditions.bc_global_vars(bc_id,1) = hydro_bc_vel_1;
+                });
+            } // 
+            // set the bc_vel_start
+            else if (a_word.compare("hydro_bc_vel_t_start") == 0) {
+                double hydro_bc_vel_t_start = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    BoundaryConditions.bc_global_vars(bc_id,2) = hydro_bc_vel_t_start;
+                });
+            } // 
+            // set the bc_vel_end
+            else if (a_word.compare("hydro_bc_vel_t_end") == 0) {
+                double hydro_bc_vel_t_end = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    BoundaryConditions.bc_global_vars(bc_id,3) = hydro_bc_vel_t_end;
+                });
+            } // 
             else if (a_word.compare("origin") == 0) {
                 std::string origin = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
                 if (VERBOSE) {
@@ -1729,7 +2105,17 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
 
                 double x1 = std::stod(numbers[0]);
                 double y1 = std::stod(numbers[1]);
-                double z1 = std::stod(numbers[2]);
+                double z1;
+
+                if(numbers.size()==3){ 
+                    // 3D
+                    z1 = std::stod(numbers[2]);
+                }
+                else {
+                    // 2D
+                    z1 = 0.0;
+                } //
+
                 if (VERBOSE) {
                     std::cout << "\tx1 = " << x1 << std::endl;
                     std::cout << "\ty1 = " << y1 << std::endl;
@@ -1738,10 +2124,11 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 // storing the origin values as (x1,y1,z1)
 
                 RUN({
-                    boundary_conditions(bc_id).origin(0) = x1;
-                    boundary_conditions(bc_id).origin(1) = y1;
-                    boundary_conditions(bc_id).origin(2) = z1;
+                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[0] = x1;
+                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[1] = y1;
+                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[2] = z1;
                 });
+
             } // origin
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
@@ -1749,7 +2136,13 @@ void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_c
                 for (const auto& element : str_bc_inps) {
                     std::cout << element << std::endl;
                 }
+                throw std::runtime_error("**** Boundary Conditions Not Understood ****");
             }
-        } // end for words in material
-    } // end loop over regions
+        } // end for words in boundary conditions
+
+    } // end loop over BCs specified
+
+    // copy the enum values to the host 
+    BoundaryConditions.BoundaryConditionEnums.update_host();
+
 } // end of function to parse region
