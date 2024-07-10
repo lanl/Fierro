@@ -1,5 +1,5 @@
 name: test notification workflow2
-on: workflow_dispatch
+on: workflow_call
 
 jobs:
   build:
