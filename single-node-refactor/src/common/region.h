@@ -80,8 +80,6 @@ struct reg_fill_t
     // type
     region::vol_tag volume; ///< Type of volume for this region eg. global, box, sphere, planes, etc.
 
-    std::string file_path     = ""; ///< Absolute path of mesh file
-
     // material id
     size_t material_id; ///< Material ID for this region
 
@@ -96,11 +94,6 @@ struct reg_fill_t
     // radius
     double radius1 = 0.0;   ///< Inner radius to fill for sphere
     double radius2 = 0.0;   ///< Outer radius to fill for sphere
-
-    // scale parameters for mesh files
-    double scale_x = 1.0;
-    double scale_y = 1.0;
-    double scale_z = 1.0;
 
     // initial conditions
     init_conds::init_velocity_conds velocity;  ///< Initial conditions for this region WARNING: Currently unimplemented
@@ -117,6 +110,24 @@ struct reg_fill_t
     double den = 0.0;  ///< density
 
     double origin[3] = {0.0, 0.0, 0.0}; ///< Origin for region
+};
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct reg_fill_host_t
+///
+/// \brief Geometry data, on the cpu only, for regions of materials/states 
+///
+/////////////////////////////////////////////////////////////////////////////
+struct reg_fill_host_t
+{
+    std::string file_path; ///< path of mesh file
+
+    // scale parameters for input mesh files
+    double scale_x = 1.0;
+    double scale_y = 1.0;
+    double scale_z = 1.0;
 };
 
 // ----------------------------------

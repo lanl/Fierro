@@ -44,7 +44,8 @@
 #include "state.h"
 
 
-void fill_regions(DCArrayKokkos<reg_fill_t>&, 
+void fill_regions(CArrayKokkos<reg_fill_t>&, 
+                  CArray<reg_fill_host_t> &,
                   Material_t&, 
                   mesh_t&, 
                   node_t&, 
@@ -228,6 +229,7 @@ public:
         
         //fill_regions();
         fill_regions(SimulationParamaters.region_fills, 
+                     SimulationParamaters.region_fills_host,
                      Materials, 
                      mesh, 
                      node, 
@@ -328,7 +330,8 @@ public:
     /// \brief Fills mesh regions based on YAML input
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills, 
+    void fill_regions(CArrayKokkos<reg_fill_t>& region_fills, 
+                      CArray<reg_fill_host_t> &region_fills_host, 
                       Material_t& Materials, 
                       mesh_t& mesh, 
                       node_t& node, 
@@ -376,10 +379,10 @@ public:
                                 voxel_dx, voxel_dy, voxel_dz,
                                 orig_x, orig_y, orig_z,
                                 voxel_num_i, voxel_num_j, voxel_num_k,
-                                region_fills(f_id).scale_x,
-                                region_fills(f_id).scale_y,
-                                region_fills(f_id).scale_z,
-                                region_fills(f_id).file_path);
+                                region_fills_host(f_id).scale_x,
+                                region_fills_host(f_id).scale_y,
+                                region_fills_host(f_id).scale_z,
+                                region_fills_host(f_id).file_path);
 
                 // copy values read from file to device
                 voxel_elem_mat_id.update_device();

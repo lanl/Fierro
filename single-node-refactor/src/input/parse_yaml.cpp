@@ -313,7 +313,7 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
         std::cout << "Parsing YAML regions:" << std::endl;
     }
     // parse the region yaml text into a vector of region_fills
-    parse_regions(root, SimulationParamaters.region_fills);
+    parse_regions(root, SimulationParamaters.region_fills, SimulationParamaters.region_fills_host);
 
     if (VERBOSE) {
         printf("\n");
@@ -898,13 +898,16 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options)
 // =================================================================================
 //    Parse Fill regions
 // =================================================================================
-void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
+void parse_regions(Yaml::Node& root, 
+                   CArrayKokkos<reg_fill_t>& region_fills, 
+                   CArray<reg_fill_host_t> &region_fills_host)
 {
     Yaml::Node& region_yaml = root["regions"];
 
     size_t num_regions = region_yaml.Size();
 
-    region_fills = DCArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
+    region_fills = CArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
+    region_fills_host = CArray<reg_fill_host_t>(num_regions); 
 
 
     // loop over the fill regions specified
@@ -1117,9 +1120,8 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                     std::cout << "\tscale_x = " << scale_x << std::endl;
                 }
 
-                RUN({
-                    region_fills(reg_id).scale_x = scale_x;
-                });
+                region_fills_host(reg_id).scale_x = scale_x;
+
             } // scale_x
             else if (a_word.compare("scale_y") == 0) {
                 // outer plane
@@ -1129,9 +1131,8 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                     std::cout << "\tscale_y = " << scale_y << std::endl;
                 }
 
-                RUN({
-                    region_fills(reg_id).scale_y = scale_y;
-                });
+                region_fills_host(reg_id).scale_y = scale_y;
+
             } // scale_y
             else if (a_word.compare("scale_z") == 0) {
                 // outer plane
@@ -1141,9 +1142,8 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                     std::cout << "\tscale_z = " << scale_z << std::endl;
                 }
 
-                RUN({
-                    region_fills(reg_id).scale_z = scale_z;
-                });
+                region_fills_host(reg_id).scale_z = scale_z;
+
             } // scale_z
             else if (a_word.compare("velocity") == 0) {
 
@@ -1325,7 +1325,7 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                     std::cout << "\tfile_path = " << path << std::endl;
                 }
 
-                region_fills(reg_id).file_path = path;   // saving the absolute file path
+                region_fills_host(reg_id).file_path = path;   // saving the absolute file path
 
             } // end file path
             //
@@ -1376,21 +1376,28 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
 
         // -----------------------------------------------
         // check for consistency in input settings
-            
-        // if the following is true, stop simulation; must add all mesh read options
-        if (region_fills(reg_id).volume == region::readVoxelFile && region_fills(reg_id).file_path.empty()) {
-            std::cout << "ERROR: When using a file to initialize a region, a file_path must be set to point to the mesh file" << std::endl;
-        }
 
-        // add all mesh read options here
-        if (region_fills(reg_id).volume != region::readVoxelFile ) {
-            // this means it is a geometric definition of the region
+        // check to see if a file path is empty
+        if(region_fills_host(reg_id).file_path.empty()){
 
-            // check to see if a file path was set
-            if(region_fills(reg_id).file_path.size()>0){
-                std::cout << "ERROR: When a geometric entity defines the region, a mesh file cannot be passed to set the region" << std::endl;
-                exit(0);
-            }
+            RUN({
+                // if the following is true, stop simulation; must add all mesh read options
+                if (region_fills(reg_id).volume == region::readVoxelFile) {
+                    printf("ERROR: When using a file to initialize a region, a file_path must be set to point to the mesh file");
+                    exit(0);
+                }
+            });
+        } // end if check
+
+        // check to see if a file path was set
+        if(region_fills_host(reg_id).file_path.size()>0){
+            RUN({
+                if (region_fills(reg_id).volume != region::readVoxelFile){  
+                    // this means it is a geometric definition of the region
+                    printf("ERROR: When a geometric entity defines the region, a mesh file cannot be passed to set the region");
+                    exit(0);
+                }
+            });
         }
         // -----------------------------------------------
 
