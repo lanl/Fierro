@@ -1376,28 +1376,41 @@ void parse_regions(Yaml::Node& root,
 
         // -----------------------------------------------
         // check for consistency in input settings
+        DCArrayKokkos<size_t> error_value(1);
 
         // check to see if a file path is empty
         if(region_fills_host(reg_id).file_path.empty()){
 
             RUN({
+                error_value(0) = 0;
+
                 // if the following is true, stop simulation; must add all mesh read options
                 if (region_fills(reg_id).volume == region::readVoxelFile) {
                     printf("ERROR: When using a file to initialize a region, a file_path must be set to point to the mesh file");
-                    exit(0);
                 }
             });
+            error_value.update_host();
+            Kokkos::fence();
+
+            if(error_value(0)==1) exit(0);
+
         } // end if check
 
         // check to see if a file path was set
         if(region_fills_host(reg_id).file_path.size()>0){
             RUN({
+                error_value(0) = 0;
+
                 if (region_fills(reg_id).volume != region::readVoxelFile){  
                     // this means it is a geometric definition of the region
                     printf("ERROR: When a geometric entity defines the region, a mesh file cannot be passed to set the region");
                     exit(0);
                 }
             });
+            error_value.update_host();
+            Kokkos::fence();
+
+            if(error_value(0)==1) exit(0);
         }
         // -----------------------------------------------
 
