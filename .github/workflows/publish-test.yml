@@ -1,4 +1,4 @@
-name: test notification workflow
+name: Publish Test
 on: 
   workflow_dispatch
 
