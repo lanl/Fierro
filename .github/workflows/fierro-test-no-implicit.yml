@@ -14,7 +14,7 @@ jobs:
     uses: ./.github/workflows/notification.yml
 
   test2:
-    uses: ./.github/workflows/test.yml
+    uses: ./.github/workflows/notification2.yml
     
   build:
     runs-on: ubuntu-latest
