@@ -162,6 +162,8 @@ public:
     // finds the boundary element surfaces in this model
     virtual void Get_Boundary_Patches();
 
+    virtual void set_rol_params(Teuchos::RCP<Teuchos::ParameterList> parlist);
+
     int setup_flag, finalize_flag;
 
     // MPI data
