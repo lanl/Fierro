@@ -67,13 +67,7 @@ jobs:
       run: |
         conda info --envs
         conda list
-
-    - name: Set OMP env variables
-      run: |
-        export OMP_PROC_BIND=spread
-        export OMP_NUM_THREADS=1
-        export OMP_PLACES=threads
-
+        
     - name: Test fierro-parallel-explicit
       run: |
         source ~/.bashrc
@@ -92,6 +86,9 @@ jobs:
       run: |
         source ~/.bashrc
         conda activate build-env
+        export OMP_PROC_BIND=spread
+        export OMP_NUM_THREADS=1
+        export OMP_PLACES=threads
         fierro-parallel-implicit ./Example_Yaml_Scripts/example_implicit_basic.yaml
       working-directory: ./src/Parallel-Solvers/Implicit-Lagrange
       shell: bash
