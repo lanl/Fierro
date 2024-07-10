@@ -1,24 +1,15 @@
 name: fierro-test-no-implicit
 
 # Workflow runs on following successful conda distribution
-#on:
-  #workflow_run:
-    #workflows: ["test notification workflow"]
-    #types:
-      #- completed
-
-on: workflow_dispatch
-
+on:
+  workflow_run:
+    workflows: ["test notification workflow, test notification workflow2"]
+    types:
+      - completed
+      
 jobs:
-  test1:
-    uses: ./.github/workflows/notification.yml
-
-  test2:
-    uses: ./.github/workflows/notification2.yml
-    
   build:
     runs-on: ubuntu-latest
-    needs: [test1, test2]
     steps:
     - uses: actions/checkout@v4
       with:
