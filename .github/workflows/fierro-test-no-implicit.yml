@@ -16,7 +16,9 @@ jobs:
         submodules: recursive
     - name: print trigger event
       run: |
-          echo "::notice:: inputs ${{ github.event_name }}"
+        - run: echo "workflow triggering event name is:" ${{ github.event_name }} 
+        - run: echo "workflow triggering event type is:" ${{ github.event.action }} 
+        - run: echo "workflow triggering event user is:" ${{ github.event.actor }} 
     - name: update the package list
       run:
         sudo apt-get update
