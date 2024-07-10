@@ -3,7 +3,7 @@ name: Fierro Test (No Implicit)
 # Workflow runs on following successful conda distribution
 on:
   workflow_run:
-    workflows: [test notification workflow, test notification workflow2]
+    workflows: [Publish Test, Publish All, Publish Elements, Publish EVPFFT-CPU, Publish EVPFFT-dev, Publish EVPFFT-GPU, Publish FIERRO GUI, Publish Fierro-CPU, Publish Fierro-dev, Publish Heffte, Publish Heffte CUDA, Publish Trilinos-CPU]
     types:
       - completed
       
