@@ -1,4 +1,4 @@
-name: fierro-test-no-implicit
+name: Fierro Test (No Implicit)
 
 # Workflow runs on following successful conda distribution
 on:
