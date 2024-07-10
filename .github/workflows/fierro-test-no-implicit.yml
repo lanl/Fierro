@@ -3,7 +3,7 @@ name: fierro-test-no-implicit
 # Workflow runs on following successful conda distribution
 on:
   workflow_run:
-    workflows: ["test notification workflow"]
+    workflows: ["test notification workflow, test notification workflow2"]
     types:
       - completed
 
