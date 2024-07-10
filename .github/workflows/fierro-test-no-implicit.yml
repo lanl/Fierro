@@ -11,10 +11,10 @@ on: workflow_dispatch
 
 jobs:
   test1:
-    uses: Fierro/.github/workflows/notification.yml@main
+    uses: ./.github/workflows/notification.yml
 
   test2:
-    uses: Fierro/.github/workflows/test.yml@main
+    uses: ./.github/workflows/test.yml
     
   build:
     runs-on: ubuntu-latest
