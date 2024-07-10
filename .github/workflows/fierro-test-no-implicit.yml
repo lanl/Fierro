@@ -17,8 +17,8 @@ jobs:
     - name: print trigger event
       run: |
         - run: echo "workflow triggering event name is:" ${{ github.event_name }} 
-        - run: echo "workflow triggering event type is:" ${{ github.event.action }} 
-        - run: echo "workflow triggering event user is:" ${{ github.event.actor }} 
+        - run: echo "workflow triggering event type is:" ${{ github.event_action }} 
+        - run: echo "workflow triggering event user is:" ${{ github.event_actor }} 
     - name: update the package list
       run:
         sudo apt-get update
