@@ -1,10 +1,11 @@
 name: fierro-test
 
-# Workflow runs on new push to main
-on: 
-  push:
-    branches:
-      - main
+# Workflow runs following successful anaconda distribution
+on:
+  workflow_run:
+    workflows: ["test notification workflow"]
+    types:
+      - completed
 
 jobs:
   build:
