@@ -1,0 +1,10 @@
+name: Publish All
+
+on: workflow_dispatch
+
+jobs:
+  test1:
+    uses: ./.github/workflows/notification.yml
+
+  test2:
+    uses: ./.github/workflows/notification2.yml
