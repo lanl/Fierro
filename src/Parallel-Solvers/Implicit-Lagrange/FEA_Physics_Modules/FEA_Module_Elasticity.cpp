@@ -6255,9 +6255,51 @@ void FEA_Module_Elasticity::linear_solver_parameters(){
   }
   else{
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("MueLu"));
-    std::string xmlFileName = "elasticity3D.xml";
-    //std::string xmlFileName = "simple_test.xml";
-    Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
+    if(module_params->muelu_parameters_xml_file){
+      std::string xmlFileName = module_params->xml_parameters_file_name;
+      //std::string xmlFileName = "simple_test.xml";
+      Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
+    }
+    else{
+      //set default parameters for MueLu
+      Linear_Solve_Params->set("problem: type", "Elasticity-3D");
+      Linear_Solve_Params->set("verbosity", "none");
+      Linear_Solve_Params->set("coarse: max size", (int) 2000);
+      Linear_Solve_Params->set("multigrid algorithm", "sa");
+      Linear_Solve_Params->set("coarse: type", "Klu2");
+      Linear_Solve_Params->set("transpose: use implicit", true);
+      Linear_Solve_Params->set("max levels", (int) 10);
+      Linear_Solve_Params->set("number of equations", (int) 3);
+      Linear_Solve_Params->set("sa: use filtered matrix", true);
+      Linear_Solve_Params->set("aggregation: type", "uncoupled");
+      Linear_Solve_Params->set("aggregation: drop scheme", "classical");
+      Linear_Solve_Params->set("reuse: type", "S");
+      //Linear_Solve_Params->set("aggregation: drop tol", (double) 0.02);
+
+      //smoother options
+      Linear_Solve_Params->set("smoother: type", "CHEBYSHEV");
+      Linear_Solve_Params->sublist("smoother: params").set("debug", false);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: degree", (int) 2);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: ratio eigenvalue", (double) 7.0);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: min eigenvalue", (double) 1.0);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: zero starting solution", true);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: eigenvalue max iterations", (int) 100);
+
+      //repartition options
+      Linear_Solve_Params->set("repartition: enable", true);
+      Linear_Solve_Params->set("repartition: partitioner", "zoltan2");
+      Linear_Solve_Params->set("repartition: start level", (int) 2);
+      Linear_Solve_Params->set("repartition: min rows per proc", (int) 2000);
+      Linear_Solve_Params->set("repartition: max imbalance", (double) 1.10);
+      Linear_Solve_Params->set("repartition: remap parts", true);
+      Linear_Solve_Params->set("repartition: rebalance P and R", true);
+
+      Linear_Solve_Params->sublist("repartition: params").set("algorithm", "multijagged");
+      Linear_Solve_Params->sublist("repartition: params").set("mj_premigration_option", (int) 1);
+
+      //for device usage
+      Linear_Solve_Params->set("use kokkos refactor", false);
+    }
   }
 }
 
