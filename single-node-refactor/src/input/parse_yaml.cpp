@@ -1404,7 +1404,6 @@ void parse_regions(Yaml::Node& root,
                 if (region_fills(reg_id).volume != region::readVoxelFile){  
                     // this means it is a geometric definition of the region
                     printf("ERROR: When a geometric entity defines the region, a mesh file cannot be passed to set the region");
-                    exit(0);
                 }
             });
             error_value.update_host();
