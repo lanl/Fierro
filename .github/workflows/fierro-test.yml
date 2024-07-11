@@ -89,7 +89,7 @@ jobs:
         export OMP_PROC_BIND=spread
         export OMP_NUM_THREADS=1
         export OMP_PLACES=threads
-        mpirun -np 3 --bind-to core fierro-parallel-implicit ./Example_Yaml_Scripts/example_implicit_basic.yaml
+        mpirun -np 4 --bind-to core fierro-parallel-implicit ./Example_Yaml_Scripts/example_implicit_basic.yaml
       working-directory: ./src/Parallel-Solvers/Implicit-Lagrange
       shell: bash
       
