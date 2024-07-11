@@ -75,7 +75,7 @@ jobs:
         export OMP_PROC_BIND=spread
         export OMP_NUM_THREADS=1
         export OMP_PLACES=threads
-        mpirun -np 8 --bind-to core fierro-parallel-explicit ./src/Parallel-Solvers/Parallel-Explicit/Example_Yaml_Scripts/example_simple.yaml
+        mpirun -np 2 --bind-to core fierro-parallel-explicit ./src/Parallel-Solvers/Parallel-Explicit/Example_Yaml_Scripts/example_simple.yaml
       shell: bash
 
     - name: Test fierro-mesh-builder
