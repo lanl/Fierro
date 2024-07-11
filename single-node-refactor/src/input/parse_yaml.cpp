@@ -1387,12 +1387,17 @@ void parse_regions(Yaml::Node& root,
                 // if the following is true, stop simulation; must add all mesh read options
                 if (region_fills(reg_id).volume == region::readVoxelFile) {
                     printf("ERROR: When using a file to initialize a region, a file_path must be set to point to the mesh file");
+
+                    Kokkos::abort("********************************************************************************************\n
+                                    ERROR: \n
+                                    When using a file to initialize a region, a file_path must be set to point to the mesh file\n
+                                    ********************************************************************************************")
                 }
             });
             error_value.update_host();
             Kokkos::fence();
 
-            if(error_value(0)==1) exit(0);
+            //if(error_value.host(0)==1) exit(0);
 
         } // end if check
 
@@ -1404,12 +1409,17 @@ void parse_regions(Yaml::Node& root,
                 if (region_fills(reg_id).volume != region::readVoxelFile){  
                     // this means it is a geometric definition of the region
                     printf("ERROR: When a geometric entity defines the region, a mesh file cannot be passed to set the region");
+
+                    Kokkos::abort("********************************************************************************************\n
+                                    ERROR: \n
+                                    hen a geometric entity defines the region, a mesh file cannot be passed to set the region\n
+                                    ********************************************************************************************")
                 }
             });
             error_value.update_host();
             Kokkos::fence();
 
-            if(error_value(0)==1) exit(0);
+            // if(error_value(0)==1) exit(0);
         }
         // -----------------------------------------------
 
