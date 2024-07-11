@@ -41,6 +41,10 @@ jobs:
       run:
         sudo apt-get install python3.6
       shell: bash
+    - name: Install dos2unix
+      run:
+        sudo apt-get install dos2unix
+      shell: bash
 
     - name: Set up Miniconda
       uses: conda-incubator/setup-miniconda@v2
