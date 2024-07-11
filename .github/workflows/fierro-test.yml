@@ -89,6 +89,7 @@ jobs:
       run: |
         source ~/.bashrc
         conda activate build-env
+        dos2unix ./Example_Yaml_Scripts/example_implicit_basic.yaml
         export OMP_PROC_BIND=spread
         export OMP_NUM_THREADS=1
         export OMP_PLACES=threads
