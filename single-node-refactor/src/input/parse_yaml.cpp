@@ -1388,10 +1388,10 @@ void parse_regions(Yaml::Node& root,
                 if (region_fills(reg_id).volume == region::readVoxelFile) {
                     printf("ERROR: When using a file to initialize a region, a file_path must be set to point to the mesh file");
 
-                    Kokkos::abort("********************************************************************************************\n
-                                    ERROR: \n
-                                    When using a file to initialize a region, a file_path must be set to point to the mesh file\n
-                                    ********************************************************************************************")
+                    Kokkos::abort("********************************************************************************************\n"
+                                    "ERROR: \n"
+                                    "When using a file to initialize a region, a file_path must be set to point to the mesh file\n"
+                                    "********************************************************************************************")
                 }
             });
             error_value.update_host();
@@ -1410,10 +1410,10 @@ void parse_regions(Yaml::Node& root,
                     // this means it is a geometric definition of the region
                     printf("ERROR: When a geometric entity defines the region, a mesh file cannot be passed to set the region");
 
-                    Kokkos::abort("********************************************************************************************\n
-                                    ERROR: \n
-                                    hen a geometric entity defines the region, a mesh file cannot be passed to set the region\n
-                                    ********************************************************************************************")
+                    Kokkos::abort("********************************************************************************************\n"
+                                    "ERROR: \n"
+                                    "When a geometric entity defines the region, a mesh file cannot be passed to set the region\n"
+                                    "********************************************************************************************")
                 }
             });
             error_value.update_host();
