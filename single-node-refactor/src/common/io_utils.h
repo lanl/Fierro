@@ -900,6 +900,9 @@ public:
         else if (SimulationParamaters.output_options.format == output_options::ensight) {
             write_ensight(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
         }
+        else if (SimulationParamaters.output_options.format == output_options::state) {
+            write_state(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
+        }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
             std::cout << "Valid options are: " << std::endl;
@@ -1287,5 +1290,11 @@ public:
         throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
     }
 };
+
+
+
+
+
+
 
 #endif // end Header Guard
