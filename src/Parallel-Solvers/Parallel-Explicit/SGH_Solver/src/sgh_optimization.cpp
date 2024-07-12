@@ -566,7 +566,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
     real_t    global_dt, current_time;
     size_t    current_data_index, next_data_index;
     int print_cycle = simparam->dynamic_options.print_cycle;
-
+    
+    double total_adjoint_time = Explicit_Solver_Pointer_->CPU_Time();
+    double state_adjoint_time = 0;
+    double state_adjoint_time_start, state_adjoint_time_end;
+    auto optimization_objective_regions = simparam->optimization_options.optimization_objective_regions;
     //initialize tally storage of gradient vector
     cached_design_gradients_distributed->putScalar(0);
     // initialize first adjoint vector at last_time_step to 0 as the terminal value
@@ -682,7 +686,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                     elem_sie(rk_level, elem_gid) = previous_element_internal_energy(elem_gid, 0);
                 });
                 Kokkos::fence();
-
                 // set state according to phase data at this timestep
                 get_vol();
 
@@ -838,7 +841,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                               elem_sie,
                               elem_mass,
                               corner_force);
-
+            
+            // state_adjoint_time_start = Explicit_Solver_Pointer_->CPU_Time();
             // force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
             const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             // const_vec_array current_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
@@ -862,10 +866,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             vec_array midpoint_adjoint_vector     = adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             vec_array phi_midpoint_adjoint_vector =  phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             vec_array psi_midpoint_adjoint_vector =  psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-
             // half step update for RK2 scheme; EQUATION 1
-            if(simparam->optimization_options.optimization_objective_regions.size()){
-                int nobj_volumes = simparam->optimization_options.optimization_objective_regions.size();
+            if(optimization_objective_regions.size()){
+                int nobj_volumes = optimization_objective_regions.size();
                 const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                     real_t rate_of_change;
@@ -878,7 +881,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                     current_node_coords[1] = all_initial_node_coords(node_gid, 1);
                     current_node_coords[2] = all_initial_node_coords(node_gid, 2);
                     for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
-                        if(simparam->optimization_options.optimization_objective_regions(ivolume).contains(current_node_coords)){
+                        if(optimization_objective_regions(ivolume).contains(current_node_coords)){
                             contained = 1;
                         }
                     }
@@ -1027,9 +1030,10 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                 elem_sie(rk_level, elem_gid) = 0.5 * (previous_element_internal_energy(elem_gid, 0) + current_element_internal_energy(elem_gid, 0));
             });
             Kokkos::fence();
-
+            
+            // state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+            // state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
             // set state according to phase data at this timestep
-
             get_vol();
 
             // ---- Calculate velocity diveregence for the element ----
@@ -1184,10 +1188,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                               elem_sie,
                               elem_mass,
                               corner_force);
-
+            
+            // state_adjoint_time_start = Explicit_Solver_Pointer_->CPU_Time();
             // full step update with midpoint gradient for RK2 scheme; EQUATION 1
-            if(simparam->optimization_options.optimization_objective_regions.size()){
-                int nobj_volumes = simparam->optimization_options.optimization_objective_regions.size();
+            if(optimization_objective_regions.size()){
+                int nobj_volumes = optimization_objective_regions.size();
                 const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                     real_t rate_of_change;
@@ -1199,8 +1204,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                     current_node_coords[0] = all_initial_node_coords(node_gid, 0);
                     current_node_coords[1] = all_initial_node_coords(node_gid, 1);
                     current_node_coords[2] = all_initial_node_coords(node_gid, 2);
+                    
                     for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
-                        if(simparam->optimization_options.optimization_objective_regions(ivolume).contains(current_node_coords)){
+                        if(optimization_objective_regions(ivolume).contains(current_node_coords)){
                             contained = 1;
                         }
                     }
@@ -1316,6 +1322,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                 (*adjoint_vector_data)[cycle]->assign(*all_adjoint_vector_distributed);
                 (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
             }
+
+            // state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+            // state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
         } // end view scope
         
         //tally contribution to the gradient vector
@@ -1367,7 +1376,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             Kokkos::fence();
 
             // set state according to phase data at this timestep
-
             get_vol();
 
             // ---- Calculate velocity diveregence for the element ----
@@ -1452,7 +1460,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                         1.0,
                         cycle);
             }
-
+            
+            //state_adjoint_time_start = Explicit_Solver_Pointer_->CPU_Time();
             get_force_dgradient_sgh(material,
                                 *mesh,
                                 node_coords,
@@ -1476,7 +1485,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                             elem_mass,
                             corner_force,
                             elem_power_dgradients);
-
+            
+            //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+            //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
             compute_topology_optimization_gradient_tally(design_densities_distributed, cached_design_gradients_distributed, cycle, global_dt);
         }
 
@@ -1489,6 +1500,10 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
 
         // phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
     }
+
+    double total_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+    std::cout << "ADJOINT CALCULATION TIME ON RANK " << myrank << " IS " << total_adjoint_time_end-total_adjoint_time << std::endl;
+    // std::cout << "ADJOINT STATE CALCULATION TIME ON RANK " << myrank << " IS " << state_adjoint_time << std::endl;
 }
 
 /////////////////////////////////////////////////////////////////////////////
