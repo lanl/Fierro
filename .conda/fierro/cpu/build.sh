@@ -1,5 +1,10 @@
 # These flag variables are set by anaconda.
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
+BUILD_PREFIX=${BUILD_PREFIX:-$CONDA_PREFIX}
+
+export MPI_C_COMPILER="${BUILD_PREFIX}/bin/mpicc"
+export MPI_CXX_COMPILER="${BUILD_PREFIX}/bin/mpicxx"
+
 mkdir build
 cd build
 
