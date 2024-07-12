@@ -1,7 +1,5 @@
 # These flag variables are set by anaconda.
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
-export PATH=$PATH:$BUILD_PREFIX/mpi/bin
-export OPAL_PREFIX=/opt/hpcx/ompi
 
 mkdir build
 cd build
@@ -11,6 +9,7 @@ cd build
 # see https://conda-forge.org/docs/maintainer/knowledge_base.html#newer-c-features-with-old-sdk
 
 cmake .. \
+      -D CMAKE_PREFIX_PATH=$BUILD_PREFIX/bin/mpiexec
       -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
       -D CMAKE_CXX_STANDARD:STRING=17 \
