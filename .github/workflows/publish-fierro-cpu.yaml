@@ -9,21 +9,10 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: Install MPI
-      run: |
-        sudo apt-get install libopenmpi-dev openmpi-bin
-        echo "MPI_OPTS=--oversubscribe" >> $GITHUB_ENV
-    - uses: ./.github/workflows/build-conda-package.yaml
-      with:
-        recipe_dir: .conda/fierro/cpu
-      secrets: inherit
-    
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/fierro/cpu
+    secrets: inherit
       
 
   
