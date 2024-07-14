@@ -361,17 +361,14 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
             }
             else{
                 // Using a full tensoral Riemann jump relation
-                mu_term = muc(node_lid)
-                          * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                    + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                real_t area_normal_norm = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
+                                               +area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                                               +area_normal(node_lid, 2) * area_normal(node_lid, 2));
+                mu_term = muc(node_lid)*area_normal_norm;
 
                 for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
                     for (int jdim = 0; jdim < num_dims; jdim++) {
-                        muc_gradient(node_lid, igradient, jdim) = muc_gradient(node_lid, igradient, jdim)
-                                                                  * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                            + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                            + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                        muc_gradient(node_lid, igradient, jdim) = muc_gradient(node_lid, igradient, jdim)*area_normal_norm;
                     }
                 }
             }
@@ -1330,22 +1327,20 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                    + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                                + area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                                + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                real_t area_normal_norm = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
+                                               +area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                                               +area_normal(node_lid, 2) * area_normal(node_lid, 2));
                 for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
                     for (int jdim = 0; jdim < num_dims; jdim++) {
                         mu_term_gradient = muc_gradient(node_lid, igradient, jdim)
-                                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                            + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                            + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                                           * area_normal_norm;
 
                         mu_term_gradient += muc(node_lid) * (area_normal(node_lid, 0) * area_normal_gradients(node_lid, 0, igradient, jdim)
                                                              + area_normal(node_lid, 1) * area_normal_gradients(node_lid, 1, igradient, jdim)
-                                                             + area_normal(node_lid, 2) * area_normal_gradients(node_lid, 2, igradient, jdim)) /
-                                            sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                            + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                            + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
-
+                                                             + area_normal(node_lid, 2) * area_normal_gradients(node_lid, 2, igradient, jdim))/ area_normal_norm;
+                        
                         muc_gradient(node_lid, igradient, jdim) = mu_term_gradient;
                     }
                 }
