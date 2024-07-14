@@ -1502,7 +1502,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
     }
 
     double total_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
-    std::cout << "ADJOINT CALCULATION TIME ON RANK " << myrank << " IS " << total_adjoint_time_end-total_adjoint_time << std::endl;
+    *fos << "ADJOINT CALCULATION TIME ON RANK " << myrank << " IS " << total_adjoint_time_end-total_adjoint_time << std::endl;
     // std::cout << "ADJOINT STATE CALCULATION TIME ON RANK " << myrank << " IS " << state_adjoint_time << std::endl;
 }
 
