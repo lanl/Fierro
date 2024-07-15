@@ -1,10 +1,10 @@
 # These flag variables are set by anaconda.
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
 
-export MPI_C_COMPILER=/usr/local/bin/mpicc
-export MPI_CXX_COMPILER=/usr/local/bin/mpicxx
-export MPI_C_INCLUDE_PATH=/usr/local/bin/mpi/include
-export MPI_CXX_INCLUDE_PATH=/usr/local/bin/mpi/include
+export MPI_C_COMPILER=$BUILD_PREFIX/bin/mpicc
+export MPI_CXX_COMPILER=$BUILD_PREFIX/bin/mpicxx
+export MPI_C_INCLUDE_PATH=$BUILD_PREFIX/bin/mpi/include
+export MPI_CXX_INCLUDE_PATH=$BUILD_PREFIX/bin/mpi/include
 
 # Create a build directory
 mkdir -p build
