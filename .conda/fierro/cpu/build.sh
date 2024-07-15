@@ -24,8 +24,8 @@ cmake .. \
       -D DISTRIBUTION=On \
       $CMAKE_ARGS \
       -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS -fopenmp -D_LIBCPP_DISABLE_AVAILABILITY" \
-      -D MPI_C_COMPILER=${MPI_C_COMPILER} \
-      -D MPI_CXX_COMPILER=${MPI_CXX_COMPILER} \
+      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
+      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
       -D VECTOR_ARCH_FLAGS="$VECTOR_ARCH_FLAGS" \
 
 make -j 10 install
