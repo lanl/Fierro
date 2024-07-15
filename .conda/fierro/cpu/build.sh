@@ -1,20 +1,10 @@
 # These flag variables are set by anaconda.
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
 
-export PATH=$PATH:/usr/local/mpi/bin
-export OPAL_PREFIX=/opt/hpcx/ompi
-
-# Define the MPI root directory
-export MPI_ROOT=/path/to/your/mpi
-
-# Set the MPI compiler variables
-export MPI_C_COMPILER=${MPI_ROOT}/bin/mpicc
-export MPI_CXX_COMPILER=${MPI_ROOT}/bin/mpicxx
-
-# Ensure the MPI libraries and includes are accessible
-export PATH=${MPI_ROOT}/bin:$PATH
-export LD_LIBRARY_PATH=${MPI_ROOT}/lib:$LD_LIBRARY_PATH
-export INCLUDE_PATH=${MPI_ROOT}/include:$INCLUDE_PATH
+export MPI_C_COMPILER=/usr/local/bin/mpicc
+export MPI_CXX_COMPILER=/usr/local/bin/mpicxx
+export MPI_C_INCLUDE_PATH=/usr/local/bin/mpi/include
+export MPI_CXX_INCLUDE_PATH=/usr/local/bin/mpi/include
 
 # Create a build directory
 mkdir -p build
