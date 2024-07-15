@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.17)
 project(Fierro NONE)
 
 set(CMAKE_CXX_STANDARD 17)
+set(MPI_C_COMPILER /usr/local/bin/mpicc)
+set(MPI_CXX_COMPILER /usr/local/bin/mpicxx)
 enable_language(CXX)
 # Disable Kokkos warning about not supporting C++ extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
