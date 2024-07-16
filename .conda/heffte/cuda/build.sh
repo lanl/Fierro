@@ -7,12 +7,12 @@ export MPI_FLAGS="--allow-run-as-root"
 
 if [ $(uname) == Linux ]; then
     export MPI_FLAGS="$MPI_FLAGS;-mca;plm;isolated"
+    export CUDACXX=$(which nvcc)
 fi
 
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
 
 export OMPI_CXX=nvcc
-#export CUDACXX=$(which nvcc)
 # Only do this for cross compiling
 if [ "$PLATFORM" != "linux-64" ] ; then
     export NVCC_PREPEND_FLAGS="-ccbin $CXX";
