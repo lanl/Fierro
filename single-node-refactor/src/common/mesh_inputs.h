@@ -80,7 +80,7 @@ struct mesh_input_t
     int num_dims = 3;   ///< Number of dimensions for the mesh
     mesh_input::source source = mesh_input::none;   ///< Source of mesh, file or generate
     std::string file_path     = ""; ///< Absolute path of mesh file
-    mesh_input::type type;  ///< Type of mesh to generate if
+    mesh_input::type type;          ///< Type of mesh to generate if
 
     double origin[3] = {0.0, 0.0, 0.0}; ///< Mesh origin for generating a mesh
     double length[3] = {0.0, 0.0, 0.0}; ///< x,y,z length of generated mesh
