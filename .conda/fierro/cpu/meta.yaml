@@ -1,6 +1,6 @@
 {% set version = "1.0.0" %}
 {% set linux_compiler_version = "10.4.0" %}
-#{% set macos_compiler_version = "12" %}
+{% set macos_compiler_version = "16" %}
 # We need the same MPI version in build + host. 
 # So we have to specify it, unfortunately
 {% set mpi_version = "4.1" %}
@@ -22,11 +22,9 @@ requirements:
   build:
     - cmake >=3.17.0
     - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
-      #- {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
-    - compiler('c')
-    - compiler('cxx')
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
-      #- {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}
       #DAN- openmpi={{ mpi_version }}
     - openmpi
