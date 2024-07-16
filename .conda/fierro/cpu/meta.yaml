@@ -26,16 +26,19 @@ requirements:
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}
-    - openmpi={{ mpi_version }}
+      #DAN- openmpi={{ mpi_version }}
+    - openmpi
   host:
     - _openmp_mutex # [linux]
     - llvm-openmp   # [osx]
-    - openmpi={{ mpi_version }}
+      #DAN- openmpi={{ mpi_version }}
     - fierro-trilinos-cpu
     - elements
+    - openmpi
   run:
     - fierro-trilinos-cpu
-    - mpi
+    - openmpi
+      #DAN- mpi
 
 about:
   home: https://github.com/lanl/Fierro
