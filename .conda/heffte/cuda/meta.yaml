@@ -35,6 +35,7 @@ requirements:
   # Not sure which ones are totally necessary.
   host:
     #DAN- cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
+    - cuda-compiler
     - cuda-cudart-static
     - cuda-toolkit
     - libcusolver-dev
