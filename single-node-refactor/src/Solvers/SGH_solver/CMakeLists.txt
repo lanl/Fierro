@@ -20,7 +20,6 @@ include_directories(include)
 include_directories(src)
 
 
-
 set(SRC_Files 
 src/boundary.cpp 
 src/energy_sgh.cpp

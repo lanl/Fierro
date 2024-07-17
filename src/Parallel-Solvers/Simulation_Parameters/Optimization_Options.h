@@ -29,7 +29,10 @@ SERIALIZABLE_ENUM(TO_MODULE_TYPE,
 
 
 SERIALIZABLE_ENUM(OPTIMIZATION_PROCESS, none, topology_optimization, shape_optimization)
-SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, none, minimize_kinetic_energy, multi_objective, minimize_compliance, minimize_thermal_resistance)
+SERIALIZABLE_ENUM(ROL_SUBPROBLEM_ALGORITHM, trust_region, line_search)
+SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, none, minimize_kinetic_energy, multi_objective,
+                  minimize_compliance, minimize_thermal_resistance, maximize_compliance,
+                  maximize_kinetic_energy, maximize_thermal_resistance)
 SERIALIZABLE_ENUM(CONSTRAINT_TYPE, mass, moment_of_inertia, center_of_mass, displacement)
 SERIALIZABLE_ENUM(RELATION, equality)
 SERIALIZABLE_ENUM(DENSITY_FILTER, none, helmholtz_filter)
@@ -93,6 +96,42 @@ struct MultiObjectiveModule {
 YAML_ADD_REQUIRED_FIELDS_FOR(MultiObjectiveModule, type, weight_coefficient)
 IMPL_YAML_SERIALIZABLE_FOR(MultiObjectiveModule, type, weight_coefficient)
 
+//ROL options read in struct
+struct ROL_Params: Yaml::DerivedFields {
+  ROL_SUBPROBLEM_ALGORITHM subproblem_algorithm = ROL_SUBPROBLEM_ALGORITHM::trust_region;
+  double initial_constraint_penalty = 1e1;
+  double step_tolerance = 1e-5;
+  double gradient_tolerance = 1e-5;
+  double constraint_tolerance = 1e-5;
+  int iteration_limit = 100;
+
+  std::string subproblem_algorithm_string;
+
+  void validate() {
+    if (iteration_limit<=0) {
+      throw Yaml::ConfigurationException("iteration limit setting cannot be less than or equal to 0");
+    }
+  }
+
+  void derive() {
+    switch(subproblem_algorithm) {
+    case ROL_SUBPROBLEM_ALGORITHM::line_search:
+      subproblem_algorithm_string = "Line Search";
+      break;
+    case ROL_SUBPROBLEM_ALGORITHM::trust_region:
+      subproblem_algorithm_string = "Trust Region";
+      break;
+    default:
+      throw std::runtime_error("Unsupported rol subproblem algorithm through yaml; try xml input");
+  }
+  }
+};
+
+IMPL_YAML_SERIALIZABLE_FOR(ROL_Params, 
+  subproblem_algorithm, initial_constraint_penalty, step_tolerance, constraint_tolerance,
+  gradient_tolerance, iteration_limit
+)
+
 struct Optimization_Options: Yaml::DerivedFields {
   OPTIMIZATION_PROCESS optimization_process = OPTIMIZATION_PROCESS::none;
   OPTIMIZATION_OBJECTIVE optimization_objective = OPTIMIZATION_OBJECTIVE::none;
@@ -100,13 +139,17 @@ struct Optimization_Options: Yaml::DerivedFields {
   std::vector<Optimization_Bound_Constraint_Region> volume_bound_constraints;
   DCArrayKokkos<Optimization_Bound_Constraint_Region> optimization_bound_constraint_volumes;
   std::vector<Volume> objective_regions;
+  ROL_Params rol_params;
   DCArrayKokkos<Volume> optimization_objective_regions;
+  bool maximize_flag = false;
+  bool normalized_objective = false;
   bool method_of_moving_asymptotes = false;                   //optimization algorithm that approximates curvature
   double simp_penalty_power = 3.0;                            //TO option; bigger value means less intermediate density
   bool thick_condition_boundary = true;                       //constrains element density if a patch is attached to BC/LC
   bool retain_outer_shell = false;                            //every patch on the outer surface will be constrained to rho=1
   bool variable_outer_shell = false;                          //allows any patch to vary even when LC/BC is applied
   int optimization_output_freq = 200;                         //number of steps between graphics dump for optimization runs
+  bool disable_forward_solve_output = false;                  //prevents explicit graphics output during the forward solve.
   DENSITY_FILTER density_filter = DENSITY_FILTER::none;       //option to set a filter on the TO process such as hemholtz or projection
   double density_epsilon = 0.001;                             //minimum allowed density; shouldnt be 0 for conditions numbers
   double minimum_density = 0;                                 //lower constraint value for a selected volume
@@ -114,8 +157,10 @@ struct Optimization_Options: Yaml::DerivedFields {
   double shell_density = 1;                                   //contraint value for outer shell of model
   real_t objective_normalization_constant = 0;                //allows a user specified normalization of the objective; default is initial value
   size_t num_solve_checkpoints = 10;                          //number of checkpoints to store explicit solve solutions for adjoint solves
-  bool use_solve_checkpoints = false;                         //when false; all timesteps of explicit solves are stored for adjoint solves; expensive
+  bool use_solve_checkpoints = true;                         //when false; all timesteps of explicit solves are stored for adjoint solves; expensive
   bool use_gradient_tally = false;                            //tallies gradient in tandem with the time sequence solving for the adjoint vectors
+  bool optimization_parameters_xml_file = false;
+  std::string xml_parameters_file_name = "optimization_parameters.xml";
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
   std::vector<MultiObjectiveModule> multi_objective_modules;
@@ -142,5 +187,6 @@ IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options,
   optimization_output_freq, density_filter, minimum_density, maximum_density,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
   variable_outer_shell, shell_density, objective_normalization_constant,
-  num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally
+  num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally, disable_forward_solve_output,
+  optimization_parameters_xml_file, xml_parameters_file_name, rol_params
 )

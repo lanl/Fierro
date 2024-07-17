@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -41,72 +41,44 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \brief Evolves the boundary according to a give velocity
 ///
 /// \param The simulation mesh
-/// \param An array of boundary_condition_t that contain information about BCs
+/// \param Boundary contain arrays of information about BCs
 /// \param A view into the nodal velocity array
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_velocity(const mesh_t&      mesh,
-    const DCArrayKokkos<boundary_condition_t>& boundary,
-    DCArrayKokkos<double>& node_vel,
-    const double time_value) const
+                            const BoundaryCondition_t& BoundaryConditions,
+                            DCArrayKokkos<double>& node_vel,
+                            const double time_value) const
 {
+
     // Loop over boundary sets
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
-        if (boundary.host(bdy_set).type == boundary_conds::reflected) {
-            // Loop over boundary nodes in a boundary set
-            FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
-                // directions with type:
-                // x_plane  = 0,
-                // y_plane  = 1,
-                // z_plane  = 2,
-                size_t direction = boundary(bdy_set).direction;
+        
+        // Loop over boundary nodes in a boundary set
+        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
 
-                size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
+            // get the global index for this node on the boundary
+            size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
-                // Set velocity to zero in that direction
-                node_vel(1, bdy_node_gid, direction) = 0.0;
-            }); // end for bdy_node_lid
-        }
-        else if (boundary.host(bdy_set).type == boundary_conds::fixed) {
-            // Loop over boundary nodes in a boundary set
-            FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
-                size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
+            // evaluate velocity on this boundary node
+            BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(mesh,
+                                                                  BoundaryConditions.BoundaryConditionEnums,
+                                                                  BoundaryConditions.bc_global_vars,
+                                                                  BoundaryConditions.bc_state_vars,
+                                                                  node_vel,
+                                                                  time_value,
+                                                                  bdy_node_gid,
+                                                                  bdy_set);
+                
+        }); // end for bdy_node_lid
 
-                for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-                    // Set velocity to zero
-                    node_vel(1, bdy_node_gid, dim) = 0.0;
-                }
-            }); // end for bdy_node_lid
-        } // end if
-        else if (boundary.host(bdy_set).type == boundary_conds::velocity) {
-            // Loop over boundary nodes in a boundary set
-            FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
-                size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
-
-                // directions with type:
-                // x_plane  = 0,
-                // y_plane  = 1,
-                // z_plane  = 2,
-                size_t direction = boundary(bdy_set).direction;
-
-                // Set velocity to that direction to specified value
-                // if t_end > time > t_start
-                // v(t) = v0 exp(-v1*(time - time_start) )
-                if (time_value >= boundary(bdy_set).hydro_bc_vel_t_start
-                    && time_value <= boundary(bdy_set).hydro_bc_vel_t_end) {
-                    double time_delta = time_value - boundary(bdy_set).hydro_bc_vel_t_start;
-
-                    node_vel(1, bdy_node_gid, direction) =
-                        boundary(bdy_set).hydro_bc_vel_0 *
-                        exp(-boundary(bdy_set).hydro_bc_vel_1 * time_delta);
-                } // end if on time
-            }); // end for bdy_node_lid
-        } // end if
+        
     } // end for bdy_set
 
     return;
 } // end boundary_velocity function
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -115,15 +87,17 @@ void SGH::boundary_velocity(const mesh_t&      mesh,
 /// \brief Evolves the boundary according to a give velocity
 ///
 /// \param The simulation mesh
-/// \param An array of boundary_condition_t that contain information about BCs
+/// \param An array of BoundaryCondition_t that contain information about BCs
 /// \param A view into the nodal velocity array
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_contact(const mesh_t& mesh,
-    const DCArrayKokkos<boundary_condition_t>& boundary,
-    DCArrayKokkos<double>& node_vel,
-    const double time_value) const
+                           const BoundaryCondition_t& BoundaryConditions,
+                           DCArrayKokkos<double>& node_vel,
+                           const double time_value) const
 {
     return;
 } // end boundary_contact function
+
+

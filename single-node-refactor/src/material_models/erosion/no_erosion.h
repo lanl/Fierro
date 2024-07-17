@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -32,76 +32,34 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_PARSE_YAML_H
-#define FIERRO_PARSE_YAML_H
+#ifndef NO_EROSION_H
+#define NO_EROSION_H
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <stdio.h>
-#include <sys/stat.h>
 
-#include "matar.h"
+// -----------------------------------------------------------------------------
+// This does nothing
+// ------------------------------------------------------------------------------
+namespace NoErosionModel {
 
-#include "Yaml.hpp"
+        KOKKOS_FUNCTION
+        static void erode (const DCArrayKokkos<double>& elem_pres,
+                           const DCArrayKokkos<double>& elem_stress,
+                           const DCArrayKokkos<bool>& elem_eroded,
+                           const DCArrayKokkos<size_t>& elem_mat_id,
+                           const size_t elem_gid,
+                           const size_t void_mat_id,
+                           const double erode_tension_val,
+                           const double erode_density_val,
+                           const DCArrayKokkos<double>& elem_sspd,
+                           const DCArrayKokkos<double>& elem_den,
+                           const double sie)
+        {
 
-struct simulation_parameters_t;
-struct solver_input_t;
-struct mesh_input_t;
-struct reg_fill_t;
-struct material_t;
-struct output_options_t;
-struct boundary_condition_t;
-struct dynamic_options_t;
+            return;
+        }
 
-using namespace mtr;
+} // end namespace
 
-// checks to see if a path exists
-static bool DoesPathExist(const std::string& s)
-{
-    struct stat buffer;
-    return (stat(s.c_str(), &buffer) == 0);
-}
 
-// for string delimiter parsing
-std::vector<std::string> exact_array_values(std::string s, std::string delimiter);
-
-// retrieves multiple values between [ ]
-std::vector<double> extract_list(std::string str);
-
-// prints the contents of a parsed yaml file
-void print_yaml(Yaml::Node root);
-
-// Read and validate user inputs
-void validate_inputs(
-    Yaml::Node& yaml, 
-    std::vector<std::string>& user_inputs, 
-    std::vector<std::string>& str_valid_inputs,
-    std::vector<std::string>& str_required_inputs);
-
-// utility function for parsing YAML file
-void parse_yaml(Yaml::Node& root, simulation_parameters_t& sim_param);
-
-// Parse the solver related data
-void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_input);
-
-// Parse dynamic time related options
-void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options);
-
-// Parse the mesh related data
-void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input);
-
-// Parse output options
-void parse_output_options(Yaml::Node& root, output_options_t& output_options);
-
-// parse the region text
-void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills);
-
-// parse the region text
-void parse_materials(Yaml::Node& root, DCArrayKokkos<material_t>& materials);
-
-// parse the boundary condition text
-void parse_bcs(Yaml::Node& root, DCArrayKokkos<boundary_condition_t>& boundary_conditions);
 
 #endif // end Header Guard

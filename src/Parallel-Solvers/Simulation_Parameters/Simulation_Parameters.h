@@ -99,12 +99,28 @@ struct Simulation_Parameters
         switch (optimization_options.optimization_objective) {
         case OPTIMIZATION_OBJECTIVE::minimize_compliance:
             add_TO_module(TO_MODULE_TYPE::Strain_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.normalized_objective = true;
             break;
         case OPTIMIZATION_OBJECTIVE::minimize_thermal_resistance:
             add_TO_module(TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.normalized_objective = true;
             break;
         case OPTIMIZATION_OBJECTIVE::minimize_kinetic_energy:
             add_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            break;
+        case OPTIMIZATION_OBJECTIVE::maximize_compliance:
+            add_TO_module(TO_MODULE_TYPE::Strain_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.normalized_objective = true;
+            optimization_options.maximize_flag = true;
+            break;
+        case OPTIMIZATION_OBJECTIVE::maximize_thermal_resistance:
+            add_TO_module(TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.normalized_objective = true;
+            optimization_options.maximize_flag = true;
+            break;
+        case OPTIMIZATION_OBJECTIVE::maximize_kinetic_energy:
+            add_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.maximize_flag = true;
             break;
         case OPTIMIZATION_OBJECTIVE::multi_objective:
             add_TO_module(TO_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});

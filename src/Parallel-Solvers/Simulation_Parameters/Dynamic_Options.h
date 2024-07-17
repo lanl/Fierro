@@ -20,6 +20,7 @@ struct Dynamic_Options : Yaml::DerivedFields {
     double tiny       = 1e-12; // very very small (between real_t and single)
     double small      = 1e-8;  // single precision
     TIME_OUTPUT_LEVEL output_time_sequence_level = TIME_OUTPUT_LEVEL::high;
+    int print_cycle   = 20;
     int rk_num_stages = 2;
     int rk_num_bins   = -1;
     double time_value = -1;
@@ -37,5 +38,5 @@ struct Dynamic_Options : Yaml::DerivedFields {
 };
 IMPL_YAML_SERIALIZABLE_FOR(Dynamic_Options, output_time_sequence_level,
   time_initial, time_value, time_final, dt_min, dt_max, dt_start, dt_cfl,
-  cycle_stop, fuzz, tiny, small, rk_num_stages, rk_num_bins
+  cycle_stop, fuzz, tiny, small, rk_num_stages, rk_num_bins, print_cycle
 )

@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -80,11 +80,11 @@ struct mesh_input_t
     int num_dims = 3;   ///< Number of dimensions for the mesh
     mesh_input::source source = mesh_input::none;   ///< Source of mesh, file or generate
     std::string file_path     = ""; ///< Absolute path of mesh file
-    mesh_input::type type;  ///< Type of mesh to generate if
+    mesh_input::type type;          ///< Type of mesh to generate if
 
-    DCArrayKokkos<double> origin; ///< Mesh origin for generating a mesh
-    DCArrayKokkos<double> length; ///< x,y,z length of generated mesh
-    DCArrayKokkos<int> num_elems; ///< Number of elements along x,y, z for generating a mesh.
+    double origin[3] = {0.0, 0.0, 0.0}; ///< Mesh origin for generating a mesh
+    double length[3] = {0.0, 0.0, 0.0}; ///< x,y,z length of generated mesh
+    size_t num_elems[3] = {1, 1, 1}; ///< Number of elements along x,y, z for generating a mesh.
 
     size_t p_order = 1;
 

@@ -79,7 +79,7 @@
 /// \param  Current density value vector chosen by the optimizer
 ///
 /////////////////////////////////////////////////////////////////////////////
-void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
+void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_design)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     // local variable for host view in the dual view
@@ -511,8 +511,18 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     elem_pres.update_host();
     elem_sspd.update_host();
 
+    //output model before deformation
+    if(simparam->optimization_options.disable_forward_solve_output&&print_design){
+        Explicit_Solver_Pointer_->write_outputs();
+    }
+
     // execute solve
     sgh_solve();
+
+    //output model after deformation
+    if(simparam->optimization_options.disable_forward_solve_output&&print_design){
+        Explicit_Solver_Pointer_->write_outputs();
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -544,7 +554,7 @@ double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const C
 /// \brief Coupled adjoint problem for the kinetic energy minimization problem
 ///
 /////////////////////////////////////////////////////////////////////////////
-void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed)
+void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     size_t num_bdy_nodes  = mesh->num_bdy_nodes;
@@ -553,16 +563,17 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
     const int num_dim = simparam->num_dims;
     bool use_solve_checkpoints = simparam->optimization_options.use_solve_checkpoints;
     bool use_gradient_tally = simparam->optimization_options.use_gradient_tally;
-    real_t    global_dt;
+    real_t    global_dt, current_time;
     size_t    current_data_index, next_data_index;
-    Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
-    Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed, current_phi_adjoint_vector_distributed;
+    int print_cycle = simparam->dynamic_options.print_cycle;
 
+    //initialize tally storage of gradient vector
+    cached_design_gradients_distributed->putScalar(0);
     // initialize first adjoint vector at last_time_step to 0 as the terminal value
     if(use_solve_checkpoints){
-        adjoint_vector_distributed->putScalar(0);
-        phi_adjoint_vector_distributed->putScalar(0);
-        psi_adjoint_vector_distributed->putScalar(0);
+        previous_adjoint_vector_distributed->putScalar(0);
+        previous_phi_adjoint_vector_distributed->putScalar(0);
+        previous_psi_adjoint_vector_distributed->putScalar(0);
     }
     else{
         (*adjoint_vector_data)[last_time_step + 1]->putScalar(0);
@@ -572,27 +583,14 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
 
     // solve terminal value problem, proceeds in time backward. For simplicity, we use the same timestep data from the forward solve.
     // A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
-    if (myrank == 0) {
-        std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
-    }
 
     for (int cycle = last_time_step; cycle >= 0; cycle--) {
-        // compute timestep from time data
-        global_dt = time_data[cycle + 1] - time_data[cycle];
-        // print
-        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
-            if (cycle == last_time_step) {
-                if (myrank == 0) {
-                    printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-                }
-            }
-            // print time step every 20 cycles
-            else if (cycle % 20 == 0) {
-                if (myrank == 0) {
-                    printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-                }
-            } // end if
+        if(!use_solve_checkpoints){
+            // compute timestep from time data
+            global_dt = time_data[cycle + 1] - time_data[cycle];
+            current_time = time_data[cycle];
         }
+        
         // else if (cycle==1){
         // if(myrank==0)
         // printf("cycle = %lu, time = %f, time step = %f \n", cycle-1, time_data[cycle-1], global_dt);
@@ -614,6 +612,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             if(use_solve_checkpoints){
                 std::set<Dynamic_Checkpoint>::iterator last_checkpoint = dynamic_checkpoint_set->end();
                 --last_checkpoint;
+                global_dt = last_checkpoint->saved_dt;
                 previous_node_velocities_distributed->assign((*last_checkpoint->get_vector_pointer(V_DATA)));
                 previous_velocity_vector = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 previous_node_coords_distributed->assign((*last_checkpoint->get_vector_pointer(U_DATA)));
@@ -629,14 +628,19 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                 --num_active_checkpoints;
                 //if the next closest checkpoint isnt adjacent, solve up to the adjacent timestep
                 if(last_checkpoint->saved_timestep!=cycle){
-                    checkpoint_solve(last_checkpoint);
+                    checkpoint_solve(last_checkpoint, cycle);
+                    last_checkpoint = dynamic_checkpoint_set->end();
+                    --last_checkpoint;
                 }
-                //if the next checkpoint is adjacent
-                else{
-                    current_velocity_vector = last_checkpoint->get_vector_pointer(V_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                    current_coordinate_vector = last_checkpoint->get_vector_pointer(U_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                    current_element_internal_energy = last_checkpoint->get_vector_pointer(SIE_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                }
+                
+                current_time = last_checkpoint->saved_time;
+                all_node_velocities_distributed->assign(*(last_checkpoint->get_vector_pointer(V_DATA)));
+                all_node_coords_distributed->assign(*(last_checkpoint->get_vector_pointer(U_DATA)));
+                element_internal_energy_distributed->assign(*(last_checkpoint->get_vector_pointer(SIE_DATA)));
+                current_velocity_vector = last_checkpoint->get_vector_pointer(V_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_coordinate_vector = last_checkpoint->get_vector_pointer(U_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_element_internal_energy = last_checkpoint->get_vector_pointer(SIE_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                
             }
             else{
                 previous_velocity_vector = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -647,6 +651,21 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
 
                 previous_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 current_element_internal_energy  = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+
+            // print
+            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+                if (cycle == last_time_step) {
+                    if (myrank == 0) {
+                        printf("cycle = %d, time = %f, time step = %f \n", cycle, current_time, global_dt);
+                    }
+                }
+                // print time step every 20 cycles
+                else if (cycle % print_cycle == 0) {
+                    if (myrank == 0) {
+                        printf("cycle = %d, time = %f, time step = %f \n", cycle, current_time, global_dt);
+                    }
+                } // end if
             }
 
             // interface of arrays for current implementation of force calculation
@@ -665,7 +684,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                 Kokkos::fence();
 
                 // set state according to phase data at this timestep
-
                 get_vol();
 
                 // ---- Calculate velocity diveregence for the element ----
@@ -828,9 +846,19 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             // const_vec_array current_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
             // compute gradient of force with respect to velocity
 
-            const_vec_array previous_adjoint_vector     = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            const_vec_array phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            const_vec_array psi_previous_adjoint_vector =  (*psi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array previous_adjoint_vector;
+            const_vec_array phi_previous_adjoint_vector;
+            const_vec_array psi_previous_adjoint_vector;
+            if(use_solve_checkpoints){
+                previous_adjoint_vector     = previous_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                phi_previous_adjoint_vector =  previous_phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                psi_previous_adjoint_vector =  previous_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+            else{
+                previous_adjoint_vector     = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                psi_previous_adjoint_vector =  (*psi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
             vec_array midpoint_adjoint_vector     = adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             vec_array phi_midpoint_adjoint_vector =  phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             vec_array psi_midpoint_adjoint_vector =  psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
@@ -958,16 +986,33 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             comm_adjoint_vector(cycle);
             comm_phi_adjoint_vector(cycle);
 
-            // save for second half of RK
-            (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
+            // save data from half time-step completion
+            if(use_solve_checkpoints){
+                midpoint_adjoint_vector_distributed->assign(*all_adjoint_vector_distributed);
+                midpoint_phi_adjoint_vector_distributed->assign(*all_phi_adjoint_vector_distributed);
+                midpoint_psi_adjoint_vector_distributed->assign(*psi_adjoint_vector_distributed);
+            }
+            else{
+                (*phi_adjoint_vector_data)[cycle]->assign(*all_phi_adjoint_vector_distributed);
+                (*adjoint_vector_data)[cycle]->assign(*all_adjoint_vector_distributed);
+                (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
+            }
 
             // swap names to get ghost nodes for the midpoint vectors
             vec_array current_adjoint_vector     = adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             vec_array psi_current_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-            midpoint_adjoint_vector     = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-            phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-            psi_midpoint_adjoint_vector =  (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            if(use_solve_checkpoints){
+                midpoint_adjoint_vector     =  midpoint_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                phi_midpoint_adjoint_vector =  midpoint_phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                psi_midpoint_adjoint_vector =  midpoint_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            }
+            else{
+                midpoint_adjoint_vector     =  (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                psi_midpoint_adjoint_vector =  (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            }
+            
 
             // compute gradients at midpoint
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
@@ -1264,8 +1309,13 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             boundary_adjoint(*mesh, boundary, current_adjoint_vector, phi_current_adjoint_vector, psi_current_adjoint_vector);
             comm_adjoint_vector(cycle);
             comm_phi_adjoint_vector(cycle);
-            // save data from time-step completion
-            (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
+            
+            if(!use_solve_checkpoints){
+                // save data from time-step completion
+                (*phi_adjoint_vector_data)[cycle]->assign(*all_phi_adjoint_vector_distributed);
+                (*adjoint_vector_data)[cycle]->assign(*all_adjoint_vector_distributed);
+                (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
+            }
         } // end view scope
         
         //tally contribution to the gradient vector
@@ -1280,6 +1330,14 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             const_vec_array current_element_internal_energy;
             
             if(use_solve_checkpoints){
+                std::set<Dynamic_Checkpoint>::iterator last_checkpoint = dynamic_checkpoint_set->end();
+                --last_checkpoint;
+                previous_velocity_vector = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_coordinate_vector = previous_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_element_internal_energy = previous_element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_velocity_vector = last_checkpoint->get_vector_pointer(V_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_coordinate_vector = last_checkpoint->get_vector_pointer(U_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_element_internal_energy = last_checkpoint->get_vector_pointer(SIE_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
             }
             else{
@@ -1419,7 +1477,14 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                             corner_force,
                             elem_power_dgradients);
 
-            compute_topology_optimization_gradient_tally(design_densities_distributed, design_gradients_distributed, cycle);
+            compute_topology_optimization_gradient_tally(design_densities_distributed, cached_design_gradients_distributed, cycle, global_dt);
+        }
+
+        if(use_solve_checkpoints){
+            //store current solution in the previous vector storage for the next timestep
+            previous_adjoint_vector_distributed->assign(*all_adjoint_vector_distributed);
+            previous_phi_adjoint_vector_distributed->assign(*all_phi_adjoint_vector_distributed);
+            previous_psi_adjoint_vector_distributed->assign(*psi_adjoint_vector_distributed);
         }
 
         // phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
@@ -1439,14 +1504,13 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
 /////////////////////////////////////////////////////////////////////////////
 
 void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed,
-                                                                  Teuchos::RCP<MV> design_gradients_distributed, unsigned long cycle)
+                                                                  Teuchos::RCP<MV> design_gradients_distributed, unsigned long cycle, real_t global_dt)
 {
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
     const int num_dim  = simparam->num_dims;
     int    num_corners = rnum_elem * num_nodes_in_elem;
-    real_t global_dt;
     bool   element_constant_density = true;
     size_t current_data_index, next_data_index;
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
@@ -1457,13 +1521,20 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
         vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
         const_vec_array design_densities = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
-            // compute timestep from time data
-            global_dt = time_data[cycle + 1] - time_data[cycle];
-
             // view scope
-            {
-                const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array next_velocity_vector    = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            {   
+            
+                const_vec_array current_velocity_vector;
+                const_vec_array next_velocity_vector;
+                if(use_solve_checkpoints){
+                    //note that these are assigned backwards because the adjoint loop progresses backwards
+                    current_velocity_vector = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_velocity_vector    = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
+                else{   
+                    current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_velocity_vector    = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
                 if(simparam->optimization_options.optimization_objective_regions.size()){
                     int nobj_volumes = simparam->optimization_options.optimization_objective_regions.size();
                     const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -1557,18 +1628,29 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                     }
                 }); // end parallel for
                 Kokkos::fence();
-            } // end view scope=
-
-            // compute timestep from time data
-            global_dt = time_data[cycle + 1] - time_data[cycle];
+            } // end view scope
 
             // compute adjoint vector for this data point; use velocity midpoint
             // view scope
             {
-                const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array current_adjoint_vector  = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array next_velocity_vector    = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array next_adjoint_vector     = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                
+                const_vec_array current_velocity_vector;
+                const_vec_array next_velocity_vector;
+                const_vec_array current_adjoint_vector;
+                const_vec_array next_adjoint_vector;
+                if(use_solve_checkpoints){
+                    //note that these are assigned backwards because the adjoint loop progresses backwards
+                    current_velocity_vector = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_adjoint_vector  = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_velocity_vector    = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_adjoint_vector     = previous_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
+                else{   
+                    current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_adjoint_vector  = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_velocity_vector    = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_adjoint_vector     = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
 
                 FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                     real_t lambda_dot_current;
@@ -1619,16 +1701,26 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 Kokkos::fence();
             } // end view scope
 
-            // compute timestep from time data
-            global_dt = time_data[cycle + 1] - time_data[cycle];
-
             // compute adjoint vector for this data point; use velocity midpoint
             // view scope
             {
-                const_vec_array current_element_internal_energy = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array current_psi_adjoint_vector   = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array next_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array next_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array current_element_internal_energy;
+                const_vec_array current_psi_adjoint_vector;
+                const_vec_array next_element_internal_energy;
+                const_vec_array next_psi_adjoint_vector;
+                if(use_solve_checkpoints){
+                    //note that these are assigned backwards because the adjoint loop progresses backwards
+                    current_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_psi_adjoint_vector   = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_element_internal_energy = previous_element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_psi_adjoint_vector = previous_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
+                else{   
+                    current_element_internal_energy = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_psi_adjoint_vector   = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    next_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
 
                 FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                     real_t psi_dot_current;
@@ -1664,8 +1756,16 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
             // compute initial condition contribution from velocities
             // view scope
             {
-                const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array current_adjoint_vector  = (*adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array current_velocity_vector;
+                const_vec_array current_adjoint_vector;
+                if(use_solve_checkpoints){
+                    current_velocity_vector = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_adjoint_vector  = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
+                else{   
+                    current_velocity_vector = (*forward_solve_velocity_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_adjoint_vector  = (*adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
 
                 FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                     real_t lambda_dot;
@@ -1715,8 +1815,16 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
             // compute initial condition contribution from internal energies
             // view scope
             {
-                const_vec_array current_element_internal_energy = (*forward_solve_internal_energy_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array current_psi_adjoint_vector = (*psi_adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array current_element_internal_energy;
+                const_vec_array current_psi_adjoint_vector;
+                if(use_solve_checkpoints){
+                    current_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
+                else{   
+                    current_element_internal_energy = (*forward_solve_internal_energy_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                    current_psi_adjoint_vector = (*psi_adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                }
 
                 // (*psi_adjoint_vector_data)[100]->describe(*fos,Teuchos::VERB_EXTREME);
                 FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
@@ -1757,8 +1865,16 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
         //compute terms with gradient of force and gradient of specific internal energy w.r.t design density
         // view scope
         {
-            const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            global_dt = time_data[cycle + 1] - time_data[cycle];
+            const_vec_array current_adjoint_vector;
+            const_vec_array current_psi_adjoint_vector;
+            if(use_solve_checkpoints){
+                current_adjoint_vector = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+            else{   
+                current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
             // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                 size_t node_id;
@@ -1792,8 +1908,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 }
             }); // end parallel for
             Kokkos::fence();
-
-            const_vec_array current_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
             // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
@@ -1855,12 +1969,13 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     }
 
     //initialize design gradient vector
-    design_gradients_distributed->putScalar(0);
-
-    compute_topology_optimization_adjoint_full(design_densities_distributed, design_gradients_distributed);
-
-    if(use_gradient_tally){ 
+    if(use_gradient_tally){
+        //set ROL gradient vector to cached gradient vector
+        design_gradients_distributed->assign(*cached_design_gradients_distributed);
         return;
+    }
+    else{
+        design_gradients_distributed->putScalar(0);
     }
     { // view scope
         vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
@@ -2679,7 +2794,8 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t& mesh,
 void FEA_Module_SGH::comm_adjoint_vector(int cycle)
 {
     // comms to get ghosts
-    (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
+    //(*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
+    all_adjoint_vector_distributed->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2694,7 +2810,8 @@ void FEA_Module_SGH::comm_adjoint_vector(int cycle)
 void FEA_Module_SGH::comm_phi_adjoint_vector(int cycle)
 {
     // comms to get ghosts
-    (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
+    //(*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
+    all_phi_adjoint_vector_distributed->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2704,7 +2821,7 @@ void FEA_Module_SGH::comm_phi_adjoint_vector(int cycle)
 /// \brief SGH solver loop
 ///
 /////////////////////////////////////////////////////////////////////////////
-void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint)
+void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint, size_t bounding_timestep)
 {
     Dynamic_Options dynamic_options = simparam->dynamic_options;
 
@@ -2714,16 +2831,16 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
 
-    time_value = dynamic_options.time_initial;
+    time_value = start_checkpoint->saved_time;
     time_final = dynamic_options.time_final;
     dt_max     = dynamic_options.dt_max;
     dt_min     = dynamic_options.dt_min;
-    dt     = dynamic_options.dt;
+    dt     = start_checkpoint->saved_dt;
     dt_cfl = dynamic_options.dt_cfl;
-
     graphics_time    = simparam->output_options.graphics_step;
     graphics_dt_ival = simparam->output_options.graphics_step;
-    cycle_stop     = dynamic_options.cycle_stop;
+    graphics_time    = int(time_value/graphics_time)*graphics_time + graphics_time;
+    cycle_stop     = bounding_timestep;
     rk_num_stages  = dynamic_options.rk_num_stages;
     graphics_times = simparam->output_options.graphics_times;
     graphics_id    = simparam->output_options.graphics_id;
@@ -2731,98 +2848,99 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     fuzz  = dynamic_options.fuzz;
     tiny  = dynamic_options.tiny;
     small = dynamic_options.small;
+    int print_cycle = simparam->dynamic_options.print_cycle;
 
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
     size_t cycle;
-    real_t objective_accumulation, global_objective_accumulation;
-
-    int nTO_modules;
-    int old_max_forward_buffer;
-
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
-    problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
-    ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
-    bool topology_optimization_on = simparam->topology_optimization_on;
-    bool shape_optimization_on    = simparam->shape_optimization_on;
-    bool use_solve_checkpoints    = simparam->optimization_options.use_solve_checkpoints;
+    size_t start_timestep = start_checkpoint->saved_timestep;
+    
     int  num_solve_checkpoints    = simparam->optimization_options.num_solve_checkpoints;
     std::set<Dynamic_Checkpoint>::iterator current_checkpoint, last_raised_checkpoint, dispensable_checkpoint, search_end;
     int  last_raised_level = 0;
     bool dispensable_found = false;
-    num_active_checkpoints = 0;
-
-    // reset time accumulating objective and constraints
-    /*
-    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
-    current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
-    //test if module needs reset
-    if(){
-
-    }
-    }
-    */
 
     CArrayKokkos<double> node_extensive_mass(nall_nodes, "node_extensive_mass");
 
-    // extensive energy tallies over the mesh elements local to this MPI rank
-    double IE_t0 = 0.0;
-    double KE_t0 = 0.0;
-    double TE_t0 = 0.0;
+    //set sgh nodal variables from checkpoint data
+    { //view scope
+        const_vec_array current_velocity_vector;
+        const_vec_array current_coordinate_vector;
+        const_vec_array current_element_internal_energy;
 
-    double IE_sum = 0.0;
-    double KE_sum = 0.0;
+        current_velocity_vector = start_checkpoint->get_vector_pointer(V_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        current_coordinate_vector = start_checkpoint->get_vector_pointer(U_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        current_element_internal_energy = start_checkpoint->get_vector_pointer(SIE_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        
+        
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+            for (int idim = 0; idim < num_dim; idim++) {
+                node_vel(rk_level, node_gid, idim)    = current_velocity_vector(node_gid, idim);
+                node_coords(rk_level, node_gid, idim) = current_coordinate_vector(node_gid, idim);
+                
+                // if(std::isnan(node_vel(rk_level, node_gid, idim))){
+                //         std::cout << " NAN VALUES at start" << node_vel(rk_level, node_gid, idim) << " " << start_checkpoint->saved_timestep << std::endl;
+                // }
+            }
+        });
+        Kokkos::fence();
 
-    double IE_loc_sum = 0.0;
-    double KE_loc_sum = 0.0;
+        FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+            elem_sie(rk_level, elem_gid) = current_element_internal_energy(elem_gid, 0);
+        });
+        Kokkos::fence();
+    }
 
-    // extensive energy tallies over the entire mesh
-    double global_IE_t0 = 0.0;
-    double global_KE_t0 = 0.0;
-    double global_TE_t0 = 0.0;
+    //repeat parts of setup that are necessary here like volume reset!!!!!!!!!!!
+    // set state according to phase data at this timestep
+    get_vol();
 
-    // ---- Calculate energy tallies ----
-    double IE_tend = 0.0;
-    double KE_tend = 0.0;
-    double TE_tend = 0.0;
+    // ---- Calculate velocity diveregence for the element ----
+    if (num_dim == 2) {
+        get_divergence2D(elem_div,
+                node_coords,
+                node_vel,
+                elem_vol);
+    }
+    else{
+        get_divergence(elem_div,
+                node_coords,
+                node_vel,
+                elem_vol);
+    } // end if 2D
 
-    double global_IE_tend = 0.0;
-    double global_KE_tend = 0.0;
-    double global_TE_tend = 0.0;
-
-    int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
-
-    // extensive IE
-    REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
-        IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
-    }, IE_sum);
-    IE_t0 = IE_sum;
-
-    MPI_Allreduce(&IE_t0, &global_IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-    // extensive KE
-    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
-        double ke = 0;
-        for (size_t dim = 0; dim < num_dim; dim++) {
-            ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
-        } // end for
-
-        if (num_dim == 2) {
-            KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
-        }
-        else{
-            KE_loc_sum += node_mass(node_gid) * ke;
-        }
-    }, KE_sum);
-    Kokkos::fence();
-    KE_t0 = 0.5 * KE_sum;
-
-    MPI_Allreduce(&KE_t0, &global_KE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-    // extensive TE
-    global_TE_t0 = global_IE_t0 + global_KE_t0;
-    TE_t0 = global_TE_t0;
-    KE_t0 = global_KE_t0;
-    IE_t0 = global_IE_t0;
+    // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+    if (num_dim == 2) {
+        update_state2D(material,
+                *mesh,
+                node_coords,
+                node_vel,
+                elem_den,
+                elem_pres,
+                elem_stress,
+                elem_sspd,
+                elem_sie,
+                elem_vol,
+                elem_mass,
+                elem_mat_id,
+                1.0,
+                cycle);
+    }
+    else{
+        update_state(material,
+                *mesh,
+                node_coords,
+                node_vel,
+                elem_den,
+                elem_pres,
+                elem_stress,
+                elem_sspd,
+                elem_sie,
+                elem_vol,
+                elem_mass,
+                elem_mat_id,
+                1.0,
+                cycle);
+    }
 
     // save the nodal mass
     FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
@@ -2833,13 +2951,81 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
         node_extensive_mass(node_gid) = node_mass(node_gid) * radius;
     }); // end parallel for
 
+    //initialize the last raised checkpoint for later; search for first non-zero level checkpoint
+    current_checkpoint = dynamic_checkpoint_set->end();
+    --current_checkpoint; // point to last element before sentinel iterator
+    last_raised_checkpoint = dynamic_checkpoint_set->begin(); //initialize
+    for(auto it = current_checkpoint; it != dynamic_checkpoint_set->begin(); --it){
+        if(it->level) last_raised_checkpoint = it;
+    }
+
     // a flag to exit the calculation
     size_t stop_calc = 0;
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
+    // // extensive energy tallies over the mesh elements local to this MPI rank
+    // double IE_t0 = 0.0;
+    // double KE_t0 = 0.0;
+    // double TE_t0 = 0.0;
+
+    // double IE_sum = 0.0;
+    // double KE_sum = 0.0;
+
+    // double IE_loc_sum = 0.0;
+    // double KE_loc_sum = 0.0;
+
+    // // extensive energy tallies over the entire mesh
+    // double global_IE_t0 = 0.0;
+    // double global_KE_t0 = 0.0;
+    // double global_TE_t0 = 0.0;
+
+    // // ---- Calculate energy tallies ----
+    // double IE_tend = 0.0;
+    // double KE_tend = 0.0;
+    // double TE_tend = 0.0;
+
+    // double global_IE_tend = 0.0;
+    // double global_KE_tend = 0.0;
+    // double global_TE_tend = 0.0;
+
+    // int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
+
+    // // extensive IE
+    // REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+    //     IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
+    // }, IE_sum);
+    // IE_t0 = IE_sum;
+
+    // MPI_Allreduce(&IE_t0, &global_IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // // extensive KE
+    // REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+    //     double ke = 0;
+    //     for (size_t dim = 0; dim < num_dim; dim++) {
+    //         ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
+    //     } // end for
+
+    //     if (num_dim == 2) {
+    //         KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+    //     }
+    //     else{
+    //         KE_loc_sum += node_mass(node_gid) * ke;
+    //     }
+    // }, KE_sum);
+    // Kokkos::fence();
+    // KE_t0 = 0.5 * KE_sum;
+
+    // MPI_Allreduce(&KE_t0, &global_KE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // // extensive TE
+    // global_TE_t0 = global_IE_t0 + global_KE_t0;
+    // TE_t0 = global_TE_t0;
+    // KE_t0 = global_KE_t0;
+    // IE_t0 = global_IE_t0;
+
     // loop over the max number of time integration cycles
-    for (cycle = 0; cycle < cycle_stop; cycle++) {
+    for (cycle = start_timestep; cycle < cycle_stop; cycle++) {
         // get the step
         if (num_dim == 2) {
             get_timestep2D(*mesh,
@@ -2863,14 +3049,14 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
         // stop calculation if flag
         // if (stop_calc == 1) break;
 
-        if (simparam->dynamic_options.output_time_sequence_level >= TIME_OUTPUT_LEVEL::high) {
+        if (simparam->dynamic_options.output_time_sequence_level >= TIME_OUTPUT_LEVEL::extreme) {
             if (cycle == 0) {
                 if (myrank == 0) {
                     printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
                 }
             }
             // print time step every 10 cycles
-            else if (cycle % 20 == 0) {
+            else if (cycle % print_cycle == 0) {
                 if (myrank == 0) {
                     printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
                 }
@@ -3281,30 +3467,32 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
         Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
         Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
 
-        if(use_solve_checkpoints){
-            //add level 0 checkpoints sequentially until requested total limit is reached
-            if(num_active_checkpoints < num_solve_checkpoints){
-                Dynamic_Checkpoint temp(3,cycle+1,time_value);
-                temp.change_vector(U_DATA, (*forward_solve_coordinate_data)[num_active_checkpoints + 1]);
-                temp.change_vector(V_DATA, (*forward_solve_velocity_data)[num_active_checkpoints + 1]);
-                temp.change_vector(SIE_DATA, (*forward_solve_internal_energy_data)[num_active_checkpoints + 1]);
-                temp.assign_vector(U_DATA,all_node_coords_distributed);
-                temp.assign_vector(V_DATA,all_node_velocities_distributed);
-                temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
-                dynamic_checkpoint_set->insert(temp);
-                num_active_checkpoints++;
-                //initializes to the end of the set until allowed total number of checkpoints is reached
-                last_raised_checkpoint = dynamic_checkpoint_set->end();
-                --last_raised_checkpoint;
-            }
-            //if limit of checkpoints was reached; search for dispensable checkpoints or raise level of recent checkpoint
-            else{
-                //a dispensable checkpoint has a lower level than another checkpoint located later in time
-                //find if there is a dispenable checkpoint to remove
-                current_checkpoint = last_raised_checkpoint;
-                --current_checkpoint; // dont need to check against itself
-                search_end = dynamic_checkpoint_set->begin();
-                dispensable_found = false;
+        //add level 0 checkpoints sequentially until requested total limit is reached
+        if(num_active_checkpoints < num_solve_checkpoints){
+            Dynamic_Checkpoint temp(3,cycle+1,time_value, dt);
+            //point to existing buffers
+            int ncached_checkpoints = cached_dynamic_checkpoints->size();
+            //*fos << "CACHE SIZE " << ncached_checkpoints << "num_active_checkpoints " << num_active_checkpoints << std::endl;
+
+            temp.change_vector(U_DATA, (*cached_dynamic_checkpoints)[ncached_checkpoints-1].get_vector_pointer(U_DATA));
+            temp.change_vector(V_DATA, (*cached_dynamic_checkpoints)[ncached_checkpoints-1].get_vector_pointer(V_DATA));
+            temp.change_vector(SIE_DATA,  (*cached_dynamic_checkpoints)[ncached_checkpoints-1].get_vector_pointer(SIE_DATA));
+            cached_dynamic_checkpoints->pop_back();
+            temp.assign_vector(U_DATA,all_node_coords_distributed);
+            temp.assign_vector(V_DATA,all_node_velocities_distributed);
+            temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
+            dynamic_checkpoint_set->insert(temp);
+            num_active_checkpoints++;
+        }
+        //if limit of checkpoints was reached; search for dispensable checkpoints or raise level of recent checkpoint
+        else{
+            //a dispensable checkpoint has a lower level than another checkpoint located later in time
+            //find if there is a dispenable checkpoint to remove
+            dispensable_found = false;
+            current_checkpoint = last_raised_checkpoint;
+            --current_checkpoint; // dont need to check against itself
+            search_end = dynamic_checkpoint_set->begin();
+            if(last_raised_checkpoint!=search_end){
                 while(current_checkpoint!=search_end){
                     if(current_checkpoint->level<last_raised_level){
                         dispensable_checkpoint = current_checkpoint;
@@ -3313,42 +3501,43 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
                     }
                     --current_checkpoint;
                 }
-                if(dispensable_found){
-                    //add replacement checkpoint
-                    Dynamic_Checkpoint temp(3,cycle+1,time_value);
-                    //get pointers to vector buffers from the checkpoint we're about to delete
-                    temp.copy_vectors(*dispensable_checkpoint);
-                    //remove checkpoint at timestep = cycle
-                    dynamic_checkpoint_set->erase(dispensable_checkpoint);
-                    //assign current phase data to vector buffers
-                    temp.assign_vector(U_DATA,all_node_coords_distributed);
-                    temp.assign_vector(V_DATA,all_node_velocities_distributed);
-                    temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
-                    dynamic_checkpoint_set->insert(temp);
+            }
+            if(dispensable_found){
+                //add replacement checkpoint
+                Dynamic_Checkpoint temp(3,cycle+1,time_value, dt);
+                //get pointers to vector buffers from the checkpoint we're about to delete
+                temp.copy_vectors(*dispensable_checkpoint);
+                //remove checkpoint at timestep = cycle
+                dynamic_checkpoint_set->erase(dispensable_checkpoint);
+                //assign current phase data to vector buffers
+                temp.assign_vector(U_DATA,all_node_coords_distributed);
+                temp.assign_vector(V_DATA,all_node_velocities_distributed);
+                temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
+                dynamic_checkpoint_set->insert(temp);
 
-                }
-                else{
-                    //since no dispensable checkpoints were found, raise level of new one to be one higher than previous checkpoint
-                    current_checkpoint = dynamic_checkpoint_set->end();
-                    --current_checkpoint; //reduce iterator by 1 so it doesnt point to the sentinel past the last element
-                    last_raised_level = current_checkpoint->level;
+            }
+            else{
+                //since no dispensable checkpoints were found, raise level of new one to be one higher than previous checkpoint
+                current_checkpoint = dynamic_checkpoint_set->end();
+                --current_checkpoint; //reduce iterator by 1 so it doesnt point to the sentinel past the last element
+                last_raised_level = current_checkpoint->level;
 
-                    //add replacement checkpoint
-                    Dynamic_Checkpoint temp(3,cycle+1,time_value,++last_raised_level);
-                    //get pointers to vector buffers from the checkpoint we're about to delete
-                    temp.copy_vectors(*current_checkpoint);
-                    //remove checkpoint at timestep = cycle
-                    dynamic_checkpoint_set->erase(current_checkpoint);
-                    //assign current phase data to vector buffers
-                    temp.assign_vector(U_DATA,all_node_coords_distributed);
-                    temp.assign_vector(V_DATA,all_node_velocities_distributed);
-                    temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
-                    dynamic_checkpoint_set->insert(temp);
-                    last_raised_checkpoint = dynamic_checkpoint_set->end();
-                    --last_raised_checkpoint; //save iterator for this checkpoint to expedite dispensable search
-                }
+                //add replacement checkpoint
+                Dynamic_Checkpoint temp(3,cycle+1,time_value, dt, ++last_raised_level);
+                //get pointers to vector buffers from the checkpoint we're about to delete
+                temp.copy_vectors(*current_checkpoint);
+                //remove checkpoint at timestep = cycle
+                dynamic_checkpoint_set->erase(current_checkpoint);
+                //assign current phase data to vector buffers
+                temp.assign_vector(U_DATA,all_node_coords_distributed);
+                temp.assign_vector(V_DATA,all_node_velocities_distributed);
+                temp.assign_vector(SIE_DATA,element_internal_energy_distributed);
+                dynamic_checkpoint_set->insert(temp);
+                last_raised_checkpoint = dynamic_checkpoint_set->end();
+                --last_raised_checkpoint; //save iterator for this checkpoint to expedite dispensable search
             }
         }
+        
         
         //retained to keep matching timesteps on resolve
         size_t write = 0;
@@ -3367,11 +3556,6 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
 
         // write outputs
         if (write == 1) {
-
-            if (myrank == 0) {
-                printf("Writing outputs to file at %f \n", graphics_time);
-            }
-
             graphics_time = time_value + graphics_dt_ival;
         } // end if
 
@@ -3381,16 +3565,68 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
         }
     } // end for cycle loop
 
-    last_time_step = cycle;
-
 
     auto time_2 = std::chrono::high_resolution_clock::now();
     auto time_difference = time_2 - time_1;
     // double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
     double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_difference).count();
-    if (myrank == 0) {
-        printf("\nCalculation time in seconds: %f \n", calc_time * 1e-09);
-    }
+    // if (myrank == 0) {
+    //     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-09);
+    // }
+
+    // IE_loc_sum = 0.0;
+    // KE_loc_sum = 0.0;
+    // IE_sum     = 0.0;
+    // KE_sum     = 0.0;
+
+    // // extensive IE
+    // REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+    //     IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
+    // }, IE_sum);
+    // IE_tend = IE_sum;
+
+    // // reduce over MPI ranks
+    // MPI_Allreduce(&IE_tend, &global_IE_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // // extensive KE
+    // REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+    //     double ke = 0;
+    //     for (size_t dim = 0; dim < num_dim; dim++) {
+    //         ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
+    //     } // end for
+
+    //     if (num_dim == 2) {
+    //         KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+    //     }
+    //     else{
+    //         KE_loc_sum += node_mass(node_gid) * ke;
+    //     }
+    // }, KE_sum);
+    // Kokkos::fence();
+    // KE_tend = 0.5 * KE_sum;
+
+    // // reduce over MPI ranks
+    // MPI_Allreduce(&KE_tend, &global_KE_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // // extensive TE
+    // TE_tend = IE_tend + KE_tend;
+    // KE_tend = global_KE_tend;
+    // IE_tend = global_IE_tend;
+
+    // // extensive TE
+    // TE_tend = IE_tend + KE_tend;
+
+    // // reduce over MPI ranks
+
+    // if (myrank == 0) {
+    //     printf("Time=0:   KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_t0, IE_t0, TE_t0);
+    // }
+    // if (myrank == 0) {
+    //     printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
+    // }
+    // if (myrank == 0) {
+    //     printf("total energy conservation error = %e \n\n", 100 * (TE_tend - TE_t0) / TE_t0);
+    // }
 
     return;
-} // end of SGH solve
+} // end of checkpoint SGH solve

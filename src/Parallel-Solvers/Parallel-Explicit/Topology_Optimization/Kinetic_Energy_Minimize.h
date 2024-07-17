@@ -94,7 +94,9 @@ private:
     ROL::Ptr<ROL_MV> ROL_Force;
     ROL::Ptr<ROL_MV> ROL_Velocities;
     ROL::Ptr<ROL_MV> ROL_Gradients;
+    Teuchos::RCP<MV> previous_gradients;
     real_t initial_kinetic_energy;
+    real_t previous_objective_accumulation, objective_sign;
 
     bool useLC_; // Use linear form of energy.  Otherwise use quadratic form.
 
@@ -147,7 +149,7 @@ public:
         valid_fea_modules.push_back(FEA_MODULE_TYPE::SGH);
         valid_fea_modules.push_back(FEA_MODULE_TYPE::Dynamic_Elasticity);
         nvalid_modules = valid_fea_modules.size();
-
+        objective_sign = 1;
         const Simulation_Parameters& simparam = Explicit_Solver_Pointer_->simparam;
         for (const auto& fea_module : Explicit_Solver_Pointer_->fea_modules) {
             for (int ivalid = 0; ivalid < nvalid_modules; ivalid++) {
@@ -166,7 +168,11 @@ public:
         current_step      = 0;
         time_accumulation = true;
         objective_accumulation = 0;
-
+        
+        previous_gradients = Teuchos::rcp(new MV(Explicit_Solver_Pointer_->map, 1));
+        if(Explicit_Solver_Pointer_->simparam.optimization_options.maximize_flag){
+            objective_sign = -1;
+        }
         // ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
         if (set_module_type == FEA_MODULE_TYPE::SGH) {
             ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_SGH_->node_velocities_distributed);
@@ -215,6 +221,7 @@ public:
             FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
         }
         else if (type == ROL::UpdateType::Accept) {
+
         }
         else if (type == ROL::UpdateType::Revert) {
             // u_ was set to u=S(x) during a trial update
@@ -262,9 +269,8 @@ public:
         // debug
         std::ostream& out = std::cout;
         Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-
-        current_step++;
-        ROL::Ptr<const MV>   zp = getVector(z);
+        bool print_flag = false;
+        ROL::Ptr<const MV>   zp = getVector(z); //tpetra multivector wrapper on design vector
         const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
         if (type == ROL::UpdateType::Initial) {
@@ -275,11 +281,20 @@ public:
 
             FEM_SGH_->comm_variables(zp);
             FEM_SGH_->update_forward_solve(zp);
+            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
+            previous_objective_accumulation = objective_accumulation;
+            previous_gradients->assign(*(FEM_SGH_->cached_design_gradients_distributed));
             // initial design density data was already communicated for ghost nodes in init_design()
             // decide to output current optimization state
             // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
         }
         else if (type == ROL::UpdateType::Accept) {
+            if (Explicit_Solver_Pointer_->myrank == 0) {
+                *fos << "called Accept" << std::endl;
+            }
+            
+            previous_objective_accumulation = objective_accumulation;
+            previous_gradients->assign(*(FEM_SGH_->cached_design_gradients_distributed));
         }
         else if (type == ROL::UpdateType::Revert) {
             // u_ was set to u=S(x) during a trial update
@@ -287,24 +302,29 @@ public:
             // Revert to cached value
             // This is a new value of x
             // communicate density variables for ghosts
-            if (Explicit_Solver_Pointer_->myrank == 0) { *fos << "called SGH Revert" << std::endl; }
+            if (Explicit_Solver_Pointer_->myrank == 0) { *fos << "called Revert" << std::endl; }
+            objective_accumulation = previous_objective_accumulation;
+            FEM_SGH_->cached_design_gradients_distributed->assign(*previous_gradients);
 
-            FEM_SGH_->comm_variables(zp);
-            // update deformation variables
-            FEM_SGH_->update_forward_solve(zp);
-            if (Explicit_Solver_Pointer_->myrank == 0) {
-                *fos << "called Revert" << std::endl;
-            }
+            // FEM_SGH_->comm_variables(zp);
+            // // update deformation variables
+            // FEM_SGH_->update_forward_solve(zp);
+            // FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
         }
         else if (type == ROL::UpdateType::Trial) {
             // This is a new value of x
-            // communicate density variables for ghosts
-            FEM_SGH_->comm_variables(zp);
-            // update deformation variables
-            FEM_SGH_->update_forward_solve(zp);
+            current_step++;
+            if(current_step%FEM_SGH_->simparam->optimization_options.optimization_output_freq==0){
+                print_flag = true;
+            }
             if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called Trial" << std::endl;
             }
+            // communicate density variables for ghosts
+            FEM_SGH_->comm_variables(zp);
+            // update deformation variables
+            FEM_SGH_->update_forward_solve(zp, print_flag);
+            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
 
             // decide to output current optimization state
             // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
@@ -313,10 +333,11 @@ public:
             // This is a new value of x used for,
             // e.g., finite-difference checks
             if (Explicit_Solver_Pointer_->myrank == 0) {
-                *fos << "called SGH Temp" << std::endl;
+                *fos << "called Temp" << std::endl;
             }
             FEM_SGH_->comm_variables(zp);
             FEM_SGH_->update_forward_solve(zp);
+            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
         }
     }
 
@@ -376,7 +397,7 @@ public:
         }
 
         // std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
-        return objective_accumulation;
+        return objective_sign*objective_accumulation;
     }
 
   /* --------------------------------------------------------------------------------------
@@ -401,6 +422,7 @@ public:
         if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
             FEM_Dynamic_Elasticity_->compute_topology_optimization_gradient_full(zp, gp);
         }
+        gp->scale(objective_sign);
         // debug print of gradient
         // std::ostream &out = std::cout;
         // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));

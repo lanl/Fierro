@@ -68,6 +68,8 @@ optimization_options:
     method_of_moving_asymptotes: false
     density_epsilon: 0.00001
     simp_penalty_power: 4
+    optimization_parameters_xml_file: true
+    xml_parameters_file_name: "optimization_parameters.xml"
     optimization_objective: multi_objective
     #Weight coefficients should add up to 1
     multi_objective_structure: linear

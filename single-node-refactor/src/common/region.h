@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -44,16 +44,19 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ==============================================================================
 namespace region
 {
-// for tagging boundary faces
-enum vol_tag
-{
-    global = 0,         // tag every elements in the mesh
-    box = 1,            // tag all elements inside a box
-    cylinder = 2,       // tag all elements inside a cylinder
-    sphere = 3,         // tag all elements inside a sphere
-    readVoxelFile = 4,  // tag all elements in a voxel mesh input WARING: Currently unimplemented
-    planes = 5,         // tag all elements between two planes
-};
+    // for tagging volumes to paint material onto the mesh
+    enum vol_tag
+    {
+        no_volume = 0,
+        global = 1,         // tag every elements in the mesh
+        box = 2,            // tag all elements inside a box
+        cylinder = 3,       // tag all elements inside a cylinder
+        sphere = 4,         // tag all elements inside a sphere
+        readVoxelFile = 5,  // tag all elements in a voxel mesh (structured VTK)
+        readPolycrystalFile = 6, // tag all elements in a polycrystallince voxel mesh (structured VTK)
+        readSTLFile = 7,    // read a STL file and voxelize it
+        readVTKFile = 8,    // tag all elements in a VTK mesh (unstructured mesh)
+    };
 } // end of namespace
 
 static std::map<std::string, region::vol_tag> region_type_map
@@ -61,9 +64,8 @@ static std::map<std::string, region::vol_tag> region_type_map
     { "global", region::global },
     { "box", region::box },
     { "sphere", region::sphere },
-    { "planes", region::planes },
     { "cylinder", region::cylinder },
-    { "readVoxelFile", region::readVoxelFile }
+    { "voxel_file", region::readVoxelFile }
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -107,7 +109,25 @@ struct reg_fill_t
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
 
-    DCArrayKokkos<double> origin; ///< Origin for region
+    double origin[3] = {0.0, 0.0, 0.0}; ///< Origin for region
+};
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct reg_fill_host_t
+///
+/// \brief Geometry data, on the cpu only, for regions of materials/states 
+///
+/////////////////////////////////////////////////////////////////////////////
+struct reg_fill_host_t
+{
+    std::string file_path; ///< path of mesh file
+
+    // scale parameters for input mesh files
+    double scale_x = 1.0;
+    double scale_y = 1.0;
+    double scale_z = 1.0;
 };
 
 // ----------------------------------
@@ -116,6 +136,7 @@ struct reg_fill_t
 static std::vector<std::string> str_region_inps
 {
     "type",
+    "file_path",
     "material_id",
     "x1",
     "x2",
@@ -125,6 +146,9 @@ static std::vector<std::string> str_region_inps
     "z2",
     "radius1",
     "radius2",
+    "scale_x",
+    "scale_y",
+    "scale_z",
     "velocity",
     "u",
     "v",

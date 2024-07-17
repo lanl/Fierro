@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -43,7 +43,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace mtr;
 
-struct boundary_condition_t;
 
 namespace mesh_init
 {
@@ -1460,8 +1459,7 @@ struct mesh_t
     /// \brief Build sets of boundary nodes
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_boundry_node_sets(const DCArrayKokkos<boundary_condition_t>& boundary,
-        mesh_t& mesh)
+    void build_boundry_node_sets(mesh_t& mesh)
     {
         // build boundary nodes in each boundary set
 
