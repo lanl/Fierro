@@ -18,6 +18,7 @@ target_link_libraries(material_models
                       EVPStrengthModel
                       EVPFFTStrengthModel
                       LSEVPFFTStrengthModel
+                      LSNPEVPFFTStrengthModel
                       UserDefinedStrengthModel
                       VUMATStrengthModel)
 

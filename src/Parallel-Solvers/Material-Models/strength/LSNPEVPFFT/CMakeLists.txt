@@ -1,0 +1,12 @@
+if(BUILD_LSNP_EVPFFT_FIERRO)
+  add_definitions(-DBUILD_LSNP_EVPFFT_FIERRO=1)
+  add_subdirectory(../../../../LSNP-EVPFFT/src LSNP-EVPFFT)
+endif()
+
+set(SRC_Files LSNPEVPFFTStrengthModel.cpp)
+add_library(LSNPEVPFFTStrengthModel OBJECT ${SRC_Files})
+target_include_directories(LSNPEVPFFTStrengthModel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(LSNPEVPFFTStrengthModel Elements)
+if(BUILD_LSNP_EVPFFT_FIERRO)
+  target_link_libraries(LSNPEVPFFTStrengthModel lsnp-evpfft-fierro)
+endif()
