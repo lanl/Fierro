@@ -6,7 +6,7 @@ cd build
 export MPI_FLAGS="--allow-run-as-root"
 
 if [ $(uname) == Linux ]; then
-#    export MPI_FLAGS="$MPI_FLAGS;-mca;plm;isolated"
+    export MPI_FLAGS="$MPI_FLAGS;-mca;plm;isolated"
 #    export CUDACXX=$(which nvcc)
 fi
 
@@ -14,9 +14,9 @@ source "$RECIPE_DIR/../../cross-compile-setup.sh"
 
 export OMPI_CXX=nvcc
 # Only do this for cross compiling
-if [ "$PLATFORM" != "linux-64" ] ; then
+#if [ "$PLATFORM" != "linux-64" ] ; then
 #    export NVCC_PREPEND_FLAGS="-ccbin $CXX";
-fi
+#fi
 # These things need to be set for certain cmake versions.
 # The cmake CUDA compiler tests need to see the host env libs
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH $PREFIX/lib"
