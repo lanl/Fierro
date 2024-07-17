@@ -7,7 +7,7 @@ export MPI_FLAGS="--allow-run-as-root"
 
 if [ $(uname) == Linux ]; then
     export MPI_FLAGS="$MPI_FLAGS;-mca;plm;isolated"
-    export CUDACXX=$(which nvcc)
+#    export CUDACXX=$(which nvcc)
 fi
 
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
@@ -32,9 +32,9 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       $CMAKE_ARGS \
       $SRC_DIR \
       -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
-      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
-      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
-      -D CMAKE_CUDA_HOST_LINK_LAUNCHER=$CXX \
+#      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
+#      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
+#      -D CMAKE_CUDA_HOST_LINK_LAUNCHER=$CXX \
 
 make -j 10 install
 
