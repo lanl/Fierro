@@ -1,4 +1,4 @@
-#include "FierroLSEVPFFTLink.h"
+#include "FierroLSNPEVPFFTLink.h"
 #include <string>
 #include "evpfft.h"
 
@@ -7,7 +7,7 @@ MPI_Comm evpfft_mpi_comm = MPI_COMM_NULL;
 // to hold all evpfft in each element
 std::vector<EVPFFT*> elem_evpfft;
 
-namespace FierroLSEVPFFTLink
+namespace FierroLSNPEVPFFTLink
 {
   void init_strength_state_vars(
     const DCArrayKokkos <material_t> &material,
@@ -19,8 +19,8 @@ namespace FierroLSEVPFFTLink
     const DCArrayKokkos <double> &elem_user_output_vars,
     const size_t num_elems)
     {
-      printf("Executing FierroLSEVPFFTLink::init_strength_state_vars ...\n");
-      fflush(stdout);
+      printf("Executing FierroLSNPEVPFFTLink::init_strength_state_vars ...\n");
+
       // First, lets create a new communicator with each rank having its own communicator containing only itself.
       if (evpfft_mpi_comm == MPI_COMM_NULL) {
         int global_rank;
@@ -37,7 +37,7 @@ namespace FierroLSEVPFFTLink
         size_t mat_id = elem_mat_id.host(elem_gid);
 
         // only fill the elem_evpfft of elements that use this model
-        if (material.host(mat_id).strength_model == STRENGTH_MODEL::ls_evpfft) {
+        if (material.host(mat_id).strength_model == STRENGTH_MODEL::lsnp_evpfft) {
           
           // evpfft only runs on host so check to see
           if (material.host(mat_id).strength_run_location == RUN_LOCATION::device) {
@@ -53,7 +53,7 @@ namespace FierroLSEVPFFTLink
           CommandLineArgs cmd;
           cmd.input_filename = filename; //"evpfft.in";
           cmd.micro_filetype = 0;
-          cmd.check_cmd_args();
+          cmd.check_cmd_args(); 
 
           // create EVPFFT model in element that used evpfft
           elem_evpfft[elem_gid] = new EVPFFT(evpfft_mpi_comm,
@@ -94,7 +94,7 @@ namespace FierroLSEVPFFTLink
     {
       if (elem_evpfft[elem_gid] == nullptr)
       {
-        throw std::runtime_error("LSEVPFFT not initialized in this element");
+        throw std::runtime_error("LSNPEVPFFT not initialized in this element");
       }
 
       real_t dt_rk = dt; // since using rk_num_stages = 1
@@ -150,5 +150,5 @@ namespace FierroLSEVPFFTLink
       return;
     }
     
-} // end namespace FierroLSEVPFFTLink
+} // end namespace FierroLSNPEVPFFTLink
 
