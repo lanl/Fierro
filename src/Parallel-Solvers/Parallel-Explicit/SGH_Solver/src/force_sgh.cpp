@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -933,7 +933,7 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos<material_t>& material,
                     applied_force[2]  = loading(ilc).z;
                     // loop over dimension
                     for (size_t dim = 0; dim < num_dim; dim++) {
-                        node_force[dim] += applied_force[dim] * (all_initial_node_coords(node_gid, 0) + all_initial_node_coords(node_gid, 1) + all_initial_node_coords(node_gid, 2)) / radius;
+                        node_force[dim] += applied_force[dim] * current_node_coords[dim] / radius;
                     } // end for dim
                 } // end for corner_lid
 
