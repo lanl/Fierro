@@ -359,11 +359,11 @@ void Explicit_Solver::run() {
   }
   */
 
-  std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
+  *fos << " Runtime of code is "<< current_cpu-initial_CPU_time << " comms time "
             << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
   
   if(simparam.output_options.timer_output_level == TIMER_VERBOSITY::thorough){
-    std::cout << " OUTPUT TIME OF CODE ON TASK " << myrank << " is "<< output_time << std::endl;
+    *fos << " Output time of code is "<< output_time << std::endl;
   }
 
   //parallel_vtk_writer();
@@ -3384,7 +3384,7 @@ void Explicit_Solver::init_design(){
     //create import object using local node indices map and all indices map
     Tpetra::Import<LO, GO> importer(map, all_node_map);
     
-    //design_node_densities_distributed->randomize(0.1,1);
+    design_node_densities_distributed->randomize(0.1,1);
     //comms to get ghosts
     all_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
     

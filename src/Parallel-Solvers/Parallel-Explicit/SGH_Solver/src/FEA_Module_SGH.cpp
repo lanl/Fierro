@@ -921,6 +921,8 @@ void FEA_Module_SGH::sgh_solve()
     tiny  = dynamic_options.tiny;
     small = dynamic_options.small;
 
+    double cached_pregraphics_dt = fuzz;
+
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
     size_t cycle;
     real_t objective_accumulation, global_objective_accumulation;
@@ -1170,6 +1172,10 @@ void FEA_Module_SGH::sgh_solve()
 
     // loop over the max number of time integration cycles
     for (cycle = 0; cycle < cycle_stop; cycle++) {
+
+        //save timestep from before graphics output contraction
+        cached_pregraphics_dt = dt;
+
         // get the step
         if (num_dim == 2) {
             get_timestep2D(*mesh,
@@ -1825,6 +1831,7 @@ void FEA_Module_SGH::sgh_solve()
             Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
 
             graphics_time = time_value + graphics_dt_ival;
+            dt = cached_pregraphics_dt;
         } // end if
 
         // end of calculation
