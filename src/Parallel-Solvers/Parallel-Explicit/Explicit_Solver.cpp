@@ -3384,7 +3384,7 @@ void Explicit_Solver::init_design(){
     //create import object using local node indices map and all indices map
     Tpetra::Import<LO, GO> importer(map, all_node_map);
     
-    design_node_densities_distributed->randomize(0.1,1);
+    //design_node_densities_distributed->randomize(0.1,1);
     //comms to get ghosts
     all_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
     

@@ -600,10 +600,6 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp)
         node_densities_distributed->describe(*fos, Teuchos::VERB_EXTREME);
         *fos << std::endl;
         std::fflush(stdout);
-
-        // communicate design densities
-        // create import object using local node indices map and all indices map
-        Tpetra::Import<LO, GO> importer(map, all_node_map);
 #endif
         // comms to get ghosts
         all_node_densities_distributed->doImport(*test_node_densities_distributed, *importer, Tpetra::INSERT);
