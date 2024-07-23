@@ -1356,7 +1356,7 @@ public:
         FILE* out_elem_state;  // element average state
         char  filename[128];
 
-        sprintf(filename, "state/mat_pt_state_t%6.5e.txt", time_value);
+        sprintf(filename, "state/mat_pt_state_t_%6.4e.txt", time_value);
 
 
         // output files
@@ -1400,7 +1400,7 @@ public:
                                elem_coords[1] * elem_coords[1] +
                                elem_coords[2] * elem_coords[2]);
 
-            fprintf(out_elem_state, "%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
+            fprintf(out_elem_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t \n",
                      elem_coords[0],
                      elem_coords[1],
                      elem_coords[2],
