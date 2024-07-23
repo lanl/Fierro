@@ -23,7 +23,7 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: ensight
+    output_file_format: state
     graphics_time_step: 0.25
     # graphics_iteration_step: 10
 

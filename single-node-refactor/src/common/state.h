@@ -125,6 +125,7 @@ struct MaterialPoint_t
     DCArrayKokkos<double> sie;    ///< MaterialPoint specific internal energy
     DCArrayKokkos<double> mass;   ///< MaterialPoint mass
     DCArrayKokkos<double> statev; ///< MaterialPoint state variable
+    // DCArrayKokkos<double> coords; ///< MaterialPoint coordinates (currently unused)
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
@@ -135,6 +136,7 @@ struct MaterialPoint_t
         this->sspd   = DCArrayKokkos<double>(num_elems, "material_point_sspd");
         this->sie    = DCArrayKokkos<double>(num_rk, num_elems, "material_point_sie");  // only used with DG
         this->mass   = DCArrayKokkos<double>(num_elems, "material_point_mass");
+        // this->coords = DCArrayKokkos<double>(num_elems, num_dims, "material_point_coordinates");
     }; // end method
 
 }; // end MaterialPoint

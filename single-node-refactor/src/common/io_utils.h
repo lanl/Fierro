@@ -901,7 +901,7 @@ public:
             write_ensight(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
         }
         else if (SimulationParamaters.output_options.format == output_options::state) {
-            write_state(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
+            write_material_point_state(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
         }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
@@ -1264,7 +1264,7 @@ public:
 
     /////////////////////////////////////////////////////////////////////////////
     ///
-    /// \fn write_ensight
+    /// \fn write_vtk
     ///
     /// \brief Writes a vtk output file
     ///
@@ -1289,6 +1289,134 @@ public:
         // Not yet supported
         throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
     }
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn write_material_point_state
+    ///
+    /// \brief Writes a state output file at each material point
+    ///
+    /// \param Simulation mesh
+    /// \param Element related state
+    /// \param Node related state
+    /// \param Corner related state
+    /// \param Simulation parameters
+    /// \param current time value
+    /// \param Vector of all graphics output times
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void write_material_point_state(mesh_t&   mesh,
+                   MaterialPoint_t& MaterialPoints,
+                   GaussPoint_t& GaussPoints,
+                   node_t&   node,
+                   corner_t& corner,
+                   SimulationParameters_t& SimulationParamaters,
+                   double time_value,
+                   CArray<double> graphics_times)
+    {
+
+        // WARNING WARNING WARNING:
+        // This currently assumes the gauss and material point IDs are the same as the element ID
+        // This will need to be updated for high order methods
+
+        // Update host data
+        // Material Points
+        MaterialPoints.den.update_host();
+        MaterialPoints.pres.update_host();
+        MaterialPoints.stress.update_host();
+        MaterialPoints.sspd.update_host();
+        MaterialPoints.sie.update_host();
+        MaterialPoints.mass.update_host();
+
+        // Gauss Points
+        GaussPoints.vol.update_host();
+        GaussPoints.mat_id.update_host();
+
+        // Nodes
+        node.coords.update_host();
+        node.vel.update_host();
+        node.mass.update_host();
+        Kokkos::fence();
+
+        struct stat st;
+
+        if (stat("state", &st) != 0)
+        {
+            system("mkdir state");
+        }
+
+
+        size_t num_dims = mesh.num_dims;
+
+        //  ---------------------------------------------------------------------------
+        //  Setup of file and directory for exporting
+        //  ---------------------------------------------------------------------------
+
+        // output file
+        FILE* out_elem_state;  // element average state
+        char  filename[128];
+
+        sprintf(filename, "state/mat_pt_state_t%6.5e.txt", time_value);
+
+
+        // output files
+        out_elem_state = fopen(filename, "w");
+
+        // write state dump
+        fprintf(out_elem_state, "# state dump file\n");
+        fprintf(out_elem_state, "# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass \n");
+
+        // write out values for the elem
+        for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++)
+        {
+            double elem_coords[3];
+            elem_coords[0] = 0.0;
+            elem_coords[1] = 0.0;
+            elem_coords[2] = 0.0;
+
+            // get the coordinates of the element center
+            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++)
+            {
+                elem_coords[0] += node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
+                elem_coords[1] += node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
+                if (num_dims == 3)
+                {
+                    elem_coords[2] += node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
+                }
+                else
+                {
+                    elem_coords[2] = 0.0;
+                }
+            } // end loop over nodes in element
+
+            elem_coords[0] = elem_coords[0] / mesh.num_nodes_in_elem;
+            elem_coords[1] = elem_coords[1] / mesh.num_nodes_in_elem;
+            elem_coords[2] = elem_coords[2] / mesh.num_nodes_in_elem;
+
+            double rad2 = sqrt(elem_coords[0] * elem_coords[0] +
+                               elem_coords[1] * elem_coords[1]);
+
+            double rad3 = sqrt(elem_coords[0] * elem_coords[0] +
+                               elem_coords[1] * elem_coords[1] +
+                               elem_coords[2] * elem_coords[2]);
+
+            fprintf(out_elem_state, "%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
+                     elem_coords[0],
+                     elem_coords[1],
+                     elem_coords[2],
+                     rad2,
+                     rad3,
+                     MaterialPoints.den.host(elem_gid),
+                     MaterialPoints.pres.host(elem_gid),
+                     MaterialPoints.sie.host(1, elem_gid),
+                     MaterialPoints.sspd.host(elem_gid),
+                     GaussPoints.vol.host(elem_gid),
+                     MaterialPoints.mass.host(elem_gid) );
+        } // end for elements
+        fclose(out_elem_state);
+
+        return;
+    } // end of state output
 };
 
 
