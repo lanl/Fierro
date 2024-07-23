@@ -1,44 +1,40 @@
-# Sedov Test Problem
+# Sod problem in Y
 
 dynamic_options:
-    time_final: 1.0
+    time_final: 0.15
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 300000
+    cycle_stop: 2000000
 
 mesh_options:
     source: generate
     num_dims: 3
     type: Box
-    origin: [0.0, 0.0, 0.0]
-    length: [1.2, 1.2, 1.2]
-    num_elems: [20, 20, 20]
-
+    origin: [0, 0, 0]
+    length: [0.01, 1.0, 0.01]
+    num_elems: [1, 100, 1]
 
 output_options:
     timer_output_level: thorough
     output_file_format: state
-    graphics_time_step: 1.0
+    graphics_time_step: 0.15
 
 solver_options:
-  - solver:
+    - solver:
         method: SGH
 
 boundary_conditions:
-    # Tag X plane
+    # Tag X=0 plane
     - boundary_condition:
         solver: SGH
         geometry: x_plane
         direction: x_dir
         value: 0.0
-        u: 0.0
-        v: 0.0
-        w: 1.0
         type: reflected_velocity
 
             
-    # Tag Y plane
+    # Tag Y=0 plane
     - boundary_condition:
         solver: SGH
         geometry: y_plane
@@ -46,14 +42,41 @@ boundary_conditions:
         value: 0.0
         type: reflected_velocity
 
-    # Tag z plane
+    # Tag z=0 plane
     - boundary_condition:
         solver: SGH
         geometry: z_plane
         direction: z_dir
         value: 0.0
         type: reflected_velocity
-  
+
+
+    # Tag X=0.01 plane
+    - boundary_condition:
+        solver: SGH
+        geometry: x_plane
+        direction: x_dir
+        value: 0.01
+        type: reflected_velocity
+
+            
+    # Tag Y=1.0 plane
+    - boundary_condition:
+        solver: SGH
+        geometry: y_plane
+        direction: y_dir
+        value: 1.0
+        type: reflected_velocity
+
+    # Tag z=0.01 plane
+    - boundary_condition:
+        solver: SGH
+        geometry: z_plane
+        direction: z_dir
+        value: 0.01
+        type: reflected_velocity
+                
+
 materials:
     - material:
         id: 0
@@ -73,26 +96,20 @@ regions:
         type: global
         material_id: 0
         den: 1.0
-        sie: 1.e-14
+        sie: 2.5
         velocity: cartesian
         u: 0.0
         v: 0.0
         w: 0.0
 
-    
-
-    # energy source initial conditions
     - fill_volume:
-        type: sphere
-        origin: [0.0, 0.0, 0.0]
-        radius1: 0.0
-        radius2: 0.06
+        type: box
+        x1: 0.0
+        x2: 0.01
+        y1: 0.5
+        y2: 1.0
+        z1: 0.0
+        z2: 0.01
         material_id: 0
-        den: 1.0
-        sie: 61.67375002 
-        velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: 0.0
-
-
+        den: 0.125
+        sie: 2

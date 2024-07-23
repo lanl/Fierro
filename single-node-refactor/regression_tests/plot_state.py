@@ -47,15 +47,3 @@ plt.xlabel('Radius 3D')
 plt.ylabel(f'Density')
 plt.savefig(f"test.png", dpi=300)
 # plt.show()
-
-
-# # Plotting each column against the radius_3D column
-# columns_to_plot = range(0, len(data[0]))  # All columns except the first one (header)
-# for i in columns_to_plot:
-#     y_values = [row[i] for row in data]
-#     plt.figure()
-#     plt.plot(x_values, y_values)
-#     plt.title(f'Column {i + 1} vs Radius 3D')
-#     plt.xlabel('Radius 3D')
-#     plt.ylabel(f'Value in Column {i + 1}')
-#     plt.show()
