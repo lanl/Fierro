@@ -1,0 +1,86 @@
+name: Fierro Test (No Implicit)
+
+# Workflow runs on following successful conda distribution
+on:
+  workflow_run:
+    workflows: [Publish Test, Publish All, Publish Elements, Publish EVPFFT-CPU, Publish EVPFFT-dev, Publish EVPFFT-GPU, Publish FIERRO GUI, Publish Fierro-CPU, Publish Fierro-dev, Publish Heffte, Publish Heffte CUDA, Publish Trilinos-CPU]
+    types:
+      - completed
+  workflow_dispatch:
+      
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: print trigger event
+      run: |
+        echo "::workflow triggering event name is::" ${{ github.event_name }} 
+    - name: update the package list
+      run:
+        sudo apt-get update
+      shell: bash
+    - name: Install build tools
+      run:
+        sudo apt-get install build-essential
+      shell: bash
+    - name: Install LaPack
+      run:
+        sudo apt-get install libblas-dev liblapack-dev
+      shell: bash
+    - name: Install MPI
+      run: |
+        sudo apt-get install libopenmpi-dev openmpi-bin
+        echo "MPI_OPTS=--oversubscribe" >> $GITHUB_ENV
+    - name: Install cmake
+      run:
+        sudo apt-get -y install cmake
+      shell: bash
+    - name: Install python
+      run:
+        sudo apt-get install python3.6
+      shell: bash
+
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        python-version: 3.8
+
+    - name: Create conda environment
+      run: conda env create -f ./.etc/conda_build_environment.yaml
+
+    - name: Initialize conda
+      run: conda init bash
+
+    - name: Activate conda environment, install Fierro anaconda packages
+      run: |
+        source ~/.bashrc
+        conda activate build-env
+        conda install --solver=classic conda-forge::conda-libmamba-solver conda-forge::libmamba conda-forge::libmambapy conda-forge::libarchive
+        conda install -c conda-forge -c fierromechanics fierro-cpu
+        conda install -c conda-forge -c fierromechanics evpfft 
+        conda install -c conda-forge -c fierromechanics fierro_gui 
+        
+    - name: Verify package dependencies
+      run: |
+        conda info --envs
+        conda list
+
+    - name: Test fierro-parallel-explicit
+      run: |
+        source ~/.bashrc
+        conda activate build-env
+        fierro-parallel-explicit ./src/Parallel-Solvers/Parallel-Explicit/Example_Yaml_Scripts/example_simple.yaml
+      shell: bash
+      
+    - name: Test fierro-mesh-builder
+      run: |
+        source ~/.bashrc
+        conda activate build-env
+        fierro-mesh-builder ./src/Mesh-Builder/examples/mesh_Box_16_p3.yaml
+      shell: bash
+    
+        
