@@ -30,7 +30,7 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D Heffte_ENABLE_CUDA=ON \
       -D Heffte_DISABLE_GPU_AWARE_MPI=ON \
       $CMAKE_ARGS \
-      $SRC_DIR \
+      -S $SRC_DIR \
       -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
 #      -D CMAKE_CUDA_COMPILER=${OMPI_CXX} \
 #      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
