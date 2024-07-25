@@ -21,7 +21,7 @@ build:
 
 requirements:
   build:
-    - cmake=3.24
+    - cmake>=3.17.0
     - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
@@ -44,6 +44,7 @@ requirements:
     - libcusparse-dev
     - openmpi
   run:
+    - cuda-compiler
     - cuda-cudart
     - libcufft
     - libcublas
