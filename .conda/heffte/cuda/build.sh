@@ -33,7 +33,7 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       $CMAKE_ARGS \
       $SRC_DIR \
       -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
-      -D CMAKE_CUDA_COMPILER=$(which nvcc) \
+#      -D CMAKE_CUDA_COMPILER=$(which nvcc) \
 
 make -j 10 install
 
