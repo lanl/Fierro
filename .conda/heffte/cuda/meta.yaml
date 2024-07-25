@@ -1,7 +1,7 @@
 {% set version = "1.0.0" %}
 {% set linux_compiler_version = "12.4.0" %}
 {% set macos_compiler_version = "16" %}
-#{% set cuda_version = "12.5" %}
+{% set cuda_version = "12.5" %}
 
 package:
   name: fierro-heffte-cuda
@@ -28,13 +28,13 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}={{ linux_compiler_version }}
     - openmpi
-      # - cuda-compiler
-      #    - cuda-toolkit={{ cuda_version }}
-    - cuda-toolkit
+    - cuda-compiler
+    - cuda-toolkit={{ cuda_version }}
+      #    - cuda-toolkit
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
-    #- cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
+    - cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
     - cuda-compiler
     - cuda-cudart-static
     - cuda-toolkit
