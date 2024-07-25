@@ -29,11 +29,11 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D Heffte_DISABLE_GPU_AWARE_MPI=ON \
       $CMAKE_ARGS \
       $SRC_DIR \
-      -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
-      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
-      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
+#      -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
+#      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
+#      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
 #      -D CMAKE_CUDA_HOST_LINK_LAUNCHER=$CXX \
-      -D CMAKE_CUDA_COMPILER=$(which nvcc) \
+#      -D CMAKE_CUDA_COMPILER=$(which nvcc) \
 
 make -j 10 install
 
