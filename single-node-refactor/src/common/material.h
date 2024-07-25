@@ -282,14 +282,8 @@ struct Material_t{
     RaggedRightArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
     CArrayKokkos<size_t> num_eos_global_vars;
 
-    RaggedRightArrayKokkos<double> eos_state_vars;       ///< Array of state (in each element) variables for the EOS
-    CArrayKokkos<size_t> num_eos_state_vars;
-
     RaggedRightArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
     CArrayKokkos<size_t> num_strength_global_vars;
-
-    RaggedRightArrayKokkos<double> strength_state_vars;  ///< Array of state (in each element) variables for the strength
-    CArrayKokkos<size_t> num_strength_state_vars;
     
     RaggedRightArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
 

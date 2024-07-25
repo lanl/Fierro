@@ -75,7 +75,12 @@ void SGH::update_state(const Material_t& Materials,
     const double rk_alpha) const
 {
     // loop over all the elements in the mesh
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
+    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+        // get elem gid
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);  
+
+
         const size_t num_dims = mesh.num_dims;
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
 
@@ -83,7 +88,7 @@ void SGH::update_state(const Material_t& Materials,
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
         // --- Density ---
-        MaterialPoints_den(elem_gid) = MaterialPoints_mass(elem_gid) / GaussPoints_vol(elem_gid);
+        MaterialPoints_den(mat_elem_lid) = MaterialPoints_mass(mat_elem_lid) / GaussPoints_vol(elem_gid);
 
         size_t mat_id = GaussPoints_mat_id(elem_gid);
 
@@ -94,7 +99,7 @@ void SGH::update_state(const Material_t& Materials,
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
             // --- Density ---
-            MaterialPoints_den(elem_gid) = MaterialPoints_mass(elem_gid) / GaussPoints_vol(elem_gid);
+            MaterialPoints_den(mat_elem_lid) = MaterialPoints_mass(mat_elem_lid) / GaussPoints_vol(elem_gid);
 
             // corner area normals
             double area_array[24];
@@ -119,7 +124,7 @@ void SGH::update_state(const Material_t& Materials,
             Materials.MaterialFunctions(mat_id).calc_stress(
                                          MaterialPoints_pres,
                                          MaterialPoints_stress,
-                                         elem_gid,
+                                         mat_elem_lid,
                                          mat_id,
                                          MaterialPoints_statev,
                                          MaterialPoints_sspd,

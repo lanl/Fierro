@@ -612,18 +612,10 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
                 std::cout << "\tfile_path = " << path << std::endl;
             }
 
-            mesh_input.file_path = path;
+            // absolute path to file or local to the director where exe is run
+            mesh_input.file_path = path;  
 
-            if (mesh_input.source == mesh_input::file && mesh_input.file_path.empty()) {
-                std::cout << "ERROR: When the mesh source is a file, a file_path must be set to point to the mesh file" << std::endl;
-                std::cout << "A mesh can either be generated or read in from a file, but not both" << std::endl;
-            }
-
-            if (mesh_input.source == mesh_input::generate) {
-                std::cout << "ERROR: When the mesh source is set to generate, a mesh file cannot be passed in" << std::endl;
-                exit(0);
-            }
-        } // file path
+        } // end file path
         // Origin for the mesh
         else if (a_word.compare("origin") == 0) {
             std::string origin = root["mesh_options"][a_word].As<std::string>();
@@ -799,6 +791,24 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             }
             throw std::runtime_error("**** Mesh Not Understood ****");
         }
+
+
+
+        // -----------------------------------------------
+        // check for consistency in input settings
+
+        if (mesh_input.source == mesh_input::file && mesh_input.file_path.empty()) {
+            std::cout << "ERROR: When the mesh source is a file, a file_path must be set to point to the mesh file" << std::endl;
+            std::cout << "A mesh can either be generated or read in from a file, but not both" << std::endl;
+        }
+
+        if (mesh_input.source == mesh_input::generate) {
+            std::cout << "ERROR: When the mesh source is set to generate, a mesh file cannot be passed in" << std::endl;
+            exit(0);
+        }
+        // -----------------------------------------------
+
+
     } // end user_mesh_inputs
 } // end of parse mesh options
 
@@ -1325,7 +1335,8 @@ void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills)
                     std::cout << "\tfile_path = " << path << std::endl;
                 }
 
-                region_fills(reg_id).file_path = path;   // saving the absolute file path
+                // absolute path to file or local to the director where exe is run
+                region_fills(reg_id).file_path = path;   
 
             } // end file path
             //

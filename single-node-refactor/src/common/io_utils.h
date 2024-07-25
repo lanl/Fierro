@@ -97,7 +97,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_mesh(mesh_t& mesh, 
-                   MaterialPoint_t& MaterialPoints, 
                    GaussPoint_t& GaussPoints, 
                    node_t& node, 
                    corner_t& corner, 
@@ -111,7 +110,7 @@ public:
 
         // Check mesh file extension
         // and read based on extension
-        read_ensight_mesh(mesh, MaterialPoints, GaussPoints, node, corner, num_dims, rk_num_bins);
+        read_ensight_mesh(mesh, GaussPoints, node, corner, num_dims, rk_num_bins);
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -129,7 +128,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_ensight_mesh(mesh_t& mesh, 
-                           MaterialPoint_t& MaterialPoints, 
                            GaussPoint_t& GaussPoints, 
                            node_t& node, 
                            corner_t& corner, 
@@ -208,7 +206,6 @@ public:
 
         // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
-        MaterialPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
         GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
 
         // for each cell read the list of associated nodes
@@ -282,7 +279,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_mesh(mesh_t& mesh, 
-                    MaterialPoint_t& MaterialPoints, 
                     GaussPoint_t& GaussPoints,
                     node_t& node, 
                     corner_t& corner, 
@@ -290,10 +286,10 @@ public:
     {
         if (SimulationParamaters.mesh_input.num_dims == 2) {
             if (SimulationParamaters.mesh_input.type == mesh_input::Cylinder) {
-                build_2d_polar(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
+                build_2d_polar(mesh, GaussPoints, node, corner, SimulationParamaters);
             }
             else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {
-                build_2d_box(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
+                build_2d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
             }
             else{
                 std::cout << "**** 2D MESH TYPE NOT SUPPORTED **** " << std::endl;
@@ -306,7 +302,7 @@ public:
             }
         }
         else if (SimulationParamaters.mesh_input.num_dims == 3) {
-            build_3d_box(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
+            build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
@@ -327,7 +323,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_2d_box(mesh_t& mesh, 
-                      MaterialPoint_t& MaterialPoints, 
                       GaussPoint_t& GaussPoints,
                       node_t& node, 
                       corner_t& corner, 
@@ -402,7 +397,6 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
         GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
@@ -460,7 +454,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_2d_polar(mesh_t& mesh, 
-                        MaterialPoint_t& MaterialPoints, 
                         GaussPoint_t& GaussPoints,
                         node_t& node, 
                         corner_t& corner, 
@@ -538,7 +531,6 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
         GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
@@ -596,7 +588,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_3d_box(mesh_t& mesh, 
-                      MaterialPoint_t& MaterialPoints, 
                       GaussPoint_t& GaussPoints,
                       node_t& node, 
                       corner_t& corner, 
@@ -685,7 +676,6 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
         GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // --- Build elems  ---
@@ -749,7 +739,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_3d_HexN_box(mesh_t& mesh, 
-                           MaterialPoint_t& MaterialPoints, 
                            GaussPoint_t& GaussPoints,
                            node_t& node, 
                            corner_t& corner, 
@@ -886,7 +875,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_mesh(mesh_t&   mesh,
-                    MaterialPoint_t&   MaterialPoints,
                     GaussPoint_t& GaussPoints,
                     node_t&   node,
                     corner_t& corner,
@@ -895,10 +883,10 @@ public:
                     CArray<double> graphics_times)
     {
         if (SimulationParamaters.output_options.format == output_options::vtk) {
-            write_vtk(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
+            write_vtk(mesh, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
         }
         else if (SimulationParamaters.output_options.format == output_options::ensight) {
-            write_ensight(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
+            write_ensight(mesh, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
         }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;

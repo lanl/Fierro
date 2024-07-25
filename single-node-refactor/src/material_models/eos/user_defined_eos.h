@@ -62,7 +62,7 @@ namespace UserDefinedEOSModel
     KOKKOS_FUNCTION
     static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
                               const DCArrayKokkos<double>& elem_stress,
-                              const size_t elem_gid,
+                              const size_t mat_pt_lid,
                               const size_t mat_id,
                               const DCArrayKokkos<double>& elem_state_vars,
                               const DCArrayKokkos<double>& elem_sspd,
@@ -84,7 +84,7 @@ namespace UserDefinedEOSModel
     KOKKOS_FUNCTION
     static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
                                  const DCArrayKokkos<double>& elem_stress,
-                                 const size_t elem_gid,
+                                 const size_t mat_pt_lid,
                                  const size_t mat_id,
                                  const DCArrayKokkos<double>& elem_state_vars,
                                  const DCArrayKokkos<double>& elem_sspd,
@@ -132,7 +132,7 @@ namespace NotionalEOSModel {
     KOKKOS_FUNCTION
     static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
         const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
+        const size_t mat_pt_lid,
         const size_t mat_id,
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
@@ -141,7 +141,7 @@ namespace NotionalEOSModel {
         const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
         // pressure of a void is 0
-        elem_pres(elem_gid) = 0.0;
+        elem_pres(mat_pt_lid) = 0.0;
 
         return;
     } // end func
@@ -149,7 +149,7 @@ namespace NotionalEOSModel {
     KOKKOS_FUNCTION
     static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
         const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
+        const size_t mat_pt_lid,
         const size_t mat_id,
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
@@ -159,7 +159,7 @@ namespace NotionalEOSModel {
     {
 
         // sound speed of a void is 0, machine small must be used for CFL calculation
-        elem_sspd(elem_gid) = 1.0e-32;
+        elem_sspd(mat_pt_lid) = 1.0e-32;
 
         return;
     } // end func

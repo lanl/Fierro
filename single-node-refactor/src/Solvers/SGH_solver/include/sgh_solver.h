@@ -85,10 +85,7 @@ public:
                Material_t& Materials, 
                BoundaryCondition_t& Boundary, 
                mesh_t& mesh, 
-               node_t& node, 
-               MaterialPoint_t& MaterialPoints, 
-               GaussPoint_t& GaussPoints,
-               corner_t& corner) const override
+               State_t& State) const override
     {
     }
 
@@ -104,10 +101,7 @@ public:
                  Material_t& Materials, 
                  BoundaryCondition_t& Boundary, 
                  mesh_t& mesh, 
-                 node_t& node, 
-                 MaterialPoint_t& MaterialPoints, 
-                 GaussPoint_t& GaussPoints,
-                 corner_t& corner) override;
+                 STate_t& State) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -147,19 +141,26 @@ public:
 
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(
-        double rk_alpha,
-        double dt,
+        const double rk_alpha,
+        const double dt,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<double>& corner_force) const;
+        const DCArrayKokkos<double>& MaterialCorners_force,
+        const corners_in_mat_t corners_in_mat_elem,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t num_mat_elems) const;
 
     // **** Functions defined in force_sgh.cpp **** //
     void get_force(
         const Material_t& Materials,
         const mesh_t& mesh,
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const DCArrayKokkos<double>& GaussPoints_div,
+        const DCArrayKokkos<bool>&   GaussPoints_eroded,
+        const DCArrayKokkos<double>& corner_force,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& MaterialPoints_den,
@@ -167,20 +168,23 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_pres,
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& GaussPoints_div,
-        const DCArrayKokkos<size_t>& GaussPoints_mat_id,
-        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DCArrayKokkos<double>& corner_force,
+        const DCArrayKokkos<double>& MaterialPoints_statev,
+        const DCArrayKokkos<double>& MaterialCorners_force,
+        const corners_in_mat_t
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t num_mat_elems,
+        const size_t mat_id,
         const double fuzz,
         const double small,
-        const DCArrayKokkos<double>& MaterialPoints_statev,
         const double dt,
         const double rk_alpha) const;
 
     void get_force_2D(
         const Material_t& Materials,
         const mesh_t& mesh,
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const DCArrayKokkos<double>& GaussPoints_div,
+        const DCArrayKokkos<double>& corner_force,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& MaterialPoints_den,
@@ -188,13 +192,14 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_pres,
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& GaussPoints_div,
-        const DCArrayKokkos<size_t>& GaussPoints_mat_id,
-        DCArrayKokkos<double>& corner_force,
+        const DCArrayKokkos<double>& MaterialPoints_statev,
+        const DCArrayKokkos<double>& MaterialCorners_force,
+        const corners_in_mat_t
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t num_mat_elems,
+        const size_t mat_id,
         const double fuzz,
         const double small,
-        const DCArrayKokkos<double>& MaterialPoints_statev,
         const double dt,
         const double rk_alpha) const;
 
@@ -270,7 +275,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<size_t>& GaussPoints_mat_id,
         const DCArrayKokkos<double>& MaterialPoints_statev,
-        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+        const DCArrayKokkos<bool>&   GaussPoints_eroded,
         const double dt,
         const double rk_alpha) const;
 
@@ -300,7 +305,8 @@ public:
         DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,
         const size_t num_elems,
-        const size_t num_nodes) const;
+        const size_t num_nodes,
+        const size_t num_mat_points) const;
 
     void get_timestep(
         mesh_t& mesh,
@@ -308,6 +314,8 @@ public:
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& MaterialPoints_sspd,
         DCArrayKokkos<double>& GaussPoints_vol,
+        DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        size_t num_material_elems,
         double time_value,
         const double graphics_time,
         const double time_final,
@@ -323,6 +331,8 @@ public:
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& MaterialPoints_sspd,
         DCArrayKokkos<double>& GaussPoints_vol,
+        DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        size_t num_material_elems,
         double time_value,
         const double graphics_time,
         const double time_final,
@@ -363,5 +373,27 @@ public:
         const double dt,
         const double rk_alpha);
 };
+
+calc_extensive_node_mass(CArrayKokkos<double>& node_extensive_mass
+                         CArrayKokkos<double>& node_coords,
+                         CArrayKokkos<double>& node_mass,
+                         double num_dims,
+                         double num_nodes);
+
+calc_node_areal_mass(const mesh_t& mesh,
+                     const DCArrayKokkos<double>& node_coords,
+                     CArrayKokkos<double> node_extensive_mass,
+                     double tiny);
+
+double sum_domain_internal_energy(DCArrayKokkos<double>& MaterialPoints_mass,
+                                  DCArrayKokkos<double>& MaterialPoints_sie,
+                                  size_t num_mat_points,
+                                  double &IE_sum);
+
+double sum_domain_kinetic_energy(DCArrayKokkos<double>& node_vel,
+                                 DCArrayKokkos<double>& node_coords,
+                                 DCArrayKokkos<double>& node_mass,
+                                 mest_t& mesh);
+
 
 #endif // end HEADER_H

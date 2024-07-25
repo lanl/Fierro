@@ -58,7 +58,7 @@ namespace NoEOSModel {
     KOKKOS_FUNCTION
     static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
         const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
+        const size_t mat_pt_lid,
         const size_t mat_id,
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
@@ -72,7 +72,7 @@ namespace NoEOSModel {
     KOKKOS_FUNCTION
     static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
         const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
+        const size_t mat_pt_lid,
         const size_t mat_id,
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
