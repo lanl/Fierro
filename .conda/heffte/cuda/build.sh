@@ -12,7 +12,7 @@ fi
 
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
 
-export OMPI_CXX=nvcc
+#export OMPI_CXX=nvcc
 # Only do this for cross compiling
 #if [ "$PLATFORM" != "linux-64" ] ; then
 #    export NVCC_PREPEND_FLAGS="-ccbin $CXX";
@@ -24,7 +24,7 @@ export LIBRARIES="$LIBRARIES \"-L$PREFIX/lib\""
 
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D BUILD_SHARED_LIBS=ON \
-      -D CMAKE_CXX_COMPILER=${OMPI_CXX} \
+#      -D CMAKE_CXX_COMPILER=${OMPI_CXX} \
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
       -D CMAKE_CXX_STANDARD:STRING=17 \
       -D Heffte_ENABLE_CUDA=ON \
@@ -32,7 +32,7 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       $CMAKE_ARGS \
       $SRC_DIR \
 #      -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
-      -D CMAKE_CUDA_COMPILER=${OMPI_CXX} \
+#      -D CMAKE_CUDA_COMPILER=${OMPI_CXX} \
 #      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
 #      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
 #      -D CMAKE_CUDA_HOST_LINK_LAUNCHER=$CXX \
