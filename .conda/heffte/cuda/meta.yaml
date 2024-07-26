@@ -29,12 +29,14 @@ requirements:
     - {{ compiler('fortran') }}={{ linux_compiler_version }}
     - openmpi
     - cudatoolkit-dev
+    - nvcc_linux-64
       #   - cudatoolkit-dev={{ cuda_version }}
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
     #- cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
     - cuda-cudart-static
+    - nvcc_linux-64
     - libcusolver-dev
     - libcufft-dev
     - libcublas-dev
