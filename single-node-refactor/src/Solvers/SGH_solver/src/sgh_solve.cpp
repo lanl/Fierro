@@ -344,11 +344,11 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
                             dt,
                             mesh.num_dims,
                             mesh.num_nodes,
-                            node.coords,
-                            node.vel);
+                            State.node.coords,
+                            State.node.vel);
 
             // ---- Calculate cell volume for next time step ----
-            geometry::get_vol(GaussPoints.vol, node.coords, mesh);
+            geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
             if (mesh.num_dims == 2) {
@@ -425,7 +425,11 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
-            mesh_writer.write_mesh(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
+            mesh_writer.write_mesh(mesh, 
+                                   State, 
+                                   SimulationParamaters, 
+                                   time_value, 
+                                   graphics_times);
 
             graphics_time = time_value + graphics_dt_ival;
 

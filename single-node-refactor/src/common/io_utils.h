@@ -916,28 +916,33 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_ensight(mesh_t&   mesh,
-                       MaterialPoint_t& MaterialPoints,
-                       GaussPoint_t& GaussPoints,
-                       node_t&   node,
-                       corner_t& corner,
+                       state_t&  state,
                        SimulationParameters_t& SimulationParamaters,
                        double time_value,
                        CArray<double> graphics_times)
     {
-        // Update host data
-        MaterialPoints.den.update_host();
-        MaterialPoints.pres.update_host();
-        MaterialPoints.stress.update_host();
-        MaterialPoints.sspd.update_host();
-        MaterialPoints.sie.update_host();
-        GaussPoints.vol.update_host();
-        MaterialPoints.mass.update_host();
-        GaussPoints.mat_id.update_host();
+        // ---- Update host data ----
 
-        node.coords.update_host();
-        node.vel.update_host();
-        node.mass.update_host();
+        for(int mat_id=0; mat_id<num_mats; mat_id++){
+            State.MaterialPoints(mat_id).den.update_host();
+            State.MaterialPoints(mat_id).pres.update_host();
+            State.MaterialPoints(mat_id).stress.update_host();
+            State.MaterialPoints(mat_id).sspd.update_host();
+            State.MaterialPoints(mat_id).sie.update_host();
+            State.MaterialPoints(mat_id).mass.update_host();
+        } // end for mat_id
+
+        State.GaussPoints.vol.update_host();
+
+        State.node.coords.update_host();
+        State.node.vel.update_host();
+        State.node.mass.update_host();
+
         Kokkos::fence();
+
+        // --------------------------
+
+
 
         const int num_scalar_vars = 9;
         const int num_vec_vars    = 2;
@@ -993,22 +998,42 @@ public:
             speed(elem_gid) = sqrt(speed_sqrd);
         }); // end parallel for
         speed.update_host();
+        Kokkos::fence();
 
         // save the output scale fields to a single 2D array
+        
+        // export material centeric data to the elements
+        for(int mat_id=0; mat_id<num_mats; mat_id++){
+
+            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+            for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
+
+                // 1 material per element
+
+                // get elem gid
+                size_t elem_gid = State.MaterialToMeshMaps_elem(mat_elem_lid); 
+
+                // save outputs
+                elem_fields(elem_gid, 0) = MaterialPoints.den.host(mat_elem_gid);
+                elem_fields(elem_gid, 1) = MaterialPoints.pres.host(mat_elem_gid);
+                elem_fields(elem_gid, 2) = MaterialPoints.sie.host(1, mat_elem_gid);
+                elem_fields(elem_gid, 4) = MaterialPoints.mass.host(mat_elem_gid);
+                elem_fields(elem_gid, 5) = MaterialPoints.sspd.host(mat_elem_gid);
+            
+                elem_fields(elem_gid, 7) = (double)mat_id;
+            } // end for mat elems storage
+        } // end parallel loop over materials
+
+        // export element centric data
         double e_switch = 1;
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-            // save outputs
-            elem_fields(elem_gid, 0) = MaterialPoints.den.host(elem_gid);
-            elem_fields(elem_gid, 1) = MaterialPoints.pres.host(elem_gid);
-            elem_fields(elem_gid, 2) = MaterialPoints.sie.host(1, elem_gid);
             elem_fields(elem_gid, 3) = GaussPoints.vol.host(elem_gid);
-            elem_fields(elem_gid, 4) = MaterialPoints.mass.host(elem_gid);
-            elem_fields(elem_gid, 5) = MaterialPoints.sspd.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
-            elem_fields(elem_gid, 7) = (double)GaussPoints.mat_id.host(elem_gid);
             elem_fields(elem_gid, 8) = e_switch;
             elem_switch *= -1;
-        } // end for elements
+        } // end for elem_gid
+
 
         // save the vertex vector fields to an array for exporting to graphics files
         CArray<double> vec_fields(num_nodes, num_vec_vars, 3);
@@ -1249,7 +1274,7 @@ public:
 
     /////////////////////////////////////////////////////////////////////////////
     ///
-    /// \fn write_ensight
+    /// \fn write_vtk
     ///
     /// \brief Writes a vtk output file
     ///
