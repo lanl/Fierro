@@ -70,7 +70,8 @@ public:
     // Initialize data specific to the SGH solver
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
-                    BoundaryCondition_t& Boundary) const override
+                    BoundaryCondition_t& Boundary,
+                    State_t& State) const override
     {
     }
 
@@ -101,7 +102,7 @@ public:
                  Material_t& Materials, 
                  BoundaryCondition_t& Boundary, 
                  mesh_t& mesh, 
-                 STate_t& State) override;
+                 State_t& State) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -170,7 +171,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_statev,
         const DCArrayKokkos<double>& MaterialCorners_force,
-        const corners_in_mat_t
+        const corners_in_mat_t,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
@@ -194,7 +195,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_statev,
         const DCArrayKokkos<double>& MaterialCorners_force,
-        const corners_in_mat_t
+        const corners_in_mat_t,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
@@ -266,35 +267,40 @@ public:
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& MaterialPoints_den,
-        DCArrayKokkos<double>& MaterialPoints_pres,
-        DCArrayKokkos<double>& MaterialPoints_stress,
-        DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DCArrayKokkos<double>& MaterialPoints_den,
+        const DCArrayKokkos<double>& MaterialPoints_pres,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<size_t>& GaussPoints_mat_id,
         const DCArrayKokkos<double>& MaterialPoints_statev,
         const DCArrayKokkos<bool>&   GaussPoints_eroded,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const double dt,
-        const double rk_alpha) const;
+        const double rk_alpha,
+        const size_t num_material_elems,
+        const size_t mat_id) const;
 
     void update_state2D(
         const Material_t& Materials,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& MaterialPoints_den,
-        DCArrayKokkos<double>& MaterialPoints_pres,
-        DCArrayKokkos<double>& MaterialPoints_stress,
-        DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DCArrayKokkos<double>& MaterialPoints_den,
+        const DCArrayKokkos<double>& MaterialPoints_pres,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<size_t>& GaussPoints_mat_id,
         const DCArrayKokkos<double>& MaterialPoints_statev,
+        const DCArrayKokkos<bool>&   GaussPoints_eroded,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const double dt,
-        const double rk_alpha) const;
+        const double rk_alpha,
+        const size_t num_material_elems,
+        const size_t mat_id) const;
 
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
@@ -374,26 +380,26 @@ public:
         const double rk_alpha);
 };
 
-calc_extensive_node_mass(CArrayKokkos<double>& node_extensive_mass
-                         CArrayKokkos<double>& node_coords,
-                         CArrayKokkos<double>& node_mass,
-                         double num_dims,
-                         double num_nodes);
+void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
+                              const CArrayKokkos<double>& node_coords,
+                              const CArrayKokkos<double>& node_mass,
+                              const double num_dims,
+                              const double num_nodes);
 
-calc_node_areal_mass(const mesh_t& mesh,
-                     const DCArrayKokkos<double>& node_coords,
-                     CArrayKokkos<double> node_extensive_mass,
-                     double tiny);
+void calc_node_areal_mass(const mesh_t& mesh,
+                          const DCArrayKokkos<double>& node_coords,
+                          const CArrayKokkos<double>& node_extensive_mass,
+                          double tiny);
 
-double sum_domain_internal_energy(DCArrayKokkos<double>& MaterialPoints_mass,
-                                  DCArrayKokkos<double>& MaterialPoints_sie,
-                                  size_t num_mat_points,
-                                  double &IE_sum);
+double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
+                                  const DCArrayKokkos<double>& MaterialPoints_sie,
+                                  const size_t num_mat_points,
+                                  const double &IE_sum);
 
-double sum_domain_kinetic_energy(DCArrayKokkos<double>& node_vel,
-                                 DCArrayKokkos<double>& node_coords,
-                                 DCArrayKokkos<double>& node_mass,
-                                 mest_t& mesh);
+double sum_domain_kinetic_energy(const DCArrayKokkos<double>& node_vel,
+                                 const DCArrayKokkos<double>& node_coords,
+                                 const DCArrayKokkos<double>& node_mass,
+                                 const mesh_t& mesh);
 
 
 #endif // end HEADER_H

@@ -324,7 +324,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
             // mpi_coms();
 
             for(int mat_id=0; mat_id<num_mats; mat_id++){
-
+                 
                 // ---- Update specific internal energy in the elements ----
                 update_energy(rk_alpha,
                               dt,
@@ -351,41 +351,52 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
             geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
-            if (mesh.num_dims == 2) {
-                update_state2D(Materials,
-                               mesh,
-                               State.node.coords,
-                               State.node.vel,
-                               State.MaterialPoints.den,
-                               State.MaterialPoints.pres,
-                               State.MaterialPoints.stress,
-                               State.MaterialPoints.sspd,
-                               State.MaterialPoints.sie,
-                               State.GaussPoints.vol,
-                               State.MaterialPoints.mass,
-                               State.GaussPoints.mat_id,
-                               State.MaterialPoints.statev,
-                               dt,
-                               rk_alpha);
-            }
-            else{
-                update_state(Materials,
-                             mesh,
-                             State.node.coords,
-                             State.node.vel,
-                             State.MaterialPoints.den,
-                             State.MaterialPoints.pres,
-                             State.MaterialPoints.stress,
-                             State.MaterialPoints.sspd,
-                             State.MaterialPoints.sie,
-                             State.GaussPoints.vol,
-                             State.MaterialPoints.mass,
-                             State.GaussPoints.mat_id,
-                             State.MaterialPoints.statev,
-                             State.GaussPoints.eroded,
-                             dt,
-                             rk_alpha);
-            } // end if num_dims=2
+            for(int mat_id=0; mat_id<num_mats; mat_id++){
+            
+                if (mesh.num_dims == 2) {
+
+                    size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+                    update_state2D(Materials,
+                                   mesh,
+                                   State.node.coords,
+                                   State.node.vel,
+                                   State.MaterialPoints(mat_id).den,
+                                   State.MaterialPoints(mat_id).pres,
+                                   State.MaterialPoints(mat_id).stress,
+                                   State.MaterialPoints(mat_id).sspd,
+                                   State.MaterialPoints(mat_id).sie,
+                                   State.GaussPoints.vol,
+                                   State.MaterialPoints(mat_id).mass,
+                                   State.MaterialPoints(mat_id).statev,
+                                   State.GaussPoints_eroded,
+                                   State.MaterialToMeshMaps(mat_id).elem,
+                                   dt,
+                                   rk_alpha,
+                                   num_mat_elems,
+                                   mat_id);
+                }
+                else{
+                    update_state(Materials,
+                                 mesh,
+                                 State.node.coords,
+                                 State.node.vel,
+                                 State.MaterialPoints(mat_id).den,
+                                 State.MaterialPoints(mat_id).pres,
+                                 State.MaterialPoints(mat_id).stress,
+                                 State.MaterialPoints(mat_id).sspd,
+                                 State.MaterialPoints(mat_id).sie,
+                                 State.GaussPoints.vol,
+                                 State.MaterialPoints(mat_id).mass,
+                                 State.MaterialPoints(mat_id).statev,
+                                 State.GaussPoints_eroded,
+                                 State.MaterialToMeshMaps(mat_id).elem,
+                                 dt,
+                                 rk_alpha,
+                                 num_mat_elems,
+                                 mat_id);
+                } // end if num_dims=2
+            } // end for mat_id
 
             // ----
             // Notes on strength:

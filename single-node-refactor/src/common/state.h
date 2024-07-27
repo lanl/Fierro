@@ -39,38 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace mtr;
 
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \struct state_t
-///
-/// \brief Stores all state
-///
-/////////////////////////////////////////////////////////////////////////////
-struct State_t
-{
-    // ---------------------------------------------------------------------
-    //    state data on mesh declarations
-    // ---------------------------------------------------------------------
-    node_t   node;
-    GaussPoint_t GaussPoints;
-    corner_t corner; 
 
-    // ---------------------------------------------------------------------
-    //    material to mesh maps
-    // ---------------------------------------------------------------------
-    CArray<MaterialToMeshMap_t>&  MaterialToMeshMaps;   ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
-    corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_lid, corn_lid)
-    points_in_mat_t  points_in_mat_elem;  ///< for accessing e.g., guass points mat lid with arbitrary-order FE 
-    zones_in_mat_t   zones_in_mat_elem;   ///< for accessing sub-zones mat lid with arbitrary-order FE
-
-    // ---------------------------------------------------------------------
-    //    material state, compressed, and sequentially accessed
-    // ---------------------------------------------------------------------
-    CArray<MaterialPoint_t>&  MaterialPoints;  ///< access as MaterialPoints(mat_id).var(mat_pt)
-    CArray<MaterialCorner_t>& MaterialCorners; ///< access as MaterialCorners(mat_id).var(mat_corner), not used with MPM
-    CArray<MaterialZone_t>&   MaterialZones;   ///< access as MaterialZones(mat_id).var(mat_zone), only used with arbitrary-order FE
-
-}; // end state_t
 
 
 
@@ -241,7 +210,7 @@ struct MaterialCorner_t
     {
         this->force  = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
     }; // end method
-}
+}; // end material corner 
 
 
 
@@ -415,6 +384,37 @@ struct points_in_mat_t
         };
 };
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct state_t
+///
+/// \brief Stores all state
+///
+/////////////////////////////////////////////////////////////////////////////
+struct State_t
+{
+    // ---------------------------------------------------------------------
+    //    state data on mesh declarations
+    // ---------------------------------------------------------------------
+    node_t   node;
+    GaussPoint_t GaussPoints;
+    corner_t corner; 
 
+    // ---------------------------------------------------------------------
+    //    material to mesh maps
+    // ---------------------------------------------------------------------
+    CArray<MaterialToMeshMap_t>&  MaterialToMeshMaps;   ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
+    corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_lid, corn_lid)
+    points_in_mat_t  points_in_mat_elem;  ///< for accessing e.g., guass points mat lid with arbitrary-order FE 
+    zones_in_mat_t   zones_in_mat_elem;   ///< for accessing sub-zones mat lid with arbitrary-order FE
+
+    // ---------------------------------------------------------------------
+    //    material state, compressed, and sequentially accessed
+    // ---------------------------------------------------------------------
+    CArray<MaterialPoint_t>&  MaterialPoints;  ///< access as MaterialPoints(mat_id).var(mat_pt)
+    CArray<MaterialCorner_t>& MaterialCorners; ///< access as MaterialCorners(mat_id).var(mat_corner), not used with MPM
+    CArray<MaterialZone_t>&   MaterialZones;   ///< access as MaterialZones(mat_id).var(mat_zone), only used with arbitrary-order FE
+
+}; // end state_t
 
 #endif

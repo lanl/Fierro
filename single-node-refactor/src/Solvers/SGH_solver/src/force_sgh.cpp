@@ -87,7 +87,7 @@ void SGH::get_force(const Material_t& Materials,
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = State.MaterialToMeshMaps_elem(mat_elem_lid); 
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
         const size_t num_dims = 3;
         const size_t num_nodes_in_elem = 8;
@@ -402,7 +402,7 @@ void SGH::get_force(const Material_t& Materials,
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(MaterialPoints_pres,
                                          MaterialPoints_stress,
-                                         mat_elem_gid,
+                                         mat_elem_lid,
                                          mat_id,
                                          MaterialPoints_statev,
                                          MaterialPoints_sspd,
@@ -450,7 +450,6 @@ void SGH::get_force_2D(const Material_t& Materials,
                        const mesh_t& mesh,
                        const DCArrayKokkos<double>& GaussPoints_vol,
                        const DCArrayKokkos<double>& GaussPoints_div,
-                       const DCArrayKokkos<size_t>& GaussPoints_mat_id,
                        const DCArrayKokkos<double>& corner_force,
                        const DCArrayKokkos<double>& node_coords,
                        const DCArrayKokkos<double>& node_vel,
@@ -474,7 +473,7 @@ void SGH::get_force_2D(const Material_t& Materials,
      FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get mesh elem gid
-        size_t elem_gid = State.MaterialToMeshMaps_elem(mat_elem_lid); 
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
         //size_t guass_gid = elem_gid; // 1 gauss point per element
 
@@ -777,7 +776,6 @@ void SGH::get_force_2D(const Material_t& Materials,
         // --- Update Stress ---
         // calculate the new stress at the next rk level, if it is a increment_based model
 
-        size_t mat_id = GaussPoints_mat_id(elem_gid);
 
         // increment_based elastic plastic model
         if (Materials.MaterialEnums(mat_id).StrengthType == model::incrementBased) {

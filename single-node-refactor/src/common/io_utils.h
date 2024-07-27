@@ -916,7 +916,7 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_ensight(mesh_t&   mesh,
-                       state_t&  state,
+                       State_t&  State,
                        SimulationParameters_t& SimulationParamaters,
                        double time_value,
                        CArray<double> graphics_times)

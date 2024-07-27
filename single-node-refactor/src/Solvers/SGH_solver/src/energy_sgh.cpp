@@ -67,7 +67,7 @@ void SGH::update_energy(const double rk_alpha,
 FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = State.MaterialToMeshMaps_elem(mat_elem_lid); 
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
         
         double MaterialPoints_power = 0.0;
 

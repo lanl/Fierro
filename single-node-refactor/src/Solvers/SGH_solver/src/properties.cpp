@@ -57,25 +57,28 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::update_state(const Material_t& Materials,
+void SGH::update_state(
+    const Material_t& Materials,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& MaterialPoints_den,
-    DCArrayKokkos<double>& MaterialPoints_pres,
-    DCArrayKokkos<double>& MaterialPoints_stress,
-    DCArrayKokkos<double>& MaterialPoints_sspd,
+    const DCArrayKokkos<double>& MaterialPoints_den,
+    const DCArrayKokkos<double>& MaterialPoints_pres,
+    const DCArrayKokkos<double>& MaterialPoints_stress,
+    const DCArrayKokkos<double>& MaterialPoints_sspd,
     const DCArrayKokkos<double>& MaterialPoints_sie,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<size_t>& GaussPoints_mat_id,
     const DCArrayKokkos<double>& MaterialPoints_statev,
     const DCArrayKokkos<bool>&   GaussPoints_eroded,
+    const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const double dt,
-    const double rk_alpha) const
+    const double rk_alpha,
+    const size_t num_material_elems,
+    const size_t mat_id) const
 {
-    // loop over all the elements in the mesh
-    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+    // loop over all the elements the material lives in
+    FOR_ALL(mat_elem_lid, 0, num_material_elems, {
 
         // get elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);  
@@ -90,7 +93,6 @@ void SGH::update_state(const Material_t& Materials,
         // --- Density ---
         MaterialPoints_den(mat_elem_lid) = MaterialPoints_mass(mat_elem_lid) / GaussPoints_vol(elem_gid);
 
-        size_t mat_id = GaussPoints_mat_id(elem_gid);
 
         // --- Stress ---
         // state_based elastic plastic model
@@ -226,20 +228,28 @@ void SGH::update_state2D(const Material_t& Materials,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& MaterialPoints_den,
-    DCArrayKokkos<double>& MaterialPoints_pres,
-    DCArrayKokkos<double>& MaterialPoints_stress,
-    DCArrayKokkos<double>& MaterialPoints_sspd,
+    const DCArrayKokkos<double>& MaterialPoints_den,
+    const DCArrayKokkos<double>& MaterialPoints_pres,
+    const DCArrayKokkos<double>& MaterialPoints_stress,
+    const DCArrayKokkos<double>& MaterialPoints_sspd,
     const DCArrayKokkos<double>& MaterialPoints_sie,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<size_t>& GaussPoints_mat_id,
     const DCArrayKokkos<double>& MaterialPoints_statev,
+    const DCArrayKokkos<bool>&   GaussPoints_eroded,
+    const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const double dt,
-    const double rk_alpha) const
+    const double rk_alpha,
+    const size_t num_material_elems,
+    const size_t mat_id) const
 {
-    // loop over all the elements in the mesh
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
+
+    // loop over all the elements the material lives in
+    FOR_ALL(mat_elem_lid, 0, num_material_elems, {
+
+        // get elem gid
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);  
+
         const size_t num_dims = mesh.num_dims;
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
 
@@ -249,7 +259,6 @@ void SGH::update_state2D(const Material_t& Materials,
         // --- Density ---
         MaterialPoints_den(elem_gid) = MaterialPoints_mass(elem_gid) / GaussPoints_vol(elem_gid);
 
-        size_t mat_id = GaussPoints_mat_id(elem_gid);
 
         // --- Stress ---
         // state_based elastic plastic model
