@@ -906,45 +906,42 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos<material_t>& material,
     // debug check
     // std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
 
-    // walk over the nodes to update the velocity
-    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-        double current_node_coords[3];
-        size_t dof_id;
-        double node_force[3];
-        double applied_force[3];
-        double radius;
-        for (size_t dim = 0; dim < num_dim; dim++) {
-            node_force[dim] = 0.0;
-            current_node_coords[dim] = all_initial_node_coords(node_gid, dim);
-        } // end for dim
-        radius = sqrt(current_node_coords[0] * current_node_coords[0] + current_node_coords[1] * current_node_coords[1] + current_node_coords[2] * current_node_coords[2]);
-        for (size_t ilc = 0; ilc < num_lcs; ilc++) {
-            // debug check
-            // std::cout << "LOADING CONDITION VOLUME TYPE: " << to_string(loading(ilc).volume) << std::endl;
+    for (size_t ilc = 0; ilc < num_lcs; ilc++) {
+        
+        const Volume current_volume = loading(ilc).volume;
+        const double applied_force[] = {loading(ilc).x, loading(ilc).y, loading(ilc).z};
 
-            bool fill_this = loading(ilc).volume.contains(current_node_coords);
-            if (fill_this) {
-                // loop over all corners around the node and calculate the nodal force
-                for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
-                    // Get corner gid
-                    size_t corner_gid = corners_in_node(node_gid, corner_lid);
-                    applied_force[0]  = loading(ilc).x;
-                    applied_force[1]  = loading(ilc).y;
-                    applied_force[2]  = loading(ilc).z;
+        FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+            double current_node_coords[3];
+            size_t dof_id;
+            double node_force[3];
+            double radius;
+            size_t node_id;
+            size_t corner_id;
+            // std::cout << elem_mass(elem_id) <<std::endl;
+
+            // current_nodal_velocities
+            for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                node_id = nodes_in_elem(elem_id, inode);
+                corner_id = elem_id * num_nodes_in_elem + inode;
+
+                for (size_t dim = 0; dim < num_dim; dim++) {
+                    current_node_coords[dim] = all_initial_node_coords(node_id, dim);
+                } // end for dim
+                radius = sqrt(current_node_coords[0] * current_node_coords[0] + current_node_coords[1] * current_node_coords[1] + current_node_coords[2] * current_node_coords[2]);
+                bool fill_this = current_volume.contains(current_node_coords);
+
+                if (fill_this) {
                     // loop over dimension
                     for (size_t dim = 0; dim < num_dim; dim++) {
-                        node_force[dim] += applied_force[dim] * current_node_coords[dim] / radius;
+                        corner_force(corner_id,dim) += applied_force[dim] * current_node_coords[dim] / radius / num_nodes_in_elem;
                     } // end for dim
-                } // end for corner_lid
-
-                // update the velocity
-                for (int dim = 0; dim < num_dim; dim++) {
-                    node_vel(rk_level, node_gid, dim) +=
-                        rk_alpha * dt * node_force[dim] / node_mass(node_gid);
-                } // end for dim
+                }
             }
-        }
-    }); // end for parallel for over nodes
+
+        }); // end parallel for
+        Kokkos::fence();
+    }
 
     return;
 } // end of routine

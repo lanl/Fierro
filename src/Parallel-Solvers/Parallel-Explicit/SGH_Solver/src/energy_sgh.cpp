@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -34,6 +34,8 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
+#include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -93,6 +95,103 @@ void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
         elem_sie(rk_level, elem_gid) = elem_sie(0, elem_gid) -
                                        rk_alpha * dt / elem_mass(elem_gid) * elem_power;
     }); // end parallel loop over the elements
+
+    return;
+} // end subroutine
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_external_energy_sgh
+///
+/// \brief Evolves the specific internal energy
+///
+/// \param The current Runge Kutta alpha value
+/// \param The simulation mesh
+/// \param A view into the nodal velocity data
+/// \param A view into the nodal position data
+/// \param A view into the element specific internal energy data
+/// \param A view into the corner force data
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_SGH::update_external_energy_sgh(double rk_alpha,
+    const mesh_t& mesh,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& node_coords,
+    DViewCArrayKokkos<double>& elem_sie,
+    const DViewCArrayKokkos<double>& elem_mass,
+    const DViewCArrayKokkos<double>& corner_force)
+{
+
+    const size_t    rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    const size_t    num_dim  = mesh.num_dims;
+    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+    const size_t    num_lcs = module_params->loading.size();
+
+    const DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
+    const DCArrayKokkos<loading_t>  loading  = module_params->loading;
+
+    // debug check
+    // std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
+
+    for (size_t ilc = 0; ilc < num_lcs; ilc++) {
+        
+        const Volume current_volume = loading(ilc).volume;
+        const double applied_force[] = {loading(ilc).x, loading(ilc).y, loading(ilc).z};
+
+        FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+            double current_node_coords[3];
+            size_t dof_id;
+            double node_force[3];
+            double radius;
+            size_t node_id;
+            size_t corner_id;
+            size_t corner_lid;
+            double node_radius;
+            double elem_power = 0.0;
+            double half_vel;
+            // std::cout << elem_mass(elem_id) <<std::endl;
+
+            // current_nodal_velocities
+            for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+
+                // Get node global id for the local node id
+                node_id = nodes_in_elem(elem_id, inode);
+                corner_id = elem_id * num_nodes_in_elem + inode;
+
+                // Get the corner global id for the local corner id
+                corner_lid = inode;
+
+                node_radius = 1;
+                if (num_dim == 2) {
+                    node_radius = node_coords(rk_level, node_id, 1);
+                }
+
+                for (size_t dim = 0; dim < num_dim; dim++) {
+                    current_node_coords[dim] = all_initial_node_coords(node_id, dim);
+                } // end for dim
+                radius = sqrt(current_node_coords[0] * current_node_coords[0] + current_node_coords[1] * current_node_coords[1] + current_node_coords[2] * current_node_coords[2]);
+                bool fill_this = current_volume.contains(current_node_coords);
+
+                if (fill_this) {
+                    // loop over dimension
+                    for (size_t dim = 0; dim < num_dim; dim++) {
+                        node_force[dim] = applied_force[dim] * current_node_coords[dim] / radius / num_nodes_in_elem;
+                    } // end for dim
+                    
+                    // calculate the Power=F dot V for this corner
+                    for (size_t dim = 0; dim < num_dim; dim++) {
+                        half_vel = (node_vel(rk_level, node_id, dim) + node_vel(0, node_id, dim)) * 0.5;
+                        elem_power -= node_force[dim] * node_radius * half_vel;
+                    } // end for dim
+                }
+            }
+
+            // update the specific energy
+            elem_sie(rk_level, elem_id) = elem_sie(0, elem_id) -
+                                       rk_alpha * dt / elem_mass(elem_id) * elem_power;
+        }); // end parallel for
+        Kokkos::fence();
+    }
 
     return;
 } // end subroutine

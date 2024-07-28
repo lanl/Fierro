@@ -563,6 +563,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
     const int num_dim = simparam->num_dims;
     bool use_solve_checkpoints = simparam->optimization_options.use_solve_checkpoints;
     bool use_gradient_tally = simparam->optimization_options.use_gradient_tally;
+    const size_t    num_lcs = module_params->loading_conditions.size();
     real_t    global_dt, current_time;
     size_t    current_data_index, next_data_index;
     int print_cycle = simparam->dynamic_options.print_cycle;
@@ -770,6 +771,21 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                             corner_force,
                             1.0,
                             cycle);
+                }
+
+                if (have_loading_conditions) {
+                    applied_forces(material,
+                                    *mesh,
+                                    node_coords,
+                                    node_vel,
+                                    node_mass,
+                                    elem_den,
+                                    elem_vol,
+                                    elem_div,
+                                    elem_mat_id,
+                                    corner_force,
+                                    1.0,
+                                    cycle);
                 }
             }
             // compute gradient matrices
@@ -1119,6 +1135,21 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                         cycle);
             }
 
+            if (have_loading_conditions) {
+                applied_forces(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              node_mass,
+                              elem_den,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              1.0,
+                              cycle);
+            }
+
             // compute gradient matrices
             get_force_egradient_sgh(material,
                               *mesh,
@@ -1459,6 +1490,21 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                         corner_force,
                         1.0,
                         cycle);
+            }
+
+            if (have_loading_conditions) {
+                applied_forces(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              node_mass,
+                              elem_den,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              1.0,
+                              cycle);
             }
             
             //state_adjoint_time_start = Explicit_Solver_Pointer_->CPU_Time();

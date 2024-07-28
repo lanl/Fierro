@@ -1280,6 +1280,21 @@ void FEA_Module_SGH::sgh_solve()
                               cycle);
             }
 
+            if (have_loading_conditions) {
+                applied_forces(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              node_mass,
+                              elem_den,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              rk_alpha,
+                              cycle);
+            }
+
 #ifdef DEBUG
             if (myrank == 1) {
                 std::cout << "rk_alpha = " << rk_alpha << ", dt = " << dt << std::endl;
@@ -1319,20 +1334,6 @@ void FEA_Module_SGH::sgh_solve()
                               node_mass,
                               corner_force);
 
-            if (have_loading_conditions) {
-                applied_forces(material,
-                              *mesh,
-                              node_coords,
-                              node_vel,
-                              node_mass,
-                              elem_den,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              rk_alpha,
-                              cycle);
-            }
 
             // ---- apply force boundary conditions to the boundary patches----
             boundary_velocity(*mesh, boundary, node_vel);
@@ -1394,6 +1395,16 @@ void FEA_Module_SGH::sgh_solve()
                               elem_sie,
                               elem_mass,
                               corner_force);
+
+            if (have_loading_conditions) {
+                update_external_energy_sgh(rk_alpha,
+                                           *mesh,
+                                           node_vel,
+                                           node_coords,
+                                           elem_sie,
+                                           elem_mass,
+                                           corner_force);
+            }
 
             // ---- Update nodal positions ----
             update_position_sgh(rk_alpha,
