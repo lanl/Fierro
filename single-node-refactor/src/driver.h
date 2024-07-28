@@ -476,12 +476,12 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
 
             size_t mat_point_lid = mat_elem_lid; // for more than 1 gauss point, this must increment
 
-            // --- element erosion flaf ----
-            State.GaussPoint.eroded.host(gauss_gid) = false;
-
             // --- density and mass ---
             State.MaterialPoints(mat_id).den.host(mat_point_lid)  = GaussPoint_den.host(guass_gid); 
             State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(guass_gid) * GaussPoints.vol.host(gauss_gid);
+
+            // --- set eroded flag to false ---
+            State.MaterialPoints(mat_id).eroded.host(mat_point_lid) = false;
 
             // --- specific internal energy ---
             // save state, that is integrated in time, at the RK levels
@@ -506,7 +506,9 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
     State.MaterialPoints(mat_id).den.update_device();
     State.MaterialPoints(mat_id).mass.update_device();
     State.MaterialPoints(mat_id).sie.update_device();
-    State.GaussPoints.eroded.update_device();
+    State.MaterialPoints(mat_id).eroded.update_device();
+
+    State.MaterialToMeshMaps(mat_id).elem.update_device();
     Kokkos::fence();
 
 

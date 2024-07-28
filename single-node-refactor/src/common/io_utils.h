@@ -875,18 +875,24 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_mesh(mesh_t&   mesh,
-                    GaussPoint_t& GaussPoints,
-                    node_t&   node,
-                    corner_t& corner,
+                    State_t& State,
                     SimulationParameters_t& SimulationParamaters,
                     double time_value,
                     CArray<double> graphics_times)
     {
         if (SimulationParamaters.output_options.format == output_options::vtk) {
-            write_vtk(mesh, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
+            write_vtk(mesh,
+                      State,
+                      SimulationParamaters,
+                      time_value,
+                      graphics_times);
         }
         else if (SimulationParamaters.output_options.format == output_options::ensight) {
-            write_ensight(mesh, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
+            write_ensight(mesh,
+                          State,
+                          SimulationParamaters,
+                          time_value,
+                          graphics_times);
         }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
@@ -921,6 +927,9 @@ public:
                        double time_value,
                        CArray<double> graphics_times)
     {
+
+        size_t num_mats = State.MaterialPoints.size();
+
         // ---- Update host data ----
 
         for(int mat_id=0; mat_id<num_mats; mat_id++){
@@ -978,10 +987,10 @@ public:
             elem_vel[2] = 0.0;
             // get the coordinates of the element center
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_vel[0] += node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_vel[1] += node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                elem_vel[0] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_vel[1] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3) {
-                    elem_vel[2] += node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_vel[2] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
                 }
                 else{
                     elem_vel[2] = 0.0;
@@ -1012,14 +1021,14 @@ public:
                 // 1 material per element
 
                 // get elem gid
-                size_t elem_gid = State.MaterialToMeshMaps_elem(mat_elem_lid); 
+                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid); 
 
                 // save outputs
-                elem_fields(elem_gid, 0) = MaterialPoints.den.host(mat_elem_gid);
-                elem_fields(elem_gid, 1) = MaterialPoints.pres.host(mat_elem_gid);
-                elem_fields(elem_gid, 2) = MaterialPoints.sie.host(1, mat_elem_gid);
-                elem_fields(elem_gid, 4) = MaterialPoints.mass.host(mat_elem_gid);
-                elem_fields(elem_gid, 5) = MaterialPoints.sspd.host(mat_elem_gid);
+                elem_fields(elem_gid, 0) = State.MaterialPoints(mat_id).den.host(mat_elem_lid);
+                elem_fields(elem_gid, 1) = State.MaterialPoints(mat_id).pres.host(mat_elem_lid);
+                elem_fields(elem_gid, 2) = State.MaterialPoints(mat_id).sie.host(1, mat_elem_lid);
+                elem_fields(elem_gid, 4) = State.MaterialPoints(mat_id).mass.host(mat_elem_lid);
+                elem_fields(elem_gid, 5) = State.MaterialPoints(mat_id).sspd.host(mat_elem_lid);
             
                 elem_fields(elem_gid, 7) = (double)mat_id;
             } // end for mat elems storage
@@ -1028,7 +1037,7 @@ public:
         // export element centric data
         double e_switch = 1;
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-            elem_fields(elem_gid, 3) = GaussPoints.vol.host(elem_gid);
+            elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
             elem_fields(elem_gid, 8) = e_switch;
             elem_switch *= -1;
@@ -1040,23 +1049,23 @@ public:
 
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             // position, var 0
-            vec_fields(node_gid, 0, 0) = node.coords.host(1, node_gid, 0);
-            vec_fields(node_gid, 0, 1) = node.coords.host(1, node_gid, 1);
+            vec_fields(node_gid, 0, 0) = State.node.coords.host(1, node_gid, 0);
+            vec_fields(node_gid, 0, 1) = State.node.coords.host(1, node_gid, 1);
             if (num_dims == 2) {
                 vec_fields(node_gid, 0, 2) = 0.0;
             }
             else{
-                vec_fields(node_gid, 0, 2) = node.coords.host(1, node_gid, 2);
+                vec_fields(node_gid, 0, 2) = State.node.coords.host(1, node_gid, 2);
             }
 
             // position, var 1
-            vec_fields(node_gid, 1, 0) = node.vel.host(1, node_gid, 0);
-            vec_fields(node_gid, 1, 1) = node.vel.host(1, node_gid, 1);
+            vec_fields(node_gid, 1, 0) = State.node.vel.host(1, node_gid, 0);
+            vec_fields(node_gid, 1, 1) = State.node.vel.host(1, node_gid, 1);
             if (num_dims == 2) {
                 vec_fields(node_gid, 1, 2) = 0.0;
             }
             else{
-                vec_fields(node_gid, 1, 2) = node.vel.host(1, node_gid, 2);
+                vec_fields(node_gid, 1, 2) = State.node.vel.host(1, node_gid, 2);
             }
         } // end for loop over vertices
 
@@ -1107,16 +1116,16 @@ public:
 
         // write all components of the point coordinates
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            fprintf(out[0], "%12.5e\n", node.coords.host(1, node_gid, 0));
+            fprintf(out[0], "%12.5e\n", State.node.coords.host(1, node_gid, 0));
         }
 
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            fprintf(out[0], "%12.5e\n", node.coords.host(1, node_gid, 1));
+            fprintf(out[0], "%12.5e\n", State.node.coords.host(1, node_gid, 1));
         }
 
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
             if (num_dims == 3) {
-                fprintf(out[0], "%12.5e\n", node.coords.host(1, node_gid, 2));
+                fprintf(out[0], "%12.5e\n", State.node.coords.host(1, node_gid, 2));
             }
             else{
                 fprintf(out[0], "%12.5e\n", 0.0);
@@ -1288,10 +1297,7 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_vtk(mesh_t&   mesh,
-                   MaterialPoint_t& MaterialPoints,
-                   GaussPoint_t& GaussPoints,
-                   node_t&   node,
-                   corner_t& corner,
+                   State_t&  State,
                    SimulationParameters_t& SimulationParamaters,
                    double time_value,
                    CArray<double> graphics_times)

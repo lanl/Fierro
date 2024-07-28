@@ -1726,12 +1726,16 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                     // erosion_model_map[erosion_model] returns enum value, e.g., model::erosion
                     switch(erosion_model_map[erosion_model]){
                         case model::basicErosion:
+                            Materials.MaterialEnums.host(mat_id).ErosionModels = model::basicErosion;
                             RUN({
+                                Materials.MaterialEnums(mat_id).ErosionModels = model::basicErosion;
                                 Materials.MaterialFunctions(mat_id).erode = &BasicErosionModel::erode;
                             });
                             break;
                         case model::noErosion:
+                            Materials.MaterialEnums.host(mat_id).ErosionModels = model::noErosion;
                             RUN({
+                                Materials.MaterialEnums(mat_id).ErosionModels = model::noErosion;
                                 Materials.MaterialFunctions(mat_id).erode = &NoErosionModel::erode;
                             });
                             break;
@@ -1753,15 +1757,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                 } // end if
 
             } // erosion model variables
-            else if (a_word.compare("void_mat_id") == 0) {
-                double void_mat_id = root["materials"][mat_id]["material"]["void_mat_id"].As<size_t>();
-                if (VERBOSE) {
-                    std::cout << "\tvoid_mat_id = " << void_mat_id << std::endl;
-                }
-                RUN({
-                    Materials.MaterialFunctions(mat_id).void_mat_id = void_mat_id;
-                });
-            } // blank_mat_id 
             else if (a_word.compare("erode_tension_val") == 0) {
                 double erode_tension_val = root["materials"][mat_id]["material"]["erode_tension_val"].As<double>();
                 if (VERBOSE) {

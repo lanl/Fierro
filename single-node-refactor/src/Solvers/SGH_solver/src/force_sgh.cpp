@@ -63,7 +63,7 @@ void SGH::get_force(const Material_t& Materials,
                     const mesh_t& mesh,
                     const DCArrayKokkos<double>& GaussPoints_vol,
                     const DCArrayKokkos<double>& GaussPoints_div,
-                    const DCArrayKokkos<bool>&   GaussPoints_eroded,
+                    const DCArrayKokkos<bool>&   MaterialPoints_eroded,
                     const DCArrayKokkos<double>& corner_force,
                     const DCArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_vel,
@@ -83,14 +83,26 @@ void SGH::get_force(const Material_t& Materials,
                     const double dt,
                     const double rk_alpha) const
 {
+    const size_t num_dims = 3;
+    const size_t num_nodes_in_elem = 8;
+
+
+    // set corner force to zero
+    FOR_ALL(corner_gid, 0, mesh.num_corners, {
+        for (int dim = 0; dim < num_dims; dim++) {
+            corner_force(corner_gid, dim) = 0.0;
+        }
+    }); // end parallel for corners
+
+
+
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
-        const size_t num_dims = 3;
-        const size_t num_nodes_in_elem = 8;
+
 
         // total Cauchy stress
         double tau_array[9];
@@ -371,7 +383,7 @@ void SGH::get_force(const Material_t& Materials,
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
             // loop over dimensions and calc corner forces
-            if (GaussPoints_eroded(elem_gid) == true) { // material(mat_id).blank_mat_id)
+            if (MaterialPoints_eroded(mat_elem_lid) == true) { // material(mat_id).blank_mat_id)
                 for (int dim = 0; dim < num_dims; dim++) {
                     corner_force(corner_gid, dim) = 0.0;
                 }
@@ -469,6 +481,17 @@ void SGH::get_force_2D(const Material_t& Materials,
                        const double dt,
                        const double rk_alpha) const
 {
+    const size_t num_dims = 2;
+    const size_t num_nodes_in_elem = 4;
+
+        // set corner force to zero
+    FOR_ALL(corner_gid, 0, mesh.num_corners, {
+        for (int dim = 0; dim < num_dims; dim++) {
+            corner_force(corner_gid, dim) = 0.0;
+        }
+    }); // end parallel for corners
+
+
     // --- calculate the forces acting on the nodes from the element ---
      FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
@@ -476,9 +499,6 @@ void SGH::get_force_2D(const Material_t& Materials,
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
         //size_t guass_gid = elem_gid; // 1 gauss point per element
-
-        const size_t num_dims = 2;
-        const size_t num_nodes_in_elem = 4;
 
         // total Cauchy stress
         double tau_array[9];

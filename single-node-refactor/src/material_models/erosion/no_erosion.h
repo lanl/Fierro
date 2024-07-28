@@ -42,17 +42,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace NoErosionModel {
 
         KOKKOS_FUNCTION
-        static void erode (const DCArrayKokkos<double>& elem_pres,
-                           const DCArrayKokkos<double>& elem_stress,
-                           const DCArrayKokkos<bool>& elem_eroded,
-                           const DCArrayKokkos<size_t>& elem_mat_id,
-                           const size_t elem_gid,
-                           const size_t void_mat_id,
+        static void erode (const DCArrayKokkos<bool>& MaterialPoint_eroded,
+                           const DCArrayKokkos<double>& MaterialPoint_stress,
+                           const double mat_point_pres,
+                           const double mat_point_den,
                            const double erode_tension_val,
                            const double erode_density_val,
-                           const DCArrayKokkos<double>& elem_sspd,
-                           const DCArrayKokkos<double>& elem_den,
-                           const double sie)
+                           const size_t mat_point_lid)
         {
 
             return;

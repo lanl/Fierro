@@ -82,15 +82,12 @@ struct GaussPoint_t
     DCArrayKokkos<double> vol;  ///< GaussPoint volume
     DCArrayKokkos<double> div;  ///< GaussPoint divergence of velocity
 
-    DCArrayKokkos<bool> eroded; ///< GuassPoint eroded or not
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_gauss_pnts, size_t num_dims)
     {
         this->vol    = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_volume");
         this->div    = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_div");
-
-        this->eroded = DCArrayKokkos<bool>(num_gauss_pnts, "gauss_point_eroded");
 
     }; // end method
 
@@ -138,12 +135,14 @@ struct MaterialPoint_t
     DCArrayKokkos<double> stress; ///< MaterialPoint stress
     DCArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
     DCArrayKokkos<double> mass;   ///< MaterialPoint mass
+    DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
 
     DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
 
     // Material Models are stored on Material points
-    CArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
-    CArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
+    DCArrayKokkos<double> statev; // a place holder to get things to compile
+    DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
+    DCArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
 
 
     // initialization method (num_rk_storage_bins, num_pts_max, num_dims)
@@ -154,7 +153,8 @@ struct MaterialPoint_t
         this->stress = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, num_dims, "material_point_stress");
         this->sspd   = DCArrayKokkos<double>(num_pts_max, "material_point_sspd");
         this->mass   = DCArrayKokkos<double>(num_pts_max, "material_point_mass");
-        this->sie = DCArrayKokkos<double>(num_rk, num_pts_max, "material_point_sie");
+        this->sie    = DCArrayKokkos<double>(num_rk, num_pts_max, "material_point_sie");
+        this->eroded = DCArrayKokkos<bool>(num_pts_max, "material_point_eroded");
     }; // end method
 
     // initialization method for arbitrary-order FE (num_rk_storage_bins, num_pts_max, num_dims)

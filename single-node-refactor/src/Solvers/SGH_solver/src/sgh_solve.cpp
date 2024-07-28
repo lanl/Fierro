@@ -101,12 +101,15 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
     double cached_pregraphics_dt = fuzz;
 
     // calculate the extensive node mass, its key to 2D
-    calc_extensive_node_mass(node_extensive_mass
+    calc_extensive_node_mass(node_extensive_mass,
                              State.node.coords,
                              State.node.mass,
                              mesh.num_dims,
-                             mesh.num_nodes)
+                             mesh.num_nodes);
 
+
+    // the number of materials specified by the user input
+    const size_t num_mats = Materials.num_mats;
 
     // extensive IE
     for(int mat_id=0; mat_id<num_mats; mat_id++){
@@ -121,7 +124,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
     // extensive KE
     KE_t0 = sum_domain_kinetic_energy(State.node.vel,
                                       State.node.coords,
-                                      State.node.mass
+                                      State.node.mass,
                                       mesh);
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
@@ -132,10 +135,8 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     std::cout << "Applying initial boundary conditions" << std::endl;
-    boundary_velocity(mesh, BoundaryConditions, node.vel, time_value); // Time value = 0.0;
+    boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
 
-    // the number of materials specified by the user input
-    const size_t num_mats = Materials.num_mats;
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -230,7 +231,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- Calculate velocity divergence for the element ----
             if (mesh.num_dims == 2) {
-                get_divergence2D(GaussPoints.div,
+                get_divergence2D(State.GaussPoints.div,
                                  mesh,
                                  State.node.coords,
                                  State.node.vel,
@@ -244,12 +245,6 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
                                State.GaussPoints.vol);
             } // end if 2D
 
-            // set corner force to zero
-            FOR_ALL(corner_gid, 0, num_corners, {
-                for (int dim = 0; dim < num_dims; dim++) {
-                    corner_force(corner_gid, dim) = 0.0;
-                }
-            }); // end parallel for corners
             
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             for(int mat_id=0; mat_id<num_mats; mat_id++){
@@ -271,7 +266,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
                                  State.MaterialPoints(mat_id).sspd,
                                  State.MaterialPoints(mat_id).statev,
                                  State.MaterialCorners(mat_id).force,
-                                 State.corners_in_mat_elem
+                                 State.corners_in_mat_elem,
                                  State.MaterialToMeshMaps(mat_id).elem,
                                  num_mat_elems,
                                  mat_id,
@@ -285,7 +280,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
                               mesh,
                               State.GaussPoints.vol,
                               State.GaussPoints.div,
-                              State.GaussPoints.eroded,
+                              State.MaterialPoints(mat_id).eroded,
                               State.corner.force,
                               State.node.coords,
                               State.node.vel,
@@ -352,10 +347,12 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
             for(int mat_id=0; mat_id<num_mats; mat_id++){
+
+                size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
             
                 if (mesh.num_dims == 2) {
 
-                    size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+                    
 
                     update_state2D(Materials,
                                    mesh,
@@ -369,7 +366,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
                                    State.GaussPoints.vol,
                                    State.MaterialPoints(mat_id).mass,
                                    State.MaterialPoints(mat_id).statev,
-                                   State.GaussPoints_eroded,
+                                   State.MaterialPoints(mat_id).eroded,
                                    State.MaterialToMeshMaps(mat_id).elem,
                                    dt,
                                    rk_alpha,
@@ -389,7 +386,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
                                  State.GaussPoints.vol,
                                  State.MaterialPoints(mat_id).mass,
                                  State.MaterialPoints(mat_id).statev,
-                                 State.GaussPoints_eroded,
+                                 State.MaterialPoints(mat_id).eroded,
                                  State.MaterialToMeshMaps(mat_id).elem,
                                  dt,
                                  rk_alpha,
@@ -409,7 +406,11 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
             if (mesh.num_dims == 2) {
 
                 // calculate the nodal areal mass
-                calc_nodal_area_mass(mesh, State.node_coords, node_extensive_mass, tiny);
+                calc_node_areal_mass(mesh, 
+                                     State.node.coords, 
+                                     State.node.mass, 
+                                     node_extensive_mass, 
+                                     tiny);
 
             } // end of if 2D-RZ
 
@@ -477,7 +478,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
     // extensive KE
     KE_tend = sum_domain_kinetic_energy(State.node.vel,
                                         State.node.coords,
-                                        State.node.mass
+                                        State.node.mass,
                                         mesh);
     // extensive TE
     TE_tend = IE_tend + KE_tend;
@@ -596,9 +597,10 @@ double max_Eigen2D(const ViewCArrayKokkos<double> tensor)
 } // end 2D max eignen value
 
 
-void calc_extensive_node_mass(CArrayKokkos<double>& node_extensive_mass
-                              CArrayKokkos<double>& node_coords,
-                              CArrayKokkos<double>& node_mass,
+
+void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
+                              const DCArrayKokkos<double>& node_coords,
+                              const DCArrayKokkos<double>& node_mass,
                               double num_dims,
                               double num_nodes){
     // save the nodal mass
@@ -615,21 +617,21 @@ void calc_extensive_node_mass(CArrayKokkos<double>& node_extensive_mass
 
 } // end function
 
+
 // a function to tally the internal energy
-double sum_domain_internal_energy(DCArrayKokkos<double>& MaterialPoints_mass,
-                                  DCArrayKokkos<double>& MaterialPoints_sie,
-                                  size_t num_mat_points,
-                                  double &IE_sum){
+double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
+                                  const DCArrayKokkos<double>& MaterialPoints_sie,
+                                  size_t num_mat_points){
 
     double IE_sum = 0;
     double IE_loc_sum;
 
     // loop over the material points and tally IE
-    REDUCE_SUM(matpt_lid, 0, num_matpts, IE_loc_sum, {
+    REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
         IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(matpt_lid);
     }, IE_sum);
 
-    return IE_Sum;
+    return IE_sum;
 
 } // end function 
 
@@ -637,7 +639,7 @@ double sum_domain_internal_energy(DCArrayKokkos<double>& MaterialPoints_mass,
 double sum_domain_kinetic_energy(DCArrayKokkos<double>& node_vel,
                                  DCArrayKokkos<double>& node_coords,
                                  DCArrayKokkos<double>& node_mass,
-                                 mest_t& mesh){
+                                 mesh_t& mesh){
     // extensive KE
     double KE_sum = 0;
     double KE_loc_sum;
@@ -666,15 +668,16 @@ double sum_domain_kinetic_energy(DCArrayKokkos<double>& node_vel,
 // for R=0, it is interpolated from off-axis
 void calc_node_areal_mass(const mesh_t& mesh,
                           const DCArrayKokkos<double>& node_coords,
+                          const DCArrayKokkos<double>& node_mass,
                           CArrayKokkos<double> node_extensive_mass,
                           double tiny){
 
     // calculate the nodal areal mass
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        node.mass(node_gid) = 0.0;
+        node_mass(node_gid) = 0.0;
 
-        if (node.coords(1, node_gid, 1) > tiny) {
-            node.mass(node_gid) = node_extensive_mass(node_gid) / node.coords(1, node_gid, 1);
+        if (node_coords(1, node_gid, 1) > tiny) {
+            node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(1, node_gid, 1);
         }
     }); // end parallel for over node_gid
     Kokkos::fence();
@@ -683,15 +686,15 @@ void calc_node_areal_mass(const mesh_t& mesh,
     FOR_ALL(node_bdy_gid, 0, mesh.num_bdy_nodes, {
         size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
 
-        if (node.coords(1, node_gid, 1) < tiny) {
+        if (node_coords(1, node_gid, 1) < tiny) {
             // node is on the axis
 
             for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_node(node_gid); node_lid++) {
                 size_t node_neighbor_gid = mesh.nodes_in_node(node_gid, node_lid);
 
                 // if the node is off the axis, use it's areal mass on the boundary
-                if (node.coords(1, node_neighbor_gid, 1) > tiny) {
-                    node.mass(node_gid) = fmax(node.mass(node_gid), node.mass(node_neighbor_gid) / 2.0);
+                if (node_coords(1, node_neighbor_gid, 1) > tiny) {
+                    node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid) / 2.0);
                 }
             } // end for over neighboring nodes
         } // end if

@@ -381,20 +381,20 @@ public:
 };
 
 void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
-                              const CArrayKokkos<double>& node_coords,
-                              const CArrayKokkos<double>& node_mass,
+                              const DCArrayKokkos<double>& node_coords,
+                              const DCArrayKokkos<double>& node_mass,
                               const double num_dims,
                               const double num_nodes);
 
 void calc_node_areal_mass(const mesh_t& mesh,
                           const DCArrayKokkos<double>& node_coords,
-                          const CArrayKokkos<double>& node_extensive_mass,
+                          const DCArrayKokkos<double>& node_mass,
+                          CArrayKokkos<double> node_extensive_mass,
                           double tiny);
 
 double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
                                   const DCArrayKokkos<double>& MaterialPoints_sie,
-                                  const size_t num_mat_points,
-                                  const double &IE_sum);
+                                  const size_t num_mat_points);
 
 double sum_domain_kinetic_energy(const DCArrayKokkos<double>& node_vel,
                                  const DCArrayKokkos<double>& node_coords,
