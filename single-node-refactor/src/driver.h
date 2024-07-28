@@ -221,7 +221,7 @@ public:
         for (int solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
             if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH) {
                 SGH* sgh_solver = new SGH(); // , mesh, node, MaterialPoints, corner
-                sgh_solver->initialize(SimulationParamaters, Materials, BoundaryConditions);
+                sgh_solver->initialize(SimulationParamaters, Materials, BoundaryConditions, State);
                 solvers.push_back(sgh_solver);
             }
         }
@@ -311,7 +311,7 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
 
 
     size_t num_fills = region_fills.size();
-    printf("Num Fills's = %d\n", num_fills);
+    printf("Num Fills's = %zu\n", num_fills);
 
     // the number of elems and nodes in the mesh
     const size_t num_elems = mesh.num_elems;
@@ -321,9 +321,9 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
 
     // create temporary state fields
     // Painting routine requires only 1 material per GaussPoint
-    CArrayKokkos <double> GaussPoint_den(num_elems);
-    CArrayKokkos <double> GaussPoint_sie(num_elems);
-    CArrayKokkos <double> elem_mat_id(num_elems); // the mat_id in the elem
+    DCArrayKokkos <double> GaussPoint_den(num_elems);
+    DCArrayKokkos <double> GaussPoint_sie(num_elems);
+    DCArrayKokkos <size_t> elem_mat_id(num_elems); // the mat_id in the elem
 
 
     // ---------------------------------------------
@@ -357,8 +357,8 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
     // ---------------------------------------------
     fill_regions_sgh(Materials,
                      mesh,
-                     State.node_coords,
-                     State.node_vel,
+                     State.node.coords,
+                     State.node.vel,
                      region_fills,
                      voxel_elem_mat_id,
                      GaussPoint_den,
@@ -368,6 +368,7 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
                      num_elems,
                      num_nodes,
                      rk_num_bins);
+    // note device and host are updated in the above function
     // ---------------------------------------------
 
     
@@ -404,7 +405,7 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
     State.MaterialToMeshMaps = CArray<MaterialToMeshMap_t> (num_mats);
 
     State.MaterialPoints  = CArray<MaterialPoint_t> (num_mats);
-    State.MaterialCorners = CArray<MaterialCorners_t> (num_mats);
+    State.MaterialCorners = CArray<MaterialCorner_t> (num_mats);
     // zones not needed with SGH
     
     
@@ -427,7 +428,7 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
         size_t num_points_for_mat = num_elems_for_mat*num_mat_pts_in_elem;  
         size_t num_corners_for_mat = num_elems_for_mat*mesh.num_nodes_in_elem;
 
-        State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat, mesh.num_dims); 
+        State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat); 
         State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3); // aways 3D, even for 2D-RZ calcs
         State.MaterialCorners(mat_id).initialize(num_corners_for_mat, mesh.num_dims); 
         // zones are not used
@@ -451,8 +452,8 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
     // ---------------------------------------
     //  SGH save data, maps, and state
     // ---------------------------------------
-    GaussPoints.vol.update_host(); 
-    kokkos::fence();
+    State.GaussPoints.vol.update_host(); 
+    Kokkos::fence();
 
     // the following loop is not thread safe
     for(size_t elem_gid=0; elem_gid<num_elems; elem_gid++){
@@ -477,8 +478,8 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
             size_t mat_point_lid = mat_elem_lid; // for more than 1 gauss point, this must increment
 
             // --- density and mass ---
-            State.MaterialPoints(mat_id).den.host(mat_point_lid)  = GaussPoint_den.host(guass_gid); 
-            State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(guass_gid) * GaussPoints.vol.host(gauss_gid);
+            State.MaterialPoints(mat_id).den.host(mat_point_lid)  = GaussPoint_den.host(gauss_gid); 
+            State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(gauss_gid) * GaussPoints.vol.host(gauss_gid);
 
             // --- set eroded flag to false ---
             State.MaterialPoints(mat_id).eroded.host(mat_point_lid) = false;
@@ -494,7 +495,7 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
         // -----------------------
         // Save MaterialZones
         // -----------------------
-        // For higher-order FE, least squares fit the sie at guass points to get zone values
+        // For higher-order FE, least squares fit the sie at gauss points to get zone values
 
         
         // update counter for how many mat_elem_lid values have been saved
@@ -1162,7 +1163,7 @@ void paint_gauss_den_sie(const Material_t& Material,
 
         }  // end if 
         
-    } // end loop over guass points in element'
+    } // end loop over gauss points in element'
 
     // done setting the element state
 
@@ -1454,13 +1455,13 @@ void fill_regions_sgh(const Material_t& Materials,
 
                 // default sgh paint
                 paint_node_vel(Material,
-                                mesh,
-                                region_fills,
-                                node_vel,
-                                coords,
-                                elem_gid,
-                                f_id,
-                                rk_num_bins);
+                               mesh,
+                               region_fills,
+                               node_vel,
+                               coords,
+                               elem_gid,
+                               f_id,
+                               rk_num_bins);
 
                 // add user defined paint here
                 // user_defined_vel_state();
