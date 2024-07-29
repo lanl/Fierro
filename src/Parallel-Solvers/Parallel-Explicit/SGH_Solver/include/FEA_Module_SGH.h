@@ -348,14 +348,6 @@ public:
                            const DViewCArrayKokkos<double>& elem_mass,
                            const DViewCArrayKokkos<double>& corner_force);
 
-    void update_external_energy_sgh(double rk_alpha,
-                           const mesh_t& mesh,
-                           const DViewCArrayKokkos<double>& node_vel,
-                           const DViewCArrayKokkos<double>& node_coords,
-                           DViewCArrayKokkos<double>& elem_sie,
-                           const DViewCArrayKokkos<double>& elem_mass,
-                           const DViewCArrayKokkos<double>& corner_force);
-
     void power_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
 
     void get_power_dgradient_sgh(double rk_alpha,
@@ -686,6 +678,7 @@ public:
 
     // Dual Views of the corner struct variables
     DViewCArrayKokkos<double> corner_force;
+    DCArrayKokkos<double> corner_external_force;
     DViewCArrayKokkos<double> corner_mass;
 
     // Boundary Conditions Data

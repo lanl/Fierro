@@ -1396,16 +1396,6 @@ void FEA_Module_SGH::sgh_solve()
                               elem_mass,
                               corner_force);
 
-            if (have_loading_conditions) {
-                update_external_energy_sgh(rk_alpha,
-                                           *mesh,
-                                           node_vel,
-                                           node_coords,
-                                           elem_sie,
-                                           elem_mass,
-                                           corner_force);
-            }
-
             // ---- Update nodal positions ----
             update_position_sgh(rk_alpha,
                                 nall_nodes,

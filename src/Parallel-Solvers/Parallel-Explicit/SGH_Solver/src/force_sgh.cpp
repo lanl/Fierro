@@ -899,12 +899,21 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos<material_t>& material,
     const size_t    num_dim  = mesh.num_dims;
     const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
     const size_t    num_lcs = module_params->loading.size();
+    const size_t    num_corners = mesh.num_corners;
 
     const DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
     const DCArrayKokkos<loading_t>  loading  = module_params->loading;
 
     // debug check
     // std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
+
+    //initialize
+    FOR_ALL_CLASS(corner_id, 0, num_corners, {
+        for (size_t dim = 0; dim < num_dim; dim++) {
+            corner_external_force(corner_id,dim) = 0;
+        }
+    }); // end parallel for
+    Kokkos::fence();
 
     for (size_t ilc = 0; ilc < num_lcs; ilc++) {
         
@@ -934,7 +943,7 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos<material_t>& material,
                 if (fill_this) {
                     // loop over dimension
                     for (size_t dim = 0; dim < num_dim; dim++) {
-                        corner_force(corner_id,dim) += applied_force[dim] * current_node_coords[dim] / radius / num_nodes_in_elem;
+                        corner_external_force(corner_id,dim) += applied_force[dim] * current_node_coords[dim] / radius / num_nodes_in_elem;
                     } // end for dim
                 }
             }
