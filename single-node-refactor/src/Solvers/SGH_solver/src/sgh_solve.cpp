@@ -636,10 +636,10 @@ double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_ma
 } // end function 
 
 // a function to tally the kinetic energy
-double sum_domain_kinetic_energy(DCArrayKokkos<double>& node_vel,
-                                 DCArrayKokkos<double>& node_coords,
-                                 DCArrayKokkos<double>& node_mass,
-                                 mesh_t& mesh){
+double sum_domain_kinetic_energy(const mesh_t& mesh,
+                                 const DCArrayKokkos<double>& node_vel,
+                                 const DCArrayKokkos<double>& node_coords,
+                                 const DCArrayKokkos<double>& node_mass){
     // extensive KE
     double KE_sum = 0;
     double KE_loc_sum;
