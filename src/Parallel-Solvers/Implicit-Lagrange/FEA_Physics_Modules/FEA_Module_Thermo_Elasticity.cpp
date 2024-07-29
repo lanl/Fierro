@@ -447,6 +447,9 @@ void FEA_Module_Thermo_Elasticity::read_conditions_ansys_dat(std::ifstream *in, 
       if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex20){
         nodes_per_patch = 8;
       }
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex32){
+        nodes_per_patch = 12;
+      }
 
       //calculate buffer iterations to read number of lines
       buffer_iterations = num_patches/buffer_lines;
@@ -1440,9 +1443,11 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   int nodes_per_elem = max_nodes_per_element;
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign;
+  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign, num_nodes_in_patch;
+  bool is_hex;
   int patch_node_count;
   CArray<int> patch_local_node_ids;
+  real_t constant_stress_flag = module_params.constant_stress_flag;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -1454,6 +1459,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
   real_t force_density[3], wedge_product, Jacobian, current_density, current_temperature, weight_multiply, surface_normal[3], pressure, normal_displacement;
+  real_t resulting_term;
   CArray<GO> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
@@ -1471,9 +1477,6 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_temperatures(nodes_per_elem);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(nodes_per_elem,num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(nodes_per_elem,num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s3(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
 
   size_t Brows;
@@ -1565,9 +1568,14 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
     //loop over quadrature points if this is a distributed force
     for(int iquad=0; iquad < direct_product_count; iquad++){
       
-      if(Element_Types(current_element_index)==elements::elem_types::Hex8){
+      is_hex = Element_Types(current_element_index)==elements::elem_types::Hex8||
+               Element_Types(current_element_index)==elements::elem_types::Hex20||
+               Element_Types(current_element_index)==elements::elem_types::Hex32;
+      num_nodes_in_patch = elem->surface_to_dof_lid.stride(local_surface_id);
 
-      int local_nodes[4];
+      if(is_hex){
+
+      CArray<int> local_nodes(num_nodes_in_patch);
       //set current quadrature point
       y_quad = iquad / num_gauss_points;
       x_quad = iquad % num_gauss_points;
@@ -1623,10 +1631,9 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
 
       //find local dof set for this surface
-      local_nodes[0] = elem->surface_to_dof_lid(local_surface_id,0);
-      local_nodes[1] = elem->surface_to_dof_lid(local_surface_id,1);
-      local_nodes[2] = elem->surface_to_dof_lid(local_surface_id,2);
-      local_nodes[3] = elem->surface_to_dof_lid(local_surface_id,3);
+      for(int node_loop=0; node_loop < num_nodes_in_patch; node_loop++){
+        local_nodes(node_loop) = elem->surface_to_dof_lid(local_surface_id, node_loop);
+      }
 
       //acquire set of nodes for this face
       for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
@@ -1655,12 +1662,6 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
         elem->partial_eta_basis(basis_derivative_s1,quad_coordinate);
         elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
         elem->partial_xi_basis(basis_derivative_s3,quad_coordinate);
-      }
-
-      //set values relevant to this surface
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        surf_basis_derivative_s1(node_loop) = basis_derivative_s1(local_nodes[node_loop]);
-        surf_basis_derivative_s2(node_loop) = basis_derivative_s2(local_nodes[node_loop]);
       }
 
       //compute derivatives of x,y,z w.r.t the s,t coordinates of this surface; needed to compute dA in surface integral
@@ -1736,9 +1737,9 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
       elem->basis(basis_values,quad_coordinate);
 
       // loop over nodes of this face and 
-      for(int node_count = 0; node_count < 4; node_count++){
+      for(int node_count = 0; node_count < num_nodes_in_patch; node_count++){
             
-        node_id = nodes_in_elem(current_element_index, local_nodes[node_count]);
+        node_id = nodes_in_elem(current_element_index, local_nodes(node_count));
         //check if node is local to alter Nodal Forces vector
         if(!map->isNodeGlobalElement(node_id)) continue;
         node_id = map->getLocalElement(node_id);
@@ -1760,7 +1761,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
         for(int idim = 0; idim < num_dim; idim++){
           if(force_density[idim]!=0)
           //Nodal_RHS(num_dim*node_gid + idim) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
-          Nodal_RHS(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
+          Nodal_RHS(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes(node_count));
         }
       }
       }
@@ -2151,6 +2152,228 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   }//for
 
 
+  //apply contribution from constant stress
+  if(constant_stress_flag){
+    //initialize quadrature data
+    elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+    direct_product_count = std::pow(num_gauss_points,num_dim);
+    size_t Brows;
+    if(num_dim==2) Brows = 3;
+    if(num_dim==3) Brows = 6;
+    FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> stress_matrix(Brows);
+    
+    stress_matrix(0) = module_params.constant_stress[0];
+    stress_matrix(1) = module_params.constant_stress[1];
+    stress_matrix(2) = module_params.constant_stress[2];
+    stress_matrix(3) = module_params.constant_stress[3];
+    stress_matrix(4) = module_params.constant_stress[4];
+    stress_matrix(5) = module_params.constant_stress[5];
+    
+    for(size_t ielem = 0; ielem < rnum_elem; ielem++){
+
+      //acquire set of nodes and nodal displacements for this local element
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+        nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
+        nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
+        nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+        if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
+      }
+
+      //loop over quadrature points
+      for(int iquad=0; iquad < direct_product_count; iquad++){
+
+        //set current quadrature point
+        if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
+        y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
+        x_quad = iquad % num_gauss_points;
+        quad_coordinate(0) = legendre_nodes_1D(x_quad);
+        quad_coordinate(1) = legendre_nodes_1D(y_quad);
+        if(num_dim==3)
+        quad_coordinate(2) = legendre_nodes_1D(z_quad);
+
+        //set current quadrature weight
+        quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+        quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+        if(num_dim==3)
+        quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+        else
+        quad_coordinate_weight(2) = 1;
+        weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
+
+        //compute shape functions at this point for the element type
+        elem->basis(basis_values,quad_coordinate);
+
+        //debug print
+        //std::cout << "Current Density " << current_density << std::endl;
+
+        //debug print
+        //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
+      
+      /*
+      //debug print of elasticity matrix
+      std::cout << " ------------ELASTICITY MATRIX "<< ielem + 1 <<"--------------"<<std::endl;
+      for (int idof = 0; idof < Brows; idof++){
+        std::cout << "row: " << idof + 1 << " { ";
+        for (int istride = 0; istride < Brows; istride++){
+          std::cout << istride + 1 << " = " << C_matrix(idof,istride) << " , " ;
+        }
+        std::cout << " }"<< std::endl;
+      }
+      //end debug block
+      */
+
+        //compute all the necessary coordinates and derivatives at this point
+        //compute shape function derivatives
+        elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+        elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+        elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
+
+        //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+        //derivative of x,y,z w.r.t s
+        JT_row1(0) = 0;
+        JT_row1(1) = 0;
+        JT_row1(2) = 0;
+        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+          JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+          JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+          JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+        }
+
+        //derivative of x,y,z w.r.t t
+        JT_row2(0) = 0;
+        JT_row2(1) = 0;
+        JT_row2(2) = 0;
+        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+          JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+          JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+          JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+        }
+
+        //derivative of x,y,z w.r.t w
+        JT_row3(0) = 0;
+        JT_row3(1) = 0;
+        JT_row3(2) = 0;
+        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+          JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+          JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+          JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+          //debug print
+        /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
+          std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+          std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
+          std::fflush(stdout);
+        }*/
+        }
+        
+        //compute the contributions of this quadrature point to the B matrix
+        if(num_dim==2)
+        for(int ishape=0; ishape < nodes_per_elem; ishape++){
+          B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(1,ishape*num_dim) = 0;
+          B_matrix_contribution(2,ishape*num_dim) = 0;
+          B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+          B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(5,ishape*num_dim) = 0;
+          B_matrix_contribution(0,ishape*num_dim+1) = 0;
+          B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+          B_matrix_contribution(2,ishape*num_dim+1) = 0;
+          B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(4,ishape*num_dim+1) = 0;
+          B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(0,ishape*num_dim+2) = 0;
+          B_matrix_contribution(1,ishape*num_dim+2) = 0;
+          B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(3,ishape*num_dim+2) = 0;
+          B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        }
+        if(num_dim==3)
+        for(int ishape=0; ishape < nodes_per_elem; ishape++){
+          B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(1,ishape*num_dim) = 0;
+          B_matrix_contribution(2,ishape*num_dim) = 0;
+          B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+          B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(5,ishape*num_dim) = 0;
+          B_matrix_contribution(0,ishape*num_dim+1) = 0;
+          B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+          B_matrix_contribution(2,ishape*num_dim+1) = 0;
+          B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(4,ishape*num_dim+1) = 0;
+          B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(0,ishape*num_dim+2) = 0;
+          B_matrix_contribution(1,ishape*num_dim+2) = 0;
+          B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(3,ishape*num_dim+2) = 0;
+          B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        }
+        /*
+        //debug print of B matrix per quadrature point
+        std::cout << " ------------B MATRIX QUADRATURE CONTRIBUTION"<< ielem + 1 <<"--------------"<<std::endl;
+        for (int idof = 0; idof < Brows; idof++){
+          std::cout << "row: " << idof + 1 << " { ";
+          for (int istride = 0; istride < nodes_per_elem*num_dim; istride++){
+            std::cout << istride + 1 << " = " << B_matrix_contribution(idof,istride) << " , " ;
+          }
+          std::cout << " }"<< std::endl;
+        }
+        //end debug block
+        */
+
+        //evaluate contribution to force vector
+        for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+          if(!map->isNodeGlobalElement(nodes_in_elem(ielem, icol/num_dim))) continue;
+          local_node_id = map->getLocalElement(nodes_in_elem(ielem, icol/num_dim));
+          resulting_term = 0;
+          for(int span=0; span < Brows; span++){
+            resulting_term += stress_matrix(span)*B_matrix_contribution(span,icol);
+          }
+          Nodal_RHS(num_dim*local_node_id + icol%num_dim,0) += weight_multiply*resulting_term*basis_values(icol/num_dim);
+        }
+      }
+    }//for
+  }
     //debug print of force vector
     /*
     std::cout << "---------FORCE VECTOR-------------" << std::endl;
@@ -5132,9 +5355,51 @@ void FEA_Module_Thermo_Elasticity::linear_solver_parameters(){
   }
   else{
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("MueLu"));
-    std::string xmlFileName = "elasticity3D.xml";
-    //std::string xmlFileName = "simple_test.xml";
-    Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
+    if(module_params.muelu_parameters_xml_file){
+      std::string xmlFileName = module_params.xml_parameters_file_name;
+      //std::string xmlFileName = "simple_test.xml";
+      Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
+    }
+    else{
+      //set default parameters for MueLu
+      Linear_Solve_Params->set("problem: type", "Elasticity-3D");
+      Linear_Solve_Params->set("verbosity", "none");
+      Linear_Solve_Params->set("coarse: max size", (int) 2000);
+      Linear_Solve_Params->set("multigrid algorithm", "sa");
+      Linear_Solve_Params->set("coarse: type", "Klu2");
+      Linear_Solve_Params->set("transpose: use implicit", true);
+      Linear_Solve_Params->set("max levels", (int) 10);
+      Linear_Solve_Params->set("number of equations", (int) 3);
+      Linear_Solve_Params->set("sa: use filtered matrix", true);
+      Linear_Solve_Params->set("aggregation: type", "uncoupled");
+      Linear_Solve_Params->set("aggregation: drop scheme", "classical");
+      Linear_Solve_Params->set("reuse: type", "S");
+      //Linear_Solve_Params->set("aggregation: drop tol", (double) 0.02);
+
+      //smoother options
+      Linear_Solve_Params->set("smoother: type", "CHEBYSHEV");
+      Linear_Solve_Params->sublist("smoother: params").set("debug", false);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: degree", (int) 2);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: ratio eigenvalue", (double) 7.0);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: min eigenvalue", (double) 1.0);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: zero starting solution", true);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: eigenvalue max iterations", (int) 100);
+
+      //repartition options
+      Linear_Solve_Params->set("repartition: enable", true);
+      Linear_Solve_Params->set("repartition: partitioner", "zoltan2");
+      Linear_Solve_Params->set("repartition: start level", (int) 2);
+      Linear_Solve_Params->set("repartition: min rows per proc", (int) 2000);
+      Linear_Solve_Params->set("repartition: max imbalance", (double) 1.10);
+      Linear_Solve_Params->set("repartition: remap parts", true);
+      Linear_Solve_Params->set("repartition: rebalance P and R", true);
+
+      Linear_Solve_Params->sublist("repartition: params").set("algorithm", "multijagged");
+      Linear_Solve_Params->sublist("repartition: params").set("mj_premigration_option", (int) 1);
+
+      //for device usage
+      Linear_Solve_Params->set("use kokkos refactor", false);
+    }
   }
 }
 

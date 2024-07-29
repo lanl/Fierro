@@ -979,7 +979,8 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   int nodes_per_elem = max_nodes_per_element;
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign;
+  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign, num_nodes_in_patch;
+  bool is_hex;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -1008,8 +1009,6 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(nodes_per_elem,num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
 
    //RHS vector initialization
@@ -1053,9 +1052,14 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
     //loop over quadrature points if this is a distributed force
     for(int iquad=0; iquad < direct_product_count; iquad++){
       
-      if(Element_Types(current_element_index)==elements::elem_types::Hex8){
+      is_hex = Element_Types(current_element_index)==elements::elem_types::Hex8||
+               Element_Types(current_element_index)==elements::elem_types::Hex20||
+               Element_Types(current_element_index)==elements::elem_types::Hex32;
+      num_nodes_in_patch = elem->surface_to_dof_lid.stride(local_surface_id);
+      
+      if(is_hex){
 
-      int local_nodes[4];
+      CArray<int> local_nodes(num_nodes_in_patch);
       //set current quadrature point
       y_quad = iquad / num_gauss_points;
       x_quad = iquad % num_gauss_points;
@@ -1111,10 +1115,9 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
 
       //find local dof set for this surface
-      local_nodes[0] = elem->surface_to_dof_lid(local_surface_id,0);
-      local_nodes[1] = elem->surface_to_dof_lid(local_surface_id,1);
-      local_nodes[2] = elem->surface_to_dof_lid(local_surface_id,2);
-      local_nodes[3] = elem->surface_to_dof_lid(local_surface_id,3);
+      for(int node_loop=0; node_loop < num_nodes_in_patch; node_loop++){
+        local_nodes(node_loop) = elem->surface_to_dof_lid(local_surface_id, node_loop);
+      }
 
       //acquire set of nodes for this face
       for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
@@ -1143,12 +1146,6 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
         elem->partial_eta_basis(basis_derivative_s1,quad_coordinate);
         elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
         elem->partial_xi_basis(basis_derivative_s3,quad_coordinate);
-      }
-
-      //set values relevant to this surface
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        surf_basis_derivative_s1(node_loop) = basis_derivative_s1(local_nodes[node_loop]);
-        surf_basis_derivative_s2(node_loop) = basis_derivative_s2(local_nodes[node_loop]);
       }
 
       //compute derivatives of x,y,z w.r.t the s,t coordinates of this surface; needed to compute dA in surface integral
@@ -1216,9 +1213,9 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       elem->basis(basis_values,quad_coordinate);
 
       // loop over nodes of this face and 
-      for(int node_count = 0; node_count < 4; node_count++){
+      for(int node_count = 0; node_count < num_nodes_in_patch; node_count++){
             
-        node_id = nodes_in_elem(current_element_index, local_nodes[node_count]);
+        node_id = nodes_in_elem(current_element_index, local_nodes(node_count));
         //check if node is local to alter Nodal Forces vector
         if(!map->isNodeGlobalElement(node_id)) continue;
         node_id = map->getLocalElement(node_id);
@@ -1238,7 +1235,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
         inner_product = surface_normal[0]*heat_flux[0] + surface_normal[1]*heat_flux[1] + surface_normal[2]*heat_flux[2];
 
         if(inner_product!=0)
-          Nodal_RHS(node_id,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*inner_product*basis_values(local_nodes[node_count]);
+          Nodal_RHS(node_id,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*inner_product*basis_values(local_nodes(node_count));
         
       }
       }
@@ -3424,9 +3421,51 @@ void FEA_Module_Heat_Conduction::linear_solver_parameters(){
   }
   else{
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("MueLu"));
-    std::string xmlFileName = "MueLu_Thermal_3D_Params.xml";
-    //std::string xmlFileName = "simple_test.xml";
-    Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
+    if(module_params.muelu_parameters_xml_file){
+      std::string xmlFileName = module_params.xml_parameters_file_name;
+      //std::string xmlFileName = "simple_test.xml";
+      Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
+    }
+    else{
+      //set default parameters for MueLu
+      Linear_Solve_Params->set("problem: type", "Poisson-3D");
+      Linear_Solve_Params->set("verbosity", "none");
+      Linear_Solve_Params->set("coarse: max size", (int) 2000);
+      Linear_Solve_Params->set("multigrid algorithm", "sa");
+      Linear_Solve_Params->set("coarse: type", "Klu2");
+      Linear_Solve_Params->set("transpose: use implicit", true);
+      Linear_Solve_Params->set("max levels", (int) 10);
+      Linear_Solve_Params->set("number of equations", (int) 1);
+      Linear_Solve_Params->set("sa: use filtered matrix", true);
+      Linear_Solve_Params->set("aggregation: type", "uncoupled");
+      Linear_Solve_Params->set("aggregation: drop scheme", "classical");
+      Linear_Solve_Params->set("reuse: type", "S");
+      //Linear_Solve_Params->set("aggregation: drop tol", (double) 0.02);
+
+      //smoother options
+      Linear_Solve_Params->set("smoother: type", "CHEBYSHEV");
+      Linear_Solve_Params->sublist("smoother: params").set("debug", false);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: degree", (int) 2);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: ratio eigenvalue", (double) 7.0);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: min eigenvalue", (double) 1.0);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: zero starting solution", true);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: eigenvalue max iterations", (int) 100);
+
+      //repartition options
+      Linear_Solve_Params->set("repartition: enable", true);
+      Linear_Solve_Params->set("repartition: partitioner", "zoltan2");
+      Linear_Solve_Params->set("repartition: start level", (int) 2);
+      Linear_Solve_Params->set("repartition: min rows per proc", (int) 2000);
+      Linear_Solve_Params->set("repartition: max imbalance", (double) 1.10);
+      Linear_Solve_Params->set("repartition: remap parts", true);
+      Linear_Solve_Params->set("repartition: rebalance P and R", true);
+
+      Linear_Solve_Params->sublist("repartition: params").set("algorithm", "multijagged");
+      Linear_Solve_Params->sublist("repartition: params").set("mj_premigration_option", (int) 1);
+
+      //for device usage
+      Linear_Solve_Params->set("use kokkos refactor", false);
+    }
   }
 }
 

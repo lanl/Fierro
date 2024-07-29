@@ -116,6 +116,7 @@ FEA_Module::FEA_Module(Solver* Solver_Pointer)
     node_specified_bcs = false;
     // initialize for default
     num_boundary_conditions = 0;
+    bcs_initialized = false;
 
     // flag init
     body_term_flag = nonzero_bc_flag = false;

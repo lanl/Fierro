@@ -766,7 +766,7 @@ void Explicit_Solver::parallel_vtk_writer_new()
     MPI_File          myfile_parallel;
     bool              displace_geometry = false;
 
-    std::string vtk_dir      = "vtk/";
+    std::string vtk_dir      = simparam.output_options.output_file_location;
     std::string vtk_data_dir = vtk_dir + "data/";
 
     // mkdir if needed
@@ -1025,6 +1025,19 @@ void Explicit_Solver::parallel_vtk_writer_new()
         }
         sort_and_write_data_to_file_mpi_all<CArrayLayout, double, LO, GO, node_type>(
       data_ptr, all_element_map, data_num_comps, num_elem, world, myfile_parallel, element_sorting_importer);
+    }
+
+    if(simparam.output_options.optimization_restart_file){
+        // Write commented restart data to be used by Fierro
+        str_stream.str("");
+        str_stream << std::endl << "#RESTART DATA: Objective_Normalization_Constant " <<
+                    simparam.optimization_options.objective_normalization_constant << std::endl;
+        current_offset = mpi_get_file_position_shared(world, myfile_parallel);
+        if (myrank == 0)
+        {
+            MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
+                        str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
+        }
     }
 
     MPI_Barrier(world);

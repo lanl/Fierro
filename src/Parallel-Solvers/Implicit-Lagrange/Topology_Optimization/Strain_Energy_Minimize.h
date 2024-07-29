@@ -93,6 +93,7 @@ private:
   ROL::Ptr<ROL_MV> ROL_Displacements;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> all_node_displacements_distributed_temp;
+  real_t initial_strain_energy, objective_sign;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
 
@@ -115,7 +116,7 @@ public:
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
       current_step = 0;
-      
+      objective_sign = 1;
       //deep copy solve data into the cache variable
       FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
       all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
@@ -124,10 +125,28 @@ public:
       ROL_Displacements = ROL::makePtr<ROL_MV>(FEM_->node_displacements_distributed);
 
       real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force)/2;
+      if(FEM_->simparam->optimization_options.objective_normalization_constant==0){
+        initial_strain_energy = current_strain_energy;
+      }
+      else{
+        initial_strain_energy = FEM_->simparam->optimization_options.objective_normalization_constant;
+      }
+
+      //save initial normalization value for restart data
+      if(FEM_->simparam->output_options.optimization_restart_file){
+        FEM_->simparam->optimization_options.objective_normalization_constant = initial_strain_energy;
+      }
+      if(FEM_->simparam->optimization_options.maximize_flag){
+        objective_sign = -1;
+      }
       std::cout.precision(10);
       if(FEM_->myrank==0)
-      std::cout << "INITIAL STRAIN ENERGY " << current_strain_energy << std::endl;
+      std::cout << "INITIAL STRAIN ENERGY " << initial_strain_energy << std::endl;
   }
+
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     // //debug
@@ -185,6 +204,10 @@ public:
       FEM_->Implicit_Solver_Pointer_->output_design(current_step);
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update objective value with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
     //std::cout << "Started obj value on task " <<FEM_->myrank  << std::endl;
     ROL::Ptr<const MV> zp = getVector(z);
@@ -228,15 +251,15 @@ public:
     real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force)/2;
     std::cout.precision(10);
     if(FEM_->myrank==0)
-    std::cout << "CURRENT STRAIN ENERGY " << current_strain_energy << std::endl;
+    std::cout << "CURRENT NORMALIZED STRAIN ENERGY " << current_strain_energy/initial_strain_energy << std::endl;
 
     //std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
-    return current_strain_energy;
+    return objective_sign*current_strain_energy/initial_strain_energy;
   }
 
-  //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //g.zero();
-  //}
+  /* --------------------------------------------------------------------------------------
+   Update gradient vector (g) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
   
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
     //std::cout << "Started obj gradient on task " <<FEM_->myrank  << std::endl;
@@ -263,6 +286,7 @@ public:
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
+    gp->scale(objective_sign/initial_strain_energy);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -288,7 +312,11 @@ public:
     //std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
   }
   
-  
+  /* --------------------------------------------------------------------------------------
+   Update Hessian vector product (hv) using the differential design vector (v) and
+   the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
     // //debug
     // std::ostream &out = std::cout;
@@ -305,6 +333,7 @@ public:
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
+    hvp->scale(objective_sign/initial_strain_energy);
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);

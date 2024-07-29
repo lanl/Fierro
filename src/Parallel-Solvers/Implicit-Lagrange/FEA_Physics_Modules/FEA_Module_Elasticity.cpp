@@ -199,6 +199,541 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   CArrayKokkos<long long int, array_layout, HostSpace, memory_traits> read_buffer_indices;
   int buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
   size_t read_index_start, node_rid, elem_gid;
+  LO local_dof_id, dof_dim_offset;
+  GO node_gid;
+  real_t dof_value;
+  host_vec_array node_densities;
+  //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
+
+  //initialize boundary condition storage structures
+  init_boundaries();
+
+  //task 0 reads file, it should be open by now due to Implicit Solver mesh read in
+
+  //ANSYS dat file doesn't always correctly specify total number of nodes, which is needed for the node map.
+  //First pass reads in node section to determine the maximum number of nodes, second pass distributes node data
+  //The elements section header does specify element count
+
+  //revert file position to before first condition zone
+  if(myrank==0){
+    in->seekg(before_condition_header);
+  }
+
+  //prompts all MPI ranks to expect more broadcasts
+  GO dof_count;
+  bool searching_for_conditions = true;
+  bool found_no_conditions = true;
+  int  zone_condition_type = NONE;
+  bool zero_displacement = false;
+  bool assign_flag;
+  //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
+  while (searching_for_conditions) {
+    if(myrank==0){
+      //reset variables 
+      zone_condition_type = NONE;
+      while(searching_for_conditions&&in->good()){
+        getline(*in, skip_line);
+        //std::cout << skip_line << std::endl;
+        line_parse.clear();
+        line_parse.str(skip_line);
+        //stop when the NODES= string is reached
+        while (!line_parse.eof()){
+          line_parse >> substring;
+          //std::cout << substring << std::endl;
+          if(!substring.compare("Supports")){
+            //std::cout << "FOUND BC ZONE" << std::endl;
+            searching_for_conditions = found_no_conditions = false;
+            zone_condition_type = DISPLACEMENT_CONDITION;
+          }
+          else if(!substring.compare("Pressure")){
+            //std::cout << "FOUND PRESSURE ZONE" << std::endl;
+            searching_for_conditions = found_no_conditions = false;
+            zone_condition_type = SURFACE_LOADING_CONDITION;
+          }
+          else if(!substring.compare("Displacements")||!substring.compare("Displacement\"")){
+            //std::cout << "FOUND BC ZONE" << std::endl;
+            searching_for_conditions = found_no_conditions = false;
+            zone_condition_type = ANSYS_DISPLACEMENT_IMPORT;
+          }
+        } //while
+      }//while
+    }
+    
+    //broadcast zone flags
+    MPI_Bcast(&zone_condition_type,1,MPI_INT,0,world);
+    //perform readin strategy according to zone type
+    if(zone_condition_type==DISPLACEMENT_CONDITION){
+      node_specified_bcs = true;
+      bool per_node_flag = false;
+      if(myrank==0){
+        getline(*in, read_line);
+        std::cout << read_line << std::endl;
+        line_parse.clear();
+        line_parse.str(read_line);
+        line_parse >> substring;
+        //parse boundary condition specifics out of jumble of comma delimited entries
+        line_parse2.clear();
+        line_parse2.str(substring);
+        while(line_parse2.good()){
+        getline(line_parse2, token, ',');
+        if(!token.compare("FIXEDSU")){
+          nonzero_bc_flag = false;
+        }
+        if(!token.compare("NODE")){
+          per_node_flag = true;
+        }
+        }
+        //read number of nodes/dof in boundary condition zone
+        line_parse >> dof_count;
+        //skip 1 line
+        getline(*in, read_line);
+      }
+      //broadcast number of fixed support conditions to read in (global ids)
+      
+      MPI_Bcast(&dof_count,1,MPI_LONG_LONG_INT,0,world);
+
+      //calculate buffer iterations to read number of lines
+      buffer_iterations = dof_count/buffer_lines;
+
+      if(dof_count%buffer_lines!=0) buffer_iterations++;
+      read_index_start = 0;
+
+      //allocate read buffer
+      read_buffer_indices = CArrayKokkos<long long int, array_layout, HostSpace, memory_traits>(buffer_lines);
+      //read global indices being fixed on rank zero then broadcast buffer until list is complete
+      for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+        //pack buffer on rank 0
+        if(myrank==0&&buffer_iteration<buffer_iterations-1){
+          for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
+            *in >> read_buffer_indices(buffer_loop);
+            read_buffer_indices(buffer_loop);
+          }
+        }
+        else if(myrank==0){
+          buffer_loop=0;
+          while(buffer_iteration*buffer_lines+buffer_loop < dof_count) {
+            *in >> read_buffer_indices(buffer_loop);
+            read_buffer_indices(buffer_loop);
+            buffer_loop++;
+          }
+        }
+
+        //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+        MPI_Bcast(read_buffer_indices.pointer(),buffer_lines,MPI_LONG_LONG_INT,0,world);
+        //broadcast how many nodes were read into this buffer iteration
+        MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
+
+        //debug_print
+        //std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+        //for(int iprint=0; iprint < buffer_loop; iprint++)
+        //std::cout<<"buffer packing: " << read_buffer_indices(iprint) << std::endl;
+        //return;
+
+        //determine which data to store in the swage mesh members (the local node data)
+        //loop through read buffer
+        for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
+          node_gid = read_buffer_indices(scan_loop)-1; //read indices are base 1, we need base 0
+          //let map decide if this node id belongs locally; if yes store data
+          if(all_node_map->isNodeGlobalElement(node_gid)){
+            //set local node index in this mpi rank
+            local_node_index = all_node_map->getLocalElement(node_gid);
+            if(map->isNodeGlobalElement(node_gid)){
+              Number_DOF_BCS+=num_dim;
+            }
+            if(nonzero_bc_flag){
+
+            }
+            else{
+              local_dof_id = num_dim*local_node_index;
+              Node_DOF_Boundary_Condition_Type(local_dof_id) = DISPLACEMENT_CONDITION;
+              Node_DOF_Displacement_Boundary_Conditions(local_dof_id) = 0;
+              Node_DOF_Boundary_Condition_Type(local_dof_id + 1) = DISPLACEMENT_CONDITION;
+              Node_DOF_Displacement_Boundary_Conditions(local_dof_id + 1) = 0;
+              if(num_dim==3){
+                Node_DOF_Boundary_Condition_Type(local_dof_id + 2) = DISPLACEMENT_CONDITION;
+                Node_DOF_Displacement_Boundary_Conditions(local_dof_id + 2) = 0;
+              }
+            }
+          }
+        }
+        read_index_start+=buffer_lines;
+      }
+    }
+
+    if(zone_condition_type==ANSYS_DISPLACEMENT_IMPORT){
+      nonzero_bc_flag = true;
+      if(myrank==0){
+        std::streampos just_before_zone_data;
+        bool data_zone_reached = false;
+        //skip lines until displacement data is reached
+        while(!data_zone_reached){
+          //save stream position to reread first line with data in next code block
+          just_before_zone_data = in->tellg();
+          getline(*in, read_line);
+          //std::cout << read_line << std::endl;
+
+          line_parse.clear();
+          line_parse.str(read_line);
+          line_parse >> substring;
+          line_parse2.clear();
+          line_parse2.str(substring);
+          getline(line_parse2, token, ',');
+          
+          //first token in line should be "d,"
+          if(!token.compare("d")||!in->good()){
+            data_zone_reached = true;
+            in->seekg(just_before_zone_data);
+            break;
+          }
+          
+        }
+      }
+
+      //Keep reading until a dof displacement setting line is not found
+      bool not_done_reading = true;
+
+      //allocate read buffer; format has 4 words per line of dof displacement data; we dont need the first substring
+      read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines, 3, max_word);
+      //read global indices being fixed on rank zero then broadcast buffer until list is complete
+      while(not_done_reading){
+        //pack buffer on rank 0
+        if(myrank==0){
+          for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
+            getline(*in, read_line);
+            // std::cout << read_line << std::endl;
+            line_parse.clear();
+            line_parse.str(read_line);
+            line_parse >> substring;
+            line_parse2.clear();
+            line_parse2.str(substring);
+            getline(line_parse2, token, ',');
+            //first substring in line should be "d,"
+            if(token.compare("d")||!in->good()){
+              not_done_reading = false;
+              break;
+            }
+            for (int iword = 0; iword < 3; iword++)
+            {
+                // read portions of the line into the substring variable
+                getline(line_parse2, token, ',');
+                // assign the substring variable as a word of the read buffer
+                strcpy(&read_buffer(buffer_loop, iword, 0), token.c_str());
+            }
+          }
+        }
+
+        //broadcast search condition
+        MPI_Bcast(&not_done_reading,1,MPI_CXX_BOOL,0,world);
+        //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+        MPI_Bcast(read_buffer.pointer(), buffer_lines * 3 * max_word, MPI_CHAR, 0, world);
+        //broadcast how many nodes were read into this buffer iteration
+        MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
+
+        //debug_print
+        //std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+        //for(int iprint=0; iprint < buffer_loop; iprint++)
+        //std::cout<<"buffer packing: " << read_buffer_indices(iprint) << std::endl;
+        //return;
+
+        //determine which data to store in the swage mesh members (the local node data)
+        //loop through read buffer
+        for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
+
+          node_gid = atoi(&read_buffer(scan_loop, 0, 0))-1; //read indices are base 1, we need base 0
+          // std::cout << node_gid << std::endl;
+          //let map decide if this node id belongs locally; if yes store data
+          if(all_node_map->isNodeGlobalElement(node_gid)){
+            //set local node index in this mpi rank
+            local_node_index = all_node_map->getLocalElement(node_gid);
+            if(map->isNodeGlobalElement(node_gid)){
+              Number_DOF_BCS++;
+            }
+            local_dof_id = num_dim*local_node_index;
+            substring = &read_buffer(scan_loop, 1, 0);
+            // std::cout << substring << std::endl;
+            if(!substring.compare("ux")){
+              dof_dim_offset = 0;
+            }
+            else if(!substring.compare("uy")){
+              dof_dim_offset = 1;
+            }
+            else if(!substring.compare("uz")){
+              dof_dim_offset = 2;
+            }
+            Node_DOF_Boundary_Condition_Type(local_dof_id+dof_dim_offset) = DISPLACEMENT_CONDITION;
+            Node_DOF_Displacement_Boundary_Conditions(local_dof_id+dof_dim_offset) = atof(&read_buffer(scan_loop, 2, 0));
+            // std::cout << Node_DOF_Displacement_Boundary_Conditions(local_dof_id+dof_dim_offset) << std::endl;
+        }
+        }
+      }
+    }
+    
+    if(zone_condition_type==SURFACE_LOADING_CONDITION){
+      LO local_patch_index;
+      LO boundary_set_npatches = 0;
+      bool look_at_end = false;
+      CArray<GO> Surface_Nodes;
+      std::streampos last_zone_ending_position;
+      //grow structures for loading condition storage
+      //debug print
+      std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< num_surface_force_sets << std::endl;
+      if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+      num_boundary_conditions++;
+      if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
+      num_surface_force_sets++;
+      
+      GO num_patches;
+      real_t force_density[3];
+      force_density[0] = force_density[1] = force_density[2] = 0;
+      if(myrank == 0){
+        getline(*in, read_line);
+        std::cout << read_line << std::endl;
+        line_parse.clear();
+        line_parse.str(read_line);
+        line_parse >> substring;
+        //parse boundary condition specifics out of jumble of comma delimited entries
+        line_parse2.clear();
+        line_parse2.str(substring);
+        //this first token should be the word local, otherwise the traction is printed at file end
+        getline(line_parse2, token, ',');
+        if(token.compare("local")){
+          look_at_end = true;
+        }
+        
+        if(!look_at_end){
+          getline(line_parse2, token, ',');
+          force_density[0]  = std::stod(token);
+          getline(line_parse2, token, ',');
+          force_density[1]  = std::stod(token);
+          getline(line_parse2, token, ',');
+          force_density[2]  = std::stod(token);
+        
+        //skip 2 lines
+          getline(*in, read_line);
+          getline(*in, read_line);
+        }
+        //read number of surface patches
+        getline(*in, read_line);
+        std::cout << read_line << std::endl;
+        line_parse.clear();
+        line_parse.str(read_line);
+        line_parse >> substring;
+        //parse boundary condition specifics out of jumble of comma delimited entries
+        line_parse2.clear();
+        line_parse2.str(substring);
+        while(line_parse2.good()){
+          getline(line_parse2, token, ',');
+        }
+        //number of patches should be last read token
+        //element count should be the last token read in
+        num_patches = std::stoi(token);
+        
+        //std::cout << " NUMBER OF BOUNDARY PATCHES "<< num_patches << std::endl;
+        //skip 1 more line
+        getline(*in, read_line);
+      }
+
+      //broadcast number of element surface patches subject to force density
+      MPI_Bcast(&look_at_end,1,MPI_CXX_BOOL,0,world);
+
+      if(look_at_end){
+        Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_PRESSURE_CONDITION;
+      }
+      else{
+        Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_LOADING_CONDITION;
+      }
+        
+      
+      //broadcast number of element surface patches subject to force density
+      MPI_Bcast(&num_patches,1,MPI_LONG_LONG_INT,0,world);
+      
+      std::cout << "LOAD PATCHES TO READ " << num_patches << std::endl;
+      int nodes_per_patch;
+      //select nodes per patch based on element type
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex8){
+        nodes_per_patch = 4;
+      }
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex20){
+        nodes_per_patch = 8;
+      }
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex32){
+        nodes_per_patch = 12;
+      }
+
+      //calculate buffer iterations to read number of lines
+      buffer_iterations = num_patches/buffer_lines;
+
+      if(num_patches%buffer_lines!=0) buffer_iterations++;
+      read_index_start = 0;
+      //allocate read buffer
+      read_buffer_indices = CArrayKokkos<long long int, array_layout, HostSpace, memory_traits>(buffer_lines,nodes_per_patch);
+      int non_node_entries = 5;
+      words_per_line = nodes_per_patch + non_node_entries;
+
+      for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+        //pack buffer on rank 0
+        if(myrank==0&&buffer_iteration<buffer_iterations-1){
+          for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
+            getline(*in,read_line);
+            line_parse.clear();
+            line_parse.str(read_line);
+            //debug print
+            //std::cout<< read_line <<std::endl;
+
+            for(int iword = 0; iword < words_per_line; iword++){
+              //read portions of the line into the substring variable
+              line_parse >> substring;
+              //debug print
+              //std::cout<<" "<< substring <<std::endl;
+              //assign the substring variable as a word of the read buffer
+              if(iword>non_node_entries-1){
+                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring)-1;
+              }
+            }
+          }
+        }
+        else if(myrank==0){
+          buffer_loop=0;
+          while(buffer_iteration*buffer_lines+buffer_loop < num_patches) {
+            getline(*in,read_line);
+            line_parse.clear();
+            line_parse.str(read_line);
+            for(int iword = 0; iword < words_per_line; iword++){
+              //read portions of the line into the substring variable
+              line_parse >> substring;
+              //assign the substring variable as a word of the read buffer
+              if(iword>non_node_entries-1){
+                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring)-1; //make base 0, file has base 1
+              }
+            }
+            buffer_loop++;
+          }
+      
+        }
+
+        //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+        MPI_Bcast(read_buffer_indices.pointer(),buffer_lines*nodes_per_patch,MPI_LONG_LONG_INT,0,world);
+        //broadcast how many nodes were read into this buffer iteration
+        MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
+
+        //determine which data to store in the swage mesh members (the local node data)
+        //loop through read buffer
+        //std::cout << "BUFFER LOOP IS " << buffer_loop << " ASSIGNED ON RANK " << myrank << std::endl;
+        int belong_count;
+        for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
+          belong_count = 0;
+          //judge if this patch could be relevant to this MPI rank
+          //all nodes of the patch must belong to the local + ghost set of nodes
+          for(int inode = 0; inode < nodes_per_patch; inode++){
+            node_gid = read_buffer_indices(scan_loop, inode);
+            if(map->isNodeGlobalElement(node_gid)){
+              belong_count++;
+            }
+          }
+          if(belong_count){
+            //construct patch object and look for patch index; the assign patch index to the new loading condition set
+            Surface_Nodes = CArray<GO>(nodes_per_patch);
+            for(int inode = 0; inode < nodes_per_patch; inode++){
+              Surface_Nodes(inode) = read_buffer_indices(scan_loop, inode);
+            }
+            Node_Combination temp(Surface_Nodes);
+            //debug print
+            //std::cout << "PATCH NODES " << boundary_set_npatches +1 << " " << Surface_Nodes(0) << " " << Surface_Nodes(1) << " " << Surface_Nodes(2) << " " << Surface_Nodes(3) << " ASSIGNED ON RANK " << myrank << std::endl;
+            //construct Node Combination object for this surface
+            local_patch_index = Implicit_Solver_Pointer_->boundary_patch_to_index[temp];
+            //debug print
+            //std::cout << "MAPPED PATCH NODES " << boundary_set_npatches +1 << " " << Boundary_Patches(local_patch_index).node_set(0) << " " << Boundary_Patches(local_patch_index).node_set(1) << " " << Boundary_Patches(local_patch_index).node_set(2) << " " << Boundary_Patches(local_patch_index).node_set(3) << " ASSIGNED ON RANK " << myrank << std::endl;
+            Boundary_Condition_Patches(num_boundary_conditions-1,boundary_set_npatches++) = local_patch_index;
+            //debug print
+            //std::cout << "PATCH INDEX " << local_patch_index << " ASSIGNED ON RANK " << myrank << std::endl;
+          }
+          //find patch id associated with node combination
+        }
+        read_index_start+=buffer_lines;
+      }
+      NBoundary_Condition_Patches(num_boundary_conditions-1) = boundary_set_npatches;
+      
+      //get surface pressure from the end of the file
+      if(myrank==0){
+        if(look_at_end){
+          //save file position in case there other conditions to read in afterwards
+          last_zone_ending_position = in->tellg();
+          bool found_pressure = false;
+          real_t pressure;
+          while(in->good()){
+            getline(*in, read_line);
+            //std::cout << read_line << std::endl;
+            line_parse.clear();
+            line_parse.str(read_line);
+            line_parse >> substring;
+            //parse for surface pressure token "sf" then obtain pressure value
+            line_parse2.clear();
+            line_parse2.str(substring);
+            while(line_parse2.good()){
+              getline(line_parse2, token, ',');
+              if(!token.compare("sf")){
+                found_pressure = true;
+              }
+            }
+            if(found_pressure){
+              //last token read in from the line should be the pressure
+              pressure = std::stod(token);
+              break;
+            }
+          }
+          force_density[0] = pressure;
+          //reset file position
+          in->seekg(last_zone_ending_position);
+        }
+      }
+
+      //broadcast surface force density
+      MPI_Bcast(&force_density,3,MPI_DOUBLE,0,world);
+      
+      //std::cout << " FORCE DENSITY "<< force_density[0] << std::endl;
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,0)  = force_density[0];
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,1)  = force_density[1];
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,2)  = force_density[2];
+    }
+
+    if(myrank==0){
+      //previous search on rank 0 for boundary condition keywords failed if search is still true
+      if(found_no_conditions){
+        std::cout << "FILE FORMAT ERROR" << std::endl;
+      }
+      //check if there is yet more text to try reading for more boundary condition keywords
+      searching_for_conditions = in->good();
+    }
+    
+    MPI_Bcast(&searching_for_conditions,1,MPI_CXX_BOOL,0,world);
+  } //All rank while loop
+
+  //close file
+  if(myrank == 0) in->close();
+  
+ 
+} // end read_conditions_ansys_dat
+
+/* ----------------------------------------------------------------------
+   Read ANSYS dat format mesh file
+------------------------------------------------------------------------- */
+void FEA_Module_Elasticity::read_conditions_abaqus_inp(std::ifstream *in, std::streampos before_condition_header){
+
+  char ch;
+  int num_dim = simparam->num_dims;
+  int buffer_lines = 1000;
+  int max_word = 30;
+  Input_Options input_options = simparam->input_options.value();
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
+  int local_node_index, current_column_index;
+  size_t strain_count;
+  std::string skip_line, read_line, substring, token;
+  std::stringstream line_parse, line_parse2;
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
+  CArrayKokkos<long long int, array_layout, HostSpace, memory_traits> read_buffer_indices;
+  int buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
+  size_t read_index_start, node_rid, elem_gid;
   LO local_dof_id;
   GO node_gid;
   real_t dof_value;
@@ -246,7 +781,6 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             zone_condition_type = DISPLACEMENT_CONDITION;
           }
           if(!substring.compare("Pressure")){
-            
             //std::cout << "FOUND PRESSURE ZONE" << std::endl;
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = SURFACE_LOADING_CONDITION;
@@ -443,6 +977,9 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       }
       if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex20){
         nodes_per_patch = 8;
+      }
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex32){
+        nodes_per_patch = 12;
       }
 
       //calculate buffer iterations to read number of lines
@@ -804,6 +1341,22 @@ void FEA_Module_Elasticity::generate_bcs(){
     }
     if(bc.type == BOUNDARY_CONDITION_TYPE::displacement){
       Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
+    }
+    switch (bc.type) {
+      case BOUNDARY_CONDITION_TYPE::displacement:
+        Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
+        break;
+      case BOUNDARY_CONDITION_TYPE::displacement_x:
+        Boundary_Condition_Type_List(num_boundary_conditions) = X_DISPLACEMENT_CONDITION;
+        break;
+      case BOUNDARY_CONDITION_TYPE::displacement_y:
+        Boundary_Condition_Type_List(num_boundary_conditions) = Y_DISPLACEMENT_CONDITION;
+        break;
+      case BOUNDARY_CONDITION_TYPE::displacement_z:
+        Boundary_Condition_Type_List(num_boundary_conditions) = Z_DISPLACEMENT_CONDITION;
+        break;
+      default:
+        throw std::runtime_error("Invalid surface type: " + to_string(bc.surface.type));
     }
     Boundary_Surface_Displacements(num_surface_disp_sets,0) = bc.value;
     Boundary_Surface_Displacements(num_surface_disp_sets,1) = bc.value;
@@ -1541,7 +2094,8 @@ void FEA_Module_Elasticity::assemble_vector(){
   int nodes_per_elem = max_nodes_per_element;
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign;
+  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign, num_nodes_in_patch;
+  bool is_hex;
   int patch_node_count;
   CArray<int> patch_local_node_ids;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
@@ -1555,6 +2109,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
   real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply, surface_normal[3], pressure, normal_displacement;
+  real_t resulting_term;
   CArray<GO> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
@@ -1571,10 +2126,8 @@ void FEA_Module_Elasticity::assemble_vector(){
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(nodes_per_elem,num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(nodes_per_elem,num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s3(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
+  real_t constant_stress_flag = module_params->constant_stress_flag;
 
    //force vector initialization
   for(int i=0; i < num_dim*nlocal_nodes; i++)
@@ -1638,10 +2191,15 @@ void FEA_Module_Elasticity::assemble_vector(){
 
     //loop over quadrature points if this is a distributed force
     for(int iquad=0; iquad < direct_product_count; iquad++){
-      
-      if(Element_Types(current_element_index)==elements::elem_types::Hex8){
 
-      int local_nodes[4];
+      is_hex = Element_Types(current_element_index)==elements::elem_types::Hex8||
+               Element_Types(current_element_index)==elements::elem_types::Hex20||
+               Element_Types(current_element_index)==elements::elem_types::Hex32;
+      num_nodes_in_patch = elem->surface_to_dof_lid.stride(local_surface_id);
+
+      if(is_hex){
+
+      CArray<int> local_nodes(num_nodes_in_patch);
       //set current quadrature point
       y_quad = iquad / num_gauss_points;
       x_quad = iquad % num_gauss_points;
@@ -1697,10 +2255,9 @@ void FEA_Module_Elasticity::assemble_vector(){
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
 
       //find local dof set for this surface
-      local_nodes[0] = elem->surface_to_dof_lid(local_surface_id,0);
-      local_nodes[1] = elem->surface_to_dof_lid(local_surface_id,1);
-      local_nodes[2] = elem->surface_to_dof_lid(local_surface_id,2);
-      local_nodes[3] = elem->surface_to_dof_lid(local_surface_id,3);
+      for(int node_loop=0; node_loop < num_nodes_in_patch; node_loop++){
+        local_nodes(node_loop) = elem->surface_to_dof_lid(local_surface_id, node_loop);
+      }
 
       //acquire set of nodes for this face
       for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
@@ -1729,12 +2286,6 @@ void FEA_Module_Elasticity::assemble_vector(){
         elem->partial_eta_basis(basis_derivative_s1,quad_coordinate);
         elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
         elem->partial_xi_basis(basis_derivative_s3,quad_coordinate);
-      }
-
-      //set values relevant to this surface
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        surf_basis_derivative_s1(node_loop) = basis_derivative_s1(local_nodes[node_loop]);
-        surf_basis_derivative_s2(node_loop) = basis_derivative_s2(local_nodes[node_loop]);
       }
 
       //compute derivatives of x,y,z w.r.t the s,t coordinates of this surface; needed to compute dA in surface integral
@@ -1810,9 +2361,9 @@ void FEA_Module_Elasticity::assemble_vector(){
       elem->basis(basis_values,quad_coordinate);
 
       // loop over nodes of this face and 
-      for(int node_count = 0; node_count < 4; node_count++){
+      for(int node_count = 0; node_count < num_nodes_in_patch; node_count++){
             
-        node_id = nodes_in_elem(current_element_index, local_nodes[node_count]);
+        node_id = nodes_in_elem(current_element_index, local_nodes(node_count));
         //check if node is local to alter Nodal Forces vector
         if(!map->isNodeGlobalElement(node_id)) continue;
         node_id = map->getLocalElement(node_id);
@@ -1834,7 +2385,7 @@ void FEA_Module_Elasticity::assemble_vector(){
         for(int idim = 0; idim < num_dim; idim++){
           if(force_density[idim]!=0)
           //Nodal_RHS(num_dim*node_gid + idim) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
-          Nodal_RHS(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
+          Nodal_RHS(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes(node_count));
         }
       }
       }
@@ -1855,6 +2406,146 @@ void FEA_Module_Elasticity::assemble_vector(){
 
       for(size_t ielem = 0; ielem < rnum_elem; ielem++){
 
+        //acquire set of nodes and nodal displacements for this local element
+        for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+          local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+          nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
+          nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
+          nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+          if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
+        }
+
+        //loop over quadrature points
+        for(int iquad=0; iquad < direct_product_count; iquad++){
+
+          //set current quadrature point
+          if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
+          y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
+          x_quad = iquad % num_gauss_points;
+          quad_coordinate(0) = legendre_nodes_1D(x_quad);
+          quad_coordinate(1) = legendre_nodes_1D(y_quad);
+          if(num_dim==3)
+          quad_coordinate(2) = legendre_nodes_1D(z_quad);
+
+          //set current quadrature weight
+          quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+          quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+          if(num_dim==3)
+          quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+          else
+          quad_coordinate_weight(2) = 1;
+          weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
+
+          //compute shape functions at this point for the element type
+          elem->basis(basis_values,quad_coordinate);
+
+          //compute all the necessary coordinates and derivatives at this point
+          //compute shape function derivatives
+          elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+          elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+          elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
+
+          //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+          //derivative of x,y,z w.r.t s
+          JT_row1(0) = 0;
+          JT_row1(1) = 0;
+          JT_row1(2) = 0;
+          for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+            JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+            JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+            JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+          }
+
+          //derivative of x,y,z w.r.t t
+          JT_row2(0) = 0;
+          JT_row2(1) = 0;
+          JT_row2(2) = 0;
+          for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+            JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+            JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+            JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+          }
+
+          //derivative of x,y,z w.r.t w
+          JT_row3(0) = 0;
+          JT_row3(1) = 0;
+          JT_row3(2) = 0;
+          for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+            JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+            JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+            JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+          }
+        
+          //compute the determinant of the Jacobian
+          Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                      JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                      JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+          if(Jacobian<0) Jacobian = -Jacobian;
+
+          //compute density
+          current_density = 0;
+          if(nodal_density_flag)
+          for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+            current_density += nodal_density(node_loop)*basis_values(node_loop);
+          }
+          //default constant element density
+          else{
+            current_density = Element_Densities(ielem,0);
+          }
+
+          //debug print
+          //std::cout << "Current Density " << current_density << std::endl;
+          //look up element material properties at this point as a function of density
+          Body_Term(ielem, current_density, force_density);
+        
+          //evaluate contribution to force vector component
+          for(int ibasis=0; ibasis < nodes_per_elem; ibasis++){
+            if(!map->isNodeGlobalElement(nodes_in_elem(ielem, ibasis))) continue;
+            local_node_id = map->getLocalElement(nodes_in_elem(ielem, ibasis));
+
+            for(int idim = 0; idim < num_dim; idim++){
+                if(force_density[idim]!=0)
+                Nodal_RHS(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
+            }
+          }
+        }
+      }//for
+    }//if
+
+  //apply contribution from non-zero displacement boundary conditions
+  if(nonzero_bc_flag){
+    for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+      for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+        dof_id = all_dof_map->getLocalElement(DOF_Graph_Matrix(irow,istride));
+        if((Node_DOF_Boundary_Condition_Type(dof_id)==DISPLACEMENT_CONDITION||X_DISPLACEMENT_CONDITION||Y_DISPLACEMENT_CONDITION||Z_DISPLACEMENT_CONDITION)&&Node_DOF_Displacement_Boundary_Conditions(dof_id)){
+          Nodal_RHS(irow,0) -= Stiffness_Matrix(irow,istride)*Node_DOF_Displacement_Boundary_Conditions(dof_id);  
+        }
+      }//for
+    }//for
+  }
+
+  //apply contribution from constant stress
+  if(constant_stress_flag){
+    //initialize quadrature data
+    elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+    direct_product_count = std::pow(num_gauss_points,num_dim);
+    size_t Brows;
+    if(num_dim==2) Brows = 3;
+    if(num_dim==3) Brows = 6;
+    FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> stress_matrix(Brows);
+    
+    stress_matrix(0) = module_params->constant_stress[0];
+    stress_matrix(1) = module_params->constant_stress[1];
+    stress_matrix(2) = module_params->constant_stress[2];
+    stress_matrix(3) = module_params->constant_stress[3];
+    stress_matrix(4) = module_params->constant_stress[4];
+    stress_matrix(5) = module_params->constant_stress[5];
+    
+    for(size_t ielem = 0; ielem < rnum_elem; ielem++){
+
       //acquire set of nodes and nodal displacements for this local element
       for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
         local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
@@ -1867,111 +2558,195 @@ void FEA_Module_Elasticity::assemble_vector(){
       //loop over quadrature points
       for(int iquad=0; iquad < direct_product_count; iquad++){
 
-      //set current quadrature point
-      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-      x_quad = iquad % num_gauss_points;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(1) = legendre_nodes_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate(2) = legendre_nodes_1D(z_quad);
+        //set current quadrature point
+        if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
+        y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
+        x_quad = iquad % num_gauss_points;
+        quad_coordinate(0) = legendre_nodes_1D(x_quad);
+        quad_coordinate(1) = legendre_nodes_1D(y_quad);
+        if(num_dim==3)
+        quad_coordinate(2) = legendre_nodes_1D(z_quad);
 
-      //set current quadrature weight
-      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-      else
-      quad_coordinate_weight(2) = 1;
-      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
+        //set current quadrature weight
+        quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+        quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+        if(num_dim==3)
+        quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+        else
+        quad_coordinate_weight(2) = 1;
+        weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
-      //compute shape functions at this point for the element type
-      elem->basis(basis_values,quad_coordinate);
+        //compute shape functions at this point for the element type
+        elem->basis(basis_values,quad_coordinate);
 
-      //compute all the necessary coordinates and derivatives at this point
-      //compute shape function derivatives
-      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
+        //debug print
+        //std::cout << "Current Density " << current_density << std::endl;
 
-      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-      //derivative of x,y,z w.r.t s
-      JT_row1(0) = 0;
-      JT_row1(1) = 0;
-      JT_row1(2) = 0;
-      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+        //debug print
+        //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
+      
+      /*
+      //debug print of elasticity matrix
+      std::cout << " ------------ELASTICITY MATRIX "<< ielem + 1 <<"--------------"<<std::endl;
+      for (int idof = 0; idof < Brows; idof++){
+        std::cout << "row: " << idof + 1 << " { ";
+        for (int istride = 0; istride < Brows; istride++){
+          std::cout << istride + 1 << " = " << C_matrix(idof,istride) << " , " ;
+        }
+        std::cout << " }"<< std::endl;
       }
+      //end debug block
+      */
 
-      //derivative of x,y,z w.r.t t
-      JT_row2(0) = 0;
-      JT_row2(1) = 0;
-      JT_row2(2) = 0;
-      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-      }
+        //compute all the necessary coordinates and derivatives at this point
+        //compute shape function derivatives
+        elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+        elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+        elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
 
-      //derivative of x,y,z w.r.t w
-      JT_row3(0) = 0;
-      JT_row3(1) = 0;
-      JT_row3(2) = 0;
-      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-      }
-    
-      //compute the determinant of the Jacobian
-      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-      if(Jacobian<0) Jacobian = -Jacobian;
+        //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+        //derivative of x,y,z w.r.t s
+        JT_row1(0) = 0;
+        JT_row1(1) = 0;
+        JT_row1(2) = 0;
+        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+          JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+          JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+          JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+        }
 
-      //compute density
-      current_density = 0;
-      if(nodal_density_flag)
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        current_density += nodal_density(node_loop)*basis_values(node_loop);
-      }
-      //default constant element density
-      else{
-        current_density = Element_Densities(ielem,0);
-      }
+        //derivative of x,y,z w.r.t t
+        JT_row2(0) = 0;
+        JT_row2(1) = 0;
+        JT_row2(2) = 0;
+        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+          JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+          JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+          JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+        }
 
-      //debug print
-      //std::cout << "Current Density " << current_density << std::endl;
-      //look up element material properties at this point as a function of density
-      Body_Term(ielem, current_density, force_density);
-    
-      //evaluate contribution to force vector component
-      for(int ibasis=0; ibasis < nodes_per_elem; ibasis++){
-        if(!map->isNodeGlobalElement(nodes_in_elem(ielem, ibasis))) continue;
-        local_node_id = map->getLocalElement(nodes_in_elem(ielem, ibasis));
+        //derivative of x,y,z w.r.t w
+        JT_row3(0) = 0;
+        JT_row3(1) = 0;
+        JT_row3(2) = 0;
+        for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+          JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+          JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+          JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+          //debug print
+        /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
+          std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+          std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
+          std::fflush(stdout);
+        }*/
+        }
+        
+        //compute the contributions of this quadrature point to the B matrix
+        if(num_dim==2)
+        for(int ishape=0; ishape < nodes_per_elem; ishape++){
+          B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(1,ishape*num_dim) = 0;
+          B_matrix_contribution(2,ishape*num_dim) = 0;
+          B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+          B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(5,ishape*num_dim) = 0;
+          B_matrix_contribution(0,ishape*num_dim+1) = 0;
+          B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+          B_matrix_contribution(2,ishape*num_dim+1) = 0;
+          B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(4,ishape*num_dim+1) = 0;
+          B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(0,ishape*num_dim+2) = 0;
+          B_matrix_contribution(1,ishape*num_dim+2) = 0;
+          B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(3,ishape*num_dim+2) = 0;
+          B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        }
+        if(num_dim==3)
+        for(int ishape=0; ishape < nodes_per_elem; ishape++){
+          B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(1,ishape*num_dim) = 0;
+          B_matrix_contribution(2,ishape*num_dim) = 0;
+          B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+          B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(5,ishape*num_dim) = 0;
+          B_matrix_contribution(0,ishape*num_dim+1) = 0;
+          B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+          B_matrix_contribution(2,ishape*num_dim+1) = 0;
+          B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(4,ishape*num_dim+1) = 0;
+          B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(0,ishape*num_dim+2) = 0;
+          B_matrix_contribution(1,ishape*num_dim+2) = 0;
+          B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+          B_matrix_contribution(3,ishape*num_dim+2) = 0;
+          B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+              basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+              basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+          B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+              basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+              basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        }
+        /*
+        //debug print of B matrix per quadrature point
+        std::cout << " ------------B MATRIX QUADRATURE CONTRIBUTION"<< ielem + 1 <<"--------------"<<std::endl;
+        for (int idof = 0; idof < Brows; idof++){
+          std::cout << "row: " << idof + 1 << " { ";
+          for (int istride = 0; istride < nodes_per_elem*num_dim; istride++){
+            std::cout << istride + 1 << " = " << B_matrix_contribution(idof,istride) << " , " ;
+          }
+          std::cout << " }"<< std::endl;
+        }
+        //end debug block
+        */
 
-        for(int idim = 0; idim < num_dim; idim++){
-            if(force_density[idim]!=0)
-            Nodal_RHS(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
+        //evaluate contribution to force vector
+        for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+          if(!map->isNodeGlobalElement(nodes_in_elem(ielem, icol/num_dim))) continue;
+          local_node_id = map->getLocalElement(nodes_in_elem(ielem, icol/num_dim));
+          resulting_term = 0;
+          for(int span=0; span < Brows; span++){
+            resulting_term += stress_matrix(span)*B_matrix_contribution(span,icol);
+          }
+          Nodal_RHS(num_dim*local_node_id + icol%num_dim,0) += weight_multiply*resulting_term*basis_values(icol/num_dim);
         }
       }
-      }
-      }//for
-    }//if
+    }//for
+  }
 
-  //apply contribution from non-zero displacement boundary conditions
-    if(nonzero_bc_flag){
-      for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
-        for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
-          dof_id = all_dof_map->getLocalElement(DOF_Graph_Matrix(irow,istride));
-          if((Node_DOF_Boundary_Condition_Type(dof_id)==DISPLACEMENT_CONDITION||X_DISPLACEMENT_CONDITION||Y_DISPLACEMENT_CONDITION||Z_DISPLACEMENT_CONDITION)&&Node_DOF_Displacement_Boundary_Conditions(dof_id)){
-            Nodal_RHS(irow,0) -= Stiffness_Matrix(irow,istride)*Node_DOF_Displacement_Boundary_Conditions(dof_id);  
-          }
-        }//for
-      }//for
-    }
     //debug print of force vector
     /*
     std::cout << "---------FORCE VECTOR-------------" << std::endl;
@@ -3305,13 +4080,19 @@ void FEA_Module_Elasticity::Displacement_Boundary_Conditions(){
       num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
       if(bc_option==0) {
         bc_dim_set[0]=1;
+        bc_dim_set[1]=0;
+        bc_dim_set[2]=0;
         displacement(0) = Boundary_Surface_Displacements(surface_disp_set_id,0);
       }
       else if(bc_option==1) {
+        bc_dim_set[0]=0;
         bc_dim_set[1]=1;
+        bc_dim_set[2]=0;
         displacement(1) = Boundary_Surface_Displacements(surface_disp_set_id,1);
       }
       else if(bc_option==2) {
+        bc_dim_set[0]=0;
+        bc_dim_set[1]=0;
         bc_dim_set[2]=1;
         displacement(2) = Boundary_Surface_Displacements(surface_disp_set_id,2);
       }
@@ -3359,8 +4140,8 @@ void FEA_Module_Elasticity::Displacement_Boundary_Conditions(){
               Node_DOF_Displacement_Boundary_Conditions(current_node_id*num_dim+idim) = displacement(idim);
               //counts local DOF being constrained
               if(local_flag){
-              Number_DOF_BCS++;
-              node_displacements_host(current_node_id*num_dim+idim,0) = displacement(idim);
+                Number_DOF_BCS++;
+                node_displacements_host(current_node_id*num_dim+idim,0) = displacement(idim);
               }
             }
           }
@@ -5474,9 +6255,51 @@ void FEA_Module_Elasticity::linear_solver_parameters(){
   }
   else{
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("MueLu"));
-    std::string xmlFileName = "elasticity3D.xml";
-    //std::string xmlFileName = "simple_test.xml";
-    Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
+    if(module_params->muelu_parameters_xml_file){
+      std::string xmlFileName = module_params->xml_parameters_file_name;
+      //std::string xmlFileName = "simple_test.xml";
+      Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
+    }
+    else{
+      //set default parameters for MueLu
+      Linear_Solve_Params->set("problem: type", "Elasticity-3D");
+      Linear_Solve_Params->set("verbosity", "none");
+      Linear_Solve_Params->set("coarse: max size", (int) 2000);
+      Linear_Solve_Params->set("multigrid algorithm", "sa");
+      Linear_Solve_Params->set("coarse: type", "Klu2");
+      Linear_Solve_Params->set("transpose: use implicit", true);
+      Linear_Solve_Params->set("max levels", (int) 10);
+      Linear_Solve_Params->set("number of equations", (int) 3);
+      Linear_Solve_Params->set("sa: use filtered matrix", true);
+      Linear_Solve_Params->set("aggregation: type", "uncoupled");
+      Linear_Solve_Params->set("aggregation: drop scheme", "classical");
+      Linear_Solve_Params->set("reuse: type", "S");
+      //Linear_Solve_Params->set("aggregation: drop tol", (double) 0.02);
+
+      //smoother options
+      Linear_Solve_Params->set("smoother: type", "CHEBYSHEV");
+      Linear_Solve_Params->sublist("smoother: params").set("debug", false);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: degree", (int) 2);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: ratio eigenvalue", (double) 7.0);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: min eigenvalue", (double) 1.0);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: zero starting solution", true);
+      Linear_Solve_Params->sublist("smoother: params").set("chebyshev: eigenvalue max iterations", (int) 100);
+
+      //repartition options
+      Linear_Solve_Params->set("repartition: enable", true);
+      Linear_Solve_Params->set("repartition: partitioner", "zoltan2");
+      Linear_Solve_Params->set("repartition: start level", (int) 2);
+      Linear_Solve_Params->set("repartition: min rows per proc", (int) 2000);
+      Linear_Solve_Params->set("repartition: max imbalance", (double) 1.10);
+      Linear_Solve_Params->set("repartition: remap parts", true);
+      Linear_Solve_Params->set("repartition: rebalance P and R", true);
+
+      Linear_Solve_Params->sublist("repartition: params").set("algorithm", "multijagged");
+      Linear_Solve_Params->sublist("repartition: params").set("mj_premigration_option", (int) 1);
+
+      //for device usage
+      Linear_Solve_Params->set("use kokkos refactor", false);
+    }
   }
 }
 

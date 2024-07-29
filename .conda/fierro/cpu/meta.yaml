@@ -1,9 +1,10 @@
 {% set version = "1.0.0" %}
 {% set linux_compiler_version = "10.4.0" %}
-{% set macos_compiler_version = "12" %}
+{% set macos_compiler_version = "16" %}
 # We need the same MPI version in build + host. 
 # So we have to specify it, unfortunately
-{% set mpi_version = "4.1" %}
+# UPDATE: Not necessary right now, perhaps in the future
+#{% set mpi_version = "4.1" %}
 
 package:
   name: fierro-cpu
@@ -26,16 +27,16 @@ requirements:
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}
-    - openmpi={{ mpi_version }}
+    - openmpi
   host:
     - _openmp_mutex # [linux]
     - llvm-openmp   # [osx]
-    - openmpi={{ mpi_version }}
     - fierro-trilinos-cpu
     - elements
+    - openmpi
   run:
     - fierro-trilinos-cpu
-    - mpi
+    - openmpi
 
 about:
   home: https://github.com/lanl/Fierro

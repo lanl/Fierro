@@ -135,7 +135,9 @@ public:
 
   void Gradient_Body_Term(size_t ielem, real_t density, real_t *forces);
 
-  void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header);
+  void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header); //ANSYS .dat import of specified load and boundary conditions
+
+  void read_conditions_abaqus_inp(std::ifstream *in, std::streampos before_condition_header); //ABAQUS .inp import of specified load and boundary conditions
 
   //interfaces between user input and creating data structures for bcs
   void generate_bcs();
@@ -201,7 +203,8 @@ public:
   //Boundary Conditions Data
   
   enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
-   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, SURFACE_PRESSURE_CONDITION};
+   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, ANSYS_DISPLACEMENT_IMPORT,
+   POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, SURFACE_PRESSURE_CONDITION};
   int max_boundary_sets, max_disp_boundary_sets, max_load_boundary_sets;
   int num_surface_disp_sets, num_surface_force_sets;
   bool matrix_bc_reduced;

@@ -13,7 +13,7 @@ fierro_build_type="${4}"
 if { [ ! -d "${ELEMENTS_SOURCE_DIR}/elements" ] || [ ! -d "${ELEMENTS_SOURCE_DIR}/matar/src" ] ;}
 then
     echo "Missing submodules, downloading them...."
-    git submodule update "${ELEMENTS_SOURCE_DIR}"
+    git submodule update --recursive "${ELEMENTS_SOURCE_DIR}"
 fi
 
 if [ ! -d "${TRILINOS_INSTALL_DIR}/lib" ]; then

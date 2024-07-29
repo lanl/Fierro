@@ -135,6 +135,10 @@ public:
     constraint_gradients_distributed = FEM_->mass_gradients_distributed;
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     current_step++;
 
@@ -163,6 +167,10 @@ public:
       FEM_->comm_variables(zp);
     }
   }
+
+  /* --------------------------------------------------------------------------------------
+   Update constraint value (c) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
 
   void value(ROL::Vector<real_t> &c, const ROL::Vector<real_t> &z, real_t &tol ) override {
     //std::cout << "Started constraint value on task " <<FEM_->myrank <<std::endl;
@@ -196,6 +204,11 @@ public:
 
     //std::cout << "Ended constraint value on task " <<FEM_->myrank <<std::endl;
   }
+
+  /* ----------------------------------------------------------------------------------------
+    Update adjoint of the constraint jacobian (ajv), involves gradient vector
+    and constraint adjoint (v) for the current design variable vector, z
+  ------------------------------------------------------------------------------------------*/
 
   void applyAdjointJacobian(ROL::Vector<real_t> &ajv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol) override {
     //std::cout << "Started constraint adjoint grad on task " <<FEM_->myrank << std::endl;
@@ -250,6 +263,11 @@ public:
     //std::cout << "Constraint Gradient value " << std::endl;
   }
   
+  /* ----------------------------------------------------------------------------------------
+    Update the constraint jacobian (jv), involves gradient vector
+    and design vector differential (v) for the current design variable vector, x
+  ------------------------------------------------------------------------------------------*/
+
   void applyJacobian(ROL::Vector<real_t> &jv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &x, real_t &tol) override {
     //std::cout << "Started constraint grad on task " <<FEM_->myrank  << std::endl;
      //get Tpetra multivector pointer from the ROL vector
@@ -297,7 +315,12 @@ public:
     //std::cout << "Ended constraint grad on task " <<FEM_->myrank  << std::endl;
   }
   
-  
+  /* ----------------------------------------------------------------------------------------
+    Update adjoint of the constraint Hessian vector product (ahuv), product of hessian and
+    differential design vector (v), and constraint adjoint (u) for the 
+    current design variable vector, z
+  ------------------------------------------------------------------------------------------*/
+
   void applyAdjointHessian(ROL::Vector<real_t> &ahuv, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol) {
     
     // Unwrap hv

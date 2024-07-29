@@ -21,6 +21,7 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   MESH_FORMAT mesh_file_format;
   int p_order = 2;
   double unit_scaling = 1.0;
+  bool topology_optimization_restart = false;
 
   ELEMENT_TYPE element_type = ELEMENT_TYPE::hex8;
   bool zero_index_base = false;
@@ -56,8 +57,20 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
         case ELEMENT_TYPE::hex8:
           elem_words_per_line = 8;
           break;
+        case ELEMENT_TYPE::hex20:
+          elem_words_per_line = 20;
+          break;
+        case ELEMENT_TYPE::hex32:
+          elem_words_per_line = 32;
+          break;
         case ELEMENT_TYPE::quad4:
           elem_words_per_line = 4;
+          break;
+        case ELEMENT_TYPE::quad8:
+          elem_words_per_line = 8;
+          break;
+        case ELEMENT_TYPE::quad12:
+          elem_words_per_line = 12;
           break;
         // TODO: Implement handling for other element types
         default:
@@ -76,4 +89,5 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
     Yaml::validate_filepath(mesh_file_name);
   }
 };
-IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base, p_order, unit_scaling)
+IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base, p_order, unit_scaling,
+topology_optimization_restart)

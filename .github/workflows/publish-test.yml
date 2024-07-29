@@ -1,0 +1,19 @@
+name: Publish Test
+on: 
+  workflow_dispatch
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: update the package list
+      run:
+        sudo apt-get update
+      shell: bash
+
+

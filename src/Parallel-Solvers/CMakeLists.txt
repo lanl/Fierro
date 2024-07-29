@@ -48,7 +48,7 @@ include_directories(${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)
 
-set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp FEA_Module_Inertial.cpp Solver.cpp)
+set(Parallel_Base_SRC node_combination.cpp dynamic_checkpoint.cpp FEA_Module.cpp FEA_Module_Inertial.cpp Solver.cpp)
 add_library(parallel_base_src OBJECT ${Parallel_Base_SRC})
 
 include_directories(Optimization_Modules)
@@ -62,6 +62,7 @@ target_link_libraries (
     ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS}
     yaml_serializable
     mesh_builder
+    voxelizer
 )
 
 # Material Models

@@ -144,6 +144,8 @@ public:
 
     virtual void read_conditions_ansys_dat(std::ifstream* in, std::streampos before_condition_header) {}
 
+    virtual void read_conditions_abaqus_inp(std::ifstream* in, std::streampos before_condition_header) {}
+
     virtual void linear_solver_parameters() {}
 
     virtual void comm_variables(Teuchos::RCP<const MV> zp) {}
@@ -266,6 +268,7 @@ public:
     size_t nboundary_patches;
     size_t num_boundary_conditions;
     int    current_bdy_id;
+    bool   bcs_initialized;
     CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Boundary_Patches;
     CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches; // set of patches corresponding to each boundary condition
     CArrayKokkos<size_t, array_layout, device_type, memory_traits> NBoundary_Condition_Patches;
