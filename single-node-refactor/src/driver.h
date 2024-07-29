@@ -51,6 +51,99 @@ void fill_regions(DCArrayKokkos<reg_fill_t>&,
                   size_t);
 
 // ==============================================================================
+//   Function that returns 1 or 0 if the mesh location is inside an object
+// ==============================================================================
+size_t fill_geometric_region(const mesh_t& mesh,
+                             const DCArrayKokkos<size_t>& voxel_elem_mat_id,
+                             const DCArrayKokkos<reg_fill_t>& region_fills,
+                             const ViewCArrayKokkos <double>& mesh_coords,
+                             const double voxel_dx, 
+                             const double voxel_dy, 
+                             const double voxel_dz,
+                             const double orig_x, 
+                             const double orig_y, 
+                             const double orig_z,
+                             const size_t voxel_num_i, 
+                             const size_t voxel_num_j, 
+                             const size_t voxel_num_k,
+                             const size_t f_id);
+
+
+// ==============================================================================
+//   SGH related fill functions
+// ==============================================================================
+void fill_regions_sgh(const Material_t& Materials,
+                      const mesh_t& mesh,
+                      const DCArrayKokkos <double>& node_coords,
+                      const DCArrayKokkos <double>& node_vel,
+                      DCArrayKokkos <double>& GaussPoint_den,
+                      DCArrayKokkos <double>& GaussPoint_sie,
+                      DCArrayKokkos <size_t>& elem_mat_id,
+                      DCArrayKokkos <reg_fill_t>& region_fills,
+                      DCArrayKokkos <size_t>& voxel_elem_mat_id,
+                      const DCArrayKokkos <size_t>& read_voxel_file,
+                      const size_t num_fills,
+                      const size_t num_elems,
+                      const size_t num_nodes,
+                      const size_t rk_num_bins);
+
+void init_press_sspd_stress(const Material_t& Materials,
+                            const mesh_t& mesh,
+                            const DCArrayKokkos<double>& MaterialPoints_den,
+                            const DCArrayKokkos<double>& MaterialPoints_pres,
+                            const DCArrayKokkos<double>& MaterialPoints_stress,
+                            const DCArrayKokkos<double>& MaterialPoints_sspd,
+                            const DCArrayKokkos<double>& MaterialPoints_sie,
+                            const DCArrayKokkos<double>& MaterialPoints_statev,
+                            const size_t rk_num_bins,
+                            const size_t num_mat_pts,
+                            const size_t mat_id);
+
+void init_corner_node_masses_zero(const mesh_t& mesh,
+                                  const DCArrayKokkos<double>& node_mass,
+                                  const DCArrayKokkos<double>& corner_mass);
+
+void calc_corner_node_masses(const Material_t& Materials,
+                      const mesh_t& mesh,
+                      const DCArrayKokkos<double>& node_coords,
+                      const DCArrayKokkos<double>& node_mass,
+                      const DCArrayKokkos<double>& corner_mass,
+                      const DCArrayKokkos<double>& MaterialPoints_mass,
+                      const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                      const size_t num_mat_elems);        
+
+
+// ==============================================================================
+//   Functions to paint nodal fields onto the mesh
+// ==============================================================================
+KOKKOS_FUNCTION
+void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
+                    const DCArrayKokkos<double>& node_vel,
+                    const DCArrayKokkos<double>& node_coords,
+                    const double node_gid,
+                    const double num_dims,
+                    const size_t f_id,
+                    const size_t rk_num_bins);             
+
+
+
+// ==============================================================================
+//   Functions to fields on the gauss points of the mesh
+// ==============================================================================
+KOKKOS_FUNCTION
+void paint_gauss_den_sie(const Material_t& Materials,
+                         const mesh_t& mesh,
+                         const DCArrayKokkos <double>& node_coords,
+                         const DCArrayKokkos <double>& GaussPoint_den,
+                         const DCArrayKokkos <double>& GaussPoint_sie,
+                         const DCArrayKokkos <size_t>& elem_mat_id,
+                         const DCArrayKokkos<reg_fill_t>& region_fills,
+                         const ViewCArrayKokkos <double> elem_coords,
+                         const double elem_gid,
+                         const size_t f_id);
+
+
+// ==============================================================================
 //   Functions to read voxel mesh
 // ==============================================================================
 void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
@@ -330,9 +423,6 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
     // variables from a voxel file
     // ---------------------------------------------
     DCArrayKokkos<size_t> voxel_elem_mat_id;      // 1 or 0 if material exist, or it is the material_id
-    double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
-    double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
-    size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
     
     DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
     FOR_ALL(f_id, 0, num_fills, {
@@ -359,15 +449,18 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
                      mesh,
                      State.node.coords,
                      State.node.vel,
-                     region_fills,
-                     voxel_elem_mat_id,
                      GaussPoint_den,
                      GaussPoint_sie,
                      elem_mat_id,
+                     region_fills,
+                     voxel_elem_mat_id,
+                     read_voxel_file,
                      num_fills,
                      num_elems,
                      num_nodes,
                      rk_num_bins);
+
+
     // note device and host are updated in the above function
     // ---------------------------------------------
 
@@ -385,11 +478,13 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
         size_t sum_local;
         size_t sum_total;
 
-        REDUCE_SUM(elem_gid, 0, num_elems, sum_local{
-            if(elem_mat_id(elem_id) == mat_id;){
+        REDUCE_SUM(elem_gid, 0, num_elems, sum_local,{
+
+            if(elem_mat_id(elem_gid) == mat_id){
                 // increment the number of elements the materials live in
                 sum_local++;
             } // end if    
+
         }, sum_total);
 
         // material index space size
@@ -479,7 +574,7 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
 
             // --- density and mass ---
             State.MaterialPoints(mat_id).den.host(mat_point_lid)  = GaussPoint_den.host(gauss_gid); 
-            State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(gauss_gid) * GaussPoints.vol.host(gauss_gid);
+            State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(gauss_gid) * State.GaussPoints.vol.host(gauss_gid);
 
             // --- set eroded flag to false ---
             State.MaterialPoints(mat_id).eroded.host(mat_point_lid) = false;
@@ -504,17 +599,21 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
     } // end serial for loop over all elements
 
     // copy the state to the device
-    State.MaterialPoints(mat_id).den.update_device();
-    State.MaterialPoints(mat_id).mass.update_device();
-    State.MaterialPoints(mat_id).sie.update_device();
-    State.MaterialPoints(mat_id).eroded.update_device();
+    for(int mat_id=0; mat_id<num_mats; mat_id++){
+        State.MaterialPoints(mat_id).den.update_device();
+        State.MaterialPoints(mat_id).mass.update_device();
+        State.MaterialPoints(mat_id).sie.update_device();
+        State.MaterialPoints(mat_id).eroded.update_device();
 
-    State.MaterialToMeshMaps(mat_id).elem.update_device();
+        State.MaterialToMeshMaps(mat_id).elem.update_device();
+    } // end for
     Kokkos::fence();
 
 
     // calculate pressure, sound speed, and stress for each material
     for(int mat_id=0; mat_id<num_mats; mat_id++){
+
+        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
 
         init_press_sspd_stress(Materials,
                             mesh,
@@ -525,14 +624,14 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
                             State.MaterialPoints(mat_id).sie,
                             State.MaterialPoints(mat_id).statev,
                             rk_num_bins,
-                            num_mat_pts,
+                            num_mat_points,
                             mat_id);
 
     } // for loop over mat_id
 
 
     // set corner and node masses to zero
-    init_corner_node_masses_zero(mesh, node_mass, corner_mass);
+    init_corner_node_masses_zero(mesh, State.node.mass, State.corner.mass);
 
 
     // calculate corner and node masses on the mesh
@@ -545,8 +644,9 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
                                     mesh,
                                     State.node.coords,
                                     State.node.mass,
-                                    State.corner_mass,
+                                    State.corner.mass,
                                     State.MaterialPoints(mat_id).mass,
+                                    State.MaterialToMeshMaps(mat_id).elem,
                                     num_mat_elems);
         } // end for mat_id
     }
@@ -983,7 +1083,17 @@ std::string trim(const std::string& s)
 size_t fill_geometric_region(const mesh_t& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
                              const DCArrayKokkos<reg_fill_t>& region_fills,
-                             const ViewCArrayKokkos <double>& mesh_coords) const {
+                             const ViewCArrayKokkos <double>& mesh_coords,
+                             const double voxel_dx, 
+                             const double voxel_dy, 
+                             const double voxel_dz,
+                             const double orig_x, 
+                             const double orig_y, 
+                             const double orig_z,
+                             const size_t voxel_num_i, 
+                             const size_t voxel_num_j, 
+                             const size_t voxel_num_k,
+                             const size_t f_id){
 
     // default is not to fill the element
     size_t fill_this = 0;
@@ -1107,24 +1217,25 @@ size_t fill_geometric_region(const mesh_t& mesh,
 ///
 /// \param Materials holds the material models and global parameters
 /// \param mesh is the simulation mesh
+/// \param node_coords are the node coordinates of the element
 /// \param GaussPoint_den is density at the GaussPoints on the mesh
 /// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
 /// \param elem_mat_id is the material id in an element
 /// \param region_fills are the instructures to paint state on the mesh
-/// \param node_vel is the nodal velocity array
 /// \param elem_coords is the geometric center of the element
 /// \param elem_gid is the element global mesh index
 /// \param f_id is fill instruction
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_gauss_den_sie(const Material_t& Material,
+void paint_gauss_den_sie(const Material_t& Materials,
                          const mesh_t& mesh,
-                         const CArrayKokkos <double>& GaussPoint_den,
-                         const CArrayKokkos <double>& GaussPoint_sie,
-                         const CArrayKokkos <double>& elem_mat_id,
+                         const DCArrayKokkos <double>& node_coords,
+                         const DCArrayKokkos <double>& GaussPoint_den,
+                         const DCArrayKokkos <double>& GaussPoint_sie,
+                         const DCArrayKokkos <size_t>& elem_mat_id,
                          const DCArrayKokkos<reg_fill_t>& region_fills,
-                         const ViewCArrayKokkos <double>& elem_coords,
+                         const ViewCArrayKokkos <double> elem_coords,
                          const double elem_gid,
                          const size_t f_id){
 
@@ -1132,10 +1243,11 @@ void paint_gauss_den_sie(const Material_t& Material,
     size_t mat_id = region_fills(f_id).material_id;
 
     // --- material_id in elem ---
-    elem_mat_id(elem_id) = mat_id;
+    elem_mat_id(elem_gid) = mat_id;
 
     // loop over the Gauss points in the element
     {
+        
         const size_t gauss_gid = elem_gid;  // 1 gauss point per element
 
         // add test problem state setups here
@@ -1143,8 +1255,9 @@ void paint_gauss_den_sie(const Material_t& Material,
 
             GaussPoint_den(gauss_gid) = 1.0;    
 
+            // note: elem_coords are the gauss_coords, higher quadrature requires ref elem data
             double pres = 0.25 * (cos(2.0 * PI * elem_coords(0)) + 
-                                    cos(2.0 * PI * elem_coords(1)) ) + 1.0;
+                                  cos(2.0 * PI * elem_coords(1)) ) + 1.0;
 
             // p = rho*ie*(gamma - 1)
             // makes sure index 0 matches the gamma in the gamma law function 
@@ -1188,7 +1301,8 @@ KOKKOS_FUNCTION
 void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
                     const DCArrayKokkos<double>& node_vel,
                     const DCArrayKokkos<double>& node_coords,
-                    const double elem_gid,
+                    const double node_gid,
+                    const double num_dims,
                     const size_t f_id,
                     const size_t rk_num_bins){
 
@@ -1201,7 +1315,7 @@ void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
                 {
                     node_vel(rk_level, node_gid, 0) = region_fills(f_id).u;
                     node_vel(rk_level, node_gid, 1) = region_fills(f_id).v;
-                    if (mesh.num_dims == 3) {
+                    if (num_dims == 3) {
                         node_vel(rk_level, node_gid, 2) = region_fills(f_id).w;
                     }
 
@@ -1233,7 +1347,7 @@ void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
 
                     node_vel(rk_level, node_gid, 0) = region_fills(f_id).speed * dir[0];
                     node_vel(rk_level, node_gid, 1) = region_fills(f_id).speed * dir[1];
-                    if (mesh.num_dims == 3) {
+                    if (num_dims == 3) {
                         node_vel(rk_level, node_gid, 2) = 0.0;
                     }
 
@@ -1265,7 +1379,7 @@ void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
 
                     node_vel(rk_level, node_gid, 0) = region_fills(f_id).speed * dir[0];
                     node_vel(rk_level, node_gid, 1) = region_fills(f_id).speed * dir[1];
-                    if (mesh.num_dims == 3) {
+                    if (num_dims == 3) {
                         node_vel(rk_level, node_gid, 2) = region_fills(f_id).speed * dir[2];
                     }
 
@@ -1287,7 +1401,7 @@ void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
                                                         cos(PI * node_coords(rk_level, node_gid, 1));
                     node_vel(rk_level, node_gid, 1) = -1.0 * cos(PI * node_coords(rk_level, node_gid, 0)) * 
                                                         sin(PI * node_coords(rk_level, node_gid, 1));
-                    if (mesh.num_dims == 3) {
+                    if (num_dims == 3) {
                         node_vel(rk_level, node_gid, 2) = 0.0;
                     }
 
@@ -1299,7 +1413,7 @@ void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
                     // no velocity
                     node_vel(rk_level, node_gid, 0) = 0.0;
                     node_vel(rk_level, node_gid, 1) = 0.0;
-                    if (mesh.num_dims == 3) {
+                    if (num_dims == 3) {
                         node_vel(rk_level, node_gid, 2) = 0.0;
                     }
 
@@ -1310,7 +1424,7 @@ void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
                     // no velocity
                     node_vel(rk_level, node_gid, 0) = 0.0;
                     node_vel(rk_level, node_gid, 1) = 0.0;
-                    if (mesh.num_dims == 3) {
+                    if (num_dims == 3) {
                         node_vel(rk_level, node_gid, 2) = 0.0;
                     }
 
@@ -1353,17 +1467,23 @@ void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
 /////////////////////////////////////////////////////////////////////////////
 void fill_regions_sgh(const Material_t& Materials,
                       const mesh_t& mesh,
-                      const DCArrayKokkos<double>& node_coords,
-                      const DCArrayKokkos<double>& node_vel,
-                      const DCArrayKokkos<reg_fill_t>& region_fills,
-                      const DCArrayKokkos<size_t>& voxel_elem_mat_id,
-                      const CArrayKokkos <double>& GaussPoint_den,
-                      const CArrayKokkos <double>& GaussPoint_sie,
-                      const CArrayKokkos <double>& elem_mat_id,
+                      const DCArrayKokkos <double>& node_coords,
+                      const DCArrayKokkos <double>& node_vel,
+                      DCArrayKokkos <double>& GaussPoint_den,
+                      DCArrayKokkos <double>& GaussPoint_sie,
+                      DCArrayKokkos <size_t>& elem_mat_id,
+                      DCArrayKokkos <reg_fill_t>& region_fills,
+                      DCArrayKokkos <size_t>& voxel_elem_mat_id,
+                      const DCArrayKokkos <size_t>& read_voxel_file,
                       const size_t num_fills,
                       const size_t num_elems,
                       const size_t num_nodes,
                       const size_t rk_num_bins){
+
+
+    double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
+    double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
+    size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
 
 
     // loop over the fill instructions
@@ -1375,9 +1495,15 @@ void fill_regions_sgh(const Material_t& Materials,
         {
             // read voxel mesh to get the values in the fcn interface
             user_voxel_init(voxel_elem_mat_id,
-                            voxel_dx, voxel_dy, voxel_dz,
-                            orig_x, orig_y, orig_z,
-                            voxel_num_i, voxel_num_j, voxel_num_k,
+                            voxel_dx, 
+                            voxel_dy, 
+                            voxel_dz,
+                            orig_x, 
+                            orig_y, 
+                            orig_z,
+                            voxel_num_i, 
+                            voxel_num_j, 
+                            voxel_num_k,
                             region_fills(f_id).scale_x,
                             region_fills(f_id).scale_y,
                             region_fills(f_id).scale_z,
@@ -1401,10 +1527,10 @@ void fill_regions_sgh(const Material_t& Materials,
 
             // get the coordinates of the element center (using rk_level=1 or node coords)
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_coords(0) += node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_coords(1) += node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                elem_coords(0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_coords(1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3) {
-                    elem_coords(2) += node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_coords(2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
                 }
                 else{
                     elem_coords(2) = 0.0;
@@ -1416,21 +1542,36 @@ void fill_regions_sgh(const Material_t& Materials,
 
             
             // calc if we are to fill this element
-            size_t fill_this = fill_geometric_region(mesh, voxel_elem_mat_id, region_fills, elem_coords);
+            size_t fill_this = fill_geometric_region(mesh, 
+                                                     voxel_elem_mat_id, 
+                                                     region_fills, 
+                                                     elem_coords, 
+                                                     voxel_dx, 
+                                                     voxel_dy, 
+                                                     voxel_dz,
+                                                     orig_x, 
+                                                     orig_y, 
+                                                     orig_z,
+                                                     voxel_num_i, 
+                                                     voxel_num_j, 
+                                                     voxel_num_k,
+                                                     f_id);
 
 
             // paint the material state on the element if fill_this=1
             if (fill_this == 1) {
 
                 // default sgh paint
-                paint_gauss_den_sie(Material,
-                                mesh,
-                                GaussPoint_den,
-                                GaussPoint_sie,
-                                elem_mat_id,
-                                region_fills,
-                                elem_gid,
-                                f_id);
+                paint_gauss_den_sie(Materials,
+                                    mesh,
+                                    node_coords,
+                                    GaussPoint_den,
+                                    GaussPoint_sie,
+                                    elem_mat_id,
+                                    region_fills,
+                                    elem_coords,
+                                    elem_gid,
+                                    f_id);
 
                 // add user defined paint here
                 // user_defined_sgh_state();
@@ -1445,21 +1586,34 @@ void fill_regions_sgh(const Material_t& Materials,
         FOR_ALL(node_gid, 0, num_nodes, {
 
             // make a view to pass to fill and paint functions (using rk_level 1 for node coords)
-            ViewCArrayKokkos <double> coords(&node_coords(1,node_gid,0), 3);
+            ViewCArrayKokkos <double> these_coords(&node_coords(1,node_gid,0), 3);
+
             
             // calc if we are to fill this element
-            size_t fill_this = fill_geometric_region(mesh, voxel_elem_mat_id, region_fills, coords);
+            size_t fill_this = fill_geometric_region(mesh, 
+                                                     voxel_elem_mat_id, 
+                                                     region_fills, 
+                                                     these_coords, 
+                                                     voxel_dx, 
+                                                     voxel_dy, 
+                                                     voxel_dz,
+                                                     orig_x, 
+                                                     orig_y, 
+                                                     orig_z,
+                                                     voxel_num_i, 
+                                                     voxel_num_j, 
+                                                     voxel_num_k,
+                                                     f_id);
 
             // paint the material state on the node if fill_this=1
             if (fill_this == 1) {
 
                 // default sgh paint
-                paint_node_vel(Material,
-                               mesh,
-                               region_fills,
+                paint_node_vel(region_fills,
                                node_vel,
-                               coords,
-                               elem_gid,
+                               node_coords,
+                               node_gid,
+                               mesh.num_dims,
                                f_id,
                                rk_num_bins);
 
@@ -1536,14 +1690,14 @@ void init_press_sspd_stress(const Material_t& Materials,
 
         // --- Sound Speed ---                               
         Materials.MaterialFunctions(mat_id).calc_sound_speed(
-                                        State.MaterialPoints_pres,
-                                        State.MaterialPoints_stress,
+                                        MaterialPoints_pres,
+                                        MaterialPoints_stress,
                                         mat_point_lid,
                                         mat_id,
-                                        State.MaterialPoints_statev,
-                                        State.MaterialPoints_sspd,
-                                        State.MaterialPoints_den(mat_point_lid),
-                                        State.MaterialPoints_sie(0, mat_point_lid),
+                                        MaterialPoints_statev,
+                                        MaterialPoints_sspd,
+                                        MaterialPoints_den(mat_point_lid),
+                                        MaterialPoints_sie(0, mat_point_lid),
                                         Materials.eos_global_vars);
     }); // end pressure and sound speed
 
@@ -1556,7 +1710,7 @@ void init_press_sspd_stress(const Material_t& Materials,
             // always 3D even for 2D-RZ
             for (size_t i = 0; i < 3; i++) {
                 for (size_t j = 0; j < 3; j++) {
-                    State.MaterialPoints(mat_id).stress(rk_level, mat_point_lid, i, j) = 0.0;
+                    MaterialPoints_stress(rk_level, mat_point_lid, i, j) = 0.0;
                 }
             }  // end for i,j
                              
@@ -1610,12 +1764,13 @@ void init_corner_node_masses_zero(const mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_node_masses(const Material_t& Materials,
-                      const mesh_t& mesh,
-                      const DCArrayKokkos<double>& node_coords,
-                      const DCArrayKokkos<double>& node_mass,
-                      const DCArrayKokkos<double>& corner_mass,
-                      const DCArrayKokkos<double>& MaterialPoints_mass,
-                      const size_t num_mat_elems){
+                             const mesh_t& mesh,
+                             const DCArrayKokkos<double>& node_coords,
+                             const DCArrayKokkos<double>& node_mass,
+                             const DCArrayKokkos<double>& corner_mass,
+                             const DCArrayKokkos<double>& MaterialPoints_mass,
+                             const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                             const size_t num_mat_elems){
 
 
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
@@ -1627,7 +1782,7 @@ void calc_corner_node_masses(const Material_t& Materials,
         double corner_frac = 1.0/((double)mesh.num_nodes_in_elem);  // =1/8
         
         // partion the mass to the corners
-        for(corner_lid=0; corner_lid<mesh.num_nodes_in_elem; corner_lid++){
+        for(size_t corner_lid=0; corner_lid<mesh.num_nodes_in_elem; corner_lid++){
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
             corner_mass(corner_gid) += corner_frac*MaterialPoints_mass(mat_elem_lid);
         } // end for
@@ -1635,12 +1790,12 @@ void calc_corner_node_masses(const Material_t& Materials,
     }); // end parallel for over mat elem local ids
 
 
-    FOR_ALL(nodes_gid, 0, mesh.num_nodes, {
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
         for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
 
-            size_t corner_gid = mesh.cornerers_in_node(node_gid, corner_lid);
+            size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
 
-            node.mass(node_gid) += corner_mass(corner_gid);
+            node_mass(node_gid) += corner_mass(corner_gid);
         } // end for elem_lid
     }); // end parallel loop over nodes in the mesh
 

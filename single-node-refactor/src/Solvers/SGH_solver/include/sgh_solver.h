@@ -396,10 +396,10 @@ double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_ma
                                   const DCArrayKokkos<double>& MaterialPoints_sie,
                                   const size_t num_mat_points);
 
-double sum_domain_kinetic_energy(const DCArrayKokkos<double>& node_vel,
+double sum_domain_kinetic_energy(const mesh_t& mesh,
+                                 const DCArrayKokkos<double>& node_vel,
                                  const DCArrayKokkos<double>& node_coords,
-                                 const DCArrayKokkos<double>& node_mass,
-                                 const mesh_t& mesh);
+                                 const DCArrayKokkos<double>& node_mass);
 
 
 #endif // end HEADER_H

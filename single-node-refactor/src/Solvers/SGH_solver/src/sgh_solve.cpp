@@ -122,10 +122,10 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
     } // end loop over mat_id
 
     // extensive KE
-    KE_t0 = sum_domain_kinetic_energy(State.node.vel,
+    KE_t0 = sum_domain_kinetic_energy(mesh,
+                                      State.node.vel,
                                       State.node.coords,
-                                      State.node.mass,
-                                      mesh);
+                                      State.node.mass);
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
 
@@ -476,10 +476,10 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
     } // end loop over mat_id
 
     // extensive KE
-    KE_tend = sum_domain_kinetic_energy(State.node.vel,
+    KE_tend = sum_domain_kinetic_energy(mesh,
+                                        State.node.vel,
                                         State.node.coords,
-                                        State.node.mass,
-                                        mesh);
+                                        State.node.mass);
     // extensive TE
     TE_tend = IE_tend + KE_tend;
 
