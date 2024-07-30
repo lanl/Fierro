@@ -3,11 +3,6 @@ import sys
 import matplotlib
 import matplotlib.pyplot as plt
 
-
-
-
-
-
 # Check if the file path is provided as a command-line argument
 if len(sys.argv) < 2:
     print("Usage: python script.py <path_to_file>")
@@ -46,4 +41,4 @@ plt.title(f'Density')
 plt.xlabel('Radius 3D')
 plt.ylabel(f'Density')
 plt.savefig(f"test.png", dpi=300)
-# plt.show()
+
