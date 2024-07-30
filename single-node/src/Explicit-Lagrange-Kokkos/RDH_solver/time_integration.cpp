@@ -261,7 +261,7 @@ void get_timestep_HexN(mesh_t &mesh,
                   double &dt,
                   const double fuzz){
 
-    
+    double dt_old = dt;
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;
 
@@ -270,11 +270,13 @@ void get_timestep_HexN(mesh_t &mesh,
     REDUCE_MIN(elem_gid, 0, mesh.num_elems, dt_lcl, {
         
         
-        double elem_sspd = 0.0;
+        double elem_sspd = -1.0e+10;
         for (int legendre_lid = 0; legendre_lid < mesh.num_leg_gauss_in_elem; legendre_lid++){
             int legendre_gid = mesh.legendre_in_elem(elem_gid, legendre_lid);
-            elem_sspd = elem_sspd > mat_pt_sspd(legendre_gid) ? elem_sspd : mat_pt_sspd(legendre_gid);//+= mat_pt_sspd(legendre_gid);
+            elem_sspd = elem_sspd > abs(mat_pt_sspd(legendre_gid)) ? elem_sspd : abs(mat_pt_sspd(legendre_gid));//+= mat_pt_sspd(legendre_gid);
         }
+        // printf(" \n ");
+        // printf(" elem sspd : %10.16lf \n", elem_sspd);
         //elem_sspd = elem_sspd/mesh.num_leg_gauss_in_elem;
 
 
@@ -350,6 +352,16 @@ void get_timestep_HexN(mesh_t &mesh,
     
     // save the min dt
     if(min_dt_calc < dt) dt = min_dt_calc;
+
+    // don't let dt increase by more than 2% or decrease by more than 20%
+    if ( 1.25*dt_old <= dt ){
+        dt = 1.02*dt_old;
+    } 
+    else if ( dt < dt_old){
+        time_value -= dt_old;
+        dt = 0.85*dt_old;
+        printf(" time step repeated \n");
+    }
     
     // ensure time step hits the graphics time intervals
     dt = fmin(dt, (graphics_time - time_value)+fuzz);
@@ -365,7 +377,8 @@ void get_timestep_HexN(mesh_t &mesh,
 void init_tn(const mesh_t &mesh,
              DViewCArrayKokkos <double> &node_coords,
              DViewCArrayKokkos <double> &node_vel,
-             DViewCArrayKokkos <double> &zone_sie){
+             DViewCArrayKokkos <double> &zone_sie,
+             DViewCArrayKokkos <double> &stress){
 
     // save elem quantities
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -387,6 +400,15 @@ void init_tn(const mesh_t &mesh,
         }
     }); // end parallel for
     Kokkos::fence();
+
+    // FOR_ALL(gauss_gid, 0, mesh.num_elems*mesh.num_leg_gauss_in_elem, {
+    //     for(size_t i=0; i<mesh.num_dims; i++){
+    //         for(size_t j=0; j<mesh.num_dims; j++){
+    //             stress(0,gauss_gid,i,j) = stress(1,gauss_gid,i,j);
+    //         }
+    //     }  // end for
+    // }); // end parallel for
+    // Kokkos::fence();
     
     return;
     

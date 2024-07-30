@@ -415,6 +415,7 @@ void state_file( const mesh_t &mesh,
                  const DViewCArrayKokkos <double> &node_vel,
                  const DViewCArrayKokkos <double> &mat_pt_vel,
                  const DViewCArrayKokkos <double> &mat_pt_coords,
+                 const DViewCArrayKokkos <double> &mat_pt_h,
                  const DViewCArrayKokkos <double> &node_mass,
                  const DViewCArrayKokkos <double> &mat_pt_den,
                  const DViewCArrayKokkos <double> &mat_pt_pres,
@@ -447,8 +448,8 @@ void state_file( const mesh_t &mesh,
     out_mat_pt_state  = fopen(filename, "w");
 
     // write state dump
-    fprintf(out_mat_pt_state, "# state dump file\n");
-    fprintf(out_mat_pt_state, "# x y z u v w den  pres  sie  sspd \n");
+    // fprintf(out_mat_pt_state, "# state dump file\n");
+    // fprintf(out_mat_pt_state, "# x y z u v w den  pres  sie  sspd h \n");
     
 
     
@@ -458,7 +459,7 @@ void state_file( const mesh_t &mesh,
         for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
             int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
 
-            fprintf( out_mat_pt_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
+            fprintf( out_mat_pt_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
                  mat_pt_coords.host( gauss_gid, 0),
                  mat_pt_coords.host( gauss_gid, 1),
                  mat_pt_coords.host( gauss_gid, 2),
@@ -468,7 +469,8 @@ void state_file( const mesh_t &mesh,
                  mat_pt_den.host( gauss_gid ),
                  mat_pt_pres.host( gauss_gid ),
                  mat_pt_sie.host( gauss_gid ),
-                 mat_pt_sspd.host( gauss_gid ));
+                 mat_pt_sspd.host( gauss_gid ),
+                 mat_pt_h.host( gauss_gid ));
 
         }
   
@@ -487,8 +489,8 @@ void state_file( const mesh_t &mesh,
     out_node_state  = fopen(filename2, "w");
 
     // write state dump
-    fprintf(out_node_state, "# state dump file\n");
-    fprintf(out_node_state, "# x y z u v w\n");
+    // fprintf(out_node_state, "# state dump file\n");
+    // fprintf(out_node_state, "# x y z u v w\n");
     
 
     
@@ -641,6 +643,8 @@ void VTKHexN(const mesh_t &mesh,
 
     std::string name_tmp;
     name_tmp = "Outputs_HighOrder";
+
+    name_tmp += std::to_string(time_value);
 
     char * name = new char [name_tmp.length()+1];
     std::strcpy (name, name_tmp.c_str());

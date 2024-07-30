@@ -31,7 +31,6 @@ void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
     double gamma = elem_state_vars(elem_gid,0);
     double csmin = elem_state_vars(elem_gid,1);
     
-    
     // pressure
     elem_pres(legendre_gid) = (gamma - 1.0)*sie*den;
     

@@ -116,6 +116,8 @@ struct mat_pt_t {
 
     CArray <double> coords;
 
+    CArray <double> h;
+
     // constructed from zone.sie(1, zone_gid) as for vel
     CArray <double> sie;
 
@@ -130,6 +132,13 @@ struct mat_pt_t {
     // det of jacobian
     CArrayKokkos <double> gauss_lobatto_det_j;
     CArrayKokkos <double> gauss_legendre_det_j;
+
+    // materials and artificial viscosity stuff
+    CArrayKokkos <double> grad_vel;
+    CArrayKokkos <double> sym_grad_vel;
+    CArrayKokkos <double> anti_sym_grad_vel;
+    CArrayKokkos <double> div_vel;
+    CArrayKokkos <double> statev;
     
     // global number of quadrature points
     size_t num_leg_pts;
@@ -166,6 +175,14 @@ struct mat_pt_t {
         this->vel = CArray <double> (num_leg_pts, num_dims);
         this->coords = CArray <double> (num_leg_pts, num_dims);
         this->sie = CArray <double> (num_leg_pts);
+        this->h = CArray <double> (num_leg_pts);
+
+        // material and artificial viscosity
+        this->grad_vel = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
+        this->sym_grad_vel = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
+        this->anti_sym_grad_vel = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
+        this->div_vel = CArrayKokkos <double> (num_leg_pts);
+
 
     }
 
@@ -279,21 +296,14 @@ struct material_t {
                        const double sie) = NULL;
     
     // strength fcn pointer
-    void (*strength_model) (const DViewCArrayKokkos <double> &elem_pres,
-                            const DViewCArrayKokkos <double> &elem_stress,
-                            const size_t elem_gid,
-                            const size_t mat_id,
-                            const DViewCArrayKokkos <double> &elem_state_vars,
-                            const DViewCArrayKokkos <double> &elem_sspd,
-                            const double den,
-                            const double sie,
-                            const ViewCArrayKokkos <double> &vel_grad,
-                            const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                            const DViewCArrayKokkos <double> &node_coords,
-                            const DViewCArrayKokkos <double> &node_vel,
-                            const double vol,
-                            const double dt,
-                            const double alpha) = NULL;
+    void (*strength_model) (CArrayKokkos <double> &deviatoric_stress_rhs,
+                         const DViewCArrayKokkos <double> &stress,
+                         const CArrayKokkos <double> &mat_pt_state_vars,
+                         const CArrayKokkos <double> &sym_grad_vel,
+                         const CArrayKokkos <double> &anti_sym_grad_vel,
+                         const CArrayKokkos <double> &div_vel,
+                         const size_t num_gauss,
+                         const size_t stage) = NULL;
     
     // hypo or hyper elastic plastic model
     model::strength_tag strength_type;

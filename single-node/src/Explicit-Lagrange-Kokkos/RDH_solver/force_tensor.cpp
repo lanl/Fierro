@@ -133,14 +133,12 @@ void build_force_tensor( CArrayKokkos <double> &force_tensor,
                     for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
                         int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
 
-                        // for (int i = 0; i < mesh.num_dims; i++){
-                        //     for (int j = 0; j < mesh.num_dims; j++){
-                                force_tensor( stage, global_K_dof, global_T_dof, dim) +=  sigma_dot_Jinv_dot_nabla(elem_gid, K_dof, leg_lid, dim)
-                                                                                        * thermo_basis(leg_lid, T_dof)
-                                                                                        * legendre_weights(leg_lid)
-                                                                                        * legendre_jacobian_det(leg_gid);
-                        //     }// end loop over contraction dimension 2
-                        // }// end loop over contraction dimension 1
+                        
+                        force_tensor( stage, global_K_dof, global_T_dof, dim) +=  sigma_dot_Jinv_dot_nabla(elem_gid, K_dof, leg_lid, dim)
+                                                                                * thermo_basis(leg_lid, T_dof)
+                                                                                * legendre_weights(leg_lid)
+                                                                                * legendre_jacobian_det(leg_gid);
+                        
                     }// end loop over legendre quadrature nodes
                 }// end loop over dimension
             }// end loop over thermodynamic dofs

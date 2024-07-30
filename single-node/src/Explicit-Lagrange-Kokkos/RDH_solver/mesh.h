@@ -1868,6 +1868,7 @@ void setup(const CArrayKokkos <material_t> &material,
            const DViewCArrayKokkos <double> &elem_mass,
            const DViewCArrayKokkos <size_t> &elem_mat_id,
            const DViewCArrayKokkos <double> &elem_statev,
+           CArrayKokkos <double> &mat_pt_statev,
            const CArrayKokkos <double> &state_vars,
            const DViewCArrayKokkos <double> &corner_mass,
            const size_t num_fills,
@@ -1910,10 +1911,6 @@ void ensight(const mesh_t &mesh,
              size_t &graphics_id,
              const double time_value);
 
-// void VTKHexN(const mesh_t &mesh,
-//              const node_t &node);
-
-
 void VTKHexN(const mesh_t &mesh,
              const DViewCArrayKokkos <double> &node_coords,
              const DViewCArrayKokkos <double> &node_vel,
@@ -1936,6 +1933,7 @@ void state_file(const mesh_t &mesh,
                 const DViewCArrayKokkos <double> &node_vel,
                 const DViewCArrayKokkos <double> &mat_pt_vel,
                 const DViewCArrayKokkos <double> &mat_pt_coords,
+                const DViewCArrayKokkos <double> &mat_pt_h,
                 const DViewCArrayKokkos <double> &node_mass,
                 const DViewCArrayKokkos <double> &elem_den,
                 const DViewCArrayKokkos <double> &elem_pres,
@@ -1985,49 +1983,15 @@ void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
 
 KOKKOS_FUNCTION
 void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
-                    const DViewCArrayKokkos <double> &elem_stress,
-                    const size_t elem_gid,
-                    const size_t mat_id,
-                    const DViewCArrayKokkos <double> &elem_state_vars,
-                    const DViewCArrayKokkos <double> &elem_sspd,
-                    const double den,
-                    const double sie);
+                       const DViewCArrayKokkos <double> &elem_stress,
+                       const size_t elem_gid,
+                       const size_t legendre_gid,
+                       const size_t mat_id,
+                       const DViewCArrayKokkos <double> &elem_state_vars,
+                       const DViewCArrayKokkos <double> &elem_sspd,
+                       const double den,
+                       const double sie);
 
-
-KOKKOS_FUNCTION
-void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
-                         const DViewCArrayKokkos <double> &elem_stress,
-                         const size_t elem_gid,
-                         const size_t mat_id,
-                         const DViewCArrayKokkos <double> &elem_state_vars,
-                         const DViewCArrayKokkos <double> &elem_sspd,
-                         const double den,
-                         const double sie,
-                         const ViewCArrayKokkos <double> &vel_grad,
-                         const ViewCArrayKokkos <size_t> &elem_node_gids,
-                         const DViewCArrayKokkos <double> &node_coords,
-                         const DViewCArrayKokkos <double> &node_vel,
-                         const double vol,
-                         const double dt,
-                         const double rk_alpha);
-
-
-KOKKOS_FUNCTION
-void user_strength_model_vpsc(const DViewCArrayKokkos <double> &elem_pres,
-                              const DViewCArrayKokkos <double> &elem_stress,
-                              const size_t elem_gid,
-                              const size_t mat_id,
-                              const DViewCArrayKokkos <double> &elem_state_vars,
-                              const DViewCArrayKokkos <double> &elem_sspd,
-                              const double den,
-                              const double sie,
-                              const ViewCArrayKokkos <double> &vel_grad,
-                              const ViewCArrayKokkos <size_t> &elem_node_gids,
-                              const DViewCArrayKokkos <double> &node_coords,
-                              const DViewCArrayKokkos <double> &node_vel,
-                              const double vol,
-                              const double dt,
-                              const double rk_alpha);
 
 void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                      const size_t num_state_vars,
@@ -2040,6 +2004,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                               const DViewCArrayKokkos <double> &den,
                               const DViewCArrayKokkos <double> &sspd,
                               const DViewCArrayKokkos <double> &vol,
+                              DViewCArrayKokkos <double> &mat_pt_h,
                               const CArrayKokkos <double> &legendre_jacobian_inverse,
                               const CArrayKokkos <double> &legendre_jacobian,
                               const CArrayKokkos <double> &legendre_jacobian_inverse_t0,
@@ -2073,6 +2038,50 @@ void get_stress_tensor(DViewCArrayKokkos <double> &elem_stress,
                        const size_t stage,
                        const mesh_t &mesh,
                        const DViewCArrayKokkos <double> &elem_pressure);
+
+void get_grad_vel(CArrayKokkos <double> &grad_vel,
+                              const DViewCArrayKokkos <double> &vel,
+                              const CArrayKokkos <double> &legendre_jacobian_inverse,
+                              const mesh_t &mesh,
+                              const fe_ref_elem_t &ref_elem,
+                              const size_t stage);
+
+void get_sym_grad_vel(CArrayKokkos <double> &sym_grad_vel,
+                              const DViewCArrayKokkos <double> &vel,
+                              const CArrayKokkos <double> &legendre_jacobian_inverse,
+                              const mesh_t &mesh,
+                              const fe_ref_elem_t &ref_elem,
+                              const size_t stage);
+
+void get_sym_grad_vel(CArrayKokkos <double> &sym_grad_vel,
+                              const DViewCArrayKokkos <double> &vel,
+                              const CArrayKokkos <double> &legendre_jacobian_inverse,
+                              const mesh_t &mesh,
+                              const fe_ref_elem_t &ref_elem,
+                              const size_t stage);
+void get_anti_sym_grad_vel(CArrayKokkos <double> &anti_sym_grad_vel,
+                              const DViewCArrayKokkos <double> &vel,
+                              const CArrayKokkos <double> &legendre_jacobian_inverse,
+                              const mesh_t &mesh,
+                              const fe_ref_elem_t &ref_elem,
+                              const size_t stage);
+
+void get_div_vel(CArrayKokkos <double> &div_vel,
+                              const DViewCArrayKokkos <double> &vel,
+                              const CArrayKokkos <double> &legendre_jacobian_inverse,
+                              const mesh_t &mesh,
+                              const fe_ref_elem_t &ref_elem,
+                              const size_t stage);
+
+
+void correct_force_tensor(CArrayKokkos <double> &force_tensor,
+                         const size_t stage,
+                         const mesh_t &mesh,
+                         const CArrayKokkos <double> &L2,
+                         const CArrayKokkos <double> &M,
+                         const CArrayKokkos <double> &m,
+                         const CArrayKokkos <double> &F_dot_ones,
+                         const double dt);
 
 KOKKOS_FUNCTION
 void assemble_kinematic_mass_matrix( CArrayKokkos <double> &M_V,
@@ -2109,18 +2118,6 @@ void assemble_L2(   CArrayKokkos <double> &L2,
                     const CArrayKokkos <double> &mass_matrix,
                     const DViewCArrayKokkos <double> &node_vel );
 
-void assemble_Thermo_L2( CArrayKokkos <double> &L2,
-                    const size_t stage,
-                    const double dt,
-                    const mesh_t &mesh,
-                    CArrayKokkos <double> &M_dot_e,
-                    CArrayKokkos <double> &F_dot_u,
-                    const CArrayKokkos <double> &force_tensor,
-                    CArrayKokkos <double> &source,
-                    const CArrayKokkos <double> &mass_matrix,
-                    const DViewCArrayKokkos <double> &zone_sie,
-                    const DViewCArrayKokkos <double> &node_vel );
-
 void update_momentum(DViewCArrayKokkos <double> &node_vel,
                      const size_t stage,
                      const mesh_t &mesh,
@@ -2134,19 +2131,15 @@ void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
                      const CArrayKokkos <double> &M_e_inv,
                      const CArrayKokkos <double> &force_tensor,
                      CArrayKokkos <double> &F_dot_u,
+                     const CArrayKokkos <double> &Fc,
+                     CArrayKokkos <double> &Fc_dot_u,
                      const CArrayKokkos <double> &source,
                      const DViewCArrayKokkos <double> &node_vel,
+                     const CArrayKokkos <double> &lumped_mass,
                      const double dt);
                     //  const CArrayKokkos <double> &A1,
                     //  const CArrayKokkos <double> &lumped_mass);
 
-void update_internal_energy_DeC(DViewCArrayKokkos <double> &zone_sie,
-                     const size_t stage,
-                     const mesh_t &mesh,
-                     const CArrayKokkos <double> &m,
-                     const CArrayKokkos <double> &L_2,
-                     const CArrayKokkos <double> &correction,
-                     const double dt);
 
 void get_sie_source(CArrayKokkos <double> source,
                     const DViewCArrayKokkos <double> &node_coords,
@@ -2156,17 +2149,6 @@ void get_sie_source(CArrayKokkos <double> source,
                     const fe_ref_elem_t &ref_elem,
                     const size_t stage
                     );
-
-void get_sie_correction(CArrayKokkos <double> correction,
-                        const CArrayKokkos <double> &ke_correction,
-                        const CArrayKokkos <double> &M_dot_e,
-                        const mesh_t &mesh);
-                    //     CArrayKokkos <double> correction,
-                    // const DViewCArrayKokkos <double> &node_vel,
-                    // const CArrayKokkos <double> &F,
-                    // const CArrayKokkos <double> &vel_tilde,
-                    // const CArrayKokkos <double> &ke_correction,
-                    // const mesh_t &mesh);
 
 void update_position_rdh(const size_t stage,
                          double dt,
@@ -2200,8 +2182,14 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                DViewCArrayKokkos <double> &elem_vol,
                DViewCArrayKokkos <double> &mat_pt_div,
                DViewCArrayKokkos <double> &mat_pt_mass,
+               DViewCArrayKokkos <double> &mat_pt_h,
                DViewCArrayKokkos <size_t> &elem_mat_id,
                DViewCArrayKokkos <double> &elem_statev,
+               CArrayKokkos <double> &mat_pt_statev,
+               CArrayKokkos <double> &grad_vel,
+               CArrayKokkos <double> &sym_grad_vel,
+               CArrayKokkos <double> &anti_sym_grad_vel,
+               CArrayKokkos <double> &div_vel,
                double &time_value,
                const double time_final,
                const double dt_max,
@@ -2219,31 +2207,6 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                CArray <double> &graphics_times,
                size_t &graphics_id);
 
-/*
-void rk_init(DViewCArrayKokkos <double> &node_coords,
-             DViewCArrayKokkos <double> &node_vel,
-             DViewCArrayKokkos <double> &elem_sie,
-             DViewCArrayKokkos <double> &elem_stress,
-             const size_t num_dims,
-             const size_t num_elems,
-             const size_t num_nodes);
-
-
-void get_timestep(mesh_t &mesh,
-                  DViewCArrayKokkos <double> &node_coords,
-                  DViewCArrayKokkos <double> &node_vel,
-                  DViewCArrayKokkos <double> &elem_sspd,
-                  DViewCArrayKokkos <double> &elem_vol,
-                  double time_value,
-                  const double graphics_time,
-                  const double time_final,
-                  const double dt_max,
-                  const double dt_min,
-                  const double dt_cfl,
-                  double &dt,
-                  const double fuzz);
-
-*/
 
 void get_timestep_HexN(mesh_t &mesh,
                   DViewCArrayKokkos <double> &node_coords,
@@ -2262,7 +2225,8 @@ void get_timestep_HexN(mesh_t &mesh,
 void init_tn(const mesh_t &mesh,
              DViewCArrayKokkos <double> &node_coords,
              DViewCArrayKokkos <double> &node_vel,
-             DViewCArrayKokkos <double> &zone_sie);
+             DViewCArrayKokkos <double> &zone_sie,
+             DViewCArrayKokkos <double> &stress);
 
 KOKKOS_FUNCTION
 double heron(const double x1,

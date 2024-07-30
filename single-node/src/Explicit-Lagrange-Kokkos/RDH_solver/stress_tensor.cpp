@@ -3,6 +3,8 @@
 #include "mesh.h"
 #include "state.h"
 
+const double fuzz = 1.e-16;
+
 
 void get_stress_tensor( DViewCArrayKokkos <double> &mat_pt_stress,
                        const size_t stage,
