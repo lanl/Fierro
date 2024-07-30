@@ -20,19 +20,22 @@ k=$1
 for ((i=1; i<=k; i++)); do
   j=$((i-1))
   for ((m=2; m<=5; m++)); do
-    mesh_size="${((2**m))}x${((2**m))}x1"
+    mesh_size="$((2**m))x$((2**m))x1"
     mesh_file="./meshes/TGV_Q${i}Q${j}_${mesh_size}.vtk"
     output_file="./TGV_batch_output/TGV_Q${i}Q${j}_${mesh_size}_${SLURM_JOB_ID}.out"
     error_file="./TGV_batch_output/TGV_${SLURM_JOB_ID}.err"
     state_file="./state/mat_pt_state_t_5.00000e-01.txt"
-    mv_file="./TGV_convergence/TGV_Q${i}Q${j}_${mesh_size}_matpt.txt"
+    node_state_file="./state/node_state_t_5.00000e-01.txt"
+    matpt_mv_file="./TGV_convergence/TGV_Q${i}Q${j}_${mesh_size}_matpt.txt"
+    nodest_mv_file="./TGV_convergence/TGV_Q${i}Q${j}_${mesh_size}_nodes.txt"
     vtk_folder="./vtk"
     new_vtk_folder="./vtk_TGV_Q${i}Q${j}_${mesh_size}"
 
     # Check if mesh file exists before running
     if [[ -f $mesh_file ]]; then
       srun ./build-RDH-openmp/bin/FierroRDH $mesh_file > $output_file 2> $error_file
-      mv $state_file $mv_file
+      mv $state_file $matpt_mv_file
+      mv $node_state_file $nodest_mv_file
       
       # Check if the vtk folder exists and move it
       if [[ -d $vtk_folder ]]; then
