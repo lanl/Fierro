@@ -60,8 +60,10 @@ int main(int argc, char* argv[])
         return 0;
     } // end if
 
-    Kokkos::initialize();
-    {
+    //Kokkos::initialize(argc, argv);
+    MATAR_MPI_INIT
+    MATAR_KOKKOS_INIT
+    { // kokkos scope
 
         // Create driver
         Driver* driver = new Driver(argv[1]);
@@ -73,9 +75,10 @@ int main(int argc, char* argv[])
 
         // Delete driver
         delete driver;
-    }
-
-    Kokkos::finalize();
+    } // end kokkos scope
+    MATAR_KOKKOS_FINALIZE
+    MATAR_MPI_FINALIZE
+    //Kokkos::finalize();
 
     std::cout << "**** End of main **** " << std::endl;
     return 0;

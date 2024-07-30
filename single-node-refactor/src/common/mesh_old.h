@@ -919,7 +919,7 @@ struct mesh_t
 
 void ensight(const mesh_t& mesh,
              const DCArrayKokkos<double>& node_coords,
-             const DCArrayKokkos<double>& node_vel,
+             const MPIArrayKokkos<double>& node_vel,
              const DCArrayKokkos<double>& node_mass,
              const DCArrayKokkos<double>& elem_den,
              const DCArrayKokkos<double>& elem_pres,
@@ -935,7 +935,7 @@ void ensight(const mesh_t& mesh,
 
 void state_file(const mesh_t& mesh,
                 const DCArrayKokkos<double>& node_coords,
-                const DCArrayKokkos<double>& node_vel,
+                const MPIArrayKokkos<double>& node_vel,
                 const DCArrayKokkos<double>& node_mass,
                 const DCArrayKokkos<double>& elem_den,
                 const DCArrayKokkos<double>& elem_pres,
@@ -959,7 +959,7 @@ void decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
                         const ViewCArrayKokkos<size_t>& elem_node_gids,
                         const size_t elem_gid,
                         const DCArrayKokkos<double>& node_coords,
-                        const DCArrayKokkos<double>& node_vel,
+                        const MPIArrayKokkos<double>& node_vel,
                         const double vol);
 
 #endif

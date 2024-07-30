@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::rk_init(DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_vel,
+    MPIArrayKokkos<double>& node_vel,
     DCArrayKokkos<double>& MaterialPoints_sie,
     DCArrayKokkos<double>& MaterialPoints_stress,
     const size_t num_dims,
@@ -101,7 +101,7 @@ void SGH::rk_init(DCArrayKokkos<double>& node_coords,
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep(mesh_t& mesh,
     DCArrayKokkos<double>&     node_coords,
-    DCArrayKokkos<double>&     node_vel,
+    MPIArrayKokkos<double>&     node_vel,
     DCArrayKokkos<double>&     MaterialPoints_sspd,
     DCArrayKokkos<double>&     GaussPoints_vol,
     double time_value,
@@ -211,7 +211,7 @@ void SGH::get_timestep(mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep2D(mesh_t& mesh,
     DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_vel,
+    MPIArrayKokkos<double>& node_vel,
     DCArrayKokkos<double>& MaterialPoints_sspd,
     DCArrayKokkos<double>& GaussPoints_vol,
     double time_value,

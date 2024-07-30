@@ -19,6 +19,9 @@ else
         -D Matar_ENABLE_KOKKOS=ON
     )
 fi
+cmake_options+=(
+    -D Matar_ENABLE_MPI=ON
+)
 
 # Print CMake options for reference
 echo "CMake Options: ${cmake_options[@]}"

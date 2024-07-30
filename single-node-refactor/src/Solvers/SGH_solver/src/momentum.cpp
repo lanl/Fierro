@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH::update_velocity(double rk_alpha,
     double dt,
     const mesh_t& mesh,
-    DCArrayKokkos<double>& node_vel,
+    MPIArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& corner_force) const
 {
@@ -101,7 +101,7 @@ void SGH::update_velocity(double rk_alpha,
 KOKKOS_FUNCTION
 void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>& elem_node_gids,
-    const DCArrayKokkos<double>&    node_vel,
+    const MPIArrayKokkos<double>&    node_vel,
     const ViewCArrayKokkos<double>& b_matrix,
     const double elem_vol,
     const size_t elem_gid) const
@@ -196,7 +196,7 @@ void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
 KOKKOS_FUNCTION
 void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>& elem_node_gids,
-    const DCArrayKokkos<double>&    node_vel,
+    const MPIArrayKokkos<double>&    node_vel,
     const ViewCArrayKokkos<double>& b_matrix,
     const double elem_vol,
     const double elem_area,
@@ -266,7 +266,7 @@ void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
 void SGH::get_divergence(DCArrayKokkos<double>& elem_div,
     const mesh_t mesh,
     const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const MPIArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---
@@ -342,7 +342,7 @@ void SGH::get_divergence(DCArrayKokkos<double>& elem_div,
 void SGH::get_divergence2D(DCArrayKokkos<double>& elem_div,
     const mesh_t mesh,
     const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const MPIArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---

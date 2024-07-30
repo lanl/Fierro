@@ -19,6 +19,9 @@ if [ "$solver" = "SGH" ]; then
 else
     echo "Error: Solver not supported."
 fi
+cmake_options+=(
+    -D MPI=ON
+)
 
 # Print CMake options for reference
 echo "CMake Options: ${cmake_options[@]}"

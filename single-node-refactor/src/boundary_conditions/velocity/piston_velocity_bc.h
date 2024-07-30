@@ -67,7 +67,7 @@ namespace PistonVelocityBC {
                          const DCArrayKokkos <BoundaryConditionEnums_t>& BoundaryConditionEnums,
                          const DCArrayKokkos<double>& bc_global_vars,
                          const DCArrayKokkos<double>& bc_state_vars,
-                         const DCArrayKokkos<double>& node_vel,
+                         const MPIArrayKokkos<double>& node_vel,
                          const double time_value,
                          const size_t bdy_node_gid,
                          const size_t bdy_set)

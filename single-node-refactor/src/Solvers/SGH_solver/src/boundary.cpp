@@ -48,7 +48,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_velocity(const mesh_t&      mesh,
                             const BoundaryCondition_t& BoundaryConditions,
-                            DCArrayKokkos<double>& node_vel,
+                            MPIArrayKokkos<double>& node_vel,
                             const double time_value) const
 {
 
@@ -94,7 +94,7 @@ void SGH::boundary_velocity(const mesh_t&      mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGH::boundary_contact(const mesh_t& mesh,
                            const BoundaryCondition_t& BoundaryConditions,
-                           DCArrayKokkos<double>& node_vel,
+                           MPIArrayKokkos<double>& node_vel,
                            const double time_value) const
 {
     return;

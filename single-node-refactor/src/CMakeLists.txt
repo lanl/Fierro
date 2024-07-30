@@ -37,6 +37,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${VECTOR_CXX_FLAGS}")
 
 find_package(Kokkos REQUIRED)
 find_package(Matar REQUIRED)
+if (MPI)
+    find_package(MPI REQUIRED)
+    add_definitions(-DHAVE_MPI=1)
+endif()
 
 
 # if(BUILD_KOKKOS_SGH)
@@ -77,3 +81,6 @@ include_directories(common)
 
 add_executable(Fierro main.cpp solver.cpp )
 target_link_libraries(Fierro PRIVATE matar parse_yaml sgh_solver Kokkos::kokkos)
+if (MPI)
+    target_link_libraries(Fierro PRIVATE MPI::MPI_CXX)
+endif()

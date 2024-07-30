@@ -76,7 +76,7 @@ namespace UserDefinedStrengthModel {
         const ViewCArrayKokkos<double>& vel_grad,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
         const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
+        const MPIArrayKokkos<double>&    node_vel,
         const double vol,
         const double dt,
         const double rk_alpha)
@@ -111,7 +111,7 @@ namespace NoStrengthModel {
         const ViewCArrayKokkos<double>& vel_grad,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
         const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
+        const MPIArrayKokkos<double>&    node_vel,
         const double vol,
         const double dt,
         const double rk_alpha)
@@ -155,7 +155,7 @@ namespace NotionalStrengthModel {
         const ViewCArrayKokkos<double>& vel_grad,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
         const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
+        const MPIArrayKokkos<double>&    node_vel,
         const double vol,
         const double dt,
         const double rk_alpha)

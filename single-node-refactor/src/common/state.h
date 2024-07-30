@@ -48,14 +48,14 @@ using namespace mtr;
 struct node_t
 {
     DCArrayKokkos<double> coords; ///< Nodal coordinates
-    DCArrayKokkos<double> vel;  ///< Nodal velocity
+    MPIArrayKokkos<double> vel;  ///< Nodal velocity
     DCArrayKokkos<double> mass; ///< Nodal mass
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
     {
         this->coords = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_coordinates");
-        this->vel    = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
+        this->vel    = MPIArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
         this->mass   = DCArrayKokkos<double>(num_nodes, "node_mass");
     }; // end method
 }; // end node_t

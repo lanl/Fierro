@@ -136,13 +136,13 @@ public:
     void boundary_velocity(
         const mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>& node_vel,
+        MPIArrayKokkos<double>& node_vel,
         const double time_value) const;
 
     void boundary_contact(
         const mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>& node_vel,
+        MPIArrayKokkos<double>& node_vel,
         const double time_value) const;
 
     // **** Functions defined in energy_sgh.cpp **** //
@@ -150,7 +150,7 @@ public:
         double rk_alpha,
         double dt,
         const mesh_t& mesh,
-        const DCArrayKokkos<double>& node_vel,
+        const MPIArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_mass,
@@ -161,7 +161,7 @@ public:
         const Material_t& Materials,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const MPIArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_pres,
@@ -182,7 +182,7 @@ public:
         const Material_t& Materials,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const MPIArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_pres,
@@ -205,14 +205,14 @@ public:
         const size_t num_dims,
         const size_t num_nodes,
         DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel) const;
+        const MPIArrayKokkos<double>& node_vel) const;
 
     // **** Functions defined in momentum.cpp **** //
     void update_velocity(
         double rk_alpha,
         double dt,
         const mesh_t& mesh,
-        DCArrayKokkos<double>& node_vel,
+        MPIArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
 
@@ -220,7 +220,7 @@ public:
     void get_velgrad(
         ViewCArrayKokkos<double>& vel_grad,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_vel,
+        const MPIArrayKokkos<double>&    node_vel,
         const ViewCArrayKokkos<double>& b_matrix,
         const double GaussPoints_vol,
         const size_t elem_gid) const;
@@ -229,7 +229,7 @@ public:
     void get_velgrad2D(
         ViewCArrayKokkos<double>& vel_grad,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_vel,
+        const MPIArrayKokkos<double>&    node_vel,
         const ViewCArrayKokkos<double>& b_matrix,
         const double GaussPoints_vol,
         const double elem_area,
@@ -239,14 +239,14 @@ public:
         DCArrayKokkos<double>& GaussPoints_div,
         const mesh_t mesh,
         const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const MPIArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vol) const;
 
     void get_divergence2D(
         DCArrayKokkos<double>& GaussPoints_div,
         const mesh_t mesh,
         const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const MPIArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vol) const;
 
     KOKKOS_FUNCTION
@@ -260,7 +260,7 @@ public:
         const Material_t& Materials,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const MPIArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& MaterialPoints_den,
         DCArrayKokkos<double>& MaterialPoints_pres,
         DCArrayKokkos<double>& MaterialPoints_stress,
@@ -278,7 +278,7 @@ public:
         const Material_t& Materials,
         const mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const MPIArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& MaterialPoints_den,
         DCArrayKokkos<double>& MaterialPoints_pres,
         DCArrayKokkos<double>& MaterialPoints_stress,
@@ -295,7 +295,7 @@ public:
     // NOTE: Consider pulling up
     void rk_init(
         DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
+        MPIArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& MaterialPoints_sie,
         DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,
@@ -305,7 +305,7 @@ public:
     void get_timestep(
         mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
+        MPIArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& MaterialPoints_sspd,
         DCArrayKokkos<double>& GaussPoints_vol,
         double time_value,
@@ -320,7 +320,7 @@ public:
     void get_timestep2D(
         mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
+        MPIArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& MaterialPoints_sspd,
         DCArrayKokkos<double>& GaussPoints_vol,
         double time_value,
@@ -358,7 +358,7 @@ public:
         const ViewCArrayKokkos<double>& vel_grad,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
         const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
+        const MPIArrayKokkos<double>&    node_vel,
         const double vol,
         const double dt,
         const double rk_alpha);

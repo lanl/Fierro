@@ -354,6 +354,7 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
+
         //SimulationParamaters.mesh_input.origin.update_host();
         for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
@@ -378,13 +379,35 @@ public:
         mesh.initialize_nodes(num_nodes);
         node.initialize(rk_num_bins, num_nodes, num_dim);
 
+        // MPI data
+        int world_size, rank;
+        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+        int grid_world_size, jrem, irem, col, row, jadd, iadd, jsub, isub, jchunk, ichunk, jstart, jend, istart, iend;
+        grid_world_size = sqrt(world_size);
+        jrem = num_points_j % grid_world_size; // how many extra points we have after a division of ranks
+        irem = num_points_i % grid_world_size;
+        col = rank % grid_world_size;
+        row = rank / grid_world_size;
+        jadd = col / (grid_world_size - jrem); // 1 if you have an extra piece, 0 otherwise
+        iadd = row / (grid_world_size - irem); // 1 if you have an extra piece, 0 otherwise
+        jsub = jadd * (grid_world_size - jrem); // subtraction from your start based on how many other ranks have an extra piece
+        isub = iadd * (grid_world_size - irem);
+        jchunk = num_points_j / grid_world_size + jadd;
+        ichunk = num_points_i / grid_world_size + iadd;
+        jstart = col * jchunk - jsub;
+        jend = jstart +  jchunk;
+        istart = row * ichunk - isub;
+        iend = istart +  ichunk;
+
         // --- Build nodes ---
 
         // populate the point data structures
-        for (int j = 0; j < num_points_j; j++) {
-            for (int i = 0; i < num_points_i; i++) {
+        for (int j = jstart, j_loc = 0; j < jend; j++, j_loc++) {
+            for (int i = istart, i_loc = 0; i < iend; i++, i_loc++) {
                 // global id for the point
-                int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
+                int node_gid = get_id(i_loc, j_loc, 0, ichunk, jchunk);
 
                 // store the point coordinates
                 node.coords.host(0, node_gid, 0) = origin[0] + (double)i * dx;
@@ -393,7 +416,7 @@ public:
         } // end for j
 
         for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
-            for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
+            for (int node_gid = 0; node_gid < jchunk * ichunk; node_gid++) {
                 node.coords.host(rk_level, node_gid, 0) = node.coords.host(0, node_gid, 0);
                 node.coords.host(rk_level, node_gid, 1) = node.coords.host(0, node_gid, 1);
             }
@@ -401,15 +424,31 @@ public:
         node.coords.update_device();
 
         // intialize elem variables
+        
+        jrem = (int) num_elems_j % grid_world_size; // how many extra points we have after a division of ranks
+        irem = (int) num_elems_i % grid_world_size;
+        col = rank % grid_world_size;
+        row = rank / grid_world_size;
+        jadd = col / (grid_world_size - jrem); // 1 if you have an extra piece, 0 otherwise
+        iadd = row / (grid_world_size - irem); // 1 if you have an extra piece, 0 otherwise
+        jsub = jadd * (grid_world_size - jrem); // subtraction from your start based on how many other ranks have an extra piece
+        isub = iadd * (grid_world_size - irem);
+        jchunk = (int) num_elems_j / grid_world_size + jadd;
+        ichunk = (int) num_elems_i / grid_world_size + iadd;
+        jstart = col * jchunk - jsub;
+        jend = jstart +  jchunk;
+        istart = row * ichunk - isub;
+        iend = istart +  ichunk;
+
         mesh.initialize_elems(num_elems, num_dim);
         MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
         GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
-        for (int j = 0; j < num_elems_j; j++) {
-            for (int i = 0; i < num_elems_i; i++) {
+        for (int j = jstart, j_loc = 0; j < jend; j++, j_loc++) {
+            for (int i = istart, i_loc = 0; i < i<iend; i++, i_loc++) {
                 // global id for the elem
-                int elem_gid = get_id(i, j, 0, num_elems_i, num_elems_j);
+                int elem_gid = get_id(i_loc, j_loc, 0, ichunk, jchunk);
 
                 // store the point IDs for this elem where the range is
                 // (i:i+1, j:j+1 for a linear quad
