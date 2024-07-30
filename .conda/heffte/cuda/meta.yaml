@@ -30,7 +30,7 @@ requirements:
     - {{ compiler('fortran') }}={{ linux_compiler_version }}
     - openmpi
     - nvidia::cuda-compiler
-    - nvidia::cuda-toolkit #={{ cuda_version }}
+    - cuda-toolkit #={{ cuda_version }}
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
