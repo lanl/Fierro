@@ -8,6 +8,10 @@
 #SBATCH --output=./TGV_batch_output/TGV_%j.out
 #SBATCH --error=./TGV_batch_output/TGV_%j.err
 
+## usage: sbatch tgv_batch.sh 2 1 5, will run Q1Q0 and Q2Q1 on 4x4, 8x8, 16x16, 32x32 meshes
+## usage: sbatch tgv_batch.sh 2 2 3, will run Q2Q1 on 4x4 and 8x8 meshes
+
+
 source ./scripts/machines/darwin-env.sh
 module list
 
