@@ -28,8 +28,9 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}={{ linux_compiler_version }}
     - openmpi
-    - cuda-compiler={{ cuda_version }}
-    - cudatoolkit={{ cuda_version }}
+      #    - cuda-compiler={{ cuda_version }}
+      #    - cudatoolkit={{ cuda_version }}
+    - cudatoolkit
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
