@@ -6,7 +6,7 @@
 package:
   name: fierro-heffte-cuda
   version: {{ version }}
-  dependencies: nvidia::cudatoolkit
+  dependencies: nvidia::cuda-toolkit
 
 source:
   git_url: https://github.com/icl-utk-edu/heffte.git
@@ -29,13 +29,13 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}={{ linux_compiler_version }}
     - openmpi
-    - cuda-compiler
+    - nvidia::cuda-compiler
     - nvidia::cuda-toolkit #={{ cuda_version }}
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
-    - cuda-cudart-static #={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
-    - cuda-compiler
+    - nvidia::cuda-cudart-static #={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
+    - nvidia::cuda-compiler
     #- cuda-cudart-static
     - libcusolver-dev
     - libcufft-dev
@@ -43,7 +43,7 @@ requirements:
     - libcusparse-dev
     - openmpi
   run:
-    - cuda-cudart
+    - nvidia::cuda-cudart
     - libcufft
     - libcublas
     - openmpi
