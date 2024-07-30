@@ -6,6 +6,7 @@
 package:
   name: fierro-heffte-cuda
   version: {{ version }}
+  dependencies: nvidia
 
 source:
   git_url: https://github.com/icl-utk-edu/heffte.git
