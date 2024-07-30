@@ -302,22 +302,21 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             Kokkos::fence();
             
 
-            // Compute L2 operator = \sum_{E \ni i} \Phi^E_i(u^k)
-            // printf("Computing L2 operator at stage %lu in cycle %lu \n", rk_stage, cycle);
-            // printf("here\n");
+            // // Compute L2 operator = \sum_{E \ni i} \Phi^E_i(u^k)
             assemble_L2(L2, rk_stage, dt, mesh, M_dot_u, F_dot_ones, force_tensor, M_V, node_vel);
-            //printf("L2 operator computed \n");
 
           
-            // update the momentum DOFs. u^k+1 = u^k - dt*L2
-            //printf("Updating momentum\n");// DOFs at stage %lu in cycle %lu \n", rk_stage, cycle);
+            // // update the momentum DOFs. u^k+1 = u^k - dt*L2
             update_momentum(node_vel, rk_stage, mesh, dt, L2, lumped_mass);
-            //printf("Momentum DOFs updated \n");
 
             FOR_ALL(elem_gid, 0, mesh.num_elems,{
                 for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
                     int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
                     int lobatto_lid = ref_elem.dof_lobatto_map(node_lid);
+
+                    // node_vel(1, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
+                    // node_vel(1, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
+                    // node_vel(1, node_gid, 2) = 0.0;
                     
                     for (int dim = 0; dim < mesh.num_dims; dim++){
                         double interp = 0.0;
@@ -380,10 +379,41 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             
             
             // internal energy update //
-            get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
+            //get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
 
-            update_internal_energy(zone_sie, rk_stage, mesh, zone.M_e_inv, force_tensor, F_dot_u, Fc, Fc_dot_u, source, node_vel, zone.zonal_mass, dt);//T_L2, zone.zonal_mass);
-            
+            //update_internal_energy(zone_sie, rk_stage, mesh, zone.M_e_inv, force_tensor, F_dot_u, Fc, Fc_dot_u, source, node_vel, zone.zonal_mass, dt);//T_L2, zone.zonal_mass);
+            FOR_ALL(elem_gid,  0, mesh.num_elems, {
+                
+                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+                        
+                    int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+                    
+                    double zone_coords[3]; 
+                    zone_coords[0] = 0.0;
+                    zone_coords[1] = 0.0;
+                    zone_coords[2] = 0.0;
+
+                    // get the coordinates of the zone center
+                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
+                        zone_coords[0] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 0);
+                        zone_coords[1] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 1);
+                        if (mesh.num_dims == 3){
+                            zone_coords[2] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 2);
+                        } else
+                        {
+                            zone_coords[2] = 0.0;
+                        }
+                    } // end loop over nodes in element
+
+                    zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
+                    zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
+                    zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
+                    
+
+                    zone_sie(1, zone_gid) = zone_sie(0, zone_gid) + dt*(3.0/8.0)*PI*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
+
+                }// end loop over zones
+            });// end loop over elems
             FOR_ALL(elem_gid, 0, mesh.num_elems,{
                 for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
                     int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);

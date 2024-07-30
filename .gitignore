@@ -15,8 +15,8 @@ CTestTestfile.cmake
 install
 single-node_material
 single-node/build-*
-single-node/Triple_Point_batch_output
-single-node/TriplePt_*
-single-node/vtk
+single-node/*_batch_output
+single-node/TriplePt_*.vtk
+single-node/vtk*
 single-node/state
 single-node/TGV_convergence

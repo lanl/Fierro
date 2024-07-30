@@ -15,11 +15,15 @@ export OMP_PROC_BIND=spread OMP_PLACES=threads OMP_NUM_THREADS=56
 
 # Argument k for the highest order i
 k=$1
+# Argument q for the lowest order i
+q=$2
+# Argument r for the exponent defining the highest mesh resolution 2^r x 2^r
+r=$3
 
-# Loop over i and j (j = i-1)
-for ((i=1; i<=k; i++)); do
+for ((i=q; i<=k; i++)); do
   j=$((i-1))
-  for ((m=2; m<=5; m++)); do
+  # consider mesh resolutions of 4x4, 8x8, 16x16, 32x32, ..., 2^r x 2^r 
+  for ((m=2; m<=r; m++)); do
     mesh_size="$((2**m))x$((2**m))x1"
     mesh_file="./meshes/TGV_Q${i}Q${j}_${mesh_size}.vtk"
     output_file="./TGV_batch_output/TGV_Q${i}Q${j}_${mesh_size}_${SLURM_JOB_ID}.out"
@@ -31,13 +35,11 @@ for ((i=1; i<=k; i++)); do
     vtk_folder="./vtk"
     new_vtk_folder="./vtk_TGV_Q${i}Q${j}_${mesh_size}"
 
-    # Check if mesh file exists before running
     if [[ -f $mesh_file ]]; then
       srun ./build-RDH-openmp/bin/FierroRDH $mesh_file > $output_file 2> $error_file
       mv $state_file $matpt_mv_file
       mv $node_state_file $nodest_mv_file
       
-      # Check if the vtk folder exists and move it
       if [[ -d $vtk_folder ]]; then
         mv $vtk_folder $new_vtk_folder
       else
