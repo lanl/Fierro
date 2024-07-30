@@ -6,7 +6,6 @@
 package:
   name: fierro-heffte-cuda
   version: {{ version }}
-  dependencies: nvidia::cuda-toolkit
 
 source:
   git_url: https://github.com/icl-utk-edu/heffte.git
@@ -30,7 +29,7 @@ requirements:
     - {{ compiler('fortran') }}={{ linux_compiler_version }}
     - openmpi
     - nvidia::cuda-compiler
-    - cuda-toolkit #={{ cuda_version }}
+    - nvidia::cudatoolkit-dev #={{ cuda_version }}
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
