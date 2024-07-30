@@ -30,6 +30,7 @@ requirements:
     - openmpi
       #    - cuda-compiler={{ cuda_version }}
       #    - cudatoolkit={{ cuda_version }}
+    - cuda-compiler
     - cudatoolkit
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
