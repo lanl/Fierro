@@ -6,7 +6,6 @@
 package:
   name: fierro-heffte-cuda
   version: {{ version }}
-  dependencies: nvidia
 
 source:
   git_url: https://github.com/icl-utk-edu/heffte.git
@@ -22,31 +21,31 @@ build:
 
 requirements:
   build:
-    - cmake=3.24
-    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
-    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
-    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
-    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
-    - {{ compiler('fortran') }}={{ linux_compiler_version }}
-    - openmpi
-    - nvidia::cuda-compiler
-    - nvidia::cudatoolkit-dev #={{ cuda_version }}
+    - conda-forge::cmake=3.24
+    - conda-forge::{{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - conda-forge::{{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+    - conda-forge::{{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - conda-forge::{{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - conda-forge::{{ compiler('fortran') }}={{ linux_compiler_version }}
+    - conda-forge::openmpi
+    - cuda-compiler
+    - cuda-toolkit #={{ cuda_version }}
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
-    - nvidia::cuda-cudart-static #={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
-    - nvidia::cuda-compiler
+    - cuda-cudart-static #={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
+    - cuda-compiler
     #- cuda-cudart-static
     - libcusolver-dev
     - libcufft-dev
     - libcublas-dev
     - libcusparse-dev
-    - openmpi
+    - conda-forge::openmpi
   run:
-    - nvidia::cuda-cudart
+    - cuda-cudart
     - libcufft
     - libcublas
-    - openmpi
+    - conda-forge::openmpi
 
 about:
   home: https://github.com/lanl/Fierro

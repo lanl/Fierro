@@ -1,5 +1,6 @@
 name: build-env
 channels:
+  - nvidia
   - conda-forge
   - fierromechanics
   - defaults
