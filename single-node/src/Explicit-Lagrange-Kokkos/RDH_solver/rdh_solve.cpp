@@ -362,7 +362,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             });
             Kokkos::fence();
 
-            correct_force_tensor(Fc, rk_stage, mesh, L2, M_V, lumped_mass, F_dot_ones, dt);
+            // correct_force_tensor(Fc, rk_stage, mesh, L2, M_V, lumped_mass, F_dot_ones, dt);
             
             CArrayKokkos <double> Thermo_L2(mesh.num_zones,"Thermo_L2");
             CArrayKokkos <double> M_dot_e(mesh.num_zones,"M delta e");

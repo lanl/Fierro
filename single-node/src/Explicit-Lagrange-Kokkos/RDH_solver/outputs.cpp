@@ -429,8 +429,8 @@ void state_file( const mesh_t &mesh,
     
     struct stat st;
     
-    if(stat("../state",&st) != 0)
-        system("mkdir ../state");
+    if(stat("./state",&st) != 0)
+        system("mkdir ./state");
     
     size_t num_dims = mesh.num_dims;
     
@@ -442,7 +442,7 @@ void state_file( const mesh_t &mesh,
     FILE *out_mat_pt_state;  
     char filename[128];
     
-    sprintf(filename, "../state/mat_pt_state_t_%6.5e.txt", time_value);
+    sprintf(filename, "./state/mat_pt_state_t_%6.5e.txt", time_value);
     
     // output files
     out_mat_pt_state  = fopen(filename, "w");
@@ -483,7 +483,7 @@ void state_file( const mesh_t &mesh,
     FILE *out_node_state;  
     char filename2[128];
     
-    sprintf(filename2, "../state/node_state_t_%6.5e.txt", time_value);
+    sprintf(filename2, "./state/node_state_t_%6.5e.txt", time_value);
     
     // output files
     out_node_state  = fopen(filename2, "w");

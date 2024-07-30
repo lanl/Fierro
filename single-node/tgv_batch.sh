@@ -26,11 +26,20 @@ for ((i=1; i<=k; i++)); do
     error_file="./TGV_batch_output/TGV_${SLURM_JOB_ID}.err"
     state_file="./state/mat_pt_state_t_5.00000e-01.txt"
     mv_file="./TGV_convergence/TGV_Q${i}Q${j}_${mesh_size}_matpt.txt"
+    vtk_folder="./vtk"
+    new_vtk_folder="./vtk_TGV_Q${i}Q${j}_${mesh_size}"
 
     # Check if mesh file exists before running
     if [[ -f $mesh_file ]]; then
       srun ./build-RDH-openmp/bin/FierroRDH $mesh_file > $output_file 2> $error_file
       mv $state_file $mv_file
+      
+      # Check if the vtk folder exists and move it
+      if [[ -d $vtk_folder ]]; then
+        mv $vtk_folder $new_vtk_folder
+      else
+        echo "VTK folder $vtk_folder does not exist"
+      fi
     else
       echo "Mesh file $mesh_file does not exist"
     fi
