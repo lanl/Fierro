@@ -559,11 +559,6 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
                 if (VERBOSE) {
                     std::cout << "\tsource = " << source << std::endl;
                 }
-
-                if (mesh_input.source == mesh_input::generate && !mesh_input.file_path.empty()) {
-                    std::cout << "ERROR: When the mesh source is set to generate, a mesh file cannot be passed in" << std::endl;
-                    exit(0);
-                }
             }
             else{
                 std::cout << "ERROR: invalid mesh option input in YAML file: " << source << std::endl;
@@ -803,9 +798,15 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
         }
 
         if (mesh_input.source == mesh_input::generate) {
-            std::cout << "ERROR: When the mesh source is set to generate, a mesh file cannot be passed in" << std::endl;
-            exit(0);
+
+            // check to see if a file path was set
+            if(mesh_input.file_path.size()>0){
+                std::cout << "ERROR: When the mesh source is set to generate, a mesh file cannot be passed in" << std::endl;
+                exit(0);
+            }
+
         }
+
         // -----------------------------------------------
 
 
