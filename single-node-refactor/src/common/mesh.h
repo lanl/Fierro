@@ -1443,8 +1443,8 @@ struct mesh_t
     void init_bdy_sets(size_t num_bcs)
     {
         if (num_bcs == 0) {
-            printf("ERROR: number of boundary sets = 0, set it = 1");
-            num_bcs = 1;
+            num_bdy_sets = num_bcs;
+            return;
         }
         num_bdy_sets = num_bcs;
         bdy_patches_in_set = DynamicRaggedRightArrayKokkos<size_t>(num_bcs, num_bdy_patches, "mesh.bdy_patches_in_set");
