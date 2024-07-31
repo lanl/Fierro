@@ -54,6 +54,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
+    // Unpack simulation parameters
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
     double tiny  = SimulationParamaters.dynamic_options.tiny;
     double small = SimulationParamaters.dynamic_options.small;
