@@ -1,7 +1,7 @@
 {% set version = "1.0.0" %}
 {% set linux_compiler_version = "10.4.0" %}
 {% set macos_compiler_version = "12" %}
-{% set cuda_version = "11.8" %}
+{% set cuda_version = "12.3" %}
 
 package:
   name: fierro-heffte-cuda
@@ -35,7 +35,7 @@ requirements:
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
-    - cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
+    #- cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
     #- cuda-cudart-static
     - libcusolver-dev
     - libcufft-dev
