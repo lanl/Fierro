@@ -99,6 +99,7 @@ private:
     real_t previous_objective_accumulation, objective_sign;
 
     bool useLC_; // Use linear form of energy.  Otherwise use quadratic form.
+    bool first_init; //prevents ROL from calling init computation twice at start for the AL algorithm
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -145,7 +146,7 @@ public:
         : useLC_(true)
     {
         Explicit_Solver_Pointer_ = Explicit_Solver_Pointer;
-
+        first_init = false;
         valid_fea_modules.push_back(FEA_MODULE_TYPE::SGH);
         valid_fea_modules.push_back(FEA_MODULE_TYPE::Dynamic_Elasticity);
         nvalid_modules = valid_fea_modules.size();
@@ -211,14 +212,17 @@ public:
         const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
         if (type == ROL::UpdateType::Initial) {
-            // This is the first call to update
-            // first linear solve was done in FEA class run function already
-            FEM_Dynamic_Elasticity_->comm_variables(zp);
-            // update deformation variables
-            FEM_Dynamic_Elasticity_->update_forward_solve(zp);
-            // initial design density data was already communicated for ghost nodes in init_design()
-            // decide to output current optimization state
-            FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
+            if(first_init){
+                // This is the first call to update
+                // first linear solve was done in FEA class run function already
+                FEM_Dynamic_Elasticity_->comm_variables(zp);
+                // update deformation variables
+                FEM_Dynamic_Elasticity_->update_forward_solve(zp);
+                // initial design density data was already communicated for ghost nodes in init_design()
+                // decide to output current optimization state
+                FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
+            }
+            first_init = true;
         }
         else if (type == ROL::UpdateType::Accept) {
 
@@ -274,19 +278,22 @@ public:
         const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
         if (type == ROL::UpdateType::Initial) {
-            // This is the first call to update
-            if (Explicit_Solver_Pointer_->myrank == 0) {
-                *fos << "called SGH Initial" << std::endl;
-            }
+            if(first_init){
+                // This is the first call to update
+                if (Explicit_Solver_Pointer_->myrank == 0) {
+                    *fos << "called SGH Initial" << std::endl;
+                }
 
-            FEM_SGH_->comm_variables(zp);
-            FEM_SGH_->update_forward_solve(zp);
-            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
-            previous_objective_accumulation = objective_accumulation;
-            previous_gradients->assign(*(FEM_SGH_->cached_design_gradients_distributed));
-            // initial design density data was already communicated for ghost nodes in init_design()
-            // decide to output current optimization state
-            // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
+                FEM_SGH_->comm_variables(zp);
+                FEM_SGH_->update_forward_solve(zp);
+                FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
+                previous_objective_accumulation = objective_accumulation;
+                previous_gradients->assign(*(FEM_SGH_->cached_design_gradients_distributed));
+                // initial design density data was already communicated for ghost nodes in init_design()
+                // decide to output current optimization state
+                // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
+            }
+            first_init = true;
         }
         else if (type == ROL::UpdateType::Accept) {
             if (Explicit_Solver_Pointer_->myrank == 0) {
@@ -392,7 +399,7 @@ public:
         }
 
         std::cout.precision(10);
-        if (Explicit_Solver_Pointer_->myrank == 0) {
+        if (Explicit_Solver_Pointer_->myrank == 0&&first_init) {
             std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
         }
 
