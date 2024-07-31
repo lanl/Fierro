@@ -37,7 +37,7 @@ do
             # We are going to add our own instruction optimization flags.
             echo "Removing architecture CXXFLAG: $arg"
         ;;
-        -fvisibility-inlines-hidden | -ftree-vectorize)
+        -fvisibility-inlines-hidden) ###DAN | -ftree-vectorize)
             # inlines-hidden is a problem when compiling the trilinos package and then
             # using it later.
             # also clang does not support -fnovisibility-inlines-hidden to disable it.
@@ -48,7 +48,6 @@ do
         ;;
     esac
 done
-echo "Done patching, no problems here"
 
 PATCHED_CXXFLAGS+=(${arch_flags[@]})
 PATCHED_CXXFLAGS=${PATCHED_CXXFLAGS[@]}
