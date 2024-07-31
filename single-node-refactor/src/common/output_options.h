@@ -44,6 +44,7 @@ enum format
 {
     vtk = 0,
     ensight = 1,
+    state = 2
 };
 
 // timer output level
@@ -56,7 +57,8 @@ enum timer_output_level
 static std::map<std::string, output_options::format> output_format_map
 {
     // { "vtk", output_options::vtk }, // Not yet supported
-    { "ensight", output_options::ensight }
+    { "ensight", output_options::ensight },
+    { "state", output_options::state }
 };
 
 static std::map<std::string, output_options::timer_output_level> timer_output_level_map
