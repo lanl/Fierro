@@ -48,6 +48,7 @@ do
         ;;
     esac
 done
+echo "Done patching, no problems here"
 
 PATCHED_CXXFLAGS+=(${arch_flags[@]})
 PATCHED_CXXFLAGS=${PATCHED_CXXFLAGS[@]}
