@@ -35,6 +35,6 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       $SRC_DIR \
       -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
 
-make -j 10 install
+make install #-j 10 install
 
 source "$RECIPE_DIR/../make-relocatable.sh"
