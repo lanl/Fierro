@@ -63,13 +63,19 @@ void SGH::update_energy(const double rk_alpha,
     const size_t num_mat_elems
     ) const
 {
+
     // loop over all the elements in the mesh
-FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
         
         double MaterialPoints_power = 0.0;
+
+        //double test_momentum[3];
+        //test_momentum[0] = 0.0;
+        //test_momentum[1] = 0.0;
+        //test_momentum[2] = 0.0;
 
         // --- tally the contribution from each corner to the element ---
 
@@ -96,12 +102,19 @@ FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
                 MaterialPoints_power += MaterialCorners_force(mat_corner_lid, dim) * node_radius * half_vel;
+
+                //test_momentum[dim] += MaterialCorners_force(mat_corner_lid, dim);
             } // end for dim
         } // end for node_lid
 
         // update the specific energy
         MaterialPoints_sie(1, mat_elem_lid) = MaterialPoints_sie(0, mat_elem_lid) -
                                 rk_alpha * dt / MaterialPoints_mass(mat_elem_lid) * MaterialPoints_power;
+
+        // a check on momentum conservation
+        //if( sqrt(pow(test_momentum[0], 2.0) + pow(test_momentum[1], 2.0) + pow(test_momentum[2], 2.0) ) >= 1.e-13) 
+        //    printf("momentum conservation %f, %f, %f \n", test_momentum[0], test_momentum[1], test_momentum[2]);
+
     }); // end parallel loop over the elements
 
     return;

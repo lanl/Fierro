@@ -771,7 +771,7 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 
     found = false;
 
-    int            num_points = num_points_i * num_points_j * num_points_k;
+    int num_points = num_points_i * num_points_j * num_points_k;
     CArray<double> pt_coords_x(num_points_i);
     CArray<double> pt_coords_y(num_points_j);
     CArray<double> pt_coords_z(num_points_k);

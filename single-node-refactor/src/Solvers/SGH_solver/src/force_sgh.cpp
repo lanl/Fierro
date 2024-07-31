@@ -87,21 +87,12 @@ void SGH::get_force(const Material_t& Materials,
     const size_t num_nodes_in_elem = 8;
 
 
-    // set corner force to zero
-    FOR_ALL(corner_gid, 0, mesh.num_corners, {
-        for (int dim = 0; dim < num_dims; dim++) {
-            corner_force(corner_gid, dim) = 0.0;
-        }
-    }); // end parallel for corners
-
-
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
-
 
 
         // total Cauchy stress
@@ -249,8 +240,8 @@ void SGH::get_force(const Material_t& Materials,
                 // if there is no velocity change, then use the surface area
                 // normal as the shock direction
                 mag = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                    + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                         + area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                         + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
 
                 // estimate of the shock direction
                 for (int dim = 0; dim < num_dims; dim++) {
@@ -280,15 +271,15 @@ void SGH::get_force(const Material_t& Materials,
                 // direction
                 mu_term = muc(node_lid) *
                           fabs(shock_dir(0) * area_normal(node_lid, 0)
-                    + shock_dir(1) * area_normal(node_lid, 1)
-                    + shock_dir(2) * area_normal(node_lid, 2) );
+                        + shock_dir(1) * area_normal(node_lid, 1)
+                        + shock_dir(2) * area_normal(node_lid, 2) );
             }
             else{
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                    + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                          + area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                          + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
             }
 
             sum(0) += mu_term * vel(0);
@@ -371,6 +362,8 @@ void SGH::get_force(const Material_t& Materials,
 
         // loop over the each node in the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+
+            // the local corner id is the local node id
             size_t corner_lid = node_lid;
 
             // Get corner gid
@@ -381,6 +374,7 @@ void SGH::get_force(const Material_t& Materials,
 
             // Get the material corner lid
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
+            //printf("corner difference = %zu \n", mat_corner_lid-corner_gid);
 
             // loop over dimensions and calc corner forces
             if (MaterialPoints_eroded(mat_elem_lid) == true) { // material(mat_id).blank_mat_id)
@@ -388,6 +382,7 @@ void SGH::get_force(const Material_t& Materials,
                     corner_force(corner_gid, dim) = 0.0;
                 }
             }
+            
             else{
                 for (int dim = 0; dim < num_dims; dim++) {
 
@@ -419,7 +414,7 @@ void SGH::get_force(const Material_t& Materials,
                                          MaterialPoints_statev,
                                          MaterialPoints_sspd,
                                          MaterialPoints_den(mat_elem_lid),
-                                         MaterialPoints_sie(mat_elem_lid),
+                                         MaterialPoints_sie(1,mat_elem_lid),
                                          vel_grad,
                                          elem_node_gids,
                                          node_coords,
@@ -810,7 +805,7 @@ void SGH::get_force_2D(const Material_t& Materials,
             //                                 MaterialPoints_statev,
             //                                 MaterialPoints_sspd,
             //                                 MaterialPoints_den(elem_gid),
-            //                                 MaterialPoints_sie(elem_gid),
+            //                                 MaterialPoints_sie(1,elem_gid),
             //                                 vel_grad,
             //                                 elem_node_gids,
             //                                 node_coords,

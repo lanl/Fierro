@@ -401,5 +401,14 @@ double sum_domain_kinetic_energy(const mesh_t& mesh,
                                  const DCArrayKokkos<double>& node_coords,
                                  const DCArrayKokkos<double>& node_mass);
 
+double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
+                                const size_t num_mat_points);
+
+double sum_domain_node_mass(const mesh_t& mesh,
+                            const DCArrayKokkos<double>& node_coords,
+                            const DCArrayKokkos<double>& node_mass);
+                            
+void set_corner_force_zero(const mesh_t& mesh, 
+                           const DCArrayKokkos<double>& corner_force);   
 
 #endif // end HEADER_H

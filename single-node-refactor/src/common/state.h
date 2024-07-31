@@ -135,6 +135,7 @@ struct MaterialPoint_t
     DCArrayKokkos<double> stress; ///< MaterialPoint stress
     DCArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
     DCArrayKokkos<double> mass;   ///< MaterialPoint mass
+    
     DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
 
     DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM

@@ -80,28 +80,6 @@ void SGH::update_state(
     
     const size_t num_dims = mesh.num_dims;
 
-    // --- Density ---
-    // loop over all the elements the material lives in
-    FOR_ALL(mat_elem_lid, 0, num_material_elems, {
-
-        // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
-
-
-        // get the material points for this material 
-        // Note, with the SGH method, they are equal
-        size_t mat_point_lid = mat_elem_lid;
-
-        // for this method, gauss point is equal to elem_gid
-        size_t gauss_gid = elem_gid;
-
-
-        // --- Density ---
-        MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
-
-    }); // end parallel for over mat elem lid
-    Kokkos::fence();
-
 
     // --- pressure ---
     if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
@@ -120,6 +98,9 @@ void SGH::update_state(
             // for this method, gauss point is equal to elem_gid
             size_t gauss_gid = elem_gid;
 
+            // --- Density ---
+            MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
+
             // --- Pressure ---
             Materials.MaterialFunctions(mat_id).calc_pressure(
                                         MaterialPoints_pres,
@@ -129,8 +110,9 @@ void SGH::update_state(
                                         MaterialPoints_statev,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(0, mat_point_lid),
+                                        MaterialPoints_sie(1, mat_point_lid),
                                         Materials.eos_global_vars);   
+
             // --- Sound Speed ---                               
             Materials.MaterialFunctions(mat_id).calc_sound_speed(
                                         MaterialPoints_pres,
@@ -140,12 +122,37 @@ void SGH::update_state(
                                         MaterialPoints_statev,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(0, mat_point_lid),
+                                        MaterialPoints_sie(1, mat_point_lid),
                                         Materials.eos_global_vars);
 
         }); // end parallel for over mat elem lid
 
     } // if decoupled EOS
+    else {
+        // only calculate density as pressure and sound speed come from the coupled strength model
+
+        // --- Density ---
+        // loop over all the elements the material lives in
+        FOR_ALL(mat_elem_lid, 0, num_material_elems, {
+
+            // get elem gid
+            size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+
+
+            // get the material points for this material 
+            // Note, with the SGH method, they are equal
+            size_t mat_point_lid = mat_elem_lid;
+
+            // for this method, gauss point is equal to elem_gid
+            size_t gauss_gid = elem_gid;
+
+
+            // --- Density ---
+            MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
+
+        }); // end parallel for over mat elem lid
+        Kokkos::fence();
+    } // end if
 
 
     // --- Stress ---
