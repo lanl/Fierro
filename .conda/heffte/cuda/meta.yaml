@@ -28,17 +28,12 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}={{ linux_compiler_version }}
     - openmpi
-      #- cuda-compiler={{ cuda_version }}
-      #- cuda-cudart-dev
     - cuda-toolkit={{ cuda_version }}
-      #- cuda-compiler
-      #- cudatoolkit-dev
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
-    #- cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
-    - cuda-cudart-static
-    - cuda-nvcc
+    - cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
+      #- cuda-cudart-static
     - libcusolver-dev
     - libcufft-dev
     - libcublas-dev
