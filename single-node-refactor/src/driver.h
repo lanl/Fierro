@@ -1587,51 +1587,29 @@ void fill_regions_sgh(const Material_t& Materials,
                 // add user defined paint here
                 // user_defined_sgh_state();
 
-            } // end if fill
 
-        }); // end FOR_ALL element loop
-        Kokkos::fence();
+                // technically, not thread safe, but making it a separate loop created bad fill behavior
+                // loop over the nodes of this element and apply velocity
+                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                        
+                    // get the mesh node index
+                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);       
 
+                    // default sgh paint
+                    paint_node_vel(region_fills,
+                                node_vel,
+                                node_coords,
+                                node_gid,
+                                mesh.num_dims,
+                                f_id,
+                                rk_num_bins);
 
-        // parallel loop over nodes in mesh
-        FOR_ALL(node_gid, 0, num_nodes, {
+                    // add user defined paint here
+                    // user_defined_vel_state();
+                    
+                } // end loop over the nodes in elem
 
-            // make a view to pass to fill and paint functions (using rk_level 1 for node coords)
-            ViewCArrayKokkos <double> these_coords(&node_coords(1,node_gid,0), 3);
-
-            
-            // calc if we are to fill this element
-            size_t fill_this = fill_geometric_region(mesh, 
-                                                     voxel_elem_mat_id, 
-                                                     region_fills, 
-                                                     these_coords, 
-                                                     voxel_dx, 
-                                                     voxel_dy, 
-                                                     voxel_dz,
-                                                     orig_x, 
-                                                     orig_y, 
-                                                     orig_z,
-                                                     voxel_num_i, 
-                                                     voxel_num_j, 
-                                                     voxel_num_k,
-                                                     f_id);
-
-            // paint the material state on the node if fill_this=1
-            if (fill_this == 1) {
-
-                // default sgh paint
-                paint_node_vel(region_fills,
-                               node_vel,
-                               node_coords,
-                               node_gid,
-                               mesh.num_dims,
-                               f_id,
-                               rk_num_bins);
-
-                // add user defined paint here
-                // user_defined_vel_state();
-
-            } // end if fill
+            } // end if fill this
 
         }); // end FOR_ALL node loop
         Kokkos::fence();

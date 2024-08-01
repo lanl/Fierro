@@ -318,10 +318,11 @@ public:
         mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& MaterialPoints_sspd,
         DCArrayKokkos<double>& GaussPoints_vol,
+        DCArrayKokkos<double>& MaterialPoints_sspd,
+        DCArrayKokkos<bool>&   MaterialPoints_eroded,
         DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        size_t num_material_elems,
+        size_t num_mat_elems,
         double time_value,
         const double graphics_time,
         const double time_final,
@@ -335,10 +336,11 @@ public:
         mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& MaterialPoints_sspd,
         DCArrayKokkos<double>& GaussPoints_vol,
+        DCArrayKokkos<double>& MaterialPoints_sspd,
+        DCArrayKokkos<bool>&   MaterialPoints_eroded,
         DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        size_t num_material_elems,
+        size_t num_mat_elems,
         double time_value,
         const double graphics_time,
         const double time_final,
@@ -407,7 +409,7 @@ double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass
 double sum_domain_node_mass(const mesh_t& mesh,
                             const DCArrayKokkos<double>& node_coords,
                             const DCArrayKokkos<double>& node_mass);
-                            
+
 void set_corner_force_zero(const mesh_t& mesh, 
                            const DCArrayKokkos<double>& corner_force);   
 

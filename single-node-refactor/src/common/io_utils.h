@@ -932,6 +932,7 @@ public:
 
         // ---- Update host data ----
 
+        // material point values
         for(int mat_id=0; mat_id<num_mats; mat_id++){
             State.MaterialPoints(mat_id).den.update_host();
             State.MaterialPoints(mat_id).pres.update_host();
@@ -939,10 +940,13 @@ public:
             State.MaterialPoints(mat_id).sspd.update_host();
             State.MaterialPoints(mat_id).sie.update_host();
             State.MaterialPoints(mat_id).mass.update_host();
+            State.MaterialPoints(mat_id).eroded.update_host();
         } // end for mat_id
 
+        // gauss point values
         State.GaussPoints.vol.update_host();
 
+        // nodal values
         State.node.coords.update_host();
         State.node.vel.update_host();
         State.node.mass.update_host();
@@ -953,7 +957,7 @@ public:
 
 
 
-        const int num_scalar_vars = 9;
+        const int num_scalar_vars = 10;
         const int num_vec_vars    = 2;
 
         std::string name_tmp;
@@ -963,7 +967,7 @@ public:
         std::strcpy(name, name_tmp.c_str());
 
         const char scalar_var_names[num_scalar_vars][15] = {
-            "den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch"
+            "den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch", "eroded"
         };
 
         const char vec_var_names[num_vec_vars][15] = {
@@ -1027,10 +1031,14 @@ public:
                 elem_fields(elem_gid, 0) = State.MaterialPoints(mat_id).den.host(mat_elem_lid);
                 elem_fields(elem_gid, 1) = State.MaterialPoints(mat_id).pres.host(mat_elem_lid);
                 elem_fields(elem_gid, 2) = State.MaterialPoints(mat_id).sie.host(1, mat_elem_lid);
+                // 3 is guass point vol
                 elem_fields(elem_gid, 4) = State.MaterialPoints(mat_id).mass.host(mat_elem_lid);
                 elem_fields(elem_gid, 5) = State.MaterialPoints(mat_id).sspd.host(mat_elem_lid);
-            
+                // 6 is elem speed
                 elem_fields(elem_gid, 7) = (double)mat_id;
+                // 8 is the e_switch
+                elem_fields(elem_gid, 9) = (double)State.MaterialPoints(mat_id).eroded.host(mat_elem_lid);
+
             } // end for mat elems storage
         } // end parallel loop over materials
 

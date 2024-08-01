@@ -103,20 +103,21 @@ void SGH::rk_init(DCArrayKokkos<double>& node_coords,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep(mesh_t& mesh,
-    DCArrayKokkos<double>&     node_coords,
-    DCArrayKokkos<double>&     node_vel,
-    DCArrayKokkos<double>&     MaterialPoints_sspd,
-    DCArrayKokkos<double>&     GaussPoints_vol,
-    DCArrayKokkos<size_t>&     MaterialToMeshMaps_elem,
-    size_t num_mat_elems,
-    double time_value,
-    const double graphics_time,
-    const double time_final,
-    const double dt_max,
-    const double dt_min,
-    const double dt_cfl,
-    double&      dt,
-    const double fuzz) const
+                       DCArrayKokkos<double>& node_coords,
+                       DCArrayKokkos<double>& node_vel,
+                       DCArrayKokkos<double>& GaussPoints_vol,
+                       DCArrayKokkos<double>& MaterialPoints_sspd,
+                       DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                       DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                       size_t num_mat_elems,
+                       double time_value,
+                       const double graphics_time,
+                       const double time_final,
+                       const double dt_max,
+                       const double dt_min,
+                       const double dt_cfl,
+                       double&      dt,
+                       const double fuzz) const
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
@@ -176,7 +177,11 @@ void SGH::get_timestep(mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(elem_gid) + fuzz);
+        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
+
+        if (MaterialToMeshMaps_elem(mat_elem_lid) == true){
+            dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
+        }
 
         // make dt be in bounds
         dt_lcl_ = fmin(dt_lcl_, dt_max);    // make dt small than dt_max
@@ -218,27 +223,28 @@ void SGH::get_timestep(mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep2D(mesh_t& mesh,
-    DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& MaterialPoints_sspd,
-    DCArrayKokkos<double>& GaussPoints_vol,
-    DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-    size_t num_material_elems,
-    double time_value,
-    const double graphics_time,
-    const double time_final,
-    const double dt_max,
-    const double dt_min,
-    const double dt_cfl,
-    double&      dt,
-    const double fuzz) const
+                         DCArrayKokkos<double>& node_coords,
+                         DCArrayKokkos<double>& node_vel,
+                         DCArrayKokkos<double>& GaussPoints_vol,
+                         DCArrayKokkos<double>& MaterialPoints_sspd,
+                         DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                         DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                         size_t num_mat_elems,
+                         double time_value,
+                         const double graphics_time,
+                         const double time_final,
+                         const double dt_max,
+                         const double dt_min,
+                         const double dt_cfl,
+                         double&      dt,
+                         const double fuzz) const
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
 
     double dt_lcl;
     double min_dt_calc;
-    REDUCE_MIN(mat_elem_lid, 0, num_material_elems, dt_lcl, {
+    REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
 
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
@@ -277,6 +283,11 @@ void SGH::get_timestep2D(mesh_t& mesh,
 
         // local dt calc based on CFL
         double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(elem_gid) + fuzz);
+
+
+        if (MaterialToMeshMaps_elem(mat_elem_lid) == true){
+            dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
+        }
 
         // make dt be in bounds
         dt_lcl_ = fmin(dt_lcl_, dt_max);    // make dt small than dt_max

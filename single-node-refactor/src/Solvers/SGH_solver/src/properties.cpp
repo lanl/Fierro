@@ -245,8 +245,6 @@ void SGH::update_state(
             // for this method, gauss point is equal to elem_gid
             size_t gauss_gid = elem_gid;
 
-            double sie_before = MaterialPoints_sie(1, mat_point_lid);
-
             // --- Element erosion model ---
             Materials.MaterialFunctions(mat_id).erode(
                                    MaterialPoints_eroded,
@@ -262,16 +260,20 @@ void SGH::update_state(
 
 
             // apply a void eos if mat_point is eroded
-            double phi_fail = 1.0 - (double)MaterialPoints_eroded(mat_point_lid);
-            MaterialPoints_pres(mat_point_lid) *= phi_fail;  // phi_fail = 1 or 0
-            MaterialPoints_sspd(mat_point_lid) *= phi_fail;
-            MaterialPoints_sspd(mat_point_lid) = fmax(MaterialPoints_sspd(mat_point_lid), 1.0e-32);
+            if(MaterialPoints_eroded(mat_point_lid)){
 
-            for (size_t i = 0; i < 3; i++) {
-                for (size_t j = 0; j < 3; j++) {
-                    MaterialPoints_stress(1, mat_point_lid, i, j) *= phi_fail;
-                }
-            }  // end for i,j
+                MaterialPoints_pres(mat_point_lid) = 0.0;
+                MaterialPoints_sspd(mat_point_lid) = 1.0e-32;
+
+                for (size_t i = 0; i < 3; i++) {
+                    for (size_t j = 0; j < 3; j++) {
+                        MaterialPoints_stress(1, mat_point_lid, i, j) = 0.0; 
+                    }
+                }  // end for i,j
+
+            } // end if on eroded
+
+
         
         }); // end parallel for
     } // end if elem errosion 
