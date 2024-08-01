@@ -21,7 +21,6 @@ source "$RECIPE_DIR/../../cross-compile-setup.sh"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH $PREFIX/lib"
 export LIBRARIES="$LIBRARIES \"-L$PREFIX/lib\""
 
-#      -D CMAKE_CUDA_COMPILER=$(which nvcc) \
 #      -D CMAKE_CUDA_HOST_LINK_LAUNCHER=$CXX \
 #      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
 #      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
@@ -32,6 +31,7 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D Heffte_ENABLE_CUDA=ON \
       -D Heffte_DISABLE_GPU_AWARE_MPI=ON \
       -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
+      -D CMAKE_CUDA_COMPILER=nvcc \
       $CMAKE_ARGS \
       -S $SRC_DIR \
 
