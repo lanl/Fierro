@@ -251,9 +251,13 @@ void SGH::update_state(
                                    MaterialPoints_stress,
                                    MaterialPoints_pres(mat_point_lid),
                                    MaterialPoints_den(mat_point_lid),
+                                   MaterialPoints_sie(1, mat_point_lid),
+                                   MaterialPoints_sspd(mat_point_lid),
                                    Materials.MaterialFunctions(mat_id).erode_tension_val,
                                    Materials.MaterialFunctions(mat_id).erode_density_val,
                                    mat_point_lid);
+
+
 
             // apply a void eos if mat_point is eroded
             double phi_fail = 1.0 - (double)MaterialPoints_eroded(mat_point_lid);
@@ -483,6 +487,8 @@ void SGH::update_state2D(
                                    MaterialPoints_stress,
                                    MaterialPoints_pres(mat_point_lid),
                                    MaterialPoints_den(mat_point_lid),
+                                   MaterialPoints_sie(1, mat_point_lid),
+                                   MaterialPoints_sspd(mat_point_lid),
                                    Materials.MaterialFunctions(mat_id).erode_tension_val,
                                    Materials.MaterialFunctions(mat_id).erode_density_val,
                                    mat_point_lid);

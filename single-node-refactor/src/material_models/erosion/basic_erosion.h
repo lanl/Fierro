@@ -42,20 +42,21 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace BasicErosionModel {
     
     KOKKOS_FUNCTION
-    static void erode (const DCArrayKokkos<bool>& MaterialPoint_eroded,
-                       const DCArrayKokkos<double>& MaterialPoint_stress,
-                       const double mat_point_pres,
-                       const double mat_point_den,
+    static void erode (const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                       const DCArrayKokkos<double>& MaterialPoints_stress,
+                       const double MaterialPoint_pres,
+                       const double MaterialPoint_den,
+                       const double MaterialPoint_sie,
+                       const double MaterialPoint_sspd,
                        const double erode_tension_val,
                        const double erode_density_val,
                        const size_t mat_point_lid)
     {
 
-
         // simple model based on tension and density
-        if (mat_point_pres <= erode_tension_val || mat_point_den <= erode_density_val) {
+        if (MaterialPoint_pres <= erode_tension_val || MaterialPoint_den <= erode_density_val) {
 
-            MaterialPoint_eroded(mat_point_lid) = true;
+            MaterialPoints_eroded(mat_point_lid) = true;
 
         } // end if
 

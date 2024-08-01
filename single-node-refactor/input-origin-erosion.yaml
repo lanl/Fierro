@@ -78,9 +78,10 @@ materials:
             - 1.666666666666667
             - 1.0E-14
             - 1.0
-        #erosion_model: basic
-        #erode_tension_val: 0.00003
-        #erode_density_val: 0.02
+        erosion_model: basic
+        erode_tension_val: 0.00003
+        erode_density_val: 0.02
+
 
     - material:
         id: 1

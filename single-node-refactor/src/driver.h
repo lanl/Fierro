@@ -103,14 +103,19 @@ void init_corner_node_masses_zero(const mesh_t& mesh,
                                   const DCArrayKokkos<double>& node_mass,
                                   const DCArrayKokkos<double>& corner_mass);
 
-void calc_corner_node_masses(const Material_t& Materials,
+void calc_corner_mass(const Material_t& Materials,
                       const mesh_t& mesh,
                       const DCArrayKokkos<double>& node_coords,
                       const DCArrayKokkos<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
                       const DCArrayKokkos<double>& MaterialPoints_mass,
                       const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                      const size_t num_mat_elems);        
+                      const size_t num_mat_elems);      
+
+void calc_node_mass(const mesh_t& mesh,
+                    const DCArrayKokkos<double>& node_coords,
+                    const DCArrayKokkos<double>& node_mass,
+                    const DCArrayKokkos<double>& corner_mass);  
 
 
 // ==============================================================================
@@ -640,15 +645,21 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
 
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
             
-            calc_corner_node_masses(Materials,
-                                    mesh,
-                                    State.node.coords,
-                                    State.node.mass,
-                                    State.corner.mass,
-                                    State.MaterialPoints(mat_id).mass,
-                                    State.MaterialToMeshMaps(mat_id).elem,
-                                    num_mat_elems);
+            calc_corner_mass(Materials,
+                             mesh,
+                             State.node.coords,
+                             State.node.mass,
+                             State.corner.mass,
+                             State.MaterialPoints(mat_id).mass,
+                             State.MaterialToMeshMaps(mat_id).elem,
+                             num_mat_elems);
         } // end for mat_id
+
+        calc_node_mass(mesh,
+                       State.node.coords,
+                       State.node.mass,
+                       State.corner.mass);
+
     }
     else{
         // 2D RZ
@@ -1748,9 +1759,11 @@ void init_corner_node_masses_zero(const mesh_t& mesh,
 } // end setting masses equal to zero
 
 
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn init_press_sspd_stress
+/// \fn calc_corner_mass
 ///
 /// \brief a function to initialize pressure, sound speed and stress
 ///
@@ -1763,14 +1776,14 @@ void init_corner_node_masses_zero(const mesh_t& mesh,
 /// \param num_mat_elems is the number of material elements for mat_id
 ///
 /////////////////////////////////////////////////////////////////////////////
-void calc_corner_node_masses(const Material_t& Materials,
-                             const mesh_t& mesh,
-                             const DCArrayKokkos<double>& node_coords,
-                             const DCArrayKokkos<double>& node_mass,
-                             const DCArrayKokkos<double>& corner_mass,
-                             const DCArrayKokkos<double>& MaterialPoints_mass,
-                             const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                             const size_t num_mat_elems){
+void calc_corner_mass(const Material_t& Materials,
+                      const mesh_t& mesh,
+                      const DCArrayKokkos<double>& node_coords,
+                      const DCArrayKokkos<double>& node_mass,
+                      const DCArrayKokkos<double>& corner_mass,
+                      const DCArrayKokkos<double>& MaterialPoints_mass,
+                      const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                      const size_t num_mat_elems){
 
 
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
@@ -1788,6 +1801,30 @@ void calc_corner_node_masses(const Material_t& Materials,
         } // end for
 
     }); // end parallel for over mat elem local ids
+
+
+} // end function calculate SGH mass
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn calc_node_mass
+///
+/// \brief a function to initialize material corner masses
+///
+/// \param Materials holds the material models and global parameters
+/// \param mesh is the simulation mesh
+/// \param node_coords are the nodal coordinates of the mesh
+/// \param node_mass is mass of the node
+/// \param corner_mass is corner mass
+/// \param MaterialPoints_mass is the mass at the material point for mat_id
+/// \param num_mat_elems is the number of material elements for mat_id
+///
+/////////////////////////////////////////////////////////////////////////////
+void calc_node_mass(const mesh_t& mesh,
+                    const DCArrayKokkos<double>& node_coords,
+                    const DCArrayKokkos<double>& node_mass,
+                    const DCArrayKokkos<double>& corner_mass){
 
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {

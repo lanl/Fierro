@@ -69,18 +69,24 @@ void SGH::update_energy(const double rk_alpha,
 
         // get elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
+        // the material point index = the material elem index for a 1-point element
+        size_t mat_point_lid = mat_elem_lid;
+
         
         double MaterialPoints_power = 0.0;
 
-        //double test_momentum[3];
-        //test_momentum[0] = 0.0;
-        //test_momentum[1] = 0.0;
-        //test_momentum[2] = 0.0;
+        double test_momentum[3];
+        test_momentum[0] = 0.0;
+        test_momentum[1] = 0.0;
+        test_momentum[2] = 0.0;
 
         // --- tally the contribution from each corner to the element ---
 
         // Loop over the nodes in the element
         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+
+            // corner lid and node lid
             size_t corner_lid = node_lid;
 
             // Get node global id for the local node id
@@ -103,17 +109,17 @@ void SGH::update_energy(const double rk_alpha,
                 double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
                 MaterialPoints_power += MaterialCorners_force(mat_corner_lid, dim) * node_radius * half_vel;
 
-                //test_momentum[dim] += MaterialCorners_force(mat_corner_lid, dim);
+                test_momentum[dim] += MaterialCorners_force(mat_corner_lid, dim);
             } // end for dim
         } // end for node_lid
 
         // update the specific energy
-        MaterialPoints_sie(1, mat_elem_lid) = MaterialPoints_sie(0, mat_elem_lid) -
-                                rk_alpha * dt / MaterialPoints_mass(mat_elem_lid) * MaterialPoints_power;
+        MaterialPoints_sie(1, mat_point_lid) = MaterialPoints_sie(0, mat_point_lid) -
+                                rk_alpha * dt / MaterialPoints_mass(mat_point_lid) * MaterialPoints_power;
 
         // a check on momentum conservation
-        //if( sqrt(pow(test_momentum[0], 2.0) + pow(test_momentum[1], 2.0) + pow(test_momentum[2], 2.0) ) >= 1.e-13) 
-        //    printf("momentum conservation %f, %f, %f \n", test_momentum[0], test_momentum[1], test_momentum[2]);
+        if( sqrt(pow(test_momentum[0], 2.0) + pow(test_momentum[1], 2.0) + pow(test_momentum[2], 2.0) ) >= 1.e-13) 
+            printf("momentum conservation %f, %f, %f \n", test_momentum[0], test_momentum[1], test_momentum[2]);
 
     }); // end parallel loop over the elements
 

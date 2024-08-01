@@ -94,6 +94,9 @@ void SGH::get_force(const Material_t& Materials,
         // get elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
+        // the material point index = the material elem index for a 1-point element
+        size_t mat_point_lid = mat_elem_lid;
+
 
         // total Cauchy stress
         double tau_array[9];
@@ -131,7 +134,7 @@ void SGH::get_force(const Material_t& Materials,
 
 
         // create a view of the stress_matrix
-        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, mat_elem_lid, 0, 0), 3, 3);
+        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, mat_point_lid, 0, 0), 3, 3);
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
@@ -181,7 +184,7 @@ void SGH::get_force(const Material_t& Materials,
         // add the pressure if a decoupled model is used
         if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
             for (int i = 0; i < num_dims; i++) {
-                tau(i, i) -= MaterialPoints_pres(mat_elem_lid);
+                tau(i, i) -= MaterialPoints_pres(mat_point_lid);
             } // end for
         }
 
@@ -251,13 +254,13 @@ void SGH::get_force(const Material_t& Materials,
 
             // cell divergence indicates compression or expansions
             if (div < 0) { // element in compression
-                muc(node_lid) = MaterialPoints_den(mat_elem_lid) *
-                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(mat_elem_lid) + 
+                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
+                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(mat_point_lid) + 
                                  Materials.MaterialFunctions(mat_id).q2 * mag_vel);
             }
             else{  // element in expansion
-                muc(node_lid) = MaterialPoints_den(mat_elem_lid) *
-                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(mat_elem_lid) + 
+                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
+                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(mat_point_lid) + 
                                  Materials.MaterialFunctions(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
 
@@ -345,7 +348,7 @@ void SGH::get_force(const Material_t& Materials,
         double omega    = 20.0; // 20.0;    // weighting factor on Mach number
         double third    = 1.0 / 3.0;
         double c_length = pow(vol, third); // characteristic length
-        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_elem_lid) + fuzz) );
+        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_point_lid) + fuzz) );
 
         // use Mach based detector with standard shock detector
 
@@ -377,7 +380,7 @@ void SGH::get_force(const Material_t& Materials,
             //printf("corner difference = %zu \n", mat_corner_lid-corner_gid);
 
             // loop over dimensions and calc corner forces
-            if (MaterialPoints_eroded(mat_elem_lid) == true) { // material(mat_id).blank_mat_id)
+            if (MaterialPoints_eroded(mat_point_lid) == true) { // material(mat_id).blank_mat_id)
                 for (int dim = 0; dim < num_dims; dim++) {
                     corner_force(corner_gid, dim) = 0.0;
                 }
@@ -409,12 +412,12 @@ void SGH::get_force(const Material_t& Materials,
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(MaterialPoints_pres,
                                          MaterialPoints_stress,
-                                         mat_elem_lid,
+                                         mat_point_lid,
                                          mat_id,
                                          MaterialPoints_statev,
                                          MaterialPoints_sspd,
-                                         MaterialPoints_den(mat_elem_lid),
-                                         MaterialPoints_sie(1,mat_elem_lid),
+                                         MaterialPoints_den(mat_point_lid),
+                                         MaterialPoints_sie(1,mat_point_lid),
                                          vel_grad,
                                          elem_node_gids,
                                          node_coords,
@@ -495,6 +498,9 @@ void SGH::get_force_2D(const Material_t& Materials,
 
         //size_t guass_gid = elem_gid; // 1 gauss point per element
 
+        // the material point index = the material elem index for a 1-point element
+        size_t mat_point_lid = mat_elem_lid;
+
         // total Cauchy stress
         double tau_array[9];
 
@@ -527,10 +533,10 @@ void SGH::get_force_2D(const Material_t& Materials,
         ViewCArrayKokkos<double> vel_grad(vel_grad_array, 3, 3);
 
         // create a view of the stress_matrix
-        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, mat_elem_lid, 0, 0), 3, 3);
+        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, mat_point_lid, 0, 0), 3, 3);
 
         // cut out the node_gids for this element
-        ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(mat_elem_lid, 0), 4);
+        ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
 
         // get the B matrix which are the OUTWARD corner area normals
         geometry::get_bmatrix2D(area_normal,
@@ -584,7 +590,7 @@ void SGH::get_force_2D(const Material_t& Materials,
 
         // add the pressure
         for (int i = 0; i < 3; i++) {
-            tau(i, i) -= MaterialPoints_pres(mat_elem_lid);
+            tau(i, i) -= MaterialPoints_pres(mat_point_lid);
         } // end for
 
         // ---- Multidirectional Approximate Riemann solver (MARS) ----
@@ -650,13 +656,13 @@ void SGH::get_force_2D(const Material_t& Materials,
 
             // cell divergence indicates compression or expansions
             if (div < 0) { // element in compression
-                muc(node_lid) = MaterialPoints_den(mat_elem_lid) *
-                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(mat_elem_lid) + 
+                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
+                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(mat_point_lid) + 
                                  Materials.MaterialFunctions(mat_id).q2 * mag_vel);
             }
             else{  // element in expansion
-                muc(node_lid) = MaterialPoints_den(mat_elem_lid) *
-                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(mat_elem_lid) + 
+                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
+                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(mat_point_lid) + 
                                  Materials.MaterialFunctions(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
 

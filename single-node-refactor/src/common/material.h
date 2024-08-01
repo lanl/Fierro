@@ -237,10 +237,12 @@ struct MaterialFunctions_t
     double erode_tension_val;   ///< tension threshold to initiate erosion
     double erode_density_val;   ///< density threshold to initiate erosion
     // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
-    void (*erode)(const DCArrayKokkos<bool>& MaterialPoint_eroded,
-                  const DCArrayKokkos<double>& MaterialPoint_stress,
-                  const double mat_point_pres,
-                  const double mat_point_sie,
+    void (*erode)(const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                  const DCArrayKokkos<double>& MaterialPoints_stress,
+                  const double MaterialPoint_pres,
+                  const double MaterialPoint_den,
+                  const double MaterialPoint_sie,
+                  const double MaterialPoint_sspd,
                   const double erode_tension_val,
                   const double erode_density_val,
                   const size_t mat_point_lid) = NULL;
