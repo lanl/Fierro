@@ -32,8 +32,8 @@ requirements:
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
-    - cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
-      #- cuda-cudart-static
+    #- cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
+    - cuda-cudart-static
     - libcusolver-dev
     - libcufft-dev
     - libcublas-dev
