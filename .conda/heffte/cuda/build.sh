@@ -14,9 +14,9 @@ source "$RECIPE_DIR/../../cross-compile-setup.sh"
 export OMPI_CXX=$(which nvcc)
 echo "nvcc here ${OMPI_CXX}"
 # Only do this for cross compiling
-#if [ "$PLATFORM" != "linux-64" ] ; then
-#    export NVCC_PREPEND_FLAGS="-ccbin $CXX";
-#fi
+if [ "$PLATFORM" != "linux-64" ] ; then
+    export NVCC_PREPEND_FLAGS="-ccbin $CXX";
+fi
 # These things need to be set for certain cmake versions.
 # The cmake CUDA compiler tests need to see the host env libs
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH $PREFIX/lib"
