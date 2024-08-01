@@ -31,9 +31,9 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
  #     -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
 #      -D CMAKE_CUDA_HOST_LINK_LAUNCHER=$CXX \
       -D CMAKE_CUDA_COMPILER='which nvcc' \
-      $CMAKE_ARGS \
-      $SRC_DIR \
       -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
+      $CMAKE_ARGS \
+      -S $SRC_DIR #\
 
 make install #-j 10 install
 
