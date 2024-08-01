@@ -383,6 +383,7 @@ void SGH::get_force(const Material_t& Materials,
             if (MaterialPoints_eroded(mat_point_lid) == true) { // material(mat_id).blank_mat_id)
                 for (int dim = 0; dim < num_dims; dim++) {
                     corner_force(corner_gid, dim) = 0.0;
+                     MaterialCorners_force(mat_corner_lid, dim) = 0.0;
                 }
             }
             
