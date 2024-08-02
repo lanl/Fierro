@@ -185,42 +185,43 @@ void SGH::update_state(
             MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
 
 
-                // corner area normals
-                double area_array[24];
-                ViewCArrayKokkos<double> area(area_array, num_nodes_in_elem, num_dims);
+            // corner area normals
+            double area_array[24];
+            ViewCArrayKokkos<double> area(area_array, num_nodes_in_elem, num_dims);
 
-                // velocity gradient
-                double vel_grad_array[9];
-                ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
+            // velocity gradient
+            double vel_grad_array[9];
+            ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
 
-                // get the B matrix which are the OUTWARD corner area normals
-                geometry::get_bmatrix(area, elem_gid, node_coords, elem_node_gids);
+            // get the B matrix which are the OUTWARD corner area normals
+            geometry::get_bmatrix(area, elem_gid, node_coords, elem_node_gids);
 
-                // --- Calculate the velocity gradient ---
-                get_velgrad(vel_grad,
-                            elem_node_gids,
-                            node_vel,
-                            area,
-                            GaussPoints_vol(elem_gid),
-                            elem_gid);
+            // --- Calculate the velocity gradient ---
+            get_velgrad(vel_grad,
+                        elem_node_gids,
+                        node_vel,
+                        area,
+                        GaussPoints_vol(elem_gid),
+                        elem_gid);
 
-                // --- call strength model ---
-                Materials.MaterialFunctions(mat_id).calc_stress(
-                                             MaterialPoints_pres,
-                                             MaterialPoints_stress,
-                                             mat_point_lid,
-                                             mat_id,
-                                             MaterialPoints_statev,
-                                             MaterialPoints_sspd,
-                                             MaterialPoints_den(mat_point_lid),
-                                             MaterialPoints_sie(1,mat_point_lid),
-                                             vel_grad,
-                                             elem_node_gids,
-                                             node_coords,
-                                             node_vel,
-                                             GaussPoints_vol(gauss_gid),
-                                             dt,
-                                             rk_alpha);
+
+            // --- call strength model ---
+            Materials.MaterialFunctions(mat_id).calc_stress(
+                                            MaterialPoints_pres,
+                                            MaterialPoints_stress,
+                                            mat_point_lid,
+                                            mat_id,
+                                            MaterialPoints_statev,
+                                            MaterialPoints_sspd,
+                                            MaterialPoints_den(mat_point_lid),
+                                            MaterialPoints_sie(1,mat_point_lid),
+                                            vel_grad,
+                                            elem_node_gids,
+                                            node_coords,
+                                            node_vel,
+                                            GaussPoints_vol(gauss_gid),
+                                            dt,
+                                            rk_alpha);
 
 
         }); // end parallel for over mat elem lid

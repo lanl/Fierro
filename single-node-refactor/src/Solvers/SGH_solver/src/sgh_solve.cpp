@@ -93,6 +93,13 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
 
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
+
+
+    std::cout << "Applying initial boundary conditions" << std::endl;
+    boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
+
+
+
     // extensive energy tallies over the entire mesh
     double IE_t0 = 0.0;
     double KE_t0 = 0.0;
@@ -160,8 +167,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-    std::cout << "Applying initial boundary conditions" << std::endl;
-    boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
+
 
 
     // loop over the max number of time integration cycles
