@@ -44,7 +44,7 @@
 #include "state.h"
 
 
-void fill_regions(DCArrayKokkos<reg_fill_t>&, 
+void fill_regions(SimulationParameters_t&, 
                   Material_t&, 
                   mesh_t&, 
                   State_t&, 
@@ -53,9 +53,10 @@ void fill_regions(DCArrayKokkos<reg_fill_t>&,
 // ==============================================================================
 //   Function that returns 1 or 0 if the mesh location is inside an object
 // ==============================================================================
+KOKKOS_FUNCTION
 size_t fill_geometric_region(const mesh_t& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
-                             const DCArrayKokkos<reg_fill_t>& region_fills,
+                             const CArrayKokkos<reg_fill_t>& region_fills,
                              const ViewCArrayKokkos <double>& mesh_coords,
                              const double voxel_dx, 
                              const double voxel_dy, 
@@ -75,13 +76,13 @@ size_t fill_geometric_region(const mesh_t& mesh,
 void fill_regions_sgh(const Material_t& Materials,
                       const mesh_t& mesh,
                       const DCArrayKokkos <double>& node_coords,
-                      const DCArrayKokkos <double>& node_vel,
+                      DCArrayKokkos <double>& node_vel,
                       DCArrayKokkos <double>& GaussPoint_den,
                       DCArrayKokkos <double>& GaussPoint_sie,
                       DCArrayKokkos <size_t>& elem_mat_id,
-                      DCArrayKokkos <reg_fill_t>& region_fills,
                       DCArrayKokkos <size_t>& voxel_elem_mat_id,
-                      const DCArrayKokkos <size_t>& read_voxel_file,
+                      const CArrayKokkos <reg_fill_t>& region_fills,
+                      const CArray <reg_fill_host_t>& region_fills_host,
                       const size_t num_fills,
                       const size_t num_elems,
                       const size_t num_nodes,
@@ -307,7 +308,7 @@ public:
 
         
         //fill_regions();
-        fill_regions(SimulationParamaters.region_fills, 
+        fill_regions(SimulationParamaters, 
                      Materials, 
                      mesh, 
                      State,
@@ -400,21 +401,19 @@ public:
 /// \brief Fills mesh regions based on YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
-void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills, 
+void fill_regions(SimulationParameters_t& SimulationParamaters, 
                   Material_t& Materials, 
                   mesh_t& mesh, 
                   State_t& State,
                   size_t rk_num_bins)
 {
 
-
-    size_t num_fills = region_fills.size();
+    size_t num_fills = SimulationParamaters.region_fills.size();
     printf("Num Fills's = %zu\n", num_fills);
 
     // the number of elems and nodes in the mesh
     const size_t num_elems = mesh.num_elems;
     const size_t num_nodes = mesh.num_nodes;
-
 
 
     // create temporary state fields
@@ -423,27 +422,7 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
     DCArrayKokkos <double> GaussPoint_sie(num_elems);
     DCArrayKokkos <size_t> elem_mat_id(num_elems); // the mat_id in the elem
 
-
-    // ---------------------------------------------
-    // variables from a voxel file
-    // ---------------------------------------------
-    DCArrayKokkos<size_t> voxel_elem_mat_id;      // 1 or 0 if material exist, or it is the material_id
-    
-    DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
-    FOR_ALL(f_id, 0, num_fills, {
-        if (region_fills(f_id).volume == region::readVoxelFile)
-        {
-            read_voxel_file(f_id) = region::readVoxelFile;  // read the  voxel file
-        }
-        // add other mesh voxel files
-        else
-        {
-            read_voxel_file(f_id) = 0;
-        }
-    }); // end parallel for
-    read_voxel_file.update_host(); // copy to CPU if code is to read a file
-    Kokkos::fence();
-    // ---------------------------------------------
+    DCArrayKokkos<size_t> voxel_elem_mat_id;       // 1 or 0 if material exist, or it is the material_id
 
 
 
@@ -457,9 +436,9 @@ void fill_regions(DCArrayKokkos<reg_fill_t>& region_fills,
                      GaussPoint_den,
                      GaussPoint_sie,
                      elem_mat_id,
-                     region_fills,
                      voxel_elem_mat_id,
-                     read_voxel_file,
+                     SimulationParamaters.region_fills,
+                     SimulationParamaters.region_fills_host,
                      num_fills,
                      num_elems,
                      num_nodes,
@@ -1091,9 +1070,10 @@ std::string trim(const std::string& s)
 /// \param mesh_coords is the geometric center of the element or a node coordinates
 ///
 /////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
 size_t fill_geometric_region(const mesh_t& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
-                             const DCArrayKokkos<reg_fill_t>& region_fills,
+                             const CArrayKokkos<reg_fill_t>& region_fills,
                              const ViewCArrayKokkos <double>& mesh_coords,
                              const double voxel_dx, 
                              const double voxel_dy, 
@@ -1245,7 +1225,7 @@ void paint_gauss_den_sie(const Material_t& Materials,
                          const DCArrayKokkos <double>& GaussPoint_den,
                          const DCArrayKokkos <double>& GaussPoint_sie,
                          const DCArrayKokkos <size_t>& elem_mat_id,
-                         const DCArrayKokkos<reg_fill_t>& region_fills,
+                         const CArrayKokkos<reg_fill_t>& region_fills,
                          const ViewCArrayKokkos <double> elem_coords,
                          const double elem_gid,
                          const size_t f_id){
@@ -1309,7 +1289,7 @@ void paint_gauss_den_sie(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
+void paint_node_vel(const CArrayKokkos<reg_fill_t>& region_fills,
                     const DCArrayKokkos<double>& node_vel,
                     const DCArrayKokkos<double>& node_coords,
                     const double node_gid,
@@ -1479,13 +1459,13 @@ void paint_node_vel(const DCArrayKokkos<reg_fill_t>& region_fills,
 void fill_regions_sgh(const Material_t& Materials,
                       const mesh_t& mesh,
                       const DCArrayKokkos <double>& node_coords,
-                      const DCArrayKokkos <double>& node_vel,
+                      DCArrayKokkos <double>& node_vel,
                       DCArrayKokkos <double>& GaussPoint_den,
                       DCArrayKokkos <double>& GaussPoint_sie,
                       DCArrayKokkos <size_t>& elem_mat_id,
-                      DCArrayKokkos <reg_fill_t>& region_fills,
                       DCArrayKokkos <size_t>& voxel_elem_mat_id,
-                      const DCArrayKokkos <size_t>& read_voxel_file,
+                      const CArrayKokkos <reg_fill_t>& region_fills,
+                      const CArray <reg_fill_host_t>& region_fills_host,
                       const size_t num_fills,
                       const size_t num_elems,
                       const size_t num_nodes,
@@ -1495,6 +1475,28 @@ void fill_regions_sgh(const Material_t& Materials,
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
     size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
+
+
+    // ---------------------------------------------
+    // copy to host, enum to read a voxel file
+    // ---------------------------------------------
+    
+    DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
+
+    FOR_ALL(f_id, 0, num_fills, {
+        if (region_fills(f_id).volume == region::readVoxelFile)
+        {
+            read_voxel_file(f_id) = region::readVoxelFile;  // read the  voxel file
+        }
+        // add other mesh voxel files
+        else
+        {
+            read_voxel_file(f_id) = 0;
+        }
+    }); // end parallel for
+    read_voxel_file.update_host(); // copy to CPU if code is to read a file
+    Kokkos::fence();
+    // ---------------------------------------------
 
 
     // loop over the fill instructions
@@ -1515,10 +1517,10 @@ void fill_regions_sgh(const Material_t& Materials,
                             voxel_num_i, 
                             voxel_num_j, 
                             voxel_num_k,
-                            region_fills(f_id).scale_x,
-                            region_fills(f_id).scale_y,
-                            region_fills(f_id).scale_z,
-                            region_fills(f_id).file_path);
+                            region_fills_host(f_id).scale_x,
+                            region_fills_host(f_id).scale_y,
+                            region_fills_host(f_id).scale_z,
+                            region_fills_host(f_id).file_path);
 
             // copy values read from file to device
             voxel_elem_mat_id.update_device();
@@ -1620,6 +1622,8 @@ void fill_regions_sgh(const Material_t& Materials,
     elem_mat_id.update_host();
     GaussPoint_den.update_host();
     GaussPoint_sie.update_host();
+    node_vel.update_host();
+
     Kokkos::fence();
 
 } // end SGH fill regions

@@ -50,6 +50,7 @@ struct SimulationParameters_t;
 struct solver_input_t;
 struct mesh_input_t;
 struct reg_fill_t;
+struct reg_fill_host_t;
 struct output_options_t;
 
 struct Material_t;
@@ -105,7 +106,9 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input);
 void parse_output_options(Yaml::Node& root, output_options_t& output_options);
 
 // parse the region text
-void parse_regions(Yaml::Node& root, DCArrayKokkos<reg_fill_t>& region_fills);
+void parse_regions(Yaml::Node& root, 
+                   CArrayKokkos<reg_fill_t>& region_fills,
+                   CArray<reg_fill_host_t>& region_fills_host);
 
 // parse the region text
 void parse_materials(Yaml::Node& root, Material_t& Materials);
