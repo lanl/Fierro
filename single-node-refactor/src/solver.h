@@ -53,7 +53,7 @@ class Solver
 public:
 
     Solver();
-    ~Solver();
+    virtual ~Solver();
 
     virtual void initialize(SimulationParameters_t& SimulationParamaters, 
                             Material_t& Materials, 
