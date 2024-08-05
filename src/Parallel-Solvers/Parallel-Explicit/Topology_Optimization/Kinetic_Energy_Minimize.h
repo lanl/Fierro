@@ -135,13 +135,12 @@ private:
     }
 
 public:
-    bool   nodal_density_flag_, time_accumulation;
+    bool   nodal_density_flag_;
     int    last_comm_step, last_solve_step, current_step;
     size_t nvalid_modules;
     std::vector<FEA_MODULE_TYPE> valid_fea_modules; // modules that may interface with this objective function
     FEA_MODULE_TYPE set_module_type;
     // std::string my_fea_module = "SGH";
-    real_t objective_accumulation;
 
     KineticEnergyMinimize_TopOpt(Explicit_Solver* Explicit_Solver_Pointer, bool nodal_density_flag)
         : useLC_(true)
@@ -169,7 +168,6 @@ public:
         last_comm_step    = last_solve_step = -1;
         current_step      = 0;
         time_accumulation = true;
-        objective_accumulation = 0;
         
         previous_gradients = Teuchos::rcp(new MV(Explicit_Solver_Pointer_->map, 1));
         if(Explicit_Solver_Pointer_->simparam.optimization_options.maximize_flag){

@@ -117,8 +117,12 @@ private:
 
 public:
 
+  bool time_accumulation;
+  real_t objective_accumulation;
+
   FierroOptimizationObjective(){
- 
+    objective_accumulation = 0;
+    time_accumulation = false;
   }
 
 
