@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.1.3)
 
-
 find_package(Matar REQUIRED)
 find_package(Kokkos REQUIRED)
 
@@ -19,28 +18,18 @@ endif()
 include_directories(include)
 include_directories(src)
 
+message("\n ****** ADDING SGH SOURCE FILES ******** \n ")
 
-set(SRC_Files 
-src/boundary.cpp 
-src/energy_sgh.cpp
-src/force_sgh.cpp
-src/position.cpp
-src/momentum.cpp
-src/properties.cpp
-src/sgh_solve.cpp
-src/time_integration.cpp
-src/sgh_setup.cpp)
-
-
-message("\n ****** ADDING SGH LIBRARY ******** \n ")
-
-add_library(sgh_solver ${SRC_Files} ) # ${SGH_Solver_SRC} 
-target_include_directories(sgh_solver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-target_link_libraries(sgh_solver matar Kokkos::kokkos)
-
-
-
-
-
-
+set(SGH_SRC_Files 
+${CMAKE_CURRENT_SOURCE_DIR}/src/boundary.cpp 
+${CMAKE_CURRENT_SOURCE_DIR}/src/energy_sgh.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/force_sgh.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/position.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/momentum.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/properties.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_solve.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/time_integration.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_setup.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/include/sgh_solver.h
+PARENT_SCOPE
+)

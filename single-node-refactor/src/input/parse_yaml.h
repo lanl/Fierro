@@ -74,6 +74,25 @@ static bool DoesPathExist(const std::string& s)
     return (stat(s.c_str(), &buffer) == 0);
 }
 
+// ==============================================================================
+//   Functions to parse strings
+// ==============================================================================
+// for string delimiter parsing
+std::vector<std::string> split(std::string s, std::string delimiter);
+
+// retrieves multiple values between [ ]
+std::vector<double> extract_list(std::string str);
+
+const std::string WHITESPACE = " ";
+
+std::string ltrim(const std::string& s);
+
+std::string rtrim(const std::string& s);
+
+std::string trim(const std::string& s);
+
+
+
 // for string delimiter parsing
 std::vector<std::string> exact_array_values(std::string s, std::string delimiter);
 

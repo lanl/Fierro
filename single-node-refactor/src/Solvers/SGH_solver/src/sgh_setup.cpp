@@ -33,17 +33,235 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver.h"
-#include "solver.h"
-#include "geometry_new.h"
-#include "matar.h"
-#include "simulation_parameters.h"
-#include "boundary_conditions.h"
-#include "material.h"
-#include "mesh.h"
-#include "state.h"
-#include "io_utils.h"
-#include "dynamic_options.h"
 #include "region_fill.h"
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_corner_node_masses_zero
+///
+/// \brief a function to initialize corner and node masses to zero
+///
+/// \param mesh is the simulation mesh
+/// \param node_mass is the node mass
+/// \param corner_mass is the corner mass
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGH::init_corner_node_masses_zero(const mesh_t& mesh,
+                                  const DCArrayKokkos<double>& node_mass,
+                                  const DCArrayKokkos<double>& corner_mass) const
+{
+                    
+    // calculate the nodal mass
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        node_mass(node_gid) = 0.0;
+    }); // end parallel over nodes
+
+    FOR_ALL(corner_gid, 0, mesh.num_corners, {
+        corner_mass(corner_gid) = 0.0;
+    });  // end parallel over corners
+
+} // end setting masses equal to zero
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn fill_regions_sgh
+///
+/// \brief a function to paint den, sie, vel, and mat_ids on the mesh 
+/// The arrays populated (on host and device) are:
+///       elem_mat_id
+///       GaussPoint_den
+///       GaussPoint_sie
+///       node_vel
+///
+/// \param Materials holds the material models and global parameters
+/// \param mesh is the simulation mesh
+/// \param node_coords are the coordinates of the nodes
+/// \param node_vel is the nodal velocity array
+/// \param region_fills are the instructures to paint state on the mesh
+/// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh 
+/// \param GaussPoint_den is density at the GaussPoints on the mesh
+/// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
+/// \param elem_mat_id is the material id in an element
+/// \param num_fills is number of fill instruction
+/// \param num_elems is number of elements on the mesh
+/// \param num_nodes is number of nodes on the mesh
+/// \param rk_num_bins is number of time integration storage bins
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGH::fill_regions_sgh(const Material_t& Materials,
+                      const mesh_t& mesh,
+                      const DCArrayKokkos <double>& node_coords,
+                      DCArrayKokkos <double>& node_vel,
+                      DCArrayKokkos <double>& GaussPoint_den,
+                      DCArrayKokkos <double>& GaussPoint_sie,
+                      DCArrayKokkos <size_t>& elem_mat_id,
+                      DCArrayKokkos <size_t>& voxel_elem_mat_id,
+                      const CArrayKokkos <reg_fill_t>& region_fills,
+                      const CArray <reg_fill_host_t>& region_fills_host,
+                      const size_t num_fills,
+                      const size_t num_elems,
+                      const size_t num_nodes,
+                      const size_t rk_num_bins) const
+{
+
+
+    double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
+    double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
+    size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
+
+
+    // ---------------------------------------------
+    // copy to host, enum to read a voxel file
+    // ---------------------------------------------
+    
+    DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
+
+    FOR_ALL(f_id, 0, num_fills, {
+        if (region_fills(f_id).volume == region::readVoxelFile)
+        {
+            read_voxel_file(f_id) = region::readVoxelFile;  // read the  voxel file
+        }
+        // add other mesh voxel files
+        else
+        {
+            read_voxel_file(f_id) = 0;
+        }
+    }); // end parallel for
+    read_voxel_file.update_host(); // copy to CPU if code is to read a file
+    Kokkos::fence();
+    // ---------------------------------------------
+
+
+    // loop over the fill instructions
+    for (size_t f_id = 0; f_id < num_fills; f_id++) {
+
+        // ----
+        // voxel mesh setup
+        if (read_voxel_file.host(f_id) == region::readVoxelFile)
+        {
+            // read voxel mesh to get the values in the fcn interface
+            user_voxel_init(voxel_elem_mat_id,
+                            voxel_dx, 
+                            voxel_dy, 
+                            voxel_dz,
+                            orig_x, 
+                            orig_y, 
+                            orig_z,
+                            voxel_num_i, 
+                            voxel_num_j, 
+                            voxel_num_k,
+                            region_fills_host(f_id).scale_x,
+                            region_fills_host(f_id).scale_y,
+                            region_fills_host(f_id).scale_z,
+                            region_fills_host(f_id).file_path);
+
+            // copy values read from file to device
+            voxel_elem_mat_id.update_device();
+        } // endif
+        // add else if for other mesh reads including STL-2-voxel
+
+
+        // parallel loop over elements in mesh
+        FOR_ALL(elem_gid, 0, num_elems, {
+
+            // calculate the coordinates and radius of the element
+            double elem_coords_1D[3]; // note:initialization with a list won't work
+            ViewCArrayKokkos <double> elem_coords(&elem_coords_1D[0], 3);
+            elem_coords(0) = 0.0;
+            elem_coords(1) = 0.0;
+            elem_coords(2) = 0.0;
+
+            // get the coordinates of the element center (using rk_level=1 or node coords)
+            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                elem_coords(0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_coords(1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                if (mesh.num_dims == 3) {
+                    elem_coords(2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                }
+                else{
+                    elem_coords(2) = 0.0;
+                }
+            } // end loop over nodes in element 
+            elem_coords(0) = (elem_coords(0) / mesh.num_nodes_in_elem);
+            elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
+            elem_coords(2) = (elem_coords(2) / mesh.num_nodes_in_elem);
+
+            
+            // calc if we are to fill this element
+            size_t fill_this = fill_geometric_region(mesh, 
+                                                     voxel_elem_mat_id, 
+                                                     region_fills, 
+                                                     elem_coords, 
+                                                     voxel_dx, 
+                                                     voxel_dy, 
+                                                     voxel_dz,
+                                                     orig_x, 
+                                                     orig_y, 
+                                                     orig_z,
+                                                     voxel_num_i, 
+                                                     voxel_num_j, 
+                                                     voxel_num_k,
+                                                     f_id);
+
+
+            // paint the material state on the element if fill_this=1
+            if (fill_this == 1) {
+
+                // default sgh paint
+                paint_gauss_den_sie(Materials,
+                                    mesh,
+                                    node_coords,
+                                    GaussPoint_den,
+                                    GaussPoint_sie,
+                                    elem_mat_id,
+                                    region_fills,
+                                    elem_coords,
+                                    elem_gid,
+                                    f_id);
+
+                // add user defined paint here
+                // user_defined_sgh_state();
+
+
+                // technically, not thread safe, but making it a separate loop created bad fill behavior
+                // loop over the nodes of this element and apply velocity
+                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                        
+                    // get the mesh node index
+                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);       
+
+                    // default sgh paint
+                    paint_node_vel(region_fills,
+                                node_vel,
+                                node_coords,
+                                node_gid,
+                                mesh.num_dims,
+                                f_id,
+                                rk_num_bins);
+
+                    // add user defined paint here
+                    // user_defined_vel_state();
+                    
+                } // end loop over the nodes in elem
+
+            } // end if fill this
+
+        }); // end FOR_ALL node loop
+        Kokkos::fence();
+
+    } // end for loop over fills
+
+
+    elem_mat_id.update_host();
+    GaussPoint_den.update_host();
+    GaussPoint_sie.update_host();
+    node_vel.update_host();
+
+    Kokkos::fence();
+
+} // end SGH fill regions
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -332,232 +550,11 @@ void SGH::setup(SimulationParameters_t& SimulationParamaters,
 
 
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn fill_regions_sgh
-///
-/// \brief a function to paint den, sie, vel, and mat_ids on the mesh 
-/// The arrays populated (on host and device) are:
-///       elem_mat_id
-///       GaussPoint_den
-///       GaussPoint_sie
-///       node_vel
-///
-/// \param Materials holds the material models and global parameters
-/// \param mesh is the simulation mesh
-/// \param node_coords are the coordinates of the nodes
-/// \param node_vel is the nodal velocity array
-/// \param region_fills are the instructures to paint state on the mesh
-/// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh 
-/// \param GaussPoint_den is density at the GaussPoints on the mesh
-/// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
-/// \param elem_mat_id is the material id in an element
-/// \param num_fills is number of fill instruction
-/// \param num_elems is number of elements on the mesh
-/// \param num_nodes is number of nodes on the mesh
-/// \param rk_num_bins is number of time integration storage bins
-///
-/////////////////////////////////////////////////////////////////////////////
-void fill_regions_sgh(const Material_t& Materials,
-                      const mesh_t& mesh,
-                      const DCArrayKokkos <double>& node_coords,
-                      DCArrayKokkos <double>& node_vel,
-                      DCArrayKokkos <double>& GaussPoint_den,
-                      DCArrayKokkos <double>& GaussPoint_sie,
-                      DCArrayKokkos <size_t>& elem_mat_id,
-                      DCArrayKokkos <size_t>& voxel_elem_mat_id,
-                      const CArrayKokkos <reg_fill_t>& region_fills,
-                      const CArray <reg_fill_host_t>& region_fills_host,
-                      const size_t num_fills,
-                      const size_t num_elems,
-                      const size_t num_nodes,
-                      const size_t rk_num_bins){
-
-
-    double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
-    double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
-    size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
-
-
-    // ---------------------------------------------
-    // copy to host, enum to read a voxel file
-    // ---------------------------------------------
-    
-    DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
-
-    FOR_ALL(f_id, 0, num_fills, {
-        if (region_fills(f_id).volume == region::readVoxelFile)
-        {
-            read_voxel_file(f_id) = region::readVoxelFile;  // read the  voxel file
-        }
-        // add other mesh voxel files
-        else
-        {
-            read_voxel_file(f_id) = 0;
-        }
-    }); // end parallel for
-    read_voxel_file.update_host(); // copy to CPU if code is to read a file
-    Kokkos::fence();
-    // ---------------------------------------------
-
-
-    // loop over the fill instructions
-    for (size_t f_id = 0; f_id < num_fills; f_id++) {
-
-        // ----
-        // voxel mesh setup
-        if (read_voxel_file.host(f_id) == region::readVoxelFile)
-        {
-            // read voxel mesh to get the values in the fcn interface
-            user_voxel_init(voxel_elem_mat_id,
-                            voxel_dx, 
-                            voxel_dy, 
-                            voxel_dz,
-                            orig_x, 
-                            orig_y, 
-                            orig_z,
-                            voxel_num_i, 
-                            voxel_num_j, 
-                            voxel_num_k,
-                            region_fills_host(f_id).scale_x,
-                            region_fills_host(f_id).scale_y,
-                            region_fills_host(f_id).scale_z,
-                            region_fills_host(f_id).file_path);
-
-            // copy values read from file to device
-            voxel_elem_mat_id.update_device();
-        } // endif
-        // add else if for other mesh reads including STL-2-voxel
-
-
-        // parallel loop over elements in mesh
-        FOR_ALL(elem_gid, 0, num_elems, {
-
-            // calculate the coordinates and radius of the element
-            double elem_coords_1D[3]; // note:initialization with a list won't work
-            ViewCArrayKokkos <double> elem_coords(&elem_coords_1D[0], 3);
-            elem_coords(0) = 0.0;
-            elem_coords(1) = 0.0;
-            elem_coords(2) = 0.0;
-
-            // get the coordinates of the element center (using rk_level=1 or node coords)
-            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_coords(0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_coords(1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
-                if (mesh.num_dims == 3) {
-                    elem_coords(2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
-                }
-                else{
-                    elem_coords(2) = 0.0;
-                }
-            } // end loop over nodes in element 
-            elem_coords(0) = (elem_coords(0) / mesh.num_nodes_in_elem);
-            elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
-            elem_coords(2) = (elem_coords(2) / mesh.num_nodes_in_elem);
-
-            
-            // calc if we are to fill this element
-            size_t fill_this = fill_geometric_region(mesh, 
-                                                     voxel_elem_mat_id, 
-                                                     region_fills, 
-                                                     elem_coords, 
-                                                     voxel_dx, 
-                                                     voxel_dy, 
-                                                     voxel_dz,
-                                                     orig_x, 
-                                                     orig_y, 
-                                                     orig_z,
-                                                     voxel_num_i, 
-                                                     voxel_num_j, 
-                                                     voxel_num_k,
-                                                     f_id);
-
-
-            // paint the material state on the element if fill_this=1
-            if (fill_this == 1) {
-
-                // default sgh paint
-                paint_gauss_den_sie(Materials,
-                                    mesh,
-                                    node_coords,
-                                    GaussPoint_den,
-                                    GaussPoint_sie,
-                                    elem_mat_id,
-                                    region_fills,
-                                    elem_coords,
-                                    elem_gid,
-                                    f_id);
-
-                // add user defined paint here
-                // user_defined_sgh_state();
-
-
-                // technically, not thread safe, but making it a separate loop created bad fill behavior
-                // loop over the nodes of this element and apply velocity
-                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                        
-                    // get the mesh node index
-                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);       
-
-                    // default sgh paint
-                    paint_node_vel(region_fills,
-                                node_vel,
-                                node_coords,
-                                node_gid,
-                                mesh.num_dims,
-                                f_id,
-                                rk_num_bins);
-
-                    // add user defined paint here
-                    // user_defined_vel_state();
-                    
-                } // end loop over the nodes in elem
-
-            } // end if fill this
-
-        }); // end FOR_ALL node loop
-        Kokkos::fence();
-
-    } // end for loop over fills
-
-
-    elem_mat_id.update_host();
-    GaussPoint_den.update_host();
-    GaussPoint_sie.update_host();
-    node_vel.update_host();
-
-    Kokkos::fence();
-
-} // end SGH fill regions
 
 
 
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn init_corner_node_masses_zero
-///
-/// \brief a function to initialize corner and node masses to zero
-///
-/// \param mesh is the simulation mesh
-/// \param node_mass is the node mass
-/// \param corner_mass is the corner mass
-///
-/////////////////////////////////////////////////////////////////////////////
-void init_corner_node_masses_zero(const mesh_t& mesh,
-                                  const DCArrayKokkos<double>& node_mass,
-                                  const DCArrayKokkos<double>& corner_mass){
-                    
-    // calculate the nodal mass
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        node_mass(node_gid) = 0.0;
-    }); // end parallel over nodes
 
-    FOR_ALL(corner_gid, 0, mesh.num_corners, {
-        corner_mass(corner_gid) = 0.0;
-    });  // end parallel over corners
-
-} // end setting masses equal to zero
 
 
 

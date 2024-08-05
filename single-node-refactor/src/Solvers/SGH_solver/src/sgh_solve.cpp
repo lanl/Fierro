@@ -33,17 +33,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver.h"
-#include "solver.h"
-#include "geometry_new.h"
-#include "matar.h"
-#include "simulation_parameters.h"
-#include "boundary_conditions.h"
-#include "material.h"
-#include "mesh.h"
-#include "state.h"
-#include "io_utils.h"
-#include "dynamic_options.h"
-#include <chrono>
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -668,7 +657,8 @@ void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
                               const DCArrayKokkos<double>& node_coords,
                               const DCArrayKokkos<double>& node_mass,
                               double num_dims,
-                              double num_nodes){
+                              double num_nodes)
+{
     // save the nodal mass
     FOR_ALL(node_gid, 0, num_nodes, {
 
@@ -680,14 +670,14 @@ void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
 
         node_extensive_mass(node_gid) = node_mass(node_gid) * radius;
     }); // end parallel for
-
 } // end function
 
 
 // a function to tally the internal energy
 double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
                                   const DCArrayKokkos<double>& MaterialPoints_sie,
-                                  size_t num_mat_points){
+                                  size_t num_mat_points)
+{
 
     double IE_sum = 0.0;
     double IE_loc_sum;
@@ -700,13 +690,13 @@ double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_ma
 
 
     return IE_sum;
-
 } // end function 
 
 double sum_domain_kinetic_energy(const mesh_t& mesh,
                                  const DCArrayKokkos<double>& node_vel,
                                  const DCArrayKokkos<double>& node_coords,
-                                 const DCArrayKokkos<double>& node_mass){
+                                 const DCArrayKokkos<double>& node_mass)
+{
     // extensive KE
     double KE_sum = 0.0;
     double KE_loc_sum;
@@ -733,10 +723,10 @@ double sum_domain_kinetic_energy(const mesh_t& mesh,
 } // end function
 
 
-
 // a function to tally the material point masses
 double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
-                                const size_t num_mat_points){
+                                const size_t num_mat_points)
+{
 
     double mass_domain = 0.0;
     double mass_loc_domain;
@@ -749,13 +739,13 @@ double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass
     Kokkos::fence();
 
     return mass_domain;
-
 } // end function 
 
 
 double sum_domain_node_mass(const mesh_t& mesh,
                             const DCArrayKokkos<double>& node_coords,
-                            const DCArrayKokkos<double>& node_mass){
+                            const DCArrayKokkos<double>& node_mass)
+{
 
     double mass_domain = 0.0;
     double mass_loc_domain;
@@ -783,7 +773,8 @@ void calc_node_areal_mass(const mesh_t& mesh,
                           const DCArrayKokkos<double>& node_coords,
                           const DCArrayKokkos<double>& node_mass,
                           CArrayKokkos<double> node_extensive_mass,
-                          double tiny){
+                          double tiny)
+{
 
     // calculate the nodal areal mass
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
@@ -814,13 +805,13 @@ void calc_node_areal_mass(const mesh_t& mesh,
     }); // end parallel for over elem_gid
 
     return;
-
 }// end function
 
 
 // set the corner forces to zero
 void set_corner_force_zero(const mesh_t& mesh, 
-                           const DCArrayKokkos<double>& corner_force){
+                           const DCArrayKokkos<double>& corner_force)
+{
 
     // set corner force to zero
     FOR_ALL(corner_gid, 0, mesh.num_corners, {
@@ -828,5 +819,4 @@ void set_corner_force_zero(const mesh_t& mesh,
             corner_force(corner_gid, dim) = 0.0;
         }
     }); // end parallel for corners
-
 } // end function

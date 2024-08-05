@@ -47,8 +47,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "dynamic_options.h"
 
 
-
-
 using namespace mtr; // matar namespace
 
 /////////////////////////////////////////////////////////////////////////////
