@@ -32,11 +32,17 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "state.h"
-#include "mesh.h"
-#include "geometry_new.h"
 #include "sgh_solver.h"
+#include "solver.h"
+#include "geometry_new.h"
+#include "matar.h"
+#include "simulation_parameters.h"
+#include "boundary_conditions.h"
+#include "material.h"
+#include "mesh.h"
+#include "state.h"
 #include "io_utils.h"
+#include "dynamic_options.h"
 #include <chrono>
 
 /////////////////////////////////////////////////////////////////////////////
@@ -547,7 +553,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
     printf("nodal mass conservation error = %f \n",   mass_domain_nodes_tend - mass_domain_nodes_t0);
     printf("nodal and material mass error = %f \n\n", mass_domain_nodes_tend - mass_domain_all_mats_tend);
 
-} // end of SGH solve
+} // end of SGH execute
 
 /////////////////////////////////////////////////////////////////////////////
 ///

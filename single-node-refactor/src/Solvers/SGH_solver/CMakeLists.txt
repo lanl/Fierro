@@ -28,15 +28,14 @@ src/position.cpp
 src/momentum.cpp
 src/properties.cpp
 src/sgh_solve.cpp
-src/time_integration.cpp)
+src/time_integration.cpp
+src/sgh_setup.cpp)
 
-# set(SGH_Solver_SRC src/sgh_solver.cpp )
 
 message("\n ****** ADDING SGH LIBRARY ******** \n ")
 
 add_library(sgh_solver ${SRC_Files} ) # ${SGH_Solver_SRC} 
 target_include_directories(sgh_solver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 
 target_link_libraries(sgh_solver matar Kokkos::kokkos)
 
