@@ -1611,6 +1611,8 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialEnums(mat_id).EOSType = model::decoupledEOSType;
                             });
+
+                            Materials.MaterialEnums.host(mat_id).EOSType = model::decoupledEOSType;
                             break;
 
                         case model::coupledEOSType:
@@ -1618,12 +1620,14 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialEnums(mat_id).EOSType = model::coupledEOSType;
                             });
+                            Materials.MaterialEnums.host(mat_id).EOSType = model::coupledEOSType;
                             break;
 
                         default:
                             RUN({ 
                                 Materials.MaterialEnums(mat_id).EOSType = model::noEOSType;
                             });
+                            Materials.MaterialEnums.host(mat_id).EOSType = model::noEOSType;
                             std::cout << "ERROR: No valid EOS type input " << std::endl;
                             std::cout << "Valid EOS types are: " << std::endl;
                             
@@ -1717,6 +1721,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialEnums(mat_id).StrengthType = model::noStrengthType;
                             });
+                            Materials.MaterialEnums.host(mat_id).StrengthType = model::noStrengthType;
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model_type_type = " << strength_model_type << std::endl;
                             }
@@ -1726,6 +1731,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialEnums(mat_id).StrengthType = model::incrementBased;
                             });
+                            Materials.MaterialEnums.host(mat_id).StrengthType = model::incrementBased;
                             
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model_type = " << strength_model_type << std::endl;
@@ -1735,6 +1741,8 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialEnums(mat_id).StrengthType = model::stateBased;
                             });
+                            Materials.MaterialEnums.host(mat_id).StrengthType = model::stateBased;
+                            
                             std::cout << "ERROR: state_based models not yet defined: " << std::endl;
                             throw std::runtime_error("**** ERROR: state_based models not yet defined ****");
                             if (VERBOSE) {

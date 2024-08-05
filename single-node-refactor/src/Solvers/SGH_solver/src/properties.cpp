@@ -82,7 +82,7 @@ void SGH::update_state(
 
 
     // --- pressure ---
-    if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
+    if (Materials.MaterialEnums.host(mat_id).EOSType == model::decoupledEOSType) {
 
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
