@@ -53,12 +53,13 @@
 #include "ROL_Types.hpp"
 #include <ROL_TpetraMultiVector.hpp>
 #include "ROL_Objective.hpp"
+#include "Fierro_Optimization_Objective.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
 #include "FEA_Module_SGH.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
 
-class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t>
+class KineticEnergyMinimize_TopOpt : public FierroOptimizationObjective
 {
 typedef Tpetra::Map<>::local_ordinal_type LO;
 typedef Tpetra::Map<>::global_ordinal_type GO;
@@ -286,6 +287,9 @@ public:
 
                 FEM_SGH_->comm_variables(zp);
                 FEM_SGH_->update_forward_solve(zp);
+                if(Explicit_Solver_Pointer_->myrank == 0){
+                    std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
+                }
                 FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
                 previous_objective_accumulation = objective_accumulation;
                 previous_gradients->assign(*(FEM_SGH_->cached_design_gradients_distributed));
@@ -312,7 +316,9 @@ public:
             if (Explicit_Solver_Pointer_->myrank == 0) { *fos << "called Revert" << std::endl; }
             objective_accumulation = previous_objective_accumulation;
             FEM_SGH_->cached_design_gradients_distributed->assign(*previous_gradients);
-
+            if(Explicit_Solver_Pointer_->myrank == 0){
+                std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
+            }
             // FEM_SGH_->comm_variables(zp);
             // // update deformation variables
             // FEM_SGH_->update_forward_solve(zp);
@@ -331,8 +337,11 @@ public:
             FEM_SGH_->comm_variables(zp);
             // update deformation variables
             FEM_SGH_->update_forward_solve(zp, print_flag);
+            
+            if(Explicit_Solver_Pointer_->myrank == 0){
+                std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
+            }
             FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
-
             // decide to output current optimization state
             // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
         }
@@ -399,9 +408,6 @@ public:
         }
 
         std::cout.precision(10);
-        if (Explicit_Solver_Pointer_->myrank == 0&&first_init) {
-            std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
-        }
 
         // std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
         return objective_sign*objective_accumulation;
