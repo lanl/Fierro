@@ -361,17 +361,14 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
             }
             else{
                 // Using a full tensoral Riemann jump relation
-                mu_term = muc(node_lid)
-                          * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                    + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                real_t area_normal_norm = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
+                                               +area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                                               +area_normal(node_lid, 2) * area_normal(node_lid, 2));
+                mu_term = muc(node_lid)*area_normal_norm;
 
                 for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
                     for (int jdim = 0; jdim < num_dims; jdim++) {
-                        muc_gradient(node_lid, igradient, jdim) = muc_gradient(node_lid, igradient, jdim)
-                                                                  * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                            + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                            + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                        muc_gradient(node_lid, igradient, jdim) = muc_gradient(node_lid, igradient, jdim)*area_normal_norm;
                     }
                 }
             }
@@ -509,26 +506,32 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
 
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++) {
+                const double current_node_vel = node_vel(rk_level, node_gid, dim);
                 // assign gradient of corner contribution of force to relevant matrix entries with non-zero node velocity gradient
                 for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
                     size_t gradient_node_gid = nodes_in_elem(elem_gid, igradient);
                     column_index = num_dims * Global_Gradient_Matrix_Assembly_Map(elem_gid, igradient, node_lid);
+                    
+                    if (map->isNodeLocalElement(gradient_node_gid)) {
+                        for (int jdim = 0; jdim < num_dims; jdim++) {
+                            if (node_lid == igradient && jdim == dim) {
+                                Force_Gradient_Velocities(gradient_node_gid * num_dims + jdim, column_index + dim) += phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim) - 1) +
+                                                                                                                                muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - current_node_vel));
+                            }
+                            else {
+                                Force_Gradient_Velocities(gradient_node_gid * num_dims + jdim, column_index + dim) += phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim)) +
+                                                                                                                                muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - current_node_vel));
+                            }
+                        }
+                    }
                     for (int jdim = 0; jdim < num_dims; jdim++) {
                         if (node_lid == igradient && jdim == dim) {
-                            if (map->isNodeLocalElement(gradient_node_gid)) {
-                                Force_Gradient_Velocities(gradient_node_gid * num_dims + jdim, column_index + dim) += phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim) - 1) +
-                                                                                                                             muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim)));
-                            }
                             corner_gradient_storage(corner_gid, dim, igradient, jdim) = phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim) - 1) +
-                                                                                               muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim)));
+                                                                                               muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - current_node_vel));
                         }
                         else {
-                            if (map->isNodeLocalElement(gradient_node_gid)) {
-                                Force_Gradient_Velocities(gradient_node_gid * num_dims + jdim, column_index + dim) += phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim)) +
-                                                                                                                             muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim)));
-                            }
                             corner_gradient_storage(corner_gid, dim, igradient, jdim) = phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim)) +
-                                                                                               muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim)));
+                                                                                               muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - current_node_vel));
                         }
                     }
                 }
@@ -1093,8 +1096,6 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
         ViewCArrayKokkos<double> vel_star_gradient(vel_star_gradient_array, num_dims, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
 
-        // --- abviatations of variables ---
-
         // element volume
         double vol = elem_vol(elem_gid);
 
@@ -1326,22 +1327,20 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                    + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                                + area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                                + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                real_t area_normal_norm = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
+                                               +area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                                               +area_normal(node_lid, 2) * area_normal(node_lid, 2));
                 for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
                     for (int jdim = 0; jdim < num_dims; jdim++) {
                         mu_term_gradient = muc_gradient(node_lid, igradient, jdim)
-                                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                            + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                            + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                                           * area_normal_norm;
 
                         mu_term_gradient += muc(node_lid) * (area_normal(node_lid, 0) * area_normal_gradients(node_lid, 0, igradient, jdim)
                                                              + area_normal(node_lid, 1) * area_normal_gradients(node_lid, 1, igradient, jdim)
-                                                             + area_normal(node_lid, 2) * area_normal_gradients(node_lid, 2, igradient, jdim)) /
-                                            sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                            + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                            + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
-
+                                                             + area_normal(node_lid, 2) * area_normal_gradients(node_lid, 2, igradient, jdim))/ area_normal_norm;
+                        
                         muc_gradient(node_lid, igradient, jdim) = mu_term_gradient;
                     }
                 }
@@ -1470,40 +1469,34 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
 
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++) {
+                const double current_node_vel = node_vel(rk_level, node_gid, dim);
                 // assign gradient of corner contribution of force to relevant matrix entries with non-zero node velocity gradient
                 for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
-                    for (int jdim = 0; jdim < num_dims; jdim++) {
-                        size_t gradient_node_gid = nodes_in_elem(elem_gid, igradient);
-                        // if(!map->isNodeLocalElement(gradient_node_gid)) continue;
-                        column_index = num_dims * Global_Gradient_Matrix_Assembly_Map(elem_gid, igradient, node_lid);
-                        if (map->isNodeLocalElement(gradient_node_gid)) {
+                    size_t gradient_node_gid = nodes_in_elem(elem_gid, igradient);
+                    // if(!map->isNodeLocalElement(gradient_node_gid)) continue;
+                    column_index = num_dims * Global_Gradient_Matrix_Assembly_Map(elem_gid, igradient, node_lid);
+                    
+                    if (map->isNodeLocalElement(gradient_node_gid)) {
+                        for (int jdim = 0; jdim < num_dims; jdim++) {
                             Force_Gradient_Positions(gradient_node_gid * num_dims + jdim, column_index + dim) += area_normal(node_lid, 0) * tau_gradient(0, dim, igradient, jdim)
                                                                                                                  + area_normal(node_lid, 1) * tau_gradient(1, dim, igradient, jdim)
                                                                                                                  + area_normal(node_lid, 2) * tau_gradient(2, dim, igradient, jdim)
                                                                                                                  + area_normal_gradients(node_lid, 0, igradient, jdim) * tau(0, dim)
                                                                                                                  + area_normal_gradients(node_lid, 1, igradient, jdim) * tau(1, dim)
                                                                                                                  + area_normal_gradients(node_lid, 2, igradient, jdim) * tau(2, dim)
-                                                                                                                 + phi * muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim))
+                                                                                                                 + phi * muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - current_node_vel)
                                                                                                                  + phi * muc(node_lid) * (vel_star_gradient(dim, igradient, jdim));
                         }
+                    }
+                    for (int jdim = 0; jdim < num_dims; jdim++) {
                         corner_gradient_storage(corner_gid, dim, igradient, jdim) = area_normal(node_lid, 0) * tau_gradient(0, dim, igradient, jdim)
                                                                                     + area_normal(node_lid, 1) * tau_gradient(1, dim, igradient, jdim)
                                                                                     + area_normal(node_lid, 2) * tau_gradient(2, dim, igradient, jdim)
                                                                                     + area_normal_gradients(node_lid, 0, igradient, jdim) * tau(0, dim)
                                                                                     + area_normal_gradients(node_lid, 1, igradient, jdim) * tau(1, dim)
                                                                                     + area_normal_gradients(node_lid, 2, igradient, jdim) * tau(2, dim)
-                                                                                    + phi * muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim))
+                                                                                    + phi * muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - current_node_vel)
                                                                                     + phi * muc(node_lid) * (vel_star_gradient(dim, igradient, jdim));
-                        // if(map->isNodeLocalElement(gradient_node_gid)){
-                        //     Force_Gradient_Positions(gradient_node_gid*num_dims+jdim, column_index+dim) +=
-                        //             + area_normal_gradients(node_lid, 0, igradient, jdim)*tau(0, dim)
-                        //             + area_normal_gradients(node_lid, 1, igradient, jdim)*tau(1, dim)
-                        //             + area_normal_gradients(node_lid, 2, igradient, jdim)*tau(2, dim);
-                        // }
-                        // corner_gradient_storage(corner_gid,dim,igradient,jdim) =
-                        //         + area_normal_gradients(node_lid, 0, igradient, jdim)*tau(0, dim)
-                        //         + area_normal_gradients(node_lid, 1, igradient, jdim)*tau(1, dim)
-                        //         + area_normal_gradients(node_lid, 2, igradient, jdim)*tau(2, dim);
                     }
                 }
             } // end loop over dimension

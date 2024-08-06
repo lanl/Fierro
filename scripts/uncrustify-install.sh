@@ -2,10 +2,10 @@
 
 # Check if the uncrustify build directory exists and is not empty in the parent directory; if not, clone it
 
-if [ ! -d "${UNCRUSTIFY_SOURCE_DIR}" ];
+if [ ! -d "${UNCRUSTIFY_SOURCE_DIR}/src" ];
 then
     echo "Missing Uncrustify submodule, downloading...."
-    git submodule update ${UNCRUSTIFY_SOURCE_DIR}
+    git submodule update --init ${UNCRUSTIFY_SOURCE_DIR}
 fi
 
 if [ ! -f "${UNCRUSTIFY_BUILD_DIR}/uncrustify" ]; then

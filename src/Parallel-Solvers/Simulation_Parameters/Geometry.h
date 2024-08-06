@@ -47,14 +47,6 @@ struct Volume : Yaml::ValidatedYaml {
     double length_x = 0;
     double length_y = 0;
     double length_z = 0;
-    double i0_real;
-    double j0_real;
-    double k0_real;
-    int i0;
-    int j0;
-    int k0;
-    int elem_id0;
-    bool fill_this;
     
     // Run voxelization scheme on stl file
     KOKKOS_FUNCTION
@@ -68,9 +60,17 @@ struct Volume : Yaml::ValidatedYaml {
     }
     
     KOKKOS_FUNCTION
-    bool contains(const double* elem_coords) {
+    bool contains(const double* elem_coords) const {
       double radius;
-
+      bool fill_this;
+      double i0_real;
+      double j0_real;
+      double k0_real;
+      int i0;
+      int j0;
+      int k0;
+      int elem_id0;
+      
       switch(type) {
           case VOLUME_TYPE::global:
             return true;

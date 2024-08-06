@@ -194,8 +194,9 @@ void Explicit_Solver::run() {
   init_maps();
 
   //print element imbalance stats
-  int rnum_global_sum = 0;
-  MPI_Allreduce(&rnum_elem, &rnum_global_sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  long long int rnum_global_sum = 0;
+  long long int temp_rnum_elem = rnum_elem;
+  MPI_Allreduce(&temp_rnum_elem, &rnum_global_sum, 1, MPI_LONG_LONG_INT, MPI_SUM, MPI_COMM_WORLD);
   double local_imbalance, max_imbalance, avg_elem;
   max_imbalance = 0;
   avg_elem = rnum_global_sum/((double) nranks);
@@ -359,11 +360,11 @@ void Explicit_Solver::run() {
   }
   */
 
-  std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
+  *fos << " Runtime of code is "<< current_cpu-initial_CPU_time << " comms time "
             << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
   
   if(simparam.output_options.timer_output_level == TIMER_VERBOSITY::thorough){
-    std::cout << " OUTPUT TIME OF CODE ON TASK " << myrank << " is "<< output_time << std::endl;
+    *fos << " Output time of code is "<< output_time << std::endl;
   }
 
   //parallel_vtk_writer();

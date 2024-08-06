@@ -115,6 +115,11 @@ void FEA_Module_SGH::setup()
     corner_force = DViewCArrayKokkos<double>(&corner_interface.force(0, 0), num_corners, num_dim);
     corner_mass  = DViewCArrayKokkos<double>(&corner_interface.mass(0), num_corners);
 
+    //external force storage
+    if(num_lcs){
+        corner_external_force = DCArrayKokkos<double>(num_corners, num_dim);
+    }
+
     // allocate elem_vel_grad
     elem_vel_grad = DCArrayKokkos<double>(num_elems, 3, 3);
 
