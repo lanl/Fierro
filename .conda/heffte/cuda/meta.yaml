@@ -28,8 +28,8 @@ requirements:
       #- {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
       #- {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - openmpi
-    - openmpi-mpicxx
-    - openmpi-mpifort
+      #- openmpi-mpicxx
+      #- openmpi-mpifort
       #- cuda-toolkit={{ cuda_version }}
     - cuda-nvcc
     - cuda-toolkit
