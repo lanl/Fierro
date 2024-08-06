@@ -21,8 +21,6 @@ fi
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH $PREFIX/lib"
 export LIBRARIES="$LIBRARIES \"-L$PREFIX/lib\""
 
-      #-D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
-      #-D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
       #-D CMAKE_CUDA_HOST_LINK_LAUNCHER=$CXX \
       #-D CMAKE_CUDA_COMPILER=$(which nvcc) \
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
@@ -34,6 +32,8 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       $CMAKE_ARGS \
       $SRC_DIR \
       -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
+      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
+      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
 
 make install #-j 10 install
 
