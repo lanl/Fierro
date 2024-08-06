@@ -25,9 +25,11 @@ requirements:
       #- {{ compiler('fortran') }}={{ linux_compiler_version }}
       #- {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
       #- {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
-    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+      #- {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
       #- {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - openmpi
+    - openmpi-mpicxx
+    - openmpi-mpifort
       #- cuda-toolkit={{ cuda_version }}
     - cuda-nvcc
     - cuda-toolkit
@@ -35,8 +37,6 @@ requirements:
   # Not sure which ones are totally necessary.
   host:
     #- cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
-    #- openmpi-mpicxx
-    #- openmpi-mpifort
     - cuda-cudart-static
     - cuda-nvcc
     - libcusolver-dev
