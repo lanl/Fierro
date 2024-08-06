@@ -20,7 +20,7 @@ export installdir=${basedir}/install
 
 export devutilsdir=${topdir}/dev-utils
 
-export UNCRUSTIFY_SOURCE_DIR=${devutilsdir}/uncrustify/src
+export UNCRUSTIFY_SOURCE_DIR=${devutilsdir}/uncrustify
 export UNCRUSTIFY_BUILD_DIR=${devutilsdir}/uncrustify/build
 export UNCRUSTIFY_INSTALL_DIR=${devutilsdir}/uncrustify/build
 
