@@ -106,6 +106,9 @@ optimization_options:
     optimization_process: topology_optimization
     optimization_objective: minimize_kinetic_energy
     use_solve_checkpoints: true
+    num_solve_checkpoints : 10
+    disable_forward_solve_output: true
+    optimization_output_freq: 1
     rol_params:
         subproblem_algorithm: line_search
         initial_constraint_penalty: 1.e-2

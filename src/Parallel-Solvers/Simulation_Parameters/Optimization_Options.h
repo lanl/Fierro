@@ -175,6 +175,10 @@ struct Optimization_Options: Yaml::DerivedFields {
     if(use_solve_checkpoints){
       use_gradient_tally = true;
     }
+
+    if(retain_outer_shell&&variable_outer_shell){
+      throw Yaml::ConfigurationException("Cannot specify both retain_outer_shell and variable_outer_shell as true");
+    }
   }
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Optimization_Options,
