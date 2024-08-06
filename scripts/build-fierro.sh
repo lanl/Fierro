@@ -199,13 +199,8 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
     source uncrustify-install.sh
-<<<<<<< HEAD
     source trilinos-install.sh ${kokkos_build_type} ${machine}
     if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" || [ "${solver}" = "explicit-lsnp-evpfft" ]; then
-=======
-    source trilinos-install.sh ${kokkos_build_type} ${machine} ${intel_mkl}
-    if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
->>>>>>> main
         source hdf5-install.sh
         source heffte-install.sh ${heffte_build_type} ${machine}
     fi
