@@ -38,7 +38,7 @@ requirements:
   host:
     #- cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
     - cuda-cudart-static
-    - cuda-nvcc
+      #    - cuda-nvcc
     - libcusolver-dev
     - libcufft-dev
     - libcublas-dev
