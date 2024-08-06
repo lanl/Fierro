@@ -24,8 +24,8 @@ requirements:
     - cmake=3.24
       #- {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
       #- {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
-      #- {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
-      #- {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}={{ linux_compiler_version }}
     - openmpi
       #- cuda-toolkit={{ cuda_version }}
