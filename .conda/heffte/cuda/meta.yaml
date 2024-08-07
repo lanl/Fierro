@@ -23,10 +23,10 @@ requirements:
   build:
     - cmake=3.24
     - {{ compiler('fortran') }}={{ linux_compiler_version }}
-    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
-    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
-    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
-    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+      #- {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+      #- {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+      #- {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+      #- {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - openmpi
     - openmpi-mpicxx
     - cuda-toolkit={{ cuda_version }}
