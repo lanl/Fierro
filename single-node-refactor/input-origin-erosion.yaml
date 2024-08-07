@@ -5,7 +5,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 300000
+    cycle_stop: 30000
 
 
 # mesh_options:
@@ -79,14 +79,23 @@ materials:
             - 1.0E-14
             - 1.0
         erosion_model: basic
-        void_mat_id: 1   
         erode_tension_val: 0.00003
         erode_density_val: 0.02
+
 
     - material:
         id: 1
         eos_model_type: decoupled
-        eos_model: void
+        eos_model: gamma_law_gas
+        # strength_model: none
+        q1: 1.0
+        q2: 1.333
+        q1ex: 1.0
+        q2ex: 1.333
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
 
 regions:
     - fill_volume:

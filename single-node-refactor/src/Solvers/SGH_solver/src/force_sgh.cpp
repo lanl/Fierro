@@ -60,29 +60,43 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_force(const Material_t& Materials,
-    const mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& MaterialPoints_den,
-    const DCArrayKokkos<double>& MaterialPoints_sie,
-    const DCArrayKokkos<double>& MaterialPoints_pres,
-    const DCArrayKokkos<double>& MaterialPoints_stress,
-    const DCArrayKokkos<double>& MaterialPoints_sspd,
-    const DCArrayKokkos<double>& GaussPoints_vol,
-    const DCArrayKokkos<double>& GaussPoints_div,
-    const DCArrayKokkos<size_t>& GaussPoints_mat_id,
-    const DCArrayKokkos<bool>&   GaussPoints_eroded,
-    const DCArrayKokkos<double>& corner_force,
-    const double fuzz,
-    const double small,
-    const DCArrayKokkos<double>& MaterialPoints_statev,
-    const double dt,
-    const double rk_alpha) const
+                    const mesh_t& mesh,
+                    const DCArrayKokkos<double>& GaussPoints_vol,
+                    const DCArrayKokkos<double>& GaussPoints_div,
+                    const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                    const DCArrayKokkos<double>& corner_force,
+                    const DCArrayKokkos<double>& node_coords,
+                    const DCArrayKokkos<double>& node_vel,
+                    const DCArrayKokkos<double>& MaterialPoints_den,
+                    const DCArrayKokkos<double>& MaterialPoints_sie,
+                    const DCArrayKokkos<double>& MaterialPoints_pres,
+                    const DCArrayKokkos<double>& MaterialPoints_stress,
+                    const DCArrayKokkos<double>& MaterialPoints_sspd,
+                    const DCArrayKokkos<double>& MaterialPoints_statev,
+                    const DCArrayKokkos<double>& MaterialCorners_force,
+                    const corners_in_mat_t corners_in_mat_elem,
+                    const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                    const size_t num_mat_elems,
+                    const size_t mat_id,
+                    const double fuzz,
+                    const double small,
+                    const double dt,
+                    const double rk_alpha) const
 {
+    const size_t num_dims = 3;
+    const size_t num_nodes_in_elem = 8;
+
+
+
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
-        const size_t num_dims = 3;
-        const size_t num_nodes_in_elem = 8;
+    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+        // get elem gid
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
+        // the material point index = the material elem index for a 1-point element
+        size_t mat_point_lid = mat_elem_lid;
+
 
         // total Cauchy stress
         double tau_array[9];
@@ -118,11 +132,9 @@ void SGH::get_force(const Material_t& Materials,
         // element volume
         double vol = GaussPoints_vol(elem_gid);
 
-        // the id for the material in this element
-        size_t mat_id = GaussPoints_mat_id(elem_gid);
 
         // create a view of the stress_matrix
-        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, elem_gid, 0, 0), 3, 3);
+        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, mat_point_lid, 0, 0), 3, 3);
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
@@ -172,7 +184,7 @@ void SGH::get_force(const Material_t& Materials,
         // add the pressure if a decoupled model is used
         if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
             for (int i = 0; i < num_dims; i++) {
-                tau(i, i) -= MaterialPoints_pres(elem_gid);
+                tau(i, i) -= MaterialPoints_pres(mat_point_lid);
             } // end for
         }
 
@@ -231,8 +243,8 @@ void SGH::get_force(const Material_t& Materials,
                 // if there is no velocity change, then use the surface area
                 // normal as the shock direction
                 mag = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                    + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                         + area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                         + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
 
                 // estimate of the shock direction
                 for (int dim = 0; dim < num_dims; dim++) {
@@ -242,13 +254,13 @@ void SGH::get_force(const Material_t& Materials,
 
             // cell divergence indicates compression or expansions
             if (div < 0) { // element in compression
-                muc(node_lid) = MaterialPoints_den(elem_gid) *
-                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(elem_gid) + 
+                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
+                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(mat_point_lid) + 
                                  Materials.MaterialFunctions(mat_id).q2 * mag_vel);
             }
             else{  // element in expansion
-                muc(node_lid) = MaterialPoints_den(elem_gid) *
-                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(elem_gid) + 
+                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
+                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(mat_point_lid) + 
                                  Materials.MaterialFunctions(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
 
@@ -262,15 +274,15 @@ void SGH::get_force(const Material_t& Materials,
                 // direction
                 mu_term = muc(node_lid) *
                           fabs(shock_dir(0) * area_normal(node_lid, 0)
-                    + shock_dir(1) * area_normal(node_lid, 1)
-                    + shock_dir(2) * area_normal(node_lid, 2) );
+                        + shock_dir(1) * area_normal(node_lid, 1)
+                        + shock_dir(2) * area_normal(node_lid, 2) );
             }
             else{
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                    + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                          + area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                          + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
             }
 
             sum(0) += mu_term * vel(0);
@@ -336,7 +348,7 @@ void SGH::get_force(const Material_t& Materials,
         double omega    = 20.0; // 20.0;    // weighting factor on Mach number
         double third    = 1.0 / 3.0;
         double c_length = pow(vol, third); // characteristic length
-        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(elem_gid) + fuzz) );
+        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_point_lid) + fuzz) );
 
         // use Mach based detector with standard shock detector
 
@@ -353,6 +365,8 @@ void SGH::get_force(const Material_t& Materials,
 
         // loop over the each node in the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+
+            // the local corner id is the local node id
             size_t corner_lid = node_lid;
 
             // Get corner gid
@@ -361,22 +375,32 @@ void SGH::get_force(const Material_t& Materials,
             // Get node gid
             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
-            // loop over dimension
+            // Get the material corner lid
+            size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
+            //printf("corner difference = %zu \n", mat_corner_lid-corner_gid);
 
-            if (GaussPoints_eroded(elem_gid) == true) { // material(mat_id).blank_mat_id)
+            // loop over dimensions and calc corner forces
+            if (MaterialPoints_eroded(mat_point_lid) == true) { // material(mat_id).blank_mat_id)
                 for (int dim = 0; dim < num_dims; dim++) {
                     corner_force(corner_gid, dim) = 0.0;
+                    MaterialCorners_force(mat_corner_lid, dim) = 0.0;
                 }
             }
+            
             else{
                 for (int dim = 0; dim < num_dims; dim++) {
-                    corner_force(corner_gid, dim) =
+
+                    double force_component =
                         area_normal(node_lid, 0) * tau(0, dim)
                         + area_normal(node_lid, 1) * tau(1, dim)
                         + area_normal(node_lid, 2) * tau(2, dim)
                         + phi * muc(node_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
+
+                    MaterialCorners_force(mat_corner_lid, dim) = force_component;
+                    corner_force(corner_gid, dim) += force_component; // tally all forces to the corner
                 } // end loop over dimension
-            }
+            } // end if
+
         } // end for loop over nodes in elem
 
         // --- Update Stress ---
@@ -389,12 +413,12 @@ void SGH::get_force(const Material_t& Materials,
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(MaterialPoints_pres,
                                          MaterialPoints_stress,
-                                         elem_gid,
+                                         mat_point_lid,
                                          mat_id,
                                          MaterialPoints_statev,
                                          MaterialPoints_sspd,
-                                         MaterialPoints_den(elem_gid),
-                                         MaterialPoints_sie(elem_gid),
+                                         MaterialPoints_den(mat_point_lid),
+                                         MaterialPoints_sie(1,mat_point_lid),
                                          vel_grad,
                                          elem_node_gids,
                                          node_coords,
@@ -434,28 +458,49 @@ void SGH::get_force(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_force_2D(const Material_t& Materials,
-    const mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& MaterialPoints_den,
-    const DCArrayKokkos<double>& MaterialPoints_sie,
-    const DCArrayKokkos<double>& MaterialPoints_pres,
-    const DCArrayKokkos<double>& MaterialPoints_stress,
-    const DCArrayKokkos<double>& MaterialPoints_sspd,
-    const DCArrayKokkos<double>& GaussPoints_vol,
-    const DCArrayKokkos<double>& GaussPoints_div,
-    const DCArrayKokkos<size_t>& GaussPoints_mat_id,
-    DCArrayKokkos<double>& corner_force,
-    const double fuzz,
-    const double small,
-    const DCArrayKokkos<double>& MaterialPoints_statev,
-    const double dt,
-    const double rk_alpha) const
+                       const mesh_t& mesh,
+                       const DCArrayKokkos<double>& GaussPoints_vol,
+                       const DCArrayKokkos<double>& GaussPoints_div,
+                       const DCArrayKokkos<double>& corner_force,
+                       const DCArrayKokkos<double>& node_coords,
+                       const DCArrayKokkos<double>& node_vel,
+                       const DCArrayKokkos<double>& MaterialPoints_den,
+                       const DCArrayKokkos<double>& MaterialPoints_sie,
+                       const DCArrayKokkos<double>& MaterialPoints_pres,
+                       const DCArrayKokkos<double>& MaterialPoints_stress,
+                       const DCArrayKokkos<double>& MaterialPoints_sspd,
+                       const DCArrayKokkos<double>& MaterialPoints_statev,
+                       const DCArrayKokkos<double>& MaterialCorners_force,
+                       const corners_in_mat_t corners_in_mat_elem,
+                       const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                       const size_t num_mat_elems,
+                       const size_t mat_id,
+                       const double fuzz,
+                       const double small,
+                       const double dt,
+                       const double rk_alpha) const
 {
+    const size_t num_dims = 2;
+    const size_t num_nodes_in_elem = 4;
+
+        // set corner force to zero
+    FOR_ALL(corner_gid, 0, mesh.num_corners, {
+        for (int dim = 0; dim < num_dims; dim++) {
+            corner_force(corner_gid, dim) = 0.0;
+        }
+    }); // end parallel for corners
+
+
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
-        const size_t num_dims = 2;
-        const size_t num_nodes_in_elem = 4;
+     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+        // get mesh elem gid
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
+        //size_t guass_gid = elem_gid; // 1 gauss point per element
+
+        // the material point index = the material elem index for a 1-point element
+        size_t mat_point_lid = mat_elem_lid;
 
         // total Cauchy stress
         double tau_array[9];
@@ -489,7 +534,7 @@ void SGH::get_force_2D(const Material_t& Materials,
         ViewCArrayKokkos<double> vel_grad(vel_grad_array, 3, 3);
 
         // create a view of the stress_matrix
-        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, elem_gid, 0, 0), 3, 3);
+        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, mat_point_lid, 0, 0), 3, 3);
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
@@ -546,7 +591,7 @@ void SGH::get_force_2D(const Material_t& Materials,
 
         // add the pressure
         for (int i = 0; i < 3; i++) {
-            tau(i, i) -= MaterialPoints_pres(elem_gid);
+            tau(i, i) -= MaterialPoints_pres(mat_point_lid);
         } // end for
 
         // ---- Multidirectional Approximate Riemann solver (MARS) ----
@@ -611,15 +656,14 @@ void SGH::get_force_2D(const Material_t& Materials,
             } // end if mag_vel
 
             // cell divergence indicates compression or expansions
-            size_t mat_id = GaussPoints_mat_id(elem_gid);
             if (div < 0) { // element in compression
-                muc(node_lid) = MaterialPoints_den(elem_gid) *
-                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(elem_gid) + 
+                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
+                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(mat_point_lid) + 
                                  Materials.MaterialFunctions(mat_id).q2 * mag_vel);
             }
             else{  // element in expansion
-                muc(node_lid) = MaterialPoints_den(elem_gid) *
-                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(elem_gid) + 
+                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
+                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(mat_point_lid) + 
                                  Materials.MaterialFunctions(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
 
@@ -754,7 +798,6 @@ void SGH::get_force_2D(const Material_t& Materials,
         // --- Update Stress ---
         // calculate the new stress at the next rk level, if it is a increment_based model
 
-        size_t mat_id = GaussPoints_mat_id(elem_gid);
 
         // increment_based elastic plastic model
         if (Materials.MaterialEnums(mat_id).StrengthType == model::incrementBased) {
@@ -769,7 +812,7 @@ void SGH::get_force_2D(const Material_t& Materials,
             //                                 MaterialPoints_statev,
             //                                 MaterialPoints_sspd,
             //                                 MaterialPoints_den(elem_gid),
-            //                                 MaterialPoints_sie(elem_gid),
+            //                                 MaterialPoints_sie(1,elem_gid),
             //                                 vel_grad,
             //                                 elem_node_gids,
             //                                 node_coords,

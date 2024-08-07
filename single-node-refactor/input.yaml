@@ -42,9 +42,6 @@ boundary_conditions:
         geometry: x_plane
         direction: x_dir
         value: 0.0
-        u: 0.0
-        v: 0.0
-        w: 1.0
         type: reflected_velocity
 
             
@@ -63,6 +60,8 @@ boundary_conditions:
         direction: z_dir
         value: 0.0
         type: reflected_velocity
+
+
   
 materials:
     - material:

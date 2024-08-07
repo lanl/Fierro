@@ -50,30 +50,50 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param A view into the corner force data
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::update_energy(double rk_alpha,
-    double dt,
+void SGH::update_energy(const double rk_alpha,
+    const double dt,
     const mesh_t& mesh,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& MaterialPoints_sie,
+    const DCArrayKokkos<double>& MaterialPoints_sie,
     const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<double>& corner_force) const
+    const DCArrayKokkos<double>& MaterialCorners_force,
+    const corners_in_mat_t corners_in_mat_elem,
+    const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const size_t num_mat_elems
+    ) const
 {
+
     // loop over all the elements in the mesh
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
+    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+        // get elem gid
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
+        // the material point index = the material elem index for a 1-point element
+        size_t mat_point_lid = mat_elem_lid;
+
+        
         double MaterialPoints_power = 0.0;
+
 
         // --- tally the contribution from each corner to the element ---
 
         // Loop over the nodes in the element
         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+
+            // corner lid and node lid
             size_t corner_lid = node_lid;
 
             // Get node global id for the local node id
             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
             // Get the corner global id for the local corner id
-            size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+            //size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+
+            // Get the material corner lid
+            size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
+
 
             double node_radius = 1;
             if (mesh.num_dims == 2) {
@@ -82,14 +102,18 @@ void SGH::update_energy(double rk_alpha,
 
             // calculate the Power=F dot V for this corner
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+
                 double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
-                MaterialPoints_power += corner_force(corner_gid, dim) * node_radius * half_vel;
+                MaterialPoints_power += MaterialCorners_force(mat_corner_lid, dim) * node_radius * half_vel;
+
             } // end for dim
         } // end for node_lid
 
         // update the specific energy
-        MaterialPoints_sie(1, elem_gid) = MaterialPoints_sie(0, elem_gid) -
-                                rk_alpha * dt / MaterialPoints_mass(elem_gid) * MaterialPoints_power;
+        MaterialPoints_sie(1, mat_point_lid) = MaterialPoints_sie(0, mat_point_lid) -
+                                rk_alpha * dt / MaterialPoints_mass(mat_point_lid) * MaterialPoints_power;
+
+       
     }); // end parallel loop over the elements
 
     return;
