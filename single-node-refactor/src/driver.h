@@ -147,7 +147,6 @@ public:
         geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
         
-        // Create solvers and initialize
         for (int solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
             if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH) {
@@ -236,7 +235,4 @@ public:
 
     
 }; // end driver class
-
-
-
 

@@ -7,3 +7,4 @@ dependencies:
   - boa # For building
   - conda-build
   - anaconda-client # For uploading
+  - python=3.8

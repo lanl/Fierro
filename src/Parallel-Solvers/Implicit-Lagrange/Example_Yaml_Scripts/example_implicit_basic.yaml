@@ -5,7 +5,7 @@ mesh_generation_options:
     type: Box
     origin: [0, 0, 0]
     length: [10, 10, 100]
-    num_elems: [10, 10, 100]
+    num_elems: [5, 5, 50]
 
 materials:
   - id: 0
@@ -66,10 +66,15 @@ fea_module_parameters:
 optimization_options:
     optimization_process: topology_optimization
     method_of_moving_asymptotes: false
-    density_epsilon: 0.00001
-    simp_penalty_power: 4
-    optimization_parameters_xml_file: true
-    xml_parameters_file_name: "optimization_parameters.xml"
+    density_epsilon: 0.001
+    simp_penalty_power: 3
+    rol_params:
+        subproblem_algorithm: trust_region
+        initial_constraint_penalty: 1.e1
+        step_tolerance: 1.e-5
+        gradient_tolerance: 1.e-5
+        constraint_tolerance: 1.e-5
+        iteration_limit: 5
     optimization_objective: multi_objective
     #Weight coefficients should add up to 1
     multi_objective_structure: linear

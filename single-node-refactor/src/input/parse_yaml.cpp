@@ -376,6 +376,7 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
                   SimulationParamaters.region_fills,
                   SimulationParamaters.region_fills_host);
 
+
     if (VERBOSE) {
         printf("\n");
         std::cout << "Parsing YAML materials:" << std::endl;
@@ -974,6 +975,7 @@ void parse_output_options(Yaml::Node& root,
 void parse_regions(Yaml::Node& root, 
                    CArrayKokkos<reg_fill_t>& region_fills, 
                    CArray<reg_fill_host_t>&  region_fills_host)
+
 {
     Yaml::Node& region_yaml = root["regions"];
 
@@ -1476,11 +1478,12 @@ void parse_regions(Yaml::Node& root,
                                     "********************************************************************************************\n");
                 }
             });
-        }            
+
+        }  // end if        
 
         // -----------------------------------------------
 
-        
+
     } // end loop over regions
 } // end of function to parse region
 

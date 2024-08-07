@@ -16,6 +16,8 @@ struct Thermo_Elasticity_Parameters
     real_t constant_pressure = 0;
     real_t constant_stress[6];
     bool constant_stress_flag = false;
+    bool muelu_parameters_xml_file = false;
+    std::string xml_parameters_file_name = "elasticity3D.xml";
 
     std::set<FIELD> default_output_fields {
         FIELD::displacement,
@@ -34,5 +36,5 @@ struct Thermo_Elasticity_Parameters
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Thermo_Elasticity_Parameters, ImplicitModule,
     strain_max_flag, modal_analysis, anisotropic_lattice, num_modes, smallest_modes, largest_modes,
-    convergence_tolerance, constant_pressure, constant_stress
+    convergence_tolerance, constant_pressure, constant_stress, muelu_parameters_xml_file, xml_parameters_file_name
 )

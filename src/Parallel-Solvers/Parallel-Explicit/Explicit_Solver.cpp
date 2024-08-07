@@ -193,12 +193,24 @@ void Explicit_Solver::run() {
   //return;
   init_maps();
 
+  //print element imbalance stats
+  long long int rnum_global_sum = 0;
+  long long int temp_rnum_elem = rnum_elem;
+  MPI_Allreduce(&temp_rnum_elem, &rnum_global_sum, 1, MPI_LONG_LONG_INT, MPI_SUM, MPI_COMM_WORLD);
+  double local_imbalance, max_imbalance, avg_elem;
+  max_imbalance = 0;
+  avg_elem = rnum_global_sum/((double) nranks);
+  local_imbalance = rnum_elem/avg_elem;
+  MPI_Allreduce(&local_imbalance, &max_imbalance, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+  *fos << "Element imbalance: " << max_imbalance << std::endl;
+
   init_state_vectors();
         
   //set initial saved coordinates
   //initial_node_coords_distributed->assign(*node_coords_distributed);
   
-  std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
+  //std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
   
   //initialize timing
   init_clock();
@@ -348,11 +360,11 @@ void Explicit_Solver::run() {
   }
   */
 
-  std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
+  *fos << " Runtime of code is "<< current_cpu-initial_CPU_time << " comms time "
             << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
   
   if(simparam.output_options.timer_output_level == TIMER_VERBOSITY::thorough){
-    std::cout << " OUTPUT TIME OF CODE ON TASK " << myrank << " is "<< output_time << std::endl;
+    *fos << " Output time of code is "<< output_time << std::endl;
   }
 
   //parallel_vtk_writer();
@@ -526,7 +538,7 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
     
-  std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+  //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
   // read the initial mesh coordinates
   // x-coords
@@ -1132,17 +1144,25 @@ void Explicit_Solver::setup_optimization_problem(){
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
-  std::string filename = "optimization_parameters.xml";
 
-  //check if parameter file exists
-  std::ifstream param_file_check("optimization_parameters.xml");
-  if (!param_file_check.is_open()) {
-      *fos << "Unable to find xml parameter file required for optimization with the ROL library"  << std::endl;
-      exit_solver(0);
+  Teuchos::RCP<Teuchos::ParameterList> parlist;
+  if(simparam.optimization_options.optimization_parameters_xml_file){
+    std::string xmlFileName = simparam.optimization_options.xml_parameters_file_name;
+    
+    //check if parameter file exists
+    std::ifstream param_file_check(xmlFileName);
+    if (!param_file_check.is_open()) {
+        *fos << "Unable to find xml parameter file required for optimization with the ROL library"  << std::endl;
+        exit_solver(0);
+    }
+    param_file_check.close();
+
+    parlist = ROL::getParametersFromXmlFile(xmlFileName);
   }
-  param_file_check.close();
-
-  auto parlist = ROL::getParametersFromXmlFile( filename );
+  else{
+    parlist = Teuchos::rcp(new Teuchos::ParameterList("Inputs"));
+    set_rol_params(parlist);
+  }
   //ROL::ParameterList parlist;
 
   ROL::Ptr<ROL::BoundConstraint<real_t> > bnd, mma_bnd;
@@ -1564,7 +1584,7 @@ void Explicit_Solver::init_boundaries(){
   Local_Index_Boundary_Patches.update_device();
   
   //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
-  std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
+  //std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
   
   //disable for now
   //if(0)

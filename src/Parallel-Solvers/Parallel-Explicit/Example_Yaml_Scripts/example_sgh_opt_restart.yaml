@@ -6,19 +6,22 @@ dynamic_options:
   dt_start: 1.e-5
   cycle_stop: 2000000
   output_time_sequence_level: extreme
+  print_cycle: 20
 
-mesh_generation_options:
-  type: Box
-  origin: [0, 0, 0]
-  length: [1.2, 1.2, 1.2]
-  num_elems: [32, 32, 32]
+num_dims: 3
+input_options:
+    mesh_file_format: vtk
+    mesh_file_name: VTK0.vtk
+    zero_index_base: true
+    topology_optimization_restart: true
 
 output_options:
   timer_output_level: thorough
   output_file_format: vtk
-  graphics_step: 1.0
+  graphics_step: 0.25
   write_initial: true
   write_final: false
+  optimization_restart_file: true
   
 fea_module_parameters:
   - type: SGH
@@ -109,6 +112,8 @@ optimization_options:
     num_solve_checkpoints : 10
     disable_forward_solve_output: true
     optimization_output_freq: 1
+    optimization_parameters_xml_file: false
+    xml_parameters_file_name: "optimization_parameters.xml"
     rol_params:
         subproblem_algorithm: line_search
         initial_constraint_penalty: 1.e-2

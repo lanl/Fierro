@@ -12,7 +12,7 @@ kokkos_build_type="${3}"
 if { [ ! -d "${ELEMENTS_SOURCE_DIR}/elements" ] || [ ! -d "${ELEMENTS_SOURCE_DIR}/matar/src" ] ;}
 then
     echo "Missing submodules, downloading them...."
-    git submodule update "${ELEMENTS_SOURCE_DIR}"
+    git submodule update --init --recursive "${ELEMENTS_SOURCE_DIR}"
 fi
 
 if [ ! -d "${TRILINOS_INSTALL_DIR}/lib" ]; then

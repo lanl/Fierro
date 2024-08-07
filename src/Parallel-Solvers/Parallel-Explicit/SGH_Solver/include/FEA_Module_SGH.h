@@ -678,6 +678,7 @@ public:
 
     // Dual Views of the corner struct variables
     DViewCArrayKokkos<double> corner_force;
+    DCArrayKokkos<double> corner_external_force;
     DViewCArrayKokkos<double> corner_mass;
 
     // Boundary Conditions Data
