@@ -1,5 +1,5 @@
 {% set version = "1.0.0" %}
-{% set linux_compiler_version = "11.4.0" %}
+{% set linux_compiler_version = "10.4.0" %}
 {% set macos_compiler_version = "12" %}
 {% set cuda_version = "12.3" %}
 

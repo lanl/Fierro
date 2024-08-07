@@ -12,12 +12,17 @@ source:
 
 build:
   number: 1
+  noarch: False
   script_env:
     - PLATFORM={{ target_platform }}
+  skip: True  # [osx]
+  skip: False # [linux]
 
 requirements:
   build:
     - cmake >=3.17.0
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - cuda-compiler
