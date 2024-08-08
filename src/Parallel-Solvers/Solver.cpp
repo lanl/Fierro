@@ -3587,8 +3587,8 @@ void Solver::init_maps()
         nonoverlap_elem_nodes.modify_host();
         nonoverlap_elem_nodes.sync_device();
     }
-    
-    // create a Map for ghost node indices
+
+    // create a Map for node indices belonging to the non-overlapping set of elements
     nonoverlap_element_node_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), nonoverlap_elem_nodes.d_view, 0, comm));
 
     // std::cout << "number of patches = " << mesh->num_patches() << std::endl;
