@@ -38,15 +38,14 @@
 #include <map>
 #include <memory>
 
-#include "mesh.h"
-#include "state.h"
-#include "material.h"
-#include "region.h"
-#include "boundary_conditions.h"
-#include "dynamic_options.h"
-
+#include "matar.h"
 
 struct SimulationParameters_t;
+struct Material_t;
+struct mesh_t;
+struct State_t;
+struct BoundaryCondition_t;
+
 
 class Solver
 {

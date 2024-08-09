@@ -37,7 +37,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "solver.h"
 #include "geometry_new.h"
-#include "matar.h"
 #include "simulation_parameters.h"
 #include "boundary_conditions.h"
 #include "material.h"

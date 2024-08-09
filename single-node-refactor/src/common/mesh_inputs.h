@@ -34,9 +34,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef FIERRO_MESH_INPUT_OPTIONS_H
 #define FIERRO_MESH_INPUT_OPTIONS_H
+
 #include <stdio.h>
 #include "matar.h"
-#include "parse_yaml.h"
 
 namespace mesh_input
 {

@@ -41,26 +41,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simulation_parameters.h"
 #include "region.h"
 #include "mesh_io.h"
+#include "string_utils.h"
 
 #include <stdio.h>
+#include <fstream>
 
-// ==============================================================================
-//   Functions to read voxel mesh
-// ==============================================================================
-void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
-                     double& dx,
-                     double& dy,
-                     double& dz,
-                     double& orig_x,
-                     double& orig_y,
-                     double& orig_z,
-                     size_t& voxel_num_i,
-                     size_t& voxel_num_j,
-                     size_t& voxel_num_k,
-                     double scale_x,
-                     double scale_y,
-                     double scale_z,
-                     std::string mesh_file);
 
 // -----------------------------------------------------------------------------
 // The function to read a voxel vtk file from Dream3d and intialize the mesh
@@ -376,6 +361,7 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 
     in.close();
 } // end routine
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn fill_geometric_region
@@ -406,7 +392,8 @@ size_t fill_geometric_region(const mesh_t& mesh,
                              const size_t voxel_num_i, 
                              const size_t voxel_num_j, 
                              const size_t voxel_num_k,
-                             const size_t f_id){
+                             const size_t f_id)
+{
 
     // default is not to fill the element
     size_t fill_this = 0;
@@ -550,7 +537,8 @@ void paint_gauss_den_sie(const Material_t& Materials,
                          const CArrayKokkos<reg_fill_t>& region_fills,
                          const ViewCArrayKokkos <double> elem_coords,
                          const double elem_gid,
-                         const size_t f_id){
+                         const size_t f_id)
+{
 
     // the material id
     size_t mat_id = region_fills(f_id).material_id;
@@ -617,7 +605,8 @@ void paint_node_vel(const CArrayKokkos<reg_fill_t>& region_fills,
                     const double node_gid,
                     const double num_dims,
                     const size_t f_id,
-                    const size_t rk_num_bins){
+                    const size_t rk_num_bins)
+{
 
     // save velocity at all rk_levels
     for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){
@@ -782,7 +771,8 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const DCArrayKokkos<double>& MaterialPoints_statev,
                             const size_t rk_num_bins,
                             const size_t num_mat_pts,
-                            const size_t mat_id){
+                            const size_t mat_id)
+{
 
 
     // -------
@@ -861,7 +851,8 @@ void calc_corner_mass(const Material_t& Materials,
                       const DCArrayKokkos<double>& corner_mass,
                       const DCArrayKokkos<double>& MaterialPoints_mass,
                       const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                      const size_t num_mat_elems){
+                      const size_t num_mat_elems)
+{
 
 
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
@@ -902,7 +893,8 @@ void calc_corner_mass(const Material_t& Materials,
 void calc_node_mass(const mesh_t& mesh,
                     const DCArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_mass,
-                    const DCArrayKokkos<double>& corner_mass){
+                    const DCArrayKokkos<double>& corner_mass)
+{
 
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {

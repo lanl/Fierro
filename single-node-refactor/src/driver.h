@@ -37,7 +37,7 @@
 #include "solver.h"
 #include "simulation_parameters.h"
 
-// Headers for solver classes
+// Headers for SGH solver classes
 #include "sgh_solver.h"
 
 // Physical state data
