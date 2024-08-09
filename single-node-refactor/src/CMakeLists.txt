@@ -74,10 +74,11 @@ elseif (THREADS)
 endif()
 
 include_directories(common)
+# add_subdirectory(Solvers/SGH_solver)
 
 # Add SGH Solver
 include_directories(Solvers/SGH_solver/include)
 add_subdirectory(Solvers/SGH_solver)
 
-add_executable(Fierro main.cpp solver.cpp ${YAML_SRC_Files} ${SGH_SRC_Files} )
+add_executable(Fierro main.cpp driver.cpp solver.cpp ${YAML_SRC_Files} ${SGH_SRC_Files} )
 target_link_libraries(Fierro PRIVATE matar Kokkos::kokkos) #sgh_solver  parse_yaml 
