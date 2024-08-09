@@ -24,6 +24,8 @@ void EVPFFT::calc_c0()
     Kokkos::MDRangePolicy<Kokkos::Rank<3,LOOP_ORDER,LOOP_ORDER>>({1,1,1}, {npts3+1,npts2+1,npts1+1}),
     KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i, ArrayType <real_t,n> & loc_reduce) {
 
+    if (iframe(i,j,k) == 0) {
+
     int jph;
     int isign;
 
@@ -171,6 +173,8 @@ void EVPFFT::calc_c0()
 
     }
 
+    }
+
   }, all_reduce);
   Kokkos::fence(); // needed to prevent race condition
 
@@ -196,6 +200,18 @@ void EVPFFT::calc_c0()
     }
   }
   invert_matrix <6> (s066.pointer());
+  for (int ii = 1; ii <= 6; ii++) {
+    for (int jj = 1; jj <= 6; jj++) {
+      dF6_dP6.host(ii,jj) = s066(ii,jj);
+    }
+  }
+
+  for (int ii = 1; ii <= 6; ii++) {
+    for (int jj = 1; jj <= 6; jj++) {
+      c066.host(ii,jj) *= xc0;
+      s066(ii,jj) /= xc0;
+    }
+  }
 
   cb.chg_basis_3(c066.host_pointer(), c0.host_pointer(), 3, 6, cb.B_basis_host_pointer());
   cb.chg_basis_3(s066.pointer(), s0.host_pointer(), 3, 6, cb.B_basis_host_pointer());
@@ -204,5 +220,6 @@ void EVPFFT::calc_c0()
   c066.update_device();
   c0.update_device();
   s0.update_device();
+  dF6_dP6.update_device();
 
 }

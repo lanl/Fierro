@@ -7,7 +7,7 @@
 #include "reduction_data_structures.h"
 #include "mod_frequency.h"
 
-void EVPFFT::update_grid_velgrad()
+void EVPFFT::calc_velocity()
 {
   Profiler profiler(__FUNCTION__);
 
@@ -22,11 +22,13 @@ void EVPFFT::update_grid_velgrad()
     Kokkos::MDRangePolicy<Kokkos::Rank<3,LOOP_ORDER,LOOP_ORDER>>({1,1,1}, {npts3+1,npts2+1,npts1+1}),
     KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i, ArrayType <real_t,n> & loc_reduce) {
 
-    for (int ii = 1; ii <= 3; ii++) {
-      for (int jj = 1; jj <= 3; jj++) {
-        velgradref(ii,jj,i,j,k) = 0.0;
-        for (int kk = 1; kk <= 3; kk++) {
-          velgradref(ii,jj,i,j,k) += (velgrad(ii,kk,i,j,k))*defgrad(kk,jj,i,j,k);
+    if (ibc == 0) {
+      for (int ii = 1; ii <= 3; ii++) {
+        for (int jj = 1; jj <= 3; jj++) {
+          velgradref(ii,jj,i,j,k) = 0.0;
+          for (int kk = 1; kk <= 3; kk++) {
+            velgradref(ii,jj,i,j,k) += (velgrad(ii,kk,i,j,k))*defgrad(kk,jj,i,j,k);
+          }
         }
       }
     }
@@ -122,11 +124,12 @@ void EVPFFT::update_grid_velgrad()
 
       xkxk = xk(1)*xk(1) + xk(2)*xk(2) + xk(3)*xk(3);
   
-      if (xkxk > 0.0 && 
-        !(i + local_start1_cmplx == npts1_g/2+1 || 
-          j + local_start2_cmplx == npts2_g/2+1 || 
-          (npts3_g > 1 && k + local_start3_cmplx == npts3_g/2+1))) {
-  
+      //if (xkxk > 0.0 && 
+      //  !(i + local_start1_cmplx == npts1_g/2+1 || 
+      //    j + local_start2_cmplx == npts2_g/2+1 || 
+      //    (npts3_g > 1 && k + local_start3_cmplx == npts3_g/2+1))) {
+      if (xkxk > 0.0) {
+
         for (int ii = 1; ii <= 3; ii++) {
           velhatr(ii) = 0.0;
           velhatim(ii) = 0.0;
@@ -150,10 +153,11 @@ void EVPFFT::update_grid_velgrad()
 
       krot_ckrot = POW2(krot_re(1)) + POW2(krot_im(1)) + POW2(krot_re(2)) +
           POW2(krot_im(2)) + POW2(krot_re(3)) + POW2(krot_im(3));
-      if (abs(krot_ckrot) >= 1.0e-15 && 
-        !(i + local_start1_cmplx == npts1_g/2+1 || 
-          j + local_start2_cmplx == npts2_g/2+1 || 
-          (npts3_g > 1 && k + local_start3_cmplx == npts3_g/2+1))) {
+      // if (abs(krot_ckrot) >= 1.0e-15 && 
+      //   !(i + local_start1_cmplx == npts1_g/2+1 || 
+      //     j + local_start2_cmplx == npts2_g/2+1 || 
+      //     (npts3_g > 1 && k + local_start3_cmplx == npts3_g/2+1))) {
+      if (abs(krot_ckrot) >= 1.0e-15) {
 
         for (int ii = 1; ii <= 3; ii++) {
           velhatr(ii) = 0.0;
@@ -181,6 +185,16 @@ void EVPFFT::update_grid_velgrad()
 
   }); // end FOR_ALL_CLASS
 
+  //for (int i = 1; i <= npts1_cmplx; i++) {
+  //for (int j = 1; j <= npts2_cmplx; j++) {
+  //for (int k = 1; k <= npts3_cmplx; k++) {
+  //  printf("%d %d %d %24.14E\n", i, j, k,  work(1,1,i,j,k));
+  //  printf("%d %d %d %24.14E\n", i, j, k,  workim(1,1,i,j,k));
+  //}
+  //}
+  //}
+  //exit(1);
+
   for (int ii = 1; ii <= 3; ii++) {
 
     // prep for backward FFT
@@ -207,117 +221,48 @@ void EVPFFT::update_grid_velgrad()
     FOR_ALL_CLASS(k, 1, npts3+1,
                   j, 1, npts2+1,
                   i, 1, npts1+1, {
-      work(ii,1,i,j,k) = data(i,j,k);
+      velocity(ii,i,j,k) = data(i,j,k);
     }); // end FOR_ALL_CLASS
     Kokkos::fence();
 
   } // end for ii
 
-  FOR_ALL_CLASS(k, 1, npts3+2,
-                j, 1, npts2+2,
-                i, 1, npts1+2, {
-
-    int iv1;
-    int iv2;
-    int jv1;
-    int jv2;
-    int kv1;
-    int kv2;
-    int in;
-    int jn;
-    int kn;
+  FOR_ALL_CLASS(k, 1, npts3+1,
+                j, 1, npts2+1,
+                i, 1, npts1+1, {
 
     // thread private arrays
-    real_t dvnode_[3];
-    real_t Xnode_ref_[3];
+    real_t X_ref_[3];
 
     // create views of thread private arrays
-    ViewMatrixTypeReal dvnode(dvnode_,3);
-    ViewMatrixTypeReal Xnode_ref(Xnode_ref_,3);
-
-    Xnode_ref(1) = float(i + local_start1) - 0.5;
-    Xnode_ref(2) = float(j + local_start2) - 0.5;
-    Xnode_ref(3) = float(k + local_start3) - 0.5;
+    ViewMatrixTypeReal X_ref(X_ref_,3);
 
     if (igamma == 0) {
 
-      if (i == 1) {
-        iv1 = npts1;
-        iv2 = 1;
-      } else if (i == npts1 + 1) {
-        iv1 = npts1;
-        iv2 = 1;
-      } else {
-        iv1 = i - 1;
-        iv2 = i;
-      }
-  
-      if (j == 1) {
-        jv1 = npts2;
-        jv2 = 1;
-      } else if (j == npts2 + 1) {
-        jv1 = npts2;
-        jv2 = 1;
-      } else {
-        jv1 = j - 1;
-        jv2 = j;
-      }
-  
-      if (k == 1) {
-        kv1 = npts3;
-        kv2 = 1;
-      } else if (k == npts3 + 1) {
-        kv1 = npts3;
-        kv2 = 1;
-      } else {
-        kv1 = k - 1;
-        kv2 = k;
-      }
+      X_ref(1) = float(i + local_start1);
+      X_ref(2) = float(j + local_start2);
+      X_ref(3) = float(k + local_start3);
 
       for (int ii = 1; ii <= 3; ii++) {
-        dvnode(ii) = 0.125*(work(ii,1,iv1,jv1,kv1) + work(ii,1,iv2,jv1,kv1) + 
-         work(ii,1,iv1,jv2,kv1) + work(ii,1,iv2,jv2,kv1) +
-         work(ii,1,iv1,jv1,kv2) + work(ii,1,iv2,jv1,kv2) + 
-         work(ii,1,iv1,jv2,kv2) + work(ii,1,iv2,jv2,kv2));
+        for (int jj = 1; jj <= 3; jj++) {
+          velocity(ii,i,j,k) += velgradrefavg(ii,jj)*X_ref(jj);
+        }
       }
 
     } else if (igamma == 1) {
 
-      if (i == npts1 + 1) {
-        in = 1;
-      } else {
-        in = i;
-      }
-
-      if (j == npts2 + 1) {
-        jn = 1;
-      } else {
-        jn = j;
-      }
-
-      if (k == npts3 + 1) {
-        kn = 1;
-      } else {
-        kn = k;
-      }
-
+      X_ref(1) = float(i + local_start1) - 0.5;
+      X_ref(2) = float(j + local_start2) - 0.5;
+      X_ref(3) = float(k + local_start3) - 0.5;
       for (int ii = 1; ii <= 3; ii++) {
-        dvnode(ii) = work(ii,1,in,jn,kn);
+        for (int jj = 1; jj <= 3; jj++) {
+          velocity(ii,i,j,k) += velgradrefavg(ii,jj)*X_ref(jj);
+        }
       }
 
-    }
-
-    for (int ii = 1; ii <= 3; ii++) {
-      for (int jj = 1; jj <= 3; jj++) {
-        dvnode(ii) += velgradrefavg(ii,jj)*Xnode_ref(jj);
-      }
-    }
-
-    for (int ii = 1; ii <= 3; ii++) {
-      xnode(ii,i,j,k) += dvnode(ii)*tdot;
     }
 
   }); // end FOR_ALL_CLASS
   Kokkos::fence();
-  
+
 }

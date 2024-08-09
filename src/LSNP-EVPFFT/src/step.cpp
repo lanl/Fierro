@@ -8,6 +8,8 @@ void EVPFFT::step_update_velgrad()
 {
   Profiler profiler(__FUNCTION__);
 
+  if (ibc == 0) {
+
   FOR_ALL_CLASS(k, 1, npts3+1,
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
@@ -19,6 +21,23 @@ void EVPFFT::step_update_velgrad()
     } // end for jj
  
   }); // end FOR_ALL_CLASS
+
+  } else if (ibc == 1) {
+
+  FOR_ALL_CLASS(k, 1, npts3+1,
+                j, 1, npts2+1,
+                i, 1, npts1+1, {
+    
+    for (int jj = 1; jj <= 3; jj++) {
+      for (int ii = 1; ii <= 3; ii++) {
+        velgrad(ii,jj,i,j,k) = eigenvelgradref(ii,jj,i,j,k);
+        velgradref(ii,jj,i,j,k) = eigenvelgradref(ii,jj,i,j,k);
+      } // end for ii
+    } // end for jj
+ 
+  }); // end FOR_ALL_CLASS
+    
+  }
 
 }
 
@@ -42,11 +61,15 @@ void EVPFFT::step_update()
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
 
+    if (iframe(i,j,k) == 0) {
+
     for (int jj = 1; jj <= 3; jj++) {
       for (int ii = 1; ii <= 3; ii++) {
         sgt(ii,jj,i,j,k) = sg(ii,jj,i,j,k);
       } // end for ii
     } // end for jj
+
+    }
 
   }); // end FOR_ALL_CLASS
 
@@ -95,6 +118,8 @@ void EVPFFT::step_vm_calc()
   KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i, 
                 ArrayOfArrayType <2, real_t, 3*3> & loc_reduce) {
 
+    if (iframe(i,j,k) == 0) {
+
     ViewMatrixTypeReal epav_loc (&loc_reduce.array[0].array[0], 3, 3);
     ViewMatrixTypeReal edotpav_loc (&loc_reduce.array[1].array[0], 3, 3);
 
@@ -112,6 +137,8 @@ void EVPFFT::step_vm_calc()
         epav_loc(ii,jj) += ept(ii,jj,i,j,k) * wgtc(i,j,k);
         edotpav_loc(ii,jj) += edotp(ii,jj,i,j,k) * wgtc(i,j,k);
       }
+    }
+
     }
 
   }, all_reduce);

@@ -46,6 +46,8 @@ void EVPFFT::write_texture()
       for (int j = 1; j <= npts2; j++) {
         for (int i = 1; i <= npts1; i++) {
 
+          if (iframe(i,j,k) == 0) {
+
           ig += 1;
 
           for (int jj = 1; jj <= 3; jj++) {
@@ -62,6 +64,8 @@ void EVPFFT::write_texture()
                   ph,th,om,one,
                   i,j,k,jgrain(i,j,k),jphase.host(i,j,k)
           );
+
+          }
 
         } // end for ii
       } // end for jj

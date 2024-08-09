@@ -13,6 +13,8 @@ void EVPFFT::update_defgradp()
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
 
+    if (iframe(i,j,k )== 0) {
+
     // thread private arrays
     real_t aa_[3*3];
     real_t velgradp_[3*3];
@@ -88,6 +90,7 @@ void EVPFFT::update_defgradp()
         }
       }
 
+      }
 
     } // end if (igas(iph) == 0) 
 

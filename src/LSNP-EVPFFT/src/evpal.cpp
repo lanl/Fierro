@@ -21,6 +21,8 @@ void EVPFFT::evpal(int imicro)
     Kokkos::MDRangePolicy<Kokkos::Rank<3,LOOP_ORDER,LOOP_ORDER>>({1,1,1}, {npts3+1,npts2+1,npts1+1}),
     KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i, ArrayType <real_t,n> & loc_reduce) {
 
+    if (iframe(i,j,k) == 0) {
+
     int jph;
     int itmaxal;
     int iter1;
@@ -354,6 +356,75 @@ void EVPFFT::evpal(int imicro)
       }
     }
 #endif
+
+    } else if (iframe(i,j,k) == 1) {
+
+    real_t dum;
+    real_t rhs_[3*3];
+
+    ViewMatrixTypeReal rhs(rhs_,3,3);
+
+    for (int ii = 1; ii <= 3; ii++) {
+      for (int jj = 1; jj <= 3; jj++) {
+        dum = 0.0;
+        for (int kk = 1; kk <= 3; kk++) {
+          for (int ll = 1; ll <= 3; ll++) {
+            dum += c0(ii,jj,kk,ll)*(velgradref(kk,ll,i,j,k) - 
+                     (eigenvelgradref(kk,ll,i,j,k) - Cinv_sgPK1old(kk,ll,i,j,k)));
+          }
+        }
+        rhs(ii,jj) = sgPK1(ii,jj,i,j,k) + dum;
+      }
+    }
+
+    for (int ii = 1; ii <= 3; ii++) {
+      for (int jj = 1; jj <= 3; jj++) {
+        dum = 0.0;
+        for (int kk = 1; kk <= 3; kk++) {
+          for (int ll = 1; ll <= 3; ll++) {
+            dum += IC0a_inv(ii,jj,kk,ll)*rhs(kk,ll);
+          }
+        }
+        sgPK1(ii,jj,i,j,k) = dum;
+      }
+    }
+
+//      ! right hand side
+//      do i = 1,3
+//      do j = 1,3
+//        dum1 = 0.0
+//        do k = 1,3
+//        do l = 1,3
+//          if (props%visc_frame) then
+//            dum1 = dum1 + micro%c0(i,j,k,l)*(micro%velgradrefext(k,l,ip1ext,ip2ext,ip3ext) - &
+//              micro%eigvelgradrefext(k,l,ip1ext,ip2ext,ip3ext))
+//          else
+//            dum1 = dum1 + micro%c0(i,j,k,l)*(micro%velgradrefext(k,l,ip1ext,ip2ext,ip3ext) - &
+//              (micro%eigvelgradrefext(k,l,ip1ext,ip2ext,ip3ext) - micro%CinvsgPK1text(k,l,ip1ext,ip2ext,ip3ext)))
+//          endif
+//        enddo
+//        enddo
+//
+//        rhs(i,j) = micro%sgPK1ext(i,j,ip1ext,ip2ext,ip3ext) + dum1! *xstp
+//      enddo
+//      enddo
+//
+//      sgPK1old = micro%sgPK1ext(:,:,ip1ext,ip2ext,ip3ext) 
+//
+//      ! new guess
+//      do i = 1,3
+//      do j = 1,3
+//        dum1 = 0.0
+//        do k = 1,3
+//        do l = 1,3
+//          dum1 = dum1 + micro%IC0a_inv_ext(i,j,k,l,ip1ext,ip2ext,ip3ext)*rhs(k,l)
+//        enddo
+//        enddo
+//        micro%sgPK1ext(i,j,ip1ext,ip2ext,ip3ext) = dum1
+//      enddo
+//      enddo
+
+    }
 
   }, all_reduce);
   Kokkos::fence(); // needed to prevent race condition

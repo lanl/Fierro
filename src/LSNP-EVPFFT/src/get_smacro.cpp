@@ -17,6 +17,8 @@ void EVPFFT::get_smacro()
     KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i,
                   ArrayOfArrayType <2, real_t, 3*3> & loc_reduce) {
 
+      if (iframe(i,j,k) == 0) {
+
       ViewMatrixTypeReal scauav_loc  (&loc_reduce.array[0].array[0], 3, 3);
       ViewMatrixTypeReal scauav1_loc (&loc_reduce.array[1].array[0], 3, 3);
 
@@ -31,6 +33,8 @@ void EVPFFT::get_smacro()
 
         } // end for ii
       } // end for jj
+
+      }
 
   }, all_reduce);
   Kokkos::fence(); // needed to prevent race condition on scauav and scauav1

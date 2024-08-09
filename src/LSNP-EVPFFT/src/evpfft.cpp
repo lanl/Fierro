@@ -73,6 +73,7 @@ EVPFFT::EVPFFT(const MPI_Comm mpi_comm_, const CommandLineArgs cmd_, const real_
 
   // Reading and initialization of arrays and parameters
   vpsc_input();
+
   //set_some_voxels_arrays_to_zero();
   init_after_reading_input_data();
 
@@ -150,19 +151,24 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
 void EVPFFT::init_after_reading_input_data()
 {
     init_xk_gb();
+    calc_wfhat();
     init_disgradmacro_velgradmacro();
     init_ept();
     init_disgrad();
     init_evm();
     init_defgrad();
+    if (ibc == 1) {
+      init_Xvert();
+    }
 
 // the variables initialized in the funcitons below are reduced into
 // and should be done once, hence the need for #if guard since the variables
 // needs to be initialized after udot and dt are know from fierro
 #ifndef BUILD_LSNP_EVPFFT_FIERRO
-    init_sg();
+    if (ibc == 0) init_sg();
     // init_c0_s0();
 #endif
+
 }
 
 void EVPFFT::init_xk_gb()
@@ -171,21 +177,21 @@ void EVPFFT::init_xk_gb()
   FOR_ALL_CLASS(kxx, 0, npts1, {
         int kx;
         kx = kxx + local_start1_cmplx;
-        if (kx >  npts1_g/2) kx = kx-npts1_g;
+        if (kx >  npts1_g/2-1) kx = kx-npts1_g;
         xk_gb(kxx+1) = kx/float(npts1_g);
   });
 
   FOR_ALL_CLASS(kyy, 0, npts2, {
         int ky;
         ky = kyy + local_start2_cmplx;
-        if (ky >  npts2_g/2) ky = ky-npts2_g;
+        if (ky >  npts2_g/2-1) ky = ky-npts2_g;
         yk_gb(kyy+1) = ky/float(npts2_g);
   });
 
   FOR_ALL_CLASS(kzz, 0, npts3, {
         int kz;
         kz = kzz + local_start3_cmplx;
-        if (kz >  npts3_g/2) kz = kz-npts3_g;
+        if (kz >  npts3_g/2-1) kz = kz-npts3_g;
         zk_gb(kzz+1) = kz/float(npts3_g);
   });
   Kokkos::fence();
@@ -273,6 +279,7 @@ void EVPFFT::init_sg()
 
     for (int ii = 1; ii <= 3; ii++) {
       for (int jj = 1; jj <= 3; jj++) {
+        sgPK1(ii,jj,i,j,k) = 0.0;
         sg(ii,jj,i,j,k) = 0.0;
         sgt(ii,jj,i,j,k) = 0.0;
       }
@@ -283,6 +290,9 @@ void EVPFFT::init_sg()
   FOR_ALL_CLASS(k, 1, npts3+1,
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
+
+
+    if (iframe(i,j,k) == 0) {
 
     int jph;
     real_t cg66aux_[6*6];
@@ -301,15 +311,31 @@ void EVPFFT::init_sg()
 
       cb.chg_basis_3(cg66aux.pointer(), cg.pointer(), 3, 6, cb.B_basis_device_pointer());
 
-      for (int ii = 1; ii <= 3; ii++) {
-        for (int jj = 1; jj <= 3; jj++) {
-
-          sg(ii,jj,i,j,k) = 0.0;
-
-          for (int kk = 1; kk <= 3; kk++) {
-            for (int ll = 1; ll <= 3; ll++) {
-              // sg(ii,jj,i,j,k) += cg(ii,jj,kk,ll) * disgradmacro(kk,ll);
-              sg(ii,jj,i,j,k) += cg(ii,jj,kk,ll) * udot(kk,ll) * tdot;
+      if (ibc == 0) {
+        for (int ii = 1; ii <= 3; ii++) {
+          for (int jj = 1; jj <= 3; jj++) {
+  
+            sg(ii,jj,i,j,k) = 0.0;
+  
+            for (int kk = 1; kk <= 3; kk++) {
+              for (int ll = 1; ll <= 3; ll++) {
+                // sg(ii,jj,i,j,k) += cg(ii,jj,kk,ll) * disgradmacro(kk,ll);
+                sg(ii,jj,i,j,k) += cg(ii,jj,kk,ll) * udot(kk,ll) * tdot;
+              }
+            }
+          }
+        }
+      } else if (ibc == 1){
+        for (int ii = 1; ii <= 3; ii++) {
+          for (int jj = 1; jj <= 3; jj++) {
+  
+            sg(ii,jj,i,j,k) = 0.0;
+  
+            for (int kk = 1; kk <= 3; kk++) {
+              for (int ll = 1; ll <= 3; ll++) {
+                // sg(ii,jj,i,j,k) += cg(ii,jj,kk,ll) * disgradmacro(kk,ll);
+                sg(ii,jj,i,j,k) += cg(ii,jj,kk,ll) * eigenvelgradref(kk,ll,i,j,k) * tdot;
+              }
             }
           }
         }
@@ -321,6 +347,7 @@ void EVPFFT::init_sg()
           sg(ii,jj,i,j,k) = 0.0;
         }
       }
+    }
     }
   }); // end FOR_ALL_CLASS
   Kokkos::fence();
@@ -340,6 +367,7 @@ void EVPFFT::init_c0_s0()
   for (int ii = 1; ii <= 6; ii++) {
     for (int jj = 1; jj <= 6; jj++) {
       c066.host(ii,jj) *= tdot;
+      dF6_dP6.host(ii,jj) /= tdot;
     }
   }
 
@@ -366,6 +394,7 @@ void EVPFFT::deinit_c0_s0()
   for (int ii = 1; ii <= 6; ii++) {
     for (int jj = 1; jj <= 6; jj++) {
       c066.host(ii,jj) /= tdot;
+      dF6_dP6.host(ii,jj) *= tdot;
     }
   }
 
@@ -412,15 +441,69 @@ void EVPFFT::init_defgrad() {
     wgtc(i,j,k) = wgt;
   }); // end FOR_ALL_CLASS
 
+  FOR_ALL_CLASS(k, 1, npts3+1,
+                j, 1, npts2+1,
+                i, 1, npts1+1, {
+
+    if (igamma == 0) {
+      x_grid(1,i,j,k) = float(i + local_start1 - dnpts1_g); // voxel center
+      x_grid(2,i,j,k) = float(j + local_start2 - dnpts2_g);
+      x_grid(3,i,j,k) = float(k + local_start3 - dnpts3_g);
+    } else if (igamma == 1) {
+      x_grid(1,i,j,k) = float(i + local_start1 - dnpts1_g) - 0.5; // nodal
+      x_grid(2,i,j,k) = float(j + local_start2 - dnpts2_g) - 0.5;
+      x_grid(3,i,j,k) = float(k + local_start3 - dnpts3_g) - 0.5;
+    }
+
+  }); // end FOR_ALL_CLASS
+
   FOR_ALL_CLASS(k, 1, npts3+2,
                 j, 1, npts2+2,
                 i, 1, npts1+2, {
 
-    xnode(1,i,j,k) = float(i) - 0.5;
-    xnode(2,i,j,k) = float(j) - 0.5;
-    xnode(3,i,j,k) = float(k) - 0.5;
+    xnode(1,i,j,k) = float(i + local_start1 - dnpts1_g) - 0.5;
+    xnode(2,i,j,k) = float(j + local_start2 - dnpts2_g) - 0.5;
+    xnode(3,i,j,k) = float(k + local_start3 - dnpts3_g) - 0.5;
 
   }); // end FOR_ALL_CLASS
+
+}
+
+void EVPFFT::init_Xvert() {
+
+  Xvert(1,1) = 0.5; // 1
+  Xvert(2,1) = 0.5; // 1
+  Xvert(3,1) = 0.5; // 1
+
+  Xvert(1,2) = float(npts1_g - dnpts1_g*2) + 0.5; // 2
+  Xvert(2,2) = 0.5; // 2
+  Xvert(3,2) = 0.5; // 2
+
+  Xvert(1,3) = float(npts1_g - dnpts1_g*2) + 0.5; // 3
+  Xvert(2,3) = float(npts2_g - dnpts2_g*2) + 0.5; // 3
+  Xvert(3,3) = 0.5; // 3
+
+  Xvert(1,4) = 0.5; // 4
+  Xvert(2,4) = float(npts2_g - dnpts2_g*2) + 0.5; // 4
+  Xvert(3,4) = 0.5; // 4
+
+  Xvert(1,5) = 0.5; // 5
+  Xvert(2,5) = 0.5; // 5
+  Xvert(3,5) = float(npts3_g - dnpts3_g*2) + 0.5; // 5
+
+  Xvert(1,6) = float(npts1_g - dnpts1_g*2) + 0.5; // 6
+  Xvert(2,6) = 0.5; // 6
+  Xvert(3,6) = float(npts3_g - dnpts3_g*2) + 0.5; // 6
+
+  Xvert(1,7) = float(npts1_g - dnpts1_g*2) + 0.5; // 7
+  Xvert(2,7) = float(npts2_g - dnpts2_g*2) + 0.5; // 7
+  Xvert(3,7) = float(npts3_g - dnpts3_g*2) + 0.5; // 7
+
+  Xvert(1,8) = 0.5; // 8
+  Xvert(2,8) = float(npts2_g - dnpts2_g*2) + 0.5; // 8
+  Xvert(3,8) = float(npts3_g - dnpts3_g*2) + 0.5; // 8
+
+  xvert_current = Xvert;
 
 }
 
@@ -454,19 +537,35 @@ void EVPFFT::evolve()
 
       step_set_dvelgradmacro_and_dvelgradmacroacum_to_zero();
 
+      int itertot;
+
+      err_disp_bc_vel = 2.0*error_bc;
+      iter_out = 0;
+      itertot = 0;
+      while ((iter_out <= itmax_out && err_disp_bc_vel > error_bc) || iter_out < itmin_out) {
+      
+      iter_out += 1;
+
+      if (ibc == 1) {
+        if (iter_out > 1 && mult_incr_accum < mult_incr_mx) frame_c = frame_c*mult_incr;
+        if (iter_out > 1 && mult_incr_accum < mult_incr_mx) mult_incr_accum = mult_incr_accum*mult_incr;
+        calc_IC0a_inv();
+      }
+
       iter = 0;
       erre = 2.0*error;
       errs = 2.0*error;
 
-      while (iter < itmax && (errs > error || erre > error)) {
+      while ((iter < itmax && (errs > error || erre > error)) || iter < 2) {
 
         iter += 1;
+        itertot += 1;
 
 #ifndef ABSOLUTE_NO_OUTPUT
         if (0 == my_rank) {
           printf(" --------------------\n");
           printf(" STEP = %d\n", imicro);
-          printf(" ITER = %d\n", iter);
+          printf(" ITER = %d %d\n", iter, itertot);
           printf(" DIRECT FFT OF STRESS FIELD\n");
           fprintf(ofile_mgr.conv_file.get(), "ITER = %d\n", iter);
         }
@@ -520,11 +619,26 @@ void EVPFFT::evolve()
           printf(" STRAIN FIELD ERROR = %24.14E\n", erre);
           printf(" STRESS FIELD ERROR = %24.14E\n", errs);
           printf(" AVG NUM OF NR ITER = %24.14E\n", avg_nr_iter);
-          fprintf(ofile_mgr.err_file.get(), "%d,%d,%10.4E,%10.4E,%10.4E,%10.4E\n", 
-                  imicro, iter, erre, errs, svm, avg_nr_iter);
+          fprintf(ofile_mgr.err_file.get(), "%d,%d,%10.4E,%10.4E,%10.4E,%10.4E,%10.4E\n", 
+                  imicro, itertot, erre, errs, err_disp_bc_vel, svm, avg_nr_iter);
         }
 #endif
       } // end while loop
+
+      calc_velocity();
+
+      if (ibc == 0) {
+        err_disp_bc_vel = 0.0;
+      } else if (ibc == 1) {
+        calc_vel_bc_error();
+        if (0 == my_rank) {
+          fprintf(ofile_mgr.err_file.get(), "%d,%d,%10.4E,%10.4E,%10.4E,%10.4E,%10.4E\n", 
+                  imicro, itertot, erre, errs, err_disp_bc_vel, svm, avg_nr_iter);
+        }
+      } 
+      
+
+      }
 
       // kinematic hardening (ithermo == 1)
       if (ithermo == 1 && imicro == 1) {
@@ -539,10 +653,12 @@ void EVPFFT::evolve()
       if (iupdate == 1 ) { // do not skip first increment
         // step_texture_rve_update(); // ag now stores inital crystallographic orientation
         update_defgradp();
-        update_grid_velgrad();
+        // update_grid_velgrad();      
+        update_grid();
         update_defgrad();
         update_defgrade();
         update_el_stiff();
+        update_xvert();
       }
 
       if (iuphard == 1 && (ithermo != 1 || imicro > 2)) {
@@ -568,6 +684,15 @@ void EVPFFT::evolve()
 
 void EVPFFT::solve() {
   for (imicro = 1; imicro <= nsteps; imicro++) {
+    if (ibc == 1) {
+      // velvert
+      calc_velvert();
+      calc_vel_boundary_lin_el();
+      calc_eigenvelgradref();
+      if (imicro == 1) {
+        init_sg();
+      }
+    }
     evolve();
   }
   return;

@@ -10,6 +10,8 @@ void EVPFFT::kinhard_param()
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
 
+    if (iframe(i,j,k) == 0) {
+
     int jph;
 
     // thread private arrays
@@ -53,6 +55,8 @@ void EVPFFT::kinhard_param()
       } // end for is
 
     } //end if (igas(jph) == 0)
+
+    }
 
   }); // end FOR_ALL_CLASS
 

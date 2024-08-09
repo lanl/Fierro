@@ -7,6 +7,8 @@ void EVPFFT::initialize_velgrad()
 {
   Profiler profiler(__FUNCTION__);
 
+  if (ibc == 0) {
+
   const size_t n = 9; // for dvelgradavg (3,3)
   ArrayType <real_t, n> all_reduce;
 
@@ -83,5 +85,33 @@ void EVPFFT::initialize_velgrad()
       }
     }
   }); // end FOR_ALL_CLASS
+
+  } else if (ibc == 1){
+
+  FOR_ALL_CLASS(k, 1, npts3+1,
+                j, 1, npts2+1,
+                i, 1, npts1+1, {
+
+    real_t dum;
+
+    for (int jj = 1; jj <= 3; jj++) {
+      for (int ii = 1; ii <= 3; ii++) {
+        velgradref(ii,jj,i,j,k) += work(ii,jj,i,j,k);
+      }
+    }
+
+    if (iframe(i,j,k) == 0) {
+      for (int jj = 1; jj <= 3; jj++) {
+        for (int ii = 1; ii <= 3; ii++) {
+          dum = 0.0;
+          for (int kk = 1; kk <= 3; kk++) {
+            dum += (velgradref(ii,kk,i,j,k))*defgradinv(kk,jj,i,j,k);
+          }
+          velgrad(ii,jj,i,j,k) = dum;
+        }
+      }
+    }
+  }); // end FOR_ALL_CLASS
+  }
 
 }

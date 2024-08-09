@@ -27,6 +27,8 @@ void EVPFFT::update_defgrad()
     Kokkos::MDRangePolicy<Kokkos::Rank<3,LOOP_ORDER,LOOP_ORDER>>({1,1,1}, {npts3+1,npts2+1,npts1+1}),
     KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i, ArrayType <real_t,n> & loc_reduce) {
 
+    if (iframe(i,j,k) == 0) {
+
     real_t detFtmp;
 
     // thread private arrays
@@ -79,7 +81,7 @@ void EVPFFT::update_defgrad()
     determinant33(defgradnew.pointer(), detFtmp);
 
     if (detFtmp < 0.0) {
-      printf(" -> WARNING: detF = %E24.14E in voxel %d %d %d", detFtmp, i, j, k);
+      printf(" -> WARNING: detF = %E24.14E in voxel %d %d %d\n", detFtmp, i, j, k);
     }
 
     detF(i,j,k) = detFtmp;
@@ -146,6 +148,7 @@ void EVPFFT::update_defgrad()
         loc_reduce.array[ic] += velgrad(ii,jj,i,j,k) * wgt * detFtmp;
       }
     }
+    }
 
   }, all_reduce);
   Kokkos::fence(); // needed to prevent race condition
@@ -181,6 +184,8 @@ void EVPFFT::update_defgrad()
     }
   }
 
+  //if (ibc == 0) {
+
   // weight normalization and correction to velgrad
   MatrixTypeRealDual dudot_dXini_avg(3,3);
 
@@ -198,9 +203,10 @@ void EVPFFT::update_defgrad()
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
 
+    if (iframe(i,j,k) == 0) {
+
     wgtc(i,j,k) = wgtc(i,j,k)/detFavg;
-
-
+    
     for (int jj = 1; jj <= 3; jj++) {
       for (int ii = 1; ii <= 3; ii++) {
         for (int kk = 1; kk <= 3; kk++) {
@@ -208,7 +214,11 @@ void EVPFFT::update_defgrad()
         }
       }
     }
+
+    }
   
   }); // end FOR_ALL_CLASS
+
+  //}
 
 }

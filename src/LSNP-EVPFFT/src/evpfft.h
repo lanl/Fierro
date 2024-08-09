@@ -65,6 +65,9 @@ public:
   int npts1_g;   // global array size in x dim.
   int npts2_g;   // global array size in y dim.
   int npts3_g;   // global array size in z dim.
+  int dnpts1_g;   // global array size in x dim.
+  int dnpts2_g;   // global array size in y dim.
+  int dnpts3_g;   // global array size in z dim.
   int npts1;     // local per rank array size in x dim.
   int npts2;     // local per rank array size in y dim.
   int npts3;     // local per rank array size in z dim.
@@ -75,6 +78,7 @@ public:
   int local_end2;   // end index of local array in y dim.
   int local_end3;   // end index of local array in z dim.
   real_t wgt;
+  real_t wgttot;
 
   int npts1_g_cmplx;   // complex global array size in x dim.
   int npts2_g_cmplx;   // complex global array size in y dim.
@@ -204,7 +208,11 @@ public:
   MatrixTypeRealDual sgPK1;
   MatrixTypeRealDual c066mod;
   MatrixTypeRealDual velgradref;
+  MatrixTypeRealDual x_grid;
   MatrixTypeRealDual xnode;
+  MatrixTypeRealDual velapp_node;
+  MatrixTypeRealDual wfhat_re;
+  MatrixTypeRealDual eigenvelgradref;
 #ifdef NON_SCHMID_EFFECTS
   MatrixTypeRealDual schnon;
 #endif
@@ -219,6 +227,7 @@ public:
   MatrixTypeRealHost om_array;
   MatrixTypeIntDual  jphase;
   MatrixTypeIntHost  jgrain;
+  MatrixTypeIntDual  iframe;
 
   MatrixTypeRealDual work;
   MatrixTypeRealDual workim;
@@ -260,6 +269,26 @@ public:
   MatrixTypeRealDevice rss1;
   MatrixTypeRealDevice rss2;
 
+  int igamma;
+  int ibc;
+  double frame_c;
+  double err_disp_bc_vel;
+  double error_bc;
+  int iter_out;
+  int itmax_out;
+  int itmin_out;
+  double mult_incr;
+  double mult_incr_mx;
+  double mult_incr_accum;
+  double xc0;
+
+  MatrixTypeRealDual Xvert;
+  MatrixTypeRealDual xvert_current;
+  MatrixTypeRealDual velvert;
+  MatrixTypeRealDual dF6_dP6;
+  MatrixTypeRealDual IC0a_inv;
+  MatrixTypeRealDual Cinv_sgPK1old;
+  MatrixTypeRealDual velocity;
 //-----------------------------------------------
 // End Of EVPFFT Data Members
 //-----------------------------------------------
@@ -293,6 +322,7 @@ public:
   void init_c0_s0();
   void deinit_c0_s0();
   void init_defgrad();
+  void init_Xvert();
   void data_crystal(int iph, const std::string & filecryspl);
   void data_crystal_elast(int iph, const std::string & filecrysel);
   void data_grain(const std::string & filetext);
@@ -315,8 +345,14 @@ public:
   void update_defgrade();
   void update_el_stiff();
   void calc_c0();
+  void calc_wfhat();
   void Cauchy_to_PK1();
   void calc_c066mod();
+  void calc_IC0a_inv();
+  void calc_velocity();
+  void update_grid();
+  void update_xvert();
+  void calc_vel_bc_error();
   void update_grid_velgrad();
   void harden(int imicro);
   void read_classic_los_alamos_texture_file(const std::string & filetext);
@@ -329,4 +365,8 @@ public:
 
   void init_crss_voce();
   void update_crss_voce();
+
+  void calc_velvert();
+  void calc_vel_boundary_lin_el();
+  void calc_eigenvelgradref();
 };

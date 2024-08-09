@@ -26,6 +26,7 @@ void EVPFFT::calc_c066mod()
     ViewMatrixTypeReal c0modsym(c0modsym_,3,3,3,3);
     ViewMatrixTypeReal c066modtmp(c066modtmp_,6,6);
 
+    if (iframe(i,j,k) == 0){
 
     for (int ii = 1; ii <= 3; ii++) {
       for (int jj = 1; jj <= 3; jj++) {
@@ -60,6 +61,8 @@ void EVPFFT::calc_c066mod()
       for (int jj = 1; jj <= 6; jj++) {
         c066mod(ii,jj,i,j,k) = c066modtmp(ii,jj);
       }
+    }
+
     }
 
   }); // end FOR_ALL_CLASS

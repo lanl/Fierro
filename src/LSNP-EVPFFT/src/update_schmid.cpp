@@ -23,7 +23,6 @@ void EVPFFT::update_schmid()
     } // end for is
   });
 
-
   FOR_ALL_CLASS(kk, 1, npts3+1,
                 jj, 1, npts2+1,
                 ii, 1, npts1+1, {
@@ -44,6 +43,7 @@ void EVPFFT::update_schmid()
     ViewMatrixTypeReal aa  (aa_,3,3);
     ViewMatrixTypeReal aainv  (aainv_,3,3);
     
+    if (iframe(ii,jj,kk) == 0) {
 
     int jph;
     jph = jphase(ii,jj,kk);
@@ -134,6 +134,8 @@ void EVPFFT::update_schmid()
 
       } // end for is 
     }  // end if (igas(jph) == 0)
+
+    }
 
   }); // end FOR_ALL_CLASS
 
