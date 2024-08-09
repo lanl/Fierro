@@ -36,14 +36,26 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SGH_SOLVER_H
 
 #include "solver.h"
-#include "geometry_new.h"
-#include "simulation_parameters.h"
-#include "boundary_conditions.h"
-#include "material.h"
-#include "mesh.h"
-#include "state.h"
-#include "mesh_io.h"
-#include "dynamic_options.h"
+// #include "geometry_new.h"
+// #include "simulation_parameters.h"
+// #include "boundary_conditions.h"
+// #include "material.h"
+// #include "mesh.h"
+// #include "state.h"
+// #include "mesh_io.h"
+// #include "dynamic_options.h"
+
+
+// Forward declare structs
+struct SimulationParameters_t;
+struct Material_t;
+struct mesh_t;
+struct BoundaryCondition_t;
+struct State_t;
+struct reg_fill_t;
+struct reg_fill_host_t;
+struct corners_in_mat_t;
+
 
 
 using namespace mtr; // matar namespace

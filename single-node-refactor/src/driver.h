@@ -37,6 +37,8 @@
 #include "solver.h"
 #include "simulation_parameters.h"
 
+#include "geometry_new.h"
+
 // Headers for SGH solver classes
 #include "sgh_solver.h"
 

@@ -34,6 +34,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "sgh_solver.h"
 
+#include "simulation_parameters.h"
+#include "material.h"
+#include "boundary_conditions.h"
+#include "mesh.h"
+#include "state.h"
+#include "geometry_new.h"
+#include "mesh_io.h"
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn solve

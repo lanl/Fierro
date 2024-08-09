@@ -33,6 +33,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver.h"
+#include "material.h"
+#include "mesh.h"
+#include "state.h"
+#include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -492,7 +496,7 @@ void SGH::get_force_2D(const Material_t& Materials,
 
 
     // --- calculate the forces acting on the nodes from the element ---
-     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get mesh elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 

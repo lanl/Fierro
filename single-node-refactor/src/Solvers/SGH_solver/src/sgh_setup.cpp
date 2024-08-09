@@ -33,9 +33,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver.h"
+#include "mesh.h"
 #include "region_fill.h"
-
-
+#include "material.h"
+#include "boundary_conditions.h"
+#include "state.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
