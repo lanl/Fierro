@@ -46,17 +46,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/stat.h>
 
 
-
-
-
-// ==============================================================================
-//   Functions to get 1D for an i,j,k layout mesh
-// ==============================================================================
-// inline int get_id(int i, int j, int k, int num_i, int num_j);
-
-// KOKKOS_INLINE_FUNCTION
-// int get_id_device(int i, int j, int k, int num_i, int num_j);
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn get_id

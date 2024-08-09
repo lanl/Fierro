@@ -43,7 +43,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "material.h"
 #include "mesh.h"
 #include "state.h"
-#include "io_utils.h"
+#include "mesh_io.h"
 #include "dynamic_options.h"
 
 

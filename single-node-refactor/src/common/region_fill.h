@@ -40,7 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.h"
 #include "simulation_parameters.h"
 #include "region.h"
-#include "io_utils.h"
+#include "mesh_io.h"
 
 #include <stdio.h>
 
