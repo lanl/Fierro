@@ -49,7 +49,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_velocity(const mesh_t&      mesh,
+void SGH::boundary_velocity(const Mesh_t&      mesh,
                             const BoundaryCondition_t& BoundaryConditions,
                             DCArrayKokkos<double>& node_vel,
                             const double time_value) const
@@ -95,7 +95,7 @@ void SGH::boundary_velocity(const mesh_t&      mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_contact(const mesh_t& mesh,
+void SGH::boundary_contact(const Mesh_t& mesh,
                            const BoundaryCondition_t& BoundaryConditions,
                            DCArrayKokkos<double>& node_vel,
                            const double time_value) const

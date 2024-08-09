@@ -36,24 +36,15 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SGH_SOLVER_H
 
 #include "solver.h"
-// #include "geometry_new.h"
-// #include "simulation_parameters.h"
-// #include "boundary_conditions.h"
-// #include "material.h"
-// #include "mesh.h"
-// #include "state.h"
-// #include "mesh_io.h"
-// #include "dynamic_options.h"
-
 
 // Forward declare structs
 struct SimulationParameters_t;
 struct Material_t;
-struct mesh_t;
+struct Mesh_t;
 struct BoundaryCondition_t;
 struct State_t;
-struct reg_fill_t;
-struct reg_fill_host_t;
+struct RegionFill_t;
+struct RegionFill_host_t;
 struct corners_in_mat_t;
 
 
@@ -84,7 +75,7 @@ public:
     // Initialize data specific to the SGH solver
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
-                    mesh_t& mesh, 
+                    Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override
     {
@@ -100,7 +91,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void setup(SimulationParameters_t& SimulationParamaters, 
                Material_t& Materials, 
-               mesh_t& mesh, 
+               Mesh_t& mesh, 
                BoundaryCondition_t& Boundary,
                State_t& State) override;
 
@@ -115,7 +106,7 @@ public:
     void execute(SimulationParameters_t& SimulationParamaters, 
                  Material_t& Materials, 
                  BoundaryCondition_t& Boundary, 
-                 mesh_t& mesh, 
+                 Mesh_t& mesh, 
                  State_t& State) override;
 
     /////////////////////////////////////////////////////////////////////////////
@@ -144,34 +135,34 @@ public:
     // **** Functions defined in sgh_setup.cpp **** //
     void fill_regions_sgh(
         const Material_t& Materials,
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         const DCArrayKokkos <double>& node_coords,
         DCArrayKokkos <double>& node_vel,
         DCArrayKokkos <double>& GaussPoint_den,
         DCArrayKokkos <double>& GaussPoint_sie,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& voxel_elem_mat_id,
-        const CArrayKokkos <reg_fill_t>& region_fills,
-        const CArray <reg_fill_host_t>& region_fills_host,
+        const CArrayKokkos <RegionFill_t>& region_fills,
+        const CArray <RegionFill_host_t>& region_fills_host,
         const size_t num_fills,
         const size_t num_elems,
         const size_t num_nodes,
         const size_t rk_num_bins) const;
                         
     void init_corner_node_masses_zero(
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_mass) const;
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value) const;
 
     void boundary_contact(
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value) const;
@@ -180,7 +171,7 @@ public:
     void update_energy(
         const double rk_alpha,
         const double dt,
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& MaterialPoints_sie,
@@ -193,7 +184,7 @@ public:
     // **** Functions defined in force_sgh.cpp **** //
     void get_force(
         const Material_t& Materials,
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& GaussPoints_div,
         const DCArrayKokkos<bool>&   GaussPoints_eroded,
@@ -218,7 +209,7 @@ public:
 
     void get_force_2D(
         const Material_t& Materials,
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& GaussPoints_div,
         const DCArrayKokkos<double>& corner_force,
@@ -253,7 +244,7 @@ public:
     void update_velocity(
         double rk_alpha,
         double dt,
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
@@ -279,14 +270,14 @@ public:
 
     void get_divergence(
         DCArrayKokkos<double>& GaussPoints_div,
-        const mesh_t mesh,
+        const Mesh_t mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vol) const;
 
     void get_divergence2D(
         DCArrayKokkos<double>& GaussPoints_div,
-        const mesh_t mesh,
+        const Mesh_t mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vol) const;
@@ -300,7 +291,7 @@ public:
     // **** Functions defined in properties.cpp **** //
     void update_state(
         const Material_t& Materials,
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& MaterialPoints_den,
@@ -320,7 +311,7 @@ public:
 
     void update_state2D(
         const Material_t& Materials,
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& MaterialPoints_den,
@@ -351,7 +342,7 @@ public:
         const size_t num_mat_points) const;
 
     void get_timestep(
-        mesh_t& mesh,
+        Mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
@@ -369,7 +360,7 @@ public:
         const double fuzz) const;
 
     void get_timestep2D(
-        mesh_t& mesh,
+        Mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
@@ -424,7 +415,7 @@ void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
                               const double num_dims,
                               const double num_nodes);
 
-void calc_node_areal_mass(const mesh_t& mesh,
+void calc_node_areal_mass(const Mesh_t& mesh,
                           const DCArrayKokkos<double>& node_coords,
                           const DCArrayKokkos<double>& node_mass,
                           CArrayKokkos<double> node_extensive_mass,
@@ -434,7 +425,7 @@ double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_ma
                                   const DCArrayKokkos<double>& MaterialPoints_sie,
                                   const size_t num_mat_points);
 
-double sum_domain_kinetic_energy(const mesh_t& mesh,
+double sum_domain_kinetic_energy(const Mesh_t& mesh,
                                  const DCArrayKokkos<double>& node_vel,
                                  const DCArrayKokkos<double>& node_coords,
                                  const DCArrayKokkos<double>& node_mass);
@@ -442,11 +433,11 @@ double sum_domain_kinetic_energy(const mesh_t& mesh,
 double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
                                 const size_t num_mat_points);
 
-double sum_domain_node_mass(const mesh_t& mesh,
+double sum_domain_node_mass(const Mesh_t& mesh,
                             const DCArrayKokkos<double>& node_coords,
                             const DCArrayKokkos<double>& node_mass);
 
-void set_corner_force_zero(const mesh_t& mesh, 
+void set_corner_force_zero(const Mesh_t& mesh, 
                            const DCArrayKokkos<double>& corner_force);   
 
 #endif // end HEADER_H

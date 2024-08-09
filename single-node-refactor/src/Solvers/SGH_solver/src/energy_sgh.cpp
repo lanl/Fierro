@@ -54,7 +54,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_energy(const double rk_alpha,
     const double dt,
-    const mesh_t& mesh,
+    const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& MaterialPoints_sie,

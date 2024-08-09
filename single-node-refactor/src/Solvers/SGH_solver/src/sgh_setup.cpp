@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param corner_mass is the corner mass
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::init_corner_node_masses_zero(const mesh_t& mesh,
+void SGH::init_corner_node_masses_zero(const Mesh_t& mesh,
                                   const DCArrayKokkos<double>& node_mass,
                                   const DCArrayKokkos<double>& corner_mass) const
 {
@@ -93,15 +93,15 @@ void SGH::init_corner_node_masses_zero(const mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::fill_regions_sgh(const Material_t& Materials,
-                      const mesh_t& mesh,
+                      const Mesh_t& mesh,
                       const DCArrayKokkos <double>& node_coords,
                       DCArrayKokkos <double>& node_vel,
                       DCArrayKokkos <double>& GaussPoint_den,
                       DCArrayKokkos <double>& GaussPoint_sie,
                       DCArrayKokkos <size_t>& elem_mat_id,
                       DCArrayKokkos <size_t>& voxel_elem_mat_id,
-                      const CArrayKokkos <reg_fill_t>& region_fills,
-                      const CArray <reg_fill_host_t>& region_fills_host,
+                      const CArrayKokkos <RegionFill_t>& region_fills,
+                      const CArray <RegionFill_host_t>& region_fills_host,
                       const size_t num_fills,
                       const size_t num_elems,
                       const size_t num_nodes,
@@ -275,7 +275,7 @@ void SGH::fill_regions_sgh(const Material_t& Materials,
 /////////////////////////////////////////////////////////////////////////////
 void SGH::setup(SimulationParameters_t& SimulationParamaters, 
                 Material_t& Materials, 
-                mesh_t& mesh, 
+                Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
                 State_t& State)
 {

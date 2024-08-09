@@ -70,12 +70,12 @@ static std::map<std::string, region::vol_tag> region_type_map
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct reg_fill_t
+/// \struct RegionFill_t
 ///
 /// \brief Geometry data for regions of materials/states
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct reg_fill_t
+struct RegionFill_t
 {
     // type
     region::vol_tag volume; ///< Type of volume for this region eg. global, box, sphere, planes, etc.
@@ -115,12 +115,12 @@ struct reg_fill_t
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct reg_fill_host_t
+/// \struct RegionFill_host_t
 ///
 /// \brief Geometry data, on the cpu only, for regions of materials/states 
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct reg_fill_host_t
+struct RegionFill_host_t
 {
     std::string file_path; ///< path of mesh file
 

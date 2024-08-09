@@ -895,16 +895,16 @@ void parse_output_options(Yaml::Node& root,
 //    Parse Fill regions
 // =================================================================================
 void parse_regions(Yaml::Node& root, 
-                   CArrayKokkos<reg_fill_t>& region_fills, 
-                   CArray<reg_fill_host_t>&  region_fills_host)
+                   CArrayKokkos<RegionFill_t>& region_fills, 
+                   CArray<RegionFill_host_t>&  region_fills_host)
 
 {
     Yaml::Node& region_yaml = root["regions"];
 
     size_t num_regions = region_yaml.Size();
 
-    region_fills = CArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
-    region_fills_host = CArray<reg_fill_host_t>(num_regions); 
+    region_fills = CArrayKokkos<RegionFill_t>(num_regions , "sim_param.region_fills");
+    region_fills_host = CArray<RegionFill_host_t>(num_regions); 
 
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {

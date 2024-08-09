@@ -379,9 +379,9 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-size_t fill_geometric_region(const mesh_t& mesh,
+size_t fill_geometric_region(const Mesh_t& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
-                             const CArrayKokkos<reg_fill_t>& region_fills,
+                             const CArrayKokkos<RegionFill_t>& region_fills,
                              const ViewCArrayKokkos <double>& mesh_coords,
                              const double voxel_dx, 
                              const double voxel_dy, 
@@ -529,12 +529,12 @@ size_t fill_geometric_region(const mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void paint_gauss_den_sie(const Material_t& Materials,
-                         const mesh_t& mesh,
+                         const Mesh_t& mesh,
                          const DCArrayKokkos <double>& node_coords,
                          const DCArrayKokkos <double>& GaussPoint_den,
                          const DCArrayKokkos <double>& GaussPoint_sie,
                          const DCArrayKokkos <size_t>& elem_mat_id,
-                         const CArrayKokkos<reg_fill_t>& region_fills,
+                         const CArrayKokkos<RegionFill_t>& region_fills,
                          const ViewCArrayKokkos <double> elem_coords,
                          const double elem_gid,
                          const size_t f_id)
@@ -599,7 +599,7 @@ void paint_gauss_den_sie(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_node_vel(const CArrayKokkos<reg_fill_t>& region_fills,
+void paint_node_vel(const CArrayKokkos<RegionFill_t>& region_fills,
                     const DCArrayKokkos<double>& node_vel,
                     const DCArrayKokkos<double>& node_coords,
                     const double node_gid,
@@ -762,7 +762,7 @@ void paint_node_vel(const CArrayKokkos<reg_fill_t>& region_fills,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void init_press_sspd_stress(const Material_t& Materials,
-                            const mesh_t& mesh,
+                            const Mesh_t& mesh,
                             const DCArrayKokkos<double>& MaterialPoints_den,
                             const DCArrayKokkos<double>& MaterialPoints_pres,
                             const DCArrayKokkos<double>& MaterialPoints_stress,
@@ -845,7 +845,7 @@ void init_press_sspd_stress(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass(const Material_t& Materials,
-                      const mesh_t& mesh,
+                      const Mesh_t& mesh,
                       const DCArrayKokkos<double>& node_coords,
                       const DCArrayKokkos<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
@@ -890,7 +890,7 @@ void calc_corner_mass(const Material_t& Materials,
 /// \param num_mat_elems is the number of material elements for mat_id
 ///
 /////////////////////////////////////////////////////////////////////////////
-void calc_node_mass(const mesh_t& mesh,
+void calc_node_mass(const Mesh_t& mesh,
                     const DCArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass)

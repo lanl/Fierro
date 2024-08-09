@@ -64,7 +64,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_force(const Material_t& Materials,
-                    const mesh_t& mesh,
+                    const Mesh_t& mesh,
                     const DCArrayKokkos<double>& GaussPoints_vol,
                     const DCArrayKokkos<double>& GaussPoints_div,
                     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
@@ -462,7 +462,7 @@ void SGH::get_force(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_force_2D(const Material_t& Materials,
-                       const mesh_t& mesh,
+                       const Mesh_t& mesh,
                        const DCArrayKokkos<double>& GaussPoints_vol,
                        const DCArrayKokkos<double>& GaussPoints_div,
                        const DCArrayKokkos<double>& corner_force,
