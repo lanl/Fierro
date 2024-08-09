@@ -14,7 +14,8 @@ void EVPFFT::allocate_memory()
   local_end1 = fft->localRealBoxes[my_rank].high[0];
   local_end2 = fft->localRealBoxes[my_rank].high[1];
   local_end3 = fft->localRealBoxes[my_rank].high[2];
-  wgt = real_t(1.0) / real_t(npts1_g*npts2_g*npts3_g);
+  wgt = real_t(1.0) / real_t((npts1_g-2*dnpts1_g)*(npts2_g-2*dnpts2_g)*(npts2_g-2*dnpts2_g));
+  wgttot = real_t(1.0) / real_t(npts1_g*npts2_g*npts3_g);
 
   npts1_g_cmplx = fft->globalComplexBoxSize[0];
   npts2_g_cmplx = fft->globalComplexBoxSize[0];
@@ -102,7 +103,11 @@ void EVPFFT::allocate_memory()
   sgPK1 = MatrixTypeRealDual (3, 3, npts1, npts2, npts3);
   c066mod = MatrixTypeRealDual (6, 6, npts1, npts2, npts3);
   velgradref = MatrixTypeRealDual (3, 3, npts1, npts2, npts3);
+  x_grid = MatrixTypeRealDual (3, npts1, npts2, npts3);
   xnode = MatrixTypeRealDual (3, npts1 + 1, npts2 + 1, npts3 + 1);
+  velapp_node = MatrixTypeRealDual (3, npts1, npts2, npts3);
+  wfhat_re = MatrixTypeRealDual (npts1_cmplx, npts2_cmplx, npts3_cmplx);
+  eigenvelgradref = MatrixTypeRealDual (3, 3, npts1, npts2, npts3);
 #ifdef NON_SCHMID_EFFECTS
   schnon = MatrixTypeRealDual (5, NSYSMX, npts1, npts2, npts3);
 #endif
@@ -117,6 +122,7 @@ void EVPFFT::allocate_memory()
   om_array = MatrixTypeRealHost (npts1, npts2, npts3);
   jphase = MatrixTypeIntDual (npts1, npts2, npts3);
   jgrain = MatrixTypeIntHost (npts1, npts2, npts3);
+  iframe = MatrixTypeIntDual (npts1, npts2, npts3);
 
   work = MatrixTypeRealDual (3, 3, npts1, npts2, npts3);
   workim = MatrixTypeRealDual (3, 3, npts1_cmplx, npts2_cmplx, npts3_cmplx);
@@ -128,6 +134,14 @@ void EVPFFT::allocate_memory()
   velgradmacroactual = MatrixTypeRealHost (3,3);
   disgradmacrot = MatrixTypeRealHost (3,3);
   velgradmacro = MatrixTypeRealDual (3,3);
+
+  Xvert = MatrixTypeRealDual (3,8);
+  xvert_current = MatrixTypeRealDual (3,8);
+  velvert = MatrixTypeRealDual (3,8);
+  dF6_dP6 = MatrixTypeRealDual (6,6);
+  IC0a_inv = MatrixTypeRealDual (3,3,3,3);
+  Cinv_sgPK1old = MatrixTypeRealDual (3,3,npts1, npts2, npts3);
+  velocity = MatrixTypeRealDual (3,npts1, npts2, npts3);
 
   // for fierro linking
   M66 = MatrixTypeRealHost (6,6);

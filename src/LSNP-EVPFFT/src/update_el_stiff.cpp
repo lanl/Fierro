@@ -15,6 +15,8 @@ void EVPFFT::update_el_stiff()
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
 
+    if (iframe(i,j,k) == 0) {
+
     real_t detFe;
     real_t dum;
 
@@ -110,6 +112,8 @@ void EVPFFT::update_el_stiff()
       }
 
     } // end if (igas(iph) == 0) 
+
+    }
 
   }); // end FOR_ALL_CLASS
 

@@ -133,6 +133,9 @@ void EVPFFT::calculate_eel(MatrixTypeRealDual &eel)
           j, 1, npts2+1,
           i, 1, npts1+1, {
 
+
+      if (iframe(i,j,k) == 0) {
+
       int jph;
       real_t cg66aux_ [6*6];
       real_t cinvg_ [3*3*3*3];
@@ -178,6 +181,16 @@ void EVPFFT::calculate_eel(MatrixTypeRealDual &eel)
         }
 
       } // end if (igas(jph)  == 0)
+
+      } else {
+
+        for (int jj = 1; jj <= 3; jj++) {
+          for (int ii = 1; ii <= 3; ii++) {
+            eel(ii,jj,i,j,k) = -100.0;
+          }
+        }
+
+      }
 
   }); // end FOR_ALL_CLASS
   Kokkos::fence();

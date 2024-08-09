@@ -75,7 +75,9 @@ int main(int argc, char *argv[])
     cmd.parse_command_line(argc, argv);
 
     // EVPFFT
+    printf("evpfft(MPI_COMM_WORLD, cmd) \n");
     EVPFFT evpfft(MPI_COMM_WORLD, cmd);
+    printf("evpfft.solve() start \n");
     evpfft.solve();
 
     } // end profiler("Total") scope
@@ -215,6 +217,15 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
     init_defgrad();
   }
   active = true;
+
+  //--------------------------------
+  //generate necessary velocity stuff for non-periodic mechanisms
+  if (ibc == 1) {
+    // velvert
+    calc_velvert();
+    calc_vel_boundary_lin_el();
+    calc_eigenvelgradref();
+  }
 
   //--------------------------------
   // EVPFFT evolve

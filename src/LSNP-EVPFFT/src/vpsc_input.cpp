@@ -53,6 +53,7 @@ void EVPFFT::vpsc_input()
 
   ur0 >> NPHMX >> NMODMX >> NTWMMX >> NSYSMX; CLEAR_LINE(ur0);
   ur0 >> npts1_g >> npts2_g >> npts3_g; CLEAR_LINE(ur0);
+  ur0 >> dnpts1_g >> dnpts2_g >> dnpts3_g; CLEAR_LINE(ur0);
 
   allocate_memory();
 
@@ -108,6 +109,14 @@ void EVPFFT::vpsc_input()
   // and calculates the local elastic stiffness
   data_grain(filetext);
  
+// ****************************************************************************
+//     ADDITIONAL INPUT
+// ****************************************************************************
+  ur0 >> prosa; CLEAR_LINE(ur0);
+  ur0 >> igamma; CLEAR_LINE(ur0);
+
+  ur0 >> prosa; CLEAR_LINE(ur0);
+  ur0 >> xc0; CLEAR_LINE(ur0);
 
 // ****************************************************************************
 //     READ BOUNDARY CONDITIONS ON OVERALL STRESS AND STRAIN-RATE
@@ -115,12 +124,20 @@ void EVPFFT::vpsc_input()
 
   ur0 >> prosa; CLEAR_LINE(ur0);
   ur0 >> prosa; CLEAR_LINE(ur0);
+  ur0 >> ibc; CLEAR_LINE(ur0);
 
   for (int i = 1; i <= 3; i++) {
     for (int j = 1; j <= 3; j++) {
       ur0 >> iudot(i,j);
     }
     CLEAR_LINE(ur0);
+  }
+
+  if (iudot(1,1) + iudot(1,2) + iudot(1,3) + 
+      iudot(2,1) + iudot(2,2) + iudot(2,3) +
+      iudot(3,1) + iudot(3,2) + iudot(3,3) != 9 && ibc == 1) {
+     printf("iudot has to be fully imposed for ibc=1 \n");
+    exit(1);
   }
  
   // check that the components of iudot are correct
@@ -159,6 +176,16 @@ void EVPFFT::vpsc_input()
   scauchy(3,2) = scauchy(2,3);
   scauchy(3,1) = scauchy(1,3);
   scauchy(2,1) = scauchy(1,2);
+
+  if (ibc == 0) {
+    itmin_out = 1;
+    itmax_out = 1;
+  } else if (ibc == 1) {
+    ur0 >> frame_c; CLEAR_LINE(ur0);
+    ur0 >> mult_incr >> mult_incr_mx; CLEAR_LINE(ur0);
+    ur0 >> error_bc >> itmin_out >> itmax_out; CLEAR_LINE(ur0);
+    mult_incr_accum = 1.0;
+  }
 
   CLEAR_LINE(ur0);
   ur0 >> dummy; CLEAR_LINE(ur0);
@@ -225,6 +252,7 @@ void EVPFFT::vpsc_input()
   } // end if (ithermo == 1)
 
   ur0.close();
+
 }
 
 void EVPFFT::check_iudot()
@@ -321,6 +349,8 @@ void EVPFFT::init_crss_voce()
     for (int jj = 1; jj <= npts2; jj++) {
       for (int ii = 1; ii <= npts1; ii++) {
 
+        if (iframe.host(ii,jj,kk) == 0) {
+
         int iph = jphase.host(ii,jj,kk);
 
         if (igas.host(iph) == 0) {
@@ -331,6 +361,8 @@ void EVPFFT::init_crss_voce()
             //trialtau.host(i,2,ii,jj,kk)  = tau.host(i,2,iph);
           }
         } // end if (igas.host(iph) == 0)
+
+        }
 
       }  // end for ii
     }  // end for jj

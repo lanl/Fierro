@@ -46,6 +46,8 @@ void EVPFFT::data_grain(const std::string & filetext)
     for (int jj = 1; jj <= npts2; jj++) {
       for (int ii = 1; ii <= npts1; ii++) {
                      
+      if (iframe(ii,jj,kk) == 0) {
+
       int jph;
       real_t ph, th, om;
       real_t ph_rad, th_rad, om_rad;
@@ -118,6 +120,8 @@ void EVPFFT::data_grain(const std::string & filetext)
         }
       }
 
+      }
+
       } // end for ii
     } // end for jj
   } // end for kk
@@ -154,13 +158,21 @@ void EVPFFT::data_grain(const std::string & filetext)
   }
   invert_matrix <6> (s066.pointer());
 
+  for (int ii = 1; ii <= 6; ii++) {
+    for (int jj = 1; jj <= 6; jj++) {
+      dF6_dP6.host(ii,jj) = s066(ii,jj);
+    }
+  }
+
   cb.chg_basis_3(c066.host_pointer(), c0.host_pointer(), 3, 6, cb.B_basis_host_pointer());
   cb.chg_basis_3(s066.pointer(), s0.host_pointer(), 3, 6, cb.B_basis_host_pointer());
 
   // update device
   c0.update_device();
   s0.update_device();
+  dF6_dP6.update_device();
   Kokkos::fence();
+
 }
 
 
@@ -174,9 +186,17 @@ void EVPFFT::read_classic_los_alamos_texture_file(const std::string & filetext)
   int iiii, jjjj, kkkk, jgr, jph;
   int i,j,k;
 
-  for (int kk = 0; kk < npts3_g; kk++) {
-    for (int jj = 0; jj < npts2_g; jj++) {
-      for (int ii = 0; ii < npts1_g; ii++) {
+  for (int kk = 1; kk <= npts3; kk++) {
+    for (int jj = 1; jj <= npts2; jj++) {
+      for (int ii = 1; ii <= npts1; ii++) {
+        iframe(ii,jj,kk) = 1;
+      }
+    }
+  }
+
+  for (int kk = 0 + dnpts3_g; kk < npts3_g - dnpts3_g; kk++) {
+    for (int jj = 0 + dnpts2_g; jj < npts2_g - dnpts3_g; jj++) {
+      for (int ii = 0 + dnpts1_g; ii < npts1_g - dnpts1_g; ii++) {
       
         ur2 >> ph >> th >> om >> iiii >> jjjj >> kkkk >> jgr >> jph; CLEAR_LINE(ur2);
         if ( (ii >= local_start1 and ii <= local_end1) and
@@ -191,6 +211,7 @@ void EVPFFT::read_classic_los_alamos_texture_file(const std::string & filetext)
           om_array(i,j,k) = om;
           jgrain(i,j,k)   = jgr;
           jphase.host(i,j,k)   = jph;
+          iframe.host(i,j,k) = 0;
         }
         
       }
@@ -199,9 +220,11 @@ void EVPFFT::read_classic_los_alamos_texture_file(const std::string & filetext)
 
   // update device
   jphase.update_device();
+  iframe.update_device();
   Kokkos::fence();
 
   ur2.close();
+
 }
 
 void EVPFFT::read_hdf5_texture_file(const std::string & filetext)

@@ -27,6 +27,8 @@ void EVPFFT::update_crss_voce()
     Kokkos::MDRangePolicy<Kokkos::Rank<3,LOOP_ORDER,LOOP_ORDER>>({1,1,1}, {npts3+1,npts2+1,npts1+1}),
     KOKKOS_CLASS_LAMBDA(const int kk, const int jj, const int ii) {
     
+    if (iframe(ii,jj,kk) == 0) {
+
     int iph;
     real_t gamtotx;
     real_t deltgam;
@@ -86,6 +88,8 @@ void EVPFFT::update_crss_voce()
       gacumgr(ii,jj,kk) = gamtotx + deltgam;
 
     } // end if (igas(iph) == 0)
+
+    }
 
   });
 

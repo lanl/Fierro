@@ -15,6 +15,8 @@ void EVPFFT::update_defgrade()
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
 
+    if (iframe(i,j,k) == 0) {
+
     real_t detdefgradeinc;
 
     // thread private arrays
@@ -95,6 +97,8 @@ void EVPFFT::update_defgrade()
       }
 
     } // end if (igas(iph) == 0)
+
+    }
 
   }); // end FOR_ALL_CLASS
 

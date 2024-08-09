@@ -39,6 +39,6 @@ void OutputFileManager::open_files()
             "E_dotP11,E_dotP22,E_dotP33,E_dotP23,E_dotP13,E_dotP12,"
             "EVM,EPVM,DVM,DPVM,SVM\n");
 
-    fprintf(err_file.get(), "STEP,IT,ERRE,ERRS,SVM,AVG_NR_IT\n");
+    fprintf(err_file.get(), "STEP,IT,ERRE,ERRS,ERRBC,SVM,AVG_NR_IT\n");
 #endif
 }

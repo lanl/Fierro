@@ -86,6 +86,7 @@ set( Sources
      chg_basis.cpp
      voigt.cpp
      matrix_exp.cpp
+     mod_frequency.cpp
      determinant33.cpp
      euler.cpp
      defgrad_dcmp.cpp
@@ -101,7 +102,16 @@ set( Sources
      update_defgradp.cpp
      update_defgrad.cpp
      update_defgrade.cpp
+     calc_eigenvelgradref.cpp
+     calc_velvert.cpp
+     calc_vel_boundary_lin_el.cpp
      calc_c0.cpp
+     calc_wfhat.cpp
+     calc_IC0a_inv.cpp
+     calc_velocity.cpp
+     update_grid.cpp
+     update_xvert.cpp
+     calc_vel_bc_error.cpp
      update_el_stiff.cpp
      Cauchy_to_PK1.cpp
      calc_c066mod.cpp

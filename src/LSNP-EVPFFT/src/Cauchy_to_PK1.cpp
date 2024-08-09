@@ -19,6 +19,8 @@ void EVPFFT::Cauchy_to_PK1()
     Kokkos::MDRangePolicy<Kokkos::Rank<3,LOOP_ORDER,LOOP_ORDER>>({1,1,1}, {npts3+1,npts2+1,npts1+1}),
     KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i, ArrayType <real_t,n> & loc_reduce) {
 
+    if (iframe(i,j,k) == 0) {
+
     // averages packed in array
     int ic;
     ic = -1;
@@ -28,6 +30,8 @@ void EVPFFT::Cauchy_to_PK1()
         ic = ic + 1;
         loc_reduce.array[ic] += sg(ii,jj,i,j,k) * wgtc(i,j,k);
       }
+    }
+
     }
 
   }, all_reduce);
@@ -51,6 +55,7 @@ void EVPFFT::Cauchy_to_PK1()
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
 
+    if (iframe(i,j,k) == 0) {
 
     for (int jj = 1; jj <= 3; jj++) {
       for (int ii = 1; ii <= 3; ii++) {
@@ -59,6 +64,7 @@ void EVPFFT::Cauchy_to_PK1()
           sgPK1(ii,jj,i,j,k) += (sg(ii,kk,i,j,k) - sgavg(ii,kk))*defgradinv(jj,kk,i,j,k)*detF(i,j,k);
         }
       }
+    }
     }
   
   }); // end FOR_ALL_CLASS

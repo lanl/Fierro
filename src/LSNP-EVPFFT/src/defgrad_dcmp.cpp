@@ -93,7 +93,6 @@ void defgrad_dcmp(real_t *F_, real_t *V_, real_t *R_)
       }
     }
   }
-  // printf("\nTotal iter = %d\n", iter);
 
   if (iter > iter_max) {
     printf("Max number of iterations exceeded in %s\n", __FUNCTION__);
