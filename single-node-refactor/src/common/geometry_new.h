@@ -372,7 +372,7 @@ void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 /////////////////////////////////////////////////////////////////////////////
 inline void get_vol(const DCArrayKokkos<double>& elem_vol,
     const DCArrayKokkos<double>& node_coords,
-    const mesh_t& mesh)
+    const Mesh_t& mesh)
 {
     const size_t num_dims = mesh.num_dims;
 
@@ -629,7 +629,7 @@ KOKKOS_INLINE_FUNCTION
 size_t check_bdy(const size_t patch_gid,
     const int     this_bc_tag,
     const double  val,
-    const mesh_t& mesh,
+    const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords)
 {
     size_t num_dims = mesh.num_dims;
@@ -711,7 +711,7 @@ size_t check_bdy(const size_t patch_gid,
 ///
 /////////////////////////////////////////////////////////////////////////////
 inline void tag_bdys(const BoundaryCondition_t& boundary,
-    mesh_t& mesh,
+    Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords)
 {
     // if (bdy_set == mesh.num_bdy_sets){

@@ -185,7 +185,7 @@ struct BoundaryConditionFunctions_t
 {
 
         // function pointer for velocity BC's
-        void (*velocity) (const mesh_t& mesh,
+        void (*velocity) (const Mesh_t& mesh,
                           const DCArrayKokkos <BoundaryConditionEnums_t>& BoundaryConditionEnums,
                           const DCArrayKokkos<double>& bc_global_vars,
                           const DCArrayKokkos<double>& bc_state_vars,

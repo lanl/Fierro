@@ -34,6 +34,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "sgh_solver.h"
 
+#include "simulation_parameters.h"
+#include "material.h"
+#include "boundary_conditions.h"
+#include "mesh.h"
+#include "state.h"
+#include "geometry_new.h"
+#include "mesh_io.h"
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn solve
@@ -44,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH::execute(SimulationParameters_t& SimulationParamaters, 
                   Material_t& Materials, 
                   BoundaryCondition_t& BoundaryConditions, 
-                  mesh_t& mesh, 
+                  Mesh_t& mesh, 
                   State_t& State)
 {
     std::cout << "In execute function in sgh solver" << std::endl;
@@ -692,7 +700,7 @@ double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_ma
     return IE_sum;
 } // end function 
 
-double sum_domain_kinetic_energy(const mesh_t& mesh,
+double sum_domain_kinetic_energy(const Mesh_t& mesh,
                                  const DCArrayKokkos<double>& node_vel,
                                  const DCArrayKokkos<double>& node_coords,
                                  const DCArrayKokkos<double>& node_mass)
@@ -742,7 +750,7 @@ double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass
 } // end function 
 
 
-double sum_domain_node_mass(const mesh_t& mesh,
+double sum_domain_node_mass(const Mesh_t& mesh,
                             const DCArrayKokkos<double>& node_coords,
                             const DCArrayKokkos<double>& node_mass)
 {
@@ -769,7 +777,7 @@ double sum_domain_node_mass(const mesh_t& mesh,
 
 // a function to calculate the 2D-RZ areal mass (rho A = m/R)
 // for R=0, it is interpolated from off-axis
-void calc_node_areal_mass(const mesh_t& mesh,
+void calc_node_areal_mass(const Mesh_t& mesh,
                           const DCArrayKokkos<double>& node_coords,
                           const DCArrayKokkos<double>& node_mass,
                           CArrayKokkos<double> node_extensive_mass,
@@ -809,7 +817,7 @@ void calc_node_areal_mass(const mesh_t& mesh,
 
 
 // set the corner forces to zero
-void set_corner_force_zero(const mesh_t& mesh, 
+void set_corner_force_zero(const Mesh_t& mesh, 
                            const DCArrayKokkos<double>& corner_force)
 {
 

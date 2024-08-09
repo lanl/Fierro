@@ -46,17 +46,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/stat.h>
 
 
-
-
-
-// ==============================================================================
-//   Functions to get 1D for an i,j,k layout mesh
-// ==============================================================================
-// inline int get_id(int i, int j, int k, int num_i, int num_j);
-
-// KOKKOS_INLINE_FUNCTION
-// int get_id_device(int i, int j, int k, int num_i, int num_j);
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn get_id
@@ -157,7 +146,7 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_mesh(mesh_t& mesh, 
+    void read_mesh(Mesh_t& mesh, 
                    GaussPoint_t& GaussPoints, 
                    node_t& node, 
                    corner_t& corner, 
@@ -188,7 +177,7 @@ public:
     /// \param Number of RK bins
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_ensight_mesh(mesh_t& mesh, 
+    void read_ensight_mesh(Mesh_t& mesh, 
                            GaussPoint_t& GaussPoints, 
                            node_t& node, 
                            corner_t& corner, 
@@ -339,7 +328,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_mesh(mesh_t& mesh, 
+    void build_mesh(Mesh_t& mesh, 
                     GaussPoint_t& GaussPoints,
                     node_t& node, 
                     corner_t& corner, 
@@ -383,7 +372,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_box(mesh_t& mesh, 
+    void build_2d_box(Mesh_t& mesh, 
                       GaussPoint_t& GaussPoints,
                       node_t& node, 
                       corner_t& corner, 
@@ -514,7 +503,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_polar(mesh_t& mesh, 
+    void build_2d_polar(Mesh_t& mesh, 
                         GaussPoint_t& GaussPoints,
                         node_t& node, 
                         corner_t& corner, 
@@ -648,7 +637,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_box(mesh_t& mesh, 
+    void build_3d_box(Mesh_t& mesh, 
                       GaussPoint_t& GaussPoints,
                       node_t& node, 
                       corner_t& corner, 
@@ -799,7 +788,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_HexN_box(mesh_t& mesh, 
+    void build_3d_HexN_box(Mesh_t& mesh, 
                            GaussPoint_t& GaussPoints,
                            node_t& node, 
                            corner_t& corner, 
@@ -915,7 +904,7 @@ public:
     /// \param Simulation input parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_mesh(mesh_t&   mesh,
+    void write_mesh(Mesh_t&   mesh,
                     State_t& State,
                     SimulationParameters_t& SimulationParamaters,
                     double time_value,
@@ -967,7 +956,7 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_ensight(mesh_t&   mesh,
+    void write_ensight(Mesh_t&   mesh,
                        State_t&  State,
                        SimulationParameters_t& SimulationParamaters,
                        double time_value,
@@ -1348,7 +1337,7 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_vtk(mesh_t&   mesh,
+    void write_vtk(Mesh_t&   mesh,
                    State_t&  State,
                    SimulationParameters_t& SimulationParamaters,
                    double time_value,
@@ -1372,7 +1361,7 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_material_point_state(mesh_t&  mesh,
+    void write_material_point_state(Mesh_t&  mesh,
                                     State_t& State,
                                     SimulationParameters_t& SimulationParamaters,
                                     double time_value,

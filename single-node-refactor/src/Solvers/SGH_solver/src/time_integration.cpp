@@ -33,6 +33,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver.h"
+#include "mesh.h"
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -102,7 +104,7 @@ void SGH::rk_init(DCArrayKokkos<double>& node_coords,
 /// REMOVE EXCESS TIME RELATED VARIABLES
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_timestep(mesh_t& mesh,
+void SGH::get_timestep(Mesh_t& mesh,
                        DCArrayKokkos<double>& node_coords,
                        DCArrayKokkos<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,
@@ -222,7 +224,7 @@ void SGH::get_timestep(mesh_t& mesh,
 /// \param View of element volume
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_timestep2D(mesh_t& mesh,
+void SGH::get_timestep2D(Mesh_t& mesh,
                          DCArrayKokkos<double>& node_coords,
                          DCArrayKokkos<double>& node_vel,
                          DCArrayKokkos<double>& GaussPoints_vol,

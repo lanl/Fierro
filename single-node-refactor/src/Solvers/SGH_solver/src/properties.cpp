@@ -33,6 +33,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver.h"
+#include "material.h"
+#include "mesh.h"
+#include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -59,7 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_state(
     const Material_t& Materials,
-    const mesh_t& mesh,
+    const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& MaterialPoints_den,
@@ -307,7 +310,7 @@ void SGH::update_state(
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_state2D(
     const Material_t& Materials,
-    const mesh_t& mesh,
+    const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& MaterialPoints_den,

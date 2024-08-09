@@ -33,6 +33,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver.h"
+#include "mesh.h"
+#include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -49,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_velocity(double rk_alpha,
     double dt,
-    const mesh_t& mesh,
+    const Mesh_t& mesh,
     DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& corner_force) const
@@ -264,7 +266,7 @@ void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_divergence(DCArrayKokkos<double>& elem_div,
-    const mesh_t mesh,
+    const Mesh_t mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
@@ -340,7 +342,7 @@ void SGH::get_divergence(DCArrayKokkos<double>& elem_div,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_divergence2D(DCArrayKokkos<double>& elem_div,
-    const mesh_t mesh,
+    const Mesh_t mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const

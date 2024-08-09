@@ -213,7 +213,7 @@ struct lobatto_in_elem_t
 // };
 
 // mesh sizes and connectivity data structures
-struct mesh_t
+struct Mesh_t
 {
     // ******* Entity Definitions **********//
     // Element: A hexahedral volume
@@ -1279,7 +1279,7 @@ struct mesh_t
         num_bdy_nodes_saved.update_host();
         Kokkos::fence();
 
-        // save the number of bdy_nodes to mesh_t
+        // save the number of bdy_nodes to Mesh_t
         num_bdy_nodes = num_bdy_nodes_saved.host(0);
 
         bdy_nodes = CArrayKokkos<size_t>(num_bdy_nodes, "mesh.bdy_nodes");
@@ -1459,7 +1459,7 @@ struct mesh_t
     /// \brief Build sets of boundary nodes
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_boundry_node_sets(mesh_t& mesh)
+    void build_boundry_node_sets(Mesh_t& mesh)
     {
         // build boundary nodes in each boundary set
 
@@ -1528,7 +1528,7 @@ struct mesh_t
 
         return;
     } // end method to build boundary nodes
-}; // end mesh_t
+}; // end Mesh_t
 
 KOKKOS_FUNCTION
 void decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
