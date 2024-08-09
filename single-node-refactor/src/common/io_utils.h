@@ -935,6 +935,13 @@ public:
                           time_value,
                           graphics_times);
         }
+        else if (SimulationParamaters.output_options.format == output_options::state) {
+            write_material_point_state(mesh,
+                                      State,
+                                      SimulationParamaters,
+                                      time_value,
+                                      graphics_times);
+        }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
             std::cout << "Valid options are: " << std::endl;
@@ -954,9 +961,7 @@ public:
     /// \brief Writes an ensight output file
     ///
     /// \param Simulation mesh
-    /// \param Element related state
-    /// \param Node related state
-    /// \param Corner related state
+    /// \param State data
     /// \param Simulation parameters
     /// \param current time value
     /// \param Vector of all graphics output times
@@ -1337,9 +1342,7 @@ public:
     /// \brief Writes a vtk output file
     ///
     /// \param Simulation mesh
-    /// \param Element related state
-    /// \param Node related state
-    /// \param Corner related state
+    /// \param State data
     /// \param Simulation parameters
     /// \param current time value
     /// \param Vector of all graphics output times
@@ -1354,6 +1357,145 @@ public:
         // Not yet supported
         throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
     }
+
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn write_material_point_state
+    ///
+    /// \brief Writes a state output file at each material point
+    ///
+    /// \param Simulation mesh
+    /// \param State data
+    /// \param Simulation parameters
+    /// \param current time value
+    /// \param Vector of all graphics output times
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void write_material_point_state(mesh_t&  mesh,
+                                    State_t& State,
+                                    SimulationParameters_t& SimulationParamaters,
+                                    double time_value,
+                                    CArray<double> graphics_times)
+    {
+
+        // WARNING WARNING WARNING:
+        // This currently assumes the gauss and material point IDs are the same as the element ID
+        // This will need to be updated for high order methods
+
+        // Update host data
+        // ---- Update host data ----
+        size_t num_mats = State.MaterialPoints.size();
+
+        for(int mat_id=0; mat_id<num_mats; mat_id++){
+            State.MaterialPoints(mat_id).den.update_host();
+            State.MaterialPoints(mat_id).pres.update_host();
+            State.MaterialPoints(mat_id).stress.update_host();
+            State.MaterialPoints(mat_id).sspd.update_host();
+            State.MaterialPoints(mat_id).sie.update_host();
+            State.MaterialPoints(mat_id).mass.update_host();
+        } // end for mat_id
+
+        State.GaussPoints.vol.update_host();
+
+        State.node.coords.update_host();
+        State.node.vel.update_host();
+        State.node.mass.update_host();
+
+        Kokkos::fence();
+
+
+        struct stat st;
+
+        if (stat("state", &st) != 0)
+        {
+            system("mkdir state");
+        }
+
+
+        size_t num_dims = mesh.num_dims;
+
+        //  ---------------------------------------------------------------------------
+        //  Setup of file and directory for exporting
+        //  ---------------------------------------------------------------------------
+
+        // output file
+        FILE* out_elem_state;  // element average state
+        char  filename[128];
+
+        sprintf(filename, "state/mat_pt_state_t_%6.4e.txt", time_value);
+
+
+        // output files
+        out_elem_state = fopen(filename, "w");
+
+        // write state dump
+        fprintf(out_elem_state, "# state dump file\n");
+        fprintf(out_elem_state, "# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass \n");
+
+
+
+        // write out values for the elem
+        for(size_t mat_id = 0; mat_id<num_mats; mat_id++){
+
+            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+            for (size_t elem_lid = 0; elem_lid < num_mat_elems; elem_lid++)
+            {
+
+                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem(elem_lid); 
+
+
+                double elem_coords[3];
+                elem_coords[0] = 0.0;
+                elem_coords[1] = 0.0;
+                elem_coords[2] = 0.0;
+
+                // get the coordinates of the element center
+                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++)
+                {
+                    elem_coords[0] += State.node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
+                    elem_coords[1] += State.node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
+                    if (num_dims == 3)
+                    {
+                        elem_coords[2] += State.node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
+                    }
+                    else
+                    {
+                        elem_coords[2] = 0.0;
+                    }
+                } // end loop over nodes in element
+
+                elem_coords[0] = elem_coords[0] / mesh.num_nodes_in_elem;
+                elem_coords[1] = elem_coords[1] / mesh.num_nodes_in_elem;
+                elem_coords[2] = elem_coords[2] / mesh.num_nodes_in_elem;
+
+                double rad2 = sqrt(elem_coords[0] * elem_coords[0] +
+                                   elem_coords[1] * elem_coords[1]);
+
+                double rad3 = sqrt(elem_coords[0] * elem_coords[0] +
+                                   elem_coords[1] * elem_coords[1] +
+                                   elem_coords[2] * elem_coords[2]);
+
+
+
+                fprintf(out_elem_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t \n",
+                         elem_coords[0],
+                         elem_coords[1],
+                         elem_coords[2],
+                         rad2,
+                         rad3,
+                         State.MaterialPoints(mat_id).den.host(elem_gid),
+                         State.MaterialPoints(mat_id).pres.host(elem_gid),
+                         State.MaterialPoints(mat_id).sie.host(1, elem_gid),
+                         State.MaterialPoints(mat_id).sspd.host(elem_gid),
+                         State.GaussPoints.vol.host(elem_gid),
+                         State.MaterialPoints(mat_id).mass.host(elem_gid) );
+            } // end for elements
+        } // end for materials
+        fclose(out_elem_state);
+
+        return;
+    } // end of state output
 }; // end class
 
 
