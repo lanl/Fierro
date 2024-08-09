@@ -43,6 +43,7 @@
 #include "material.h"
 #include "region.h"
 #include "boundary_conditions.h"
+#include "dynamic_options.h"
 
 
 struct SimulationParameters_t;
@@ -56,25 +57,21 @@ public:
 
     virtual void initialize(SimulationParameters_t& SimulationParamaters, 
                             Material_t& Materials, 
-                            BoundaryCondition_t& Boundary) const = 0;
+                            mesh_t& mesh, 
+                            BoundaryCondition_t& Boundary,
+                            State_t& State) const = 0;
 
     virtual void setup(SimulationParameters_t& SimulationParamaters, 
                        Material_t& Materials, 
-                       BoundaryCondition_t& Boundary, 
                        mesh_t& mesh, 
-                       node_t& node, 
-                       MaterialPoint_t& MaterialPoints, 
-                       GaussPoint_t& GaussPoints,
-                       corner_t& corner) const = 0;
+                       BoundaryCondition_t& Boundary,
+                       State_t& State) = 0;
 
     virtual void execute(SimulationParameters_t& SimulationParamaters, 
                          Material_t& Materials, 
-                         BoundaryCondition_t& Boundary, 
+                         BoundaryCondition_t& BoundaryConditions, 
                          mesh_t& mesh, 
-                         node_t& node, 
-                         MaterialPoint_t& MaterialPoints, 
-                         GaussPoint_t& GaussPoints,
-                         corner_t& corner) = 0;
+                         State_t& State) = 0;
 
     virtual void finalize(SimulationParameters_t& SimulationParamaters, 
                           Material_t& Materials, 

@@ -31,9 +31,9 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
-
 #ifndef FIERRO_DYNAMIC_OPTIONS_H
 #define FIERRO_DYNAMIC_OPTIONS_H
+
 #include <stdio.h>
 #include "matar.h"
 
