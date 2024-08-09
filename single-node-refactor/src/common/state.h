@@ -405,6 +405,11 @@ struct State_t
     //    material to mesh maps
     // ---------------------------------------------------------------------
     CArray<MaterialToMeshMap_t>  MaterialToMeshMaps;   ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
+
+
+    // ---------------------------------------------------------------------
+    //    materialto material maps
+    // ---------------------------------------------------------------------
     corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_lid, corn_lid)
     points_in_mat_t  points_in_mat_elem;  ///< for accessing e.g., guass points mat lid with arbitrary-order FE 
     zones_in_mat_t   zones_in_mat_elem;   ///< for accessing sub-zones mat lid with arbitrary-order FE
