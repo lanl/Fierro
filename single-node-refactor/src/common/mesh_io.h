@@ -990,8 +990,6 @@ public:
 
         // --------------------------
 
-
-
         const int num_scalar_vars = 10;
         const int num_vec_vars    = 2;
 
@@ -1344,8 +1342,275 @@ public:
                    CArray<double> graphics_times)
     {
         // Not yet supported
-        throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
-    }
+        // throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
+
+        const int num_scalar_vars = 10;
+        const int num_vec_vars    = 2;
+
+
+        size_t num_mats = State.MaterialPoints.size();
+
+        // ---- Update host data ----
+
+        // material point values
+        for(int mat_id=0; mat_id<num_mats; mat_id++){
+            State.MaterialPoints(mat_id).den.update_host();
+            State.MaterialPoints(mat_id).pres.update_host();
+            State.MaterialPoints(mat_id).stress.update_host();
+            State.MaterialPoints(mat_id).sspd.update_host();
+            State.MaterialPoints(mat_id).sie.update_host();
+            State.MaterialPoints(mat_id).mass.update_host();
+            State.MaterialPoints(mat_id).eroded.update_host();
+        } // end for mat_id
+
+        // gauss point values
+        State.GaussPoints.vol.update_host();
+
+        // nodal values
+        State.node.coords.update_host();
+        State.node.vel.update_host();
+        State.node.mass.update_host();
+
+        Kokkos::fence();
+
+
+        const char scalar_var_names[num_scalar_vars][15] = {
+            "den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch", "eroded"
+        };
+
+        const char vec_var_names[num_vec_vars][15] = {
+            "pos", "vel"
+        };
+
+        // short hand
+        const size_t num_nodes = mesh.num_nodes;
+        const size_t num_elems = mesh.num_elems;
+        const size_t num_dims  = mesh.num_dims;
+
+        // save the cell state to an array for exporting to graphics files
+        auto elem_fields = CArray<double>(num_elems, num_scalar_vars);
+        int  elem_switch = 1;
+
+        DCArrayKokkos<double> speed(num_elems);
+        FOR_ALL(elem_gid, 0, num_elems, {
+            double elem_vel[3]; // note:initialization with a list won't work
+            elem_vel[0] = 0.0;
+            elem_vel[1] = 0.0;
+            elem_vel[2] = 0.0;
+            // get the coordinates of the element center
+            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                elem_vel[0] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_vel[1] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                if (mesh.num_dims == 3) {
+                    elem_vel[2] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                }
+                else{
+                    elem_vel[2] = 0.0;
+                }
+            } // end loop over nodes in element
+            elem_vel[0] = elem_vel[0] / mesh.num_nodes_in_elem;
+            elem_vel[1] = elem_vel[1] / mesh.num_nodes_in_elem;
+            elem_vel[2] = elem_vel[2] / mesh.num_nodes_in_elem;
+
+            double speed_sqrd = 0.0;
+            for (int dim = 0; dim < num_dims; dim++) {
+                speed_sqrd += elem_vel[dim] * elem_vel[dim];
+            }
+            speed(elem_gid) = sqrt(speed_sqrd);
+        }); // end parallel for
+        speed.update_host();
+        Kokkos::fence();
+
+        // save the output scale fields to a single 2D array
+        
+        // export material centeric data to the elements
+        for(int mat_id=0; mat_id<num_mats; mat_id++){
+
+            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+            for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
+
+                // 1 material per element
+
+                // get elem gid
+                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid); 
+
+                // save outputs
+                elem_fields(elem_gid, 0) = State.MaterialPoints(mat_id).den.host(mat_elem_lid);
+                elem_fields(elem_gid, 1) = State.MaterialPoints(mat_id).pres.host(mat_elem_lid);
+                elem_fields(elem_gid, 2) = State.MaterialPoints(mat_id).sie.host(1, mat_elem_lid);
+                // 3 is guass point vol
+                elem_fields(elem_gid, 4) = State.MaterialPoints(mat_id).mass.host(mat_elem_lid);
+                elem_fields(elem_gid, 5) = State.MaterialPoints(mat_id).sspd.host(mat_elem_lid);
+                // 6 is elem speed
+                elem_fields(elem_gid, 7) = (double)mat_id;
+                // 8 is the e_switch
+                elem_fields(elem_gid, 9) = (double)State.MaterialPoints(mat_id).eroded.host(mat_elem_lid);
+
+            } // end for mat elems storage
+        } // end parallel loop over materials
+
+        // export element centric data
+        double e_switch = 1;
+        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+            elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
+            elem_fields(elem_gid, 6) = speed.host(elem_gid);
+            elem_fields(elem_gid, 8) = e_switch;
+            elem_switch *= -1;
+        } // end for elem_gid
+
+
+        // save the vertex vector fields to an array for exporting to graphics files
+        CArray<double> vec_fields(num_nodes, num_vec_vars, 3);
+
+        for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
+            // position, var 0
+            vec_fields(node_gid, 0, 0) = State.node.coords.host(1, node_gid, 0);
+            vec_fields(node_gid, 0, 1) = State.node.coords.host(1, node_gid, 1);
+            if (num_dims == 2) {
+                vec_fields(node_gid, 0, 2) = 0.0;
+            }
+            else{
+                vec_fields(node_gid, 0, 2) = State.node.coords.host(1, node_gid, 2);
+            }
+
+            // position, var 1
+            vec_fields(node_gid, 1, 0) = State.node.vel.host(1, node_gid, 0);
+            vec_fields(node_gid, 1, 1) = State.node.vel.host(1, node_gid, 1);
+            if (num_dims == 2) {
+                vec_fields(node_gid, 1, 2) = 0.0;
+            }
+            else{
+                vec_fields(node_gid, 1, 2) = State.node.vel.host(1, node_gid, 2);
+            }
+        } // end for loop over vertices
+    
+         
+    
+        // --------------------------
+
+        FILE *out[20];   // the output files that are written to
+        char name[100];  // char string
+        
+        
+        struct stat st;
+        
+        if(stat("vtk",&st) != 0)
+            system("mkdir vtk");
+
+
+        sprintf(name,"vtk/meshHexN.vtk");  // mesh file
+        out[0]=fopen(name,"w");
+
+
+
+        fprintf(out[0],"# vtk DataFile Version 2.0\n");  // part 2
+        fprintf(out[0],"Mesh for Fierro\n");             // part 2
+        fprintf(out[0],"ASCII \n");                      // part 3
+        fprintf(out[0],"DATASET UNSTRUCTURED_GRID\n\n"); // part 4
+        
+        fprintf(out[0],"POINTS %zu float\n", mesh.num_nodes);
+
+        
+        // write all components of the point coordinates
+        for (size_t node_gid=0; node_gid<mesh.num_nodes; node_gid++){
+            fprintf(out[0],
+                    "%f %f %f\n",
+                    State.node.coords(1, node_gid, 0),
+                    State.node.coords(1, node_gid, 1),
+                    State.node.coords(1, node_gid, 2));
+        } // end for
+        // WARNING update to (1, node_gid, ...)  WARNING needs to be rk=1 for outputs
+
+
+        /*
+        ---------------------------------------------------------------------------
+        Write the elems
+        ---------------------------------------------------------------------------
+        */
+        fprintf(out[0],"\n");
+        fprintf(out[0],"CELLS %lu %lu\n", mesh.num_elems, mesh.num_elems+mesh.num_elems*mesh.num_nodes_in_elem);  // size=all printed values
+
+        // write all global point numbers for this elem
+        for (size_t elem_gid=0; elem_gid<mesh.num_elems; elem_gid++) {
+            
+            fprintf(out[0], "%lu ", mesh.num_nodes_in_elem); // num points in this elem
+            
+            for (size_t vtk_index=0; vtk_index<mesh.num_nodes_in_elem; vtk_index++){
+                
+                // get the Fierro node_lid
+                // size_t node_lid = mesh.convert_vtk_to_fierro(vtk_index);
+                size_t node_lid = vtk_index;
+                
+                fprintf(out[0],"%lu ", mesh.nodes_in_elem.host(elem_gid, node_lid));
+            
+            }
+            fprintf(out[0],"\n");
+            
+        } // end for
+
+    
+        // Write the element types
+        fprintf(out[0],"\n");
+        fprintf(out[0],"CELL_TYPES %zu \n", mesh.num_elems);
+        // VTK_LAGRANGE_HEXAHEDRON: 72,
+        // VTK_HIGHER_ORDER_HEXAHEDRON: 67
+        // VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON = 33
+        // element types: https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
+        // element types: https://kitware.github.io/vtk-js/api/Common_DataModel_CellTypes.html
+        // vtk format: https://www.kitware.com//modeling-arbitrary-order-lagrange-finite-elements-in-the-visualization-toolkit/
+        for (size_t elem_gid=0; elem_gid<mesh.num_elems; elem_gid++) {
+            fprintf(out[0],"%d \n", 72);
+        }
+
+        /*
+        ---------------------------------------------------------------------------
+        Write the nodal vector variables to file
+        ---------------------------------------------------------------------------
+        */
+        
+        fprintf(out[0],"\n");
+        fprintf(out[0],"POINT_DATA %zu \n", mesh.num_nodes);
+        
+        // vtk vector vars = (position, velocity)
+        for (int var=0; var<num_vec_vars; var++){
+            
+            fprintf(out[0],"VECTORS %s float \n", vec_var_names[var]);
+            for (size_t node_gid=0; node_gid<mesh.num_nodes; node_gid++) {
+                fprintf(out[0],"%f %f %f\n",
+                        vec_fields(node_gid, var, 0),
+                        vec_fields(node_gid, var, 1),
+                        vec_fields(node_gid, var, 2));
+            } // end for nodes
+            
+        } // end for vec_vars
+
+        /*
+        ---------------------------------------------------------------------------
+        Write the scalar elem variable to file
+        ---------------------------------------------------------------------------
+        */
+
+        
+        fprintf(out[0],"\n");
+        fprintf(out[0],"CELL_DATA %zu \n", mesh.num_elems);
+        
+        for (int var=0; var<num_scalar_vars; var++){
+
+            fprintf(out[0],"SCALARS %s float 1\n", scalar_var_names[var]); // the 1 is number of scalar components [1:4]
+            fprintf(out[0],"LOOKUP_TABLE default\n");
+            for (size_t elem_gid=0; elem_gid < mesh.num_elems; elem_gid++) {
+                fprintf(out[0],"%f\n", elem_fields(elem_gid, var));
+            } // end for elem
+            
+        } // end for scalar_vars
+
+        
+        fclose(out[0]);
+
+    }// end write vtk
+
+        
 
 
     /////////////////////////////////////////////////////////////////////////////
