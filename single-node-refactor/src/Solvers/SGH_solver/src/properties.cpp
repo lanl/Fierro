@@ -62,7 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_state(
     const Material_t& Materials,
-    const Mesh_t& mesh,
+    const Mesh_t&     mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& MaterialPoints_den,
@@ -80,21 +80,16 @@ void SGH::update_state(
     const size_t num_material_elems,
     const size_t mat_id) const
 {
-    
     const size_t num_dims = mesh.num_dims;
-
 
     // --- pressure ---
     if (Materials.MaterialEnums.host(mat_id).EOSType == model::decoupledEOSType) {
-
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
-
             // get elem gid
             size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
-
-            // get the material points for this material 
+            // get the material points for this material
             // Note, with the SGH method, they are equal
             size_t mat_point_lid = mat_elem_lid;
 
@@ -114,9 +109,9 @@ void SGH::update_state(
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(1, mat_point_lid),
-                                        Materials.eos_global_vars);   
+                                        Materials.eos_global_vars);
 
-            // --- Sound Speed ---                               
+            // --- Sound Speed ---
             Materials.MaterialFunctions(mat_id).calc_sound_speed(
                                         MaterialPoints_pres,
                                         MaterialPoints_stress,
@@ -127,9 +122,7 @@ void SGH::update_state(
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(1, mat_point_lid),
                                         Materials.eos_global_vars);
-
         }); // end parallel for over mat elem lid
-
     } // if decoupled EOS
     else {
         // only calculate density as pressure and sound speed come from the coupled strength model
@@ -137,56 +130,45 @@ void SGH::update_state(
         // --- Density ---
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
-
             // get elem gid
             size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
-
-            // get the material points for this material 
+            // get the material points for this material
             // Note, with the SGH method, they are equal
             size_t mat_point_lid = mat_elem_lid;
 
             // for this method, gauss point is equal to elem_gid
             size_t gauss_gid = elem_gid;
 
-
             // --- Density ---
             MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
-
         }); // end parallel for over mat elem lid
         Kokkos::fence();
     } // end if
-
 
     // --- Stress ---
 
     // state_based elastic plastic model
     if (Materials.MaterialEnums.host(mat_id).StrengthType == model::stateBased) {
-
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
 
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
-
             // get elem gid
             size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
-
-            // get the material points for this material 
+            // get the material points for this material
             // Note, with the SGH method, they are equal
             size_t mat_point_lid = mat_elem_lid;
 
             // for this method, gauss point is equal to elem_gid
             size_t gauss_gid = elem_gid;
 
-
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
-
             // --- Density ---
             MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
-
 
             // corner area normals
             double area_array[24];
@@ -207,7 +189,6 @@ void SGH::update_state(
                         GaussPoints_vol(elem_gid),
                         elem_gid);
 
-
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(
                                             MaterialPoints_pres,
@@ -217,7 +198,7 @@ void SGH::update_state(
                                             MaterialPoints_statev,
                                             MaterialPoints_sspd,
                                             MaterialPoints_den(mat_point_lid),
-                                            MaterialPoints_sie(1,mat_point_lid),
+                                            MaterialPoints_sie(1, mat_point_lid),
                                             vel_grad,
                                             elem_node_gids,
                                             node_coords,
@@ -225,24 +206,17 @@ void SGH::update_state(
                                             GaussPoints_vol(gauss_gid),
                                             dt,
                                             rk_alpha);
-
-
         }); // end parallel for over mat elem lid
-
     } // end if state_based strength model
-
 
     // --- mat point erosion ---
     if (Materials.MaterialEnums.host(mat_id).ErosionModels != model::noErosion) {
-
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
-
             // get elem gid
             size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
-
-            // get the material points for this material 
+            // get the material points for this material
             // Note, with the SGH method, they are equal
             size_t mat_point_lid = mat_elem_lid;
 
@@ -261,26 +235,19 @@ void SGH::update_state(
                                    Materials.MaterialFunctions(mat_id).erode_density_val,
                                    mat_point_lid);
 
-
-
             // apply a void eos if mat_point is eroded
-            if(MaterialPoints_eroded(mat_point_lid)){
-
+            if (MaterialPoints_eroded(mat_point_lid)) {
                 MaterialPoints_pres(mat_point_lid) = 0.0;
                 MaterialPoints_sspd(mat_point_lid) = 1.0e-32;
 
                 for (size_t i = 0; i < 3; i++) {
                     for (size_t j = 0; j < 3; j++) {
-                        MaterialPoints_stress(1, mat_point_lid, i, j) = 0.0; 
+                        MaterialPoints_stress(1, mat_point_lid, i, j) = 0.0;
                     }
                 }  // end for i,j
-
             } // end if on eroded
-
-
-        
         }); // end parallel for
-    } // end if elem errosion 
+    } // end if elem errosion
 
     return;
 } // end method to update state
@@ -310,7 +277,7 @@ void SGH::update_state(
 /////////////////////////////////////////////////////////////////////////////
 void SGH::update_state2D(
     const Material_t& Materials,
-    const Mesh_t& mesh,
+    const Mesh_t&     mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& MaterialPoints_den,
@@ -328,43 +295,34 @@ void SGH::update_state2D(
     const size_t num_material_elems,
     const size_t mat_id) const
 {
-    
     const size_t num_dims = mesh.num_dims;
 
     // --- Density ---
     // loop over all the elements the material lives in
     FOR_ALL(mat_elem_lid, 0, num_material_elems, {
-
         // get elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
-
-        // get the material points for this material 
+        // get the material points for this material
         // Note, with the SGH method, they are equal
         size_t mat_point_lid = mat_elem_lid;
 
         // for this method, gauss point is equal to elem_gid
         size_t gauss_gid = elem_gid;
 
-
         // --- Density ---
         MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
-
     }); // end parallel for over mat elem lid
     Kokkos::fence();
 
-
     // --- pressure ---
     if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
-
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
-
             // get elem gid
             size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
-
-            // get the material points for this material 
+            // get the material points for this material
             // Note, with the SGH method, they are equal
             size_t mat_point_lid = mat_elem_lid;
 
@@ -381,8 +339,8 @@ void SGH::update_state2D(
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(0, mat_point_lid),
-                                        Materials.eos_global_vars);   
-            // --- Sound Speed ---                               
+                                        Materials.eos_global_vars);
+            // --- Sound Speed ---
             Materials.MaterialFunctions(mat_id).calc_sound_speed(
                                         MaterialPoints_pres,
                                         MaterialPoints_stress,
@@ -393,63 +351,54 @@ void SGH::update_state2D(
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(0, mat_point_lid),
                                         Materials.eos_global_vars);
-
         }); // end parallel for over mat elem lid
-
     } // if decoupled EOS
-
 
     // --- Stress ---
 
     // state_based elastic plastic model
     if (Materials.MaterialEnums.host(mat_id).StrengthType == model::stateBased) {
-
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
 
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
-
             // get elem gid
             size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
-
-            // get the material points for this material 
+            // get the material points for this material
             // Note, with the SGH method, they are equal
             size_t mat_point_lid = mat_elem_lid;
 
             // for this method, gauss point is equal to elem_gid
             size_t gauss_gid = elem_gid;
 
-
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
-
 
             // --- Density ---
             MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
 
+            // corner area normals
+            double area_array[24];
+            ViewCArrayKokkos<double> area(area_array, num_nodes_in_elem, num_dims);
 
-                // corner area normals
-                double area_array[24];
-                ViewCArrayKokkos<double> area(area_array, num_nodes_in_elem, num_dims);
+            // velocity gradient
+            double vel_grad_array[9];
+            ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
 
-                // velocity gradient
-                double vel_grad_array[9];
-                ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
+            // get the B matrix which are the OUTWARD corner area normals
+            geometry::get_bmatrix(area, elem_gid, node_coords, elem_node_gids);
 
-                // get the B matrix which are the OUTWARD corner area normals
-                geometry::get_bmatrix(area, elem_gid, node_coords, elem_node_gids);
-
-                // --- Calculate the velocity gradient ---
-                get_velgrad(vel_grad,
+            // --- Calculate the velocity gradient ---
+            get_velgrad(vel_grad,
                             elem_node_gids,
                             node_vel,
                             area,
                             GaussPoints_vol(elem_gid),
                             elem_gid);
 
-                // --- call strength model ---
-                Materials.MaterialFunctions(mat_id).calc_stress(
+            // --- call strength model ---
+            Materials.MaterialFunctions(mat_id).calc_stress(
                                              MaterialPoints_pres,
                                              MaterialPoints_stress,
                                              mat_point_lid,
@@ -457,7 +406,7 @@ void SGH::update_state2D(
                                              MaterialPoints_statev,
                                              MaterialPoints_sspd,
                                              MaterialPoints_den(mat_point_lid),
-                                             MaterialPoints_sie(1,mat_point_lid),
+                                             MaterialPoints_sie(1, mat_point_lid),
                                              vel_grad,
                                              elem_node_gids,
                                              node_coords,
@@ -465,24 +414,17 @@ void SGH::update_state2D(
                                              GaussPoints_vol(gauss_gid),
                                              dt,
                                              rk_alpha);
-
-
         }); // end parallel for over mat elem lid
-
     } // end if state_based strength model
-
 
     // --- mat point erosion ---
     if (Materials.MaterialEnums.host(mat_id).ErosionModels != model::noErosion) {
-
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
-
             // get elem gid
             size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
-
-            // get the material points for this material 
+            // get the material points for this material
             // Note, with the SGH method, they are equal
             size_t mat_point_lid = mat_elem_lid;
 
@@ -505,16 +447,15 @@ void SGH::update_state2D(
             double phi_fail = 1.0 - (double)MaterialPoints_eroded(mat_point_lid);
             MaterialPoints_pres(mat_point_lid) *= phi_fail;  // phi_fail = 1 or 0
             MaterialPoints_sspd(mat_point_lid) *= phi_fail;
-            MaterialPoints_sspd(mat_point_lid) = fmax(MaterialPoints_sspd(mat_point_lid), 1e-32);
+            MaterialPoints_sspd(mat_point_lid)  = fmax(MaterialPoints_sspd(mat_point_lid), 1e-32);
 
             for (size_t i = 0; i < 3; i++) {
                 for (size_t j = 0; j < 3; j++) {
                     MaterialPoints_stress(1, mat_point_lid, i, j) *= phi_fail;
                 }
             }  // end for i,j
-        
         }); // end parallel for
-    } // end if elem errosion 
+    } // end if elem errosion
 
     return;
 } // end method to update state2D
