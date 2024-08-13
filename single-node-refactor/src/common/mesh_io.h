@@ -1322,6 +1322,62 @@ public:
         return;
     }
 
+/**\brief Given (i,j,k) coordinates within the Lagrange hex, return an offset into the local connectivity (PointIds) array.
+*
+* The \a order parameter must point to an array of 3 integers specifying the order
+* along each axis of the hexahedron.
+*/
+int PointIndexFromIJK(int i, int j, int k, const int* order)
+{
+    bool ibdy = (i == 0 || i == order[0]);
+    bool jbdy = (j == 0 || j == order[1]);
+    bool kbdy = (k == 0 || k == order[2]);
+    // How many boundaries do we lie on at once?
+    int nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0) + (kbdy ? 1 : 0);
+
+    if (nbdy == 3) // Vertex DOF
+    { // ijk is a corner node. Return the proper index (somewhere in [0,7]):
+        return (i ? (j ? 2 : 1) : (j ? 3 : 0)) + (k ? 4 : 0);
+    }
+
+    int offset = 8;
+    if (nbdy == 2) // Edge DOF
+    {
+        if (!ibdy)
+        { // On i axis
+            return (i - 1) +  (j ? order[0] - 1 + order[1] - 1 : 0) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
+        }
+        if (!jbdy)
+        { // On j axis
+            return (j - 1) + (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] - 1) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
+        }
+        // !kbdy, On k axis
+        offset += 4 * (order[0] - 1) + 4 * (order[1] - 1);
+        return (k - 1) + (order[2] - 1) * (i ? (j ? 3 : 1) : (j ? 2 : 0)) + offset;
+    }
+
+    offset += 4 * (order[0] - 1 + order[1] - 1 + order[2] - 1);
+    if (nbdy == 1) // Face DOF
+    {
+        if (ibdy) // On i-normal face
+        {
+            return (j - 1) + ((order[1] - 1) * (k - 1)) + (i ? (order[1] - 1) * (order[2] - 1) : 0) + offset;
+        }
+        offset += 2 * (order[1] - 1) * (order[2] - 1);
+        if (jbdy) // On j-normal face
+        {
+            return (i - 1) + ((order[0] - 1) * (k - 1)) + (j ? (order[2] - 1) * (order[0] - 1) : 0) + offset;
+        }
+        offset += 2 * (order[2] - 1) * (order[0] - 1);
+        // kbdy, On k-normal face
+        return (i - 1) + ((order[0] - 1) * (j - 1)) + (k ? (order[0] - 1) * (order[1] - 1) : 0) + offset;
+    }
+
+    // nbdy == 0: Body DOF
+    offset += 2 * ( (order[1] - 1) * (order[2] - 1) + (order[2] - 1) * (order[0] - 1) + (order[0] - 1) * (order[1] - 1));
+    return offset + (i - 1) + (order[0] - 1) * ( (j - 1) + (order[1] - 1) * ( (k - 1)));
+}
+
     /////////////////////////////////////////////////////////////////////////////
     ///
     /// \fn write_vtk
@@ -1485,7 +1541,13 @@ public:
             }
         } // end for loop over vertices
     
-         
+
+
+        // ---------------------------------------------------------------------------
+        // Done writing the graphics dump
+        // ---------------------------------------------------------------------------
+
+
     
         // --------------------------
 
@@ -1499,7 +1561,9 @@ public:
             system("mkdir vtk");
 
 
-        sprintf(name,"vtk/meshHexN.vtk");  // mesh file
+        // snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+        
+        sprintf(name,"vtk/meshHexN.%05d.vtk", graphics_id);  // mesh file
         out[0]=fopen(name,"w");
 
 
@@ -1520,7 +1584,6 @@ public:
                     State.node.coords(1, node_gid, 1),
                     State.node.coords(1, node_gid, 2));
         } // end for
-        // WARNING update to (1, node_gid, ...)  WARNING needs to be rk=1 for outputs
 
 
         /*
@@ -1528,6 +1591,38 @@ public:
         Write the elems
         ---------------------------------------------------------------------------
         */
+
+
+        CArray <int> get_ijk_from_vtk(mesh.num_nodes_in_elem, 3);
+        CArray <int> convert_vtk_to_fierro(mesh.num_nodes_in_elem);
+        
+        // re-order the nodes to be in i,j,k format of Fierro
+        int Pn_order = mesh.Pn;
+        int this_point = 0;
+        for (int k=0; k<=Pn_order; k++){
+            for (int j=0; j<=Pn_order; j++){
+                for (int i=0; i<=Pn_order; i++){
+                    
+                    // convert this_point index to the FE index convention
+                    int order[3] = {Pn_order, Pn_order, Pn_order};
+                    int this_index = PointIndexFromIJK(i, j, k, order);
+                    
+                    // store the points in this elem according the the finite
+                    // element numbering convention
+                    convert_vtk_to_fierro(this_index) = this_point;
+                    
+                    get_ijk_from_vtk(this_index, 0) = i;
+                    get_ijk_from_vtk(this_index, 1) = j;
+                    get_ijk_from_vtk(this_index, 2) = k;
+                    
+                    // increment the point counting index
+                    this_point = this_point + 1;
+                    
+                } // end for icount
+            } // end for jcount
+        }  // end for kcount
+
+
         fprintf(out[0],"\n");
         fprintf(out[0],"CELLS %lu %lu\n", mesh.num_elems, mesh.num_elems+mesh.num_elems*mesh.num_nodes_in_elem);  // size=all printed values
 
@@ -1590,8 +1685,6 @@ public:
         Write the scalar elem variable to file
         ---------------------------------------------------------------------------
         */
-
-        
         fprintf(out[0],"\n");
         fprintf(out[0],"CELL_DATA %zu \n", mesh.num_elems);
         
@@ -1605,6 +1698,9 @@ public:
             
         } // end for scalar_vars
 
+        graphics_times(graphics_id) = time_value;
+        // increment graphics id counter
+        graphics_id++;
         
         fclose(out[0]);
 
