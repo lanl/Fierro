@@ -385,10 +385,10 @@ public:
 
         double KE_sum = 0.0;
         double KE_loc_sum = 0.0;
-
         // extensive KE
         if(FEM_SGH_->simparam->optimization_options.optimization_objective_regions.size()){
             int nobj_volumes = FEM_SGH_->simparam->optimization_options.optimization_objective_regions.size();
+            auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
             const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
                 double ke = 0;
@@ -398,7 +398,7 @@ public:
                 current_node_coords[1] = all_initial_node_coords(node_gid, 1);
                 current_node_coords[2] = all_initial_node_coords(node_gid, 2);
                 for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
-                    if(FEM_SGH_->simparam->optimization_options.optimization_objective_regions(ivolume).contains(current_node_coords)){
+                    if(optimization_objective_regions(ivolume).contains(current_node_coords)){
                         contained = true;
                     }
                 }
