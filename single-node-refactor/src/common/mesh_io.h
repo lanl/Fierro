@@ -811,7 +811,7 @@ public:
         
         if (Pn_order > 19) {
             printf(" Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
-            return 0;
+            return;
         }
 
         const int num_zones_i = Pn_order*num_elems_i;
@@ -903,7 +903,7 @@ public:
                 for (int i=0; i<num_elems_i; i++){
                   
                     // global id for the elem
-                    elem_id = get_id(i, j, k, num_elems_i, num_elems_j);
+                    size_t elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
                     
                     // store the point IDs for this elem where the range is
                     // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
@@ -920,7 +920,7 @@ public:
                             for (int icount=i*Pn_order; icount<=(i+1)*Pn_order; icount++){
                                 
                                 // global id for the points
-                                point_id = get_id(icount, jcount, kcount,
+                                size_t node_gid = get_id(icount, jcount, kcount,
                                                   num_points_i, num_points_j);
                                 
                                 // convert this_point index to the FE index convention
@@ -952,7 +952,7 @@ public:
         // update device side
         mesh.nodes_in_elem.update_device();
 
-        // intialize corner variables
+        // initialize corner variables
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
         corner.initialize(num_corners, num_dim);
