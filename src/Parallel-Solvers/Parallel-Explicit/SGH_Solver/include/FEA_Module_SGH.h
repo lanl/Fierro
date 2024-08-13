@@ -701,7 +701,6 @@ public:
     int rk_num_bins;
 
     // optimization flags and data
-    bool kinetic_energy_objective;
     Teuchos::RCP<std::set<Dynamic_Checkpoint>> dynamic_checkpoint_set;
     Teuchos::RCP<std::vector<Dynamic_Checkpoint>> cached_dynamic_checkpoints;
     int num_active_checkpoints;

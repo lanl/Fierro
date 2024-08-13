@@ -137,7 +137,10 @@ private:
 public:
     bool   nodal_density_flag_;
     int    last_comm_step, last_solve_step, current_step;
+    int num_dim;
     size_t nvalid_modules;
+    size_t nlocal_nodes;
+    DViewCArrayKokkos<double> node_mass, node_coords;
     std::vector<FEA_MODULE_TYPE> valid_fea_modules; // modules that may interface with this objective function
     FEA_MODULE_TYPE set_module_type;
     // std::string my_fea_module = "SGH";
@@ -151,16 +154,23 @@ public:
         valid_fea_modules.push_back(FEA_MODULE_TYPE::Dynamic_Elasticity);
         nvalid_modules = valid_fea_modules.size();
         objective_sign = 1;
+        num_dim = Explicit_Solver_Pointer_->simparam.num_dims;
         const Simulation_Parameters& simparam = Explicit_Solver_Pointer_->simparam;
         for (const auto& fea_module : Explicit_Solver_Pointer_->fea_modules) {
             for (int ivalid = 0; ivalid < nvalid_modules; ivalid++) {
                 if (fea_module->Module_Type == FEA_MODULE_TYPE::SGH) {
                     FEM_SGH_ = dynamic_cast<FEA_Module_SGH*>(fea_module);
                     set_module_type = FEA_MODULE_TYPE::SGH;
+                    node_mass = FEM_SGH_->node_mass;
+                    node_coords = FEM_SGH_->node_coords;
+                    nlocal_nodes = FEM_SGH_->nlocal_nodes;
                 }
                 if (fea_module->Module_Type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
                     FEM_Dynamic_Elasticity_ = dynamic_cast<FEA_Module_Dynamic_Elasticity*>(fea_module);
                     set_module_type = FEA_MODULE_TYPE::Dynamic_Elasticity;
+                    node_mass = FEM_Dynamic_Elasticity_->node_mass;
+                    node_coords = FEM_Dynamic_Elasticity_->node_coords;
+                    nlocal_nodes = FEM_Dynamic_Elasticity_->nlocal_nodes;
                 }
             }
         }
@@ -353,6 +363,81 @@ public:
             FEM_SGH_->update_forward_solve(zp);
             FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
         }
+    }
+
+  /* --------------------------------------------------------------------------------------
+   Compute time integral contribution for this objective function form
+  ----------------------------------------------------------------------------------------- */
+    void step_accumulation(const real_t& dt, const size_t& cycle, const size_t& rk_level) {
+        
+        const_vec_array node_velocities_interface;
+        const_vec_array previous_node_velocities_interface;
+        bool use_solve_checkpoints    = FEM_SGH_->simparam->optimization_options.use_solve_checkpoints;
+        if(use_solve_checkpoints){
+            node_velocities_interface = FEM_SGH_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            previous_node_velocities_interface = FEM_SGH_->previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        }
+        else{
+            auto forward_solve_velocity_data = FEM_SGH_->forward_solve_velocity_data;
+            node_velocities_interface = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            previous_node_velocities_interface = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        }
+
+        double KE_sum = 0.0;
+        double KE_loc_sum = 0.0;
+
+        // extensive KE
+        if(FEM_SGH_->simparam->optimization_options.optimization_objective_regions.size()){
+            int nobj_volumes = FEM_SGH_->simparam->optimization_options.optimization_objective_regions.size();
+            const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+                double ke = 0;
+                double current_node_coords[3];
+                bool contained = false;
+                current_node_coords[0] = all_initial_node_coords(node_gid, 0);
+                current_node_coords[1] = all_initial_node_coords(node_gid, 1);
+                current_node_coords[2] = all_initial_node_coords(node_gid, 2);
+                for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                    if(FEM_SGH_->simparam->optimization_options.optimization_objective_regions(ivolume).contains(current_node_coords)){
+                        contained = true;
+                    }
+                }
+                if(contained){
+                    for (size_t dim = 0; dim < num_dim; dim++) {
+                        // midpoint integration approximation
+                        ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
+                                (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
+                    } // end for
+                }
+
+                if (num_dim == 2) {
+                    KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+                }
+                else{
+                    KE_loc_sum += node_mass(node_gid) * ke;
+                }
+            }, KE_sum);
+        }
+        else{
+            REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+                double ke = 0;
+                for (size_t dim = 0; dim < num_dim; dim++) {
+                    // midpoint integration approximation
+                    ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
+                        (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
+                } // end for
+
+                if (num_dim == 2) {
+                    KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+                }
+                else{
+                    KE_loc_sum += node_mass(node_gid) * ke;
+                }
+            }, KE_sum);
+        }
+        Kokkos::fence();
+        KE_sum = 0.5 * KE_sum;
+        objective_accumulation += KE_sum * dt;
     }
 
   /* --------------------------------------------------------------------------------------
