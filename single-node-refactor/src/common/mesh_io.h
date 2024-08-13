@@ -45,7 +45,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstring>
 #include <sys/stat.h>
 
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn get_id
@@ -67,7 +66,6 @@ inline int get_id(int i, int j, int k, int num_i, int num_j)
 {
     return i + j * num_i + k * num_i * num_j;
 }
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -91,8 +89,6 @@ int get_id_device(int i, int j, int k, int num_i, int num_j)
 {
     return i + j * num_i + k * num_i * num_j;
 }
-
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -138,24 +134,16 @@ public:
     /// \brief Read mesh from file
     ///
     /// \param Simulation mesh
-    /// \param Element state struct
-    /// \param Node state struct
-    /// \param Corner state struct
+    /// \param Simulation state
     /// \param Number of dimensions
     /// \param Number of RK bins
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    // void read_mesh(Mesh_t& mesh, 
-    //                GaussPoint_t& GaussPoints, 
-    //                node_t& node, 
-    //                corner_t& corner, 
-    //                int num_dims, 
-    //                int rk_num_bins)
-    void read_mesh(Mesh_t& mesh, 
-                   State_t& State,
-                   int num_dims, 
-                   int rk_num_bins)
+    void read_mesh(Mesh_t& mesh,
+        State_t& State,
+        int      num_dims,
+        int      rk_num_bins)
     {
         if (mesh_file_ == NULL) {
             printf("No mesh given\n");
@@ -185,12 +173,12 @@ public:
     /// \param Number of RK bins
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_ensight_mesh(Mesh_t& mesh, 
-                           GaussPoint_t& GaussPoints, 
-                           node_t& node, 
-                           corner_t& corner, 
-                           int num_dims, 
-                           int rk_num_bins)
+    void read_ensight_mesh(Mesh_t& mesh,
+        GaussPoint_t& GaussPoints,
+        node_t&   node,
+        corner_t& corner,
+        int num_dims,
+        int rk_num_bins)
     {
         FILE* in;
         char  ch;
@@ -301,7 +289,6 @@ public:
 
         return;
     }
-
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -338,11 +325,11 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_mesh(Mesh_t& mesh, 
-                    GaussPoint_t& GaussPoints,
-                    node_t& node, 
-                    corner_t& corner, 
-                    SimulationParameters_t& SimulationParamaters)
+    void build_mesh(Mesh_t& mesh,
+        GaussPoint_t& GaussPoints,
+        node_t&   node,
+        corner_t& corner,
+        SimulationParameters_t& SimulationParamaters)
     {
         if (SimulationParamaters.mesh_input.num_dims == 2) {
             if (SimulationParamaters.mesh_input.type == mesh_input::Cylinder) {
@@ -382,11 +369,11 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_box(Mesh_t& mesh, 
-                      GaussPoint_t& GaussPoints,
-                      node_t& node, 
-                      corner_t& corner, 
-                      SimulationParameters_t& SimulationParamaters) const
+    void build_2d_box(Mesh_t& mesh,
+        GaussPoint_t& GaussPoints,
+        node_t&   node,
+        corner_t& corner,
+        SimulationParameters_t& SimulationParamaters) const
     {
         printf(" Creating a 2D box mesh \n");
 
@@ -409,7 +396,7 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        //SimulationParamaters.mesh_input.origin.update_host();
+        // SimulationParamaters.mesh_input.origin.update_host();
         for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 2D parameters ---
@@ -513,11 +500,11 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_polar(Mesh_t& mesh, 
-                        GaussPoint_t& GaussPoints,
-                        node_t& node, 
-                        corner_t& corner, 
-                        SimulationParameters_t& SimulationParamaters) const
+    void build_2d_polar(Mesh_t& mesh,
+        GaussPoint_t& GaussPoints,
+        node_t&   node,
+        corner_t& corner,
+        SimulationParameters_t& SimulationParamaters) const
     {
         printf(" Creating a 2D polar mesh \n");
 
@@ -544,7 +531,7 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        //SimulationParamaters.mesh_input.origin.update_host();
+        // SimulationParamaters.mesh_input.origin.update_host();
         for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 2D parameters ---
@@ -647,22 +634,22 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_box(Mesh_t& mesh, 
-                      GaussPoint_t& GaussPoints,
-                      node_t& node, 
-                      corner_t& corner, 
-                      SimulationParameters_t& SimulationParamaters) const
+    void build_3d_box(Mesh_t& mesh,
+        GaussPoint_t& GaussPoints,
+        node_t&   node,
+        corner_t& corner,
+        SimulationParameters_t& SimulationParamaters) const
     {
         printf(" Creating a 3D box mesh \n");
 
         const int num_dim = 3;
 
-        //SimulationParamaters.mesh_input.length.update_host();
+        // SimulationParamaters.mesh_input.length.update_host();
         const double lx = SimulationParamaters.mesh_input.length[0];
         const double ly = SimulationParamaters.mesh_input.length[1];
         const double lz = SimulationParamaters.mesh_input.length[2];
 
-        //SimulationParamaters.mesh_input.num_elems.update_host();
+        // SimulationParamaters.mesh_input.num_elems.update_host();
         const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
         const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
         const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
@@ -680,7 +667,7 @@ public:
         const int num_elems = num_elems_i * num_elems_j * num_elems_k;
 
         std::vector<double> origin(num_dim);
-        //SimulationParamaters.mesh_input.origin.update_host();
+        // SimulationParamaters.mesh_input.origin.update_host();
         for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 3D parameters ---
@@ -798,15 +785,14 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_HexN_box(Mesh_t& mesh, 
-                           GaussPoint_t& GaussPoints,
-                           node_t& node, 
-                           corner_t& corner, 
-                           SimulationParameters_t& SimulationParamaters) const
+    void build_3d_HexN_box(Mesh_t& mesh,
+        GaussPoint_t& GaussPoints,
+        node_t&   node,
+        corner_t& corner,
+        SimulationParameters_t& SimulationParamaters) const
     {
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
     }
-
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -844,11 +830,11 @@ public:
     /// \param Simulation input parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_mesh(Mesh_t&   mesh,
-                    State_t& State,
-                    SimulationParameters_t& SimulationParamaters,
-                    double time_value,
-                    CArray<double> graphics_times)
+    void write_mesh(Mesh_t& mesh,
+        State_t& State,
+        SimulationParameters_t& SimulationParamaters,
+        double time_value,
+        CArray<double> graphics_times)
     {
         if (SimulationParamaters.output_options.format == output_options::vtk) {
             write_vtk(mesh,
@@ -896,19 +882,18 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_ensight(Mesh_t&   mesh,
-                       State_t&  State,
-                       SimulationParameters_t& SimulationParamaters,
-                       double time_value,
-                       CArray<double> graphics_times)
+    void write_ensight(Mesh_t& mesh,
+        State_t& State,
+        SimulationParameters_t& SimulationParamaters,
+        double time_value,
+        CArray<double> graphics_times)
     {
-
         size_t num_mats = State.MaterialPoints.size();
 
         // ---- Update host data ----
 
         // material point values
-        for(int mat_id=0; mat_id<num_mats; mat_id++){
+        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
             State.MaterialPoints(mat_id).den.update_host();
             State.MaterialPoints(mat_id).pres.update_host();
             State.MaterialPoints(mat_id).stress.update_host();
@@ -987,18 +972,16 @@ public:
         Kokkos::fence();
 
         // save the output scale fields to a single 2D array
-        
-        // export material centeric data to the elements
-        for(int mat_id=0; mat_id<num_mats; mat_id++){
 
+        // export material centeric data to the elements
+        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
             for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
-
                 // 1 material per element
 
                 // get elem gid
-                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid); 
+                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid);
 
                 // save outputs
                 elem_fields(elem_gid, 0) = State.MaterialPoints(mat_id).den.host(mat_elem_lid);
@@ -1011,7 +994,6 @@ public:
                 elem_fields(elem_gid, 7) = (double)mat_id;
                 // 8 is the e_switch
                 elem_fields(elem_gid, 9) = (double)State.MaterialPoints(mat_id).eroded.host(mat_elem_lid);
-
             } // end for mat elems storage
         } // end parallel loop over materials
 
@@ -1023,7 +1005,6 @@ public:
             elem_fields(elem_gid, 8) = e_switch;
             elem_switch *= -1;
         } // end for elem_gid
-
 
         // save the vertex vector fields to an array for exporting to graphics files
         CArray<double> vec_fields(num_nodes, num_vec_vars, 3);
@@ -1055,8 +1036,8 @@ public:
         //  ---------------------------------------------------------------------------
         FILE* out[20];   // the output files that are written to
         char  filename[128];
-        int max_len = sizeof filename;
-        int str_output_len;
+        int   max_len = sizeof filename;
+        int   str_output_len;
 
         struct stat st;
 
@@ -1071,13 +1052,12 @@ public:
         //  ---------------------------------------------------------------------------
         //  Write the Geometry file
         //  ---------------------------------------------------------------------------
-        //sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
+        // sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
         str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.geo", name, graphics_id);
         // filename has the full string
-        if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
 
         out[0] = fopen(filename, "w");
-
 
         fprintf(out[0], "A graphics dump by Fierro \n");
 
@@ -1092,8 +1072,6 @@ public:
         // --- vertices ---
         fprintf(out[0], "coordinates\n");
         fprintf(out[0], "%10lu\n", num_nodes);
-
-        
 
         // write all components of the point coordinates
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
@@ -1139,9 +1117,9 @@ public:
         // ensight_vars = (den, pres,...)
         for (int var = 0; var < num_scalar_vars; var++) {
             // write a scalar value
-            //sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+            // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
             str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
-            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
 
             out[0] = fopen(filename, "w");
 
@@ -1168,11 +1146,9 @@ public:
 
         // ensight vector vars = (position, velocity, force)
         for (int var = 0; var < num_vec_vars; var++) {
-
             // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
             str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
-            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
-            
+            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
 
             out[0] = fopen(filename, "w");
             // fprintf(out[0],"Per_node vector values\n");
@@ -1204,35 +1180,35 @@ public:
         // Write the case file
         // ---------------------------------------------------------------------------
 
-        //sprintf(filename, "ensight/%s.case", name);
+        // sprintf(filename, "ensight/%s.case", name);
         str_output_len = snprintf(filename, max_len, "ensight/%s.case", name);
-        if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
-        
+        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+
         out[0] = fopen(filename, "w");
 
         fprintf(out[0], "FORMAT\n");
         fprintf(out[0], "type: ensight gold\n");
         fprintf(out[0], "GEOMETRY\n");
 
-        //sprintf(filename, "model: data/%s.*****.geo\n", name);
+        // sprintf(filename, "model: data/%s.*****.geo\n", name);
         str_output_len = snprintf(filename, max_len, "model: data/%s.*****.geo\n", name);
-        if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
 
         fprintf(out[0], "%s", filename);
         fprintf(out[0], "VARIABLE\n");
 
         for (int var = 0; var < num_scalar_vars; var++) {
-            //sprintf(filename, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
+            // sprintf(filename, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
             str_output_len = snprintf(filename, max_len, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
-            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
 
             fprintf(out[0], "%s", filename);
         }
 
         for (int var = 0; var < num_vec_vars; var++) {
-            //sprintf(filename, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
+            // sprintf(filename, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
             str_output_len = snprintf(filename, max_len, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
-            if (str_output_len >= max_len) fputs("Filename length exceeded; string truncated", stderr);
+            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
             fprintf(out[0], "%s", filename);
         }
 
@@ -1275,20 +1251,17 @@ public:
         // How many boundaries do we lie on at once?
         int nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0) + (kbdy ? 1 : 0);
 
-        if (nbdy == 3) // Vertex DOF
-        { // ijk is a corner node. Return the proper index (somewhere in [0,7]):
+        if (nbdy == 3) { // Vertex DOF
+            // ijk is a corner node. Return the proper index (somewhere in [0,7]):
             return (i ? (j ? 2 : 1) : (j ? 3 : 0)) + (k ? 4 : 0);
         }
 
         int offset = 8;
-        if (nbdy == 2) // Edge DOF
-        {
-            if (!ibdy)
-            { // On i axis
-                return (i - 1) +  (j ? order[0] - 1 + order[1] - 1 : 0) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
+        if (nbdy == 2) { // Edge DOF
+            if (!ibdy) { // On i axis
+                return (i - 1) + (j ? order[0] - 1 + order[1] - 1 : 0) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
             }
-            if (!jbdy)
-            { // On j axis
+            if (!jbdy) { // On j axis
                 return (j - 1) + (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] - 1) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
             }
             // !kbdy, On k axis
@@ -1297,15 +1270,12 @@ public:
         }
 
         offset += 4 * (order[0] - 1 + order[1] - 1 + order[2] - 1);
-        if (nbdy == 1) // Face DOF
-        {
-            if (ibdy) // On i-normal face
-            {
+        if (nbdy == 1) { // Face DOF
+            if (ibdy) { // On i-normal face
                 return (j - 1) + ((order[1] - 1) * (k - 1)) + (i ? (order[1] - 1) * (order[2] - 1) : 0) + offset;
             }
             offset += 2 * (order[1] - 1) * (order[2] - 1);
-            if (jbdy) // On j-normal face
-            {
+            if (jbdy) { // On j-normal face
                 return (i - 1) + ((order[0] - 1) * (k - 1)) + (j ? (order[2] - 1) * (order[0] - 1) : 0) + offset;
             }
             offset += 2 * (order[2] - 1) * (order[0] - 1);
@@ -1331,11 +1301,11 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_vtk(Mesh_t&   mesh,
-                   State_t&  State,
-                   SimulationParameters_t& SimulationParamaters,
-                   double time_value,
-                   CArray<double> graphics_times)
+    void write_vtk(Mesh_t& mesh,
+        State_t& State,
+        SimulationParameters_t& SimulationParamaters,
+        double time_value,
+        CArray<double> graphics_times)
     {
         // Not yet supported
         // throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
@@ -1343,13 +1313,12 @@ public:
         const int num_scalar_vars = 10;
         const int num_vec_vars    = 2;
 
-
         size_t num_mats = State.MaterialPoints.size();
 
         // ---- Update host data ----
 
         // material point values
-        for(int mat_id=0; mat_id<num_mats; mat_id++){
+        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
             State.MaterialPoints(mat_id).den.update_host();
             State.MaterialPoints(mat_id).pres.update_host();
             State.MaterialPoints(mat_id).stress.update_host();
@@ -1368,7 +1337,6 @@ public:
         State.node.mass.update_host();
 
         Kokkos::fence();
-
 
         const char scalar_var_names[num_scalar_vars][15] = {
             "den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch", "eroded"
@@ -1418,18 +1386,16 @@ public:
         Kokkos::fence();
 
         // save the output scale fields to a single 2D array
-        
-        // export material centeric data to the elements
-        for(int mat_id=0; mat_id<num_mats; mat_id++){
 
+        // export material centeric data to the elements
+        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
             for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
-
                 // 1 material per element
 
                 // get elem gid
-                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid); 
+                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid);
 
                 // save outputs
                 elem_fields(elem_gid, 0) = State.MaterialPoints(mat_id).den.host(mat_elem_lid);
@@ -1442,7 +1408,6 @@ public:
                 elem_fields(elem_gid, 7) = (double)mat_id;
                 // 8 is the e_switch
                 elem_fields(elem_gid, 9) = (double)State.MaterialPoints(mat_id).eroded.host(mat_elem_lid);
-
             } // end for mat elems storage
         } // end parallel loop over materials
 
@@ -1454,7 +1419,6 @@ public:
             elem_fields(elem_gid, 8) = e_switch;
             elem_switch *= -1;
         } // end for elem_gid
-
 
         // save the vertex vector fields to an array for exporting to graphics files
         CArray<double> vec_fields(num_nodes, num_vec_vars, 3);
@@ -1480,34 +1444,30 @@ public:
                 vec_fields(node_gid, 1, 2) = State.node.vel.host(1, node_gid, 2);
             }
         } // end for loop over vertices
-    
-        FILE *out[20];   // the output files that are written to
-        char name[100];  // char string
-        
-        
-        struct stat st;
-        
-        if(stat("vtk",&st) != 0)
-            system("mkdir vtk");
 
+        FILE* out[20];   // the output files that are written to
+        char  name[100]; // char string
+
+        struct stat st;
+
+        if (stat("vtk", &st) != 0) {
+            system("mkdir vtk");
+        }
 
         // snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
-        
-        sprintf(name,"vtk/meshHexPn.%05d.vtk", graphics_id);  // mesh file
-        out[0]=fopen(name,"w");
 
+        sprintf(name, "vtk/meshHexPn.%05d.vtk", graphics_id);  // mesh file
+        out[0] = fopen(name, "w");
 
+        fprintf(out[0], "# vtk DataFile Version 2.0\n");  // part 2
+        fprintf(out[0], "Mesh for Fierro\n");             // part 2
+        fprintf(out[0], "ASCII \n");                      // part 3
+        fprintf(out[0], "DATASET UNSTRUCTURED_GRID\n\n"); // part 4
 
-        fprintf(out[0],"# vtk DataFile Version 2.0\n");  // part 2
-        fprintf(out[0],"Mesh for Fierro\n");             // part 2
-        fprintf(out[0],"ASCII \n");                      // part 3
-        fprintf(out[0],"DATASET UNSTRUCTURED_GRID\n\n"); // part 4
-        
-        fprintf(out[0],"POINTS %zu float\n", mesh.num_nodes);
+        fprintf(out[0], "POINTS %zu float\n", mesh.num_nodes);
 
-        
         // write all components of the point coordinates
-        for (size_t node_gid=0; node_gid<mesh.num_nodes; node_gid++){
+        for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
             fprintf(out[0],
                     "%f %f %f\n",
                     State.node.coords(1, node_gid, 0),
@@ -1515,77 +1475,67 @@ public:
                     State.node.coords(1, node_gid, 2));
         } // end for
 
-
         /*
         ---------------------------------------------------------------------------
         Write the elems
         ---------------------------------------------------------------------------
         */
 
+        CArray<int> get_ijk_from_vtk(mesh.num_nodes_in_elem, 3);
+        CArray<int> convert_vtk_to_fierro(mesh.num_nodes_in_elem);
 
-        CArray <int> get_ijk_from_vtk(mesh.num_nodes_in_elem, 3);
-        CArray <int> convert_vtk_to_fierro(mesh.num_nodes_in_elem);
-        
         // re-order the nodes to be in i,j,k format of Fierro
-        int Pn_order = mesh.Pn;
+        int Pn_order   = mesh.Pn;
         int this_point = 0;
-        for (int k=0; k<=Pn_order; k++){
-            for (int j=0; j<=Pn_order; j++){
-                for (int i=0; i<=Pn_order; i++){
-                    
+        for (int k = 0; k <= Pn_order; k++) {
+            for (int j = 0; j <= Pn_order; j++) {
+                for (int i = 0; i <= Pn_order; i++) {
                     // convert this_point index to the FE index convention
-                    int order[3] = {Pn_order, Pn_order, Pn_order};
+                    int order[3]   = { Pn_order, Pn_order, Pn_order };
                     int this_index = PointIndexFromIJK(i, j, k, order);
-                    
+
                     // store the points in this elem according the the finite
                     // element numbering convention
                     convert_vtk_to_fierro(this_index) = this_point;
-                    
+
                     get_ijk_from_vtk(this_index, 0) = i;
                     get_ijk_from_vtk(this_index, 1) = j;
                     get_ijk_from_vtk(this_index, 2) = k;
-                    
+
                     // increment the point counting index
                     this_point = this_point + 1;
-                    
                 } // end for icount
             } // end for jcount
         }  // end for kcount
 
-
-        fprintf(out[0],"\n");
-        fprintf(out[0],"CELLS %lu %lu\n", mesh.num_elems, mesh.num_elems+mesh.num_elems*mesh.num_nodes_in_elem);  // size=all printed values
+        fprintf(out[0], "\n");
+        fprintf(out[0], "CELLS %lu %lu\n", mesh.num_elems, mesh.num_elems + mesh.num_elems * mesh.num_nodes_in_elem);  // size=all printed values
 
         // write all global point numbers for this elem
-        for (size_t elem_gid=0; elem_gid<mesh.num_elems; elem_gid++) {
-            
+        for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
             fprintf(out[0], "%lu ", mesh.num_nodes_in_elem); // num points in this elem
-            
-            for (size_t vtk_index=0; vtk_index<mesh.num_nodes_in_elem; vtk_index++){
-                
+
+            for (size_t vtk_index = 0; vtk_index < mesh.num_nodes_in_elem; vtk_index++) {
                 // get the Fierro node_lid
                 // size_t node_lid = mesh.convert_vtk_to_fierro(vtk_index);
                 size_t node_lid = vtk_index;
-                
-                fprintf(out[0],"%lu ", mesh.nodes_in_elem.host(elem_gid, node_lid));
-            
+
+                fprintf(out[0], "%lu ", mesh.nodes_in_elem.host(elem_gid, node_lid));
             }
-            fprintf(out[0],"\n");
-            
+            fprintf(out[0], "\n");
         } // end for
 
-    
         // Write the element types
-        fprintf(out[0],"\n");
-        fprintf(out[0],"CELL_TYPES %zu \n", mesh.num_elems);
+        fprintf(out[0], "\n");
+        fprintf(out[0], "CELL_TYPES %zu \n", mesh.num_elems);
         // VTK_LAGRANGE_HEXAHEDRON: 72,
         // VTK_HIGHER_ORDER_HEXAHEDRON: 67
         // VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON = 33
         // element types: https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
         // element types: https://kitware.github.io/vtk-js/api/Common_DataModel_CellTypes.html
         // vtk format: https://www.kitware.com//modeling-arbitrary-order-lagrange-finite-elements-in-the-visualization-toolkit/
-        for (size_t elem_gid=0; elem_gid<mesh.num_elems; elem_gid++) {
-            fprintf(out[0],"%d \n", 72);
+        for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
+            fprintf(out[0], "%d \n", 72);
         }
 
         /*
@@ -1593,21 +1543,19 @@ public:
         Write the nodal vector variables to file
         ---------------------------------------------------------------------------
         */
-        
-        fprintf(out[0],"\n");
-        fprintf(out[0],"POINT_DATA %zu \n", mesh.num_nodes);
-        
+
+        fprintf(out[0], "\n");
+        fprintf(out[0], "POINT_DATA %zu \n", mesh.num_nodes);
+
         // vtk vector vars = (position, velocity)
-        for (int var=0; var<num_vec_vars; var++){
-            
-            fprintf(out[0],"VECTORS %s float \n", vec_var_names[var]);
-            for (size_t node_gid=0; node_gid<mesh.num_nodes; node_gid++) {
-                fprintf(out[0],"%f %f %f\n",
+        for (int var = 0; var < num_vec_vars; var++) {
+            fprintf(out[0], "VECTORS %s float \n", vec_var_names[var]);
+            for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
+                fprintf(out[0], "%f %f %f\n",
                         vec_fields(node_gid, var, 0),
                         vec_fields(node_gid, var, 1),
                         vec_fields(node_gid, var, 2));
             } // end for nodes
-            
         } // end for vec_vars
 
         /*
@@ -1615,56 +1563,42 @@ public:
         Write the scalar elem variable to file
         ---------------------------------------------------------------------------
         */
-        fprintf(out[0],"\n");
-        fprintf(out[0],"CELL_DATA %zu \n", mesh.num_elems);
-        
-        for (int var=0; var<num_scalar_vars; var++){
+        fprintf(out[0], "\n");
+        fprintf(out[0], "CELL_DATA %zu \n", mesh.num_elems);
 
-            fprintf(out[0],"SCALARS %s float 1\n", scalar_var_names[var]); // the 1 is number of scalar components [1:4]
-            fprintf(out[0],"LOOKUP_TABLE default\n");
-            for (size_t elem_gid=0; elem_gid < mesh.num_elems; elem_gid++) {
-                fprintf(out[0],"%f\n", elem_fields(elem_gid, var));
+        for (int var = 0; var < num_scalar_vars; var++) {
+            fprintf(out[0], "SCALARS %s float 1\n", scalar_var_names[var]); // the 1 is number of scalar components [1:4]
+            fprintf(out[0], "LOOKUP_TABLE default\n");
+            for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
+                fprintf(out[0], "%f\n", elem_fields(elem_gid, var));
             } // end for elem
-            
         } // end for scalar_vars
 
         fclose(out[0]);
 
-
         graphics_times(graphics_id) = time_value;
-        
-
-
 
         // Write time series metadata
-        sprintf(name,"vtk/meshHexPn.vtk.series", graphics_id);  // mesh file
-        out[0]=fopen(name,"w");
+        sprintf(name, "vtk/meshHexPn.vtk.series", graphics_id);  // mesh file
+        out[0] = fopen(name, "w");
 
+        fprintf(out[0], "{\n");
+        fprintf(out[0], "  \"file-series-version\" : \"1.0\",\n");
+        fprintf(out[0], "  \"files\" : [\n");
 
-        fprintf(out[0],"{\n");
-        fprintf(out[0],"  \"file-series-version\" : \"1.0\",\n");
-        fprintf(out[0],"  \"files\" : [\n");
-        
-        for(int i = 0; i <= graphics_id; i++)
-        {
-            fprintf(out[0],"    { \"name\" : \"meshHexPn.%05d.vtk\", \"time\" : %12.5e },\n", i, graphics_times(i) );
+        for (int i = 0; i <= graphics_id; i++) {
+            fprintf(out[0], "    { \"name\" : \"meshHexPn.%05d.vtk\", \"time\" : %12.5e },\n", i, graphics_times(i) );
         }
 
-
         // fprintf(out[0], "%12.5e\n", graphics_times(i));
-        fprintf(out[0],"  ]\n"); // part 4
-        fprintf(out[0],"}"); // part 4
+        fprintf(out[0], "  ]\n"); // part 4
+        fprintf(out[0], "}"); // part 4
 
-        
         fclose(out[0]);
-
 
         // increment graphics id counter
         graphics_id++;
-    }// end write vtk
-
-        
-
+    } // end write vtk
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -1679,13 +1613,12 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_material_point_state(Mesh_t&  mesh,
-                                    State_t& State,
-                                    SimulationParameters_t& SimulationParamaters,
-                                    double time_value,
-                                    CArray<double> graphics_times)
+    void write_material_point_state(Mesh_t& mesh,
+    State_t& State,
+    SimulationParameters_t& SimulationParamaters,
+    double time_value,
+    CArray<double> graphics_times)
     {
-
         // WARNING WARNING WARNING:
         // This currently assumes the gauss and material point IDs are the same as the element ID
         // This will need to be updated for high order methods
@@ -1694,7 +1627,7 @@ public:
         // ---- Update host data ----
         size_t num_mats = State.MaterialPoints.size();
 
-        for(int mat_id=0; mat_id<num_mats; mat_id++){
+        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
             State.MaterialPoints(mat_id).den.update_host();
             State.MaterialPoints(mat_id).pres.update_host();
             State.MaterialPoints(mat_id).stress.update_host();
@@ -1711,14 +1644,11 @@ public:
 
         Kokkos::fence();
 
-
         struct stat st;
 
-        if (stat("state", &st) != 0)
-        {
+        if (stat("state", &st) != 0) {
             system("mkdir state");
         }
-
 
         size_t num_dims = mesh.num_dims;
 
@@ -1732,7 +1662,6 @@ public:
 
         sprintf(filename, "state/mat_pt_state_t_%6.4e.txt", time_value);
 
-
         // output files
         out_elem_state = fopen(filename, "w");
 
@@ -1740,17 +1669,11 @@ public:
         fprintf(out_elem_state, "# state dump file\n");
         fprintf(out_elem_state, "# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass \n");
 
-
-
         // write out values for the elem
-        for(size_t mat_id = 0; mat_id<num_mats; mat_id++){
-
+        for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-            for (size_t elem_lid = 0; elem_lid < num_mat_elems; elem_lid++)
-            {
-
-                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem(elem_lid); 
-
+            for (size_t elem_lid = 0; elem_lid < num_mat_elems; elem_lid++) {
+                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem(elem_lid);
 
                 double elem_coords[3];
                 elem_coords[0] = 0.0;
@@ -1758,16 +1681,13 @@ public:
                 elem_coords[2] = 0.0;
 
                 // get the coordinates of the element center
-                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++)
-                {
+                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
                     elem_coords[0] += State.node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
                     elem_coords[1] += State.node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
-                    if (num_dims == 3)
-                    {
+                    if (num_dims == 3) {
                         elem_coords[2] += State.node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
                     }
-                    else
-                    {
+                    else{
                         elem_coords[2] = 0.0;
                     }
                 } // end loop over nodes in element
@@ -1782,8 +1702,6 @@ public:
                 double rad3 = sqrt(elem_coords[0] * elem_coords[0] +
                                    elem_coords[1] * elem_coords[1] +
                                    elem_coords[2] * elem_coords[2]);
-
-
 
                 fprintf(out_elem_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t \n",
                          elem_coords[0],
@@ -1804,7 +1722,5 @@ public:
         return;
     } // end of state output
 }; // end class
-
-
 
 #endif // end Header Guard

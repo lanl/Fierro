@@ -38,12 +38,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace mtr;
 
-
-
-
-
-
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \struct node_t
@@ -66,8 +60,6 @@ struct node_t
     }; // end method
 }; // end node_t
 
-
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \struct GaussPoint_t
@@ -77,22 +69,18 @@ struct node_t
 /////////////////////////////////////////////////////////////////////////////
 struct GaussPoint_t
 {
-    //const size_t num_bins = 3;
+    // const size_t num_bins = 3;
 
     DCArrayKokkos<double> vol;  ///< GaussPoint volume
     DCArrayKokkos<double> div;  ///< GaussPoint divergence of velocity
 
-
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_gauss_pnts, size_t num_dims)
     {
-        this->vol    = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_volume");
-        this->div    = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_div");
-
+        this->vol = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_volume");
+        this->div = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_div");
     }; // end method
-
 };  // end GuassPoint_t
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -110,14 +98,9 @@ struct MaterialToMeshMap_t
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize(size_t num_elem_max)
     {
-        this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem"); 
+        this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
     }; // end method
-
-
 }; // end MaterialtoMeshMaps_t
-
-
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -135,7 +118,7 @@ struct MaterialPoint_t
     DCArrayKokkos<double> stress; ///< MaterialPoint stress
     DCArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
     DCArrayKokkos<double> mass;   ///< MaterialPoint mass
-    
+
     DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
 
     DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
@@ -144,7 +127,6 @@ struct MaterialPoint_t
     DCArrayKokkos<double> statev; // a place holder to get things to compile
     DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
     DCArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
-
 
     // initialization method (num_rk_storage_bins, num_pts_max, num_dims)
     void initialize(size_t num_rk, size_t num_pts_max, size_t num_dims)
@@ -167,9 +149,7 @@ struct MaterialPoint_t
         this->sspd   = DCArrayKokkos<double>(num_pts_max, "material_point_sspd");
         this->mass   = DCArrayKokkos<double>(num_pts_max, "material_point_mass");
     }; // end method
-
 }; // end MaterialPoint
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -189,9 +169,7 @@ struct MaterialZone_t
     {
         this->sie = DCArrayKokkos<double>(num_rk, num_zones_max, "material_zone_sie");
     }; // end method
-
 }; // end MaterialZone_t
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -200,20 +178,18 @@ struct MaterialZone_t
 /// \brief Stores state information associated with a material in an element corner
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct MaterialCorner_t 
+struct MaterialCorner_t
 {
     size_t num_material_corners;   ///< the actual number of material corners, omitting the buffer
 
     DCArrayKokkos<double> force;   ///< Corner force for the material
-    
+
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners_max, size_t num_dims)
     {
-        this->force  = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
+        this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
     }; // end method
-}; // end material corner 
-
-
+}; // end material corner
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -234,7 +210,6 @@ struct corner_t
         this->mass  = DCArrayKokkos<double>(num_corners, "corner_mass");
     }; // end method
 }; // end corner_t
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -357,7 +332,6 @@ struct lobatto_in_mat_t
         };
 };
 
-
 // the local id for material points in elem
 struct points_in_mat_t
 {
@@ -397,30 +371,28 @@ struct State_t
     // ---------------------------------------------------------------------
     //    state data on mesh declarations
     // ---------------------------------------------------------------------
-    node_t   node;
+    node_t node;
     GaussPoint_t GaussPoints;
-    corner_t corner; 
+    corner_t corner;
 
     // ---------------------------------------------------------------------
     //    material to mesh maps
     // ---------------------------------------------------------------------
-    CArray<MaterialToMeshMap_t>  MaterialToMeshMaps;   ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
-
+    CArray<MaterialToMeshMap_t> MaterialToMeshMaps;   ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
 
     // ---------------------------------------------------------------------
     //    materialto material maps
     // ---------------------------------------------------------------------
     corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_lid, corn_lid)
-    points_in_mat_t  points_in_mat_elem;  ///< for accessing e.g., guass points mat lid with arbitrary-order FE 
-    zones_in_mat_t   zones_in_mat_elem;   ///< for accessing sub-zones mat lid with arbitrary-order FE
+    points_in_mat_t points_in_mat_elem;  ///< for accessing e.g., guass points mat lid with arbitrary-order FE
+    zones_in_mat_t zones_in_mat_elem;   ///< for accessing sub-zones mat lid with arbitrary-order FE
 
     // ---------------------------------------------------------------------
     //    material state, compressed, and sequentially accessed
     // ---------------------------------------------------------------------
-    CArray<MaterialPoint_t>  MaterialPoints;  ///< access as MaterialPoints(mat_id).var(mat_pt)
+    CArray<MaterialPoint_t> MaterialPoints;  ///< access as MaterialPoints(mat_id).var(mat_pt)
     CArray<MaterialCorner_t> MaterialCorners; ///< access as MaterialCorners(mat_id).var(mat_corner), not used with MPM
-    CArray<MaterialZone_t>   MaterialZones;   ///< access as MaterialZones(mat_id).var(mat_zone), only used with arbitrary-order FE
-
+    CArray<MaterialZone_t> MaterialZones;   ///< access as MaterialZones(mat_id).var(mat_zone), only used with arbitrary-order FE
 }; // end state_t
 
 #endif

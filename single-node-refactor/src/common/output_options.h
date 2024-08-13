@@ -80,7 +80,6 @@ struct output_options_t
 
     double graphics_time_step   = 1.0;  ///< How often to write a graphics dump in time
     int graphics_iteration_step = 2000000;  ///< How often to write a graphics dump by iteration count
-
 }; // output_options_t
 
 // ----------------------------------
