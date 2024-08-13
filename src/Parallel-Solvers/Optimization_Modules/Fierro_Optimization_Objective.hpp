@@ -118,11 +118,21 @@ private:
 public:
 
   bool time_accumulation;
-  real_t objective_accumulation;
+  real_t objective_accumulation, global_objective_accumulation;
 
   FierroOptimizationObjective(){
-    objective_accumulation = 0;
+    global_objective_accumulation = objective_accumulation = 0;
     time_accumulation = false;
+  }
+
+  virtual void step_accumulation(const real_t& dt, const size_t& cycle, const size_t& rk_level) {}
+
+  // collect local objective values
+  virtual void global_reduction() {
+
+    MPI_Allreduce(&objective_accumulation, &global_objective_accumulation, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    objective_accumulation = global_objective_accumulation;
   }
 
 
