@@ -794,6 +794,8 @@ public:
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
         const int num_dim = 3;
 
+        const int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
+
         // SimulationParamaters.mesh_input.length.update_host();
         const double lx = SimulationParamaters.mesh_input.length[0];
         const double ly = SimulationParamaters.mesh_input.length[1];
@@ -857,6 +859,9 @@ public:
 
         // --- Build nodes ---
         
+        // initialize node variables
+        mesh.initialize_nodes(num_points);
+        node.initialize(rk_num_bins, num_points, num_dim);
         // populate the point data structures
         for (int k = 0; k < num_points_k; k++){
             for (int j = 0; j < num_points_j; j++){
@@ -864,16 +869,31 @@ public:
 
                 
                     // global id for the point
-                    int point_id = get_id(i, j, k, num_points_i, num_points_j);
-                    
-                    // store the point coordinates, this accounts for Pn order
-                    pt_coords(point_id,0) = origin[0] + (double)i*dx;
-                    pt_coords(point_id,1) = origin[1] + (double)j*dy;
-                    pt_coords(point_id,2) = origin[2] + (double)k*dz;
+                    int node_gid = get_id(i, j, k, num_points_i, num_points_j);
+
+                    // store the point coordinates
+                    node.coords.host(0, node_gid, 0) = origin[0] + (double)i * dx;
+                    node.coords.host(0, node_gid, 1) = origin[1] + (double)j * dy;
+                    node.coords.host(0, node_gid, 2) = origin[2] + (double)k * dz;
                     
                 } // end for k
             } // end for i
         } // end for j
+
+        for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
+            for (int node_gid = 0; node_gid < num_points; node_gid++) {
+                node.coords.host(rk_level, node_gid, 0) = node.coords.host(0, node_gid, 0);
+                node.coords.host(rk_level, node_gid, 1) = node.coords.host(0, node_gid, 1);
+                node.coords.host(rk_level, node_gid, 2) = node.coords.host(0, node_gid, 2);
+            }
+        }
+
+        node.coords.update_device();
+
+
+        // intialize elem variables
+        mesh.initialize_elems(num_elems, num_dim);
+        GaussPoints.initialize(rk_num_bins, num_elems, 3); // WARNING: Bug here, needs Pn order in initializer
 
         // --- Build elems  ---
         
@@ -885,13 +905,6 @@ public:
                     // global id for the elem
                     elem_id = get_id(i, j, k, num_elems_i, num_elems_j);
                     
-                    
-                    // store the elem center Coordinates
-                    elem_coords(elem_id,0) = (double)i*dx + dx/2.0;
-                    elem_coords(elem_id,1) = (double)j*dy + dy/2.0;
-                    elem_coords(elem_id,2) = (double)k*dz + dz/2.0;
-                    
-                    
                     // store the point IDs for this elem where the range is
                     // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
                     // (i:(i+1)*Pn_order, j:(j+1)*Pn_order, k:(k+1)*Pn_order) for a Pn hexahedron
@@ -899,8 +912,10 @@ public:
                     
                     int k_local = 0;
                     for (int kcount=k*Pn_order; kcount<=(k+1)*Pn_order; kcount++){
+                        
                         int j_local = 0;
                         for (int jcount=j*Pn_order; jcount<=(j+1)*Pn_order; jcount++){
+                            
                             int i_local = 0;
                             for (int icount=i*Pn_order; icount<=(i+1)*Pn_order; icount++){
                                 
@@ -909,13 +924,15 @@ public:
                                                   num_points_i, num_points_j);
                                 
                                 // convert this_point index to the FE index convention
-                                int order[3] = {Pn_order, Pn_order, Pn_order};
-                                int this_index = PointIndexFromIJK(i_local, j_local, k_local, order);
+                                // int order[3] = {Pn_order, Pn_order, Pn_order};
+                                // int this_index = PointIndexFromIJK(i_local, j_local, k_local, order);
 
                                 
                                 // store the points in this elem according the the finite
                                 // element numbering convention
-                                elem_point_list(elem_id,this_index) = point_id;
+
+                                // Saved using i,j,k indexing
+                                mesh.nodes_in_elem.host(elem_gid, this_point) = node_gid;
                                 
                                 // increment the point counting index
                                 this_point = this_point + 1;
@@ -928,11 +945,20 @@ public:
                         
                         k_local ++;
                     }  // end for kcount
-                    
-                    
                 } // end for i
             } // end for j
         } // end for k
+
+        // update device side
+        mesh.nodes_in_elem.update_device();
+
+        // intialize corner variables
+        int num_corners = num_elems * mesh.num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+        corner.initialize(num_corners, num_dim);
+
+        // Build connectivity
+        mesh.build_connectivity();
 
     }
 };
