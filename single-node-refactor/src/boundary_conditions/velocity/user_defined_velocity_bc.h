@@ -46,36 +46,34 @@ struct BoundaryConditionEnums_t;
 /// \brief This is a function to set the velocity based on user implementation
 ///
 /// \param Mesh object
-/// \param Boundary condition enums to select options 
+/// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
 /// \param Node velocity
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
-/// \param Boundary set local id 
+/// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace UserDefinedVelocityBC {
+namespace UserDefinedVelocityBC
+{
+// add an enum for boundary statevars and global vars
 
-    // add an enum for boundary statevars and global vars
+KOKKOS_FUNCTION
+static void velocity(const Mesh_t& mesh,
+    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+    const DCArrayKokkos<double>& bc_global_vars,
+    const DCArrayKokkos<double>& bc_state_vars,
+    const DCArrayKokkos<double>& node_vel,
+    const double time_value,
+    const size_t rk_stage,
+    const size_t bdy_node_gid,
+    const size_t bdy_set)
+{
+    // add user coding here
 
-
-    KOKKOS_FUNCTION
-    static void velocity(const Mesh_t& mesh,
-                         const DCArrayKokkos <BoundaryConditionEnums_t>& BoundaryConditionEnums,
-                         const DCArrayKokkos<double>& bc_global_vars,
-                         const DCArrayKokkos<double>& bc_state_vars,
-                         const DCArrayKokkos<double>& node_vel,
-                         const double time_value,
-                         const size_t bdy_node_gid,
-                         const size_t bdy_set)
-    {
-
-        // add user coding here
-
-        return;
-    } // end func
-
+    return;
+} // end func
 } // end namespace
 
 #endif // end Header Guard

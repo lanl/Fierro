@@ -32,7 +32,6 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-
 #ifndef BOUNDARY_VEL_CONST_H
 #define BOUNDARY_VEL_CONST_H
 
@@ -40,51 +39,48 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct BoundaryConditionEnums_t;
 
+namespace PistonVelocityBC
+{
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary velocity is constant in one direction,
+/// \fn velocity
 ///
 /// \brief This is a function to set the velocity in one direction to a
-///        specified velocity.  The other components can freely slide on 
+///        specified velocity.  The other components can freely slide on
 ///        the piston
 ///
 /// \param Mesh object
-/// \param Boundary condition enums to select options 
+/// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
 /// \param Node velocity
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
-/// \param Boundary set local id 
+/// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace PistonVelocityBC {
+KOKKOS_FUNCTION
+static void velocity(const Mesh_t& mesh,
+    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+    const DCArrayKokkos<double>& bc_global_vars,
+    const DCArrayKokkos<double>& bc_state_vars,
+    const DCArrayKokkos<double>& node_vel,
+    const double time_value,
+    const size_t rk_stage,
+    const size_t bdy_node_gid,
+    const size_t bdy_set)
+{
+    // directions are:
+    // x_plane  = 0,
+    // y_plane  = 1,
+    // z_plane  = 2,
 
+    // Set velocity to the specified value
+    node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) =
+        bc_global_vars(bdy_set, BoundaryConditionEnums(bdy_set).Direction);
 
-
-    KOKKOS_FUNCTION
-    static void velocity(const Mesh_t& mesh,
-                         const DCArrayKokkos <BoundaryConditionEnums_t>& BoundaryConditionEnums,
-                         const DCArrayKokkos<double>& bc_global_vars,
-                         const DCArrayKokkos<double>& bc_state_vars,
-                         const DCArrayKokkos<double>& node_vel,
-                         const double time_value,
-                         const size_t bdy_node_gid,
-                         const size_t bdy_set)
-    {
-
-        // directions are:
-        // x_plane  = 0,
-        // y_plane  = 1,
-        // z_plane  = 2,
-
-        // Set velocity to the specified value
-        node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) = 
-                        bc_global_vars(bdy_set, BoundaryConditionEnums(bdy_set).Direction);
-
-        return;
-    } // end func
-
+    return;
+}     // end func
 } // end namespace
 
 #endif // end Header Guard
