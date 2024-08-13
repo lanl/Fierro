@@ -146,10 +146,14 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
+    // void read_mesh(Mesh_t& mesh, 
+    //                GaussPoint_t& GaussPoints, 
+    //                node_t& node, 
+    //                corner_t& corner, 
+    //                int num_dims, 
+    //                int rk_num_bins)
     void read_mesh(Mesh_t& mesh, 
-                   GaussPoint_t& GaussPoints, 
-                   node_t& node, 
-                   corner_t& corner, 
+                   State_t& State,
                    int num_dims, 
                    int rk_num_bins)
     {
@@ -160,8 +164,12 @@ public:
 
         // Check mesh file extension
         // and read based on extension
-        read_ensight_mesh(mesh, GaussPoints, node, corner, num_dims, rk_num_bins);
+        read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, num_dims, rk_num_bins);
     }
+
+    // void write_mesh(Mesh_t&   mesh,
+    //                 State_t& State,
+    //                 SimulationParameters_t& SimulationParamaters,
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -184,8 +192,6 @@ public:
                            int num_dims, 
                            int rk_num_bins)
     {
-        const size_t rk_level = 0;
-
         FILE* in;
         char  ch;
 
@@ -219,24 +225,36 @@ public:
         // read the initial mesh coordinates
         // x-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords(rk_level, node_id, 0));
+            fscanf(in, "%le", &node.coords.host(0, node_id, 0));
         }
 
         // y-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords(rk_level, node_id, 1));
+            fscanf(in, "%le", &node.coords.host(0, node_id, 1));
         }
 
         // z-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
             if (num_dims == 3) {
-                fscanf(in, "%le", &node.coords(rk_level, node_id, 2));
+                fscanf(in, "%le", &node.coords.host(0, node_id, 2));
             }
             else{
                 double dummy;
                 fscanf(in, "%le", &dummy);
             }
         } // end for
+
+        // save the node coords to the current RK value
+        for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
+            for (int rk = 1; rk < rk_num_bins; rk++) {
+                for (int dim = 0; dim < num_dims; dim++) {
+                    node.coords.host(rk, node_gid, dim) = node.coords.host(0, node_gid, dim);
+                } // end for dim
+            } // end for rk
+        } // end parallel for
+
+        // Update device nodal positions
+        node.coords.update_device();
 
         ch = (char)fgetc(in);
 
@@ -275,15 +293,6 @@ public:
         mesh.initialize_corners(num_corners);
         corner.initialize(num_corners, num_dims);
 
-        // save the node coords to the current RK value
-        for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-            for (int rk = 1; rk < rk_num_bins; rk++) {
-                for (int dim = 0; dim < num_dims; dim++) {
-                    node.coords(rk, node_gid, dim) = node.coords(0, node_gid, dim);
-                } // end for dim
-            } // end for rk
-        } // end parallel for
-
         // Close mesh input file
         fclose(in);
 
@@ -292,6 +301,7 @@ public:
 
         return;
     }
+
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -797,76 +807,6 @@ public:
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
     }
 
-
-
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn PointIndexFromIJK
-    ///
-    /// \brief Given (i,j,k) coordinates within the Lagrange hex, return an
-    ///        offset into the local connectivity (PointIds) array.
-    ///
-    /// Assumes that the grid has an i,j,k structure
-    /// the elem = i + (j)*(num_points_i-1) + (k)*(num_points_i-1)*(num_points_j-1)
-    /// the point = i + (j)*num_points_i + (k)*num_points_i*num_points_j
-    ///
-    /// \param i index
-    /// \param j index
-    /// \param k index
-    /// \param array of 3 integers specifying the order along each axis of the hexahedron
-    ///
-    /////////////////////////////////////////////////////////////////////////////
-    int PointIndexFromIJK(int i, int j, int k, const int* order) const
-    {
-        bool ibdy = (i == 0 || i == order[0]);
-        bool jbdy = (j == 0 || j == order[1]);
-        bool kbdy = (k == 0 || k == order[2]);
-
-        // How many boundaries do we lie on at once?
-        int nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0) + (kbdy ? 1 : 0);
-
-        if (nbdy == 3) { // Vertex DOF
-            // ijk is a corner node. Return the proper index (somewhere in [0,7]):
-            return (i ? (j ? 2 : 1) : (j ? 3 : 0)) + (k ? 4 : 0);
-        }
-
-        int offset = 8;
-        if (nbdy == 2) { // Edge DOF
-            if (!ibdy) { // On i axis
-                return (i - 1) +
-                       (j ? order[0] - 1 + order[1] - 1 : 0) +
-                       (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) +
-                       offset;
-            }
-            if (!jbdy) { // On j axis
-                return (j - 1) +
-                       (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] - 1) +
-                       (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) +
-                       offset;
-            }
-            // !kbdy, On k axis
-            offset += 4 * (order[0] - 1) + 4 * (order[1] - 1);
-            return (k - 1) + (order[2] - 1) * (i ? (j ? 3 : 1) : (j ? 2 : 0)) + offset;
-        }
-
-        offset += 4 * (order[0] - 1 + order[1] - 1 + order[2] - 1);
-        if (nbdy == 1) { // Face DOF
-            if (ibdy) { // On i-normal face
-                return (j - 1) + ((order[1] - 1) * (k - 1)) + (i ? (order[1] - 1) * (order[2] - 1) : 0) + offset;
-            }
-            offset += 2 * (order[1] - 1) * (order[2] - 1);
-            if (jbdy) { // On j-normal face
-                return (i - 1) + ((order[0] - 1) * (k - 1)) + (j ? (order[2] - 1) * (order[0] - 1) : 0) + offset;
-            }
-            offset += 2 * (order[2] - 1) * (order[0] - 1);
-            // kbdy, On k-normal face
-            return (i - 1) + ((order[0] - 1) * (j - 1)) + (k ? (order[0] - 1) * (order[1] - 1) : 0) + offset;
-        }
-
-        // nbdy == 0: Body DOF
-        offset += 2 * ((order[1] - 1) * (order[2] - 1) + (order[2] - 1) * (order[0] - 1) + (order[0] - 1) * (order[1] - 1));
-        return offset + (i - 1) + (order[0] - 1) * ((j - 1) + (order[1] - 1) * ((k - 1)));
-    }
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1322,61 +1262,61 @@ public:
         return;
     }
 
-/**\brief Given (i,j,k) coordinates within the Lagrange hex, return an offset into the local connectivity (PointIds) array.
-*
-* The \a order parameter must point to an array of 3 integers specifying the order
-* along each axis of the hexahedron.
-*/
-int PointIndexFromIJK(int i, int j, int k, const int* order)
-{
-    bool ibdy = (i == 0 || i == order[0]);
-    bool jbdy = (j == 0 || j == order[1]);
-    bool kbdy = (k == 0 || k == order[2]);
-    // How many boundaries do we lie on at once?
-    int nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0) + (kbdy ? 1 : 0);
-
-    if (nbdy == 3) // Vertex DOF
-    { // ijk is a corner node. Return the proper index (somewhere in [0,7]):
-        return (i ? (j ? 2 : 1) : (j ? 3 : 0)) + (k ? 4 : 0);
-    }
-
-    int offset = 8;
-    if (nbdy == 2) // Edge DOF
+    /**\brief Given (i,j,k) coordinates within the Lagrange hex, return an offset into the local connectivity (PointIds) array.
+    *
+    * The \a order parameter must point to an array of 3 integers specifying the order
+    * along each axis of the hexahedron.
+    */
+    int PointIndexFromIJK(int i, int j, int k, const int* order)
     {
-        if (!ibdy)
-        { // On i axis
-            return (i - 1) +  (j ? order[0] - 1 + order[1] - 1 : 0) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
-        }
-        if (!jbdy)
-        { // On j axis
-            return (j - 1) + (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] - 1) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
-        }
-        // !kbdy, On k axis
-        offset += 4 * (order[0] - 1) + 4 * (order[1] - 1);
-        return (k - 1) + (order[2] - 1) * (i ? (j ? 3 : 1) : (j ? 2 : 0)) + offset;
-    }
+        bool ibdy = (i == 0 || i == order[0]);
+        bool jbdy = (j == 0 || j == order[1]);
+        bool kbdy = (k == 0 || k == order[2]);
+        // How many boundaries do we lie on at once?
+        int nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0) + (kbdy ? 1 : 0);
 
-    offset += 4 * (order[0] - 1 + order[1] - 1 + order[2] - 1);
-    if (nbdy == 1) // Face DOF
-    {
-        if (ibdy) // On i-normal face
-        {
-            return (j - 1) + ((order[1] - 1) * (k - 1)) + (i ? (order[1] - 1) * (order[2] - 1) : 0) + offset;
+        if (nbdy == 3) // Vertex DOF
+        { // ijk is a corner node. Return the proper index (somewhere in [0,7]):
+            return (i ? (j ? 2 : 1) : (j ? 3 : 0)) + (k ? 4 : 0);
         }
-        offset += 2 * (order[1] - 1) * (order[2] - 1);
-        if (jbdy) // On j-normal face
-        {
-            return (i - 1) + ((order[0] - 1) * (k - 1)) + (j ? (order[2] - 1) * (order[0] - 1) : 0) + offset;
-        }
-        offset += 2 * (order[2] - 1) * (order[0] - 1);
-        // kbdy, On k-normal face
-        return (i - 1) + ((order[0] - 1) * (j - 1)) + (k ? (order[0] - 1) * (order[1] - 1) : 0) + offset;
-    }
 
-    // nbdy == 0: Body DOF
-    offset += 2 * ( (order[1] - 1) * (order[2] - 1) + (order[2] - 1) * (order[0] - 1) + (order[0] - 1) * (order[1] - 1));
-    return offset + (i - 1) + (order[0] - 1) * ( (j - 1) + (order[1] - 1) * ( (k - 1)));
-}
+        int offset = 8;
+        if (nbdy == 2) // Edge DOF
+        {
+            if (!ibdy)
+            { // On i axis
+                return (i - 1) +  (j ? order[0] - 1 + order[1] - 1 : 0) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
+            }
+            if (!jbdy)
+            { // On j axis
+                return (j - 1) + (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] - 1) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
+            }
+            // !kbdy, On k axis
+            offset += 4 * (order[0] - 1) + 4 * (order[1] - 1);
+            return (k - 1) + (order[2] - 1) * (i ? (j ? 3 : 1) : (j ? 2 : 0)) + offset;
+        }
+
+        offset += 4 * (order[0] - 1 + order[1] - 1 + order[2] - 1);
+        if (nbdy == 1) // Face DOF
+        {
+            if (ibdy) // On i-normal face
+            {
+                return (j - 1) + ((order[1] - 1) * (k - 1)) + (i ? (order[1] - 1) * (order[2] - 1) : 0) + offset;
+            }
+            offset += 2 * (order[1] - 1) * (order[2] - 1);
+            if (jbdy) // On j-normal face
+            {
+                return (i - 1) + ((order[0] - 1) * (k - 1)) + (j ? (order[2] - 1) * (order[0] - 1) : 0) + offset;
+            }
+            offset += 2 * (order[2] - 1) * (order[0] - 1);
+            // kbdy, On k-normal face
+            return (i - 1) + ((order[0] - 1) * (j - 1)) + (k ? (order[0] - 1) * (order[1] - 1) : 0) + offset;
+        }
+
+        // nbdy == 0: Body DOF
+        offset += 2 * ( (order[1] - 1) * (order[2] - 1) + (order[2] - 1) * (order[0] - 1) + (order[0] - 1) * (order[1] - 1));
+        return offset + (i - 1) + (order[0] - 1) * ( (j - 1) + (order[1] - 1) * ( (k - 1)));
+    }
 
     /////////////////////////////////////////////////////////////////////////////
     ///
