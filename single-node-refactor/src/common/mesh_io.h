@@ -1541,16 +1541,6 @@ int PointIndexFromIJK(int i, int j, int k, const int* order)
             }
         } // end for loop over vertices
     
-
-
-        // ---------------------------------------------------------------------------
-        // Done writing the graphics dump
-        // ---------------------------------------------------------------------------
-
-
-    
-        // --------------------------
-
         FILE *out[20];   // the output files that are written to
         char name[100];  // char string
         
@@ -1563,7 +1553,7 @@ int PointIndexFromIJK(int i, int j, int k, const int* order)
 
         // snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
         
-        sprintf(name,"vtk/meshHexN.%05d.vtk", graphics_id);  // mesh file
+        sprintf(name,"vtk/meshHexPn.%05d.vtk", graphics_id);  // mesh file
         out[0]=fopen(name,"w");
 
 
@@ -1698,12 +1688,39 @@ int PointIndexFromIJK(int i, int j, int k, const int* order)
             
         } // end for scalar_vars
 
+        fclose(out[0]);
+
+
         graphics_times(graphics_id) = time_value;
-        // increment graphics id counter
-        graphics_id++;
+        
+
+
+
+        // Write time series metadata
+        sprintf(name,"vtk/meshHexPn.vtk.series", graphics_id);  // mesh file
+        out[0]=fopen(name,"w");
+
+
+        fprintf(out[0],"{\n");
+        fprintf(out[0],"  \"file-series-version\" : \"1.0\",\n");
+        fprintf(out[0],"  \"files\" : [\n");
+        
+        for(int i = 0; i <= graphics_id; i++)
+        {
+            fprintf(out[0],"    { \"name\" : \"meshHexPn.%05d.vtk\", \"time\" : %12.5e },\n", i, graphics_times(i) );
+        }
+
+
+        // fprintf(out[0], "%12.5e\n", graphics_times(i));
+        fprintf(out[0],"  ]\n"); // part 4
+        fprintf(out[0],"}"); // part 4
+
         
         fclose(out[0]);
 
+
+        // increment graphics id counter
+        graphics_id++;
     }// end write vtk
 
         

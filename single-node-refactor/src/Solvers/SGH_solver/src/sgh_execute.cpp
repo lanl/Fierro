@@ -91,9 +91,6 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
 
 
 
-    // printf("Writing outputs to file at %f \n", time_value);
-    // mesh_writer.write_mesh(mesh, MaterialPoints, node, corner, SimulationParamaters, time_value, graphics_times);
-
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
 
@@ -162,16 +159,16 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
     printf("nodal mass domain = %f \n", mass_domain_nodes_t0);
 
 
-    
-
-
     // a flag to exit the calculation
     size_t stop_calc = 0;
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
 
-
+    // Write initial state at t=0
+    printf("Writing outputs to file at %f \n", graphics_time);
+    mesh_writer.write_mesh(mesh,  State,  SimulationParamaters,  time_value, graphics_times);
+    graphics_time = time_value + graphics_dt_ival;
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {

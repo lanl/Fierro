@@ -56,7 +56,7 @@ enum timer_output_level
 
 static std::map<std::string, output_options::format> output_format_map
 {
-    { "vtk", output_options::vtk }, // Not yet supported
+    { "vtk", output_options::vtk },
     { "ensight", output_options::ensight },
     { "state", output_options::state }
 };
@@ -80,6 +80,7 @@ struct output_options_t
 
     double graphics_time_step   = 1.0;  ///< How often to write a graphics dump in time
     int graphics_iteration_step = 2000000;  ///< How often to write a graphics dump by iteration count
+
 }; // output_options_t
 
 // ----------------------------------
