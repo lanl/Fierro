@@ -792,6 +792,148 @@ public:
         SimulationParameters_t& SimulationParamaters) const
     {
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
+        const int num_dim = 3;
+
+        // SimulationParamaters.mesh_input.length.update_host();
+        const double lx = SimulationParamaters.mesh_input.length[0];
+        const double ly = SimulationParamaters.mesh_input.length[1];
+        const double lz = SimulationParamaters.mesh_input.length[2];
+
+        // SimulationParamaters.mesh_input.num_elems.update_host();
+        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
+        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
+        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
+
+        // creating zones for the Pn order
+        const int Pn_order = SimulationParamaters.mesh_input.p_order;
+        
+        if (Pn_order > 19) {
+            printf(" Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
+            return 0;
+        }
+
+        const int num_zones_i = Pn_order*num_elems_i;
+        const int num_zones_j = Pn_order*num_elems_j;
+        const int num_zones_k = Pn_order*num_elems_k;
+        
+        const int num_points_i = num_zones_i+1; // num points in x accounting for Pn
+        const int num_points_j = num_zones_j+1; // num points in y accounting for Pn
+        const int num_points_k = num_zones_k+1; // num points in y accounting for Pn
+        
+        
+        const double dx = lx/((double)num_zones_i);  // len/(num_zones_i)
+        const double dy = ly/((double)num_zones_j);  // len/(num_zones_j)
+        const double dz = lz/((double)num_zones_k);  // len/(num_zones_k)
+        
+        const int num_elems = num_elems_i*num_elems_j*num_elems_k;
+        const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
+
+        std::vector<double> origin(num_dim);
+        // SimulationParamaters.mesh_input.origin.update_host();
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+
+        // --- 3D parameters ---
+        const int num_faces_in_zone = 6;   // number of faces in zone
+        const int num_points_in_zone = 8;  // number of points in zone
+        const int num_points_in_face = 4;  // number of points in a face
+        
+        // p_order   = 1, 2, 3, 4, 5
+        // num_nodes = 2, 3, 4, 5, 6
+        const int num_1D_points = Pn_order+1;
+        const int num_points_in_elem = num_1D_points*num_1D_points*num_1D_points;
+           
+        
+        // --- elem ---
+        int elem_id = 0;
+        auto elem_coords = CArray <double> (num_elems, num_dim);
+        auto elem_point_list = CArray <int> (num_elems, num_points_in_elem);
+        
+        
+        // --- point ---
+        int point_id = 0;
+        int num_points = num_points_i * num_points_j * num_points_k;
+        auto pt_coords = CArray <double> (num_points, num_dim);
+
+
+        // --- Build nodes ---
+        
+        // populate the point data structures
+        for (int k = 0; k < num_points_k; k++){
+            for (int j = 0; j < num_points_j; j++){
+                for (int i = 0; i < num_points_i; i++){
+
+                
+                    // global id for the point
+                    int point_id = get_id(i, j, k, num_points_i, num_points_j);
+                    
+                    // store the point coordinates, this accounts for Pn order
+                    pt_coords(point_id,0) = origin[0] + (double)i*dx;
+                    pt_coords(point_id,1) = origin[1] + (double)j*dy;
+                    pt_coords(point_id,2) = origin[2] + (double)k*dz;
+                    
+                } // end for k
+            } // end for i
+        } // end for j
+
+        // --- Build elems  ---
+        
+        // populate the elem center data structures accounting for Pn
+        for (int k=0; k<num_elems_k; k++){
+            for (int j=0; j<num_elems_j; j++){
+                for (int i=0; i<num_elems_i; i++){
+                  
+                    // global id for the elem
+                    elem_id = get_id(i, j, k, num_elems_i, num_elems_j);
+                    
+                    
+                    // store the elem center Coordinates
+                    elem_coords(elem_id,0) = (double)i*dx + dx/2.0;
+                    elem_coords(elem_id,1) = (double)j*dy + dy/2.0;
+                    elem_coords(elem_id,2) = (double)k*dz + dz/2.0;
+                    
+                    
+                    // store the point IDs for this elem where the range is
+                    // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
+                    // (i:(i+1)*Pn_order, j:(j+1)*Pn_order, k:(k+1)*Pn_order) for a Pn hexahedron
+                    int this_point = 0;
+                    
+                    int k_local = 0;
+                    for (int kcount=k*Pn_order; kcount<=(k+1)*Pn_order; kcount++){
+                        int j_local = 0;
+                        for (int jcount=j*Pn_order; jcount<=(j+1)*Pn_order; jcount++){
+                            int i_local = 0;
+                            for (int icount=i*Pn_order; icount<=(i+1)*Pn_order; icount++){
+                                
+                                // global id for the points
+                                point_id = get_id(icount, jcount, kcount,
+                                                  num_points_i, num_points_j);
+                                
+                                // convert this_point index to the FE index convention
+                                int order[3] = {Pn_order, Pn_order, Pn_order};
+                                int this_index = PointIndexFromIJK(i_local, j_local, k_local, order);
+
+                                
+                                // store the points in this elem according the the finite
+                                // element numbering convention
+                                elem_point_list(elem_id,this_index) = point_id;
+                                
+                                // increment the point counting index
+                                this_point = this_point + 1;
+                                
+                                i_local++;
+                            } // end for icount
+                            
+                            j_local++;
+                        } // end for jcount
+                        
+                        k_local ++;
+                    }  // end for kcount
+                    
+                    
+                } // end for i
+            } // end for j
+        } // end for k
+
     }
 };
 
