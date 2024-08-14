@@ -920,7 +920,7 @@ public:
                     // store the point IDs for this elem where the range is
                     // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
                     // (i:(i+1)*Pn_order, j:(j+1)*Pn_order, k:(k+1)*Pn_order) for a Pn hexahedron
-                    int this_point = 0;
+                    int node_lid = 0;
                     
                     int k_local = 0;
                     for (int kcount=k*Pn_order; kcount<=(k+1)*Pn_order; kcount++){
@@ -934,20 +934,12 @@ public:
                                 // global id for the points
                                 size_t node_gid = get_id(icount, jcount, kcount,
                                                   num_points_i, num_points_j);
-                                
-                                // convert this_point index to the FE index convention
-                                // int order[3] = {Pn_order, Pn_order, Pn_order};
-                                // int this_index = PointIndexFromIJK(i_local, j_local, k_local, order);
-
-                                
-                                // store the points in this elem according the the finite
-                                // element numbering convention
 
                                 // Saved using i,j,k indexing
-                                mesh.nodes_in_elem.host(elem_gid, this_point) = node_gid;
+                                mesh.nodes_in_elem.host(elem_gid, node_lid) = node_gid;
                                 
                                 // increment the point counting index
-                                this_point = this_point + 1;
+                                node_lid = node_lid + 1;
                                 
                                 i_local++;
                             } // end for icount
@@ -1672,33 +1664,6 @@ public:
         ---------------------------------------------------------------------------
         */
 
-        // CArray<int> get_ijk_from_vtk(mesh.num_nodes_in_elem, 3);
-        // CArray<int> convert_vtk_to_fierro(mesh.num_nodes_in_elem);
-
-        // // re-order the nodes to be in i,j,k format of Fierro
-        // int Pn_order   = mesh.Pn;
-        // int this_point = 0;
-        // for (int k = 0; k <= Pn_order; k++) {
-        //     for (int j = 0; j <= Pn_order; j++) {
-        //         for (int i = 0; i <= Pn_order; i++) {
-        //             // convert this_point index to the FE index convention
-        //             int order[3]   = { Pn_order, Pn_order, Pn_order };
-        //             int this_index = PointIndexFromIJK(i, j, k, order);
-
-        //             // store the points in this elem according the the finite
-        //             // element numbering convention
-        //             convert_vtk_to_fierro(this_index) = this_point;
-
-        //             get_ijk_from_vtk(this_index, 0) = i;
-        //             get_ijk_from_vtk(this_index, 1) = j;
-        //             get_ijk_from_vtk(this_index, 2) = k;
-
-        //             // increment the point counting index
-        //             this_point = this_point + 1;
-        //         } // end for icount
-        //     } // end for jcount
-        // }  // end for kcount
-
         fprintf(out[0], "\n");
         fprintf(out[0], "CELLS %lu %lu\n", mesh.num_elems, mesh.num_elems + mesh.num_elems * mesh.num_nodes_in_elem);  // size=all printed values
 
@@ -1714,21 +1679,12 @@ public:
             for (int k = 0; k <= Pn_order; k++) {
                 for (int j = 0; j <= Pn_order; j++) {
                     for (int i = 0; i <= Pn_order; i++) {
-
                         size_t node_lid = PointIndexFromIJK(i, j, k, order);
                         fprintf(out[0], "%lu ", mesh.nodes_in_elem.host(elem_gid, node_lid));
                     }
                 }
             }
 
-
-            // for (size_t vtk_index = 0; vtk_index < mesh.num_nodes_in_elem; vtk_index++) {
-            //     // get the Fierro node_lid
-            //     // size_t node_lid = mesh.convert_vtk_to_fierro(vtk_index);
-            //     size_t node_lid = PointIndexFromIJK(i, j, k, order)
-
-            //     fprintf(out[0], "%lu ", mesh.nodes_in_elem.host(elem_gid, node_lid));
-            // }
             fprintf(out[0], "\n");
         } // end for
 
