@@ -264,6 +264,7 @@ public:
         mesh.initialize_elems(num_elem, num_dims);
         GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
 
+        
         // for each cell read the list of associated nodes
         for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
             for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -271,6 +272,29 @@ public:
 
                 // shift to start node index space at 0
                 mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
+            }
+        }
+
+        // Convert from ensight to IJK mesh
+        int convert_ensight_to_ijk[8];
+        convert_ensight_to_ijk[0] = 0;
+        convert_ensight_to_ijk[1] = 1;
+        convert_ensight_to_ijk[2] = 3;
+        convert_ensight_to_ijk[3] = 2;
+        convert_ensight_to_ijk[4] = 4;
+        convert_ensight_to_ijk[5] = 5;
+        convert_ensight_to_ijk[6] = 7;
+        convert_ensight_to_ijk[7] = 6;
+
+        int tmp_ijk_indx[8];
+
+        for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                tmp_ijk_indx[node_lid] = mesh.nodes_in_elem.host(elem_gid, convert_ensight_to_ijk[node_lid]);
+            }
+
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+                mesh.nodes_in_elem.host(elem_gid, node_lid) = tmp_ijk_indx[node_lid];
             }
         }
         // update device side
@@ -676,18 +700,6 @@ public:
         // const int num_points_in_face = 4;  // number of points in a face
         // const int num_edges_in_elem  = 12; // number of edges in a elem
 
-        // --- mesh node ordering ---
-        // Convert ijk index system to the finite element numbering convention
-        // for vertices in elem
-        auto convert_point_number_in_Hex = CArray<int>(8);
-        convert_point_number_in_Hex(0) = 0;
-        convert_point_number_in_Hex(1) = 1;
-        convert_point_number_in_Hex(2) = 3;
-        convert_point_number_in_Hex(3) = 2;
-        convert_point_number_in_Hex(4) = 4;
-        convert_point_number_in_Hex(5) = 5;
-        convert_point_number_in_Hex(6) = 7;
-        convert_point_number_in_Hex(7) = 6;
 
         int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
@@ -745,7 +757,7 @@ public:
                                                   num_points_i, num_points_j);
 
                                 // convert this_point index to the FE index convention
-                                int this_index = convert_point_number_in_Hex(this_point);
+                                int this_index = this_point; //convert_point_number_in_Hex(this_point);
 
                                 // store the points in this elem according the the finite
                                 // element numbering convention
@@ -1268,10 +1280,21 @@ public:
         }
         fprintf(out[0], "%10lu\n", num_elems);
 
+        int convert_ijk_to_ensight[8];
+        convert_ijk_to_ensight[0] = 0;
+        convert_ijk_to_ensight[1] = 1;
+        convert_ijk_to_ensight[2] = 3;
+        convert_ijk_to_ensight[3] = 2;
+        convert_ijk_to_ensight[4] = 4;
+        convert_ijk_to_ensight[5] = 5;
+        convert_ijk_to_ensight[6] = 7;
+        convert_ijk_to_ensight[7] = 6;
+
+
         // write all global point numbers for this cell
         for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                fprintf(out[0], "%10lu\t", mesh.nodes_in_elem.host(elem_gid, node_lid) + 1); // note: node_gid starts at 1
+                fprintf(out[0], "%10lu\t", mesh.nodes_in_elem.host(elem_gid, convert_ijk_to_ensight[node_lid]) + 1); // note: node_gid starts at 1
             }
             fprintf(out[0], "\n");
         }
@@ -1649,47 +1672,63 @@ public:
         ---------------------------------------------------------------------------
         */
 
-        CArray<int> get_ijk_from_vtk(mesh.num_nodes_in_elem, 3);
-        CArray<int> convert_vtk_to_fierro(mesh.num_nodes_in_elem);
+        // CArray<int> get_ijk_from_vtk(mesh.num_nodes_in_elem, 3);
+        // CArray<int> convert_vtk_to_fierro(mesh.num_nodes_in_elem);
 
-        // re-order the nodes to be in i,j,k format of Fierro
-        int Pn_order   = mesh.Pn;
-        int this_point = 0;
-        for (int k = 0; k <= Pn_order; k++) {
-            for (int j = 0; j <= Pn_order; j++) {
-                for (int i = 0; i <= Pn_order; i++) {
-                    // convert this_point index to the FE index convention
-                    int order[3]   = { Pn_order, Pn_order, Pn_order };
-                    int this_index = PointIndexFromIJK(i, j, k, order);
+        // // re-order the nodes to be in i,j,k format of Fierro
+        // int Pn_order   = mesh.Pn;
+        // int this_point = 0;
+        // for (int k = 0; k <= Pn_order; k++) {
+        //     for (int j = 0; j <= Pn_order; j++) {
+        //         for (int i = 0; i <= Pn_order; i++) {
+        //             // convert this_point index to the FE index convention
+        //             int order[3]   = { Pn_order, Pn_order, Pn_order };
+        //             int this_index = PointIndexFromIJK(i, j, k, order);
 
-                    // store the points in this elem according the the finite
-                    // element numbering convention
-                    convert_vtk_to_fierro(this_index) = this_point;
+        //             // store the points in this elem according the the finite
+        //             // element numbering convention
+        //             convert_vtk_to_fierro(this_index) = this_point;
 
-                    get_ijk_from_vtk(this_index, 0) = i;
-                    get_ijk_from_vtk(this_index, 1) = j;
-                    get_ijk_from_vtk(this_index, 2) = k;
+        //             get_ijk_from_vtk(this_index, 0) = i;
+        //             get_ijk_from_vtk(this_index, 1) = j;
+        //             get_ijk_from_vtk(this_index, 2) = k;
 
-                    // increment the point counting index
-                    this_point = this_point + 1;
-                } // end for icount
-            } // end for jcount
-        }  // end for kcount
+        //             // increment the point counting index
+        //             this_point = this_point + 1;
+        //         } // end for icount
+        //     } // end for jcount
+        // }  // end for kcount
 
         fprintf(out[0], "\n");
         fprintf(out[0], "CELLS %lu %lu\n", mesh.num_elems, mesh.num_elems + mesh.num_elems * mesh.num_nodes_in_elem);  // size=all printed values
+
+        int Pn_order   = mesh.Pn;
+        int order[3]   = { Pn_order, Pn_order, Pn_order };
+
+        const int num_1D_points = Pn_order+1;
 
         // write all global point numbers for this elem
         for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
             fprintf(out[0], "%lu ", mesh.num_nodes_in_elem); // num points in this elem
 
-            for (size_t vtk_index = 0; vtk_index < mesh.num_nodes_in_elem; vtk_index++) {
-                // get the Fierro node_lid
-                // size_t node_lid = mesh.convert_vtk_to_fierro(vtk_index);
-                size_t node_lid = vtk_index;
+            for (int k = 0; k <= Pn_order; k++) {
+                for (int j = 0; j <= Pn_order; j++) {
+                    for (int i = 0; i <= Pn_order; i++) {
 
-                fprintf(out[0], "%lu ", mesh.nodes_in_elem.host(elem_gid, node_lid));
+                        size_t node_lid = PointIndexFromIJK(i, j, k, order);
+                        fprintf(out[0], "%lu ", mesh.nodes_in_elem.host(elem_gid, node_lid));
+                    }
+                }
             }
+
+
+            // for (size_t vtk_index = 0; vtk_index < mesh.num_nodes_in_elem; vtk_index++) {
+            //     // get the Fierro node_lid
+            //     // size_t node_lid = mesh.convert_vtk_to_fierro(vtk_index);
+            //     size_t node_lid = PointIndexFromIJK(i, j, k, order)
+
+            //     fprintf(out[0], "%lu ", mesh.nodes_in_elem.host(elem_gid, node_lid));
+            // }
             fprintf(out[0], "\n");
         } // end for
 
