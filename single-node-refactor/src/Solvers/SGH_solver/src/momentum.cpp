@@ -79,7 +79,7 @@ void SGH::update_velocity(double rk_alpha,
         // update the velocity
         for (int dim = 0; dim < num_dims; dim++) {
             node_vel(1, node_gid, dim) = node_vel(0, node_gid, dim) +
-                                         rk_alpha * dt * node_force[dim] / node_mass(node_gid);
+            rk_alpha * dt * node_force[dim] / node_mass(node_gid);
         } // end for dim
     }); // end for parallel for over nodes
 
@@ -132,50 +132,50 @@ void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
 
     // x-dir
     vel_grad(0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
-                      + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
-                      + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
-                      + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
+        + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
+        + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
+        + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
 
     vel_grad(0, 1) = (u(0) * b_matrix(0, 1) + u(1) * b_matrix(1, 1)
-                      + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)
-                      + u(4) * b_matrix(4, 1) + u(5) * b_matrix(5, 1)
-                      + u(6) * b_matrix(6, 1) + u(7) * b_matrix(7, 1)) * inverse_vol;
+        + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)
+        + u(4) * b_matrix(4, 1) + u(5) * b_matrix(5, 1)
+        + u(6) * b_matrix(6, 1) + u(7) * b_matrix(7, 1)) * inverse_vol;
 
     vel_grad(0, 2) = (u(0) * b_matrix(0, 2) + u(1) * b_matrix(1, 2)
-                      + u(2) * b_matrix(2, 2) + u(3) * b_matrix(3, 2)
-                      + u(4) * b_matrix(4, 2) + u(5) * b_matrix(5, 2)
-                      + u(6) * b_matrix(6, 2) + u(7) * b_matrix(7, 2)) * inverse_vol;
+        + u(2) * b_matrix(2, 2) + u(3) * b_matrix(3, 2)
+        + u(4) * b_matrix(4, 2) + u(5) * b_matrix(5, 2)
+        + u(6) * b_matrix(6, 2) + u(7) * b_matrix(7, 2)) * inverse_vol;
 
     // y-dir
     vel_grad(1, 0) = (v(0) * b_matrix(0, 0) + v(1) * b_matrix(1, 0)
-                      + v(2) * b_matrix(2, 0) + v(3) * b_matrix(3, 0)
-                      + v(4) * b_matrix(4, 0) + v(5) * b_matrix(5, 0)
-                      + v(6) * b_matrix(6, 0) + v(7) * b_matrix(7, 0)) * inverse_vol;
+        + v(2) * b_matrix(2, 0) + v(3) * b_matrix(3, 0)
+        + v(4) * b_matrix(4, 0) + v(5) * b_matrix(5, 0)
+        + v(6) * b_matrix(6, 0) + v(7) * b_matrix(7, 0)) * inverse_vol;
 
     vel_grad(1, 1) = (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
-                      + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)
-                      + v(4) * b_matrix(4, 1) + v(5) * b_matrix(5, 1)
-                      + v(6) * b_matrix(6, 1) + v(7) * b_matrix(7, 1)) * inverse_vol;
+        + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)
+        + v(4) * b_matrix(4, 1) + v(5) * b_matrix(5, 1)
+        + v(6) * b_matrix(6, 1) + v(7) * b_matrix(7, 1)) * inverse_vol;
     vel_grad(1, 2) = (v(0) * b_matrix(0, 2) + v(1) * b_matrix(1, 2)
-                      + v(2) * b_matrix(2, 2) + v(3) * b_matrix(3, 2)
-                      + v(4) * b_matrix(4, 2) + v(5) * b_matrix(5, 2)
-                      + v(6) * b_matrix(6, 2) + v(7) * b_matrix(7, 2)) * inverse_vol;
+        + v(2) * b_matrix(2, 2) + v(3) * b_matrix(3, 2)
+        + v(4) * b_matrix(4, 2) + v(5) * b_matrix(5, 2)
+        + v(6) * b_matrix(6, 2) + v(7) * b_matrix(7, 2)) * inverse_vol;
 
     // z-dir
     vel_grad(2, 0) = (w(0) * b_matrix(0, 0) + w(1) * b_matrix(1, 0)
-                      + w(2) * b_matrix(2, 0) + w(3) * b_matrix(3, 0)
-                      + w(4) * b_matrix(4, 0) + w(5) * b_matrix(5, 0)
-                      + w(6) * b_matrix(6, 0) + w(7) * b_matrix(7, 0)) * inverse_vol;
+        + w(2) * b_matrix(2, 0) + w(3) * b_matrix(3, 0)
+        + w(4) * b_matrix(4, 0) + w(5) * b_matrix(5, 0)
+        + w(6) * b_matrix(6, 0) + w(7) * b_matrix(7, 0)) * inverse_vol;
 
     vel_grad(2, 1) = (w(0) * b_matrix(0, 1) + w(1) * b_matrix(1, 1)
-                      + w(2) * b_matrix(2, 1) + w(3) * b_matrix(3, 1)
-                      + w(4) * b_matrix(4, 1) + w(5) * b_matrix(5, 1)
-                      + w(6) * b_matrix(6, 1) + w(7) * b_matrix(7, 1)) * inverse_vol;
+        + w(2) * b_matrix(2, 1) + w(3) * b_matrix(3, 1)
+        + w(4) * b_matrix(4, 1) + w(5) * b_matrix(5, 1)
+        + w(6) * b_matrix(6, 1) + w(7) * b_matrix(7, 1)) * inverse_vol;
 
     vel_grad(2, 2) = (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
-                      + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
-                      + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
-                      + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;
+        + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
+        + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
+        + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;
 
     return;
 } // end function
@@ -235,17 +235,17 @@ void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
 
     // x-dir
     vel_grad(0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
-                      + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)) * inverse_area;
+        + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)) * inverse_area;
 
     vel_grad(0, 1) = (u(0) * b_matrix(0, 1) + u(1) * b_matrix(1, 1)
-                      + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)) * inverse_area;
+        + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)) * inverse_area;
 
     // y-dir
     vel_grad(1, 0) = (v(0) * b_matrix(0, 0) + v(1) * b_matrix(1, 0)
-                      + v(2) * b_matrix(2, 0) + v(3) * b_matrix(3, 0)) * inverse_area;
+        + v(2) * b_matrix(2, 0) + v(3) * b_matrix(3, 0)) * inverse_area;
 
     vel_grad(1, 1) = (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
-                      + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)) * inverse_area;
+        + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)) * inverse_area;
 
     vel_grad(2, 2) = elem_vel_r / mean_radius;  // + avg(vel_R)/R
 
@@ -308,21 +308,21 @@ void SGH::get_divergence(DCArrayKokkos<double>& elem_div,
 
         // x-dir
         elem_div(elem_gid) += (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
-                               + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
-                               + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
-                               + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
+        + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
+        + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
+        + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
 
         // y-dir
         elem_div(elem_gid) += (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
-                               + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)
-                               + v(4) * b_matrix(4, 1) + v(5) * b_matrix(5, 1)
-                               + v(6) * b_matrix(6, 1) + v(7) * b_matrix(7, 1)) * inverse_vol;
+        + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)
+        + v(4) * b_matrix(4, 1) + v(5) * b_matrix(5, 1)
+        + v(6) * b_matrix(6, 1) + v(7) * b_matrix(7, 1)) * inverse_vol;
 
         // z-dir
         elem_div(elem_gid) += (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
-                               + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
-                               + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
-                               + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;
+        + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
+        + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
+        + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;
     });  // end parallel for over elem_gid
 
     return;
@@ -394,16 +394,16 @@ void SGH::get_divergence2D(DCArrayKokkos<double>& elem_div,
 
         // x-dir
         elem_div(elem_gid) += (u(0) * b_matrix(0, 0)
-                               + u(1) * b_matrix(1, 0)
-                               + u(2) * b_matrix(2, 0)
-                               + u(3) * b_matrix(3, 0)) * inverse_area;
+        + u(1) * b_matrix(1, 0)
+        + u(2) * b_matrix(2, 0)
+        + u(3) * b_matrix(3, 0)) * inverse_area;
 
         // y-dir (i.e., r direction)
         elem_div(elem_gid) += (v(0) * b_matrix(0, 1)
-                               + v(1) * b_matrix(1, 1)
-                               + v(2) * b_matrix(2, 1)
-                               + v(3) * b_matrix(3, 1)) * inverse_area
-                              + elem_vel_r / mean_radius; // + avg(u_R)/R
+        + v(1) * b_matrix(1, 1)
+        + v(2) * b_matrix(2, 1)
+        + v(3) * b_matrix(3, 1)) * inverse_area
+        + elem_vel_r / mean_radius;                       // + avg(u_R)/R
     });  // end parallel for over elem_gid
 
     return;
@@ -430,8 +430,8 @@ void SGH::get_divergence2D(DCArrayKokkos<double>& elem_div,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void SGH::decompose_vel_grad(const ViewCArrayKokkos<double>& D_tensor,
-                             const ViewCArrayKokkos<double>& W_tensor,
-                             const ViewCArrayKokkos<double>& vel_grad) const
+    const ViewCArrayKokkos<double>& W_tensor,
+    const ViewCArrayKokkos<double>& vel_grad) const
 {
     // --- Calculate the velocity gradient ---
 

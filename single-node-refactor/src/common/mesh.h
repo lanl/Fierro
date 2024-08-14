@@ -43,7 +43,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace mtr;
 
-
 namespace mesh_init
 {
 // element mesh types
@@ -147,7 +146,7 @@ struct legendre_in_elem_t
         };
 
         legendre_in_elem_t(const size_t num_leg_gauss_in_elem_inp) {
-                this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
+            this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
         };
 
         // return global gauss index for given local gauss index in an element
@@ -174,7 +173,7 @@ struct lobatto_in_elem_t
         };
 
         lobatto_in_elem_t(const size_t num_lob_gauss_in_elem_inp) {
-                this->num_lob_gauss_in_elem_ = num_lob_gauss_in_elem_inp;
+            this->num_lob_gauss_in_elem_ = num_lob_gauss_in_elem_inp;
         };
 
         // return global gauss index for given local gauss index in an element
@@ -1532,12 +1531,12 @@ struct Mesh_t
 
 KOKKOS_FUNCTION
 void decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
-                        ViewCArrayKokkos<double>& W_tensor,
-                        const ViewCArrayKokkos<double>& vel_grad,
-                        const ViewCArrayKokkos<size_t>& elem_node_gids,
-                        const size_t elem_gid,
-                        const DCArrayKokkos<double>& node_coords,
-                        const DCArrayKokkos<double>& node_vel,
-                        const double vol);
+    ViewCArrayKokkos<double>& W_tensor,
+    const ViewCArrayKokkos<double>& vel_grad,
+    const ViewCArrayKokkos<size_t>& elem_node_gids,
+    const size_t elem_gid,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel,
+    const double vol);
 
 #endif

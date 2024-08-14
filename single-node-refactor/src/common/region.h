@@ -44,19 +44,19 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ==============================================================================
 namespace region
 {
-    // for tagging volumes to paint material onto the mesh
-    enum vol_tag
-    {
-        no_volume = 0,
-        global = 1,         // tag every elements in the mesh
-        box = 2,            // tag all elements inside a box
-        cylinder = 3,       // tag all elements inside a cylinder
-        sphere = 4,         // tag all elements inside a sphere
-        readVoxelFile = 5,  // tag all elements in a voxel mesh (structured VTK)
-        readPolycrystalFile = 6, // tag all elements in a polycrystallince voxel mesh (structured VTK)
-        readSTLFile = 7,    // read a STL file and voxelize it
-        readVTKFile = 8,    // tag all elements in a VTK mesh (unstructured mesh)
-    };
+// for tagging volumes to paint material onto the mesh
+enum vol_tag
+{
+    no_volume = 0,
+    global = 1,             ///< tag every elements in the mesh
+    box = 2,                ///< tag all elements inside a box
+    cylinder = 3,           ///< tag all elements inside a cylinder
+    sphere = 4,             ///< tag all elements inside a sphere
+    readVoxelFile = 5,      ///< tag all elements in a voxel mesh (structured VTK)
+    readPolycrystalFile = 6,///< tag all elements in a polycrystallince voxel mesh (structured VTK)
+    readSTLFile = 7,        ///< read a STL file and voxelize it
+    readVTKFile = 8,        ///< tag all elements in a VTK mesh (unstructured mesh)
+};
 } // end of namespace
 
 static std::map<std::string, region::vol_tag> region_type_map
@@ -109,15 +109,14 @@ struct RegionFill_t
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
 
-    double origin[3] = {0.0, 0.0, 0.0}; ///< Origin for region
+    double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region
 };
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \struct RegionFill_host_t
 ///
-/// \brief Geometry data, on the cpu only, for regions of materials/states 
+/// \brief Geometry data, on the cpu only, for regions of materials/states
 ///
 /////////////////////////////////////////////////////////////////////////////
 struct RegionFill_host_t
