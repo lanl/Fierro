@@ -1841,7 +1841,7 @@ public:
         for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
             for (size_t elem_lid = 0; elem_lid < num_mat_elems; elem_lid++) {
-                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem(elem_lid);
+                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(elem_lid);
 
                 double elem_coords[3];
                 elem_coords[0] = 0.0;
