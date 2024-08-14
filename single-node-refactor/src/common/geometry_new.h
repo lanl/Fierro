@@ -84,16 +84,6 @@ void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
     auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
     auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
 
-    int convert_ensight_to_ijk[8];
-    convert_ensight_to_ijk[0] = 0;
-    convert_ensight_to_ijk[1] = 1;
-    convert_ensight_to_ijk[2] = 3;
-    convert_ensight_to_ijk[3] = 2;
-    convert_ensight_to_ijk[4] = 4;
-    convert_ensight_to_ijk[5] = 5;
-    convert_ensight_to_ijk[6] = 7;
-    convert_ensight_to_ijk[7] = 6;
-
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
@@ -347,38 +337,26 @@ void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
     auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
     auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
 
-
-    int convert_ensight_to_ijk[8];
-    convert_ensight_to_ijk[0] = 0;
-    convert_ensight_to_ijk[1] = 1;
-    convert_ensight_to_ijk[2] = 3;
-    convert_ensight_to_ijk[3] = 2;
-    convert_ensight_to_ijk[4] = 4;
-    convert_ensight_to_ijk[5] = 5;
-    convert_ensight_to_ijk[6] = 7;
-    convert_ensight_to_ijk[7] = 6;
-
-
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(convert_ensight_to_ijk[node_lid]) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(convert_ensight_to_ijk[node_lid]) = node_coords(1, elem_node_gids(node_lid), 1);
-        z(convert_ensight_to_ijk[node_lid]) = node_coords(1, elem_node_gids(node_lid), 2);
+        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        z(node_lid) = node_coords(1, elem_node_gids(node_lid), 2);
     }     // end for
 
     double twelth = 1. / 12.;
 
     // element volume
     elem_vol(elem_gid) =
-        (x(1) * (y(3) * (-z(0) + z(2)) + y(4) * (z(0) - z(5)) + y(0) * (z(2) + z(3) - z(4) - z(5)) + y(6) * (-z(2) + z(5)) + y(5) * (z(0) - z(2) + z(4) - z(6)) + y(2) * (-z(0) - z(3) + z(5) + z(6))) +
-        x(7) * (y(0) * (-z(3) + z(4)) + y(6) * (z(2) + z(3) - z(4) - z(5)) + y(2) * (z(3) - z(6)) + y(3) * (z(0) - z(2) + z(4) - z(6)) + y(5) * (-z(4) + z(6)) + y(4) * (-z(0) - z(3) + z(5) + z(6))) +
-        x(3) * (y(1) * (z(0) - z(2)) + y(7) * (-z(0) + z(2) - z(4) + z(6)) + y(6) * (z(2) - z(7)) + y(2) * (z(0) + z(1) - z(6) - z(7)) + y(4) * (-z(0) + z(7)) + y(0) * (-z(1) - z(2) + z(4) + z(7))) +
-        x(5) * (y(0) * (z(1) - z(4)) + y(7) * (z(4) - z(6)) + y(2) * (-z(1) + z(6)) + y(1) * (-z(0) + z(2) - z(4) + z(6)) + y(4) * (z(0) + z(1) - z(6) - z(7)) + y(6) * (-z(1) - z(2) + z(4) + z(7))) +
-        x(6) * (y(1) * (z(2) - z(5)) + y(7) * (-z(2) - z(3) + z(4) + z(5)) + y(5) * (z(1) + z(2) - z(4) - z(7)) + y(4) * (z(5) - z(7)) + y(3) * (-z(2) + z(7)) + y(2) * (-z(1) + z(3) - z(5) + z(7))) +
-        x(0) * (y(2) * (z(1) - z(3)) + y(7) * (z(3) - z(4)) + y(5) * (-z(1) + z(4)) + y(1) * (-z(2) - z(3) + z(4) + z(5)) + y(3) * (z(1) + z(2) - z(4) - z(7)) + y(4) * (-z(1) + z(3) - z(5) + z(7))) +
-        x(2) * (y(0) * (-z(1) + z(3)) + y(5) * (z(1) - z(6)) + y(1) * (z(0) + z(3) - z(5) - z(6)) + y(7) * (-z(3) + z(6)) + y(6) * (z(1) - z(3) + z(5) - z(7)) + y(3) * (-z(0) - z(1) + z(6) + z(7))) +
+        (x(1) * (y(2) * (-z(0) + z(3)) + y(4) * (z(0) - z(5)) + y(0) * (z(3) + z(2) - z(4) - z(5)) + y(7) * (-z(3) + z(5)) + y(5) * (z(0) - z(3) + z(4) - z(7)) + y(3) * (-z(0) - z(2) + z(5) + z(7))) +
+        x(6) * (y(0) * (-z(2) + z(4)) + y(7) * (z(3) + z(2) - z(4) - z(5)) + y(3) * (z(2) - z(7)) + y(2) * (z(0) - z(3) + z(4) - z(7)) + y(5) * (-z(4) + z(7)) + y(4) * (-z(0) - z(2) + z(5) + z(7))) +
+        x(2) * (y(1) * (z(0) - z(3)) + y(6) * (-z(0) + z(3) - z(4) + z(7)) + y(7) * (z(3) - z(6)) + y(3) * (z(0) + z(1) - z(7) - z(6)) + y(4) * (-z(0) + z(6)) + y(0) * (-z(1) - z(3) + z(4) + z(6))) +
+        x(5) * (y(0) * (z(1) - z(4)) + y(6) * (z(4) - z(7)) + y(3) * (-z(1) + z(7)) + y(1) * (-z(0) + z(3) - z(4) + z(7)) + y(4) * (z(0) + z(1) - z(7) - z(6)) + y(7) * (-z(1) - z(3) + z(4) + z(6))) +
+        x(7) * (y(1) * (z(3) - z(5)) + y(6) * (-z(3) - z(2) + z(4) + z(5)) + y(5) * (z(1) + z(3) - z(4) - z(6)) + y(4) * (z(5) - z(6)) + y(2) * (-z(3) + z(6)) + y(3) * (-z(1) + z(2) - z(5) + z(6))) +
+        x(0) * (y(3) * (z(1) - z(2)) + y(6) * (z(2) - z(4)) + y(5) * (-z(1) + z(4)) + y(1) * (-z(3) - z(2) + z(4) + z(5)) + y(2) * (z(1) + z(3) - z(4) - z(6)) + y(4) * (-z(1) + z(2) - z(5) + z(6))) +
+        x(3) * (y(0) * (-z(1) + z(2)) + y(5) * (z(1) - z(7)) + y(1) * (z(0) + z(2) - z(5) - z(7)) + y(6) * (-z(2) + z(7)) + y(7) * (z(1) - z(2) + z(5) - z(6)) + y(2) * (-z(0) - z(1) + z(7) + z(6))) +
         x(4) *
-        (y(1) * (-z(0) + z(5)) + y(7) * (z(0) + z(3) - z(5) - z(6)) + y(3) * (z(0) - z(7)) + y(0) * (z(1) - z(3) + z(5) - z(7)) + y(6) * (-z(5) + z(7)) + y(5) * (-z(0) - z(1) + z(6) + z(7)))) *
+        (y(1) * (-z(0) + z(5)) + y(6) * (z(0) + z(2) - z(5) - z(7)) + y(2) * (z(0) - z(6)) + y(0) * (z(1) - z(2) + z(5) - z(6)) + y(7) * (-z(5) + z(6)) + y(5) * (-z(0) - z(1) + z(7) + z(6)))) *
         twelth;
 
     // std::cout<<"Calculating volume for hex = "<<elem_vol(elem_gid)<<std::endl;
