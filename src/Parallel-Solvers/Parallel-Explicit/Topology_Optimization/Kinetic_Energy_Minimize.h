@@ -543,6 +543,22 @@ public:
         // std::fflush(stdout);
         // std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
     }
+    
+  //contributes to rate of change of adjoint vector due to term with velocity gradient of objective
+    void velocity_gradient_adjoint_contribution(vec_array& adjoint_rate_vector, const DViewCArrayKokkos<double>& node_mass,
+                                                const DViewCArrayKokkos<double>& elem_mass, const DViewCArrayKokkos<double>& node_vel,
+                                                const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
+                                                const size_t& rk_level){
+        
+
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            for (int idim = 0; idim < num_dim; idim++) {
+                adjoint_rate_vector(node_gid, idim) = node_mass(node_gid)*node_vel(rk_level, node_gid, idim);
+            }
+        }); // end parallel for
+        Kokkos::fence();
+    }
+    
 };
 
 #endif // end header guard
