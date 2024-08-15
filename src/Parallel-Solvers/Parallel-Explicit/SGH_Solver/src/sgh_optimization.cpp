@@ -915,10 +915,10 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                             elem_id = elems_in_node(node_gid, ielem);
                             matrix_contribution += psi_previous_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
                         }
-                        rate_of_change = contained*previous_velocity_vector(node_gid, idim) -
-                                        matrix_contribution / node_mass(node_gid) -
-                                        phi_previous_adjoint_vector(node_gid, idim) / node_mass(node_gid);
-                        midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / 2 + previous_adjoint_vector(node_gid, idim);
+                        rate_of_change = contained*node_mass(node_gid)*previous_velocity_vector(node_gid, idim) -
+                                        matrix_contribution -
+                                        phi_previous_adjoint_vector(node_gid, idim);
+                        midpoint_adjoint_vector(node_gid, idim) = rate_of_change;
                     }
                 }); // end parallel for
             }
@@ -942,13 +942,23 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                             elem_id = elems_in_node(node_gid, ielem);
                             matrix_contribution += psi_previous_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
                         }
-                        rate_of_change = previous_velocity_vector(node_gid, idim) -
-                                        matrix_contribution / node_mass(node_gid) -
-                                        phi_previous_adjoint_vector(node_gid, idim) / node_mass(node_gid);
-                        midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / 2 + previous_adjoint_vector(node_gid, idim);
+                        rate_of_change = node_mass(node_gid)*previous_velocity_vector(node_gid, idim) -
+                                        matrix_contribution -
+                                        phi_previous_adjoint_vector(node_gid, idim);
+                        midpoint_adjoint_vector(node_gid, idim) = rate_of_change;
                     }
                 }); // end parallel for
             }
+            Kokkos::fence();
+
+            objective_function->velocity_gradient_adjoint_contribution(midpoint_adjoint_vector);
+            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    real_t rate_of_change;
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        rate_of_change = midpoint_adjoint_vector(node_gid, idim);
+                        midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / node_mass(node_gid)/ 2 + previous_adjoint_vector(node_gid, idim);
+                    }
+                }); // end parallel for
             Kokkos::fence();
 
             // half step update for RK2 scheme; EQUATION 2
@@ -1257,10 +1267,10 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                             matrix_contribution += psi_midpoint_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
                         }
 
-                        rate_of_change =  0.5*contained*(previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim)) -
-                                        matrix_contribution / node_mass(node_gid) -
-                                        phi_midpoint_adjoint_vector(node_gid, idim) / node_mass(node_gid);
-                        current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt + previous_adjoint_vector(node_gid, idim);
+                        rate_of_change =  0.5*contained*node_mass(node_gid)*(previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim)) -
+                                        matrix_contribution -
+                                        phi_midpoint_adjoint_vector(node_gid, idim);
+                        current_adjoint_vector(node_gid, idim) = rate_of_change;
                     }
                 }); // end parallel for
             }
@@ -1286,13 +1296,23 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                             matrix_contribution += psi_midpoint_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
                         }
 
-                        rate_of_change =  0.5*(previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim)) -
-                                        matrix_contribution / node_mass(node_gid) -
-                                        phi_midpoint_adjoint_vector(node_gid, idim) / node_mass(node_gid);
-                        current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt + previous_adjoint_vector(node_gid, idim);
+                        rate_of_change =  0.5*node_mass(node_gid)*(previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim)) -
+                                        matrix_contribution -
+                                        phi_midpoint_adjoint_vector(node_gid, idim);
+                        current_adjoint_vector(node_gid, idim) = rate_of_change;
                     }
                 }); // end parallel for
             }
+            Kokkos::fence();
+
+            objective_function->velocity_gradient_adjoint_contribution(current_adjoint_vector);
+            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    real_t rate_of_change;
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        rate_of_change = current_adjoint_vector(node_gid, idim);
+                        current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / node_mass(node_gid) + previous_adjoint_vector(node_gid, idim);
+                    }
+                }); // end parallel for
             Kokkos::fence();
 
             // full step update with midpoint gradient for RK2 scheme; EQUATION 2

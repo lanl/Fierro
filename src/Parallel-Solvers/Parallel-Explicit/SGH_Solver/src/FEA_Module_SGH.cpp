@@ -926,7 +926,7 @@ void FEA_Module_SGH::sgh_solve()
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
-    FierroOptimizationObjective* objective_function;
+    
     bool topology_optimization_on = simparam->topology_optimization_on;
     bool shape_optimization_on    = simparam->shape_optimization_on;
     bool use_solve_checkpoints    = simparam->optimization_options.use_solve_checkpoints;
