@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication)
+from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog)
 from PySide6.QtCore import (QCoreApplication, QProcess)
 import re
 import csv
@@ -10,6 +10,7 @@ from paraview.simple import *
 from EVPFFT_Lattice_WInput import *
 import DeveloperInputs
 from importlib import reload
+from ReadHDF5 import *
 
 # ==============================================
 # ======= EVPFFT SOLVER LATTICE PIPELINE =======
@@ -23,10 +24,11 @@ def warning_message(msg):
 
 def EVPFFT_Lattice(self):
     # Connect tab buttons to settings windows
-    self.BImportPart.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(2))
-    self.BDefineMaterial.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(4))
-    self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(7))
-    self.BGlobalMesh.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(1))
+    #self.BImportPart.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(2))
+    #self.BImportHDF5Part.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(5))
+    #self.BDefineMaterial.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(4))
+    #self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(7))
+    #self.BGlobalMesh.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(1))
     
     # Apply Material
     def material_type():
@@ -647,7 +649,7 @@ def EVPFFT_Lattice(self):
     # Batch Run of EVPFFT
     def batch_EVPFFT():
         for BC_index in range(6):
-            self.BRunEVPFFT.clicked.connect(single_EVPFFT(BC_index))
+            #self.BRunEVPFFT.clicked.connect(single_EVPFFT(BC_index))
             self.p.waitForStarted()
             while self.p != None:
                 QApplication.processEvents()
@@ -723,7 +725,16 @@ def EVPFFT_Lattice(self):
     self.p = None
     def run_click():
         batch_EVPFFT()
-    self.BRunEVPFFT.clicked.connect(run_click)
+    #self.BRunEVPFFT.clicked.connect(run_click)
+
+    # Upload HDF5
+    def upload_hdf5_click():
+        global hdf5_filename
+        hdf5_filename = QFileDialog.getOpenFileName(
+            filter="HDF5 File (*.h5, *.hdf5, *.dream3d)",
+        )
+        ReadHDF5(hdf5_filename, "data")
+    #self.BUploadHDF5.clicked.connect(upload_hdf5_click)
     
     # Preview Results
     def preview_results_click():
