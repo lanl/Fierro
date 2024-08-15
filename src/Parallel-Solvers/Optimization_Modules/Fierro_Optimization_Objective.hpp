@@ -134,6 +134,16 @@ public:
 
     objective_accumulation = global_objective_accumulation;
   }
+  
+  //NOTE: these functions assign for every component of the gradient vector
+  //contributes to rate of change of adjoint vector due to term with velocity gradient of objective
+  virtual void velocity_gradient_adjoint_contribution(vec_array& adjoint_rate_vector){}
+
+  //contributes to rate of change of adjoint vector due to term with displacement gradient of objective
+  virtual void displacement_gradient_adjoint_contribution(vec_array& adjoint_rate_vector){}
+
+  //contributes to rate of change of adjoint vector due to term with specific internal energy gradient of objective
+  virtual void sie_gradient_adjoint_contribution(vec_array& adjoint_rate_vector){}
 
 
 }; // class ObjectiveMMA 
