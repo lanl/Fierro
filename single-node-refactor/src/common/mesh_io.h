@@ -1412,7 +1412,9 @@ public:
         FILE* out_elem_state;  // element average state
         char  filename[128];
 
-        sprintf(filename, "state/mat_pt_state_t_%6.4e.txt", time_value);
+        int max_len = sizeof filename;
+
+        snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e.txt", time_value);
 
 
         // output files

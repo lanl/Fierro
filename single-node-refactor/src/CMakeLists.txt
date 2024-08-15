@@ -39,23 +39,7 @@ find_package(Kokkos REQUIRED)
 find_package(Matar REQUIRED)
 
 
-# if(BUILD_KOKKOS_SGH)
-# #  if(NOT BUILD_IMPLICIT_SOLVER)
-# #    find_package(Kokkos REQUIRED)
-# #    add_definitions(-DHAVE_KOKKOS=1#)
-# #  endif()
-#   # include_directories(Solvers/SGH_solver)
-#   # include_directories(Solvers/SGH_solver/include)
-#   add_subdirectory(Solvers/SGH_solver)
-# endif()
 
-
-
-# if(BUILD_KOKKOS_SGH)
-#   message("\nbuilding SGH!  Here are the details: ")
-
-#   add_subdirectory(Solvers/SGH_solver)
-# endif()
 
 
 
@@ -80,5 +64,9 @@ include_directories(common)
 include_directories(Solvers/SGH_solver/include)
 add_subdirectory(Solvers/SGH_solver)
 
+# Add SGH RZ Solver
+include_directories(Solvers/SGH_solver_rz/include)
+add_subdirectory(Solvers/SGH_solver_rz)
+
 add_executable(Fierro main.cpp driver.cpp solver.cpp ${YAML_SRC_Files} ${SGH_SRC_Files} )
-target_link_libraries(Fierro PRIVATE matar Kokkos::kokkos) #sgh_solver  parse_yaml 
+target_link_libraries(Fierro PRIVATE matar Kokkos::kokkos) 
