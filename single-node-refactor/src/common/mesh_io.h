@@ -335,7 +335,7 @@ public:
                     SimulationParameters_t& SimulationParamaters)
     {
         if (SimulationParamaters.mesh_input.num_dims == 2) {
-            if (SimulationParamaters.mesh_input.type == mesh_input::Cylinder) {
+            if (SimulationParamaters.mesh_input.type == mesh_input::Polar) {
                 build_2d_polar(mesh, GaussPoints, node, corner, SimulationParamaters);
             }
             else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {

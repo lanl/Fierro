@@ -51,8 +51,8 @@ enum source
 // type of mesh to generate if source = generate
 enum type
 {
-    Box = 0,       // Create the mesh using the mesh builder
-    Cylinder = 1,  // Read in the mesh from a file
+    Box = 0,     // Create the mesh using the mesh builder
+    Polar = 1,   // Create a polar 2D mesh
 };
 } // end of namespace
 
@@ -64,8 +64,8 @@ static std::map<std::string, mesh_input::source> mesh_input_source_map
 
 static std::map<std::string, mesh_input::type> mesh_input_type_map
 {
-    { "Box", mesh_input::Box },
-    { "Cylinder", mesh_input::Cylinder }
+    { "box", mesh_input::Box },
+    { "polar", mesh_input::Polar }
 };
 
 /////////////////////////////////////////////////////////////////////////////
