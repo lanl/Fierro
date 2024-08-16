@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 kokkos_build_type="${1}"
+debug="${2}"
 
 # If all arguments are valid, you can use them in your script as needed
 echo "Kokkos Build Type: $kokkos_build_type"
@@ -61,6 +62,13 @@ elif [ "$kokkos_build_type" = "cuda" ]; then
 elif [ "$kokkos_build_type" = "hip" ]; then
     cmake_options+=(
         ${HIP_ADDITIONS[@]}
+    )
+fi
+
+if [ "$debug" = "true" ]; then
+    echo "Setting debug to true for CMAKE build type"
+    cmake_options+=(
+        -DCMAKE_BUILD_TYPE=Debug
     )
 fi
 
