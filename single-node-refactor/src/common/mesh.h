@@ -56,6 +56,7 @@ enum elem_name_tag
 // other enums could go here on the mesh
 } // end namespace
 
+
 /*
 ==========================
 Nodal indexing convention
@@ -66,7 +67,7 @@ Nodal indexing convention
               |        /
               |       /
               |      /
-      7------------------6
+      6------------------7
      /|                 /|
     / |                / |
    /  |               /  |
@@ -77,7 +78,7 @@ Nodal indexing convention
 |     |            |     |
 |     |            |     |
 |     |            |     |
-|     3------------|-----2
+|     2------------|-----3
 |    /             |    /
 |   /              |   /
 |  /               |  /
@@ -86,13 +87,12 @@ Nodal indexing convention
 0------------------1
 
 nodes are ordered for outward normal
-patch 0: [0,4,7,3]  xi-minus dir
-patch 1: [1,2,6,5]  xi-plus  dir
+patch 0: [0,4,6,2]  xi-minus dir
+patch 1: [1,3,7,5]  xi-plus  dir
 patch 2: [0,1,5,4]  eta-minus dir
-patch 3: [2,3,7,6]  eta-plus  dir
-patch 4: [0,3,2,1]  zeta-minus dir
-patch 6: [4,5,6,7]  zeta-plus  dir
-
+patch 3: [3,2,6,7]  eta-plus  dir
+patch 4: [0,2,3,1]  zeta-minus dir
+patch 6: [4,5,7,6]  zeta-plus  dir
 */
 
 // sort in ascending order using bubble sort
@@ -570,12 +570,13 @@ struct Mesh_t
         // classic linear elements
         if (elem_kind == mesh_init::linear_tensor_element) {
             if (num_dims == 3) {
-                size_t temp_node_lids[24] = { 0, 4, 7, 3,
-                                              1, 2, 6, 5,
+
+                 size_t temp_node_lids[24] = { 0, 4, 6, 2,
+                                              1, 3, 7, 5,
                                               0, 1, 5, 4,
-                                              2, 3, 7, 6,
-                                              0, 3, 2, 1,
-                                              4, 5, 6, 7 };
+                                              3, 2, 6, 7,
+                                              0, 2, 3, 1,
+                                              4, 5, 7, 6 };
 
                 int count = 0;
                 int elem_patch_lid = 0;
