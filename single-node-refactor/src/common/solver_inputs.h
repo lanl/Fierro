@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -44,12 +44,14 @@ enum method
 {
     NONE = 0,
     SGH = 1,
+    SGHRZ = 2,
 };
 } // end of namespace
 
 static std::map<std::string, solver_input::method> solver_map
 {
-    { "SGH", solver_input::SGH }
+    { "SGH", solver_input::SGH },
+    { "SGHRZ", solver_input::SGHRZ }
 };
 
 /////////////////////////////////////////////////////////////////////////////

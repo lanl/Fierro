@@ -104,6 +104,18 @@ void Driver::initialize()
 
             solvers.push_back(sgh_solver);
         } // end if SGH solver
+        else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGHRZ) {
+
+            SGHRZ* sgh_solver_rz = new SGHRZ(); 
+
+            sgh_solver_rz->initialize(SimulationParamaters, 
+                                   Materials, 
+                                   mesh, 
+                                   BoundaryConditions,
+                                   State);
+
+            solvers.push_back(sgh_solver_rz);
+        } // end if SGH solver
 
     } // end for loop over solvers
 

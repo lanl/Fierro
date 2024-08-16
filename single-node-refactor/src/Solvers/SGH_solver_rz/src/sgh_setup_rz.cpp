@@ -39,6 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.h"
 #include "simulation_parameters.h"
 #include "state.h"
+#include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -513,6 +514,90 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
                       State.corner.mass);
 
 } // end SGHRZ setup
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn calc_corner_mass
+///
+/// \brief a function to initialize pressure, sound speed and stress
+///
+/// \param Materials holds the material models and global parameters
+/// \param mesh is the simulation mesh
+/// \param node_coords are the nodal coordinates of the mesh
+/// \param node_mass is mass of the node
+/// \param corner_mass is corner mass
+/// \param MaterialPoints_mass is the mass at the material point for mat_id
+/// \param num_mat_elems is the number of material elements for mat_id
+///
+/////////////////////////////////////////////////////////////////////////////
+void calc_corner_mass_rz(const Material_t& Materials,
+                         const Mesh_t& mesh,
+                         const DCArrayKokkos<double>& node_coords,
+                         const DCArrayKokkos<double>& node_mass,
+                         const DCArrayKokkos<double>& corner_mass,
+                         const DCArrayKokkos<double>& MaterialPoints_den,
+                         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                         const size_t num_mat_elems)
+{
+
+    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+        // get elem gid
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
+        // facial area of the corners
+        double corner_areas_array[4];
+
+        ViewCArrayKokkos<double> corner_areas(&corner_areas_array[0], 4);
+        ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+
+        geometry::get_area_weights2D(corner_areas, elem_gid, node_coords, elem_node_gids);
+
+        // loop over the corners of the element and calculate the mass
+        for (size_t corner_lid = 0; corner_lid < 4; corner_lid++) {
+            size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+            corner_mass(corner_gid) += corner_areas(corner_lid) * MaterialPoints_den(mat_elem_lid); // node radius is added later
+        } // end for over corners
+    });
+
+} // end function calculate corner mass
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn calc_node_mass
+///
+/// \brief a function to initialize material corner masses
+///
+/// \param Materials holds the material models and global parameters
+/// \param mesh is the simulation mesh
+/// \param node_coords are the nodal coordinates of the mesh
+/// \param node_mass is mass of the node
+/// \param corner_mass is corner mass
+/// \param MaterialPoints_mass is the mass at the material point for mat_id
+/// \param num_mat_elems is the number of material elements for mat_id
+///
+/////////////////////////////////////////////////////////////////////////////
+void calc_node_mass_rz(const Mesh_t& mesh,
+                    const DCArrayKokkos<double>& node_coords,
+                    const DCArrayKokkos<double>& node_mass,
+                    const DCArrayKokkos<double>& corner_mass)
+{
+
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
+            
+            size_t corner_gid    = mesh.corners_in_node(node_gid, corner_lid);
+
+            node_mass(node_gid) += corner_mass(corner_gid);  // sans the radius so it is areal node mass
+
+            corner_mass(corner_gid) *= node_coords(1, node_gid, 1); // true corner mass now
+        } // end for elem_lid
+    });
+
+} // end function calculate node mass
 
 
 
