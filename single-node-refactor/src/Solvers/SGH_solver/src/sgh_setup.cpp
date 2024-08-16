@@ -38,6 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "material.h"
 #include "boundary_conditions.h"
 #include "state.h"
+#include "simulation_parameters.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
