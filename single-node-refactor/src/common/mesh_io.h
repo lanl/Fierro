@@ -1433,7 +1433,7 @@ public:
             for (size_t elem_lid = 0; elem_lid < num_mat_elems; elem_lid++)
             {
 
-                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem(elem_lid); 
+                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(elem_lid);
 
 
                 double elem_coords[3];
