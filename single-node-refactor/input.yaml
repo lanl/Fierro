@@ -23,8 +23,8 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: vtk
-    graphics_time_step: 0.25
+    output_file_format: state
+    graphics_time_step: 1.0
     # graphics_iteration_step: 10
 
 solver_options:

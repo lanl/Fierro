@@ -10,7 +10,7 @@ dynamic_options:
 mesh_options:
     source: generate
     num_dims: 3
-    type: Box
+    type: box
     origin: [0, 0, 0]
     length: [0.01, 0.01, 1.0]
     num_elems: [1, 1, 100]
