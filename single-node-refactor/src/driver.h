@@ -41,6 +41,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Headers for SGH solver classes
 #include "sgh_solver.h"
+#include "sgh_solver_rz.h"
+
 
 // Physical state data
 #include "state.h"

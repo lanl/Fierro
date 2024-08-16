@@ -18,9 +18,9 @@ endif()
 include_directories(include)
 include_directories(src)
 
-message("\n ****** ADDING SGH SOURCE FILES ******** \n ")
+message("\n ****** ADDING SGH RZ SOURCE FILES ******** \n ")
 
-set(SGH_SRC_Files 
+set(SGH_RZ_SRC_Files 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/boundary_rz.cpp 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/energy_sgh_rz.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/force_sgh_rz.cpp
