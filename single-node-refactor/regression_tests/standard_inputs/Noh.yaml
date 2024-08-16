@@ -21,7 +21,7 @@ output_options:
   
   
 fea_module_parameters:
-  - type: SGH
+  - type: SGH3D
     material_id: 0
     boundary_conditions:
       # Tag X plane

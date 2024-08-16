@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver.h"
+#include "sgh_solver_3D.h"
 #include "mesh.h"
 #include "geometry_new.h"
 
@@ -49,7 +49,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param View of the corner forces
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::update_velocity(double rk_alpha,
+void SGH3D::update_velocity(double rk_alpha,
     double dt,
     const Mesh_t& mesh,
     DCArrayKokkos<double>& node_vel,
@@ -101,7 +101,7 @@ void SGH::update_velocity(double rk_alpha,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
+void SGH3D::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>& elem_node_gids,
     const DCArrayKokkos<double>&    node_vel,
     const ViewCArrayKokkos<double>& b_matrix,
@@ -180,77 +180,6 @@ void SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     return;
 } // end function
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn get_velgrad2D
-///
-/// \brief This function calculates the velocity gradient for a 2D element
-///
-/// \param Velocity gradient
-/// \param Global ids of the nodes in this element
-/// \param View of the nodal velocity data
-/// \param The finite element B matrix
-/// \param The volume of the particular element
-/// \param The elements surface area
-/// \param The global id of this particular element
-///
-/////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
-    const ViewCArrayKokkos<size_t>& elem_node_gids,
-    const DCArrayKokkos<double>&    node_vel,
-    const ViewCArrayKokkos<double>& b_matrix,
-    const double elem_vol,
-    const double elem_area,
-    const size_t elem_gid) const
-{
-    const size_t num_nodes_in_elem = 4;
-
-    double u_array[num_nodes_in_elem];
-    double v_array[num_nodes_in_elem];
-    ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
-    ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
-
-    // get the vertex velocities for the cell
-    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-        // Get node gid
-        size_t node_gid = elem_node_gids(node_lid);
-
-        u(node_lid) = node_vel(1, node_gid, 0); // x-comp
-        v(node_lid) = node_vel(1, node_gid, 1); // y-comp
-    } // end for
-
-    // initialize to zero
-    for (size_t i = 0; i < 3; i++) {
-        for (size_t j = 0; j < 3; j++) {
-            vel_grad(i, j) = 0.0;
-        }
-    }
-
-    double mean_radius = elem_vol / elem_area;
-    double elem_vel_r  = 0.25 * (v(0) + v(1) + v(2) + v(3));
-
-    // --- calculate the velocity gradient terms ---
-    double inverse_area = 1.0 / elem_area;
-
-    // x-dir
-    vel_grad(0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
-                      + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)) * inverse_area;
-
-    vel_grad(0, 1) = (u(0) * b_matrix(0, 1) + u(1) * b_matrix(1, 1)
-                      + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)) * inverse_area;
-
-    // y-dir
-    vel_grad(1, 0) = (v(0) * b_matrix(0, 0) + v(1) * b_matrix(1, 0)
-                      + v(2) * b_matrix(2, 0) + v(3) * b_matrix(3, 0)) * inverse_area;
-
-    vel_grad(1, 1) = (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
-                      + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)) * inverse_area;
-
-    vel_grad(2, 2) = elem_vel_r / mean_radius;  // + avg(vel_R)/R
-
-    return;
-} // end function
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -265,7 +194,7 @@ void SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
 /// \param View of the volumes of each element
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::get_divergence(DCArrayKokkos<double>& elem_div,
+void SGH3D::get_divergence(DCArrayKokkos<double>& elem_div,
     const Mesh_t mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -328,86 +257,6 @@ void SGH::get_divergence(DCArrayKokkos<double>& elem_div,
     return;
 } // end subroutine
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn get_divergence2D
-///
-/// \brief This function calculates the divergence of velocity for all 2D elements
-///
-/// \param Divergence of velocity for all elements
-/// \param Simulation mesh (POSSIBLY REMOVE)
-/// \param View of the nodal position data
-/// \param View of the nodal velocity data
-/// \param View of the volumes of each element
-///
-/////////////////////////////////////////////////////////////////////////////
-void SGH::get_divergence2D(DCArrayKokkos<double>& elem_div,
-    const Mesh_t mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& elem_vol) const
-{
-    // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
-        const size_t num_nodes_in_elem = 4;
-        const size_t num_dims = 2;
-
-        double u_array[num_nodes_in_elem];
-        double v_array[num_nodes_in_elem];
-        ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
-        ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
-
-        // true volume RZ
-        // double r_array[num_nodes_in_elem];
-        // ViewCArrayKokkos <double> r(r_array, num_nodes_in_elem); // r-dir coordinate
-
-        // cut out the node_gids for this element
-        ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
-
-        // The b_matrix are the outward corner area normals
-        double b_matrix_array[24];
-        ViewCArrayKokkos<double> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
-        geometry::get_bmatrix2D(b_matrix, elem_gid, node_coords, elem_node_gids);
-
-        // calculate the area of the quad
-        double elem_area = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
-        // true volume uses the elem_vol
-
-        // get the vertex velocities and node coordinate for the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-            // Get node gid
-            size_t node_gid = elem_node_gids(node_lid);
-
-            u(node_lid) = node_vel(1, node_gid, 0);
-            v(node_lid) = node_vel(1, node_gid, 1);
-
-            // r(node_lid) = node_coords(1, node_gid, 1); // true volume RZ
-        } // end for
-
-        // --- calculate the velocity divergence terms ---
-        double inverse_area = 1.0 / elem_area;
-
-        double mean_radius = elem_vol(elem_gid) / elem_area;
-        double elem_vel_r  = 0.25 * (v(0) + v(1) + v(2) + v(3));
-
-        elem_div(elem_gid) = 0.0;
-
-        // x-dir
-        elem_div(elem_gid) += (u(0) * b_matrix(0, 0)
-                               + u(1) * b_matrix(1, 0)
-                               + u(2) * b_matrix(2, 0)
-                               + u(3) * b_matrix(3, 0)) * inverse_area;
-
-        // y-dir (i.e., r direction)
-        elem_div(elem_gid) += (v(0) * b_matrix(0, 1)
-                               + v(1) * b_matrix(1, 1)
-                               + v(2) * b_matrix(2, 1)
-                               + v(3) * b_matrix(3, 1)) * inverse_area
-                              + elem_vel_r / mean_radius; // + avg(u_R)/R
-    });  // end parallel for over elem_gid
-
-    return;
-} // end subroutine
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -429,9 +278,9 @@ void SGH::get_divergence2D(DCArrayKokkos<double>& elem_div,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void SGH::decompose_vel_grad(const ViewCArrayKokkos<double>& D_tensor,
-                             const ViewCArrayKokkos<double>& W_tensor,
-                             const ViewCArrayKokkos<double>& vel_grad) const
+void SGH3D::decompose_vel_grad(const ViewCArrayKokkos<double>& D_tensor,
+                               const ViewCArrayKokkos<double>& W_tensor,
+                               const ViewCArrayKokkos<double>& vel_grad) const
 {
     // --- Calculate the velocity gradient ---
 

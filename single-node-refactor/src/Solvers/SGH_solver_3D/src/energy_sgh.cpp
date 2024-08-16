@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver.h"
+#include "sgh_solver_3D.h"
 #include "mesh.h"
 #include "state.h"
 
@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param A view into the corner force data
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::update_energy(const double rk_alpha,
+void SGH3D::update_energy(const double rk_alpha,
     const double dt,
     const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_vel,
@@ -98,10 +98,6 @@ void SGH::update_energy(const double rk_alpha,
 
 
             double node_radius = 1;
-            if (mesh.num_dims == 2) {
-                node_radius = node_coords(1, node_gid, 1);
-            }
-
             // calculate the Power=F dot V for this corner
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
 

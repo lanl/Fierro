@@ -40,7 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.h"
 
 // Headers for SGH solver classes
-#include "sgh_solver.h"
+#include "sgh_solver_3D.h"
 #include "sgh_solver_rz.h"
 
 

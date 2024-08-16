@@ -92,9 +92,9 @@ void Driver::initialize()
     
     for (int solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
-        if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH) {
+        if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
 
-            SGH* sgh_solver = new SGH(); 
+            SGH3D* sgh_solver = new SGH3D(); 
 
             sgh_solver->initialize(SimulationParamaters, 
                                    Materials, 

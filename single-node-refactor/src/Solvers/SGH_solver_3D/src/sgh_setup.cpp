@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver.h"
+#include "sgh_solver_3D.h"
 #include "mesh.h"
 #include "region_fill.h"
 #include "material.h"
@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param corner_mass is the corner mass
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::init_corner_node_masses_zero(const Mesh_t& mesh,
+void SGH3D::init_corner_node_masses_zero(const Mesh_t& mesh,
                                   const DCArrayKokkos<double>& node_mass,
                                   const DCArrayKokkos<double>& corner_mass) const
 {
@@ -93,7 +93,7 @@ void SGH::init_corner_node_masses_zero(const Mesh_t& mesh,
 /// \param rk_num_bins is number of time integration storage bins
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::fill_regions_sgh(const Material_t& Materials,
+void SGH3D::fill_regions_sgh(const Material_t& Materials,
                       const Mesh_t& mesh,
                       const DCArrayKokkos <double>& node_coords,
                       DCArrayKokkos <double>& node_vel,
@@ -274,7 +274,7 @@ void SGH::fill_regions_sgh(const Material_t& Materials,
 /// \brief Allocate state, setup models, and fill mesh regions per the YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::setup(SimulationParameters_t& SimulationParamaters, 
+void SGH3D::setup(SimulationParameters_t& SimulationParamaters, 
                 Material_t& Materials, 
                 Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
