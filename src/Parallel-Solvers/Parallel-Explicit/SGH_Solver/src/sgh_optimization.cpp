@@ -674,89 +674,71 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             }
 
             // interface of arrays for current implementation of force calculation
-            if(1){
-                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++) {
-                        node_vel(rk_level, node_gid, idim)    = previous_velocity_vector(node_gid, idim);
-                        node_coords(rk_level, node_gid, idim) = previous_coordinate_vector(node_gid, idim);
-                    }
-                });
-                Kokkos::fence();
-
-                FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
-                    elem_sie(rk_level, elem_gid) = previous_element_internal_energy(elem_gid, 0);
-                });
-                Kokkos::fence();
-                // set state according to phase data at this timestep
-                get_vol();
-
-                // ---- Calculate velocity diveregence for the element ----
-                if (num_dim == 2) {
-                    get_divergence2D(elem_div,
-                            node_coords,
-                            node_vel,
-                            elem_vol);
+            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+                for (int idim = 0; idim < num_dim; idim++) {
+                    node_vel(rk_level, node_gid, idim)    = previous_velocity_vector(node_gid, idim);
+                    node_coords(rk_level, node_gid, idim) = previous_coordinate_vector(node_gid, idim);
                 }
-                else{
-                    get_divergence(elem_div,
-                            node_coords,
-                            node_vel,
-                            elem_vol);
-                } // end if 2D
+            });
+            Kokkos::fence();
 
-                // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
-                if (num_dim == 2) {
-                    update_state2D(material,
-                            *mesh,
-                            node_coords,
-                            node_vel,
-                            elem_den,
-                            elem_pres,
-                            elem_stress,
-                            elem_sspd,
-                            elem_sie,
-                            elem_vol,
-                            elem_mass,
-                            elem_mat_id,
-                            1.0,
-                            cycle);
-                }
-                else{
-                    update_state(material,
-                            *mesh,
-                            node_coords,
-                            node_vel,
-                            elem_den,
-                            elem_pres,
-                            elem_stress,
-                            elem_sspd,
-                            elem_sie,
-                            elem_vol,
-                            elem_mass,
-                            elem_mat_id,
-                            1.0,
-                            cycle);
-                }
+            FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+                elem_sie(rk_level, elem_gid) = previous_element_internal_energy(elem_gid, 0);
+            });
+            Kokkos::fence();
+            // set state according to phase data at this timestep
+            get_vol();
 
-                if (num_dim == 2) {
-                    get_force_sgh2D(material,
-                                *mesh,
-                                node_coords,
-                                node_vel,
-                                elem_den,
-                                elem_sie,
-                                elem_pres,
-                                elem_stress,
-                                elem_sspd,
-                                elem_vol,
-                                elem_div,
-                                elem_mat_id,
-                                corner_force,
-                                1.0,
-                                cycle);
-                }
-                else{
-                    get_force_sgh(material,
+            // ---- Calculate velocity diveregence for the element ----
+            if (num_dim == 2) {
+                get_divergence2D(elem_div,
+                        node_coords,
+                        node_vel,
+                        elem_vol);
+            }
+            else{
+                get_divergence(elem_div,
+                        node_coords,
+                        node_vel,
+                        elem_vol);
+            } // end if 2D
+
+            // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+            if (num_dim == 2) {
+                update_state2D(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_sie,
+                        elem_vol,
+                        elem_mass,
+                        elem_mat_id,
+                        1.0,
+                        cycle);
+            }
+            else{
+                update_state(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_sie,
+                        elem_vol,
+                        elem_mass,
+                        elem_mat_id,
+                        1.0,
+                        cycle);
+            }
+
+            if (num_dim == 2) {
+                get_force_sgh2D(material,
                             *mesh,
                             node_coords,
                             node_vel,
@@ -771,22 +753,38 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                             corner_force,
                             1.0,
                             cycle);
-                }
+            }
+            else{
+                get_force_sgh(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_sie,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_vol,
+                        elem_div,
+                        elem_mat_id,
+                        corner_force,
+                        1.0,
+                        cycle);
+            }
 
-                if (have_loading_conditions) {
-                    applied_forces(material,
-                                    *mesh,
-                                    node_coords,
-                                    node_vel,
-                                    node_mass,
-                                    elem_den,
-                                    elem_vol,
-                                    elem_div,
-                                    elem_mat_id,
-                                    corner_force,
-                                    1.0,
-                                    cycle);
-                }
+            if (have_loading_conditions) {
+                applied_forces(material,
+                                *mesh,
+                                node_coords,
+                                node_vel,
+                                node_mass,
+                                elem_den,
+                                elem_vol,
+                                elem_div,
+                                elem_mat_id,
+                                corner_force,
+                                1.0,
+                                cycle);
             }
             // compute gradient matrices
             get_force_egradient_sgh(material,
@@ -1377,152 +1375,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
         
         //tally contribution to the gradient vector
         if(use_gradient_tally){
-            const_vec_array previous_velocity_vector;
-            const_vec_array current_velocity_vector;
-
-            const_vec_array previous_coordinate_vector;
-            const_vec_array current_coordinate_vector;
-
-            const_vec_array previous_element_internal_energy;
-            const_vec_array current_element_internal_energy;
-            
-            if(use_solve_checkpoints){
-                std::set<Dynamic_Checkpoint>::iterator last_checkpoint = dynamic_checkpoint_set->end();
-                --last_checkpoint;
-                previous_velocity_vector = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                previous_coordinate_vector = previous_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                previous_element_internal_energy = previous_element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_velocity_vector = last_checkpoint->get_vector_pointer(V_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_coordinate_vector = last_checkpoint->get_vector_pointer(U_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_element_internal_energy = last_checkpoint->get_vector_pointer(SIE_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-
-            }
-            else{
-                previous_velocity_vector = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_velocity_vector  = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-
-                previous_coordinate_vector = (*forward_solve_coordinate_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_coordinate_vector  = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-
-                previous_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_element_internal_energy  = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
-
-            // interface of arrays for current implementation of force calculation
-
-            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
-                for (int idim = 0; idim < num_dim; idim++) {
-                    node_vel(rk_level, node_gid, idim)    = current_velocity_vector(node_gid, idim);
-                    node_coords(rk_level, node_gid, idim) = current_coordinate_vector(node_gid, idim);
-                }
-            });
-            Kokkos::fence();
-
-            FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
-                elem_sie(rk_level, elem_gid) = current_element_internal_energy(elem_gid, 0);
-            });
-            Kokkos::fence();
-
-            // set state according to phase data at this timestep
-            get_vol();
-
-            // ---- Calculate velocity diveregence for the element ----
-            if (num_dim == 2) {
-                get_divergence2D(elem_div,
-                          node_coords,
-                          node_vel,
-                          elem_vol);
-            }
-            else{
-                get_divergence(elem_div,
-                        node_coords,
-                        node_vel,
-                        elem_vol);
-            } // end if 2D
-
-            // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
-            if (num_dim == 2) {
-                update_state2D(material,
-                          *mesh,
-                          node_coords,
-                          node_vel,
-                          elem_den,
-                          elem_pres,
-                          elem_stress,
-                          elem_sspd,
-                          elem_sie,
-                          elem_vol,
-                          elem_mass,
-                          elem_mat_id,
-                          1.0,
-                          cycle);
-            }
-            else{
-                update_state(material,
-                        *mesh,
-                        node_coords,
-                        node_vel,
-                        elem_den,
-                        elem_pres,
-                        elem_stress,
-                        elem_sspd,
-                        elem_sie,
-                        elem_vol,
-                        elem_mass,
-                        elem_mat_id,
-                        1.0,
-                        cycle);
-            }
-
-            if (num_dim == 2) {
-                get_force_sgh2D(material,
-                            *mesh,
-                            node_coords,
-                            node_vel,
-                            elem_den,
-                            elem_sie,
-                            elem_pres,
-                            elem_stress,
-                            elem_sspd,
-                            elem_vol,
-                            elem_div,
-                            elem_mat_id,
-                            corner_force,
-                            1.0,
-                            cycle);
-            }
-            else{
-                get_force_sgh(material,
-                        *mesh,
-                        node_coords,
-                        node_vel,
-                        elem_den,
-                        elem_sie,
-                        elem_pres,
-                        elem_stress,
-                        elem_sspd,
-                        elem_vol,
-                        elem_div,
-                        elem_mat_id,
-                        corner_force,
-                        1.0,
-                        cycle);
-            }
-
-            if (have_loading_conditions) {
-                applied_forces(material,
-                              *mesh,
-                              node_coords,
-                              node_vel,
-                              node_mass,
-                              elem_den,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              1.0,
-                              cycle);
-            }
             
             //state_adjoint_time_start = Explicit_Solver_Pointer_->CPU_Time();
             get_force_dgradient_sgh(material,
@@ -1943,15 +1795,19 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
         //compute terms with gradient of force and gradient of specific internal energy w.r.t design density
         // view scope
         {
-            const_vec_array current_adjoint_vector;
-            const_vec_array current_psi_adjoint_vector;
+            const_vec_array current_adjoint_vector, previous_adjoint_vector;
+            const_vec_array current_psi_adjoint_vector, previous_psi_adjoint_vector;
             if(use_solve_checkpoints){
                 current_adjoint_vector = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_adjoint_vector = previous_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_psi_adjoint_vector = previous_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             }
             else{   
                 current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 current_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle+1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             }
             // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
@@ -1964,7 +1820,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                     node_id   = nodes_in_elem(elem_id, ifill);
                     corner_id = elem_id * num_nodes_in_elem + ifill;
                     for (int idim = 0; idim < num_dim; idim++) {
-                        inner_product += corner_vector_storage(corner_id, idim) * current_adjoint_vector(node_id, idim);
+                        inner_product += corner_vector_storage(corner_id, idim) * 0.5*(current_adjoint_vector(node_id, idim)+previous_adjoint_vector(node_id, idim));
                     }
                 }
 
@@ -1993,7 +1849,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 size_t corner_id;
                 real_t inner_product;
 
-                inner_product = current_psi_adjoint_vector(elem_id, 0) * elem_power_dgradients(elem_id);
+                inner_product = 0.5*(current_psi_adjoint_vector(elem_id, 0)+previous_psi_adjoint_vector(elem_id, 0)) * elem_power_dgradients(elem_id);
 
                 for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     // compute gradient of local element contribution to v^t*M*v product
