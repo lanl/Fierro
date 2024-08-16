@@ -1064,12 +1064,12 @@
                </item>
                <item>
                 <property name="text">
-                 <string>Create Basic Part</string>
+                 <string>Import Polycrystal</string>
                 </property>
                </item>
                <item>
                 <property name="text">
-                 <string>Import Polycrystal</string>
+                 <string>Create Basic Part</string>
                 </property>
                </item>
               </widget>
@@ -1213,7 +1213,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>2</number>
                 </property>
                 <widget class="QWidget" name="ImportPartTool">
                  <widget class="QPushButton" name="BVoxelizeGeometry">
@@ -1222,9 +1222,9 @@
                   </property>
                   <property name="geometry">
                    <rect>
-                    <x>29</x>
+                    <x>4</x>
                     <y>420</y>
-                    <width>301</width>
+                    <width>340</width>
                     <height>21</height>
                    </rect>
                   </property>
@@ -2050,6 +2050,34 @@
                   </property>
                   <property name="textFormat">
                    <enum>Qt::TextFormat::RichText</enum>
+                  </property>
+                 </widget>
+                </widget>
+                <widget class="QWidget" name="page_13">
+                 <widget class="QLabel" name="LImageStack_2">
+                  <property name="geometry">
+                   <rect>
+                    <x>28</x>
+                    <y>13</y>
+                    <width>300</width>
+                    <height>25</height>
+                   </rect>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <pointsize>15</pointsize>
+                    <bold>true</bold>
+                    <underline>false</underline>
+                   </font>
+                  </property>
+                  <property name="layoutDirection">
+                   <enum>Qt::LayoutDirection::LeftToRight</enum>
+                  </property>
+                  <property name="text">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:15pt; font-weight:700;&quot;&gt;Dream3D&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignmentFlag::AlignCenter</set>
                   </property>
                  </widget>
                 </widget>

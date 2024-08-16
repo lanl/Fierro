@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIicwzsj.ui'
+## Form generated from reading UI file 'FIERRO_GUIOuunyT.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.7.2
 ##
@@ -551,7 +551,7 @@ class Ui_MainWindow(object):
         self.BVoxelizeGeometry = QPushButton(self.ImportPartTool)
         self.BVoxelizeGeometry.setObjectName(u"BVoxelizeGeometry")
         self.BVoxelizeGeometry.setEnabled(False)
-        self.BVoxelizeGeometry.setGeometry(QRect(29, 420, 301, 21))
+        self.BVoxelizeGeometry.setGeometry(QRect(4, 420, 340, 21))
         self.BVoxelizeGeometry.setFont(font1)
         self.LDimensions = QLabel(self.ImportPartTool)
         self.LDimensions.setObjectName(u"LDimensions")
@@ -891,6 +891,15 @@ class Ui_MainWindow(object):
         self.LUploadedDirectory.setFont(font10)
         self.LUploadedDirectory.setTextFormat(Qt.TextFormat.RichText)
         self.GeometryOptions.addWidget(self.ImportImageStackTool)
+        self.page_13 = QWidget()
+        self.page_13.setObjectName(u"page_13")
+        self.LImageStack_2 = QLabel(self.page_13)
+        self.LImageStack_2.setObjectName(u"LImageStack_2")
+        self.LImageStack_2.setGeometry(QRect(28, 13, 300, 25))
+        self.LImageStack_2.setFont(font11)
+        self.LImageStack_2.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        self.LImageStack_2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.GeometryOptions.addWidget(self.page_13)
         self.page = QWidget()
         self.page.setObjectName(u"page")
         self.BDeleteBasicGeometry = QPushButton(self.page)
@@ -3526,7 +3535,7 @@ class Ui_MainWindow(object):
         self.ToolWindow.setCurrentIndex(2)
         self.INPipelineSelection.setCurrentIndex(0)
         self.INSelectGeometryImport.setCurrentIndex(0)
-        self.GeometryOptions.setCurrentIndex(0)
+        self.GeometryOptions.setCurrentIndex(2)
         self.BasicGeometries.setCurrentIndex(0)
         self.MeshInputs2.setCurrentIndex(0)
         self.SolverSettingsOptions.setCurrentIndex(0)
@@ -3594,8 +3603,8 @@ class Ui_MainWindow(object):
         self.LPartName_3.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Selection:</p></body></html>", None))
         self.INSelectGeometryImport.setItemText(0, QCoreApplication.translate("MainWindow", u"Import Part", None))
         self.INSelectGeometryImport.setItemText(1, QCoreApplication.translate("MainWindow", u"Import Image Stack", None))
-        self.INSelectGeometryImport.setItemText(2, QCoreApplication.translate("MainWindow", u"Create Basic Part", None))
-        self.INSelectGeometryImport.setItemText(3, QCoreApplication.translate("MainWindow", u"Import Polycrystal", None))
+        self.INSelectGeometryImport.setItemText(2, QCoreApplication.translate("MainWindow", u"Import Polycrystal", None))
+        self.INSelectGeometryImport.setItemText(3, QCoreApplication.translate("MainWindow", u"Create Basic Part", None))
 
         self.LPartName.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Part Name:</p></body></html>", None))
         self.INPartName.setText("")
@@ -3651,6 +3660,7 @@ class Ui_MainWindow(object):
         self.BImageToVTK.setText(QCoreApplication.translate("MainWindow", u"Voxelize", None))
         self.BTiffToStl.setText(QCoreApplication.translate("MainWindow", u"Convert to STL", None))
         self.LUploadedDirectory.setText(QCoreApplication.translate("MainWindow", u"Directory:", None))
+        self.LImageStack_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:15pt; font-weight:700;\">Dream3D</span></p><p align=\"center\"><br/></p></body></html>", None))
         self.BDeleteBasicGeometry.setText(QCoreApplication.translate("MainWindow", u"Delete Geometry", None))
         self.LBoxProperties.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" text-decoration: underline;\">Box Properties</span></p></body></html>", None))
         self.LBoxx1.setText(QCoreApplication.translate("MainWindow", u"x1:", None))
