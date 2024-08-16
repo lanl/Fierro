@@ -96,13 +96,11 @@ void SGH3D::update_energy(const double rk_alpha,
             // Get the material corner lid
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
-
-            double node_radius = 1;
             // calculate the Power=F dot V for this corner
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
 
                 double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
-                MaterialPoints_power += MaterialCorners_force(mat_corner_lid, dim) * node_radius * half_vel;
+                MaterialPoints_power += MaterialCorners_force(mat_corner_lid, dim) * half_vel;
 
             } // end for dim
         } // end for node_lid

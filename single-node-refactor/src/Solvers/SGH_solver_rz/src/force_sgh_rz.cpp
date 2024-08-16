@@ -384,13 +384,24 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
             // Get node gid
             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
+            // Get the material corner lid
+            size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
+
+
             // loop over dimension
-            for (int dim = 0; dim < num_dims; dim++) {
-                corner_force(corner_gid, dim) =
-                    area_normal(node_lid, 0) * tau(0, dim)
-                    + area_normal(node_lid, 1) * tau(1, dim)
-                    + phi * muc(node_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
-            } // end loop over dimension
+            // add if eroded here
+                for (int dim = 0; dim < num_dims; dim++) {
+
+                    double force_component =
+                        area_normal(node_lid, 0) * tau(0, dim)
+                        + area_normal(node_lid, 1) * tau(1, dim)
+                        + phi * muc(node_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
+
+                    MaterialCorners_force(mat_corner_lid, dim) = force_component;
+                    corner_force(corner_gid, dim) += force_component; // tally all forces to the corner
+
+                } // end loop over dimension
+
 
             // ---- add hoop stress terms ----
 
