@@ -282,6 +282,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 num_mat_elems,
                                 mat_id,
                                 fuzz,
+                                tiny,
                                 small,
                                 dt,
                                 rk_alpha);
@@ -610,11 +611,13 @@ void calc_node_areal_mass_rz(const Mesh_t& mesh,
 
     // calculate the nodal areal mass
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        
         node_mass(node_gid) = 0.0;
 
         if (node_coords(1, node_gid, 1) > tiny) {
             node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(1, node_gid, 1);
         }
+        
     }); // end parallel for over node_gid
     Kokkos::fence();
 

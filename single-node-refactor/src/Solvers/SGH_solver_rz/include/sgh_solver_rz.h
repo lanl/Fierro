@@ -201,6 +201,7 @@ public:
         const size_t num_mat_elems,
         const size_t mat_id,
         const double fuzz,
+        const double tiny,
         const double small,
         const double dt,
         const double rk_alpha) const;

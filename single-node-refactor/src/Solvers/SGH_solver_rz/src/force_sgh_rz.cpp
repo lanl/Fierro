@@ -83,6 +83,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                          const size_t num_mat_elems,
                          const size_t mat_id,
                          const double fuzz,
+                         const double tiny,
                          const double small,
                          const double dt,
                          const double rk_alpha) const
@@ -189,6 +190,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         double mag_curl = curl;
 
         // --- Calculate the Cauchy stress ---
+        // loops are always over 3 even for 2D RZ
         for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 3; j++) {
                 tau(i, j) = stress(i, j);
@@ -196,10 +198,13 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
             } // end for
         } // end for
 
-        // add the pressure
-        for (int i = 0; i < 3; i++) {
-            tau(i, i) -= MaterialPoints_pres(mat_point_lid);
-        } // end for
+        // add the pressure if a decoupled model is used
+        if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
+            // loop is always over 3 even for 2D RZ
+            for (int i = 0; i < 3; i++) {
+                tau(i, i) -= MaterialPoints_pres(mat_point_lid);
+            } // end for
+        }
 
         // ---- Multidirectional Approximate Riemann solver (MARS) ----
         // find the average velocity of the elem, it is an
@@ -354,7 +359,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         //  Mach number shock detector
         double omega    = 20.0; // 20.0;    // weighting factor on Mach number
         double c_length = sqrt(elem_area); // characteristic length
-        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(elem_gid) + fuzz) );
+        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_point_lid) + fuzz) );
 
         // use Mach based detector with standard shock detector
 
@@ -393,7 +398,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
             // Wilkins used elem_area*0.25 for the corner area, we will use the corner
             // areas calculated using Barlow's symmetry and energy preserving area partitioning
-            if (node_radius > 1e-14) {
+            if (node_radius > tiny) {
                 // sigma_RZ / R_p
                 corner_force(corner_gid, 0) += tau(1, 0) * corner_areas(corner_lid) / node_radius;
 
