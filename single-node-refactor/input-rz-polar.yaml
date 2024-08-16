@@ -21,14 +21,14 @@ mesh_options:
     outer_radius: 1.2
     starting_angle: 0
     ending_angle: 90
-    num_radial_elems: 50
+    num_radial_elems: 12
     num_angular_elems: 10
 
 
 
 output_options:
     timer_output_level: thorough
-    output_file_format: ensight #state
+    output_file_format: state  #ensight  state
     graphics_time_step: 0.25
     #graphics_iteration_step: 2
 
@@ -104,7 +104,7 @@ regions:
         material_id: 0
         den: 1.0
         # ie: 0.25833839995946534
-        sie: 78.5254574 #  (0.5*0.49339/(mat_fill(1).den*vol))
+        sie: 119.65 #  (0.5*0.49339/(mat_fill(1).den*vol))
         velocity: cartesian
         u: 0.0
         v: 0.0
