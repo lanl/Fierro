@@ -72,12 +72,13 @@ def Dream3DReader(fileIn, out, out_dir):
     import_data = nx.Dream3dImportParameter.ImportData()
     # Set the path to the file on the file system
     print ("THIS IS THE FILE: " + fileIn)
-    import_data.file_path = "output/" + os.path.basename(os.path.normpath(fileIn))
+    import_data.file_path = fileIn
     # Set the import_data.data_paths value to 'None' which signals to the filter to
     # import EVERY piece of data from the file.
     import_data.data_paths = None
 
     # Instantiate and execte the filter immediately.
+    print ("Running DREAM reader")
     result = nx.ReadDREAM3DFilter.execute(
         data_structure=data_structure, 
         import_data_object=import_data
@@ -90,12 +91,24 @@ def Dream3DReader(fileIn, out, out_dir):
     else:
         print("No errors running the ReadDREAM3DFilter filter")
 
+    print ("Running DREAM writer: ", out_dir)
+    result = nx.WriteDREAM3DFilter.execute(
+        data_structure=data_structure, 
+        export_file_path=(out_dir + "/" + out + ".dream3d"), 
+        write_xdmf_file=True)
+    if len(result.errors) != 0:
+        print('Errors: {}', result.errors)
+        print('Warnings: {}', result.warnings)
+    else:
+        print("No errors running the WriteDream3D filter")
+
     #geometry: nx.TriangleGeom = data_structure[nx.DataPath("TriangleDataContainer")]
     #vertices_view = geometry.vertices.npview()
     #faces_view = geometry.faces.npview()
 
     #show_data_structure_heirarchy(data_structure=data_structure)
 
+    '''
     result = nx.CreateDataArrayFilter.execute(
         data_structure=data_structure,
         component_count=2,
@@ -134,7 +147,7 @@ def Dream3DReader(fileIn, out, out_dir):
     else:
         print("No errors running the STL filter")
 
-'''
+
 x = nx.CreateDataGroupFilter.execute(
     data_structure=data_structure,
     data_object_path=nx.DataPath('RectGridCoords')

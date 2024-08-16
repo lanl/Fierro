@@ -343,56 +343,45 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.warning_message("Invalid directory") 
                 self.LUploadedDirectory.setText("Directory: <i>" +  os.path.basename(ct_folder_path) + "</i>")
             # Upload polycrystals
-            elif self.INSelectGeometryImport.currentIndex() == 3:
+            elif self.INSelectGeometryImport.currentIndex() == 2:
                 global dream_filename
                 dream_filename = QFileDialog.getOpenFileName(
-                    filter="Geometry File (*.dream3d)",
+                    filter="Dream File (*.xdmf* *.dream3d)",
                 )
-                dream_filename = dream_filename[0]
-                worker = Worker(self.RunDream3DReader) # Any other args, kwargs are passed to the run function
-
-                # Execute
-                self.threadpool.start(worker)
                 loadingAnimation()
+                
+                # Get xdmf file from dream3d file
+                ext = os.path.splitext(dream_filename[0])
+                if (ext[1] == ".dream3d"):
+                    print ("File to writeSS: ", dream_filename[0])
+                    dream_filename = dream_filename[0]
+                    #worker = Worker(self.RunDream3DReader) # Any other args, kwargs are passed to the run function
+
+                    # Execute
+                    #self.threadpool.start(worker)
+
+                    Dream3DReader(str(dream_filename), 'DREAM_Geometry_' + self.INPartName.text(), self.voxelizer_dir)
+                    dream_filename = self.voxelizer_dir + '/DREAM_Geometry_' + str(self.INPartName.text()) + '.xdmf'
 
                 # Paraview window
-                stl_location = self.voxelizer_dir + '/DREAM_Geometry_' + str(self.INPartName.text()) + '.stl'
+                #stl_location = self.voxelizer_dir + '/DREAM_Geometry_' + str(self.INPartName.text()) + '.stl'
+                print (dream_filename)
                 # Show the stl part
-                self.stl = pvsimple.STLReader(FileNames = stl_location)
+                self.dream = pvsimple.XDMFReader(FileNames = dream_filename)
+                if (self.dream):
+                    print ("Success")
+                else:
+                    print ("Failure")
+                pvsimple.SetDisplayProperties(Representation = "Surface")
                 text = self.INPartName.text()
                 self.variable_name = f"part_{text}"
                 print ("var name: " + self.variable_name)
                 setattr(self, self.variable_name, "")
-                pvsimple.Show(self.stl, self.render_view)
+                #pvsimple.Show(getattr(self, self.variable_name), self.render_view)
+                display = pvsimple.Show(self.dream, self.render_view)
+                pvsimple.ColorBy(display, 'EulerAngles')
                 pvsimple.ResetCamera(view=None)
-                    
-                # Turn on settings
-                self.LSTLVoxelization.setEnabled(True)
-                self.LNumberOfVoxelsX.setEnabled(True)
-                self.INNumberOfVoxelsX.setEnabled(True)
-                self.LNumberOfVoxelsY.setEnabled(True)
-                self.INNumberOfVoxelsY.setEnabled(True)
-                self.LNumberOfVoxelsZ.setEnabled(True)
-                self.INNumberOfVoxelsZ.setEnabled(True)
-                self.BVoxelizeGeometry.setEnabled(True)
-                self.BStlDimensions.setEnabled(True)
-                self.BCustomDimensions.setEnabled(True)
-                self.LOriginX.setEnabled(True)
-                self.LOriginY.setEnabled(True)
-                self.LOriginZ.setEnabled(True)
-                self.INOriginX.setEnabled(True)
-                self.INOriginY.setEnabled(True)
-                self.INOriginZ.setEnabled(True)
-                
-                # Get the bounds of the stl
-                self.stl.UpdatePipeline()
-                self.bounds = self.stl.GetDataInformation().GetBounds()
-                self.stlLx = round(self.bounds[1] - self.bounds[0],4)
-                self.stlLy = round(self.bounds[3] - self.bounds[2],4)
-                self.stlLz = round(self.bounds[5] - self.bounds[4],4)
-                self.INLengthX.setText(str(self.stlLx))
-                self.INLengthY.setText(str(self.stlLy))
-                self.INLengthZ.setText(str(self.stlLz))
+                stopLoadingAnimation()
             else:
                 self.warning_message('ERROR: Incorrect file type')
         self.BUploadGeometryFile.clicked.connect(geometry_upload_click)
