@@ -263,6 +263,7 @@ def Geometry(self):
             # Add material as an option for material assignment
             self.INMaterial.clear()
             for i in range(self.TMaterialsSGH.rowCount()):
+                print ("add material")
                 self.INMaterial.addItem(self.TMaterialsSGH.item(i,0).text())
             
 #            # Clear all inputs

@@ -12,7 +12,6 @@ def TiffImageToVTK(folder_dir, out, out_dir, file_format):
     # image
     from PIL import Image
     #from libtiff import TIFF
-    import cv2 # type: ignore
 
     # math
     import numpy as np
@@ -22,7 +21,7 @@ def TiffImageToVTK(folder_dir, out, out_dir, file_format):
     from multiprocessing.pool import ThreadPool as Pool
 
     #c writer
-    import c_writer # type: ignore
+    import c_writer  # type: ignore
 
     # voxel2stl
     import voxel2stl # type: ignore

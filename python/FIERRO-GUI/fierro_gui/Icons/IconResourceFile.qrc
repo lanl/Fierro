@@ -34,5 +34,6 @@
     <file>Logos/fierroload.gif</file>
     <file>Logos/FierroLoading.gif</file>
     <file>Logos/FIERRO_NoText.png</file>
+    <file>Logos/FierroAppIcon.png</file>
   </qresource>
 </RCC>

@@ -8,7 +8,7 @@ def main():
     from fierro_gui.FIERRO_GUI import FIERRO_GUI
     from PySide6.QtWidgets import QMainWindow, QApplication, QSplashScreen
     from PySide6 import QtCore
-    from PySide6.QtGui import QPixmap
+    from PySide6.QtGui import QPixmap, QIcon
     from fierro_gui.FIERRO_Setup import FierroSetup
     
     # MAIN WINDOW CLASS
@@ -30,8 +30,11 @@ def main():
             
 #            self.dialog = WorkingDirectoryDialog(self)
 #            self.dialog.exec()
-            
+
     app = QApplication(sys.argv)
+    app.setStyle('Fusion')
+    app.setWindowIcon(QIcon(':/Logos/Logos/FierroAppIcon.png'))
+    app.setApplicationDisplayName("Fierro")
     start = time.perf_counter()
     print ("Splash Screen")
     pixmap = QPixmap(":/Logos/Logos/FIERRO.png")
@@ -42,8 +45,8 @@ def main():
     splash.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint)
     #splash.showMessage("Loaded modules")
     splash.show()
-    for i in range(100000):
-        app.processEvents()
+    #for i in range(100000):
+        #app.processEvents()
     window = MainWindow()
     window.show()
     splash.finish(window)

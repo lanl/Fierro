@@ -6,6 +6,11 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+#Info on simplnx: https://www.dream3d.io/python_docs/ (parameter names in their filter functions are deprecated, look at simplnx.pyi module file instead for correct function definitions.)
+
+#Some simplnx examples: https://github.com/BlueQuartzSoftware/simplnx/tree/develop/wrapping/python/examples/scripts
+
+# Function to show plot of data structure
 def show_data_structure_heirarchy(data_structure: nx.DataStructure) -> None:
     """
     This method will create an image and then show that image in MatPlotLib
@@ -34,9 +39,9 @@ def show_data_structure_heirarchy(data_structure: nx.DataStructure) -> None:
         os.remove(temp_file_path)
         print("File has been deleted successfully.")
 
-# Create a Data Structure
-# Create the DataStructure object
+# Function to read in .dream3d files and output .xdmf files that paraview can display
 def Dream3DReader(fileIn, out, out_dir): 
+    # Create the DataStructure object
     data_structure = nx.DataStructure()
 
     '''
@@ -90,6 +95,7 @@ def Dream3DReader(fileIn, out, out_dir):
         print('Warnings: {}', result.warnings)
     else:
         print("No errors running the ReadDREAM3DFilter filter")
+
 
     print ("Running DREAM writer: ", out_dir)
     result = nx.WriteDREAM3DFilter.execute(

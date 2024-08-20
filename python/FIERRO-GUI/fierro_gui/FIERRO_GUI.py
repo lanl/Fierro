@@ -1,7 +1,7 @@
 # To import images using resource file you must conver the .rc file to .py using (in command line):
-# pyside6-rcc ./fierro_gui/Icons/IconResourceFile.qrc -o IconResourceFile_rc.py
+# Compile Icons: pyside6-rcc ./fierro_gui/Icons/IconResourceFile.qrc -o IconResourceFile_rc.py
 
-# python -m fierro_gui.gui
+# Run Command: python -m fierro_gui.gui
 
 from fierro_gui.ui_FIERRO_GUI import Ui_MainWindow
 
@@ -58,6 +58,7 @@ from TiffImageToVTK import *
 from Dream3DReader import *
 import DeveloperInputs
 
+# Info on multithreading: https://www.pythonguis.com/tutorials/multithreading-pyside6-applications-qthreadpool/
 class Worker(QRunnable):
     '''
     Worker thread
@@ -109,9 +110,10 @@ class FIERRO_GUI(Ui_MainWindow):
         self.INSelectBoundaryConditions.currentIndexChanged.connect(lambda: self.BoundaryConditionsOptions.setCurrentIndex(self.INSelectBoundaryConditions.currentIndex()))
         self.INRunSelection.currentIndexChanged.connect(lambda: self.RunOptions.setCurrentIndex(self.INRunSelection.currentIndex()))
         self.INSelectPostprocessing.currentIndexChanged.connect(lambda: self.PostprocessingOptions.setCurrentIndex(self.INSelectPostprocessing.currentIndex()))
+        self.INSelectAssignMaterials.currentIndexChanged.connect(lambda: self.AssignMaterialsOptions.setCurrentIndex(self.INSelectAssignMaterials.currentIndex()))
 
         # Set up pipeline selection
-        selectionComboBoxes = [self.INSelectSolverSettings, self.INSelectBoundaryConditions, self.INSelectDefineMaterials, self.INRunSelection,self.INSelectPostprocessing]
+        selectionComboBoxes = [self.INSelectSolverSettings, self.INSelectBoundaryConditions, self.INSelectDefineMaterials, self.INRunSelection,self.INSelectPostprocessing, self.INSelectAssignMaterials]
 
         # When starting the gui automatically disable functions until a pipeline is chosen
         for i in range(3, self.NavigationMenu.count()):
@@ -147,10 +149,11 @@ class FIERRO_GUI(Ui_MainWindow):
         # Set up loading animation widget
         self.LLoading = QLabel()
         self.LLoading.setScaledContents(1)
-        self.LLoading.setFixedSize(330,100)
-        self.LLoading.setParent(self.Paraview)
+        self.LLoading.setFixedSize(792,240)
         self.LLoading.lower()
         self.LLoading.hide()
+        self.paraviewLayout.addWidget(self.LLoading, alignment=Qt.AlignBottom)
+        #self.LLoading.setParent(self.Paraview)
         #self.LLoading.setAttribute(Qt.WA_StyledBackground, True)
         #self.LLoading.setStyleSheet('background-color: #52576E;')
         #self.LLoading.setAutoFillBackground(True)
@@ -353,7 +356,7 @@ class FIERRO_GUI(Ui_MainWindow):
                 # Get xdmf file from dream3d file
                 ext = os.path.splitext(dream_filename[0])
                 if (ext[1] == ".dream3d"):
-                    print ("File to writeSS: ", dream_filename[0])
+                    print ("File to write: ", dream_filename[0])
                     dream_filename = dream_filename[0]
                     #worker = Worker(self.RunDream3DReader) # Any other args, kwargs are passed to the run function
 
@@ -380,11 +383,36 @@ class FIERRO_GUI(Ui_MainWindow):
                 #pvsimple.Show(getattr(self, self.variable_name), self.render_view)
                 display = pvsimple.Show(self.dream, self.render_view)
                 pvsimple.ColorBy(display, 'EulerAngles')
+                self.INSelectColorBy.setEnabled(True)
                 pvsimple.ResetCamera(view=None)
+                row = self.TDream.rowCount()
+                self.TDream.insertRow(row)
+                self.TDream.setItem(row, 0, QTableWidgetItem(self.INPartName.text()))
+                self.INPartName.clear()
                 stopLoadingAnimation()
+                def change_color_by():
+                    # Dream Color By Selection
+                    #print (self.INSelectColorBy.itemText(self.INSelectColorBy.currentIndex()))
+                    color = None
+                    match self.INSelectColorBy.itemText(self.INSelectColorBy.currentIndex()):
+                        case "Euler Angles":
+                            color = 'EulerAngles'
+                        case "Feature Ids":
+                            color = 'FeatureIds'
+                        case "IPF Color":
+                            color = 'IPFColor'
+                        case "Phases":
+                            color = 'Phases'
+
+                    pvsimple.ColorBy(display, color)
+                    pvsimple.ResetCamera(view=None)
+                self.INSelectColorBy.currentIndexChanged.connect(change_color_by)
             else:
                 self.warning_message('ERROR: Incorrect file type')
         self.BUploadGeometryFile.clicked.connect(geometry_upload_click)
+
+        
+            
 
         # Convert image stack to .vtk
         def image_to_VTK():
@@ -669,8 +697,11 @@ class FIERRO_GUI(Ui_MainWindow):
         self.BVoxelizeGeometry.clicked.connect(voxelize_geometry_click)
         
         # Delete any previously loaded geometries from table
+        global table
+        table = self.TParts
         def delete_part():
-            current_row = self.TParts.currentRow()
+            print ("Delete Table: ", table)
+            current_row = table.currentRow()
             if current_row < 0:
                 return QMessageBox.warning(QMessageBox(),"Warning","Please select a part to delete")
 
@@ -682,20 +713,28 @@ class FIERRO_GUI(Ui_MainWindow):
                 QMessageBox.No
             )
             if button == QMessageBox.StandardButton.Yes:
-                self.newvar = "part_" + self.TParts.item(current_row,0).text()
+                self.newvar = "part_" + table.item(current_row,0).text()
                 pvsimple.Delete(getattr(self, self.newvar))
                 self.render_view.ResetCamera()
                 self.render_view.StillRender()
-                self.TParts.removeRow(current_row)
+                table.removeRow(current_row)
                 
                 # delete from material assignment options
                 self.INPartMaterial.clear()
                 self.INPartMaterial.addItem("global")
-                for i in range(self.TParts.rowCount()):
-                    self.INPartMaterial.addItem(self.TParts.item(i,0).text())
+                for i in range(table.rowCount()):
+                    self.INPartMaterial.addItem(table.item(i,0).text())
                 for i in range(self.TBasicGeometries.rowCount()):
                     self.INPartMaterial.addItem(self.TBasicGeometries.item(i,0).text())
-        self.BDeleteGeometry.clicked.connect(delete_part)
+
+        # Function to set what table to delete part from
+        def set_table(table_selection):
+            global table
+            table = table_selection
+            print ("Table: ", table)
+            delete_part()
+        self.BDeleteGeometry.clicked.connect(lambda: set_table(self.TParts))
+        self.BDeleteDream.clicked.connect(lambda: set_table(self.TDream))
             
         # Global Mesh Generation
         # Deactivate 2D option for now

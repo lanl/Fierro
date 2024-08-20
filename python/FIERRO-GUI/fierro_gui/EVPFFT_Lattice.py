@@ -725,7 +725,7 @@ def EVPFFT_Lattice(self):
     self.p = None
     def run_click():
         batch_EVPFFT()
-    #self.BRunEVPFFT.clicked.connect(run_click)
+    self.BRunEVPFFT.clicked.connect(run_click)
 
     # Upload HDF5
     def upload_hdf5_click():
