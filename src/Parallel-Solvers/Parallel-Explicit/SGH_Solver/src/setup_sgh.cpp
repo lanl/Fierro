@@ -81,7 +81,7 @@ void FEA_Module_SGH::setup()
     // shorthand names
     const size_t num_nodes   = mesh->num_nodes;
     const size_t num_elems   = mesh->num_elems;
-    const size_t num_corners = mesh->num_corners;
+    num_corners = mesh->num_corners;
 
     // --- make dual views of data on CPU and GPU ---
     //  Notes:
