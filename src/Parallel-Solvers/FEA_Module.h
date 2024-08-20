@@ -239,7 +239,7 @@ public:
 
     // Local FEA data including ghosts
     size_t nall_nodes;
-    size_t rnum_elem;
+    size_t rnum_elem, num_corners;
 
     // Global FEA data
     long long int num_nodes, num_elem;
