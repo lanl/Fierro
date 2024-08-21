@@ -1379,7 +1379,7 @@ void Explicit_Solver::setup_optimization_problem(){
           obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
         }
       }
-      if(TO_Module_List[imodule] == TO_MODULE_TYPE::Internal_Energy_Minimize){
+      else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Internal_Energy_Minimize){
         //debug print
         *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam.optimization_options.method_of_moving_asymptotes){
