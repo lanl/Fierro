@@ -7,21 +7,21 @@ dynamic_options:
   cycle_stop: 2000000
 
 mesh_generation_options:
-  type: Box
+  type: box
   origin: [0, 0, 0]
   length: [1.0, 1.0, 1.0]
   num_elems: [10, 10, 10]
 
 output_options:
   timer_output_level: thorough
-  output_file_format: vtk
+  output_file_format: state
   graphics_step: 0.6
   write_initial: false
   write_final: true
   
   
 fea_module_parameters:
-  - type: SGH
+  - type: SGH3D
     material_id: 0
     boundary_conditions:
       # Tag X plane

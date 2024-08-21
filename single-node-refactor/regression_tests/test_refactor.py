@@ -13,7 +13,7 @@ builds = ["openmp"]
 solvers = ["Fierro"]
 
 # Add names of each test
-tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion","Sedov_Read_Ensight"]
+tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion","Sedov_Read_Ensight", "Sedov_rz_polar"]
 
 # Extract data from txt file
 def extract_state_data(filename):
@@ -76,8 +76,8 @@ for i in range(len(executables)):
         
         try: fileIndex = list(file.split("/")[-1] for file in files).index(standard_results[j].split("/")[-1])
         except ValueError:
-            print("state file in test not found\n")
-            exit()  # no solution
+            raise ValueError("State file not found for "+tests[j]+" test")
+
 
         file_path = files[fileIndex]
 

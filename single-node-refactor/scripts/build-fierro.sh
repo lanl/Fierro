@@ -37,6 +37,8 @@ show_help() {
     echo "          mac                         A Mac computer. This option does not allow for cuda and hip builds, and build_cores will be set to 1"
     echo " "
     echo "      --build_cores                   The number of build cores to be used by make and make install commands. The default is 1" 
+    echo " "
+    echo "      --debug                         Build with debug. Default is false." 
     return 1
 }
 
@@ -46,12 +48,14 @@ solver="SGH"
 machine="linux"
 kokkos_build_type="openmp"
 build_cores="1"
+debug="false"
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-kokkos" "fierro")
 valid_solver=("SGH")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_machines=("darwin" "chicoma" "linux" "mac")
+valid_debug=("true" "false")
 
 # Parse command line arguments
 for arg in "$@"; do
@@ -106,6 +110,16 @@ for arg in "$@"; do
                 return 1
             fi
             ;;
+        --debug=*)
+            option="${arg#*=}"
+            if [[ " ${valid_debug[*]} " == *" $option "* ]]; then
+                debug="$option"
+            else
+                echo "Error: debug must be true or false, default is false."
+                show_help
+                return 1
+            fi
+            ;;
         --help)
             show_help
             return 1
@@ -150,9 +164,9 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
-    source kokkos-install.sh ${kokkos_build_type}
-    source matar-install.sh ${kokkos_build_type}
-    source cmake_build.sh ${solver}
+    source kokkos-install.sh ${kokkos_build_type} ${debug}
+    source matar-install.sh ${kokkos_build_type} ${debug}
+    source cmake_build.sh ${solver} ${debug}
 elif [ "$build_action" = "install-kokkos" ]; then
     source kokkos-install.sh ${kokkos_build_type}
 elif [ "$build_action" = "fierro" ]; then

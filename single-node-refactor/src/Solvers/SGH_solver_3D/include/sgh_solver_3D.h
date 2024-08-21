@@ -32,8 +32,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef SGH_SOLVER_H
-#define SGH_SOLVER_H
+#ifndef SGH3D_SOLVER_H
+#define SGH3D_SOLVER_H
 
 #include "solver.h"
 
@@ -51,31 +51,31 @@ using namespace mtr; // matar namespace
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \class SGH
+/// \class SGH3D
 ///
-/// \brief Class for containing functions required to perform SGH
+/// \brief Class for containing functions required to perform SGH on 3D Cartesian meshes
 ///
 /// This class contains the requisite functions requited to perform
 /// staggered grid hydrodynamics (SGH) which is equivalent to a lumped
 /// mass finite element (FE) scheme.
 ///
 /////////////////////////////////////////////////////////////////////////////
-class SGH : public Solver
+class SGH3D : public Solver
 {
 public:
 
-    SGH()  : Solver()
+    SGH3D()  : Solver()
     {
     }
 
-    ~SGH() = default;
+    ~SGH3D() = default;
 
-    // Initialize data specific to the SGH solver
-    void initialize(SimulationParameters_t& SimulationParamaters,
-        Material_t& Materials,
-        Mesh_t&     mesh,
-        BoundaryCondition_t& Boundary,
-        State_t& State) const override
+    // Initialize data specific to the SGH3D solver
+    void initialize(SimulationParameters_t& SimulationParamaters, 
+                    Material_t& Materials, 
+                    Mesh_t& mesh, 
+                    BoundaryCondition_t& Boundary,
+                    State_t& State) const override
     {
         // stuff goes here
     }
@@ -205,30 +205,6 @@ public:
         const double dt,
         const double rk_alpha) const;
 
-    void get_force_2D(
-        const Material_t& Materials,
-        const Mesh_t&     mesh,
-        const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& GaussPoints_div,
-        const DCArrayKokkos<double>& corner_force,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& MaterialPoints_den,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& MaterialPoints_statev,
-        const DCArrayKokkos<double>& MaterialCorners_force,
-        const corners_in_mat_t,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const size_t num_mat_elems,
-        const size_t mat_id,
-        const double fuzz,
-        const double small,
-        const double dt,
-        const double rk_alpha) const;
-
     // **** Functions defined in geometry.cpp **** //
     void update_position(
         double rk_alpha,
@@ -256,24 +232,7 @@ public:
         const double GaussPoints_vol,
         const size_t elem_gid) const;
 
-    KOKKOS_FUNCTION
-    void get_velgrad2D(
-        ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_vel,
-        const ViewCArrayKokkos<double>& b_matrix,
-        const double GaussPoints_vol,
-        const double elem_area,
-        const size_t elem_gid) const;
-
     void get_divergence(
-        DCArrayKokkos<double>& GaussPoints_div,
-        const Mesh_t mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& GaussPoints_vol) const;
-
-    void get_divergence2D(
         DCArrayKokkos<double>& GaussPoints_div,
         const Mesh_t mesh,
         const DCArrayKokkos<double>& node_coords,
@@ -307,26 +266,6 @@ public:
         const size_t num_material_elems,
         const size_t mat_id) const;
 
-    void update_state2D(
-        const Material_t& Materials,
-        const Mesh_t&     mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& MaterialPoints_den,
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
-        const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<double>& MaterialPoints_statev,
-        const DCArrayKokkos<bool>&   GaussPoints_eroded,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const double dt,
-        const double rk_alpha,
-        const size_t num_material_elems,
-        const size_t mat_id) const;
-
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
     void rk_init(
@@ -340,24 +279,6 @@ public:
         const size_t num_mat_points) const;
 
     void get_timestep(
-        Mesh_t& mesh,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& GaussPoints_vol,
-        DCArrayKokkos<double>& MaterialPoints_sspd,
-        DCArrayKokkos<bool>&   MaterialPoints_eroded,
-        DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        size_t num_mat_elems,
-        double time_value,
-        const double graphics_time,
-        const double time_final,
-        const double dt_max,
-        const double dt_min,
-        const double dt_cfl,
-        double&      dt,
-        const double fuzz) const;
-
-    void get_timestep2D(
         Mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,

@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver.h"
+#include "sgh_solver_3D.h"
 #include "mesh.h"
 #include "state.h"
 
@@ -52,8 +52,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param A view into the corner force data
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::update_energy(const double rk_alpha,
-    const double  dt,
+void SGH3D::update_energy(const double rk_alpha,
+    const double dt,
     const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_coords,
@@ -91,15 +91,11 @@ void SGH::update_energy(const double rk_alpha,
             // Get the material corner lid
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
-            double node_radius = 1;
-            if (mesh.num_dims == 2) {
-                node_radius = node_coords(1, node_gid, 1);
-            }
-
             // calculate the Power=F dot V for this corner
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
-                MaterialPoints_power += MaterialCorners_force(mat_corner_lid, dim) * node_radius * half_vel;
+                MaterialPoints_power += MaterialCorners_force(mat_corner_lid, dim) * half_vel;
+
             } // end for dim
         } // end for node_lid
 

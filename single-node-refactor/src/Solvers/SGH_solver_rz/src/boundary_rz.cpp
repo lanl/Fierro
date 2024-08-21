@@ -32,9 +32,10 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver.h"
+#include "sgh_solver_rz.h"
 #include "mesh.h"
 #include "boundary_conditions.h"
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -48,34 +49,40 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_velocity(const Mesh_t& mesh,
-    const BoundaryCondition_t& BoundaryConditions,
-    DCArrayKokkos<double>&     node_vel,
-    const double time_value) const
+void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
+                                 const BoundaryCondition_t& BoundaryConditions,
+                                 DCArrayKokkos<double>& node_vel,
+                                 const double time_value) const
 {
+
     // Loop over boundary sets
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
+        
         // Loop over boundary nodes in a boundary set
         FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+
             // get the global index for this node on the boundary
             size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
             // evaluate velocity on this boundary node
-            BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(
-                mesh,
-                BoundaryConditions.BoundaryConditionEnums,
-                BoundaryConditions.bc_global_vars,
-                BoundaryConditions.bc_state_vars,
-                node_vel,
-                time_value,
-                1, // rk_stage
-                bdy_node_gid,
-                bdy_set);
+            BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(mesh,
+                                                                  BoundaryConditions.BoundaryConditionEnums,
+                                                                  BoundaryConditions.bc_global_vars,
+                                                                  BoundaryConditions.bc_state_vars,
+                                                                  node_vel,
+                                                                  time_value,
+                                                                  1, // rk_stage
+                                                                  bdy_node_gid,
+                                                                  bdy_set);
+                
         }); // end for bdy_node_lid
+
+        
     } // end for bdy_set
 
     return;
 } // end boundary_velocity function
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -89,10 +96,12 @@ void SGH::boundary_velocity(const Mesh_t& mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_contact(const Mesh_t& mesh,
-    const BoundaryCondition_t& BoundaryConditions,
-    DCArrayKokkos<double>&     node_vel,
-    const double time_value) const
+void SGHRZ::boundary_contact_rz(const Mesh_t& mesh,
+                                const BoundaryCondition_t& BoundaryConditions,
+                                DCArrayKokkos<double>& node_vel,
+                                const double time_value) const
 {
     return;
 } // end boundary_contact function
+
+

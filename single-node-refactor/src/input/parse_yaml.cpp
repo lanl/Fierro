@@ -551,6 +551,7 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
                 for (const auto& pair : map) {
                     std::cout << "\t" << pair.first << std::endl;
                 }
+                throw std::runtime_error("**** Region Not Understood ****");
             } // end if
         } // source
         // Number of dimensions for the mesh
@@ -582,6 +583,7 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
                 for (const auto& pair : map) {
                     std::cout << "\t" << pair.first << std::endl;
                 }
+                throw std::runtime_error("**** Region Not Understood ****");
             } // end if
         } // type
         // Get mesh file path

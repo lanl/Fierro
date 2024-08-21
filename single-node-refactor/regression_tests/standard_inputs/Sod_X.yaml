@@ -10,7 +10,7 @@ dynamic_options:
 mesh_options:
     source: generate
     num_dims: 3
-    type: Box
+    type: box
     origin: [0, 0, 0]
     length: [1.0, 0.01, 0.01]
     num_elems: [100, 1, 1]
@@ -22,12 +22,12 @@ output_options:
 
 solver_options:
     - solver:
-        method: SGH
+        method: SGH3D
 
 boundary_conditions:
     # Tag X=0 plane
     - boundary_condition:
-        solver: SGH
+        solver: SGH3D
         geometry: x_plane
         direction: x_dir
         value: 0.0
@@ -36,7 +36,7 @@ boundary_conditions:
             
     # Tag Y=0 plane
     - boundary_condition:
-        solver: SGH
+        solver: SGH3D
         geometry: y_plane
         direction: y_dir
         value: 0.0
@@ -44,7 +44,7 @@ boundary_conditions:
 
     # Tag z=0 plane
     - boundary_condition:
-        solver: SGH
+        solver: SGH3D
         geometry: z_plane
         direction: z_dir
         value: 0.0
@@ -53,7 +53,7 @@ boundary_conditions:
 
     # Tag X=1 plane
     - boundary_condition:
-        solver: SGH
+        solver: SGH3D
         geometry: x_plane
         direction: x_dir
         value: 1.0
@@ -62,7 +62,7 @@ boundary_conditions:
             
     # Tag Y=0.01 plane
     - boundary_condition:
-        solver: SGH
+        solver: SGH3D
         geometry: y_plane
         direction: y_dir
         value: 0.01
@@ -70,7 +70,7 @@ boundary_conditions:
 
     # Tag z=0.01 plane
     - boundary_condition:
-        solver: SGH
+        solver: SGH3D
         geometry: z_plane
         direction: z_dir
         value: 0.01

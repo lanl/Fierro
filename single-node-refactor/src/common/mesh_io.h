@@ -356,7 +356,7 @@ public:
         SimulationParameters_t& SimulationParamaters)
     {
         if (SimulationParamaters.mesh_input.num_dims == 2) {
-            if (SimulationParamaters.mesh_input.type == mesh_input::Cylinder) {
+            if (SimulationParamaters.mesh_input.type == mesh_input::Polar) {
                 build_2d_polar(mesh, GaussPoints, node, corner, SimulationParamaters);
             }
             else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {
@@ -1629,7 +1629,9 @@ public:
         } // end for loop over vertices
 
         FILE* out[20];   // the output files that are written to
-        char  name[100]; // char string
+        char  filename[100]; // char string
+        int   max_len = sizeof filename;
+        int   str_output_len;
 
         struct stat st;
 
@@ -1639,8 +1641,12 @@ public:
 
         // snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
 
-        sprintf(name, "vtk/meshHexPn.%05d.vtk", graphics_id);  // mesh file
-        out[0] = fopen(name, "w");
+        //sprintf(filename, "vtk/meshHexPn.%05d.vtk", graphics_id);  // mesh file
+        str_output_len = snprintf(filename, max_len, "vtk/meshHexPn.%05d.vtk", graphics_id);
+        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+         // mesh file
+        
+        out[0] = fopen(filename, "w");
 
         fprintf(out[0], "# vtk DataFile Version 2.0\n");  // part 2
         fprintf(out[0], "Mesh for Fierro\n");             // part 2
@@ -1742,8 +1748,12 @@ public:
         graphics_times(graphics_id) = time_value;
 
         // Write time series metadata
-        sprintf(name, "vtk/meshHexPn.vtk.series", graphics_id);  // mesh file
-        out[0] = fopen(name, "w");
+        //sprintf(filename, "vtk/meshHexPn.vtk.series", graphics_id);  // mesh file
+        str_output_len = snprintf(filename, max_len, "vtk/meshHexPn.vtk.series"); 
+        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+        // mesh file
+
+        out[0] = fopen(filename, "w");
 
         fprintf(out[0], "{\n");
         fprintf(out[0], "  \"file-series-version\" : \"1.0\",\n");
@@ -1823,7 +1833,9 @@ public:
         FILE* out_elem_state;  // element average state
         char  filename[128];
 
-        sprintf(filename, "state/mat_pt_state_t_%6.4e.txt", time_value);
+        int max_len = sizeof filename;
+
+        snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e.txt", time_value);
 
         // output files
         out_elem_state = fopen(filename, "w");
@@ -1835,8 +1847,11 @@ public:
         // write out values for the elem
         for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-            for (size_t elem_lid = 0; elem_lid < num_mat_elems; elem_lid++) {
+            for (size_t elem_lid = 0; elem_lid < num_mat_elems; elem_lid++)
+            {
+
                 size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(elem_lid);
+
 
                 double elem_coords[3];
                 elem_coords[0] = 0.0;
