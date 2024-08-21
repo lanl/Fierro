@@ -1629,7 +1629,9 @@ public:
         } // end for loop over vertices
 
         FILE* out[20];   // the output files that are written to
-        char  name[100]; // char string
+        char  filename[100]; // char string
+        int   max_len = sizeof filename;
+        int   str_output_len;
 
         struct stat st;
 
@@ -1639,8 +1641,12 @@ public:
 
         // snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
 
-        sprintf(name, "vtk/meshHexPn.%05d.vtk", graphics_id);  // mesh file
-        out[0] = fopen(name, "w");
+        //sprintf(filename, "vtk/meshHexPn.%05d.vtk", graphics_id);  // mesh file
+        str_output_len = snprintf(filename, max_len, "vtk/meshHexPn.%05d.vtk", graphics_id);
+        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+         // mesh file
+        
+        out[0] = fopen(filename, "w");
 
         fprintf(out[0], "# vtk DataFile Version 2.0\n");  // part 2
         fprintf(out[0], "Mesh for Fierro\n");             // part 2
@@ -1742,8 +1748,12 @@ public:
         graphics_times(graphics_id) = time_value;
 
         // Write time series metadata
-        sprintf(name, "vtk/meshHexPn.vtk.series", graphics_id);  // mesh file
-        out[0] = fopen(name, "w");
+        //sprintf(filename, "vtk/meshHexPn.vtk.series", graphics_id);  // mesh file
+        str_output_len = snprintf(filename, max_len, "vtk/meshHexPn.vtk.series"); 
+        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+        // mesh file
+
+        out[0] = fopen(filename, "w");
 
         fprintf(out[0], "{\n");
         fprintf(out[0], "  \"file-series-version\" : \"1.0\",\n");
