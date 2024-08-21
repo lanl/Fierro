@@ -90,6 +90,7 @@
 #include "Mass_Constraint.h"
 #include "Moment_of_Inertia_Constraint.h"
 #include "Kinetic_Energy_Minimize.h"
+#include "Internal_Energy_Minimize.h"
 #include "MMA_Objective.hpp"
 #include "Area_Normals.h"
 
@@ -1376,6 +1377,17 @@ void Explicit_Solver::setup_optimization_problem(){
         }
         else{
           obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+        }
+      }
+      if(TO_Module_List[imodule] == TO_MODULE_TYPE::Internal_Energy_Minimize){
+        //debug print
+        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        if(simparam.optimization_options.method_of_moving_asymptotes){
+          sub_obj = ROL::makePtr<InternalEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
+        }
+        else{
+          obj = ROL::makePtr<InternalEnergyMinimize_TopOpt>(this, nodal_density_flag);
         }
       }
       else{
