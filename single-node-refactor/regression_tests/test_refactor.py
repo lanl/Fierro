@@ -13,7 +13,7 @@ builds = ["openmp"]
 solvers = ["Fierro"]
 
 # Add names of each test
-tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion"]
+tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion","Sedov_Read_Ensight"]
 
 # Extract data from txt file
 def extract_state_data(filename):
@@ -72,8 +72,14 @@ for i in range(len(executables)):
 
         # Compare to standard results
         pattern = "state/mat_pt_state*"
-        file = glob.glob(pattern)
-        file_path = file[-1]
+        files = glob.glob(pattern)
+        
+        try: fileIndex = list(file.split("/")[-1] for file in files).index(standard_results[j].split("/")[-1])
+        except ValueError:
+            print("state file in test not found\n")
+            exit()  # no solution
+
+        file_path = files[fileIndex]
 
         print(file_path)
         print(standard_results[j])
@@ -86,12 +92,15 @@ for i in range(len(executables)):
             true = [row[k] for row in standard_data]
 
 
+
             for l in range(len(calc)):
                 diff = calc[l] - true[l]
                 # print(diff)
 
                 if abs(diff) > 1E-11:
                     print(diff)
+                    print(calc[l])
+                    print(true[l])
                     raise Exception("Results do not match for "+header1[k]+" for the "+tests[j]+" test!")
 
         # Remove simulated state dump

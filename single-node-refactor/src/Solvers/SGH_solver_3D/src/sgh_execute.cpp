@@ -89,19 +89,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     double graphics_time = 0.0; // the times for writing graphics dump
     size_t graphics_id   = 0;
 
-
-
-    // printf("Writing outputs to file at %f \n", time_value);
-    // mesh_writer.write_mesh(mesh, MaterialPoints, node, corner, SimulationParamaters, time_value, graphics_times);
-
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
-
-
 
     std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
-
-
 
     // extensive energy tallies over the entire mesh
     double IE_t0 = 0.0;
@@ -117,13 +108,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                              mesh.num_dims,
                              mesh.num_nodes);
 
-
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
 
     // extensive IE
-    for(size_t mat_id=0; mat_id<num_mats; mat_id++){
-
+    for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
         size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
 
         IE_t0 += sum_domain_internal_energy(State.MaterialPoints(mat_id).mass,
@@ -139,12 +128,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
 
-
     // domain mass for each material (they are at material points)
     double mass_domain_all_mats_t0 = 0.0;
-    double mass_domain_nodes_t0 = 0.0;
+    double mass_domain_nodes_t0    = 0.0;
 
-    for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+    for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
         size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
 
         double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints(mat_id).mass,
@@ -161,17 +149,15 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     printf("nodal mass domain = %f \n", mass_domain_nodes_t0);
 
-
-    
-
-
     // a flag to exit the calculation
     size_t stop_calc = 0;
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-
-
+    // Write initial state at t=0
+    printf("Writing outputs to file at %f \n", graphics_time);
+    mesh_writer.write_mesh(mesh, State, SimulationParamaters, time_value, graphics_times);
+    graphics_time = time_value + graphics_dt_ival;
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -211,11 +197,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // save the smallest dt of all materials
             min_dt_calc = fmin(dt_mat, min_dt_calc);
-            
         } // end for loop over all mats
 
         dt = min_dt_calc;  // save this dt time step
-
 
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
@@ -242,7 +226,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
-
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
@@ -255,10 +238,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                            State.GaussPoints.vol);
 
 
-
             set_corner_force_zero(mesh, State.corner.force);
 
-            
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
@@ -307,8 +288,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // mpi_coms();
 
-            for(size_t mat_id=0; mat_id<num_mats; mat_id++){
-                 
+            for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
                 // ---- Update specific internal energy in the elements ----
                 update_energy(rk_alpha,
                               dt,
@@ -387,10 +367,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
-            mesh_writer.write_mesh(mesh, 
-                                   State, 
-                                   SimulationParamaters, 
-                                   time_value, 
+            mesh_writer.write_mesh(mesh,
+                                   State,
+                                   SimulationParamaters,
+                                   time_value,
                                    graphics_times);
 
             graphics_time = time_value + graphics_dt_ival;
@@ -402,7 +382,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         if (time_value >= time_final) {
             break;
         }
-
     } // end for cycle loop
 
     auto time_2    = std::chrono::high_resolution_clock::now();
@@ -437,10 +416,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
     printf("total energy change = %e \n\n", TE_tend - TE_t0);
 
-
     // domain mass for each material (they are at material points)
     double mass_domain_all_mats_tend = 0.0;
-    double mass_domain_nodes_tend = 0.0;
+    double mass_domain_nodes_tend    = 0.0;
 
     for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
         size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
@@ -456,10 +434,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                                   State.node.coords,
                                                   State.node.mass);
 
-    printf("material mass conservation error = %f \n",mass_domain_all_mats_tend - mass_domain_all_mats_t0);
-    printf("nodal mass conservation error = %f \n",   mass_domain_nodes_tend - mass_domain_nodes_t0);
+    printf("material mass conservation error = %f \n", mass_domain_all_mats_tend - mass_domain_all_mats_t0);
+    printf("nodal mass conservation error = %f \n", mass_domain_nodes_tend - mass_domain_nodes_t0);
     printf("nodal and material mass error = %f \n\n", mass_domain_nodes_tend - mass_domain_all_mats_tend);
-
 } // end of SGH execute
 
 /////////////////////////////////////////////////////////////////////////////
@@ -485,7 +462,7 @@ double max_Eigen3D(const ViewCArrayKokkos<double> tensor)
     det   += tensor(0, 2) * (tensor(1, 0) * tensor(2, 1) - tensor(1, 1) * tensor(2, 0));
     trace /= 3.; // easier for computation
     double p2 = pow((tensor(0, 0) - trace), 2) + pow((tensor(1, 1) - trace), 2) +
-                pow((tensor(2, 2) - trace), 2);
+        pow((tensor(2, 2) - trace), 2);
     p2 += 2. * (pow(tensor(0, 1), 2) + pow(tensor(0, 2), 2) + pow(tensor(1, 2), 2));
 
     double p = sqrt(p2 / 6.);
@@ -569,17 +546,30 @@ double max_Eigen2D(const ViewCArrayKokkos<double> tensor)
     return abs_max_val;
 } // end 2D max eignen value
 
-
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn calc_extensive_node_mass
+///
+/// \brief <insert brief description>
+///
+/// <Insert longer more detailed description which
+/// can span multiple lines if needed>
+///
+/// \param <function parameter description>
+/// \param <function parameter description>
+/// \param <function parameter description>
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
-                              const DCArrayKokkos<double>& node_coords,
-                              const DCArrayKokkos<double>& node_mass,
-                              double num_dims,
-                              double num_nodes)
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_mass,
+    double num_dims,
+    double num_nodes)
 {
     // save the nodal mass
     FOR_ALL(node_gid, 0, num_nodes, {
-
         double radius = 1.0;
 
         if (num_dims == 2) {
@@ -590,30 +580,43 @@ void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
     }); // end parallel for
 } // end function
 
-
 // a function to tally the internal energy
 double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
-                                  const DCArrayKokkos<double>& MaterialPoints_sie,
-                                  size_t num_mat_points)
+    const DCArrayKokkos<double>& MaterialPoints_sie,
+    size_t num_mat_points)
 {
-
     double IE_sum = 0.0;
     double IE_loc_sum;
 
     // loop over the material points and tally IE
     REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
-        IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(1,matpt_lid);
+        IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(1, matpt_lid);
     }, IE_sum);
     Kokkos::fence();
 
-
     return IE_sum;
-} // end function 
+} // end function
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn sum_domain_kinetic_energy
+///
+/// \brief <insert brief description>
+///
+/// <Insert longer more detailed description which
+/// can span multiple lines if needed>
+///
+/// \param <function parameter description>
+/// \param <function parameter description>
+/// \param <function parameter description>
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 double sum_domain_kinetic_energy(const Mesh_t& mesh,
-                                 const DCArrayKokkos<double>& node_vel,
-                                 const DCArrayKokkos<double>& node_coords,
-                                 const DCArrayKokkos<double>& node_mass)
+    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_mass)
 {
     // extensive KE
     double KE_sum = 0.0;
@@ -632,64 +635,68 @@ double sum_domain_kinetic_energy(const Mesh_t& mesh,
         else{
             KE_loc_sum += node_mass(node_gid) * ke;
         }
-
     }, KE_sum);
     Kokkos::fence();
 
-
-    return 0.5*KE_sum;
+    return 0.5 * KE_sum;
 } // end function
-
 
 // a function to tally the material point masses
 double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
-                                const size_t num_mat_points)
+    const size_t num_mat_points)
 {
-
     double mass_domain = 0.0;
     double mass_loc_domain;
 
     REDUCE_SUM(matpt_lid, 0, num_mat_points, mass_loc_domain, {
-
-            mass_loc_domain += MaterialPoints_mass(matpt_lid);
-        
+        mass_loc_domain += MaterialPoints_mass(matpt_lid);
     }, mass_domain);
     Kokkos::fence();
 
     return mass_domain;
-} // end function 
+} // end function
 
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn sum_domain_node_mass
+///
+/// \brief <insert brief description>
+///
+/// <Insert longer more detailed description which
+/// can span multiple lines if needed>
+///
+/// \param <function parameter description>
+/// \param <function parameter description>
+/// \param <function parameter description>
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 double sum_domain_node_mass(const Mesh_t& mesh,
-                            const DCArrayKokkos<double>& node_coords,
-                            const DCArrayKokkos<double>& node_mass)
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_mass)
 {
-
     double mass_domain = 0.0;
     double mass_loc_domain;
 
     REDUCE_SUM(node_gid, 0, mesh.num_nodes, mass_loc_domain, {
-
         if (mesh.num_dims == 2) {
             mass_loc_domain += node_mass(node_gid) * node_coords(1, node_gid, 1);
         }
         else{
             mass_loc_domain += node_mass(node_gid);
         }
-
     }, mass_domain);
     Kokkos::fence();
-   
 
     return mass_domain;
 } // end function
 
 
 // set the corner forces to zero
-void set_corner_force_zero(const Mesh_t& mesh, 
-                           const DCArrayKokkos<double>& corner_force)
+void set_corner_force_zero(const Mesh_t& mesh,
+    const DCArrayKokkos<double>& corner_force)
 {
-
     // set corner force to zero
     FOR_ALL(corner_gid, 0, mesh.num_corners, {
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {

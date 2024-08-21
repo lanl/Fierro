@@ -64,14 +64,14 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 ///
 /// \fn fill_geometric_region
 ///
-/// \brief a function to calculate whether to fill this element based on the 
+/// \brief a function to calculate whether to fill this element based on the
 /// input instructions.  The output is
 ///  = 0 then no, do not fill this element
 ///  = 1 then yes, fill this element
 ///
 /// \param mesh is the simulation mesh
 /// \param node_coords is the nodal position array
-/// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh 
+/// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh
 /// \param region_fills are the instructures to paint state on the mesh
 /// \param mesh_coords is the geometric center of the element or a node coordinates
 ///
@@ -95,7 +95,7 @@ size_t fill_geometric_region(const Mesh_t& mesh,
 ///
 /// \fn paint_gauss_den_sie
 ///
-/// \brief a function to paint den and sie on the Gauss points of the mesh 
+/// \brief a function to paint den and sie on the Gauss points of the mesh
 ///
 /// \param Materials holds the material models and global parameters
 /// \param mesh is the simulation mesh
@@ -121,12 +121,11 @@ void paint_gauss_den_sie(const Material_t& Materials,
                          const double elem_gid,
                          const size_t f_id);
 
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn paint_node_vel
 ///
-/// \brief a function to paint a velocity field on the nodes of the mesh 
+/// \brief a function to paint a velocity field on the nodes of the mesh
 ///
 /// \param mesh is the simulation mesh
 /// \param node_vel is the nodal velocity array

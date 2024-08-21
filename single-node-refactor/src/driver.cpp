@@ -59,9 +59,7 @@ void Driver::initialize()
         std::cout << "Mesh file path: " << SimulationParamaters.mesh_input.file_path << std::endl;
         mesh_reader.set_mesh_file(SimulationParamaters.mesh_input.file_path.data());
         mesh_reader.read_mesh(mesh, 
-                              State.GaussPoints, 
-                              State.node, 
-                              State.corner, 
+                              State, 
                               num_dims, 
                               SimulationParamaters.dynamic_options.rk_num_bins);
     }

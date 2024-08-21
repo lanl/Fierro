@@ -71,6 +71,7 @@ void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
                                                                   BoundaryConditions.bc_state_vars,
                                                                   node_vel,
                                                                   time_value,
+                                                                  1, // rk_stage
                                                                   bdy_node_gid,
                                                                   bdy_set);
                 

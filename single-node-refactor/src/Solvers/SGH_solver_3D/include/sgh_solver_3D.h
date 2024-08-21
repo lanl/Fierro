@@ -47,8 +47,6 @@ struct RegionFill_t;
 struct RegionFill_host_t;
 struct corners_in_mat_t;
 
-
-
 using namespace mtr; // matar namespace
 
 /////////////////////////////////////////////////////////////////////////////
@@ -79,7 +77,7 @@ public:
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override
     {
-         // stuff goes here
+        // stuff goes here
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -89,11 +87,11 @@ public:
     /// \brief Calls setup_sgh, which initializes state and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void setup(SimulationParameters_t& SimulationParamaters, 
-               Material_t& Materials, 
-               Mesh_t& mesh, 
-               BoundaryCondition_t& Boundary,
-               State_t& State) override;
+    void setup(SimulationParameters_t& SimulationParamaters,
+        Material_t& Materials,
+        Mesh_t&     mesh,
+        BoundaryCondition_t& Boundary,
+        State_t& State) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -103,11 +101,11 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void execute(SimulationParameters_t& SimulationParamaters, 
-                 Material_t& Materials, 
-                 BoundaryCondition_t& Boundary, 
-                 Mesh_t& mesh, 
-                 State_t& State) override;
+    void execute(SimulationParameters_t& SimulationParamaters,
+        Material_t& Materials,
+        BoundaryCondition_t& Boundary,
+        Mesh_t&  mesh,
+        State_t& State) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -125,9 +123,9 @@ public:
     /// \return <return type and definition description if not void>
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void finalize(SimulationParameters_t& SimulationParamaters, 
-                  Material_t& Materials, 
-                  BoundaryCondition_t& Boundary) const override
+    void finalize(SimulationParameters_t& SimulationParamaters,
+        Material_t& Materials,
+        BoundaryCondition_t& Boundary) const override
     {
         // Any finalize goes here, remove allocated memory, etc
     }
@@ -135,20 +133,20 @@ public:
     // **** Functions defined in sgh_setup.cpp **** //
     void fill_regions_sgh(
         const Material_t& Materials,
-        const Mesh_t& mesh,
-        const DCArrayKokkos <double>& node_coords,
-        DCArrayKokkos <double>& node_vel,
-        DCArrayKokkos <double>& GaussPoint_den,
-        DCArrayKokkos <double>& GaussPoint_sie,
-        DCArrayKokkos <size_t>& elem_mat_id,
-        DCArrayKokkos <size_t>& voxel_elem_mat_id,
-        const CArrayKokkos <RegionFill_t>& region_fills,
-        const CArray <RegionFill_host_t>& region_fills_host,
+        const Mesh_t&     mesh,
+        const DCArrayKokkos<double>& node_coords,
+        DCArrayKokkos<double>& node_vel,
+        DCArrayKokkos<double>& GaussPoint_den,
+        DCArrayKokkos<double>& GaussPoint_sie,
+        DCArrayKokkos<size_t>& elem_mat_id,
+        DCArrayKokkos<size_t>& voxel_elem_mat_id,
+        const CArrayKokkos<RegionFill_t>& region_fills,
+        const CArray<RegionFill_host_t>&  region_fills_host,
         const size_t num_fills,
         const size_t num_elems,
         const size_t num_nodes,
         const size_t rk_num_bins) const;
-                        
+
     void init_corner_node_masses_zero(
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_mass,
@@ -158,19 +156,19 @@ public:
     void boundary_velocity(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>& node_vel,
+        DCArrayKokkos<double>&     node_vel,
         const double time_value) const;
 
     void boundary_contact(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>& node_vel,
+        DCArrayKokkos<double>&     node_vel,
         const double time_value) const;
 
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(
-        const double rk_alpha,
-        const double dt,
+        const double  rk_alpha,
+        const double  dt,
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_coords,
@@ -184,7 +182,7 @@ public:
     // **** Functions defined in force_sgh.cpp **** //
     void get_force(
         const Material_t& Materials,
-        const Mesh_t& mesh,
+        const Mesh_t&     mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& GaussPoints_div,
         const DCArrayKokkos<bool>&   GaussPoints_eroded,
@@ -250,7 +248,7 @@ public:
     // **** Functions defined in properties.cpp **** //
     void update_state(
         const Material_t& Materials,
-        const Mesh_t& mesh,
+        const Mesh_t&     mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& MaterialPoints_den,
@@ -331,34 +329,34 @@ public:
 };
 
 void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
-                              const DCArrayKokkos<double>& node_coords,
-                              const DCArrayKokkos<double>& node_mass,
-                              const double num_dims,
-                              const double num_nodes);
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_mass,
+    const double num_dims,
+    const double num_nodes);
 
 void calc_node_areal_mass(const Mesh_t& mesh,
-                          const DCArrayKokkos<double>& node_coords,
-                          const DCArrayKokkos<double>& node_mass,
-                          CArrayKokkos<double> node_extensive_mass,
-                          double tiny);
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_mass,
+    CArrayKokkos<double> node_extensive_mass,
+    double tiny);
 
 double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
-                                  const DCArrayKokkos<double>& MaterialPoints_sie,
-                                  const size_t num_mat_points);
+    const DCArrayKokkos<double>& MaterialPoints_sie,
+    const size_t num_mat_points);
 
 double sum_domain_kinetic_energy(const Mesh_t& mesh,
-                                 const DCArrayKokkos<double>& node_vel,
-                                 const DCArrayKokkos<double>& node_coords,
-                                 const DCArrayKokkos<double>& node_mass);
+    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_mass);
 
 double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
-                                const size_t num_mat_points);
+    const size_t num_mat_points);
 
 double sum_domain_node_mass(const Mesh_t& mesh,
-                            const DCArrayKokkos<double>& node_coords,
-                            const DCArrayKokkos<double>& node_mass);
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_mass);
 
-void set_corner_force_zero(const Mesh_t& mesh, 
-                           const DCArrayKokkos<double>& corner_force);   
+void set_corner_force_zero(const Mesh_t& mesh,
+    const DCArrayKokkos<double>& corner_force);
 
 #endif // end HEADER_H

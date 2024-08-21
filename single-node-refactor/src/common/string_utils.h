@@ -36,8 +36,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 
-
-
 const std::string WHITESPACE = " ";
 
 /////////////////////////////////////////////////////////////////////////////
@@ -48,14 +46,14 @@ const std::string WHITESPACE = " ";
 ///
 /// \param Input string
 /// \param delimiter
-/// 
+///
 /// \return Vector of split string values
 ///
 /////////////////////////////////////////////////////////////////////////////
 inline std::vector<std::string> split(std::string s, std::string delimiter)
 {
-    size_t                   pos_start = 0, pos_end, delim_len = delimiter.length();
-    std::string              token;
+    size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+    std::string token;
     std::vector<std::string> res;
 
     while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
@@ -76,7 +74,7 @@ inline std::vector<std::string> split(std::string s, std::string delimiter)
 ///
 /// \param Input string
 /// \param delimiter
-/// 
+///
 /// \return Vector of split string values
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -101,7 +99,6 @@ inline std::vector<std::string> exact_array_values(std::string s, std::string de
     return res;
 } // end of extract_array_values
 
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn exact_array_values
@@ -110,7 +107,7 @@ inline std::vector<std::string> exact_array_values(std::string s, std::string de
 ///
 /// \param Input string
 /// \param delimiter
-/// 
+///
 /// \return Vector of split double values
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -121,39 +118,82 @@ inline std::vector<double> extract_list(std::string str)
     std::replace(str.begin(), str.end(), ']', ' ');
 
     std::vector<std::string> str_values;
-    std::vector<double>      values;
+    std::vector<double> values;
 
     // exact the str values into a vector
     str_values = split(str, ",");
 
     // convert the text values into double values
-    for (auto& word : str_values)
-    {
+    for (auto& word : str_values) {
         values.push_back(atof(word.c_str()) );
     } // end for
 
     return values;
 }  // end of extract_list
 
-
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn ltrim
+///
+/// \brief <insert brief description>
+///
+/// <Insert longer more detailed description which
+/// can span multiple lines if needed>
+///
+/// \param <function parameter description>
+/// \param <function parameter description>
+/// \param <function parameter description>
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 inline std::string ltrim(const std::string& s)
 {
     size_t start = s.find_first_not_of(WHITESPACE);
     return (start == std::string::npos) ? "" : s.substr(start);
 }
 
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn rtrim
+///
+/// \brief <insert brief description>
+///
+/// <Insert longer more detailed description which
+/// can span multiple lines if needed>
+///
+/// \param <function parameter description>
+/// \param <function parameter description>
+/// \param <function parameter description>
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 inline std::string rtrim(const std::string& s)
 {
     size_t end = s.find_last_not_of(WHITESPACE);
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn trim
+///
+/// \brief <insert brief description>
+///
+/// <Insert longer more detailed description which
+/// can span multiple lines if needed>
+///
+/// \param <function parameter description>
+/// \param <function parameter description>
+/// \param <function parameter description>
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 inline std::string trim(const std::string& s)
 {
     return rtrim(ltrim(s));
 }
-
 
 #endif

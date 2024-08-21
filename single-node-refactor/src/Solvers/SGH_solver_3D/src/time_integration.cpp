@@ -35,7 +35,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "sgh_solver_3D.h"
 #include "mesh.h"
 
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn rk_init
@@ -60,10 +59,8 @@ void SGH3D::rk_init(DCArrayKokkos<double>& node_coords,
     const size_t num_nodes,
     const size_t num_mat_points) const
 {
-
     // save elem quantities
     FOR_ALL(matpt_lid, 0, num_mat_points, {
-
         // stress is always 3D even with 2D-RZ
         for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 3; j++) {
@@ -127,8 +124,7 @@ void SGH3D::get_timestep(Mesh_t& mesh,
     double dt_lcl;
     double min_dt_calc;
     REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
-
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);
@@ -158,8 +154,8 @@ void SGH3D::get_timestep(Mesh_t& mesh,
 
             // returns magnitude of distance between each node, 28 total options
             dist(i) = fabs(sqrt((pow((coords(b, 0) - coords(a, 0)), 2.0)
-                                 + pow((coords(b, 1) - coords(a, 1)), 2.0)
-                                 + pow((coords(b, 2) - coords(a, 2)), 2.0))));
+            + pow((coords(b, 1) - coords(a, 1)), 2.0)
+            + pow((coords(b, 2) - coords(a, 2)), 2.0))));
 
             countB++;
             countA++;
@@ -181,7 +177,7 @@ void SGH3D::get_timestep(Mesh_t& mesh,
         // local dt calc based on CFL
         double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
 
-        if (MaterialToMeshMaps_elem(mat_elem_lid) == true){
+        if (MaterialToMeshMaps_elem(mat_elem_lid) == true) {
             dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
         }
 
