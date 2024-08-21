@@ -92,13 +92,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
     const size_t num_dims = 2;
     const size_t num_nodes_in_elem = 4;
 
-        // set corner force to zero
-    FOR_ALL(corner_gid, 0, mesh.num_corners, {
-        for (int dim = 0; dim < num_dims; dim++) {
-            corner_force(corner_gid, dim) = 0.0;
-        }
-    }); // end parallel for corners
-
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
@@ -407,6 +400,8 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
                     MaterialCorners_force(mat_corner_lid, dim) = force_component;
                     corner_force(corner_gid, dim) += force_component; // tally all forces to the corner
+
+                    printf("corner_force(corner_gid, dim)=%f \n", corner_force(corner_gid, dim));
 
                 } // end loop over dimension
 

@@ -70,6 +70,21 @@ materials:
             - 1.0E-14
             - 1.0
 
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        q1: 1.0
+        q2: 1.333
+        q1ex: 1.0
+        q2ex: 1.333
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+
+
 regions:
     - fill_volume:
         type: global
