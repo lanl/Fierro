@@ -55,7 +55,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                   Mesh_t& mesh, 
                   State_t& State)
 {
-    std::cout << "In execute function in sgh solver" << std::endl;
+    std::cout << "In execute function in SGHRZ solver" << std::endl;
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
     double tiny  = SimulationParamaters.dynamic_options.tiny;
@@ -157,16 +157,15 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
     printf("nodal mass domain = %f \n", mass_domain_nodes_t0);
 
-
-    
-
-
     // a flag to exit the calculation
     size_t stop_calc = 0;
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-
+    // Write initial state at t=0
+    printf("Writing outputs to file at %f \n", graphics_time);
+    mesh_writer.write_mesh(mesh, State, SimulationParamaters, time_value, graphics_times);
+    graphics_time = time_value + graphics_dt_ival;
 
 
     // loop over the max number of time integration cycles
