@@ -76,8 +76,8 @@ for i in range(len(executables)):
         
         try: fileIndex = list(file.split("/")[-1] for file in files).index(standard_results[j].split("/")[-1])
         except ValueError:
-            print("state file in test not found\n")
-            exit()  # no solution
+            raise ValueError("State file not found for "+tests[j]+" test")
+
 
         file_path = files[fileIndex]
 
