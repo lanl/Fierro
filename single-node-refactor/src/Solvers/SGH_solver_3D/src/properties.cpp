@@ -239,6 +239,7 @@ void SGH3D::update_state(
             if (MaterialPoints_eroded(mat_point_lid)) {
                 MaterialPoints_pres(mat_point_lid) = 0.0;
                 MaterialPoints_sspd(mat_point_lid) = 1.0e-32;
+                MaterialPoints_den(mat_point_lid) = 1.0e-32;
 
                 for (size_t i = 0; i < 3; i++) {
                     for (size_t j = 0; j < 3; j++) {

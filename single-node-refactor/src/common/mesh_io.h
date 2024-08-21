@@ -1272,15 +1272,29 @@ public:
         }
         fprintf(out[0], "%10lu\n", num_elems);
 
+
         int convert_ijk_to_ensight[8];
-        convert_ijk_to_ensight[0] = 0;
-        convert_ijk_to_ensight[1] = 1;
-        convert_ijk_to_ensight[2] = 3;
-        convert_ijk_to_ensight[3] = 2;
-        convert_ijk_to_ensight[4] = 4;
-        convert_ijk_to_ensight[5] = 5;
-        convert_ijk_to_ensight[6] = 7;
-        convert_ijk_to_ensight[7] = 6;
+        if(mesh.num_dims==3){
+            convert_ijk_to_ensight[0] = 0;
+            convert_ijk_to_ensight[1] = 1;
+            convert_ijk_to_ensight[2] = 3;
+            convert_ijk_to_ensight[3] = 2;
+            convert_ijk_to_ensight[4] = 4;
+            convert_ijk_to_ensight[5] = 5;
+            convert_ijk_to_ensight[6] = 7;
+            convert_ijk_to_ensight[7] = 6;
+        }
+        else{
+        
+            convert_ijk_to_ensight[0] = 0;
+            convert_ijk_to_ensight[1] = 1;
+            convert_ijk_to_ensight[2] = 2;
+            convert_ijk_to_ensight[3] = 3;
+            convert_ijk_to_ensight[4] = 4;
+            convert_ijk_to_ensight[5] = 5;
+            convert_ijk_to_ensight[6] = 6;
+            convert_ijk_to_ensight[7] = 7;
+        } // end if
 
 
         // write all global point numbers for this cell

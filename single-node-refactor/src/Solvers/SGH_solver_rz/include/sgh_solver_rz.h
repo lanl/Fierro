@@ -186,6 +186,7 @@ public:
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& GaussPoints_div,
+        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
         const DCArrayKokkos<double>& corner_force,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
