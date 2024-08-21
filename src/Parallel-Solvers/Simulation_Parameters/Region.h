@@ -47,6 +47,10 @@ struct Region : Yaml::DerivedFields, Yaml::ValidatedYaml, mat_fill_t {
       if (sie.has_value() == ie.has_value()){
         throw Yaml::ConfigurationException("Specify values for exactly one of: energy (ie) or specific energy (sie).");
       }
+
+      if (den<=0){
+        throw Yaml::ConfigurationException("Error: non-positive material density was specified for a region");
+      }
       
       mat_fill_t::u = u.value_or(0);
       mat_fill_t::v = v.value_or(0);
