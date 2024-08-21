@@ -1220,6 +1220,8 @@ void FEA_Module_SGH::sgh_solve()
 
         if(use_solve_checkpoints&&optimization_on){
                 previous_node_velocities_distributed->assign(*all_node_velocities_distributed);
+                previous_node_coords_distributed->assign(*all_node_coords_distributed);
+                previous_element_internal_energy_distributed->assign(*element_internal_energy_distributed);
         }
 
         // integrate solution forward in time
