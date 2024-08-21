@@ -289,74 +289,62 @@ public:
   ----------------------------------------------------------------------------------------- */
     void step_accumulation(const real_t& dt, const size_t& cycle, const size_t& rk_level) {
         
-        const_vec_array node_velocities_interface;
-        const_vec_array previous_node_velocities_interface;
+        const_vec_array current_elem_sie;
+        const_vec_array previous_elem_sie;
+        size_t nlocal_elem_non_overlapping = FEM_SGH_->Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
+        auto nodes_in_elem = FEM_SGH_->nodes_in_elem;
+        auto elem_mass = FEM_SGH_->elem_mass;
         bool use_solve_checkpoints    = FEM_SGH_->simparam->optimization_options.use_solve_checkpoints;
         if(use_solve_checkpoints){
-            node_velocities_interface = FEM_SGH_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            previous_node_velocities_interface = FEM_SGH_->previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            current_elem_sie = FEM_SGH_->element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            previous_elem_sie = FEM_SGH_->previous_element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
         }
         else{
-            auto forward_solve_velocity_data = FEM_SGH_->forward_solve_velocity_data;
-            node_velocities_interface = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            previous_node_velocities_interface = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            auto forward_solve_internal_energy_data = FEM_SGH_->forward_solve_internal_energy_data;
+            current_elem_sie = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            previous_elem_sie = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
         }
 
-        double KE_sum = 0.0;
-        double KE_loc_sum = 0.0;
+        double IE_sum = 0.0;
+        double IE_loc_sum = 0.0;
         // extensive KE
         if(FEM_SGH_->simparam->optimization_options.optimization_objective_regions.size()){
             int nobj_volumes = FEM_SGH_->simparam->optimization_options.optimization_objective_regions.size();
             auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
             const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+            REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
                 double ke = 0;
-                double current_node_coords[3];
+                int node_id;
+                double current_elem_coords[3];
                 bool contained = false;
-                current_node_coords[0] = all_initial_node_coords(node_gid, 0);
-                current_node_coords[1] = all_initial_node_coords(node_gid, 1);
-                current_node_coords[2] = all_initial_node_coords(node_gid, 2);
+                current_elem_coords[0] = 0;
+                current_elem_coords[1] = 0;
+                current_elem_coords[2] = 0;
+                for(int inode=0; inode< num_nodes_in_elem; inode++){
+                    node_id = nodes_in_elem(elem_gid, inode);
+                    current_elem_coords[0] += all_initial_node_coords(node_id, 0)/num_nodes_in_elem;
+                    current_elem_coords[1] += all_initial_node_coords(node_id, 1)/num_nodes_in_elem;
+                    current_elem_coords[2] += all_initial_node_coords(node_id, 2)/num_nodes_in_elem;
+                }
                 for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
-                    if(optimization_objective_regions(ivolume).contains(current_node_coords)){
+                    if(optimization_objective_regions(ivolume).contains(current_elem_coords)){
                         contained = true;
                     }
                 }
                 if(contained){
-                    for (size_t dim = 0; dim < num_dim; dim++) {
-                        // midpoint integration approximation
-                        ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
-                                (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
-                    } // end for
+                    IE_loc_sum += elem_mass(elem_gid) *  0.5 * (current_elem_sie(elem_gid,0)+previous_elem_sie(elem_gid,0));
                 }
 
-                if (num_dim == 2) {
-                    KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
-                }
-                else{
-                    KE_loc_sum += node_mass(node_gid) * ke;
-                }
-            }, KE_sum);
+                
+            }, IE_sum);
         }
         else{
-            REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
-                double ke = 0;
-                for (size_t dim = 0; dim < num_dim; dim++) {
-                    // midpoint integration approximation
-                    ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
-                        (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
-                } // end for
-
-                if (num_dim == 2) {
-                    KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
-                }
-                else{
-                    KE_loc_sum += node_mass(node_gid) * ke;
-                }
-            }, KE_sum);
+            REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+                IE_loc_sum += elem_mass(elem_gid) * 0.5 * (current_elem_sie(elem_gid,0)+previous_elem_sie(elem_gid,0));
+            }, IE_sum);
         }
         Kokkos::fence();
-        KE_sum = 0.5 * KE_sum;
-        objective_accumulation += KE_sum * dt;
+        objective_accumulation += IE_sum * dt;
     }
 
   /* --------------------------------------------------------------------------------------
@@ -453,7 +441,7 @@ public:
     }
     
   //contributes to rate of change of adjoint vector due to term with velocity gradient of objective
-    void velocity_gradient_adjoint_contribution(vec_array& adjoint_rate_vector, const DViewCArrayKokkos<double>& node_mass,
+    void sie_gradient_adjoint_contribution(vec_array& adjoint_rate_vector, const DViewCArrayKokkos<double>& node_mass,
                                                 const DViewCArrayKokkos<double>& elem_mass, const DViewCArrayKokkos<double>& node_vel,
                                                 const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
                                                 const size_t& rk_level){
@@ -467,6 +455,7 @@ public:
         Kokkos::fence();
     }
 
+  //contribution to gradient tally from objective w.r.t design density
     void density_gradient_term(vec_array& gradient_vector, const DViewCArrayKokkos<double>& node_mass,
                                const DViewCArrayKokkos<double>& elem_mass, const DViewCArrayKokkos<double>& node_vel,
                                const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
