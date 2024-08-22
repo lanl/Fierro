@@ -177,7 +177,7 @@ void SGH3D::get_timestep(Mesh_t& mesh,
         // local dt calc based on CFL
         double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
 
-        if (MaterialToMeshMaps_elem(mat_elem_lid) == true) {
+        if (MaterialPoints_eroded(mat_elem_lid) == true) {
             dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
         }
 

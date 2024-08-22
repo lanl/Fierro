@@ -401,8 +401,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                     MaterialCorners_force(mat_corner_lid, dim) = force_component;
                     corner_force(corner_gid, dim) += force_component; // tally all forces to the corner
 
-                    printf("corner_force(corner_gid, dim)=%f \n", corner_force(corner_gid, dim));
-
                 } // end loop over dimension
 
                 // ---- add hoop stress terms ----

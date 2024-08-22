@@ -333,15 +333,13 @@ double sum_domain_internal_energy_rz(const DCArrayKokkos<double>& MaterialPoints
 
 double sum_domain_kinetic_energy_rz(const Mesh_t& mesh,
                                     const DCArrayKokkos<double>& node_vel,
-                                    const DCArrayKokkos<double>& node_coords,
-                                    const DCArrayKokkos<double>& node_mass);
+                                    const CArrayKokkos<double>& node_extensive_mass);
 
 double sum_domain_material_mass_rz(const DCArrayKokkos<double>& MaterialPoints_mass,
                                    const size_t num_mat_points);
 
-double sum_domain_node_mass_rz(const Mesh_t& mesh,
-                               const DCArrayKokkos<double>& node_coords,
-                               const DCArrayKokkos<double>& node_mass);
+double sum_domain_node_mass_rz(const CArrayKokkos<double>& extensive_node_mass,
+                               const size_t num_nodes);
 
 void set_corner_force_zero_rz(const Mesh_t& mesh, 
                               const DCArrayKokkos<double>& corner_force);   

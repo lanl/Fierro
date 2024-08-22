@@ -59,6 +59,8 @@ void SGHRZ::update_position_rz(double rk_alpha,
         for (int dim = 0; dim < num_dims; dim++) {
             double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
             node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha * dt * half_vel;
+
+            node_coords(1, node_gid, dim) = fmax(0.0, node_coords(1, node_gid, dim));
         }
     }); // end parallel for over nodes
 } // end subroutine

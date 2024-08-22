@@ -130,8 +130,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     // extensive KE
     KE_t0 = sum_domain_kinetic_energy_rz(mesh,
                                          State.node.vel,
-                                         State.node.coords,
-                                         State.node.mass);
+                                         node_extensive_mass);
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
 
@@ -151,9 +150,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     } // end for
 
     // node mass of the domain
-    mass_domain_nodes_t0 = sum_domain_node_mass_rz(mesh,
-                                                   State.node.coords,
-                                                   State.node.mass);
+    mass_domain_nodes_t0 = sum_domain_node_mass_rz(node_extensive_mass,
+                                                   mesh.num_nodes);
 
     printf("nodal mass domain = %f \n", mass_domain_nodes_t0);
 
@@ -438,8 +436,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     // extensive KE
     KE_tend = sum_domain_kinetic_energy_rz(mesh,
                                            State.node.vel,
-                                           State.node.coords,
-                                           State.node.mass);
+                                           node_extensive_mass);
     // extensive TE
     TE_tend = IE_tend + KE_tend;
 
@@ -462,9 +459,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     } // end for
 
     // node mass of the domain
-    mass_domain_nodes_tend = sum_domain_node_mass_rz(mesh,
-                                                     State.node.coords,
-                                                     State.node.mass);
+    mass_domain_nodes_tend = sum_domain_node_mass_rz(node_extensive_mass,
+                                                     mesh.num_nodes);
 
     printf("material mass conservation error = %f \n",mass_domain_all_mats_tend - mass_domain_all_mats_t0);
     printf("nodal mass conservation error = %f \n",   mass_domain_nodes_tend - mass_domain_nodes_t0);
@@ -496,8 +492,7 @@ double sum_domain_internal_energy_rz(const DCArrayKokkos<double>& MaterialPoints
 
 double sum_domain_kinetic_energy_rz(const Mesh_t& mesh,
                                     const DCArrayKokkos<double>& node_vel,
-                                    const DCArrayKokkos<double>& node_coords,
-                                    const DCArrayKokkos<double>& node_mass)
+                                    const CArrayKokkos<double>& node_extensive_mass)
 {
     // extensive KE
     double KE_sum = 0.0;
@@ -507,10 +502,10 @@ double sum_domain_kinetic_energy_rz(const Mesh_t& mesh,
         double ke = 0;
 
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node_vel(1, node_gid, dim) * node_vel(1, node_gid, dim); // 1/2 at end
+            ke += node_vel(1, node_gid, dim) * node_vel(1, node_gid, dim); // 1/2 at end, in the return
         } // end for
 
-        KE_loc_sum += node_mass(node_gid) * node_coords(1, node_gid, 1) * ke;
+        KE_loc_sum += node_extensive_mass(node_gid) * ke;  // 1/2 in the return
 
     }, KE_sum);
     Kokkos::fence();
@@ -539,17 +534,15 @@ double sum_domain_material_mass_rz(const DCArrayKokkos<double>& MaterialPoints_m
 } // end function 
 
 
-double sum_domain_node_mass_rz(const Mesh_t& mesh,
-                               const DCArrayKokkos<double>& node_coords,
-                               const DCArrayKokkos<double>& node_mass)
+double sum_domain_node_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
+                               const size_t num_nodes)
 {
-
     double mass_domain = 0.0;
     double mass_loc_domain;
 
-    REDUCE_SUM(node_gid, 0, mesh.num_nodes, mass_loc_domain, {
+    REDUCE_SUM(node_gid, 0, num_nodes, mass_loc_domain, {
 
-            mass_loc_domain += node_mass(node_gid) * node_coords(1, node_gid, 1);
+            mass_loc_domain += node_extensive_mass(node_gid);
         
     }, mass_domain);
     Kokkos::fence();
@@ -634,6 +627,8 @@ void calc_node_areal_mass_rz(const Mesh_t& mesh,
                 // if the node is off the axis, use it's areal mass on the boundary
                 if (node_coords(1, node_neighbor_gid, 1) > tiny) {
                     node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid) / 2.0);
+                    // Why half, the on axis node is half the total area mass of the off-axis node
+                    // node_mass = rho*A
                 }
             } // end for over neighboring nodes
         } // end if
