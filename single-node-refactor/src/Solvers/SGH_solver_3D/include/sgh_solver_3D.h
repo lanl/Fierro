@@ -196,6 +196,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_statev,
         const DCArrayKokkos<double>& MaterialCorners_force,
+        const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const corners_in_mat_t,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,

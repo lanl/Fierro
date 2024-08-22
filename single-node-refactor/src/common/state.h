@@ -119,6 +119,8 @@ struct MaterialPoint_t
     DCArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
     DCArrayKokkos<double> mass;   ///< MaterialPoint mass
 
+    DCArrayKokkos<double> volfrac;   ///< MaterialPoint volume fraction
+
     DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
 
     DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
@@ -137,6 +139,7 @@ struct MaterialPoint_t
         this->sspd   = DCArrayKokkos<double>(num_pts_max, "material_point_sspd");
         this->mass   = DCArrayKokkos<double>(num_pts_max, "material_point_mass");
         this->sie    = DCArrayKokkos<double>(num_rk, num_pts_max, "material_point_sie");
+        this->volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac");
         this->eroded = DCArrayKokkos<bool>(num_pts_max, "material_point_eroded");
     }; // end method
 
