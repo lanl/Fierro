@@ -313,7 +313,6 @@ public:
             auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
             const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
-                double ke = 0;
                 int node_id;
                 double current_elem_coords[3];
                 bool contained = false;
@@ -447,10 +446,8 @@ public:
                                                 const size_t& rk_level){
         
 
-        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-            for (int idim = 0; idim < num_dim; idim++) {
-                adjoint_rate_vector(node_gid, idim) = node_mass(node_gid)*node_vel(rk_level, node_gid, idim);
-            }
+        FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+            adjoint_rate_vector(elem_gid, 0) = elem_mass(elem_gid);
         }); // end parallel for
         Kokkos::fence();
     }
@@ -461,8 +458,6 @@ public:
                                const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
                                const size_t& rk_level, const real_t& global_dt = 0){
         size_t current_data_index, next_data_index;
-        CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
-        CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
         auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
         auto nodes_in_elem = FEM_SGH_->nodes_in_elem;
         auto corner_value_storage = FEM_SGH_->corner_value_storage;
@@ -481,33 +476,27 @@ public:
                     real_t inner_product;
                     // std::cout << elem_mass(elem_id) <<std::endl;
 
-                    // current_nodal_velocities
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
-                        node_id = nodes_in_elem(elem_id, inode);
-                        
-                        for (int idim = 0; idim < num_dim; idim++) {
-                        // midpoint rule for integration being used; add velocities and divide by 2
-                        current_element_velocities(inode, idim) = node_vel(rk_level, node_id, idim);
-                        }
-                    }
-
                     inner_product = 0;
                     for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
-                        double current_node_coords[3];
+                        int node_id;
+                        double current_elem_coords[3];
                         bool contained = false;
-                        node_id = nodes_in_elem(elem_id, ifill);
-                        current_node_coords[0] = all_initial_node_coords(node_id, 0);
-                        current_node_coords[1] = all_initial_node_coords(node_id, 1);
-                        current_node_coords[2] = all_initial_node_coords(node_id, 2);
+                        current_elem_coords[0] = 0;
+                        current_elem_coords[1] = 0;
+                        current_elem_coords[2] = 0;
+                        for(int inode=0; inode< num_nodes_in_elem; inode++){
+                            node_id = nodes_in_elem(elem_id, inode);
+                            current_elem_coords[0] += all_initial_node_coords(node_id, 0)/num_nodes_in_elem;
+                            current_elem_coords[1] += all_initial_node_coords(node_id, 1)/num_nodes_in_elem;
+                            current_elem_coords[2] += all_initial_node_coords(node_id, 2)/num_nodes_in_elem;
+                        }
                         for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
-                            if(optimization_objective_regions(ivolume).contains(current_node_coords)){
+                            if(optimization_objective_regions(ivolume).contains(current_elem_coords)){
                                 contained = true;
                             }
                         }
                         if(contained){
-                            for (int idim = 0; idim < num_dim; idim++) {
-                                inner_product += elem_mass(elem_id) * current_element_velocities(ifill, idim) * current_element_velocities(ifill, idim);
-                            }
+                            inner_product = elem_mass(elem_id) * elem_sie(elem_id);
                         }
                     }
 
@@ -527,22 +516,7 @@ public:
                     real_t inner_product;
                     // std::cout << elem_mass(elem_id) <<std::endl;
 
-                    // current_nodal_velocities
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
-                        node_id = nodes_in_elem(elem_id, inode);
-                        
-                        for (int idim = 0; idim < num_dim; idim++) {
-                        // midpoint rule for integration being used; add velocities and divide by 2
-                        current_element_velocities(inode, idim) = node_vel(rk_level, node_id, idim);
-                        }
-                    }
-
-                    inner_product = 0;
-                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
-                        for (int idim = 0; idim < num_dim; idim++) {
-                            inner_product += elem_mass(elem_id) * current_element_velocities(ifill, idim) * current_element_velocities(ifill, idim);
-                        }
-                    }
+                    inner_product = elem_mass(elem_id) * elem_sie(elem_id);
 
                     for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         // compute gradient of local element contribution to v^t*M*v product
@@ -559,7 +533,7 @@ public:
                 size_t corner_id;
                 for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
-                    gradient_vector(node_id, 0) += 0.5 * corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
+                    gradient_vector(node_id, 0) += corner_value_storage(corner_id) / (double)num_nodes_in_elem;
                 }
             }); // end parallel for
             Kokkos::fence();
