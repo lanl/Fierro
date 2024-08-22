@@ -170,6 +170,9 @@ struct MaterialEnums_t
     // Strength model type: none, or increment- or state-based
     model::StrengthType StrengthType = model::noStrengthType;
 
+    // Erosion model type: none or basis
+    model::ErosionModels ErosionModels = model::noErosion;
+
 }; // end boundary condition enums
 
 
@@ -190,7 +193,7 @@ struct MaterialFunctions_t
     // Equation of state (EOS) function pointers
     void (*calc_pressure)(const DCArrayKokkos<double>& MaterialPoints_pres,
                           const DCArrayKokkos<double>& MaterialPoints_stress,
-                          const size_t MaterialPoints_gid,
+                          const size_t MaterialPoints_lid,
                           const size_t mat_id,
                           const DCArrayKokkos<double>& MaterialPoints_state_vars,
                           const DCArrayKokkos<double>& MaterialPoints_sspd,
@@ -200,7 +203,7 @@ struct MaterialFunctions_t
 
     void (*calc_sound_speed)(const DCArrayKokkos<double>& MaterialPoints_pres,
                              const DCArrayKokkos<double>& MaterialPoints_stress,
-                             const size_t MaterialPoints_gid,
+                             const size_t MaterialPoints_lid,
                              const size_t mat_id,
                              const DCArrayKokkos<double>& MaterialPoints_state_vars,
                              const DCArrayKokkos<double>& MaterialPoints_sspd,
@@ -208,19 +211,20 @@ struct MaterialFunctions_t
                              const double sie,
                              const RaggedRightArrayKokkos<double> &eos_global_vars) = NULL;
 
+
     // -- Strength --
 
     // Material strength model function pointers
     void (*calc_stress)(const DCArrayKokkos<double>& MaterialPoints_pres,
                         const DCArrayKokkos<double>& MaterialPoints_stress,
-                        const size_t MaterialPoints_gid,
+                        const size_t MaterialPoints_lid,
                         const size_t mat_id,
                         const DCArrayKokkos<double>& MaterialPoints_state_vars,
                         const DCArrayKokkos<double>& MaterialPoints_sspd,
                         const double den,
                         const double sie,
                         const ViewCArrayKokkos<double>& vel_grad,
-                        const ViewCArrayKokkos<size_t>& MaterialPoints_node_gids,
+                        const ViewCArrayKokkos<size_t>& elem_node_gids,
                         const DCArrayKokkos<double>&    node_coords,
                         const MPIArrayKokkos<double>&    node_vel,
                         const double vol,
@@ -230,21 +234,18 @@ struct MaterialFunctions_t
 
     // -- Erosion --
 
-    size_t void_mat_id;         ///< eroded elements get this mat_id
     double erode_tension_val;   ///< tension threshold to initiate erosion
     double erode_density_val;   ///< density threshold to initiate erosion
     // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
-    void (*erode)(const DCArrayKokkos<double>& MaterialPoints_pres,
+    void (*erode)(const DCArrayKokkos<bool>&   MaterialPoints_eroded,
                   const DCArrayKokkos<double>& MaterialPoints_stress,
-                  const DCArrayKokkos<bool>& MaterialPoints_eroded,
-                  const DCArrayKokkos<size_t>& MaterialPoints_mat_id,
-                  const size_t MaterialPoints_gid,
-                  const size_t void_mat_id,
+                  const double MaterialPoint_pres,
+                  const double MaterialPoint_den,
+                  const double MaterialPoint_sie,
+                  const double MaterialPoint_sspd,
                   const double erode_tension_val,
                   const double erode_density_val,
-                  const DCArrayKokkos<double>& MaterialPoints_sspd,
-                  const DCArrayKokkos<double>& MaterialPoints_den,
-                  const double sie) = NULL;
+                  const size_t mat_point_lid) = NULL;
 
     double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression
     double q1ex = 1.3333;   ///< acoustic coefficient in Riemann solver for expansion
@@ -282,14 +283,8 @@ struct Material_t{
     RaggedRightArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
     CArrayKokkos<size_t> num_eos_global_vars;
 
-    RaggedRightArrayKokkos<double> eos_state_vars;       ///< Array of state (in each element) variables for the EOS
-    CArrayKokkos<size_t> num_eos_state_vars;
-
     RaggedRightArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
     CArrayKokkos<size_t> num_strength_global_vars;
-
-    RaggedRightArrayKokkos<double> strength_state_vars;  ///< Array of state (in each element) variables for the strength
-    CArrayKokkos<size_t> num_strength_state_vars;
     
     RaggedRightArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
 

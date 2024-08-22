@@ -38,11 +38,72 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mesh.h"
 #include "state.h"
 #include "simulation_parameters.h"
+#include "region.h"
 
 #include <map>
 #include <memory>
 #include <cstring>
 #include <sys/stat.h>
+
+
+
+
+
+// ==============================================================================
+//   Functions to get 1D for an i,j,k layout mesh
+// ==============================================================================
+// inline int get_id(int i, int j, int k, int num_i, int num_j);
+
+// KOKKOS_INLINE_FUNCTION
+// int get_id_device(int i, int j, int k, int num_i, int num_j);
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_id
+///
+/// \brief This gives the index value of the point or the elem
+///
+/// Assumes that the grid has an i,j,k structure
+/// the elem = i + (j)*(num_points_i-1) + (k)*(num_points_i-1)*(num_points_j-1)
+/// the point = i + (j)*num_points_i + (k)*num_points_i*num_points_j
+///
+/// \param i index
+/// \param j index
+/// \param k index
+/// \param Number of i indices
+/// \param Number of j indices
+///
+/////////////////////////////////////////////////////////////////////////////
+inline int get_id(int i, int j, int k, int num_i, int num_j)
+{
+    return i + j * num_i + k * num_i * num_j;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_id_device
+///
+/// \brief This gives the index value of the point or the elem
+///
+/// Assumes that the grid has an i,j,k structure
+/// the elem = i + (j)*(num_points_i-1) + (k)*(num_points_i-1)*(num_points_j-1)
+/// the point = i + (j)*num_points_i + (k)*num_points_i*num_points_j
+///
+/// \param i index
+/// \param j index
+/// \param k index
+/// \param Number of i indices
+/// \param Number of j indices
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_INLINE_FUNCTION
+int get_id_device(int i, int j, int k, int num_i, int num_j)
+{
+    return i + j * num_i + k * num_i * num_j;
+}
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -97,7 +158,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_mesh(mesh_t& mesh, 
-                   MaterialPoint_t& MaterialPoints, 
                    GaussPoint_t& GaussPoints, 
                    node_t& node, 
                    corner_t& corner, 
@@ -111,7 +171,7 @@ public:
 
         // Check mesh file extension
         // and read based on extension
-        read_ensight_mesh(mesh, MaterialPoints, GaussPoints, node, corner, num_dims, rk_num_bins);
+        read_ensight_mesh(mesh, GaussPoints, node, corner, num_dims, rk_num_bins);
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -129,7 +189,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_ensight_mesh(mesh_t& mesh, 
-                           MaterialPoint_t& MaterialPoints, 
                            GaussPoint_t& GaussPoints, 
                            node_t& node, 
                            corner_t& corner, 
@@ -208,7 +267,6 @@ public:
 
         // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
-        MaterialPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
         GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
 
         // for each cell read the list of associated nodes
@@ -282,7 +340,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_mesh(mesh_t& mesh, 
-                    MaterialPoint_t& MaterialPoints, 
                     GaussPoint_t& GaussPoints,
                     node_t& node, 
                     corner_t& corner, 
@@ -290,10 +347,10 @@ public:
     {
         if (SimulationParamaters.mesh_input.num_dims == 2) {
             if (SimulationParamaters.mesh_input.type == mesh_input::Cylinder) {
-                build_2d_polar(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
+                build_2d_polar(mesh, GaussPoints, node, corner, SimulationParamaters);
             }
             else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {
-                build_2d_box(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
+                build_2d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
             }
             else{
                 std::cout << "**** 2D MESH TYPE NOT SUPPORTED **** " << std::endl;
@@ -306,7 +363,7 @@ public:
             }
         }
         else if (SimulationParamaters.mesh_input.num_dims == 3) {
-            build_3d_box(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters);
+            build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
@@ -327,7 +384,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_2d_box(mesh_t& mesh, 
-                      MaterialPoint_t& MaterialPoints, 
                       GaussPoint_t& GaussPoints,
                       node_t& node, 
                       corner_t& corner, 
@@ -441,7 +497,6 @@ public:
         iend = istart +  ichunk;
 
         mesh.initialize_elems(num_elems, num_dim);
-        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
         GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
@@ -499,7 +554,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_2d_polar(mesh_t& mesh, 
-                        MaterialPoint_t& MaterialPoints, 
                         GaussPoint_t& GaussPoints,
                         node_t& node, 
                         corner_t& corner, 
@@ -577,7 +631,6 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
         GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
@@ -635,7 +688,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_3d_box(mesh_t& mesh, 
-                      MaterialPoint_t& MaterialPoints, 
                       GaussPoint_t& GaussPoints,
                       node_t& node, 
                       corner_t& corner, 
@@ -651,21 +703,36 @@ public:
         const double lz = SimulationParamaters.mesh_input.length[2];
 
         //SimulationParamaters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
+        const int num_elems_i_global = SimulationParamaters.mesh_input.num_elems[0];
+        const int num_elems_j_global = SimulationParamaters.mesh_input.num_elems[1];
+        const int num_elems_k_global = SimulationParamaters.mesh_input.num_elems[2];
 
-        const int num_points_i = num_elems_i + 1; // num points in x
-        const int num_points_j = num_elems_j + 1; // num points in y
-        const int num_points_k = num_elems_k + 1; // num points in y
+        const int num_points_i_global = num_elems_i_global + 1; // num points in x
+        const int num_points_j_global = num_elems_j_global + 1; // num points in y
+        const int num_points_k_global = num_elems_k_global + 1; // num points in y
 
-        const int num_nodes = num_points_i * num_points_j * num_points_k;
+        const int num_nodes_global = num_points_i_global * num_points_j_global * num_points_k_global;
 
-        const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
-        const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
-        const double dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
+        const double dx_global = lx / ((double)num_elems_i_global);  // len/(num_elems_i)
+        const double dy_global = ly / ((double)num_elems_j_global);  // len/(num_elems_j)
+        const double dz_global = lz / ((double)num_elems_k_global);  // len/(num_elems_k)
 
-        const int num_elems = num_elems_i * num_elems_j * num_elems_k;
+        const int num_elems_global = num_elems_i_global * num_elems_j_global * num_elems_k_global;
+
+        // This needs to be global (outside of this function)
+        // DAN do we need another one for elems??
+        // instad of: size global, index holds local, could it be
+        // size local, index holds global, pieced together with MPIAllGather
+        // first index is id, second is rank ownership
+        MPIArrayKokkos <size_t> global_to_local_id = MPIArrayKokkos <size_t> (num_nodes_global, 2);
+        
+        // could this be parallel?
+        /* not possible now because it's size_t so no -1
+        for (int idx = 0; idx < num_nodes_global; idx++) {
+            global_to_local_id(idx, 0) = -1;
+        }
+        */
+
 
         std::vector<double> origin(num_dim);
         //SimulationParamaters.mesh_input.origin.update_host();
@@ -692,6 +759,59 @@ public:
 
         int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
+        // MPI data
+        int world_size, rank;
+        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+        // extra math for mpi decomposition
+        int grid_world_size, krem, jrem, col, row, kadd, jadd, ksub, jsub, kstart_points, kend_points, jstart_points, jend_points, kstart_elems, kend_elems, jstart_elems, jend_elems;
+        grid_world_size = sqrt(world_size); // assumes a square rootable N ranks
+        // For elem-based variables
+        /*********************************/
+        krem = num_elems_k_global % grid_world_size; // how many extra points we have after a division of ranks
+        jrem = num_elems_j_global % grid_world_size;
+        col = rank % grid_world_size;
+        row = rank / grid_world_size;
+        kadd = col / (grid_world_size - krem); // 1 if you have an extra piece, 0 otherwise
+        jadd = row / (grid_world_size - jrem); // 1 if you have an extra piece, 0 otherwise
+        ksub = kadd * (grid_world_size - krem); // subtraction from your start based on how many other ranks have an extra piece
+        jsub = jadd * (grid_world_size - jrem);
+        int num_elems_k = num_elems_k_global / grid_world_size + kadd;
+        int num_elems_j = num_elems_j_global / grid_world_size + jadd;
+        int num_elems_i = num_elems_i_global; // unchanged with MPI
+        kstart_elems = col * num_elems_k - ksub;
+        kend_elems = kstart_elems +  num_elems_k;
+        jstart_elems = row * num_elems_j - jsub;
+        jend_elems = jstart_elems +  num_elems_j;
+        /*********************************/
+
+        const int num_elems = num_elems_i * num_elems_j * num_elems_k;
+        const int num_points_i = num_elems_i + 1; // num points in x
+        const int num_points_j = num_elems_j + 1; // num points in y
+        const int num_points_k = num_elems_k + 1; // num points in y
+        const int num_nodes = num_points_i * num_points_j * num_points_k;
+        const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
+        const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
+        const double dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
+
+        // For point-based variables (some variables are overwritted)
+        // Only needed for j/k start/end
+        /*********************************/
+        krem = num_points_k_global % grid_world_size; // how many extra points we have after a division of ranks
+        jrem = num_points_j_global % grid_world_size;
+        col = rank % grid_world_size;
+        row = rank / grid_world_size;
+        kadd = col / (grid_world_size - krem); // 1 if you have an extra piece, 0 otherwise
+        jadd = row / (grid_world_size - jrem); // 1 if you have an extra piece, 0 otherwise
+        ksub = kadd * (grid_world_size - krem); // subtraction from your start based on how many other ranks have an extra piece
+        jsub = jadd * (grid_world_size - jrem);
+        kstart_points = col * num_points_k - ksub;
+        kend_points = kstart_points +  num_points_k;
+        jstart_points = row * num_points_j - jsub;
+        jend_points = jstart_points +  num_points_j;
+        /*********************************/
+
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
         node.initialize(rk_num_bins, num_nodes, num_dim);
@@ -699,11 +819,17 @@ public:
         // --- Build nodes ---
 
         // populate the point data structures
-        for (int k = 0; k < num_points_k; k++) {
-            for (int j = 0; j < num_points_j; j++) {
+        //for (int k = 0, k_glb = kstart; k < kchunk; k++, k_glb++) {
+        ////    for (int j = 0, j_glb = jstart; j < jchunk; j++, j_glb++) {
+        for (int k = 0, k_glb = kstart_points; k < num_points_k; k++, k_glb++) {
+            for (int j = 0, j_glb = jstart_points; j < num_points_j; j++, j_glb++) {
                 for (int i = 0; i < num_points_i; i++) {
                     // global id for the point
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
+                    int node_gid_global = get_id(i, j_glb, k_glb, num_points_i_global, num_points_j_global);
+
+                    global_to_local_id.host(node_gid_global, 0) = node_gid; 
+                    global_to_local_id.host(node_gid_global, 1) = rank; 
 
                     // store the point coordinates
                     node.coords.host(0, node_gid, 0) = origin[0] + (double)i * dx;
@@ -712,6 +838,7 @@ public:
                 } // end for i
             } // end for j
         } // end for k
+        global_to_local_id.update_device();
 
         for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
             for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
@@ -724,27 +851,34 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        MaterialPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
         GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+        //printf("little assert %d\n", mesh.nodes_in_elem.host(0, 0));
 
         // --- Build elems  ---
 
         // populate the elem center data structures
-        for (int k = 0; k < num_elems_k; k++) {
-            for (int j = 0; j < num_elems_j; j++) {
+        // the minus 1 is because this should be looping through num_elems_ijk
+        // which is 1 fewer than num_points, which jkchunk are based on
+        //for (int k = 0, k_loc = kstart; k < kchunk; k++, k_loc++) {
+        //    for (int j = 0, j_loc = jstart; j < jchunk; j++, j_loc++) {
+        for (int k = 0, k_glb = kstart_elems; k < num_elems_k; k++, k_glb++) {
+            for (int j = 0, j_glb = jstart_elems; j < num_elems_j; j++, j_glb++) {
                 for (int i = 0; i < num_elems_i; i++) {
                     // global id for the elem
                     int elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
+                    int elem_gid_global = get_id(i, j_glb, k_glb, num_elems_i_global, num_elems_j_global);
 
                     // store the point IDs for this elem where the range is
                     // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
                     int this_point = 0;
-                    for (int kcount = k; kcount <= k + 1; kcount++) {
-                        for (int jcount = j; jcount <= j + 1; jcount++) {
+                    for (int kcount = k, kcount_glb = k_glb; kcount <= k + 1; kcount++, kcount_glb++) {
+                        for (int jcount = j, jcount_glb = j_glb; jcount <= j + 1; jcount++, jcount_glb++) {
                             for (int icount = i; icount <= i + 1; icount++) {
                                 // global id for the points
                                 int node_gid = get_id(icount, jcount, kcount,
                                                   num_points_i, num_points_j);
+                                int node_gid_global = get_id(icount, jcount_glb, kcount_glb,
+                                                  num_points_i_global, num_points_j_global);
 
                                 // convert this_point index to the FE index convention
                                 int this_index = convert_point_number_in_Hex(this_point);
@@ -766,6 +900,7 @@ public:
         mesh.nodes_in_elem.update_device();
 
         // intialize corner variables
+        // DAN check if mesh.num_nodes_in_elem is global or local
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
         corner.initialize(num_corners, num_dim);
@@ -788,7 +923,6 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_3d_HexN_box(mesh_t& mesh, 
-                           MaterialPoint_t& MaterialPoints, 
                            GaussPoint_t& GaussPoints,
                            node_t& node, 
                            corner_t& corner, 
@@ -797,27 +931,7 @@ public:
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn get_id
-    ///
-    /// \brief This gives the index value of the point or the elem
-    ///
-    /// Assumes that the grid has an i,j,k structure
-    /// the elem = i + (j)*(num_points_i-1) + (k)*(num_points_i-1)*(num_points_j-1)
-    /// the point = i + (j)*num_points_i + (k)*num_points_i*num_points_j
-    ///
-    /// \param i index
-    /// \param j index
-    /// \param k index
-    /// \param Number of i indices
-    /// \param Number of j indices
-    ///
-    /////////////////////////////////////////////////////////////////////////////
-    int get_id(int i, int j, int k, int num_i, int num_j) const
-    {
-        return i + j * num_i + k * num_i * num_j;
-    }
+
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -925,19 +1039,24 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_mesh(mesh_t&   mesh,
-                    MaterialPoint_t&   MaterialPoints,
-                    GaussPoint_t& GaussPoints,
-                    node_t&   node,
-                    corner_t& corner,
+                    State_t& State,
                     SimulationParameters_t& SimulationParamaters,
                     double time_value,
                     CArray<double> graphics_times)
     {
         if (SimulationParamaters.output_options.format == output_options::vtk) {
-            write_vtk(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
+            write_vtk(mesh,
+                      State,
+                      SimulationParamaters,
+                      time_value,
+                      graphics_times);
         }
         else if (SimulationParamaters.output_options.format == output_options::ensight) {
-            write_ensight(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
+            write_ensight(mesh,
+                          State,
+                          SimulationParamaters,
+                          time_value,
+                          graphics_times);
         }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
@@ -967,30 +1086,42 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_ensight(mesh_t&   mesh,
-                       MaterialPoint_t& MaterialPoints,
-                       GaussPoint_t& GaussPoints,
-                       node_t&   node,
-                       corner_t& corner,
+                       State_t&  State,
                        SimulationParameters_t& SimulationParamaters,
                        double time_value,
                        CArray<double> graphics_times)
     {
-        // Update host data
-        MaterialPoints.den.update_host();
-        MaterialPoints.pres.update_host();
-        MaterialPoints.stress.update_host();
-        MaterialPoints.sspd.update_host();
-        MaterialPoints.sie.update_host();
-        GaussPoints.vol.update_host();
-        MaterialPoints.mass.update_host();
-        GaussPoints.mat_id.update_host();
 
-        node.coords.update_host();
-        node.vel.update_host();
-        node.mass.update_host();
+        size_t num_mats = State.MaterialPoints.size();
+
+        // ---- Update host data ----
+
+        // material point values
+        for(int mat_id=0; mat_id<num_mats; mat_id++){
+            State.MaterialPoints(mat_id).den.update_host();
+            State.MaterialPoints(mat_id).pres.update_host();
+            State.MaterialPoints(mat_id).stress.update_host();
+            State.MaterialPoints(mat_id).sspd.update_host();
+            State.MaterialPoints(mat_id).sie.update_host();
+            State.MaterialPoints(mat_id).mass.update_host();
+            State.MaterialPoints(mat_id).eroded.update_host();
+        } // end for mat_id
+
+        // gauss point values
+        State.GaussPoints.vol.update_host();
+
+        // nodal values
+        State.node.coords.update_host();
+        State.node.vel.update_host();
+        State.node.mass.update_host();
+
         Kokkos::fence();
 
-        const int num_scalar_vars = 9;
+        // --------------------------
+
+
+
+        const int num_scalar_vars = 10;
         const int num_vec_vars    = 2;
 
         std::string name_tmp;
@@ -1000,7 +1131,7 @@ public:
         std::strcpy(name, name_tmp.c_str());
 
         const char scalar_var_names[num_scalar_vars][15] = {
-            "den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch"
+            "den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch", "eroded"
         };
 
         const char vec_var_names[num_vec_vars][15] = {
@@ -1024,10 +1155,10 @@ public:
             elem_vel[2] = 0.0;
             // get the coordinates of the element center
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_vel[0] += node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_vel[1] += node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                elem_vel[0] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_vel[1] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3) {
-                    elem_vel[2] += node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_vel[2] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
                 }
                 else{
                     elem_vel[2] = 0.0;
@@ -1044,45 +1175,69 @@ public:
             speed(elem_gid) = sqrt(speed_sqrd);
         }); // end parallel for
         speed.update_host();
+        Kokkos::fence();
 
         // save the output scale fields to a single 2D array
+        
+        // export material centeric data to the elements
+        for(int mat_id=0; mat_id<num_mats; mat_id++){
+
+            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+            for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
+
+                // 1 material per element
+
+                // get elem gid
+                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid); 
+
+                // save outputs
+                elem_fields(elem_gid, 0) = State.MaterialPoints(mat_id).den.host(mat_elem_lid);
+                elem_fields(elem_gid, 1) = State.MaterialPoints(mat_id).pres.host(mat_elem_lid);
+                elem_fields(elem_gid, 2) = State.MaterialPoints(mat_id).sie.host(1, mat_elem_lid);
+                // 3 is guass point vol
+                elem_fields(elem_gid, 4) = State.MaterialPoints(mat_id).mass.host(mat_elem_lid);
+                elem_fields(elem_gid, 5) = State.MaterialPoints(mat_id).sspd.host(mat_elem_lid);
+                // 6 is elem speed
+                elem_fields(elem_gid, 7) = (double)mat_id;
+                // 8 is the e_switch
+                elem_fields(elem_gid, 9) = (double)State.MaterialPoints(mat_id).eroded.host(mat_elem_lid);
+
+            } // end for mat elems storage
+        } // end parallel loop over materials
+
+        // export element centric data
         double e_switch = 1;
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-            // save outputs
-            elem_fields(elem_gid, 0) = MaterialPoints.den.host(elem_gid);
-            elem_fields(elem_gid, 1) = MaterialPoints.pres.host(elem_gid);
-            elem_fields(elem_gid, 2) = MaterialPoints.sie.host(1, elem_gid);
-            elem_fields(elem_gid, 3) = GaussPoints.vol.host(elem_gid);
-            elem_fields(elem_gid, 4) = MaterialPoints.mass.host(elem_gid);
-            elem_fields(elem_gid, 5) = MaterialPoints.sspd.host(elem_gid);
+            elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
-            elem_fields(elem_gid, 7) = (double)GaussPoints.mat_id.host(elem_gid);
             elem_fields(elem_gid, 8) = e_switch;
             elem_switch *= -1;
-        } // end for elements
+        } // end for elem_gid
+
 
         // save the vertex vector fields to an array for exporting to graphics files
         CArray<double> vec_fields(num_nodes, num_vec_vars, 3);
 
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             // position, var 0
-            vec_fields(node_gid, 0, 0) = node.coords.host(1, node_gid, 0);
-            vec_fields(node_gid, 0, 1) = node.coords.host(1, node_gid, 1);
+            vec_fields(node_gid, 0, 0) = State.node.coords.host(1, node_gid, 0);
+            vec_fields(node_gid, 0, 1) = State.node.coords.host(1, node_gid, 1);
             if (num_dims == 2) {
                 vec_fields(node_gid, 0, 2) = 0.0;
             }
             else{
-                vec_fields(node_gid, 0, 2) = node.coords.host(1, node_gid, 2);
+                vec_fields(node_gid, 0, 2) = State.node.coords.host(1, node_gid, 2);
             }
 
             // position, var 1
-            vec_fields(node_gid, 1, 0) = node.vel.host(1, node_gid, 0);
-            vec_fields(node_gid, 1, 1) = node.vel.host(1, node_gid, 1);
+            vec_fields(node_gid, 1, 0) = State.node.vel.host(1, node_gid, 0);
+            vec_fields(node_gid, 1, 1) = State.node.vel.host(1, node_gid, 1);
             if (num_dims == 2) {
                 vec_fields(node_gid, 1, 2) = 0.0;
             }
             else{
-                vec_fields(node_gid, 1, 2) = node.vel.host(1, node_gid, 2);
+                vec_fields(node_gid, 1, 2) = State.node.vel.host(1, node_gid, 2);
             }
         } // end for loop over vertices
 
@@ -1133,16 +1288,16 @@ public:
 
         // write all components of the point coordinates
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            fprintf(out[0], "%12.5e\n", node.coords.host(1, node_gid, 0));
+            fprintf(out[0], "%12.5e\n", State.node.coords.host(1, node_gid, 0));
         }
 
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            fprintf(out[0], "%12.5e\n", node.coords.host(1, node_gid, 1));
+            fprintf(out[0], "%12.5e\n", State.node.coords.host(1, node_gid, 1));
         }
 
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
             if (num_dims == 3) {
-                fprintf(out[0], "%12.5e\n", node.coords.host(1, node_gid, 2));
+                fprintf(out[0], "%12.5e\n", State.node.coords.host(1, node_gid, 2));
             }
             else{
                 fprintf(out[0], "%12.5e\n", 0.0);
@@ -1300,7 +1455,7 @@ public:
 
     /////////////////////////////////////////////////////////////////////////////
     ///
-    /// \fn write_ensight
+    /// \fn write_vtk
     ///
     /// \brief Writes a vtk output file
     ///
@@ -1314,10 +1469,7 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_vtk(mesh_t&   mesh,
-                   MaterialPoint_t& MaterialPoints,
-                   GaussPoint_t& GaussPoints,
-                   node_t&   node,
-                   corner_t& corner,
+                   State_t&  State,
                    SimulationParameters_t& SimulationParamaters,
                    double time_value,
                    CArray<double> graphics_times)
@@ -1325,6 +1477,8 @@ public:
         // Not yet supported
         throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
     }
-};
+}; // end class
+
+
 
 #endif // end Header Guard

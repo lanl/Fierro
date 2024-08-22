@@ -55,18 +55,21 @@ void SGH::rk_init(DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& MaterialPoints_stress,
     const size_t num_dims,
     const size_t num_elems,
-    const size_t num_nodes) const
+    const size_t num_nodes,
+    const size_t num_mat_points) const
 {
+
     // save elem quantities
-    FOR_ALL(elem_gid, 0, num_elems, {
+    FOR_ALL(matpt_lid, 0, num_mat_points, {
+
         // stress is always 3D even with 2D-RZ
         for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 3; j++) {
-                MaterialPoints_stress(0, elem_gid, i, j) = MaterialPoints_stress(1, elem_gid, i, j);
+                MaterialPoints_stress(0, matpt_lid, i, j) = MaterialPoints_stress(1, matpt_lid, i, j);
             }
         }  // end for
 
-        MaterialPoints_sie(0, elem_gid) = MaterialPoints_sie(1, elem_gid);
+        MaterialPoints_sie(0, matpt_lid) = MaterialPoints_sie(1, matpt_lid);
     }); // end parallel for
 
     // save nodal quantities
@@ -100,25 +103,31 @@ void SGH::rk_init(DCArrayKokkos<double>& node_coords,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep(mesh_t& mesh,
-    DCArrayKokkos<double>&     node_coords,
-    MPIArrayKokkos<double>&     node_vel,
-    DCArrayKokkos<double>&     MaterialPoints_sspd,
-    DCArrayKokkos<double>&     GaussPoints_vol,
-    double time_value,
-    const double graphics_time,
-    const double time_final,
-    const double dt_max,
-    const double dt_min,
-    const double dt_cfl,
-    double&      dt,
-    const double fuzz) const
+                       DCArrayKokkos<double>& node_coords,
+                       MPIArrayKokkos<double>& node_vel,
+                       DCArrayKokkos<double>& GaussPoints_vol,
+                       DCArrayKokkos<double>& MaterialPoints_sspd,
+                       DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                       DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                       size_t num_mat_elems,
+                       double time_value,
+                       const double graphics_time,
+                       const double time_final,
+                       const double dt_max,
+                       const double dt_min,
+                       const double dt_cfl,
+                       double&      dt,
+                       const double fuzz) const
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
 
     double dt_lcl;
     double min_dt_calc;
-    REDUCE_MIN(elem_gid, 0, mesh.num_elems, dt_lcl, {
+    REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
+
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);
 
@@ -168,11 +177,15 @@ void SGH::get_timestep(mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(elem_gid) + fuzz);
+        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
+
+        if (MaterialToMeshMaps_elem(mat_elem_lid) == true){
+            dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
+        }
 
         // make dt be in bounds
-        dt_lcl_ = fmin(dt_lcl_, dt_max);               // make dt small than dt_max
-        dt_lcl_ = fmax(dt_lcl_, dt_min);               // make dt larger than dt_min
+        dt_lcl_ = fmin(dt_lcl_, dt_max);    // make dt small than dt_max
+        dt_lcl_ = fmax(dt_lcl_, dt_min);    // make dt larger than dt_min
 
         if (dt_lcl_ < dt_lcl) {
             dt_lcl = dt_lcl_;
@@ -210,25 +223,31 @@ void SGH::get_timestep(mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH::get_timestep2D(mesh_t& mesh,
-    DCArrayKokkos<double>& node_coords,
-    MPIArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& MaterialPoints_sspd,
-    DCArrayKokkos<double>& GaussPoints_vol,
-    double time_value,
-    const double graphics_time,
-    const double time_final,
-    const double dt_max,
-    const double dt_min,
-    const double dt_cfl,
-    double&      dt,
-    const double fuzz) const
+                         DCArrayKokkos<double>& node_coords,
+                         MPIArrayKokkos<double>& node_vel,
+                         DCArrayKokkos<double>& GaussPoints_vol,
+                         DCArrayKokkos<double>& MaterialPoints_sspd,
+                         DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                         DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                         size_t num_mat_elems,
+                         double time_value,
+                         const double graphics_time,
+                         const double time_final,
+                         const double dt_max,
+                         const double dt_min,
+                         const double dt_cfl,
+                         double&      dt,
+                         const double fuzz) const
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
 
     double dt_lcl;
     double min_dt_calc;
-    REDUCE_MIN(elem_gid, 0, mesh.num_elems, dt_lcl, {
+    REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
+
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
         double coords0[8];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 4, 2);
 
@@ -264,6 +283,11 @@ void SGH::get_timestep2D(mesh_t& mesh,
 
         // local dt calc based on CFL
         double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(elem_gid) + fuzz);
+
+
+        if (MaterialToMeshMaps_elem(mat_elem_lid) == true){
+            dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
+        }
 
         // make dt be in bounds
         dt_lcl_ = fmin(dt_lcl_, dt_max);    // make dt small than dt_max

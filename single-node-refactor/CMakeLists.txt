@@ -65,9 +65,6 @@ include_directories(src/input)
 add_subdirectory(src/input)
 
 
-include_directories(src/Solvers/SGH_solver)
-add_subdirectory(src/Solvers/SGH_solver)
-
 
 add_subdirectory(src)
 

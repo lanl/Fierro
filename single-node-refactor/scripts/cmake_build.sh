@@ -7,9 +7,9 @@ rm -rf ${SGH_BUILD_DIR}
 mkdir -p ${SGH_BUILD_DIR}
 
 cmake_options=(
+-D CMAKE_BUILD_TYPE=Debug
 -D BUILD_EXPLICIT_SOLVER=OFF
 -D CMAKE_PREFIX_PATH="${MATAR_INSTALL_DIR};${KOKKOS_INSTALL_DIR}"
-#-D CMAKE_CXX_FLAGS="-I${matardir}/src"
 )
 
 if [ "$solver" = "SGH" ]; then

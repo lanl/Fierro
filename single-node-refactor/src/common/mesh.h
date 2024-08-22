@@ -240,7 +240,7 @@ struct mesh_t
     size_t num_lob_gauss_in_elem; ///< Number of Gauss Lobatto points in an element
 
     DCArrayKokkos<size_t> nodes_in_elem; ///< Nodes in an element
-    CArrayKokkos<size_t> corners_in_elem; ///< Corners in an element
+    CArrayKokkos<size_t> corners_in_elem; ///< Corners in an element -- this can just be a functor
 
     RaggedRightArrayKokkos<size_t> elems_in_elem; ///< Elements connected to an element
     CArrayKokkos<size_t> num_elems_in_elem; ///< Number of elements connected to an element
@@ -321,6 +321,7 @@ struct mesh_t
         }
         num_elems       = num_elems_inp;
         nodes_in_elem   = DCArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.nodes_in_elem");
+        //printf("little assert (%d,%d), %d\n", num_elems, num_nodes_in_elem, nodes_in_elem.host(0, 0));
         corners_in_elem = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
 
         return;
@@ -407,7 +408,7 @@ struct mesh_t
                 size_t j = count_saved_corners_in_node(node_gid);
 
                 // Save corner index to this node_gid
-                size_t corner_gid = node_lid + elem_gid * num_nodes_in_elem;
+                size_t corner_gid = node_lid + elem_gid * num_nodes_in_elem;  // this can be a functor
                 corners_in_node(node_gid, j) = corner_gid;
 
                 elems_in_node(node_gid, j) = elem_gid; // save the elem_gid

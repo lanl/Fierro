@@ -96,7 +96,7 @@ struct reg_fill_t
     double radius2 = 0.0;   ///< Outer radius to fill for sphere
 
     // initial conditions
-    init_conds::init_velocity_conds velocity;  ///< Initial conditions for this region WARNING: Currently unimplemented
+    init_conds::init_velocity_conds velocity;  ///< Initial conditions for this region
 
     // velocity coefficients by component
     double u = 0.0; ///< U component of velocity

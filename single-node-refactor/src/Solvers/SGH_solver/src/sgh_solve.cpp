@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -32,12 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "state.h"
-#include "mesh.h"
-#include "geometry_new.h"
 #include "sgh_solver.h"
-#include "io_utils.h"
-#include <chrono>
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -50,10 +45,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
                   Material_t& Materials, 
                   BoundaryCondition_t& BoundaryConditions, 
                   mesh_t& mesh, 
-                  node_t& node, 
-                  MaterialPoint_t& MaterialPoints, 
-                  GaussPoint_t& GaussPoints, 
-                  corner_t& corner)
+                  State_t& State)
 {
     std::cout << "In execute function in sgh solver" << std::endl;
 
@@ -96,62 +88,82 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
 
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
+
+
+    std::cout << "Applying initial boundary conditions" << std::endl;
+    boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
+
+
+
     // extensive energy tallies over the entire mesh
     double IE_t0 = 0.0;
     double KE_t0 = 0.0;
     double TE_t0 = 0.0;
 
-    double IE_sum = 0.0;
-    double KE_sum = 0.0;
-
-    double IE_loc_sum = 0.0;
-    double KE_loc_sum = 0.0;
-
     double cached_pregraphics_dt = fuzz;
 
-    // save the nodal mass
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        double radius = 1.0;
-        if (mesh.num_dims == 2) {
-            radius = node.coords(1, node_gid, 1);
-        }
-        node_extensive_mass(node_gid) = node.mass(node_gid) * radius;
-    }); // end parallel for
+    // calculate the extensive node mass, its key to 2D
+    calc_extensive_node_mass(node_extensive_mass,
+                             State.node.coords,
+                             State.node.mass,
+                             mesh.num_dims,
+                             mesh.num_nodes);
+
+
+    // the number of materials specified by the user input
+    const size_t num_mats = Materials.num_mats;
 
     // extensive IE
-    REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
-        IE_loc_sum += MaterialPoints.mass(elem_gid) * MaterialPoints.sie(1, elem_gid);
-    }, IE_sum);
-    IE_t0 = IE_sum;
+    for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+
+        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
+
+        IE_t0 += sum_domain_internal_energy(State.MaterialPoints(mat_id).mass,
+                                            State.MaterialPoints(mat_id).sie,
+                                            num_mat_points);
+    } // end loop over mat_id
 
     // extensive KE
-    KE_loc_sum = 0.0;
-    REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
-        double ke = 0;
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node.vel(1, node_gid, dim) * node.vel(1, node_gid, dim); // 1/2 at end
-        } // end for
-
-        if (mesh.num_dims == 2) {
-            KE_loc_sum += node.mass(node_gid) * node.coords(1, node_gid, 1) * ke;
-        }
-        else{
-            KE_loc_sum += node.mass(node_gid) * ke;
-        }
-    }, KE_sum);
-    Kokkos::fence();
-    KE_t0 = 0.5 * KE_sum;
-
+    KE_t0 = sum_domain_kinetic_energy(mesh,
+                                      State.node.vel,
+                                      State.node.coords,
+                                      State.node.mass);
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
+
+
+    // domain mass for each material (they are at material points)
+    double mass_domain_all_mats_t0 = 0.0;
+    double mass_domain_nodes_t0 = 0.0;
+
+    for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
+
+        double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints(mat_id).mass,
+                                                          num_mat_points);
+
+        mass_domain_all_mats_t0 += mass_domain_mat;
+        printf("material %zu mass in domain = %f \n", mat_id, mass_domain_mat);
+    } // end for
+
+    // node mass of the domain
+    mass_domain_nodes_t0 = sum_domain_node_mass(mesh,
+                                                State.node.coords,
+                                                State.node.mass);
+
+    printf("nodal mass domain = %f \n", mass_domain_nodes_t0);
+
+
+    
+
 
     // a flag to exit the calculation
     size_t stop_calc = 0;
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-    std::cout << "Applying initial boundary conditions" << std::endl;
-    boundary_velocity(mesh, BoundaryConditions, node.vel, time_value); // Time value = 0.0;
+
+
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -161,37 +173,61 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
         }
 
         cached_pregraphics_dt = dt;
-        // get the step
-        if (mesh.num_dims == 2) {
-            get_timestep2D(mesh,
-                           node.coords,
-                           node.vel,
-                           MaterialPoints.sspd,
-                           GaussPoints.vol,
-                           time_value,
-                           graphics_time,
-                           time_final,
-                           dt_max,
-                           dt_min,
-                           dt_cfl,
-                           dt,
-                           fuzz);
-        }
-        else{
-            get_timestep(mesh,
-                         node.coords,
-                         node.vel,
-                         MaterialPoints.sspd,
-                         GaussPoints.vol,
-                         time_value,
-                         graphics_time,
-                         time_final,
-                         dt_max,
-                         dt_min,
-                         dt_cfl,
-                         dt,
-                         fuzz);
-        } // end if 2D
+
+        // the smallest time step across all materials
+        double min_dt_calc = dt_max;
+
+        // calculating time step per material
+        for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+
+            // initialize the material dt
+            double dt_mat = dt;
+
+            // get the step
+            if (mesh.num_dims == 2) {
+                get_timestep2D(mesh,
+                               State.node.coords,
+                               State.node.vel,
+                               State.GaussPoints.vol,
+                               State.MaterialPoints(mat_id).sspd,
+                               State.MaterialPoints(mat_id).eroded,
+                               State.MaterialToMeshMaps(mat_id).elem,
+                               State.MaterialToMeshMaps(mat_id).num_material_elems,
+                               time_value,
+                               graphics_time,
+                               time_final,
+                               dt_max,
+                               dt_min,
+                               dt_cfl,
+                               dt_mat,
+                               fuzz);
+            }
+            else{
+                get_timestep(mesh,
+                             State.node.coords,
+                             State.node.vel,
+                             State.GaussPoints.vol,
+                             State.MaterialPoints(mat_id).sspd,
+                             State.MaterialPoints(mat_id).eroded,
+                             State.MaterialToMeshMaps(mat_id).elem,
+                             State.MaterialToMeshMaps(mat_id).num_material_elems,
+                             time_value,
+                             graphics_time,
+                             time_final,
+                             dt_max,
+                             dt_min,
+                             dt_cfl,
+                             dt_mat,
+                             fuzz);
+            } // end if 2D
+
+            // save the smallest dt of all materials
+            min_dt_calc = fmin(dt_mat, min_dt_calc);
+            
+        } // end for loop over all mats
+
+        dt = min_dt_calc;  // save this dt time step
+
 
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
@@ -204,188 +240,213 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------------
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
         // ---------------------------------------------------------------------
-
-        // save the values at t_n
-        rk_init(node.coords,
-                node.vel,
-                MaterialPoints.sie,
-                MaterialPoints.stress,
-                mesh.num_dims,
-                mesh.num_elems,
-                mesh.num_nodes);
+        for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+            // save the values at t_n
+            rk_init(State.node.coords,
+                    State.node.vel,
+                    State.MaterialPoints(mat_id).sie,
+                    State.MaterialPoints(mat_id).stress,
+                    mesh.num_dims,
+                    mesh.num_elems,
+                    mesh.num_nodes,
+                    State.MaterialPoints(mat_id).num_material_points);
+        } // end for mat_id
 
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
+
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
             // ---- Calculate velocity divergence for the element ----
             if (mesh.num_dims == 2) {
-                get_divergence2D(GaussPoints.div,
+                get_divergence2D(State.GaussPoints.div,
                                  mesh,
-                                 node.coords,
-                                 node.vel,
-                                 GaussPoints.vol);
+                                 State.node.coords,
+                                 State.node.vel,
+                                 State.GaussPoints.vol);
             }
             else{
-                get_divergence(GaussPoints.div,
+                get_divergence(State.GaussPoints.div,
                                mesh,
-                               node.coords,
-                               node.vel,
-                               GaussPoints.vol);
+                               State.node.coords,
+                               State.node.vel,
+                               State.GaussPoints.vol);
             } // end if 2D
 
+
+            set_corner_force_zero(mesh, State.corner.force);
+
+            
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
-            if (mesh.num_dims == 2) {
-                get_force_2D(Materials,
-                             mesh,
-                             node.coords,
-                             node.vel,
-                             MaterialPoints.den,
-                             MaterialPoints.sie,
-                             MaterialPoints.pres,
-                             MaterialPoints.stress,
-                             MaterialPoints.sspd,
-                             GaussPoints.vol,
-                             GaussPoints.div,
-                             GaussPoints.mat_id,
-                             corner.force,
-                             fuzz,
-                             small,
-                             MaterialPoints.statev,
-                             dt,
-                             rk_alpha);
-            }
-            else{
-                get_force(Materials,
-                          mesh,
-                          node.coords,
-                          node.vel,
-                          MaterialPoints.den,
-                          MaterialPoints.sie,
-                          MaterialPoints.pres,
-                          MaterialPoints.stress,
-                          MaterialPoints.sspd,
-                          GaussPoints.vol,
-                          GaussPoints.div,
-                          GaussPoints.mat_id,
-                          GaussPoints.eroded,
-                          corner.force,
-                          fuzz,
-                          small,
-                          MaterialPoints.statev,
-                          dt,
-                          rk_alpha);
-            }
+            for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+
+                size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+                if (mesh.num_dims == 2) {
+                    get_force_2D(Materials,
+                                 mesh,
+                                 State.GaussPoints.vol,
+                                 State.GaussPoints.div,
+                                 State.corner.force,
+                                 State.node.coords,
+                                 State.node.vel,
+                                 State.MaterialPoints(mat_id).den,
+                                 State.MaterialPoints(mat_id).sie,
+                                 State.MaterialPoints(mat_id).pres,
+                                 State.MaterialPoints(mat_id).stress,
+                                 State.MaterialPoints(mat_id).sspd,
+                                 State.MaterialPoints(mat_id).statev,
+                                 State.MaterialCorners(mat_id).force,
+                                 State.corners_in_mat_elem,
+                                 State.MaterialToMeshMaps(mat_id).elem,
+                                 num_mat_elems,
+                                 mat_id,
+                                 fuzz,
+                                 small,
+                                 dt,
+                                 rk_alpha);
+                }
+                else{
+                    get_force(Materials,
+                              mesh,
+                              State.GaussPoints.vol,
+                              State.GaussPoints.div,
+                              State.MaterialPoints(mat_id).eroded,
+                              State.corner.force,
+                              State.node.coords,
+                              State.node.vel,
+                              State.MaterialPoints(mat_id).den,
+                              State.MaterialPoints(mat_id).sie,
+                              State.MaterialPoints(mat_id).pres,
+                              State.MaterialPoints(mat_id).stress,
+                              State.MaterialPoints(mat_id).sspd,
+                              State.MaterialPoints(mat_id).statev,
+                              State.MaterialCorners(mat_id).force,
+                              State.corners_in_mat_elem,
+                              State.MaterialToMeshMaps(mat_id).elem,
+                              num_mat_elems,
+                              mat_id,
+                              fuzz,
+                              small,
+                              dt,
+                              rk_alpha);
+                }
+            } // end for mat_id
 
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
                             dt,
                             mesh,
-                            node.vel,
-                            node.mass,
-                            corner.force);
+                            State.node.vel,
+                            State.node.mass,
+                            State.corner.force);
 
             // ---- apply velocity boundary conditions to the boundary patches----
-            boundary_velocity(mesh, BoundaryConditions, node.vel, time_value);
+            boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);
 
             // ---- apply contact boundary conditions to the boundary patches----
-            boundary_contact(mesh, BoundaryConditions, node.vel, time_value);
+            boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
 
             // mpi_coms();
 
-            // ---- Update specific internal energy in the elements ----
-            update_energy(rk_alpha,
-                          dt,
-                          mesh,
-                          node.vel,
-                          node.coords,
-                          MaterialPoints.sie,
-                          MaterialPoints.mass,
-                          corner.force);
+            for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+                 
+                // ---- Update specific internal energy in the elements ----
+                update_energy(rk_alpha,
+                              dt,
+                              mesh,
+                              State.node.vel,
+                              State.node.coords,
+                              State.MaterialPoints(mat_id).sie,
+                              State.MaterialPoints(mat_id).mass,
+                              State.MaterialCorners(mat_id).force,
+                              State.corners_in_mat_elem,
+                              State.MaterialToMeshMaps(mat_id).elem,
+                              State.MaterialToMeshMaps(mat_id).num_material_elems);
+            } // end for mat_id
 
             // ---- Update nodal positions ----
             update_position(rk_alpha,
                             dt,
                             mesh.num_dims,
                             mesh.num_nodes,
-                            node.coords,
-                            node.vel);
+                            State.node.coords,
+                            State.node.vel);
 
             // ---- Calculate cell volume for next time step ----
-            geometry::get_vol(GaussPoints.vol, node.coords, mesh);
+            geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
-            if (mesh.num_dims == 2) {
-                update_state2D(Materials,
-                               mesh,
-                               node.coords,
-                               node.vel,
-                               MaterialPoints.den,
-                               MaterialPoints.pres,
-                               MaterialPoints.stress,
-                               MaterialPoints.sspd,
-                               MaterialPoints.sie,
-                               GaussPoints.vol,
-                               MaterialPoints.mass,
-                               GaussPoints.mat_id,
-                               MaterialPoints.statev,
-                               dt,
-                               rk_alpha);
-            }
-            else{
-                update_state(Materials,
-                             mesh,
-                             node.coords,
-                             node.vel,
-                             MaterialPoints.den,
-                             MaterialPoints.pres,
-                             MaterialPoints.stress,
-                             MaterialPoints.sspd,
-                             MaterialPoints.sie,
-                             GaussPoints.vol,
-                             MaterialPoints.mass,
-                             GaussPoints.mat_id,
-                             MaterialPoints.statev,
-                             GaussPoints.eroded,
-                             dt,
-                             rk_alpha);
-            }
+            for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+
+                size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+            
+                if (mesh.num_dims == 2) {
+
+                    
+
+                    update_state2D(Materials,
+                                   mesh,
+                                   State.node.coords,
+                                   State.node.vel,
+                                   State.MaterialPoints(mat_id).den,
+                                   State.MaterialPoints(mat_id).pres,
+                                   State.MaterialPoints(mat_id).stress,
+                                   State.MaterialPoints(mat_id).sspd,
+                                   State.MaterialPoints(mat_id).sie,
+                                   State.GaussPoints.vol,
+                                   State.MaterialPoints(mat_id).mass,
+                                   State.MaterialPoints(mat_id).statev,
+                                   State.MaterialPoints(mat_id).eroded,
+                                   State.MaterialToMeshMaps(mat_id).elem,
+                                   dt,
+                                   rk_alpha,
+                                   num_mat_elems,
+                                   mat_id);
+                }
+                else{
+                    update_state(Materials,
+                                 mesh,
+                                 State.node.coords,
+                                 State.node.vel,
+                                 State.MaterialPoints(mat_id).den,
+                                 State.MaterialPoints(mat_id).pres,
+                                 State.MaterialPoints(mat_id).stress,
+                                 State.MaterialPoints(mat_id).sspd,
+                                 State.MaterialPoints(mat_id).sie,
+                                 State.GaussPoints.vol,
+                                 State.MaterialPoints(mat_id).mass,
+                                 State.MaterialPoints(mat_id).statev,
+                                 State.MaterialPoints(mat_id).eroded,
+                                 State.MaterialToMeshMaps(mat_id).elem,
+                                 dt,
+                                 rk_alpha,
+                                 num_mat_elems,
+                                 mat_id);
+                } // end if num_dims=2
+            } // end for mat_id
+
             // ----
             // Notes on strength:
             //    1) hyper-elastic strength models are called in update_state
             //    2) hypo-elastic strength models are called in get_force
             //    3) strength models must be added by the user in user_mat.cpp
 
+
             // calculate the new corner masses if 2D
             if (mesh.num_dims == 2) {
+
                 // calculate the nodal areal mass
-                FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                    node.mass(node_gid) = 0.0;
+                calc_node_areal_mass(mesh, 
+                                     State.node.coords, 
+                                     State.node.mass, 
+                                     node_extensive_mass, 
+                                     tiny);
 
-                    if (node.coords(1, node_gid, 1) > tiny) {
-                        node.mass(node_gid) = node_extensive_mass(node_gid) / node.coords(1, node_gid, 1);
-                    }
-                }); // end parallel for over node_gid
-                Kokkos::fence();
-
-                FOR_ALL(node_bdy_gid, 0, mesh.num_bdy_nodes, {
-                    size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
-
-                    if (node.coords(1, node_gid, 1) < tiny) {
-                        // node is on the axis
-
-                        for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_node(node_gid); node_lid++) {
-                            size_t node_neighbor_gid = mesh.nodes_in_node(node_gid, node_lid);
-
-                            // if the node is off the axis, use it's areal mass on the boundary
-                            if (node.coords(1, node_neighbor_gid, 1) > tiny) {
-                                node.mass(node_gid) = fmax(node.mass(node_gid), node.mass(node_neighbor_gid) / 2.0);
-                            }
-                        } // end for over neighboring nodes
-                    } // end if
-                }); // end parallel for over elem_gid
             } // end of if 2D-RZ
+
+
         } // end of RK loop
 
         // increment the time
@@ -408,7 +469,11 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
-            mesh_writer.write_mesh(mesh, MaterialPoints, GaussPoints, node, corner, SimulationParamaters, time_value, graphics_times);
+            mesh_writer.write_mesh(mesh, 
+                                   State, 
+                                   SimulationParamaters, 
+                                   time_value, 
+                                   graphics_times);
 
             graphics_time = time_value + graphics_dt_ival;
 
@@ -419,6 +484,7 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
         if (time_value >= time_final) {
             break;
         }
+
     } // end for cycle loop
 
     auto time_2    = std::chrono::high_resolution_clock::now();
@@ -431,41 +497,52 @@ void SGH::execute(SimulationParameters_t& SimulationParamaters,
     double KE_tend = 0.0;
     double TE_tend = 0.0;
 
-    IE_loc_sum = 0.0;
-    KE_loc_sum = 0.0;
-    IE_sum     = 0.0;
-    KE_sum     = 0.0;
-
     // extensive IE
-    REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
-        IE_loc_sum += MaterialPoints.mass(elem_gid) * MaterialPoints.sie(1, elem_gid);
-    }, IE_sum);
-    IE_tend = IE_sum;
+    for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+
+        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
+
+        IE_tend += sum_domain_internal_energy(State.MaterialPoints(mat_id).mass,
+                                              State.MaterialPoints(mat_id).sie,
+                                              num_mat_points);
+    } // end loop over mat_id
 
     // extensive KE
-    REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
-        double ke = 0;
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node.vel(1, node_gid, dim) * node.vel(1, node_gid, dim); // 1/2 at end
-        } // end for
-
-        if (mesh.num_dims == 2) {
-            KE_loc_sum += node.mass(node_gid) * node.coords(1, node_gid, 1) * ke;
-        }
-        else{
-            KE_loc_sum += node.mass(node_gid) * ke;
-        }
-    }, KE_sum);
-    Kokkos::fence();
-    KE_tend = 0.5 * KE_sum;
-
+    KE_tend = sum_domain_kinetic_energy(mesh,
+                                        State.node.vel,
+                                        State.node.coords,
+                                        State.node.mass);
     // extensive TE
     TE_tend = IE_tend + KE_tend;
 
     printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
     printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
-    printf("total energy conservation error = %e \n\n", TE_tend - TE_t0);
-} // end of SGH solve
+    printf("total energy change = %e \n\n", TE_tend - TE_t0);
+
+
+    // domain mass for each material (they are at material points)
+    double mass_domain_all_mats_tend = 0.0;
+    double mass_domain_nodes_tend = 0.0;
+
+    for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
+
+        double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints(mat_id).mass,
+                                                          num_mat_points);
+
+        mass_domain_all_mats_tend += mass_domain_mat;
+    } // end for
+
+    // node mass of the domain
+    mass_domain_nodes_tend = sum_domain_node_mass(mesh,
+                                                  State.node.coords,
+                                                  State.node.mass);
+
+    printf("material mass conservation error = %f \n",mass_domain_all_mats_tend - mass_domain_all_mats_t0);
+    printf("nodal mass conservation error = %f \n",   mass_domain_nodes_tend - mass_domain_nodes_t0);
+    printf("nodal and material mass error = %f \n\n", mass_domain_nodes_tend - mass_domain_all_mats_tend);
+
+} // end of SGH execute
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -573,3 +650,173 @@ double max_Eigen2D(const ViewCArrayKokkos<double> tensor)
     double abs_max_val = fmax(fabs(eig1), fabs(eig2));
     return abs_max_val;
 } // end 2D max eignen value
+
+
+
+void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
+                              const DCArrayKokkos<double>& node_coords,
+                              const DCArrayKokkos<double>& node_mass,
+                              double num_dims,
+                              double num_nodes)
+{
+    // save the nodal mass
+    FOR_ALL(node_gid, 0, num_nodes, {
+
+        double radius = 1.0;
+
+        if (num_dims == 2) {
+            radius = node_coords(1, node_gid, 1);
+        }
+
+        node_extensive_mass(node_gid) = node_mass(node_gid) * radius;
+    }); // end parallel for
+} // end function
+
+
+// a function to tally the internal energy
+double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
+                                  const DCArrayKokkos<double>& MaterialPoints_sie,
+                                  size_t num_mat_points)
+{
+
+    double IE_sum = 0.0;
+    double IE_loc_sum;
+
+    // loop over the material points and tally IE
+    REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
+        IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(1,matpt_lid);
+    }, IE_sum);
+    Kokkos::fence();
+
+
+    return IE_sum;
+} // end function 
+
+double sum_domain_kinetic_energy(const mesh_t& mesh,
+                                 const MPIArrayKokkos<double>& node_vel,
+                                 const DCArrayKokkos<double>& node_coords,
+                                 const DCArrayKokkos<double>& node_mass)
+{
+    // extensive KE
+    double KE_sum = 0.0;
+    double KE_loc_sum;
+
+    REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
+        double ke = 0;
+
+        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+            ke += node_vel(1, node_gid, dim) * node_vel(1, node_gid, dim); // 1/2 at end
+        } // end for
+
+        if (mesh.num_dims == 2) {
+            KE_loc_sum += node_mass(node_gid) * node_coords(1, node_gid, 1) * ke;
+        }
+        else{
+            KE_loc_sum += node_mass(node_gid) * ke;
+        }
+
+    }, KE_sum);
+    Kokkos::fence();
+
+
+    return 0.5*KE_sum;
+} // end function
+
+
+// a function to tally the material point masses
+double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
+                                const size_t num_mat_points)
+{
+
+    double mass_domain = 0.0;
+    double mass_loc_domain;
+
+    REDUCE_SUM(matpt_lid, 0, num_mat_points, mass_loc_domain, {
+
+            mass_loc_domain += MaterialPoints_mass(matpt_lid);
+        
+    }, mass_domain);
+    Kokkos::fence();
+
+    return mass_domain;
+} // end function 
+
+
+double sum_domain_node_mass(const mesh_t& mesh,
+                            const DCArrayKokkos<double>& node_coords,
+                            const DCArrayKokkos<double>& node_mass)
+{
+
+    double mass_domain = 0.0;
+    double mass_loc_domain;
+
+    REDUCE_SUM(node_gid, 0, mesh.num_nodes, mass_loc_domain, {
+
+        if (mesh.num_dims == 2) {
+            mass_loc_domain += node_mass(node_gid) * node_coords(1, node_gid, 1);
+        }
+        else{
+            mass_loc_domain += node_mass(node_gid);
+        }
+
+    }, mass_domain);
+    Kokkos::fence();
+   
+
+    return mass_domain;
+} // end function
+
+
+// a function to calculate the 2D-RZ areal mass (rho A = m/R)
+// for R=0, it is interpolated from off-axis
+void calc_node_areal_mass(const mesh_t& mesh,
+                          const DCArrayKokkos<double>& node_coords,
+                          const DCArrayKokkos<double>& node_mass,
+                          CArrayKokkos<double> node_extensive_mass,
+                          double tiny)
+{
+
+    // calculate the nodal areal mass
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        node_mass(node_gid) = 0.0;
+
+        if (node_coords(1, node_gid, 1) > tiny) {
+            node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(1, node_gid, 1);
+        }
+    }); // end parallel for over node_gid
+    Kokkos::fence();
+
+    // calculate the boundary areal mass
+    FOR_ALL(node_bdy_gid, 0, mesh.num_bdy_nodes, {
+        size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
+
+        if (node_coords(1, node_gid, 1) < tiny) {
+            // node is on the axis
+
+            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_node(node_gid); node_lid++) {
+                size_t node_neighbor_gid = mesh.nodes_in_node(node_gid, node_lid);
+
+                // if the node is off the axis, use it's areal mass on the boundary
+                if (node_coords(1, node_neighbor_gid, 1) > tiny) {
+                    node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid) / 2.0);
+                }
+            } // end for over neighboring nodes
+        } // end if
+    }); // end parallel for over elem_gid
+
+    return;
+}// end function
+
+
+// set the corner forces to zero
+void set_corner_force_zero(const mesh_t& mesh, 
+                           const DCArrayKokkos<double>& corner_force)
+{
+
+    // set corner force to zero
+    FOR_ALL(corner_gid, 0, mesh.num_corners, {
+        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+            corner_force(corner_gid, dim) = 0.0;
+        }
+    }); // end parallel for corners
+} // end function
