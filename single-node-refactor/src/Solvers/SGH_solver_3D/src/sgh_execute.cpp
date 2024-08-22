@@ -89,7 +89,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     double graphics_time = 0.0; // the times for writing graphics dump
     size_t graphics_id   = 0;
 
-    CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
+    // CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 
     std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
@@ -99,14 +99,14 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     double KE_t0 = 0.0;
     double TE_t0 = 0.0;
 
-    double cached_pregraphics_dt = fuzz;
+    double cached_pregraphics_dt = dt;
 
     // calculate the extensive node mass, its key to 2D
-    calc_extensive_node_mass(node_extensive_mass,
-                             State.node.coords,
-                             State.node.mass,
-                             mesh.num_dims,
-                             mesh.num_nodes);
+    // calc_extensive_node_mass(node_extensive_mass,
+    //                          State.node.coords,
+    //                          State.node.mass,
+    //                          mesh.num_dims,
+    //                          mesh.num_nodes);
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
@@ -414,7 +414,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
     printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
-    printf("total energy change = %e \n\n", TE_tend - TE_t0);
+    printf("total energy change = %.15e \n\n", TE_tend - TE_t0);
 
     // domain mass for each material (they are at material points)
     double mass_domain_all_mats_tend = 0.0;
@@ -517,34 +517,34 @@ double max_Eigen3D(const ViewCArrayKokkos<double> tensor)
     return abs_max_val;
 }
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn max_Eigen2D
-///
-/// \brief Get the maximum eigenvalues of a given tensor
-///
-/// \param Input tensor
-///
-/////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-double max_Eigen2D(const ViewCArrayKokkos<double> tensor)
-{
-    // Compute largest eigenvalue of a 2x2 tensor
-    // Algorithm only works if tensor is symmetric
-    size_t dim = tensor.dims(0);
-    double trace, det;
+// /////////////////////////////////////////////////////////////////////////////
+// ///
+// /// \fn max_Eigen2D
+// ///
+// /// \brief Get the maximum eigenvalues of a given tensor
+// ///
+// /// \param Input tensor
+// ///
+// /////////////////////////////////////////////////////////////////////////////
+// KOKKOS_FUNCTION
+// double max_Eigen2D(const ViewCArrayKokkos<double> tensor)
+// {
+//     // Compute largest eigenvalue of a 2x2 tensor
+//     // Algorithm only works if tensor is symmetric
+//     size_t dim = tensor.dims(0);
+//     double trace, det;
 
-    trace = tensor(0, 0) + tensor(1, 1);
-    det   = tensor(0, 0) * tensor(1, 1) - tensor(0, 1) * tensor(1, 0);
+//     trace = tensor(0, 0) + tensor(1, 1);
+//     det   = tensor(0, 0) * tensor(1, 1) - tensor(0, 1) * tensor(1, 0);
 
-    double eig1, eig2;
+//     double eig1, eig2;
 
-    eig1 = (trace / 2.) + sqrt(0.25 * trace * trace - det);
-    eig2 = (trace / 2.) - sqrt(0.25 * trace * trace - det);
+//     eig1 = (trace / 2.) + sqrt(0.25 * trace * trace - det);
+//     eig2 = (trace / 2.) - sqrt(0.25 * trace * trace - det);
 
-    double abs_max_val = fmax(fabs(eig1), fabs(eig2));
-    return abs_max_val;
-} // end 2D max eignen value
+//     double abs_max_val = fmax(fabs(eig1), fabs(eig2));
+//     return abs_max_val;
+// } // end 2D max eignen value
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -562,23 +562,23 @@ double max_Eigen2D(const ViewCArrayKokkos<double> tensor)
 /// \return <return type and definition description if not void>
 ///
 /////////////////////////////////////////////////////////////////////////////
-void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass,
-    double num_dims,
-    double num_nodes)
-{
-    // save the nodal mass
-    FOR_ALL(node_gid, 0, num_nodes, {
-        double radius = 1.0;
+// void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
+//     const DCArrayKokkos<double>& node_coords,
+//     const DCArrayKokkos<double>& node_mass,
+//     double num_dims,
+//     double num_nodes)
+// {
+//     // save the nodal mass
+//     FOR_ALL(node_gid, 0, num_nodes, {
+//         double radius = 1.0;
 
-        if (num_dims == 2) {
-            radius = node_coords(1, node_gid, 1);
-        }
+//         if (num_dims == 2) {
+//             radius = node_coords(1, node_gid, 1);
+//         }
 
-        node_extensive_mass(node_gid) = node_mass(node_gid) * radius;
-    }); // end parallel for
-} // end function
+//         node_extensive_mass(node_gid) = node_mass(node_gid) * radius;
+//     }); // end parallel for
+// } // end function
 
 // a function to tally the internal energy
 double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
@@ -629,12 +629,14 @@ double sum_domain_kinetic_energy(const Mesh_t& mesh,
             ke += node_vel(1, node_gid, dim) * node_vel(1, node_gid, dim); // 1/2 at end
         } // end for
 
-        if (mesh.num_dims == 2) {
-            KE_loc_sum += node_mass(node_gid) * node_coords(1, node_gid, 1) * ke;
-        }
-        else{
-            KE_loc_sum += node_mass(node_gid) * ke;
-        }
+        KE_loc_sum += node_mass(node_gid) * ke;
+
+        // if (mesh.num_dims == 2) {
+        //     KE_loc_sum += node_mass(node_gid) * node_coords(1, node_gid, 1) * ke;
+        // }
+        // else{
+        //     KE_loc_sum += node_mass(node_gid) * ke;
+        // }
     }, KE_sum);
     Kokkos::fence();
 

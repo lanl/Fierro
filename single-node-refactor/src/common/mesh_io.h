@@ -44,6 +44,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 #include <cstring>
 #include <sys/stat.h>
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -104,6 +108,16 @@ int get_id_device(int i, int j, int k, int num_i, int num_j)
 /////////////////////////////////////////////////////////////////////////////
 class MeshReader
 {
+private:
+    struct Node {
+        int id;
+        double x, y, z;
+    };
+
+    struct Element {
+        int id;
+        std::vector<int> connectivity; // Assuming connectivity is needed
+    };
 public:
 
     char* mesh_file_ = NULL;
@@ -146,18 +160,38 @@ public:
         int      rk_num_bins)
     {
         if (mesh_file_ == NULL) {
-            printf("No mesh given\n");
-            exit(0);
+            throw std::runtime_error("**** No mesh path given for read_mesh ****");
         }
 
         // Check mesh file extension
         // and read based on extension
-        read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, num_dims, rk_num_bins);
-    }
+        std::string filePathStr(mesh_file_);
+        std::string extension;
 
-    // void write_mesh(Mesh_t&   mesh,
-    //                 State_t& State,
-    //                 SimulationParameters_t& SimulationParamaters,
+        size_t pos = filePathStr.rfind('.');
+        if (pos != std::string::npos) {
+            extension = filePathStr.substr(pos + 1);
+        } else {
+            extension =  "";
+        }
+
+        std::cout << "File extension is: " << extension << std::endl;
+
+        if(extension == "geo"){ // Ensight meshfile extension
+            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, num_dims, rk_num_bins);
+        }
+        else if(extension == "inp"){ // Abaqus meshfile extension
+            read_Abaqus_mesh(mesh, State, num_dims, rk_num_bins);
+        }
+        else if(extension == "vtk"){ // vtk file format
+            throw std::runtime_error("**** VTK mesh reader not yet implemented ****");
+            // read_VTK_mesh(mesh, State, num_dims, rk_num_bins);
+        }
+        else{
+            throw std::runtime_error("**** Mesh file extension not understood ****");
+        }
+
+    }
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -313,6 +347,172 @@ public:
 
         return;
     }
+
+    void read_Abaqus_mesh(Mesh_t& mesh,
+        State_t& State,
+        int      num_dims,
+        int      rk_num_bins)
+    {
+
+        std::cout<<"Reading abaqus input file for mesh"<<std::endl;
+        std::ifstream inputFile(mesh_file_);
+        if (!inputFile.is_open()) {
+            std::cerr << "Failed to open the file." << std::endl;
+
+        }
+
+        std::vector<Node> nodes;
+        std::vector<Element> elements;
+
+        std::string line;
+        bool readingNodes = false;
+        bool readingElements = false;
+
+        int nodeCount = 0;
+        int elemCount = 0;
+        
+        while (std::getline(inputFile, line)) {
+            if (line.find("*Node") != std::string::npos) {
+                readingNodes = true;
+                std::cout<<"Found *Node"<<std::endl;
+
+            } 
+            else if (readingNodes && !line.find("*") ) { // End of nodes
+                readingNodes = false;
+            } 
+            else if (readingNodes) {
+                // std::cout<<"Reading Nodes"<<std::endl;
+                std::istringstream iss(line);
+                std::ws(iss); // Skip leading whitespace
+                std::string token;
+                Node node;
+
+                if (!(iss >> node.id && std::getline(iss, token, ',') && iss >> node.x &&
+                    std::getline(iss, token, ',') && iss >> node.y &&
+                    std::getline(iss, token, ',') && iss >> node.z)) {
+                    std::cerr << "Failed to parse line: " << line << std::endl;
+                    continue; // Skip this line if parsing failed
+                }
+                nodes.push_back(node);
+            }
+
+            if (line.find("*Element") != std::string::npos) {
+                readingElements = true;
+                std::cout<<"Found *Element*"<<std::endl;
+            } 
+            else if (readingElements &&  !line.find("*") ) { // End of elements
+                readingElements = false;
+            } 
+            else if (readingElements ) {
+                std::istringstream iss(line);
+                Element element;
+                std::string token;
+                
+                if (!(iss >> element.id)){
+                    std::cout << "Failed to parse line: " << line << std::endl;
+                    continue; // Skip this line if parsing failed
+                } 
+
+                while ((std::getline(iss, token, ','))) { 
+                    // Now extract the integer, ignoring any trailing whitespace
+                    int val;
+                    iss >> val;
+                    element.connectivity.push_back(val);
+                }
+
+                // Convert from abaqus to IJK mesh
+                int convert_abq_to_ijk[8];
+                convert_abq_to_ijk[0] = 0;
+                convert_abq_to_ijk[1] = 1;
+                convert_abq_to_ijk[2] = 3;
+                convert_abq_to_ijk[3] = 2;
+                convert_abq_to_ijk[4] = 4;
+                convert_abq_to_ijk[5] = 5;
+                convert_abq_to_ijk[6] = 7;
+                convert_abq_to_ijk[7] = 6;
+
+                int tmp_ijk_indx[8];
+
+                for (int node_lid = 0; node_lid < 8; node_lid++) {
+                    tmp_ijk_indx[node_lid] = element.connectivity[convert_abq_to_ijk[node_lid]];
+                }
+
+                for (int node_lid = 0; node_lid < 8; node_lid++){
+                    element.connectivity[node_lid] = tmp_ijk_indx[node_lid];
+                }
+
+                elements.push_back(element);
+            }
+        }
+
+        inputFile.close();
+
+        size_t num_nodes = nodes.size();
+
+        printf("Number if nodes read in %lu\n", num_nodes);
+
+        // initialize node variables
+        mesh.initialize_nodes(num_nodes);
+        State.node.initialize(rk_num_bins, num_nodes, num_dims);
+
+
+        // Copy nodes to mesh
+        for(int node_gid = 0; node_gid < num_nodes; node_gid++){
+            State.node.coords.host(0, node_gid, 0) = nodes[node_gid].x;
+            State.node.coords.host(0, node_gid, 1) = nodes[node_gid].y;
+            State.node.coords.host(0, node_gid, 2) = nodes[node_gid].z;
+        }
+
+        // save the node coords to the current RK value
+        for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
+            for (int rk = 1; rk < rk_num_bins; rk++) {
+                for (int dim = 0; dim < num_dims; dim++) {
+                    State.node.coords.host(rk, node_gid, dim) = State.node.coords.host(0, node_gid, dim);
+                } // end for dim
+            } // end for rk
+        } // end parallel for
+
+        // Update device nodal positions
+        State.node.coords.update_device();
+
+
+        // --- read in the elements in the mesh ---
+        size_t num_elem = elements.size();
+        printf("Number of elements read in %lu\n", num_elem);
+
+        // initialize elem variables
+        mesh.initialize_elems(num_elem, num_dims);
+        State.GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
+
+
+        // for each cell read the list of associated nodes
+        for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
+            for (int node_lid = 0; node_lid < 8; node_lid++) {
+                mesh.nodes_in_elem.host(elem_gid, node_lid) = elements[elem_gid].connectivity[node_lid];
+
+                // shift to start node index space at 0
+                mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
+            }
+        }
+
+        // update device side
+        mesh.nodes_in_elem.update_device();
+
+        // initialize corner variables
+        int num_corners = num_elem * mesh.num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+        State.corner.initialize(num_corners, num_dims);
+
+        // Build connectivity
+        mesh.build_connectivity();
+
+    }
+
+
+
+
+
+
 };
 
 /////////////////////////////////////////////////////////////////////////////
