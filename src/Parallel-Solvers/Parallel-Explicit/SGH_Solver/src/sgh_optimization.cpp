@@ -68,7 +68,7 @@
 
 // optimization
 #include "ROL_Solver.hpp"
-#include "Kinetic_Energy_Minimize.h"
+#include "Fierro_Optimization_Objective.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -173,8 +173,8 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_
     */
     // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
     obj_pointer = problem->getObjective();
-    KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
-    kinetic_energy_minimize_function.objective_accumulation = 0;
+    objective_function = dynamic_cast<FierroOptimizationObjective*>(obj_pointer.getRawPtr());
+    objective_function->objective_accumulation = 0;
 
     // interface trial density vector
 
