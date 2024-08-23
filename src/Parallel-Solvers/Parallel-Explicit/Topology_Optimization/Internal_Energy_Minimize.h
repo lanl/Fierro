@@ -511,7 +511,6 @@ public:
             }
             else{
                 FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
-                    size_t node_id;
                     size_t corner_id;
                     real_t inner_product;
                     // std::cout << elem_mass(elem_id) <<std::endl;
