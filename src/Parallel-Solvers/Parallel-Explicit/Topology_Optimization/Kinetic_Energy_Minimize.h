@@ -367,6 +367,9 @@ public:
             }
             FEM_SGH_->comm_variables(zp);
             FEM_SGH_->update_forward_solve(zp);
+            if(Explicit_Solver_Pointer_->myrank == 0){
+                std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
+            }
             FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
         }
     }
