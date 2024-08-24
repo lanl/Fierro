@@ -280,6 +280,9 @@ public:
             }
             FEM_SGH_->comm_variables(zp);
             FEM_SGH_->update_forward_solve(zp);
+            if(Explicit_Solver_Pointer_->myrank == 0){
+                std::cout << "CURRENT TIME INTEGRAL OF INTERNAL ENERGY " << objective_accumulation << std::endl;
+            }
             FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
         }
     }
@@ -342,6 +345,7 @@ public:
                 IE_loc_sum += elem_mass(elem_gid) * 0.5 * (current_elem_sie(elem_gid,0)+previous_elem_sie(elem_gid,0));
             }, IE_sum);
         }
+
         Kokkos::fence();
         objective_accumulation += IE_sum * dt;
     }
@@ -457,7 +461,6 @@ public:
                                const DViewCArrayKokkos<double>& elem_mass, const DViewCArrayKokkos<double>& node_vel,
                                const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
                                const size_t& rk_level, const real_t& global_dt = 0){
-        size_t current_data_index, next_data_index;
         auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
         auto nodes_in_elem = FEM_SGH_->nodes_in_elem;
         auto corner_value_storage = FEM_SGH_->corner_value_storage;
@@ -496,7 +499,7 @@ public:
                             }
                         }
                         if(contained){
-                            inner_product = elem_mass(elem_id) * elem_sie(elem_id);
+                            inner_product = elem_mass(elem_id) * elem_sie(rk_level, elem_id);
                         }
                     }
 
@@ -515,13 +518,13 @@ public:
                     real_t inner_product;
                     // std::cout << elem_mass(elem_id) <<std::endl;
 
-                    inner_product = elem_mass(elem_id) * elem_sie(elem_id);
+                    inner_product = (elem_mass(elem_id)/relative_element_densities(elem_id)) * elem_sie(rk_level, elem_id);
 
                     for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         // compute gradient of local element contribution to v^t*M*v product
                         corner_id = elem_id * num_nodes_in_elem + inode;
                         // division by design ratio recovers nominal element mass used in the gradient operator
-                        corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                        corner_value_storage(corner_id) = inner_product;
                     }
                 }); // end parallel for
                 Kokkos::fence();
@@ -532,7 +535,7 @@ public:
                 size_t corner_id;
                 for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
-                    gradient_vector(node_id, 0) += corner_value_storage(corner_id) / (double)num_nodes_in_elem;
+                    gradient_vector(node_id, 0) += (corner_value_storage(corner_id)* global_dt) / (double)num_nodes_in_elem;
                 }
             }); // end parallel for
             Kokkos::fence();
