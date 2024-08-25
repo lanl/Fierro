@@ -1,11 +1,11 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 1.0
+    time_final: 10.0
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 10000
+    cycle_stop: 10000000
 
 
 # mesh_options:
@@ -28,7 +28,7 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: state  #ensight  state
+    output_file_format: ensight  #ensight  state
     graphics_time_step: 0.25
     #graphics_iteration_step: 2
 
@@ -65,7 +65,12 @@ boundary_conditions:
         value: 0.025
         type: zero_velocity
 
-
+    # Tag outer circle
+    - boundary_condition:
+        solver: SGHRZ
+        geometry: cylinder
+        value: 1.2
+        type: zero_velocity
   
 materials:
     - material:
