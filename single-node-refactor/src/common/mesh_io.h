@@ -1673,9 +1673,9 @@ public:
         for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
             fprintf(out[0],
                     "%f %f %f\n",
-                    State.node.coords(1, node_gid, 0),
-                    State.node.coords(1, node_gid, 1),
-                    State.node.coords(1, node_gid, 2));
+                    State.node.coords.host(1, node_gid, 0),
+                    State.node.coords.host(1, node_gid, 1),
+                    State.node.coords.host(1, node_gid, 2));
         } // end for
 
         /*
