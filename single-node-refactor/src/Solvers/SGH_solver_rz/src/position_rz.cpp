@@ -56,11 +56,14 @@ void SGHRZ::update_position_rz(double rk_alpha,
 {
     // loop over all the nodes in the mesh
     FOR_ALL(node_gid, 0, num_nodes, {
+
         for (int dim = 0; dim < num_dims; dim++) {
             double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
             node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha * dt * half_vel;
-
-            node_coords(1, node_gid, dim) = fmax(0.0, node_coords(1, node_gid, dim));
         }
+
+        // radius must always be positive in RZ coordinates, the coords are (z,r)
+        node_coords(1, node_gid, 1) = fmax(0.0, node_coords(1, node_gid, 1));
+
     }); // end parallel for over nodes
 } // end subroutine
