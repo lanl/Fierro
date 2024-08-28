@@ -153,11 +153,8 @@ public:
         // Check mesh file extension
         // and read based on extension
         read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, num_dims, rk_num_bins);
+        
     }
-
-    // void write_mesh(Mesh_t&   mesh,
-    //                 State_t& State,
-    //                 SimulationParameters_t& SimulationParamaters,
 
     /////////////////////////////////////////////////////////////////////////////
     ///

@@ -58,7 +58,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     std::cout << "In execute function in SGHRZ solver" << std::endl;
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
-    // double tiny  = SimulationParamaters.dynamic_options.tiny;
+    double tiny  = SimulationParamaters.dynamic_options.tiny;
     double small = SimulationParamaters.dynamic_options.small;
 
     double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
