@@ -22,5 +22,6 @@ message("\n ****** ADDING COMMON SOURCE FILES ******** \n ")
 
 set(COMMON_Files 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/region_fill.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/geometry_new.cpp
 PARENT_SCOPE
 )

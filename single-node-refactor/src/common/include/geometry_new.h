@@ -67,201 +67,11 @@ namespace geometry
 /// \param View of the elements node ids
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
     const DCArrayKokkos<double>&    node_coords,
-    const ViewCArrayKokkos<size_t>& elem_node_gids)
-{
-    const size_t num_nodes = 8;
-
-    double x_array[8];
-    double y_array[8];
-    double z_array[8];
-
-    // x, y, z coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
-    auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
-
-    // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
-        z(node_lid) = node_coords(1, elem_node_gids(node_lid), 2);
-    }     // end for
-
-
-    double twelth = 1. / 12.;
-
-    B_matrix(0, 0) = (+y(1) * (-z(3) - z(2) + z(4) + z(5) )
-        + y(3) * (+z(1) - z(2) )
-        + y(2) * (+z(1) + z(3) - z(4) - z(6) )
-        + y(4) * (-z(1) + z(2) - z(5) + z(6) )
-        + y(5) * (-z(1) + z(4) )
-        + y(6) * (+z(2) - z(4) ) ) * twelth;
-
-    B_matrix(1, 0) = (+y(0) * (+z(3) + z(2) - z(4) - z(5) )
-        + y(3) * (-z(0) - z(2) + z(5) + z(7) )
-        + y(2) * (-z(0) + z(3) )
-        + y(4) * (+z(0) - z(5) )
-        + y(5) * (+z(0) - z(3) + z(4) - z(7) )
-        + y(7) * (-z(3) + z(5) ) ) * twelth;
-
-    B_matrix(2, 0) = (+y(0) * (-z(1) - z(3) + z(4) + z(6) )
-        + y(1) * (+z(0) - z(3) )
-        + y(3) * (+z(0) + z(1) - z(7) - z(6) )
-        + y(4) * (-z(0) + z(6) )
-        + y(7) * (+z(3) - z(6) )
-        + y(6) * (-z(0) + z(3) - z(4) + z(7) ) ) * twelth;
-
-    B_matrix(3, 0) = (+y(0) * (-z(1) + z(2) )
-        + y(1) * (+z(0) + z(2) - z(5) - z(7) )
-        + y(2) * (-z(0) - z(1) + z(7) + z(6) )
-        + y(5) * (+z(1) - z(7) )
-        + y(7) * (+z(1) - z(2) + z(5) - z(6) )
-        + y(6) * (-z(2) + z(7) ) ) * twelth;
-
-    B_matrix(4, 0) = (+y(0) * (+z(1) - z(2) + z(5) - z(6) )
-        + y(1) * (-z(0) + z(5) )
-        + y(2) * (+z(0) - z(6) )
-        + y(5) * (-z(0) - z(1) + z(7) + z(6) )
-        + y(7) * (-z(5) + z(6) )
-        + y(6) * (+z(0) + z(2) - z(5) - z(7) ) ) * twelth;
-
-    B_matrix(5, 0) = (+y(0) * (+z(1) - z(4) )
-        + y(1) * (-z(0) + z(3) - z(4) + z(7) )
-        + y(3) * (-z(1) + z(7) )
-        + y(4) * (+z(0) + z(1) - z(7) - z(6) )
-        + y(7) * (-z(1) - z(3) + z(4) + z(6) )
-        + y(6) * (+z(4) - z(7) ) ) * twelth;
-
-    B_matrix(6, 0) = (+y(0) * (-z(2) + z(4) )
-        + y(3) * (+z(2) - z(7) )
-        + y(2) * (+z(0) - z(3) + z(4) - z(7) )
-        + y(4) * (-z(0) - z(2) + z(5) + z(7) )
-        + y(5) * (-z(4) + z(7) )
-        + y(7) * (+z(3) + z(2) - z(4) - z(5) ) ) * twelth;
-
-    B_matrix(7, 0) = (+y(1) * (+z(3) - z(5) )
-        + y(3) * (-z(1) + z(2) - z(5) + z(6) )
-        + y(2) * (-z(3) + z(6) )
-        + y(4) * (+z(5) - z(6) )
-        + y(5) * (+z(1) + z(3) - z(4) - z(6) )
-        + y(6) * (-z(3) - z(2) + z(4) + z(5) ) ) * twelth;
-
-    B_matrix(0, 1) = (+z(1) * (-x(3) - x(2) + x(4) + x(5) )
-        + z(3) * (+x(1) - x(2) )
-        + z(2) * (+x(1) + x(3) - x(4) - x(6) )
-        + z(4) * (-x(1) + x(2) - x(5) + x(6) )
-        + z(5) * (-x(1) + x(4) )
-        + z(6) * (+x(2) - x(4) ) ) * twelth;
-
-    B_matrix(1, 1) = (+z(0) * (+x(3) + x(2) - x(4) - x(5) )
-        + z(3) * (-x(0) - x(2) + x(5) + x(7) )
-        + z(2) * (-x(0) + x(3) )
-        + z(4) * (+x(0) - x(5) )
-        + z(5) * (+x(0) - x(3) + x(4) - x(7) )
-        + z(7) * (-x(3) + x(5) ) ) * twelth;
-
-    B_matrix(2, 1) = (+z(0) * (-x(1) - x(3) + x(4) + x(6) )
-        + z(1) * (+x(0) - x(3) )
-        + z(3) * (+x(0) + x(1) - x(7) - x(6) )
-        + z(4) * (-x(0) + x(6) )
-        + z(7) * (+x(3) - x(6) )
-        + z(6) * (-x(0) + x(3) - x(4) + x(7) ) ) * twelth;
-
-    B_matrix(3, 1) = (+z(0) * (-x(1) + x(2) )
-        + z(1) * (+x(0) + x(2) - x(5) - x(7) )
-        + z(2) * (-x(0) - x(1) + x(7) + x(6) )
-        + z(5) * (+x(1) - x(7) )
-        + z(7) * (+x(1) - x(2) + x(5) - x(6) )
-        + z(6) * (-x(2) + x(7) ) ) * twelth;
-
-    B_matrix(4, 1) = (+z(0) * (+x(1) - x(2) + x(5) - x(6) )
-        + z(1) * (-x(0) + x(5) )
-        + z(2) * (+x(0) - x(6) )
-        + z(5) * (-x(0) - x(1) + x(7) + x(6) )
-        + z(7) * (-x(5) + x(6) )
-        + z(6) * (+x(0) + x(2) - x(5) - x(7) ) ) * twelth;
-
-    B_matrix(5, 1) = (+z(0) * (+x(1) - x(4) )
-        + z(1) * (-x(0) + x(3) - x(4) + x(7) )
-        + z(3) * (-x(1) + x(7) )
-        + z(4) * (+x(0) + x(1) - x(7) - x(6) )
-        + z(7) * (-x(1) - x(3) + x(4) + x(6) )
-        + z(6) * (+x(4) - x(7) ) ) * twelth;
-
-    B_matrix(6, 1) = (+z(0) * (-x(2) + x(4) )
-        + z(3) * (+x(2) - x(7) )
-        + z(2) * (+x(0) - x(3) + x(4) - x(7) )
-        + z(4) * (-x(0) - x(2) + x(5) + x(7) )
-        + z(5) * (-x(4) + x(7) )
-        + z(7) * (+x(3) + x(2) - x(4) - x(5) ) ) * twelth;
-
-     B_matrix(7, 1) = (+z(1) * (+x(3) - x(5) )
-        + z(3) * (-x(1) + x(2) - x(5) + x(6) )
-        + z(2) * (-x(3) + x(6) )
-        + z(4) * (+x(5) - x(6) )
-        + z(5) * (+x(1) + x(3) - x(4) - x(6) )
-        + z(6) * (-x(3) - x(2) + x(4) + x(5) ) ) * twelth;
-
-    B_matrix(0, 2) = (+x(1) * (-y(3) - y(2) + y(4) + y(5) )
-        + x(3) * (+y(1) - y(2) )
-        + x(2) * (+y(1) + y(3) - y(4) - y(6) )
-        + x(4) * (-y(1) + y(2) - y(5) + y(6) )
-        + x(5) * (-y(1) + y(4) )
-        + x(6) * (+y(2) - y(4) ) ) * twelth;
-
-    B_matrix(1, 2) = (+x(0) * (+y(3) + y(2) - y(4) - y(5) )
-        + x(3) * (-y(0) - y(2) + y(5) + y(7) )
-        + x(2) * (-y(0) + y(3) )
-        + x(4) * (+y(0) - y(5) )
-        + x(5) * (+y(0) - y(3) + y(4) - y(7) )
-        + x(7) * (-y(3) + y(5) ) ) * twelth;
-
-    B_matrix(2, 2) = (+x(0) * (-y(1) - y(3) + y(4) + y(6) )
-        + x(1) * (+y(0) - y(3) )
-        + x(3) * (+y(0) + y(1) - y(7) - y(6) )
-        + x(4) * (-y(0) + y(6) )
-        + x(7) * (+y(3) - y(6) )
-        + x(6) * (-y(0) + y(3) - y(4) + y(7) ) ) * twelth;
-
-    B_matrix(3, 2) = (+x(0) * (-y(1) + y(2) )
-        + x(1) * (+y(0) + y(2) - y(5) - y(7) )
-        + x(2) * (-y(0) - y(1) + y(7) + y(6) )
-        + x(5) * (+y(1) - y(7) )
-        + x(7) * (+y(1) - y(2) + y(5) - y(6) )
-        + x(6) * (-y(2) + y(7) ) ) * twelth;
-
-    B_matrix(4, 2) = (+x(0) * (+y(1) - y(2) + y(5) - y(6) )
-        + x(1) * (-y(0) + y(5) )
-        + x(2) * (+y(0) - y(6) )
-        + x(5) * (-y(0) - y(1) + y(7) + y(6) )
-        + x(7) * (-y(5) + y(6) )
-        + x(6) * (+y(0) + y(2) - y(5) - y(7) ) ) * twelth;
-
-    B_matrix(5, 2) = (+x(0) * (+y(1) - y(4) )
-        + x(1) * (-y(0) + y(3) - y(4) + y(7) )
-        + x(3) * (-y(1) + y(7) )
-        + x(4) * (+y(0) + y(1) - y(7) - y(6) )
-        + x(7) * (-y(1) - y(3) + y(4) + y(6) )
-        + x(6) * (+y(4) - y(7) ) ) * twelth;
-
-    B_matrix(6, 2) = (+x(0) * (-y(2) + y(4) )
-        + x(3) * (+y(2) - y(7) )
-        + x(2) * (+y(0) - y(3) + y(4) - y(7) )
-        + x(4) * (-y(0) - y(2) + y(5) + y(7) )
-        + x(5) * (-y(4) + y(7) )
-        + x(7) * (+y(3) + y(2) - y(4) - y(5) ) ) * twelth;
-
-    B_matrix(7, 2) = (+x(1) * (+y(3) - y(5) )
-        + x(3) * (-y(1) + y(2) - y(5) + y(6) )
-        + x(2) * (-y(3) + y(6) )
-        + x(4) * (+y(5) - y(6) )
-        + x(5) * (+y(1) + y(3) - y(4) - y(6) )
-        + x(6) * (-y(3) - y(2) + y(4) + y(5) ) ) * twelth;
-}     // end subroutine
+    const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -275,39 +85,11 @@ void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
 /// \param Global ids of the nodes in this element
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
     const DCArrayKokkos<double>&    node_coords,
-    const ViewCArrayKokkos<size_t>& elem_node_gids)
-{
-    elem_vol(elem_gid) = 0.0;
-
-    const size_t num_nodes = 4;
-
-    double x_array[4];
-    double y_array[4];
-
-    // x, y coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
-
-    // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
-    }     // end for
-
-    /* ensight node order   0 1 2 3
-       Flanaghan node order 3 4 1 2
-    */
-    elem_vol(elem_gid) =
-        ( (y(2) + y(3) + y(0)) * ((y(2) - y(3)) * (x(0) - x(3)) - (y(0) - y(3)) * (x(2) - x(3)) )
-        + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / 6.0;
-        
-    elem_vol(elem_gid) = fmax(elem_vol(elem_gid), 1.0E-14);
-    return;
-}     // end subroutine
+    const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -321,50 +103,11 @@ void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
 /// \param Runge Kutta time integration level
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
     const DCArrayKokkos<double>&    node_coords,
-    const ViewCArrayKokkos<size_t>& elem_node_gids)
-{
-    const size_t num_nodes = 8;
-
-    double x_array[8];
-    double y_array[8];
-    double z_array[8];
-
-    // x, y, z coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
-    auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
-
-    // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
-        z(node_lid) = node_coords(1, elem_node_gids(node_lid), 2);
-    }     // end for
-
-    double twelth = 1. / 12.;
-
-    // element volume
-    elem_vol(elem_gid) =
-        (x(1) * (y(2) * (-z(0) + z(3)) + y(4) * (z(0) - z(5)) + y(0) * (z(3) + z(2) - z(4) - z(5)) + y(7) * (-z(3) + z(5)) + y(5) * (z(0) - z(3) + z(4) - z(7)) + y(3) * (-z(0) - z(2) + z(5) + z(7))) +
-        x(6) * (y(0) * (-z(2) + z(4)) + y(7) * (z(3) + z(2) - z(4) - z(5)) + y(3) * (z(2) - z(7)) + y(2) * (z(0) - z(3) + z(4) - z(7)) + y(5) * (-z(4) + z(7)) + y(4) * (-z(0) - z(2) + z(5) + z(7))) +
-        x(2) * (y(1) * (z(0) - z(3)) + y(6) * (-z(0) + z(3) - z(4) + z(7)) + y(7) * (z(3) - z(6)) + y(3) * (z(0) + z(1) - z(7) - z(6)) + y(4) * (-z(0) + z(6)) + y(0) * (-z(1) - z(3) + z(4) + z(6))) +
-        x(5) * (y(0) * (z(1) - z(4)) + y(6) * (z(4) - z(7)) + y(3) * (-z(1) + z(7)) + y(1) * (-z(0) + z(3) - z(4) + z(7)) + y(4) * (z(0) + z(1) - z(7) - z(6)) + y(7) * (-z(1) - z(3) + z(4) + z(6))) +
-        x(7) * (y(1) * (z(3) - z(5)) + y(6) * (-z(3) - z(2) + z(4) + z(5)) + y(5) * (z(1) + z(3) - z(4) - z(6)) + y(4) * (z(5) - z(6)) + y(2) * (-z(3) + z(6)) + y(3) * (-z(1) + z(2) - z(5) + z(6))) +
-        x(0) * (y(3) * (z(1) - z(2)) + y(6) * (z(2) - z(4)) + y(5) * (-z(1) + z(4)) + y(1) * (-z(3) - z(2) + z(4) + z(5)) + y(2) * (z(1) + z(3) - z(4) - z(6)) + y(4) * (-z(1) + z(2) - z(5) + z(6))) +
-        x(3) * (y(0) * (-z(1) + z(2)) + y(5) * (z(1) - z(7)) + y(1) * (z(0) + z(2) - z(5) - z(7)) + y(6) * (-z(2) + z(7)) + y(7) * (z(1) - z(2) + z(5) - z(6)) + y(2) * (-z(0) - z(1) + z(7) + z(6))) +
-        x(4) *
-        (y(1) * (-z(0) + z(5)) + y(6) * (z(0) + z(2) - z(5) - z(7)) + y(2) * (z(0) - z(6)) + y(0) * (z(1) - z(2) + z(5) - z(6)) + y(7) * (-z(5) + z(6)) + y(5) * (-z(0) - z(1) + z(7) + z(6)))) *
-        twelth;
-
-    // std::cout<<"Calculating volume for hex = "<<elem_vol(elem_gid)<<std::endl;
-    elem_vol(elem_gid) = fmax(elem_vol(elem_gid), 1.0E-14);
-
-    return;
-}     // end subroutine
+    const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -373,31 +116,9 @@ void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 /// \brief Compute Volume of each finite element
 ///
 /////////////////////////////////////////////////////////////////////////////
-inline void get_vol(const DCArrayKokkos<double>& elem_vol,
+void get_vol(const DCArrayKokkos<double>& elem_vol,
     const DCArrayKokkos<double>& node_coords,
-    const Mesh_t& mesh)
-{
-    const size_t num_dims = mesh.num_dims;
-
-    if (num_dims == 2) {
-        FOR_ALL(elem_gid, 0, mesh.num_elems, {
-                // cut out the node_gids for this element
-                ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
-                get_vol_quad(elem_vol, elem_gid, node_coords, elem_node_gids);
-            });
-        Kokkos::fence();
-    }
-    else{
-        FOR_ALL(elem_gid, 0, mesh.num_elems, {
-                // cut out the node_gids for this element
-                ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
-                get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids);
-            });
-        Kokkos::fence();
-    }     // end if
-
-    return;
-}     // end subroutine
+    const Mesh_t& mesh);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -411,67 +132,11 @@ inline void get_vol(const DCArrayKokkos<double>& elem_vol,
 /// \param Global indices of the nodes of this element
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
     const DCArrayKokkos<double>&    node_coords,
-    const ViewCArrayKokkos<size_t>& elem_node_gids)
-{
-    const size_t num_nodes = 4;
-
-    double x_array[4];
-    double y_array[4];
-
-    // x, y coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
-
-    // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
-    }     // end for
-
-    /* ensight node order   0 1 2 3
-       Flanaghan node order 3 4 1 2
-    */
-
-    B_matrix(0, 0) = -0.5 * (y(3) - y(1));
-
-    B_matrix(1, 0) = -0.5 * (y(0) - y(2));
-
-    B_matrix(2, 0) = -0.5 * (y(1) - y(3));
-
-    B_matrix(3, 0) = -0.5 * (y(2) - y(0));
-
-    B_matrix(0, 1) = -0.5 * (x(1) - x(3));
-
-    B_matrix(1, 1) = -0.5 * (x(2) - x(0));
-
-    B_matrix(2, 1) = -0.5 * (x(3) - x(1));
-
-    B_matrix(3, 1) = -0.5 * (x(0) - x(2));
-
-    //
-    /*
-     The Flanagan and Belytschko paper has:
-                      x                y
-       node 1: 0.5*(y2 - y4)  ,  0.5*(x4 - x2)
-       node 2: 0.5*(y3 - y1)  ,  0.5*(x1 - x3)
-       node 3: 0.5*(y4 - y2)  ,  0.5*(x2 - x4)
-       node 4: 0.5*(y1 - y3)  ,  0.5*(x3 - x1)
-
-     Ensight order would be
-
-       node 2: 0.5*(y3 - y1)  ,  0.5*(x1 - x3)
-       node 3: 0.5*(y0 - y2)  ,  0.5*(x2 - x0)
-       node 0: 0.5*(y1 - y3)  ,  0.5*(x3 - x1)
-       node 1: 0.5*(y2 - y0)  ,  0.5*(x0 - x2)
-
-     */
-
-    return;
-}     // end subroutine
+    const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -486,37 +151,10 @@ void get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
 /// \return Elements face area (double)
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 double get_area_quad(const size_t   elem_gid,
     const DCArrayKokkos<double>&    node_coords,
-    const ViewCArrayKokkos<size_t>& elem_node_gids)
-{
-    double elem_area = 0.0;
-
-    const size_t num_nodes = 4;
-
-    double x_array[4];
-    double y_array[4];
-
-    // x, y coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
-
-    // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
-    }     // end for
-
-    /* ensight node order   0 1 2 3
-       Flanaghan node order 3 4 1 2
-    */
-
-    // element facial area
-    elem_area = 0.5 * ((x(0) - x(2)) * (y(1) - y(3)) + (x(3) - x(1)) * (y(0) - y(2)));
-
-    return elem_area;
-}     // end subroutine
+    const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -534,29 +172,13 @@ double get_area_quad(const size_t   elem_gid,
 /// \return Triangle area (double)
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 double heron(const double x1,
     const double y1,
     const double x2,
     const double y2,
     const double x3,
-    const double y3)
-{
-    double S, a, b, c, area;
-
-    S  = 0.0;
-    a  = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-    S += a;
-    b  = sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
-    S += b;
-    c  = sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
-    S += c;
-
-    S   *= 0.5;
-    area = sqrt(S * (S - a) * (S - b) * (S - c));
-
-    return area;
-}
+    const double y3);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -570,49 +192,12 @@ double heron(const double x1,
 /// \param Node global IDs associated with this element
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     const size_t elem_gid,
     const DCArrayKokkos<double>&    node_coords,
-    const ViewCArrayKokkos<size_t>& elem_node_gids)
-{
-    const size_t num_nodes = 4;
+    const ViewCArrayKokkos<size_t>& elem_node_gids);
 
-    double x_array[4];
-    double y_array[4];
-
-    double rc, zc;
-    double A12, A23, A34, A41;
-
-    // x, y coordinates of elem vertices
-    ViewCArrayKokkos<double> x(x_array, num_nodes);
-    ViewCArrayKokkos<double> y(y_array, num_nodes);
-
-    // get the coordinates of the nodes(rk,elem,node) in this element
-    rc = zc = 0.0;
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
-        rc += 0.25 * y(node_lid);
-        zc += 0.25 * x(node_lid);
-    }     // end for
-
-    /* ensight node order   0 1 2 3
-       Barlow node order    1 2 3 4
-    */
-
-    A12 = heron(x(0), y(0), zc, rc, x(1), y(1));
-    A23 = heron(x(1), y(1), zc, rc, x(2), y(2));
-    A34 = heron(x(2), y(2), zc, rc, x(3), y(3));
-    A41 = heron(x(3), y(3), zc, rc, x(0), y(0));
-
-    corner_areas(0) = (5. * A41 + 5. * A12 + A23 + A34) / 12.;
-    corner_areas(1) = (A41 + 5. * A12 + 5. * A23 + A34) / 12.;
-    corner_areas(2) = (A41 + A12 + 5. * A23 + 5. * A34) / 12.;
-    corner_areas(3) = (5. * A41 + A12 + A23 + 5. * A34) / 12.;
-
-    return;
-}     // end subroutine
 } // end namespace
 
 /////////////////////////////////////////////////////////////////////////////
@@ -628,79 +213,12 @@ void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 /// \param Nodal coordinates
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 size_t check_bdy(const size_t patch_gid,
     const int     this_bc_tag,
     const double  val,
     const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords)
-{
-    size_t num_dims = mesh.num_dims;
-
-    // default bool is not on the boundary
-    size_t is_on_bdy = 0;
-
-    // the patch coordinates
-    double these_patch_coords[3];  // Note: cannot allocated array with num_dims
-
-    // loop over the nodes on the patch
-    for (size_t patch_node_lid = 0; patch_node_lid < mesh.num_nodes_in_patch; patch_node_lid++) {
-        // get the nodal_gid for this node in the patch
-        size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
-
-        for (size_t dim = 0; dim < num_dims; dim++) {
-            these_patch_coords[dim] = node_coords(1, node_gid, dim);  // (rk, node_gid, dim)
-        } // end for dim
-
-        // a x-plane
-        if (this_bc_tag == 0) {
-            if (fabs(these_patch_coords[0] - val) <= 1.0e-7) {
-                is_on_bdy += 1;
-            }
-        } // end if on type
-        // a y-plane
-        else if (this_bc_tag == 1) {
-            if (fabs(these_patch_coords[1] - val) <= 1.0e-7) {
-                is_on_bdy += 1;
-            }
-        } // end if on type
-        // a z-plane
-        else if (this_bc_tag == 2) {
-            if (fabs(these_patch_coords[2] - val) <= 1.0e-7) {
-                is_on_bdy += 1;
-            }
-        } // end if on type
-        // cylinderical shell where radius = sqrt(x^2 + y^2)
-        else if (this_bc_tag == 3) {
-            real_t R = sqrt(these_patch_coords[0] * these_patch_coords[0] +
-                            these_patch_coords[1] * these_patch_coords[1]);
-
-            if (fabs(R - val) <= 1.0e-7) {
-                is_on_bdy += 1;
-            }
-        } // end if on type
-        // spherical shell where radius = sqrt(x^2 + y^2 + z^2)
-        else if (this_bc_tag == 4) {
-            real_t R = sqrt(these_patch_coords[0] * these_patch_coords[0] +
-                            these_patch_coords[1] * these_patch_coords[1] +
-                            these_patch_coords[2] * these_patch_coords[2]);
-
-            if (fabs(R - val) <= 1.0e-7) {
-                is_on_bdy += 1;
-            }
-        } // end if on type
-    } // end for nodes in the patch
-
-    // if all nodes in the patch are on the geometry
-    if (is_on_bdy == mesh.num_nodes_in_patch) {
-        is_on_bdy = 1;
-    }
-    else{
-        is_on_bdy = 0;
-    }
-
-    return is_on_bdy;
-} // end method to check bdy
+    const DCArrayKokkos<double>& node_coords);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -713,45 +231,8 @@ size_t check_bdy(const size_t patch_gid,
 /// \param Nodal coordinates
 ///
 /////////////////////////////////////////////////////////////////////////////
-inline void tag_bdys(const BoundaryCondition_t& boundary,
+void tag_bdys(const BoundaryCondition_t& boundary,
     Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords)
-{
-    // if (bdy_set == mesh.num_bdy_sets){
-    //    printf(" ERROR: number of boundary sets must be increased by %zu",
-    //              bdy_set-mesh.num_bdy_sets+1);
-    //    exit(0);
-    // } // end if
-
-    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
-        // tag boundaries
-        int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).geometry;
-        double val    = boundary.BoundaryConditionSetup(bdy_set).value;
-
-        // save the boundary patches to this set that are on the plane, spheres, etc.
-        for (size_t bdy_patch_lid = 0; bdy_patch_lid < mesh.num_bdy_patches; bdy_patch_lid++) {
-            // save the patch index
-            size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
-
-            // check to see if this patch is on the specified plane
-            size_t is_on_bdy = check_bdy(bdy_patch_gid,
-                                         bc_tag_id,
-                                         val,
-                                         mesh,
-                                         node_coords); // no=0, yes=1
-
-            if (is_on_bdy == 1) {
-                size_t index = mesh.bdy_patches_in_set.stride(bdy_set);
-
-                // increment the number of boundary patches saved
-                mesh.bdy_patches_in_set.stride(bdy_set)++;
-
-                mesh.bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
-            } // end if
-        } // end for bdy_patch
-    });  // end FOR_ALL bdy_sets
-
-    return;
-} // end tag
+    const DCArrayKokkos<double>& node_coords);
 
 #endif
