@@ -165,6 +165,14 @@ public:
             throw std::runtime_error("**** No mesh path given for read_mesh ****");
         }
 
+        std::ifstream file(mesh_file_);
+        if (file.is_open()) {
+            std::cout << "The file exists." << std::endl;
+            file.close();
+        } else {
+            throw std::runtime_error("**** Mesh path given does not exists ****");
+        }
+
         // Check mesh file extension
         // and read based on extension
         std::string filePathStr(mesh_file_);
@@ -382,9 +390,6 @@ public:
         std::string line;
         bool readingNodes = false;
         bool readingElements = false;
-
-        int nodeCount = 0;
-        int elemCount = 0;
 
         while (std::getline(inputFile, line)) {
             if (line.find("*Node") != std::string::npos) {
