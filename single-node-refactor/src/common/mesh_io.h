@@ -589,6 +589,11 @@ public:
                 // store the point coordinates
                 node.coords.host(0, node_gid, 0) = origin[0] + r_i * cos(theta_j);
                 node.coords.host(0, node_gid, 1) = origin[1] + r_i * sin(theta_j);
+
+                if(node.coords.host(0, node_gid, 0) < 0.0){
+                    throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
+                }
+
             } // end for i
         } // end for j
 
@@ -1272,15 +1277,29 @@ public:
         }
         fprintf(out[0], "%10lu\n", num_elems);
 
+
         int convert_ijk_to_ensight[8];
-        convert_ijk_to_ensight[0] = 0;
-        convert_ijk_to_ensight[1] = 1;
-        convert_ijk_to_ensight[2] = 3;
-        convert_ijk_to_ensight[3] = 2;
-        convert_ijk_to_ensight[4] = 4;
-        convert_ijk_to_ensight[5] = 5;
-        convert_ijk_to_ensight[6] = 7;
-        convert_ijk_to_ensight[7] = 6;
+        if(mesh.num_dims==3){
+            convert_ijk_to_ensight[0] = 0;
+            convert_ijk_to_ensight[1] = 1;
+            convert_ijk_to_ensight[2] = 3;
+            convert_ijk_to_ensight[3] = 2;
+            convert_ijk_to_ensight[4] = 4;
+            convert_ijk_to_ensight[5] = 5;
+            convert_ijk_to_ensight[6] = 7;
+            convert_ijk_to_ensight[7] = 6;
+        }
+        else{
+        
+            convert_ijk_to_ensight[0] = 0;
+            convert_ijk_to_ensight[1] = 1;
+            convert_ijk_to_ensight[2] = 2;
+            convert_ijk_to_ensight[3] = 3;
+            convert_ijk_to_ensight[4] = 4;
+            convert_ijk_to_ensight[5] = 5;
+            convert_ijk_to_ensight[6] = 6;
+            convert_ijk_to_ensight[7] = 7;
+        } // end if
 
 
         // write all global point numbers for this cell
@@ -1659,9 +1678,9 @@ public:
         for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
             fprintf(out[0],
                     "%f %f %f\n",
-                    State.node.coords(1, node_gid, 0),
-                    State.node.coords(1, node_gid, 1),
-                    State.node.coords(1, node_gid, 2));
+                    State.node.coords.host(1, node_gid, 0),
+                    State.node.coords.host(1, node_gid, 1),
+                    State.node.coords.host(1, node_gid, 2));
         } // end for
 
         /*
@@ -1896,6 +1915,92 @@ public:
             } // end for elements
         } // end for materials
         fclose(out_elem_state);
+
+
+        // printing nodal state
+            
+        FILE* out_point_state;  // element average state
+
+        snprintf(filename, max_len, "state/node_state_t_%6.4e.txt", time_value);
+
+        // output files
+        out_point_state = fopen(filename, "w");
+
+        // write state dump
+        fprintf(out_point_state, "# state node dump file\n");
+        fprintf(out_point_state, "# x  y  z  radius_2D  radius_3D  vel_x  vel_y  vel_z  speed  ||err_v_dot_r|| \n");
+
+        // get the coordinates of the node
+        for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
+
+            double node_coords[3];
+
+            node_coords[0] = State.node.coords.host(1, node_gid, 0);
+            node_coords[1] = State.node.coords.host(1, node_gid, 1);
+            if (num_dims == 3) {
+                node_coords[2] = State.node.coords.host(1, node_gid, 2);
+            }
+            else{
+                node_coords[2] = 0.0;
+            }
+
+            double rad2 = sqrt(node_coords[0] * node_coords[0] +
+                               node_coords[1] * node_coords[1]);
+            double rad3 = sqrt(node_coords[0] * node_coords[0] +
+                               node_coords[1] * node_coords[1] +
+                               node_coords[2] * node_coords[2]);
+
+            double node_vel[3];
+
+           node_vel[0] = State.node.vel.host(1, node_gid, 0);
+           node_vel[1] = State.node.vel.host(1, node_gid, 1);
+            if (num_dims == 3) {
+               node_vel[2] = State.node.vel.host(1, node_gid, 2);
+            }
+            else{
+               node_vel[2] = 0.0;
+            }
+
+            double speed = sqrt(node_vel[0] * node_vel[0] +
+                                node_vel[1] * node_vel[1] +
+                                node_vel[2] * node_vel[2]);
+
+
+
+            // looking at perfect radial motion
+            double unit_r_vec[2];
+            unit_r_vec[0] = node_coords[0]/rad2;
+            unit_r_vec[1] = node_coords[1]/rad2;
+
+            //the radial motion
+            double v_dot_r = node_vel[0] * unit_r_vec[0] +
+                             node_vel[1] * unit_r_vec[1];
+            
+
+            double err_v_dot_r[3]; 
+            err_v_dot_r[0] = node_vel[0]-unit_r_vec[0]*v_dot_r;
+            err_v_dot_r[1] = node_vel[1]-unit_r_vec[1]*v_dot_r;
+
+            double mag_err_v_dot_r = sqrt(err_v_dot_r[0]*err_v_dot_r[0] + err_v_dot_r[1]*err_v_dot_r[1]);
+
+            fprintf(out_point_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t  %4.12e\t %4.12e\t \n",
+                         node_coords[0],
+                         node_coords[1],
+                         node_coords[2],
+                         rad2,
+                         rad3,
+                         node_vel[0],
+                         node_vel[1],
+                         node_vel[2],
+                         speed,
+                         mag_err_v_dot_r);
+
+
+        } // end loop over nodes in element
+
+
+        fclose(out_point_state);
+
 
         return;
     } // end of state output

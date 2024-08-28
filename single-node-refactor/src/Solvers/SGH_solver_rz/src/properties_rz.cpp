@@ -233,12 +233,10 @@ void SGHRZ::update_state_rz(
 
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
-
             // get elem gid
             size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
-
-            // get the material points for this material 
+            // get the material points for this material
             // Note, with the SGH method, they are equal
             size_t mat_point_lid = mat_elem_lid;
 
@@ -258,18 +256,19 @@ void SGHRZ::update_state_rz(
                                    mat_point_lid);
 
             // apply a void eos if mat_point is eroded
-            double phi_fail = 1.0 - (double)MaterialPoints_eroded(mat_point_lid);
-            MaterialPoints_pres(mat_point_lid) *= phi_fail;  // phi_fail = 1 or 0
-            MaterialPoints_sspd(mat_point_lid) *= phi_fail;
-            MaterialPoints_sspd(mat_point_lid) = fmax(MaterialPoints_sspd(mat_point_lid), 1e-32);
+            if (MaterialPoints_eroded(mat_point_lid)) {
+                MaterialPoints_pres(mat_point_lid) = 0.0;
+                MaterialPoints_sspd(mat_point_lid) = 1.0e-32;
+                MaterialPoints_den(mat_point_lid) = 1.0e-32;
 
-            for (size_t i = 0; i < 3; i++) {
-                for (size_t j = 0; j < 3; j++) {
-                    MaterialPoints_stress(1, mat_point_lid, i, j) *= phi_fail;
-                }
-            }  // end for i,j
-        
+                for (size_t i = 0; i < 3; i++) {
+                    for (size_t j = 0; j < 3; j++) {
+                        MaterialPoints_stress(1, mat_point_lid, i, j) = 0.0;
+                    }
+                }  // end for i,j
+            } // end if on eroded
         }); // end parallel for
+
     } // end if elem errosion 
 
     return;

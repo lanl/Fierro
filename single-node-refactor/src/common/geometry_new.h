@@ -304,7 +304,8 @@ void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
     elem_vol(elem_gid) =
         ( (y(2) + y(3) + y(0)) * ((y(2) - y(3)) * (x(0) - x(3)) - (y(0) - y(3)) * (x(2) - x(3)) )
         + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / 6.0;
-
+        
+    elem_vol(elem_gid) = fmax(elem_vol(elem_gid), 1.0E-14);
     return;
 }     // end subroutine
 

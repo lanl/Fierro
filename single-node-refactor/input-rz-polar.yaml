@@ -65,7 +65,12 @@ boundary_conditions:
         value: 0.025
         type: zero_velocity
 
-
+    # Tag outer circle
+    - boundary_condition:
+        solver: SGHRZ
+        geometry: cylinder
+        value: 1.2
+        type: zero_velocity
   
 materials:
     - material:

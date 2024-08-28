@@ -297,6 +297,13 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
     DCArrayKokkos<size_t> voxel_elem_mat_id;       // 1 or 0 if material exist, or it is the material_id
 
 
+    // Verify all node radii are positive
+    for(int node_gid = 0; node_gid < num_nodes; node_gid++){
+        if(State.node.coords.host(0, node_gid, 0) < 0.0){
+            throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
+        }
+    }
+
 
     // ---------------------------------------------
     // fill den, sie, and velocity on the mesh
@@ -432,6 +439,9 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
             State.MaterialPoints(mat_id).den.host(mat_point_lid)  = GaussPoint_den.host(gauss_gid); 
             State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(gauss_gid) * State.GaussPoints.vol.host(gauss_gid);
 
+            // --- volume fraction ---
+            State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = 1.0;
+
             // --- set eroded flag to false ---
             State.MaterialPoints(mat_id).eroded.host(mat_point_lid) = false;
 
@@ -459,6 +469,8 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
         State.MaterialPoints(mat_id).den.update_device();
         State.MaterialPoints(mat_id).mass.update_device();
         State.MaterialPoints(mat_id).sie.update_device();
+
+        State.MaterialPoints(mat_id).volfrac.update_device();
         State.MaterialPoints(mat_id).eroded.update_device();
 
         State.MaterialToMeshMaps(mat_id).elem.update_device();

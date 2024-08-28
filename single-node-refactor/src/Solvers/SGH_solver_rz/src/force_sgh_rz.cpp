@@ -68,6 +68,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                          const Mesh_t& mesh,
                          const DCArrayKokkos<double>& GaussPoints_vol,
                          const DCArrayKokkos<double>& GaussPoints_div,
+                         const DCArrayKokkos<bool>&   MaterialPoints_eroded,
                          const DCArrayKokkos<double>& corner_force,
                          const DCArrayKokkos<double>& node_coords,
                          const DCArrayKokkos<double>& node_vel,
@@ -78,6 +79,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                          const DCArrayKokkos<double>& MaterialPoints_sspd,
                          const DCArrayKokkos<double>& MaterialPoints_statev,
                          const DCArrayKokkos<double>& MaterialCorners_force,
+                         const DCArrayKokkos<double>& MaterialPoints_volfrac,
                          const corners_in_mat_t corners_in_mat_elem,
                          const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                          const size_t num_mat_elems,
@@ -90,13 +92,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 {
     const size_t num_dims = 2;
     const size_t num_nodes_in_elem = 4;
-
-        // set corner force to zero
-    FOR_ALL(corner_gid, 0, mesh.num_corners, {
-        for (int dim = 0; dim < num_dims; dim++) {
-            corner_force(corner_gid, dim) = 0.0;
-        }
-    }); // end parallel for corners
 
 
     // --- calculate the forces acting on the nodes from the element ---
@@ -388,8 +383,15 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
 
-            // loop over dimension
-            // add if eroded here
+            
+            // loop over dimensions and calc corner forces
+            if (MaterialPoints_eroded(mat_point_lid) == true) { 
+                for (int dim = 0; dim < num_dims; dim++) {
+                    corner_force(corner_gid, dim) = 0.0;
+                    MaterialCorners_force(mat_corner_lid, dim) = 0.0;
+                }
+            }
+            else{
                 for (int dim = 0; dim < num_dims; dim++) {
 
                     double force_component =
@@ -397,25 +399,29 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                         + area_normal(node_lid, 1) * tau(1, dim)
                         + phi * muc(node_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
 
+                    // save the material corner force
                     MaterialCorners_force(mat_corner_lid, dim) = force_component;
-                    corner_force(corner_gid, dim) += force_component; // tally all forces to the corner
+
+                    // tally all forces to the corner
+                    corner_force(corner_gid, dim) += force_component*MaterialPoints_volfrac(mat_point_lid);
 
                 } // end loop over dimension
 
+                // ---- add hoop stress terms ----
 
-            // ---- add hoop stress terms ----
+                double node_radius = node_coords(1, node_gid, 1);
 
-            double node_radius = node_coords(1, node_gid, 1);
+                // Wilkins used elem_area*0.25 for the corner area, we will use the corner
+                // areas calculated using Barlow's symmetry and energy preserving area partitioning
+                if (node_radius > tiny) {
+                    // sigma_RZ / R_p
+                    corner_force(corner_gid, 0) += tau(1, 0) * corner_areas(corner_lid) / node_radius;
 
-            // Wilkins used elem_area*0.25 for the corner area, we will use the corner
-            // areas calculated using Barlow's symmetry and energy preserving area partitioning
-            if (node_radius > tiny) {
-                // sigma_RZ / R_p
-                corner_force(corner_gid, 0) += tau(1, 0) * corner_areas(corner_lid) / node_radius;
+                    // (sigma_RR - sigma_theta) / R_p
+                    corner_force(corner_gid, 1) += (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) / node_radius;
+                } // end if radius >0
 
-                // (sigma_RR - sigma_theta) / R_p
-                corner_force(corner_gid, 1) += (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) / node_radius;
-            } // end if radius >0
+            } // end if eroded
         } // end for loop over nodes in elem
 
         // --- Update Stress ---
@@ -429,21 +435,21 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
 
             // --- call strength model ---
-            // Materials.MaterialFunctions(mat_id).strength_model(MaterialPoints_pres,
-            //                                 MaterialPoints_stress,
-            //                                 elem_gid,
-            //                                 mat_id,
-            //                                 MaterialPoints_statev,
-            //                                 MaterialPoints_sspd,
-            //                                 MaterialPoints_den(elem_gid),
-            //                                 MaterialPoints_sie(1,elem_gid),
-            //                                 vel_grad,
-            //                                 elem_node_gids,
-            //                                 node_coords,
-            //                                 node_vel,
-            //                                 GaussPoints_vol(elem_gid),
-            //                                 dt,
-            //                                 rk_alpha);
+            Materials.MaterialFunctions(mat_id).calc_stress(MaterialPoints_pres,
+                                         MaterialPoints_stress,
+                                         mat_point_lid,
+                                         mat_id,
+                                         MaterialPoints_statev,
+                                         MaterialPoints_sspd,
+                                         MaterialPoints_den(mat_point_lid),
+                                         MaterialPoints_sie(1,mat_point_lid),
+                                         vel_grad,
+                                         elem_node_gids,
+                                         node_coords,
+                                         node_vel,
+                                         GaussPoints_vol(elem_gid),
+                                         dt,
+                                         rk_alpha);
         } // end logical on increment_based strength model
     }); // end parallel for loop over elements
 

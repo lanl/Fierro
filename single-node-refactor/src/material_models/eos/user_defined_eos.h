@@ -35,6 +35,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef USER_DEFINED_EOS_H
 #define USER_DEFINED_EOS_H
 
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn UserDefinedEOSModel
