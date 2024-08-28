@@ -298,7 +298,7 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
 
 
     // Verify all node radii are positive
-    for(int i = 0; i<mesh.num_nodes; i++){
+    for(int node_gid = 0; node_gid < num_nodes; node_gid++){
         if(State.node.coords.host(0, node_gid, 0) < 0.0){
             throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
         }
