@@ -845,16 +845,16 @@ public:
         const double dz = lz/((double)num_zones_k);  // len/(num_zones_k)
         
         const int num_elems = num_elems_i*num_elems_j*num_elems_k;
-        const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
+        // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
 
         std::vector<double> origin(num_dim);
         // SimulationParamaters.mesh_input.origin.update_host();
         for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 3D parameters ---
-        const int num_faces_in_zone = 6;   // number of faces in zone
-        const int num_points_in_zone = 8;  // number of points in zone
-        const int num_points_in_face = 4;  // number of points in a face
+        // const int num_faces_in_zone = 6;   // number of faces in zone
+        // const int num_points_in_zone = 8;  // number of points in zone
+        // const int num_points_in_face = 4;  // number of points in a face
         
         // p_order   = 1, 2, 3, 4, 5
         // num_nodes = 2, 3, 4, 5, 6
@@ -863,13 +863,11 @@ public:
            
         
         // --- elem ---
-        int elem_id = 0;
         auto elem_coords = CArray <double> (num_elems, num_dim);
         auto elem_point_list = CArray <int> (num_elems, num_points_in_elem);
         
         
         // --- point ---
-        int point_id = 0;
         int num_points = num_points_i * num_points_j * num_points_k;
         auto pt_coords = CArray <double> (num_points, num_dim);
 
@@ -1695,7 +1693,7 @@ public:
         int Pn_order   = mesh.Pn;
         int order[3]   = { Pn_order, Pn_order, Pn_order };
 
-        const int num_1D_points = Pn_order+1;
+        // const int num_1D_points = Pn_order+1;
 
         // write all global point numbers for this elem
         for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {

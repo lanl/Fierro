@@ -58,13 +58,13 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     std::cout << "In execute function in SGHRZ solver" << std::endl;
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
-    double tiny  = SimulationParamaters.dynamic_options.tiny;
+    // double tiny  = SimulationParamaters.dynamic_options.tiny;
     double small = SimulationParamaters.dynamic_options.small;
 
     double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
     int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
 
-    double time_initial = SimulationParamaters.dynamic_options.time_initial;
+    // double time_initial = SimulationParamaters.dynamic_options.time_initial;
     double time_final   = SimulationParamaters.dynamic_options.time_final;
     double dt_min   = SimulationParamaters.dynamic_options.dt_min;
     double dt_max   = SimulationParamaters.dynamic_options.dt_max;
@@ -81,19 +81,13 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
-    // --- num vars ----
-
+    // --- graphics vars ----
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = 0.0;
     double graphics_time = 0.0; // the times for writing graphics dump
-    size_t graphics_id   = 0;
 
 
     double cached_pregraphics_dt = dt_start;
-
-    // printf("Writing outputs to file at %f \n", time_value);
-    // mesh_writer.write_mesh(mesh, MaterialPoints, node, corner, SimulationParamaters, time_value, graphics_times);
-
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
     
     // calculate the extensive node mass, its key to 2D

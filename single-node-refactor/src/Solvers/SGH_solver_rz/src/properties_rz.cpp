@@ -120,9 +120,6 @@ void SGHRZ::update_state_rz(
             // Note, with the SGH method, they are equal
             size_t mat_point_lid = mat_elem_lid;
 
-            // for this method, gauss point is equal to elem_gid
-            size_t gauss_gid = elem_gid;
-
             // --- Pressure ---
             Materials.MaterialFunctions(mat_id).calc_pressure(
                                         MaterialPoints_pres,
@@ -240,9 +237,6 @@ void SGHRZ::update_state_rz(
             // get the material points for this material
             // Note, with the SGH method, they are equal
             size_t mat_point_lid = mat_elem_lid;
-
-            // for this method, gauss point is equal to elem_gid
-            size_t gauss_gid = elem_gid;
 
             // --- Element erosion model ---
             Materials.MaterialFunctions(mat_id).erode(
