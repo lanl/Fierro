@@ -64,7 +64,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
     int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
 
-    double time_initial = SimulationParamaters.dynamic_options.time_initial;
+    // double time_initial = SimulationParamaters.dynamic_options.time_initial;
     double time_final   = SimulationParamaters.dynamic_options.time_final;
     double dt_min   = SimulationParamaters.dynamic_options.dt_min;
     double dt_max   = SimulationParamaters.dynamic_options.dt_max;
@@ -81,13 +81,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
-    // --- num vars ----
-    size_t num_dims = 3;
-
+    // --- Graphics vars ----
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = 0.0;
     double graphics_time = 0.0; // the times for writing graphics dump
-    size_t graphics_id   = 0;
 
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
 

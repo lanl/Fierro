@@ -84,15 +84,10 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
     } // end if
 
     size_t i;           // used for writing information to file
-    size_t point_id;    // the global id for the point
-    size_t elem_id;     // the global id for the elem
-    size_t this_point;   // a local id for a point in a elem (0:7 for a Hexahedral elem)
 
     size_t num_points_i;
     size_t num_points_j;
     size_t num_points_k;
-
-    size_t num_dims = 3;
 
     std::string token;
 
@@ -129,7 +124,6 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 
     found = false;
 
-    int num_points = num_points_i * num_points_j * num_points_k;
     CArray<double> pt_coords_x(num_points_i);
     CArray<double> pt_coords_y(num_points_j);
     CArray<double> pt_coords_z(num_points_k);
