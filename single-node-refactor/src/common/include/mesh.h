@@ -1530,14 +1530,4 @@ struct Mesh_t
     } // end method to build boundary nodes
 }; // end Mesh_t
 
-KOKKOS_FUNCTION
-void decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
-    ViewCArrayKokkos<double>& W_tensor,
-    const ViewCArrayKokkos<double>& vel_grad,
-    const ViewCArrayKokkos<size_t>& elem_node_gids,
-    const size_t elem_gid,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
-    const double vol);
-
 #endif
