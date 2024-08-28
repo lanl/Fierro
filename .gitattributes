@@ -1,0 +1,33 @@
+special-vendored-path/* linguist-documentation
+
+
+
+dev-utils/* linguist-documentation
+dev-utils/* linguist-documentation
+docs/* linguist-documentation
+
+integrated-tests/Test-scripts/Solver-Inputs/* linguist-documentation
+integrated-tests/Test-scripts/standard-results/* linguist-documentation
+
+legacy/* linguist-documentation
+
+python/stl_files/* linguist-documentation
+
+scripts/* linguist-documentation
+
+single-node/cbin/* linguist-documentation
+single-node/scripts/* linguist-documentation
+single-node/src/Explicit-Lagrange/meshes/* linguist-documentation
+single-node/testing/tests-for-Explicit-Lagrange-Kokkos/* linguist-documentation
+
+single-node-refactor/regression_tests/standard_inputs/* linguist-documentation
+single-node-refactor/regression_tests/standard_results/* linguist-documentation
+
+src/EVPFFT/example_input_files/* linguist-documentation
+src/EVPFFT/scripts/* linguist-documentation
+src/LS-EVPFFT/example_input_files/* linguist-documentation
+src/LS-EVPFFT/scripts/* linguist-documentation
+
+src/Mesh-Builder/examples/* linguist-documentation
+src/Parallel-Solvers/Implicit-Lagrange/Mesh_Examples/* linguist-documentation
+src/Parallel-Solvers/Implicit-Lagrange/MueLu_XML_Examples/* linguist-documentation
