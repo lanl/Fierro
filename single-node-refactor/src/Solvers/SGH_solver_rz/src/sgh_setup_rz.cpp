@@ -297,6 +297,13 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
     DCArrayKokkos<size_t> voxel_elem_mat_id;       // 1 or 0 if material exist, or it is the material_id
 
 
+    // Verify all node radii are positive
+    for(int i = 0; i<mesh.num_nodes; i++){
+        if(State.node.coords.host(0, node_gid, 0) < 0.0){
+            throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
+        }
+    }
+
 
     // ---------------------------------------------
     // fill den, sie, and velocity on the mesh

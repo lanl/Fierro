@@ -589,6 +589,11 @@ public:
                 // store the point coordinates
                 node.coords.host(0, node_gid, 0) = origin[0] + r_i * cos(theta_j);
                 node.coords.host(0, node_gid, 1) = origin[1] + r_i * sin(theta_j);
+
+                if(node.coords.host(0, node_gid, 0) < 0.0){
+                    throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
+                }
+
             } // end for i
         } // end for j
 
