@@ -16,6 +16,9 @@ output_options:
   timer_output_level: thorough
   output_file_format: vtk
   graphics_step: 10
+  write_initial: true
+  write_final: false
+  optimization_restart_file: true
   
 fea_module_parameters:
   - type: SGH
@@ -69,6 +72,8 @@ optimization_options:
     optimization_objective: maximize_internal_energy
     use_solve_checkpoints: true
     num_solve_checkpoints: 100
+    disable_forward_solve_output: true
+    optimization_output_freq: 1
     rol_params:
         subproblem_algorithm: line_search
         initial_constraint_penalty: 1.e-3
