@@ -71,11 +71,11 @@ namespace GammaLawGasEOSModel {
     };
 
     // host side function
-    static void initialize(const DCArrayKokkos<double>& elem_pres,
-                           const DCArrayKokkos<double>& elem_stress,
-                           const size_t elem_gid,
+    static void initialize(const DCArrayKokkos<double>& MaterialPoints_pres,
+                           const DCArrayKokkos<double>& MaterialPoints_stress,
+                           const size_t mat_pt_lid,
                            const size_t mat_id,
-                           const DCArrayKokkos<double>& elem_sspd,
+                           const DCArrayKokkos<double>& MaterialPoints_sspd,
                            const double den,
                            const double sie,
                            const RaggedRightArrayKokkos<double> &eos_global_vars,
@@ -88,12 +88,12 @@ namespace GammaLawGasEOSModel {
     } // end func
 
     KOKKOS_FUNCTION
-    static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
-                              const DCArrayKokkos<double>& elem_stress,
-                              const size_t elem_gid,
+    static void calc_pressure(const DCArrayKokkos<double>& MaterialPoints_pres,
+                              const DCArrayKokkos<double>& MaterialPoints_stress,
+                              const size_t mat_pt_lid,
                               const size_t mat_id,
-                              const DCArrayKokkos<double>& elem_state_vars,
-                              const DCArrayKokkos<double>& elem_sspd,
+                              const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                              const DCArrayKokkos<double>& MaterialPoints_sspd,
                               const double den,
                               const double sie,
                               const RaggedRightArrayKokkos<double> &eos_global_vars)
@@ -102,19 +102,19 @@ namespace GammaLawGasEOSModel {
         double gamma = eos_global_vars(mat_id, VarNames::gamma);
 
         // pressure
-        elem_pres(elem_gid) = (gamma - 1.0) * sie * den;
+        MaterialPoints_pres(mat_pt_lid) = (gamma - 1.0) * sie * den;
 
         return;
     } // end func
 
 
     KOKKOS_FUNCTION
-    static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
-                                 const DCArrayKokkos<double>& elem_stress,
-                                 const size_t elem_gid,
+    static void calc_sound_speed(const DCArrayKokkos<double>& MaterialPoints_pres,
+                                 const DCArrayKokkos<double>& MaterialPoints_stress,
+                                 const size_t mat_pt_lid,
                                  const size_t mat_id,
-                                 const DCArrayKokkos<double>& elem_state_vars,
-                                 const DCArrayKokkos<double>& elem_sspd,
+                                 const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                                 const DCArrayKokkos<double>& MaterialPoints_sspd,
                                  const double den,
                                  const double sie,
                                  const RaggedRightArrayKokkos<double> &eos_global_vars)
@@ -125,7 +125,7 @@ namespace GammaLawGasEOSModel {
 
 
         // sound speed
-        elem_sspd(elem_gid) = fmax(sqrt(gamma * (gamma - 1.0) * sie), csmin);
+        MaterialPoints_sspd(mat_pt_lid) = fmax(sqrt(gamma * (gamma - 1.0) * sie), csmin);
 
 
         return;

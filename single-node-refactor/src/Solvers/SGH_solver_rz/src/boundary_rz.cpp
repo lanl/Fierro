@@ -32,7 +32,10 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver.h"
+#include "sgh_solver_rz.h"
+#include "mesh.h"
+#include "boundary_conditions.h"
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -46,10 +49,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_velocity(const mesh_t&      mesh,
-                            const BoundaryCondition_t& BoundaryConditions,
-                            DCArrayKokkos<double>& node_vel,
-                            const double time_value) const
+void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
+                                 const BoundaryCondition_t& BoundaryConditions,
+                                 DCArrayKokkos<double>& node_vel,
+                                 const double time_value) const
 {
 
     // Loop over boundary sets
@@ -68,6 +71,7 @@ void SGH::boundary_velocity(const mesh_t&      mesh,
                                                                   BoundaryConditions.bc_state_vars,
                                                                   node_vel,
                                                                   time_value,
+                                                                  1, // rk_stage
                                                                   bdy_node_gid,
                                                                   bdy_set);
                 
@@ -92,10 +96,10 @@ void SGH::boundary_velocity(const mesh_t&      mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::boundary_contact(const mesh_t& mesh,
-                           const BoundaryCondition_t& BoundaryConditions,
-                           DCArrayKokkos<double>& node_vel,
-                           const double time_value) const
+void SGHRZ::boundary_contact_rz(const Mesh_t& mesh,
+                                const BoundaryCondition_t& BoundaryConditions,
+                                DCArrayKokkos<double>& node_vel,
+                                const double time_value) const
 {
     return;
 } // end boundary_contact function

@@ -34,25 +34,25 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef FIERRO_MESH_INPUT_OPTIONS_H
 #define FIERRO_MESH_INPUT_OPTIONS_H
+
 #include <stdio.h>
 #include "matar.h"
-#include "parse_yaml.h"
 
 namespace mesh_input
 {
 // source of the mesh
 enum source
 {
-    none = 0,
-    generate = 1,       // Create the mesh using the mesh builder
-    file = 2,           // Read in the mesh from a file
+    none = 0,       ///< No source given, should fail
+    generate = 1,   ///< Create the mesh using the mesh builder
+    file = 2,       ///< Read in the mesh from a file
 };
 
 // type of mesh to generate if source = generate
 enum type
 {
-    Box = 0,       // Create the mesh using the mesh builder
-    Cylinder = 1,  // Read in the mesh from a file
+    Box = 0,     // Create the mesh using the mesh builder
+    Polar = 1,   // Create a polar 2D mesh
 };
 } // end of namespace
 
@@ -64,8 +64,8 @@ static std::map<std::string, mesh_input::source> mesh_input_source_map
 
 static std::map<std::string, mesh_input::type> mesh_input_type_map
 {
-    { "Box", mesh_input::Box },
-    { "Cylinder", mesh_input::Cylinder }
+    { "box", mesh_input::Box },
+    { "polar", mesh_input::Polar }
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -82,9 +82,9 @@ struct mesh_input_t
     std::string file_path     = ""; ///< Absolute path of mesh file
     mesh_input::type type;          ///< Type of mesh to generate if
 
-    double origin[3] = {0.0, 0.0, 0.0}; ///< Mesh origin for generating a mesh
-    double length[3] = {0.0, 0.0, 0.0}; ///< x,y,z length of generated mesh
-    size_t num_elems[3] = {1, 1, 1}; ///< Number of elements along x,y, z for generating a mesh.
+    double origin[3]    = { 0.0, 0.0, 0.0 }; ///< Mesh origin for generating a mesh
+    double length[3]    = { 0.0, 0.0, 0.0 }; ///< x,y,z length of generated mesh
+    size_t num_elems[3] = { 1, 1, 1 }; ///< Number of elements along x,y, z for generating a mesh.
 
     size_t p_order = 1;
 

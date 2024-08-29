@@ -38,14 +38,14 @@
 #include <map>
 #include <memory>
 
-#include "mesh.h"
-#include "state.h"
-#include "material.h"
-#include "region.h"
-#include "boundary_conditions.h"
-
+#include "matar.h"
 
 struct SimulationParameters_t;
+struct Material_t;
+struct Mesh_t;
+struct State_t;
+struct BoundaryCondition_t;
+
 
 class Solver
 {
@@ -56,25 +56,21 @@ public:
 
     virtual void initialize(SimulationParameters_t& SimulationParamaters, 
                             Material_t& Materials, 
-                            BoundaryCondition_t& Boundary) const = 0;
+                            Mesh_t& mesh, 
+                            BoundaryCondition_t& Boundary,
+                            State_t& State) const = 0;
 
     virtual void setup(SimulationParameters_t& SimulationParamaters, 
                        Material_t& Materials, 
-                       BoundaryCondition_t& Boundary, 
-                       mesh_t& mesh, 
-                       node_t& node, 
-                       MaterialPoint_t& MaterialPoints, 
-                       GaussPoint_t& GaussPoints,
-                       corner_t& corner) const = 0;
+                       Mesh_t& mesh, 
+                       BoundaryCondition_t& Boundary,
+                       State_t& State) = 0;
 
     virtual void execute(SimulationParameters_t& SimulationParamaters, 
                          Material_t& Materials, 
-                         BoundaryCondition_t& Boundary, 
-                         mesh_t& mesh, 
-                         node_t& node, 
-                         MaterialPoint_t& MaterialPoints, 
-                         GaussPoint_t& GaussPoints,
-                         corner_t& corner) = 0;
+                         BoundaryCondition_t& BoundaryConditions, 
+                         Mesh_t& mesh, 
+                         State_t& State) = 0;
 
     virtual void finalize(SimulationParameters_t& SimulationParamaters, 
                           Material_t& Materials, 

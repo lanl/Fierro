@@ -32,7 +32,6 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-
 #ifndef BOUNDARY_VEL_CONST_H
 #define BOUNDARY_VEL_CONST_H
 
@@ -40,6 +39,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct BoundaryConditionEnums_t;
 
+namespace ConstantVelocityBC
+{
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn Boundary velocity is constant in all directions per specified values
@@ -47,39 +48,33 @@ struct BoundaryConditionEnums_t;
 /// \brief This is a function to set the velocity in all directions to a value
 ///
 /// \param Mesh object
-/// \param Boundary condition enums to select options 
+/// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
 /// \param Node velocity
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
-/// \param Boundary set local id 
+/// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace ConstantVelocityBC {
+KOKKOS_FUNCTION
+static void velocity(const Mesh_t& mesh,
+    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+    const DCArrayKokkos<double>& bc_global_vars,
+    const DCArrayKokkos<double>& bc_state_vars,
+    const DCArrayKokkos<double>& node_vel,
+    const double time_value,
+    const size_t rk_stage,
+    const size_t bdy_node_gid,
+    const size_t bdy_set)
+{
+    for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+        // Set velocity to zero
+        node_vel(1, bdy_node_gid, dim) = bc_global_vars(bdy_set, dim);
+    }
 
-
-
-    KOKKOS_FUNCTION
-    static void velocity(const mesh_t& mesh,
-                         const DCArrayKokkos <BoundaryConditionEnums_t>& BoundaryConditionEnums,
-                         const DCArrayKokkos<double>& bc_global_vars,
-                         const DCArrayKokkos<double>& bc_state_vars,
-                         const DCArrayKokkos<double>& node_vel,
-                         const double time_value,
-                         const size_t bdy_node_gid,
-                         const size_t bdy_set)
-    {
-
-
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            // Set velocity to zero
-            node_vel(1, bdy_node_gid, dim) = bc_global_vars(bdy_set, dim);
-        }
-
-        return;
-    } // end func
-
+    return;
+} // end velocity
 } // end namespace
 
 #endif // end Header Guard

@@ -43,7 +43,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace mtr;
 
-
 namespace mesh_init
 {
 // element mesh types
@@ -57,6 +56,7 @@ enum elem_name_tag
 // other enums could go here on the mesh
 } // end namespace
 
+
 /*
 ==========================
 Nodal indexing convention
@@ -67,7 +67,7 @@ Nodal indexing convention
               |        /
               |       /
               |      /
-      7------------------6
+      6------------------7
      /|                 /|
     / |                / |
    /  |               /  |
@@ -78,7 +78,7 @@ Nodal indexing convention
 |     |            |     |
 |     |            |     |
 |     |            |     |
-|     3------------|-----2
+|     2------------|-----3
 |    /             |    /
 |   /              |   /
 |  /               |  /
@@ -87,13 +87,12 @@ Nodal indexing convention
 0------------------1
 
 nodes are ordered for outward normal
-patch 0: [0,4,7,3]  xi-minus dir
-patch 1: [1,2,6,5]  xi-plus  dir
+patch 0: [0,4,6,2]  xi-minus dir
+patch 1: [1,3,7,5]  xi-plus  dir
 patch 2: [0,1,5,4]  eta-minus dir
-patch 3: [2,3,7,6]  eta-plus  dir
-patch 4: [0,3,2,1]  zeta-minus dir
-patch 6: [4,5,6,7]  zeta-plus  dir
-
+patch 3: [3,2,6,7]  eta-plus  dir
+patch 4: [0,2,3,1]  zeta-minus dir
+patch 6: [4,5,7,6]  zeta-plus  dir
 */
 
 // sort in ascending order using bubble sort
@@ -147,7 +146,7 @@ struct legendre_in_elem_t
         };
 
         legendre_in_elem_t(const size_t num_leg_gauss_in_elem_inp) {
-                this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
+            this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
         };
 
         // return global gauss index for given local gauss index in an element
@@ -174,7 +173,7 @@ struct lobatto_in_elem_t
         };
 
         lobatto_in_elem_t(const size_t num_lob_gauss_in_elem_inp) {
-                this->num_lob_gauss_in_elem_ = num_lob_gauss_in_elem_inp;
+            this->num_lob_gauss_in_elem_ = num_lob_gauss_in_elem_inp;
         };
 
         // return global gauss index for given local gauss index in an element
@@ -213,7 +212,7 @@ struct lobatto_in_elem_t
 // };
 
 // mesh sizes and connectivity data structures
-struct mesh_t
+struct Mesh_t
 {
     // ******* Entity Definitions **********//
     // Element: A hexahedral volume
@@ -240,7 +239,7 @@ struct mesh_t
     size_t num_lob_gauss_in_elem; ///< Number of Gauss Lobatto points in an element
 
     DCArrayKokkos<size_t> nodes_in_elem; ///< Nodes in an element
-    CArrayKokkos<size_t> corners_in_elem; ///< Corners in an element
+    CArrayKokkos<size_t> corners_in_elem; ///< Corners in an element -- this can just be a functor
 
     RaggedRightArrayKokkos<size_t> elems_in_elem; ///< Elements connected to an element
     CArrayKokkos<size_t> num_elems_in_elem; ///< Number of elements connected to an element
@@ -407,7 +406,7 @@ struct mesh_t
                 size_t j = count_saved_corners_in_node(node_gid);
 
                 // Save corner index to this node_gid
-                size_t corner_gid = node_lid + elem_gid * num_nodes_in_elem;
+                size_t corner_gid = node_lid + elem_gid * num_nodes_in_elem;  // this can be a functor
                 corners_in_node(node_gid, j) = corner_gid;
 
                 elems_in_node(node_gid, j) = elem_gid; // save the elem_gid
@@ -571,12 +570,13 @@ struct mesh_t
         // classic linear elements
         if (elem_kind == mesh_init::linear_tensor_element) {
             if (num_dims == 3) {
-                size_t temp_node_lids[24] = { 0, 4, 7, 3,
-                                              1, 2, 6, 5,
+
+                 size_t temp_node_lids[24] = { 0, 4, 6, 2,
+                                              1, 3, 7, 5,
                                               0, 1, 5, 4,
-                                              2, 3, 7, 6,
-                                              0, 3, 2, 1,
-                                              4, 5, 6, 7 };
+                                              3, 2, 6, 7,
+                                              0, 2, 3, 1,
+                                              4, 5, 7, 6 };
 
                 int count = 0;
                 int elem_patch_lid = 0;
@@ -1279,7 +1279,7 @@ struct mesh_t
         num_bdy_nodes_saved.update_host();
         Kokkos::fence();
 
-        // save the number of bdy_nodes to mesh_t
+        // save the number of bdy_nodes to Mesh_t
         num_bdy_nodes = num_bdy_nodes_saved.host(0);
 
         bdy_nodes = CArrayKokkos<size_t>(num_bdy_nodes, "mesh.bdy_nodes");
@@ -1459,7 +1459,7 @@ struct mesh_t
     /// \brief Build sets of boundary nodes
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_boundry_node_sets(mesh_t& mesh)
+    void build_boundry_node_sets(Mesh_t& mesh)
     {
         // build boundary nodes in each boundary set
 
@@ -1528,16 +1528,16 @@ struct mesh_t
 
         return;
     } // end method to build boundary nodes
-}; // end mesh_t
+}; // end Mesh_t
 
 KOKKOS_FUNCTION
 void decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
-                        ViewCArrayKokkos<double>& W_tensor,
-                        const ViewCArrayKokkos<double>& vel_grad,
-                        const ViewCArrayKokkos<size_t>& elem_node_gids,
-                        const size_t elem_gid,
-                        const DCArrayKokkos<double>& node_coords,
-                        const DCArrayKokkos<double>& node_vel,
-                        const double vol);
+    ViewCArrayKokkos<double>& W_tensor,
+    const ViewCArrayKokkos<double>& vel_grad,
+    const ViewCArrayKokkos<size_t>& elem_node_gids,
+    const size_t elem_gid,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel,
+    const double vol);
 
 #endif

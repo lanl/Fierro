@@ -98,7 +98,7 @@ void bubble_sort(size_t arr[], const size_t num)
 } // end function
 
 // mesh sizes and connectivity data structures
-struct mesh_t
+struct Mesh_t
 {
     size_t num_dims;
 
@@ -666,7 +666,7 @@ struct mesh_t
         num_bdy_nodes_saved.update_host();
         Kokkos::fence();
 
-        // save the number of bdy_nodes to mesh_t
+        // save the number of bdy_nodes to Mesh_t
         num_bdy_nodes = num_bdy_nodes_saved.host(0);
 
         bdy_nodes = CArrayKokkos<size_t>(num_bdy_nodes, "mesh.bdy_nodes");
@@ -847,7 +847,7 @@ struct mesh_t
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_boundry_node_sets(const CArrayKokkos<boundary_condition_t>& boundary,
-        mesh_t& mesh)
+        Mesh_t& mesh)
     {
         // build boundary nodes in each boundary set
         mesh.num_bdy_nodes_in_set = DCArrayKokkos<size_t>(mesh.num_bdy_sets, "mesh.num_bdy_nodes_in_set");
@@ -915,51 +915,51 @@ struct mesh_t
 
         return;
     } // end method to build boundary nodes
-}; // end mesh_t
+}; // end Mesh_t
 
-void ensight(const mesh_t& mesh,
-             const DCArrayKokkos<double>& node_coords,
-             const DCArrayKokkos<double>& node_vel,
-             const DCArrayKokkos<double>& node_mass,
-             const DCArrayKokkos<double>& elem_den,
-             const DCArrayKokkos<double>& elem_pres,
-             const DCArrayKokkos<double>& elem_stress,
-             const DCArrayKokkos<double>& elem_sspd,
-             const DCArrayKokkos<double>& elem_sie,
-             const DCArrayKokkos<double>& elem_vol,
-             const DCArrayKokkos<double>& elem_mass,
-             const DCArrayKokkos<size_t>& elem_mat_id,
-             CArray<double>& graphics_times,
-             size_t&      graphics_id,
-             const double time_value);
+void ensight(const Mesh_t& mesh,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_mass,
+    const DCArrayKokkos<double>& elem_den,
+    const DCArrayKokkos<double>& elem_pres,
+    const DCArrayKokkos<double>& elem_stress,
+    const DCArrayKokkos<double>& elem_sspd,
+    const DCArrayKokkos<double>& elem_sie,
+    const DCArrayKokkos<double>& elem_vol,
+    const DCArrayKokkos<double>& elem_mass,
+    const DCArrayKokkos<size_t>& elem_mat_id,
+    CArray<double>& graphics_times,
+    size_t&      graphics_id,
+    const double time_value);
 
-void state_file(const mesh_t& mesh,
-                const DCArrayKokkos<double>& node_coords,
-                const DCArrayKokkos<double>& node_vel,
-                const DCArrayKokkos<double>& node_mass,
-                const DCArrayKokkos<double>& elem_den,
-                const DCArrayKokkos<double>& elem_pres,
-                const DCArrayKokkos<double>& elem_stress,
-                const DCArrayKokkos<double>& elem_sspd,
-                const DCArrayKokkos<double>& elem_sie,
-                const DCArrayKokkos<double>& elem_vol,
-                const DCArrayKokkos<double>& elem_mass,
-                const DCArrayKokkos<size_t>& elem_mat_id,
-                const double time_value);
+void state_file(const Mesh_t&    mesh,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_mass,
+    const DCArrayKokkos<double>& elem_den,
+    const DCArrayKokkos<double>& elem_pres,
+    const DCArrayKokkos<double>& elem_stress,
+    const DCArrayKokkos<double>& elem_sspd,
+    const DCArrayKokkos<double>& elem_sie,
+    const DCArrayKokkos<double>& elem_vol,
+    const DCArrayKokkos<double>& elem_mass,
+    const DCArrayKokkos<size_t>& elem_mat_id,
+    const double time_value);
 
 void user_model_init(const DCArrayKokkos<double>& file_state_vars,
-                     const size_t num_state_vars,
-                     const size_t mat_id,
-                     const size_t num_elems);
+    const size_t num_state_vars,
+    const size_t mat_id,
+    const size_t num_elems);
 
 KOKKOS_FUNCTION
 void decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
-                        ViewCArrayKokkos<double>& W_tensor,
-                        const ViewCArrayKokkos<double>& vel_grad,
-                        const ViewCArrayKokkos<size_t>& elem_node_gids,
-                        const size_t elem_gid,
-                        const DCArrayKokkos<double>& node_coords,
-                        const DCArrayKokkos<double>& node_vel,
-                        const double vol);
+    ViewCArrayKokkos<double>& W_tensor,
+    const ViewCArrayKokkos<double>& vel_grad,
+    const ViewCArrayKokkos<size_t>& elem_node_gids,
+    const size_t elem_gid,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel,
+    const double vol);
 
 #endif

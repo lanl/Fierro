@@ -44,19 +44,19 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ==============================================================================
 namespace region
 {
-    // for tagging volumes to paint material onto the mesh
-    enum vol_tag
-    {
-        no_volume = 0,
-        global = 1,         // tag every elements in the mesh
-        box = 2,            // tag all elements inside a box
-        cylinder = 3,       // tag all elements inside a cylinder
-        sphere = 4,         // tag all elements inside a sphere
-        readVoxelFile = 5,  // tag all elements in a voxel mesh (structured VTK)
-        readPolycrystalFile = 6, // tag all elements in a polycrystallince voxel mesh (structured VTK)
-        readSTLFile = 7,    // read a STL file and voxelize it
-        readVTKFile = 8,    // tag all elements in a VTK mesh (unstructured mesh)
-    };
+// for tagging volumes to paint material onto the mesh
+enum vol_tag
+{
+    no_volume = 0,
+    global = 1,             ///< tag every elements in the mesh
+    box = 2,                ///< tag all elements inside a box
+    cylinder = 3,           ///< tag all elements inside a cylinder
+    sphere = 4,             ///< tag all elements inside a sphere
+    readVoxelFile = 5,      ///< tag all elements in a voxel mesh (structured VTK)
+    readPolycrystalFile = 6,///< tag all elements in a polycrystallince voxel mesh (structured VTK)
+    readSTLFile = 7,        ///< read a STL file and voxelize it
+    readVTKFile = 8,        ///< tag all elements in a VTK mesh (unstructured mesh)
+};
 } // end of namespace
 
 static std::map<std::string, region::vol_tag> region_type_map
@@ -70,12 +70,12 @@ static std::map<std::string, region::vol_tag> region_type_map
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct reg_fill_t
+/// \struct RegionFill_t
 ///
 /// \brief Geometry data for regions of materials/states
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct reg_fill_t
+struct RegionFill_t
 {
     // type
     region::vol_tag volume; ///< Type of volume for this region eg. global, box, sphere, planes, etc.
@@ -96,7 +96,7 @@ struct reg_fill_t
     double radius2 = 0.0;   ///< Outer radius to fill for sphere
 
     // initial conditions
-    init_conds::init_velocity_conds velocity;  ///< Initial conditions for this region WARNING: Currently unimplemented
+    init_conds::init_velocity_conds velocity;  ///< Initial conditions for this region
 
     // velocity coefficients by component
     double u = 0.0; ///< U component of velocity
@@ -109,18 +109,17 @@ struct reg_fill_t
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
 
-    double origin[3] = {0.0, 0.0, 0.0}; ///< Origin for region
+    double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region
 };
 
-
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct reg_fill_host_t
+/// \struct RegionFill_host_t
 ///
-/// \brief Geometry data, on the cpu only, for regions of materials/states 
+/// \brief Geometry data, on the cpu only, for regions of materials/states
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct reg_fill_host_t
+struct RegionFill_host_t
 {
     std::string file_path; ///< path of mesh file
 

@@ -1,0 +1,118 @@
+# num_dims: 3
+
+dynamic_options:
+    time_final: 1.0
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 10000
+
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
+mesh_options:
+    source: generate
+    num_dims: 2
+    type: polar
+    origin: [0.0, 0.0]
+    inner_radius: 0.025
+    outer_radius: 1.2
+    starting_angle: 0
+    ending_angle: 90
+    num_radial_elems: 12
+    num_angular_elems: 10
+
+
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: state  #ensight  state
+    graphics_time_step: 0.25
+    #graphics_iteration_step: 2
+
+solver_options:
+  - solver:
+        method: SGHRZ
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+    # Tag X plane
+    - boundary_condition:
+        solver: SGHRZ
+        geometry: x_plane
+        direction: x_dir
+        value: 0.0
+        type: reflected_velocity
+
+            
+    # Tag Y plane
+    - boundary_condition:
+        solver: SGHRZ
+        geometry: y_plane
+        direction: y_dir
+        value: 0.0
+        type: reflected_velocity
+
+    # Tag inner circle
+    - boundary_condition:
+        solver: SGHRZ
+        geometry: cylinder
+        value: 0.025
+        type: zero_velocity
+
+    # Tag outer circle
+    - boundary_condition:
+        solver: SGHRZ
+        geometry: cylinder
+        value: 1.2
+        type: zero_velocity
+  
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        q1: 1.0
+        q2: 1.333
+        q1ex: 1.0
+        q2ex: 1.333
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+
+regions:
+    - fill_volume:
+        type: global
+        material_id: 0
+        den: 1.0
+        sie: 1.e-10
+        velocity: cartesian
+        u: 0.0
+        v: 0.0
+        w: 0.0
+
+    
+
+    # energy source initial conditions
+    - fill_volume:
+        type: sphere
+        origin: [0.0, 0.0, 0.0]
+        radius1: 0.0
+        radius2: 0.1
+        material_id: 0
+        den: 1.0
+        # ie: 0.25833839995946534
+        sie: 119.65 #  (0.5*0.49339/(mat_fill(1).den*vol))
+        velocity: cartesian
+        u: 0.0
+        v: 0.0
+        w: 0.0
+
+

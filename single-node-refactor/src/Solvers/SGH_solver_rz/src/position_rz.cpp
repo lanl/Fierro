@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -31,7 +31,7 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
-#include "sgh_solver.h"
+#include "sgh_solver_rz.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -47,7 +47,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param View of nodal velocity data
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH::update_position(double rk_alpha,
+void SGHRZ::update_position_rz(double rk_alpha,
     double dt,
     const size_t num_dims,
     const size_t num_nodes,
@@ -56,9 +56,14 @@ void SGH::update_position(double rk_alpha,
 {
     // loop over all the nodes in the mesh
     FOR_ALL(node_gid, 0, num_nodes, {
+
         for (int dim = 0; dim < num_dims; dim++) {
             double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
             node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha * dt * half_vel;
         }
+
+        // radius must always be positive in RZ coordinates, the coords are (z,r)
+        node_coords(1, node_gid, 1) = fmax(0.0, node_coords(1, node_gid, 1));
+
     }); // end parallel for over nodes
 } // end subroutine

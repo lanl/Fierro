@@ -39,6 +39,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct BoundaryConditionEnums_t;
 
+namespace NoVelocityBC
+{
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn Boundary velocity is never set
@@ -46,33 +48,29 @@ struct BoundaryConditionEnums_t;
 /// \brief This is a function to set the velocity all directions to a value
 ///
 /// \param Mesh object
-/// \param Boundary condition enums to select options 
+/// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
 /// \param Node velocity
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
-/// \param Boundary set local id 
+/// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace NoVelocityBC {
-
-
-    KOKKOS_FUNCTION
-    static void velocity(const mesh_t& mesh,
-                         const DCArrayKokkos <BoundaryConditionEnums_t>& BoundaryConditionEnums,
-                         const DCArrayKokkos<double>& bc_global_vars,
-                         const DCArrayKokkos<double>& bc_state_vars,
-                         const DCArrayKokkos<double>& node_vel,
-                         const double time_value,
-                         const size_t bdy_node_gid,
-                         const size_t bdy_set)
-    {
-        // this is a blank function by design
-
-        return;
-    } // end func
-
+KOKKOS_FUNCTION
+static void velocity(const Mesh_t& mesh,
+    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+    const DCArrayKokkos<double>& bc_global_vars,
+    const DCArrayKokkos<double>& bc_state_vars,
+    const DCArrayKokkos<double>& node_vel,
+    const double time_value,
+    const size_t rk_stage,
+    const size_t bdy_node_gid,
+    const size_t bdy_set)
+{
+    // this is a blank function by design
+    return;
+} // end velocity
 } // end namespace
 
 #endif // end Header Guard

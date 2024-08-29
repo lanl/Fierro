@@ -39,9 +39,20 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct BoundaryConditionEnums_t;
 
+namespace TimeVaryingVelocityBC
+{
+// add an enum for boundary statevars and global vars
+enum BCVars
+{
+    hydro_bc_vel_0 = 0,
+    hydro_bc_vel_1 = 1,
+    hydro_bc_vel_t_start = 2,
+    hydro_bc_vel_t_end = 3
+};
+
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary velocity is a function of time
+/// \fn velocity
 ///
 /// \brief This is a function to force the boundary to move with a specified
 ///        velocity that varies in time.  The function form is an exponential
@@ -50,62 +61,49 @@ struct BoundaryConditionEnums_t;
 ///              v(t) = v0 exp(-v1*(time - time_start) )
 ///
 /// \param Mesh object
-/// \param Boundary condition enums to select options 
+/// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
 /// \param Node velocity
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
-/// \param Boundary set local id 
+/// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace TimeVaryingVelocityBC {
+KOKKOS_FUNCTION
+static void velocity(const Mesh_t& mesh,
+    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+    const DCArrayKokkos<double>& bc_global_vars,
+    const DCArrayKokkos<double>& bc_state_vars,
+    const DCArrayKokkos<double>& node_vel,
+    const double time_value,
+    const size_t rk_stage,
+    const size_t bdy_node_gid,
+    const size_t bdy_set)
+{
+    const double hydro_bc_vel_0 = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_0);
+    const double hydro_bc_vel_1 = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_1);
+    const double hydro_bc_vel_t_start = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_start);
+    const double hydro_bc_vel_t_end   = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_end);
 
-    // add an enum for boundary statevars and global vars
-    enum BCVars
-    {
-        hydro_bc_vel_0 = 0,
-        hydro_bc_vel_1 = 1,
-        hydro_bc_vel_t_start = 2,
-        hydro_bc_vel_t_end = 3
-    };
+    // directions are as follows:
+    // x_plane  = 0,
+    // y_plane  = 1,
+    // z_plane  = 2,
 
-    KOKKOS_FUNCTION
-    static void velocity(const mesh_t& mesh,
-                         const DCArrayKokkos <BoundaryConditionEnums_t>& BoundaryConditionEnums,
-                         const DCArrayKokkos<double>& bc_global_vars,
-                         const DCArrayKokkos<double>& bc_state_vars,
-                         const DCArrayKokkos<double>& node_vel,
-                         const double time_value,
-                         const size_t bdy_node_gid,
-                         const size_t bdy_set)
-    {
-            const double hydro_bc_vel_0       = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_0);
-            const double hydro_bc_vel_1       = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_1);
-            const double hydro_bc_vel_t_start = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_start);
-            const double hydro_bc_vel_t_end   = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_end);
-            
-            // directions are as follows:
-            // x_plane  = 0,
-            // y_plane  = 1,
-            // z_plane  = 2,
+    // Set velocity to that direction to specified value
+    // if t_end > time > t_start
+    // v(t) = v0 exp(-v1*(time - time_start) )
+    if (time_value >= hydro_bc_vel_t_start && time_value <= hydro_bc_vel_t_end) {
+        // the time difference
+        const double time_delta = time_value - hydro_bc_vel_t_start;
 
-            // Set velocity to that direction to specified value
-            // if t_end > time > t_start
-            // v(t) = v0 exp(-v1*(time - time_start) )
-            if (time_value >= hydro_bc_vel_t_start && time_value <= hydro_bc_vel_t_end) {
+        node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) =
+            hydro_bc_vel_0 * exp(-hydro_bc_vel_1 * time_delta);
+    } // end if on time
 
-                // the time difference
-                const double time_delta = time_value - hydro_bc_vel_t_start;
-
-                node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) =
-                                            hydro_bc_vel_0 * exp(-hydro_bc_vel_1 * time_delta);
-
-            } // end if on time
-
-        return;
-    } // end func
-
+    return;
+} // end func
 } // end namespace
 
 #endif // end Header Guard
