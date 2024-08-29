@@ -1,6 +1,6 @@
 num_dims: 3
 dynamic_options:
-  time_final: 1.0
+  time_final: 50.0
   dt_min: 1.e-8
   dt_max: 1.e-2
   dt_start: 1.e-5
@@ -10,87 +10,75 @@ mesh_generation_options:
   type: Box
   origin: [0, 0, 0]
   length: [1.2, 1.2, 1.2]
-  num_elems: [32, 32, 32]
+  num_elems: [128, 128, 128]
 
 output_options:
   timer_output_level: thorough
   output_file_format: vtk
-  graphics_step: 0.25
+  graphics_step: 10
   
 fea_module_parameters:
   - type: SGH
     material_id: 0
     boundary_conditions:
       # Tag X plane
-      - surface:
+      - surface: 
           type: x_plane
           plane_position: 0.0
         type: reflected
                 
         # Tag Y plane
-      - surface:
+      - surface: 
           type: y_plane
           plane_position: 0.0
         type: reflected
                 
         # Tag Z plane
-      - surface:
+      - surface: 
           type: z_plane
           plane_position: 0.0
         type: reflected
                 
-        # Tag X plane
-      - surface:
-          type: x_plane
-          plane_position: 1.2
-        type: reflected
-                
-        # Tag Y plane
-      - surface:
-          type: y_plane
-          plane_position: 1.2
-        type: reflected
-                
-        # Tag Z plane
-      - surface:
-          type: z_plane
-          plane_position: 1.2
-        type: reflected
 
 materials:
   - id: 0
     eos_model: ideal_gas
     strength_model: none
-    q1: 1.0
-    q2: 1.33
-    q1ex: 1.0
-    q2ex: 0.0
+    maximum_limiter: 1
+    q1: 4.0
+    q2: 8.0
+    q1ex: 4.0
+    q2ex: 8.0
     eos_global_vars:
       - 1.666666666666667
       - 1.0E-14
       - 1.0
 
 regions:
-  - volume:
+  - volume: 
       type: global
     material_id: 0
     den: 1.0
-    sie: 1.e-10
+    sie: 1.e-9
         
-    velocity: cartesian
-    u: 0.0
-    v: 0.0
-    w: 0.0
-    # energy source initial conditions
-  - volume:
-      type: sphere
-      radius1: 0.0
-      radius2: 0.0375
-    material_id: 0
-    den: 1.0
-    ie: 0.25833839995946534
+    velocity: spherical
+    speed: -0.01
         
-    velocity: cartesian
-    u: 0.0
-    v: 0.0
-    w: 0.0
+optimization_options:
+    optimization_process: topology_optimization
+    optimization_objective: maximize_internal_energy
+    use_solve_checkpoints: true
+    num_solve_checkpoints: 100
+    rol_params:
+        subproblem_algorithm: line_search
+        initial_constraint_penalty: 1.e-3
+        step_tolerance: 1.e-3
+        gradient_tolerance: 1.e-4
+        constraint_tolerance: 1.e-5
+        iteration_limit: 4
+    density_epsilon: 0.4
+    variable_outer_shell: true
+    constraints:
+      - type: mass
+        relation: equality
+        value: 0.60
