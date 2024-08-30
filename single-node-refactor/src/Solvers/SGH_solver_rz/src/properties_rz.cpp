@@ -220,7 +220,8 @@ void SGHRZ::update_state_rz(
                                              node_vel,
                                              GaussPoints_vol(gauss_gid),
                                              dt,
-                                             rk_alpha);
+                                             rk_alpha,
+                                             Materials.strength_global_vars);
 
 
         }); // end parallel for over mat elem lid
