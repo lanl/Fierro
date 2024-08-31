@@ -2109,7 +2109,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
   real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply, surface_normal[3], pressure, normal_displacement;
-  real_t resulting_term;
+  real_t resulting_term, vessel_term;
   CArray<GO> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
@@ -2127,7 +2127,8 @@ void FEA_Module_Elasticity::assemble_vector(){
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
-  real_t constant_stress_flag = module_params->constant_stress_flag;
+  bool constant_stress_flag = module_params->constant_stress_flag;
+  bool pressure_vessel_flag = module_params->pressure_vessel_flag;
 
    //force vector initialization
   for(int i=0; i < num_dim*nlocal_nodes; i++)
@@ -2578,7 +2579,23 @@ void FEA_Module_Elasticity::assemble_vector(){
 
         //compute shape functions at this point for the element type
         elem->basis(basis_values,quad_coordinate);
-
+        if(pressure_vessel_flag){
+          current_density = 0;
+          if(nodal_density_flag){
+            for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+              current_density += nodal_density(node_loop)*basis_values(node_loop);
+            }
+          }
+          //default constant element density
+          else{
+            current_density = Element_Densities(ielem,0);
+          }
+          vessel_term = 1 - current_density;
+        }
+        else{
+          vessel_term = 1;
+        }
+        
         //debug print
         //std::cout << "Current Density " << current_density << std::endl;
 
@@ -2741,7 +2758,7 @@ void FEA_Module_Elasticity::assemble_vector(){
           for(int span=0; span < Brows; span++){
             resulting_term += stress_matrix(span)*B_matrix_contribution(span,icol);
           }
-          Nodal_RHS(num_dim*local_node_id + icol%num_dim,0) += weight_multiply*resulting_term*basis_values(icol/num_dim);
+          Nodal_RHS(num_dim*local_node_id + icol%num_dim,0) += weight_multiply*resulting_term*vessel_term*basis_values(icol/num_dim);
         }
       }
     }//for
