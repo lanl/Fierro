@@ -45,13 +45,15 @@ enum method
     NONE = 0,
     SGH3D = 1,
     SGHRZ = 2,
+    SGTM3D = 3,
 };
 } // end of namespace
 
 static std::map<std::string, solver_input::method> solver_map
 {
     { "SGH3D", solver_input::SGH3D },
-    { "SGHRZ", solver_input::SGHRZ }
+    { "SGHRZ", solver_input::SGHRZ },
+    { "SGTM3D", solver_input::SGTM3D }
 };
 
 /////////////////////////////////////////////////////////////////////////////

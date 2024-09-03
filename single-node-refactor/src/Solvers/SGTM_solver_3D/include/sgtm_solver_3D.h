@@ -329,23 +329,28 @@ public:
         const double rk_alpha);
 
 
-    double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
+    double sum_domain_internal_energy(
+        const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const size_t num_mat_points);
 
-    double sum_domain_kinetic_energy(const Mesh_t& mesh,
+    double sum_domain_kinetic_energy(
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_mass);
 
-    double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
+    double sum_domain_material_mass(
+        const DCArrayKokkos<double>& MaterialPoints_mass,
         const size_t num_mat_points);
 
-    double sum_domain_node_mass(const Mesh_t& mesh,
+    double sum_domain_node_mass(
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_mass);
 
-    void set_corner_force_zero(const Mesh_t& mesh,
+    void set_corner_force_zero(
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& corner_force);
 };
 

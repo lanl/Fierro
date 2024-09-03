@@ -57,6 +57,7 @@ void SGTM3D::boundary_temperature(const Mesh_t&      mesh,
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         // Loop over boundary nodes in a boundary set
         FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+            
             // get the global index for this node on the boundary
             size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 

@@ -35,6 +35,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "driver.h"
 
 
+// Headers for solver classes
+#include "sgh_solver_3D.h"
+#include "sgh_solver_rz.h"
+#include "sgtm_solver_3D.h"
+
+
 // Initialize driver data.  Solver type, number of solvers
 // Will be parsed from YAML input
 void Driver::initialize()
@@ -113,7 +119,19 @@ void Driver::initialize()
                                    State);
 
             solvers.push_back(sgh_solver_rz);
-        } // end if SGH solver
+        } // end if SGHRZ solver
+        else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
+
+            SGTM3D* sgtm_solver_3d = new SGTM3D(); 
+
+            sgtm_solver_3d->initialize(SimulationParamaters, 
+                                   Materials, 
+                                   mesh, 
+                                   BoundaryConditions,
+                                   State);
+
+            solvers.push_back(sgtm_solver_3d);
+        } // end if SGTM solver
 
     } // end for loop over solvers
 
