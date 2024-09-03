@@ -401,8 +401,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // extensive TE
     TE_tend = IE_tend + KE_tend;
 
-    printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
-    printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
+    printf("Time=0:   KE = %.14f, IE = %.14f, TE = %.14f \n", KE_t0, IE_t0, TE_t0);
+    printf("Time=End: KE = %.14f, IE = %.14f, TE = %.14f \n", KE_tend, IE_tend, TE_tend);
     printf("total energy change = %.15e \n\n", TE_tend - TE_t0);
 
     // domain mass for each material (they are at material points)
