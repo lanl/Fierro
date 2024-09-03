@@ -50,6 +50,7 @@ struct node_t
     DCArrayKokkos<double> coords; ///< Nodal coordinates
     DCArrayKokkos<double> vel;  ///< Nodal velocity
     DCArrayKokkos<double> mass; ///< Nodal mass
+    DCArrayKokkos<double> temp; ///< Nodal temperature
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
@@ -57,6 +58,7 @@ struct node_t
         this->coords = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_coordinates");
         this->vel    = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
         this->mass   = DCArrayKokkos<double>(num_nodes, "node_mass");
+        this->temp   = DCArrayKokkos<double>(num_nodes, "node_temp");
     }; // end method
 }; // end node_t
 
@@ -125,6 +127,8 @@ struct MaterialPoint_t
 
     DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
 
+    DCArrayKokkos<double> q_flux; ///< Heat flux
+
     // Material Models are stored on Material points
     DCArrayKokkos<double> statev; // a place holder to get things to compile
     DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
@@ -141,6 +145,7 @@ struct MaterialPoint_t
         this->sie    = DCArrayKokkos<double>(num_rk, num_pts_max, "material_point_sie");
         this->volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac");
         this->eroded = DCArrayKokkos<bool>(num_pts_max, "material_point_eroded");
+        this->q_flux = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, "material_point_heat_flux");
     }; // end method
 
     // initialization method for arbitrary-order FE (num_rk_storage_bins, num_pts_max, num_dims)
@@ -187,10 +192,13 @@ struct MaterialCorner_t
 
     DCArrayKokkos<double> force;   ///< Corner force for the material
 
+    DCArrayKokkos<double> q_flux;  ///< Corner heat flux
+
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners_max, size_t num_dims)
     {
         this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
+        this->q_flux = DCArrayKokkos<double>(2, num_corners_max, num_dims, "material_corner_heat_flux"); // WARNING: hard coding rk2
     }; // end method
 }; // end material corner
 
@@ -205,12 +213,14 @@ struct corner_t
 {
     DCArrayKokkos<double> force; ///< Corner force
     DCArrayKokkos<double> mass; ///< Corner mass
+     DCArrayKokkos<double> q_flux;  ///< Corner heat flux
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims)
     {
         this->force = DCArrayKokkos<double>(num_corners, num_dims, "corner_force");
         this->mass  = DCArrayKokkos<double>(num_corners, "corner_mass");
+        this->q_flux = DCArrayKokkos<double>(2, num_corners, num_dims, "corner_heat_flux"); // WARNING: hard coding rk2
     }; // end method
 }; // end corner_t
 
@@ -384,7 +394,7 @@ struct State_t
     CArray<MaterialToMeshMap_t> MaterialToMeshMaps;   ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
 
     // ---------------------------------------------------------------------
-    //    materialto material maps
+    //    material to material maps
     // ---------------------------------------------------------------------
     corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_lid, corn_lid)
     points_in_mat_t points_in_mat_elem;  ///< for accessing e.g., guass points mat lid with arbitrary-order FE

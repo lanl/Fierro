@@ -91,20 +91,21 @@ void SGTM3D::init_corner_node_masses_zero(const Mesh_t& mesh,
 /// \param rk_num_bins is number of time integration storage bins
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::fill_regions_sgtm(const Material_t& Materials,
-                      const Mesh_t& mesh,
-                      const DCArrayKokkos <double>& node_coords,
-                      DCArrayKokkos <double>& node_vel,
-                      DCArrayKokkos <double>& GaussPoint_den,
-                      DCArrayKokkos <double>& GaussPoint_sie,
-                      DCArrayKokkos <size_t>& elem_mat_id,
-                      DCArrayKokkos <size_t>& voxel_elem_mat_id,
-                      const CArrayKokkos <RegionFill_t>& region_fills,
-                      const CArray <RegionFill_host_t>& region_fills_host,
-                      const size_t num_fills,
-                      const size_t num_elems,
-                      const size_t num_nodes,
-                      const size_t rk_num_bins) const
+void SGTM3D::fill_regions_sgtm(
+    const Material_t& Materials,
+    const Mesh_t& mesh,
+    const DCArrayKokkos <double>& node_coords,
+    DCArrayKokkos <double>& node_vel,
+    DCArrayKokkos <double>& GaussPoint_den,
+    DCArrayKokkos <double>& GaussPoint_sie,
+    DCArrayKokkos <size_t>& elem_mat_id,
+    DCArrayKokkos <size_t>& voxel_elem_mat_id,
+    const CArrayKokkos <RegionFill_t>& region_fills,
+    const CArray <RegionFill_host_t>& region_fills_host,
+    const size_t num_fills,
+    const size_t num_elems,
+    const size_t num_nodes,
+    const size_t rk_num_bins) const
 {
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
