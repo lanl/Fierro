@@ -162,14 +162,14 @@ void Driver::setup()
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn run
+/// \fn execute
 ///
 /// \brief Calls the execute function for each of the created solvers
 ///
 /////////////////////////////////////////////////////////////////////////////
-void Driver::run()
+void Driver::execute()
 {
-    std::cout << "Inside driver run" << std::endl;
+    std::cout << "Inside driver execute" << std::endl;
     for (auto& solver : solvers) {
         solver->execute(SimulationParamaters, 
                         Materials, 
