@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.h"
+#include "sgtm_solver_3D.h"
 #include "mesh.h"
 #include "state.h"
 
@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param A view into the corner force data
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::update_energy(const double rk_alpha,
+void SGTM3D::update_temperature(const double rk_alpha,
     const double dt,
     const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_vel,

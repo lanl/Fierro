@@ -53,8 +53,8 @@ using namespace mtr; // matar namespace
 ///
 /// \class SGTM
 ///
-/// \brief Class for containing functions required to perform staggered grid thermomechanical 
-///        3D Cartesian meshes.
+/// \brief Class for containing functions required to perform staggered grid
+///        thermomechanical 3D Cartesian meshes.
 ///
 /// This class contains the requisite functions requited to perform
 /// staggered grid thermomechanical heat transfer.
@@ -84,7 +84,7 @@ public:
     ///
     /// \fn setup
     ///
-    /// \brief Calls setup_sgh, which initializes state and material data
+    /// \brief Calls setup_sgtm, which initializes state and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
     void setup(SimulationParameters_t& SimulationParamaters,
@@ -130,8 +130,8 @@ public:
         // Any finalize goes here, remove allocated memory, etc
     }
 
-    // **** Functions defined in sgh_setup.cpp **** //
-    void fill_regions_sgh(
+    // **** Functions defined in sgtm_setup.cpp **** //
+    void fill_regions_sgtm(
         const Material_t& Materials,
         const Mesh_t&     mesh,
         const DCArrayKokkos<double>& node_coords,
@@ -159,14 +159,14 @@ public:
         DCArrayKokkos<double>&     node_vel,
         const double time_value) const;
 
-    void boundary_contact(
+    void boundary_temperature(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_vel,
+        DCArrayKokkos<double>&     node_temp,
         const double time_value) const;
 
-    // **** Functions defined in energy_sgh.cpp **** //
-    void update_energy(
+    // **** Functions defined in energy_sgtm.cpp **** //
+    void update_temperature(
         const double  rk_alpha,
         const double  dt,
         const Mesh_t& mesh,
@@ -179,7 +179,7 @@ public:
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems) const;
 
-    // **** Functions defined in force_sgh.cpp **** //
+    // **** Functions defined in force_sgtm.cpp **** //
     void get_force(
         const Material_t& Materials,
         const Mesh_t&     mesh,
@@ -327,25 +327,28 @@ public:
         const double vol,
         const double dt,
         const double rk_alpha);
+
+
+    double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
+        const DCArrayKokkos<double>& MaterialPoints_sie,
+        const size_t num_mat_points);
+
+    double sum_domain_kinetic_energy(const Mesh_t& mesh,
+        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& node_mass);
+
+    double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
+        const size_t num_mat_points);
+
+    double sum_domain_node_mass(const Mesh_t& mesh,
+        const DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& node_mass);
+
+    void set_corner_force_zero(const Mesh_t& mesh,
+        const DCArrayKokkos<double>& corner_force);
 };
 
-double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<double>& MaterialPoints_sie,
-    const size_t num_mat_points);
 
-double sum_domain_kinetic_energy(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass);
-
-double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
-    const size_t num_mat_points);
-
-double sum_domain_node_mass(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass);
-
-void set_corner_force_zero(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& corner_force);
 
 #endif // end HEADER_H

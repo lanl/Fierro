@@ -31,7 +31,7 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
-#include "sgh_solver_3D.h"
+#include "sgtm_solver_3D.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -47,7 +47,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param View of nodal velocity data
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::update_position(double rk_alpha,
+void SGTM3D::update_position(double rk_alpha,
     double dt,
     const size_t num_dims,
     const size_t num_nodes,

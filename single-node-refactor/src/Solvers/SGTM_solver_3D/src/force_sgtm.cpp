@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.h"
+#include "sgtm_solver_3D.h"
 #include "material.h"
 #include "mesh.h"
 #include "state.h"
@@ -63,7 +63,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::get_force(const Material_t& Materials,
+void SGTM3D::get_force(const Material_t& Materials,
                       const Mesh_t& mesh,
                       const DCArrayKokkos<double>& GaussPoints_vol,
                       const DCArrayKokkos<double>& GaussPoints_div,
@@ -151,7 +151,7 @@ void SGH3D::get_force(const Material_t& Materials,
                               elem_node_gids);
 
         // --- Calculate the velocity gradient ---
-        SGH3D::get_velgrad(vel_grad,
+        SGTM3D::get_velgrad(vel_grad,
                     elem_node_gids,
                     node_vel,
                     area_normal,

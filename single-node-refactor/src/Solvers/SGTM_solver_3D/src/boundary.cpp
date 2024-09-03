@@ -32,13 +32,13 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.h"
+#include "sgtm_solver_3D.h"
 #include "mesh.h"
 #include "boundary_conditions.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn boundary_velocity
+/// \fn boundary_temperature
 ///
 /// \brief Evolves the boundary according to a give velocity
 ///
@@ -48,9 +48,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::boundary_velocity(const Mesh_t&      mesh,
+void SGTM3D::boundary_temperature(const Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
-                              DCArrayKokkos<double>& node_vel,
+                              DCArrayKokkos<double>& node_temp,
                               const double time_value) const
 {
     // Loop over boundary sets
@@ -61,38 +61,19 @@ void SGH3D::boundary_velocity(const Mesh_t&      mesh,
             size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
             // evaluate velocity on this boundary node
-            BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(
-                mesh,
-                BoundaryConditions.BoundaryConditionEnums,
-                BoundaryConditions.bc_global_vars,
-                BoundaryConditions.bc_state_vars,
-                node_vel,
-                time_value,
-                1, // rk_stage
-                bdy_node_gid,
-                bdy_set);
+            // BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(
+            //     mesh,
+            //     BoundaryConditions.BoundaryConditionEnums,
+            //     BoundaryConditions.bc_global_vars,
+            //     BoundaryConditions.bc_state_vars,
+            //     node_vel,
+            //     time_value,
+            //     1, // rk_stage
+            //     bdy_node_gid,
+            //     bdy_set);
         }); // end for bdy_node_lid
     } // end for bdy_set
 
     return;
 } // end boundary_velocity function
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn boundary_velocity
-///
-/// \brief Evolves the boundary according to a give velocity
-///
-/// \param The simulation mesh
-/// \param An array of BoundaryCondition_t that contain information about BCs
-/// \param A view into the nodal velocity array
-/// \param The current simulation time
-///
-/////////////////////////////////////////////////////////////////////////////
-void SGH3D::boundary_contact(const Mesh_t& mesh,
-                             const BoundaryCondition_t& BoundaryConditions,
-                             DCArrayKokkos<double>& node_vel,
-                             const double time_value) const
-{
-    return;
-} // end boundary_contact function

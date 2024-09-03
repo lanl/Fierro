@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.h"
+#include "sgtm_solver_3D.h"
 #include "mesh.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Number of nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::rk_init(DCArrayKokkos<double>& node_coords,
+void SGTM3D::rk_init(DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& node_vel,
     DCArrayKokkos<double>& MaterialPoints_sie,
     DCArrayKokkos<double>& MaterialPoints_stress,
@@ -101,7 +101,7 @@ void SGH3D::rk_init(DCArrayKokkos<double>& node_coords,
 /// REMOVE EXCESS TIME RELATED VARIABLES
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::get_timestep(Mesh_t& mesh,
+void SGTM3D::get_timestep(Mesh_t& mesh,
                        DCArrayKokkos<double>& node_coords,
                        DCArrayKokkos<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,

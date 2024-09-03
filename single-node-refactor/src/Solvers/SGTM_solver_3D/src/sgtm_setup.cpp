@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.h"
+#include "sgtm_solver_3D.h"
 #include "mesh.h"
 #include "region_fill.h"
 #include "material.h"
@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param corner_mass is the corner mass
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::init_corner_node_masses_zero(const Mesh_t& mesh,
+void SGTM3D::init_corner_node_masses_zero(const Mesh_t& mesh,
                                   const DCArrayKokkos<double>& node_mass,
                                   const DCArrayKokkos<double>& corner_mass) const
 {
@@ -91,7 +91,7 @@ void SGH3D::init_corner_node_masses_zero(const Mesh_t& mesh,
 /// \param rk_num_bins is number of time integration storage bins
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::fill_regions_sgh(const Material_t& Materials,
+void SGTM3D::fill_regions_sgtm(const Material_t& Materials,
                       const Mesh_t& mesh,
                       const DCArrayKokkos <double>& node_coords,
                       DCArrayKokkos <double>& node_vel,
@@ -250,7 +250,7 @@ void SGH3D::fill_regions_sgh(const Material_t& Materials,
 /// \brief Allocate state, setup models, and fill mesh regions per the YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::setup(SimulationParameters_t& SimulationParamaters, 
+void SGTM3D::setup(SimulationParameters_t& SimulationParamaters, 
                 Material_t& Materials, 
                 Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
@@ -276,7 +276,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // ---------------------------------------------
     // fill den, sie, and velocity on the mesh
     // ---------------------------------------------
-    fill_regions_sgh(Materials,
+    fill_regions_sgtm(Materials,
                      mesh,
                      State.node.coords,
                      State.node.vel,

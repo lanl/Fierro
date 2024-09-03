@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.h"
+#include "sgtm_solver_3D.h"
 #include "material.h"
 #include "mesh.h"
 #include "geometry_new.h"
@@ -60,7 +60,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::update_state(
+void SGTM3D::update_state(
     const Material_t& Materials,
     const Mesh_t&     mesh,
     const DCArrayKokkos<double>& node_coords,

@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.h"
+#include "sgtm_solver_3D.h"
 #include "mesh.h"
 #include "geometry_new.h"
 
@@ -49,7 +49,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param View of the corner forces
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::update_velocity(double rk_alpha,
+void SGTM3D::update_velocity(double rk_alpha,
     double dt,
     const Mesh_t& mesh,
     DCArrayKokkos<double>& node_vel,
@@ -101,7 +101,7 @@ void SGH3D::update_velocity(double rk_alpha,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void SGH3D::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
+void SGTM3D::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>& elem_node_gids,
     const DCArrayKokkos<double>&    node_vel,
     const ViewCArrayKokkos<double>& b_matrix,
@@ -194,7 +194,7 @@ void SGH3D::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
 /// \param View of the volumes of each element
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::get_divergence(DCArrayKokkos<double>& elem_div,
+void SGTM3D::get_divergence(DCArrayKokkos<double>& elem_div,
     const Mesh_t mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
@@ -278,7 +278,7 @@ void SGH3D::get_divergence(DCArrayKokkos<double>& elem_div,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void SGH3D::decompose_vel_grad(const ViewCArrayKokkos<double>& D_tensor,
+void SGTM3D::decompose_vel_grad(const ViewCArrayKokkos<double>& D_tensor,
                                const ViewCArrayKokkos<double>& W_tensor,
                                const ViewCArrayKokkos<double>& vel_grad) const
 {
