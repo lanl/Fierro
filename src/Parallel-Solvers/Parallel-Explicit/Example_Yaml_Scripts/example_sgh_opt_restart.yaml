@@ -67,8 +67,6 @@ materials:
   - id: 0
     eos_model: ideal_gas
     strength_model: none
-    elastic_modulus: 10
-    poisson_ratio: 0.3
     maximum_limiter: true
     q1: 1.0
     q2: 1.33

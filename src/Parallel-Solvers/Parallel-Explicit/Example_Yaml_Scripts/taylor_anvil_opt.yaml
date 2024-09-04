@@ -1,24 +1,27 @@
 num_dims: 3
 dynamic_options:
-  time_final: 1.0
+  time_final: 20.0
   dt_min: 1.e-8
-  dt_max: 1.e-3
+  dt_max: 1.e-2
   dt_start: 1.e-5
   cycle_stop: 2000000
   output_time_sequence_level: extreme
+  print_cycle: 20
 
-mesh_generation_options:
-  type: Box
-  origin: [0, 0, 0]
-  length: [1.2, 1.2, 1.2]
-  num_elems: [32, 32, 32]
+num_dims: 3
+input_options:
+    mesh_file_format: ensight
+    mesh_file_name: mesh_z_taylorAnvil.geo
+    zero_index_base: false
+    topology_optimization_restart: false
 
 output_options:
   timer_output_level: thorough
   output_file_format: vtk
-  graphics_step: 0.5
+  graphics_step: 5.0
   write_initial: true
   write_final: false
+  optimization_restart_file: true
   
 fea_module_parameters:
   - type: SGH
@@ -41,36 +44,20 @@ fea_module_parameters:
           type: z_plane
           plane_position: 0.0
         type: reflected
-
-        # Tag X plane
-      - surface: 
-          type: x_plane
-          plane_position: 1.2
-        type: reflected
-                
-        # Tag Y plane
-      - surface: 
-          type: y_plane
-          plane_position: 1.2
-        type: reflected
-                
-        # Tag Z plane
-      - surface: 
-          type: z_plane
-          plane_position: 1.2
-        type: reflected
         
 materials:
   - id: 0
     eos_model: ideal_gas
     strength_model: none
+    elastic_modulus: 10
+    poisson_ratio: 0.3
     maximum_limiter: true
-    q1: 1.0
-    q2: 1.33
-    q1ex: 1.0
-    q2ex: 0
+    q1: 2.0
+    q2: 4.0
+    q1ex: 2.0
+    q2ex: 4.0
     eos_global_vars:
-      - 1.666666666666667
+      - 2.666666666666667
       - 1.0E-14
       - 1.0
 
@@ -79,51 +66,31 @@ regions:
       type: global
     material_id: 0
     den: 1.0
-    sie: 1.0e-10
+    sie: 1.0e-9
         
     velocity: cartesian
     u: 0
     v: 0
-    w: 0
-    # energy source initial conditions
-  - volume: 
-      type: sphere
-      radius1: 0.0
-      radius2: 0.0375
-    material_id: 0
-    den: 1.0
-    ie: 0.25833839995946534
-        
-    velocity: cartesian
-    u: 0.0
-    v: 0.0
-    w: 0.0
-
+    w: -0.5
 
 optimization_options:
     optimization_process: topology_optimization
-    optimization_objective: minimize_kinetic_energy
+    optimization_objective: maximize_internal_energy
+    use_gradient_tally: true
     use_solve_checkpoints: true
-    num_solve_checkpoints : 10
+    num_solve_checkpoints: 100
     disable_forward_solve_output: true
     optimization_output_freq: 1
     rol_params:
         subproblem_algorithm: line_search
-        initial_constraint_penalty: 1.e-2
+        initial_constraint_penalty: 1.e3
         step_tolerance: 1.e-3
-        gradient_tolerance: 1.e-3
-        constraint_tolerance: 1.e-3
+        gradient_tolerance: 1.e-5
+        constraint_tolerance: 1.e-5
         iteration_limit: 20
-    density_epsilon: 0.1
+    density_epsilon: 0.4
     variable_outer_shell: true
     constraints:
       - type: mass
         relation: equality
-        value: 0.40
-    volume_bound_constraints:
-      - volume:
-          type: sphere
-          radius1: 0.0
-          radius2: 0.225
-        lower_density_bound: 1.0
-        upper_density_bound: 1.0
+        value: 0.60

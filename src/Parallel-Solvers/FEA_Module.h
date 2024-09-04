@@ -67,6 +67,7 @@ class Problem;
 } // namespace ROL
 
 class Simulation_Parameters;
+class FierroOptimizationObjective;
 
 enum class FEA_MODULE_TYPE;
 enum class BOUNDARY_TYPE;
@@ -238,7 +239,7 @@ public:
 
     // Local FEA data including ghosts
     size_t nall_nodes;
-    size_t rnum_elem;
+    size_t rnum_elem, num_corners;
 
     // Global FEA data
     long long int num_nodes, num_elem;
@@ -349,6 +350,9 @@ public:
     // patch ids in bdy set
     size_t num_bdy_sets;
     DynamicRaggedRightArrayKokkos<size_t> bdy_patches_in_set;
+
+    //optimization data
+    FierroOptimizationObjective* objective_function;
 };
 
 #endif // end HEADER_H
