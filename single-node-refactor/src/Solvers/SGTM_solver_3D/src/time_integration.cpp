@@ -52,7 +52,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::rk_init(DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& MaterialPoints_sie,
+    DCArrayKokkos<double>& node_temp,
+    DCArrayKokkos<double>& MaterialPoints_q_flux,
     DCArrayKokkos<double>& MaterialPoints_stress,
     const size_t num_dims,
     const size_t num_elems,
@@ -66,9 +67,9 @@ void SGTM3D::rk_init(DCArrayKokkos<double>& node_coords,
             for (size_t j = 0; j < 3; j++) {
                 MaterialPoints_stress(0, matpt_lid, i, j) = MaterialPoints_stress(1, matpt_lid, i, j);
             }
+            MaterialPoints_q_flux(0, matpt_lid, i) = MaterialPoints_q_flux(1, matpt_lid, i);
         }  // end for
 
-        MaterialPoints_sie(0, matpt_lid) = MaterialPoints_sie(1, matpt_lid);
     }); // end parallel for
 
     // save nodal quantities
@@ -77,6 +78,7 @@ void SGTM3D::rk_init(DCArrayKokkos<double>& node_coords,
             node_coords(0, node_gid, i) = node_coords(1, node_gid, i);
             node_vel(0, node_gid, i)    = node_vel(1, node_gid, i);
         }
+        node_temp(0, node_gid) = node_temp(1, node_gid);
     }); // end parallel for
     Kokkos::fence();
 

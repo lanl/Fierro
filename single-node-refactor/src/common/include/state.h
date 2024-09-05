@@ -213,7 +213,7 @@ struct corner_t
 {
     DCArrayKokkos<double> force; ///< Corner force
     DCArrayKokkos<double> mass; ///< Corner mass
-     DCArrayKokkos<double> q_flux;  ///< Corner heat flux
+    DCArrayKokkos<double> q_flux;  ///< Corner heat flux
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims)

@@ -38,7 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn update_energy
+/// \fn update_temperature
 ///
 /// \brief Evolves the specific internal energy
 ///

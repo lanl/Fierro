@@ -153,12 +153,6 @@ public:
         const DCArrayKokkos<double>& corner_mass) const;
 
     // **** Functions defined in boundary.cpp **** //
-    void boundary_velocity(
-        const Mesh_t& mesh,
-        const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_vel,
-        const double time_value) const;
-
     void boundary_temperature(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
@@ -272,7 +266,8 @@ public:
     void rk_init(
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& MaterialPoints_sie,
+        DCArrayKokkos<double>& node_temp,
+        DCArrayKokkos<double>& MaterialPoints_q_flux,
         DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,
         const size_t num_elems,

@@ -248,7 +248,7 @@ void SGTM3D::update_state(
                 }  // end for i,j
             } // end if on eroded
         }); // end parallel for
-    } // end if elem errosion
+    } // end if elem erosion
 
     return;
 } // end method to update state

@@ -205,7 +205,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             // save the values at t_n
             rk_init(State.node.coords,
                     State.node.vel,
-                    State.MaterialPoints(mat_id).sie,
+                    State.node.temp,
+                    State.MaterialPoints(mat_id).q_flux,
                     State.MaterialPoints(mat_id).stress,
                     mesh.num_dims,
                     mesh.num_elems,
@@ -216,6 +217,79 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
 
+
+            // ---- calculate the temperature gradient  ----
+            for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+
+                size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+
+                // get_temp_gradient();
+
+                // calc_elem_heat_flux();
+
+
+
+                // get_force(Materials,
+                //           mesh,
+                //           State.GaussPoints.vol,
+                //           State.GaussPoints.div,
+                //           State.MaterialPoints(mat_id).eroded,
+                //           State.corner.force,
+                //           State.node.coords,
+                //           State.node.vel,
+                //           State.MaterialPoints(mat_id).den,
+                //           State.MaterialPoints(mat_id).sie,
+                //           State.MaterialPoints(mat_id).pres,
+                //           State.MaterialPoints(mat_id).stress,
+                //           State.MaterialPoints(mat_id).sspd,
+                //           State.MaterialPoints(mat_id).statev,
+                //           State.MaterialCorners(mat_id).force,
+                //           State.MaterialPoints(mat_id).volfrac,
+                //           State.corners_in_mat_elem,
+                //           State.MaterialToMeshMaps(mat_id).elem,
+                //           num_mat_elems,
+                //           mat_id,
+                //           fuzz,
+                //           small,
+                //           dt,
+                //           rk_alpha);
+
+            } // end for mat_id
+
+            // ---- Update nodal temperature ---- //
+
+
+            // ---- apply temperature boundary conditions to the boundary patches---- //
+
+
+            // ---- Calculate cell volume for next time step ----
+            geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
+
+            // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
+            // for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+
+            //     size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+            //     update_state(Materials,
+            //                  mesh,
+            //                  State.node.coords,
+            //                  State.node.vel,
+            //                  State.MaterialPoints(mat_id).den,
+            //                  State.MaterialPoints(mat_id).pres,
+            //                  State.MaterialPoints(mat_id).stress,
+            //                  State.MaterialPoints(mat_id).sspd,
+            //                  State.MaterialPoints(mat_id).sie,
+            //                  State.GaussPoints.vol,
+            //                  State.MaterialPoints(mat_id).mass,
+            //                  State.MaterialPoints(mat_id).statev,
+            //                  State.MaterialPoints(mat_id).eroded,
+            //                  State.MaterialToMeshMaps(mat_id).elem,
+            //                  dt,
+            //                  rk_alpha,
+            //                  num_mat_elems,
+            //                  mat_id);
+            // } // end for mat_id
 
         } // end of RK loop
 
