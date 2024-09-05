@@ -81,6 +81,6 @@ double Solver::CPU_Time()
 /////////////////////////////////////////////////////////////////////////////
 void Solver::init_clock()
 {
-    double current_cpu = 0;
+    // double current_cpu = 0;
     initial_CPU_time = CPU_Time();
 }

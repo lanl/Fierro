@@ -7,13 +7,13 @@ import math
 import glob
 
 # Builds being tested
-builds = ["openmp"]
+builds = ["cuda"]
 
 # Name(s) of the solver being used
 solvers = ["Fierro"]
 
 # Add names of each test
-tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion","Sedov_Read_Ensight", "Sedov_rz_polar"]
+tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion","Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read"]
 
 # Extract data from txt file
 def extract_state_data(filename):
