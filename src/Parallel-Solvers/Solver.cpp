@@ -4002,7 +4002,7 @@ void Solver::set_rol_params(Teuchos::RCP<Teuchos::ParameterList> parlist)
     
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Print Intermediate Optimization History", false);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Step Type", simparam.optimization_options.rol_params.subproblem_algorithm_string);
-    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Iteration Limit", (int) 20);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Iteration Limit", simparam.optimization_options.rol_params.subproblem_iteration_limit);
     
     parlist->sublist("Step").sublist("Moreau-Yosida Penalty").set("Initial Penalty Parameter", (double) 1e-9);
     parlist->sublist("Step").sublist("Moreau-Yosida Penalty").set("Penalty Parameter Growth Factor", (double) 1.5);
