@@ -113,7 +113,7 @@ static std::map<std::string, model::EOSModels> eos_models_map
     { "no_eos", model::noEOS },
     { "gamma_law_gas", model::gammaLawGasEOS },
     { "void", model::voidEOS },
-    { "user_defined", model::userDefinedEOS },
+    { "user_defined_eos", model::userDefinedEOS },
 };
 
 static std::map<std::string, model::ErosionModels> erosion_model_map
@@ -184,7 +184,7 @@ struct MaterialFunctions_t
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& MaterialPoints_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
@@ -194,7 +194,7 @@ struct MaterialFunctions_t
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& MaterialPoints_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
@@ -207,7 +207,7 @@ struct MaterialFunctions_t
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& MaterialPoints_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
@@ -217,7 +217,8 @@ struct MaterialFunctions_t
         const DCArrayKokkos<double>&    node_vel,
         const double vol,
         const double dt,
-        const double rk_alpha) = NULL;
+        const double rk_alpha,
+        const RaggedRightArrayKokkos<double> &strength_global_vars) = NULL;
 
     // -- Erosion --
 

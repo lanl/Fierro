@@ -433,7 +433,8 @@ void SGH3D::get_force(const Material_t& Materials,
                                          node_vel,
                                          GaussPoints_vol(elem_gid),
                                          dt,
-                                         rk_alpha);
+                                         rk_alpha,
+                                         Materials.strength_global_vars);
         } // end logical on increment_based strength model
     }); // end parallel for loop over elements
 

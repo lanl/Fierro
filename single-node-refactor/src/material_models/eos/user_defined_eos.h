@@ -60,13 +60,30 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 namespace UserDefinedEOSModel
 {
+    // host side function
+    static void initialize(const DCArrayKokkos<double>& MaterialPoints_pres,
+                           const DCArrayKokkos<double>& MaterialPoints_stress,
+                           const size_t mat_pt_lid,
+                           const size_t mat_id,
+                           const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                           const DCArrayKokkos<double>& MaterialPoints_sspd,
+                           const double den,
+                           const double sie,
+                           const RaggedRightArrayKokkos<double> &eos_global_vars,
+                           const size_t num_vars)
+    {
+
+
+
+        return;
+    } // end func
 
     KOKKOS_FUNCTION
     static void calc_pressure(const DCArrayKokkos<double>& MaterialPoints_pres,
                               const DCArrayKokkos<double>& MaterialPoints_stress,
                               const size_t mat_pt_lid,
                               const size_t mat_id,
-                              const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                              const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                               const DCArrayKokkos<double>& MaterialPoints_sspd,
                               const double den,
                               const double sie,
@@ -88,7 +105,7 @@ namespace UserDefinedEOSModel
                                  const DCArrayKokkos<double>& MaterialPoints_stress,
                                  const size_t mat_pt_lid,
                                  const size_t mat_id,
-                                 const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                                 const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                                  const DCArrayKokkos<double>& MaterialPoints_sspd,
                                  const double den,
                                  const double sie,
@@ -131,12 +148,30 @@ namespace UserDefinedEOSModel
 // ------------------------------------------------------------------------------
 namespace NotionalEOSModel {
 
+    // host side function
+    static void initialize(const DCArrayKokkos<double>& MaterialPoints_pres,
+                           const DCArrayKokkos<double>& MaterialPoints_stress,
+                           const size_t mat_pt_lid,
+                           const size_t mat_id,
+                           const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                           const DCArrayKokkos<double>& MaterialPoints_sspd,
+                           const double den,
+                           const double sie,
+                           const RaggedRightArrayKokkos<double> &eos_global_vars,
+                           const size_t num_vars)
+    {
+
+
+
+        return;
+    } // end func
+
     KOKKOS_FUNCTION
     static void calc_pressure(const DCArrayKokkos<double>& MaterialPoints_pres,
                               const DCArrayKokkos<double>& MaterialPoints_stress,
                               const size_t mat_pt_lid,
                               const size_t mat_id,
-                              const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                              const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                               const DCArrayKokkos<double>& MaterialPoints_sspd,
                               const double den,
                               const double sie,
@@ -153,7 +188,7 @@ namespace NotionalEOSModel {
                                  const DCArrayKokkos<double>& MaterialPoints_stress,
                                  const size_t mat_pt_lid,
                                  const size_t mat_id,
-                                 const DCArrayKokkos<double>& MaterialPoints_state_vars,
+                                 const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                                  const DCArrayKokkos<double>& MaterialPoints_sspd,
                                  const double den,
                                  const double sie,
@@ -167,6 +202,9 @@ namespace NotionalEOSModel {
     } // end func
 
 } // end namespace
+
+
+
 
 
 #endif // end Header Guard

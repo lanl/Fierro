@@ -414,11 +414,21 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                 // Wilkins used elem_area*0.25 for the corner area, we will use the corner
                 // areas calculated using Barlow's symmetry and energy preserving area partitioning
                 if (node_radius > tiny) {
+                    
                     // sigma_RZ / R_p
-                    corner_force(corner_gid, 0) += tau(1, 0) * corner_areas(corner_lid) / node_radius;
+                    double force_term_1 = tau(1, 0) * corner_areas(corner_lid) / node_radius; 
+                    //force_term_1 = tau(1, 0) * 0.25*elem_area / node_radius; // Wilkins
+                    
+                    corner_force(corner_gid, 0) += force_term_1;
+                    MaterialCorners_force(mat_corner_lid, 0) += force_term_1;
 
                     // (sigma_RR - sigma_theta) / R_p
-                    corner_force(corner_gid, 1) += (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) / node_radius;
+                    double force_term_2 = (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) / node_radius;
+                    //force_term_2 = (tau(1, 1) - tau(2, 2)) * 0.25*elem_area / node_radius; // Wilkins
+
+                    corner_force(corner_gid, 1) += force_term_2;
+                    MaterialCorners_force(mat_corner_lid, 1) += force_term_2;
+
                 } // end if radius >0
 
             } // end if eroded
@@ -449,7 +459,8 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                                          node_vel,
                                          GaussPoints_vol(elem_gid),
                                          dt,
-                                         rk_alpha);
+                                         rk_alpha,
+                                         Materials.strength_global_vars);
         } // end logical on increment_based strength model
     }); // end parallel for loop over elements
 

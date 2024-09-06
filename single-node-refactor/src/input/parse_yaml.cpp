@@ -1707,6 +1707,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             break;
 
                         case model::userDefinedStrength:
+                            
                             RUN({
                                 Materials.MaterialFunctions(mat_id).calc_stress = &UserDefinedStrengthModel::calc_stress;
                             });
