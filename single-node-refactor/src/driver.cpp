@@ -90,10 +90,11 @@ void Driver::initialize()
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
     mesh.build_boundry_node_sets(mesh);
 
-    // Calculate element volume
+    // Calculate element volume (NOTE: Consider moving this to solver initialization/setup if needed)
     geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
-    
+
+    // Setup Solvers
     for (int solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
@@ -125,10 +126,10 @@ void Driver::initialize()
             SGTM3D* sgtm_solver_3d = new SGTM3D(); 
 
             sgtm_solver_3d->initialize(SimulationParamaters, 
-                                   Materials, 
-                                   mesh, 
-                                   BoundaryConditions,
-                                   State);
+                                       Materials, 
+                                       mesh, 
+                                       BoundaryConditions,
+                                       State);
 
             solvers.push_back(sgtm_solver_3d);
         } // end if SGTM solver

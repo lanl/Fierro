@@ -105,6 +105,8 @@ struct RegionFill_t
 
     double speed = 0.0; ///< velocity magnitude for radial velocity initialization
 
+    double temperature = 0.0; ///< temperature magnitude for radial velocity initialization
+
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density

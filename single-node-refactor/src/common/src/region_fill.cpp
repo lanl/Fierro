@@ -733,6 +733,140 @@ void paint_node_vel(const CArrayKokkos<RegionFill_t>& region_fills,
 }  // end function paint_node_vel
 
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn paint_node_temp
+///
+/// \brief a function to paint a temperature on the nodes of the mesh
+///
+/// \param mesh is the simulation mesh
+/// \param node_temp is the nodal temperature array
+/// \param node_coords are the coordinates of the nodes
+/// \param elem_gid is the element global mesh index
+/// \param f_id is fill instruction
+/// \param rk_num_bins is time integration storage level
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
+                    const DCArrayKokkos<double>& node_temp,
+                    const DCArrayKokkos<double>& node_coords,
+                    const double node_gid,
+                    const double num_dims,
+                    const size_t f_id,
+                    const size_t rk_num_bins)
+{
+
+    // save velocity at all rk_levels
+    for(size_t rk_level = 0; rk_level < rk_num_bins; rk_level++){
+
+        // --- temperature ---
+        switch (region_fills(f_id).velocity) {
+            case init_conds::cartesian:
+                {
+
+                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature;
+                    break;
+                }
+            // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+            case init_conds::radial:
+                {
+                    // Setting up radial
+                    double dir[2];
+                    dir[0] = 0.0;
+                    dir[1] = 0.0;
+                    double radius_val = 0.0;
+
+                    for (int dim = 0; dim < 2; dim++) {
+                        dir[dim]    = node_coords(rk_level, node_gid, dim);
+                        radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
+                    } // end for
+                    radius_val = sqrt(radius_val);
+
+                    for (int dim = 0; dim < 2; dim++) {
+                        if (radius_val > 1.0e-14) {
+                            dir[dim] /= (radius_val);
+                        }
+                        else{
+                            dir[dim] = 0.0;
+                        }
+                    } // end for
+
+                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature * dir[0];
+                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature * dir[1];
+
+                    break;
+                }
+            case init_conds::spherical:
+                {
+                    // Setting up spherical
+                    double dir[3];
+                    dir[0] = 0.0;
+                    dir[1] = 0.0;
+                    dir[2] = 0.0;
+                    double radius_val = 0.0;
+
+                    for (int dim = 0; dim < 3; dim++) {
+                        dir[dim]    = node_coords(rk_level, node_gid, dim);
+                        radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
+                    } // end for
+                    radius_val = sqrt(radius_val);
+
+                    for (int dim = 0; dim < 3; dim++) {
+                        if (radius_val > 1.0e-14) {
+                            dir[dim] /= (radius_val);
+                        }
+                        else{
+                            dir[dim] = 0.0;
+                        }
+                    } // end for
+
+                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature * dir[0];
+                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature * dir[1];
+                    if (num_dims == 3) {
+                        node_temp(rk_level, node_gid) = region_fills(f_id).temperature * dir[2];
+                    }
+
+                    break;
+                }
+            case init_conds::radial_linear:
+                {
+                    printf("**** Radial_linear initial conditions not yet supported ****\n");
+                    break;
+                }
+            case init_conds::spherical_linear:
+                {
+                    printf("**** spherical_linear initial conditions not yet supported ****\n");
+                    break;
+                }
+            case init_conds::tg_vortex:
+                {
+                    printf("**** TG Vortex not supported for temperature initial conditions ****\n");
+
+                    break;
+                }
+
+            default:
+                {
+                    // no velocity
+                    node_temp(rk_level, node_gid) = 0.0;
+                    node_temp(rk_level, node_gid) = 0.0;
+                    if (num_dims == 3) {
+                        node_temp(rk_level, node_gid) = 0.0;
+                    }
+
+                    break;
+                }
+        } // end of switch
+
+    } // end loop over rk_num_bins
+
+
+    // done setting the velocity
+}  // end function paint_node_temp
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///

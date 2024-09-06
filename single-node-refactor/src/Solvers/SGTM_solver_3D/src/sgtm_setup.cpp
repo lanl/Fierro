@@ -94,10 +94,7 @@ void SGTM3D::init_corner_node_masses_zero(const Mesh_t& mesh,
 void SGTM3D::fill_regions_sgtm(
     const Material_t& Materials,
     const Mesh_t& mesh,
-    const DCArrayKokkos <double>& node_coords,
-    DCArrayKokkos <double>& node_vel,
-    DCArrayKokkos <double>& GaussPoint_den,
-    DCArrayKokkos <double>& GaussPoint_sie,
+    State_t& State,
     DCArrayKokkos <size_t>& elem_mat_id,
     DCArrayKokkos <size_t>& voxel_elem_mat_id,
     const CArrayKokkos <RegionFill_t>& region_fills,
@@ -114,7 +111,6 @@ void SGTM3D::fill_regions_sgtm(
     // ---------------------------------------------
     // copy to host, enum to read a voxel file
     // ---------------------------------------------
-
     DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
 
     FOR_ALL(f_id, 0, num_fills, {
@@ -167,10 +163,10 @@ void SGTM3D::fill_regions_sgtm(
 
             // get the coordinates of the element center (using rk_level=1 or node coords)
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_coords(0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_coords(1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                elem_coords(0) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_coords(1) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3) {
-                    elem_coords(2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_coords(2) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
                 }
                 else{
                     elem_coords(2) = 0.0;
@@ -201,9 +197,9 @@ void SGTM3D::fill_regions_sgtm(
                 // default sgh paint
                 paint_gauss_den_sie(Materials,
                                     mesh,
-                                    node_coords,
-                                    GaussPoint_den,
-                                    GaussPoint_sie,
+                                    State.node.coords,
+                                    State.MaterialPoints.den,
+                                    State.MaterialPoints.sie,
                                     elem_mat_id,
                                     region_fills,
                                     elem_coords,
@@ -220,9 +216,9 @@ void SGTM3D::fill_regions_sgtm(
                     size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
                     // default sgh paint
-                    paint_node_vel(region_fills,
-                                node_vel,
-                                node_coords,
+                    paint_node_temp(region_fills,
+                                State.node.temp,
+                                State.node.coords,
                                 node_gid,
                                 mesh.num_dims,
                                 f_id,
