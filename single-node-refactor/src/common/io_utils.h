@@ -724,7 +724,8 @@ public:
         // instad of: size global, index holds local, could it be
         // size local, index holds global, pieced together with MPIAllGather
         // first index is id, second is rank ownership
-        MPIArrayKokkos <size_t> global_to_local_id = MPIArrayKokkos <size_t> (num_nodes_global, 2);
+        MPIArrayKokkos <size_t> global_to_local_id_nodes = MPIArrayKokkos <size_t> (num_nodes_global, 2);
+        MPIArrayKokkos <size_t> global_to_local_id_elems = MPIArrayKokkos <size_t> (num_elems_global, 2);
         
         // could this be parallel?
         /* not possible now because it's size_t so no -1
@@ -812,6 +813,10 @@ public:
         jend_points = jstart_points +  num_points_j;
         /*********************************/
 
+        // update origins
+        origin[1] = jstart_points;
+        origin[2] = kstart_points;
+
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
         node.initialize(rk_num_bins, num_nodes, num_dim);
@@ -828,8 +833,8 @@ public:
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
                     int node_gid_global = get_id(i, j_glb, k_glb, num_points_i_global, num_points_j_global);
 
-                    global_to_local_id.host(node_gid_global, 0) = node_gid; 
-                    global_to_local_id.host(node_gid_global, 1) = rank; 
+                    global_to_local_id_nodes.host(node_gid_global, 0) = node_gid; 
+                    global_to_local_id_nodes.host(node_gid_global, 1) = rank; 
 
                     // store the point coordinates
                     node.coords.host(0, node_gid, 0) = origin[0] + (double)i * dx;
@@ -838,7 +843,7 @@ public:
                 } // end for i
             } // end for j
         } // end for k
-        global_to_local_id.update_device();
+        global_to_local_id_nodes.update_device();
 
         for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
             for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
@@ -867,6 +872,9 @@ public:
                     // global id for the elem
                     int elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
                     int elem_gid_global = get_id(i, j_glb, k_glb, num_elems_i_global, num_elems_j_global);
+
+                    global_to_local_id_elems.host(elem_gid_global, 0) = elem_gid; 
+                    global_to_local_id_elems.host(elem_gid_global, 1) = rank; 
 
                     // store the point IDs for this elem where the range is
                     // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
