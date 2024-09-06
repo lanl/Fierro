@@ -106,6 +106,7 @@ struct ROL_Params: Yaml::DerivedFields {
   double gradient_tolerance = 1e-5;
   double constraint_tolerance = 1e-5;
   int iteration_limit = 100;
+  int subproblem_iteration_limit = 20;
 
   std::string subproblem_algorithm_string;
 
@@ -131,7 +132,7 @@ struct ROL_Params: Yaml::DerivedFields {
 
 IMPL_YAML_SERIALIZABLE_FOR(ROL_Params, 
   subproblem_algorithm, initial_constraint_penalty, step_tolerance, constraint_tolerance,
-  gradient_tolerance, iteration_limit
+  gradient_tolerance, iteration_limit, subproblem_iteration_limit
 )
 
 struct Optimization_Options: Yaml::DerivedFields {
