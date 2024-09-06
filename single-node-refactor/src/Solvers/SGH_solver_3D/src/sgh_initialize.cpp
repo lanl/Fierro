@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -31,59 +31,21 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
-#ifndef FIERRO_IC_H
-#define FIERRO_IC_H
 
-#include <map>
+#include "sgh_solver_3D.h"
+#include "state.h"
+#include "mesh.h"
+#include "simulation_parameters.h"
 
-namespace init_conds
+void SGH3D::initialize(SimulationParameters_t& SimulationParamaters, 
+                	   Material_t& Materials, 
+                	   Mesh_t& mesh, 
+                	   BoundaryCondition_t& Boundary,
+                	   State_t& State) const
 {
-// initial velocity conditions distribution
-// TODO: remove references to velocity, and make it general distributions
-enum init_velocity_conds
-{
-    no_ic_vel = 0,
+	int num_nodes = mesh.num_nodes;
+    int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+    int num_dim = 3;
 
-    // uniform
-    cartesian = 1,       // cart velocity
-    radial = 2,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
-    spherical = 3,       // spherical
-
-    // linear variation
-    radial_linear = 4,         // linear variation from 0,0,0
-    spherical_linear = 5,      // linear variation from 0,0,0
-
-    // vortical initial conditions
-    tg_vortex = 6
-};
-
-// // initial temperature conditions distribution
-// enum init_temperature_distribution
-// {
-//     no_ic_temp = 0,
-
-//     // uniform
-//     cartesian = 1,       // cart temperature
-//     radial = 2,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
-//     spherical = 3,       // spherical
-
-//     // linear variation
-//     radial_linear = 4,         // linear variation from 0,0,0
-//     spherical_linear = 5,      // linear variation from 0,0,0
-
-// };
-
-
-} // end of initial conditions namespace
-
-static std::map<std::string, init_conds::init_velocity_conds> velocity_type_map
-{
-    { "cartesian", init_conds::cartesian },
-    { "radial", init_conds::radial },
-    { "spherical", init_conds::spherical },
-    { "radial_linear", init_conds::radial_linear },
-    { "spherical_linear", init_conds::spherical_linear },
-    { "tg_vortex", init_conds::tg_vortex }
-};
-
-#endif // end Header Guard
+    State.node.initialize(rk_num_bins, num_nodes, num_dim, SGH3D_State::required_node_state);
+}

@@ -36,18 +36,34 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SGH3D_SOLVER_H
 
 #include "solver.h"
+#include "state.h"
 
 // Forward declare structs
 struct SimulationParameters_t;
 struct Material_t;
 struct Mesh_t;
 struct BoundaryCondition_t;
-struct State_t;
+// struct State_t;
 struct RegionFill_t;
 struct RegionFill_host_t;
-struct corners_in_mat_t;
+// struct corners_in_mat_t;
 
 using namespace mtr; // matar namespace
+
+
+namespace SGH3D_State
+{
+    // Node state to be initialized for the SGH solver
+    static const std::vector<node_state> required_node_state = 
+    { 
+        node_state::coords,
+        node_state::velocity,
+        node_state::mass,
+        node_state::temp
+    };
+
+    // Element/material point and other required state goes here
+}
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -75,10 +91,7 @@ public:
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
-                    State_t& State) const override
-    {
-        // stuff goes here
-    }
+                    State_t& State) const override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///

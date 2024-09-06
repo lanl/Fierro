@@ -134,8 +134,7 @@ public:
     void fill_regions_sgtm(
         const Material_t& Materials,
         const Mesh_t&     mesh,
-        const DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
+        State_t& State,
         DCArrayKokkos<double>& GaussPoint_den,
         DCArrayKokkos<double>& GaussPoint_sie,
         DCArrayKokkos<size_t>& elem_mat_id,

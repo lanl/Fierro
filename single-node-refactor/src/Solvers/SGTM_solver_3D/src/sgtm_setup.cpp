@@ -95,6 +95,8 @@ void SGTM3D::fill_regions_sgtm(
     const Material_t& Materials,
     const Mesh_t& mesh,
     State_t& State,
+    DCArrayKokkos <double>& GaussPoint_den,
+    DCArrayKokkos <double>& GaussPoint_sie,
     DCArrayKokkos <size_t>& elem_mat_id,
     DCArrayKokkos <size_t>& voxel_elem_mat_id,
     const CArrayKokkos <RegionFill_t>& region_fills,
@@ -198,8 +200,8 @@ void SGTM3D::fill_regions_sgtm(
                 paint_gauss_den_sie(Materials,
                                     mesh,
                                     State.node.coords,
-                                    State.MaterialPoints.den,
-                                    State.MaterialPoints.sie,
+                                    GaussPoint_den,
+                                    GaussPoint_sie,
                                     elem_mat_id,
                                     region_fills,
                                     elem_coords,
@@ -235,7 +237,8 @@ void SGTM3D::fill_regions_sgtm(
     elem_mat_id.update_host();
     GaussPoint_den.update_host();
     GaussPoint_sie.update_host();
-    node_vel.update_host();
+    State.node.vel.update_host();
+    State.node.temp.update_host();
 
     Kokkos::fence();
 } // end SGH fill regions
@@ -275,8 +278,7 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
     // ---------------------------------------------
     fill_regions_sgtm(Materials,
                      mesh,
-                     State.node.coords,
-                     State.node.vel,
+                     State,
                      GaussPoint_den,
                      GaussPoint_sie,
                      elem_mat_id,

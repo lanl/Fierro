@@ -45,6 +45,15 @@ using namespace mtr;
 /// \brief Stores state information associated with a node
 ///
 /////////////////////////////////////////////////////////////////////////////
+
+// Possible node states
+enum node_state
+{
+    coords,
+    velocity,
+    mass,
+    temp
+};
 struct node_t
 {
     DCArrayKokkos<double> coords; ///< Nodal coordinates
@@ -52,13 +61,27 @@ struct node_t
     DCArrayKokkos<double> mass; ///< Nodal mass
     DCArrayKokkos<double> temp; ///< Nodal temperature
 
-    // initialization method (num_rk_storage_bins, num_nodes, num_dims)
-    void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
+    // initialization method (num_rk_storage_bins, num_nodes, num_dims, state to allocate)
+    void initialize(size_t num_rk, size_t num_nodes, size_t num_dims, std::vector<node_state> node_state)
     {
-        this->coords = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_coordinates");
-        this->vel    = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
-        this->mass   = DCArrayKokkos<double>(num_nodes, "node_mass");
-        this->temp   = DCArrayKokkos<double>(num_nodes, "node_temp");
+        for (auto field : node_state){
+            switch(field){
+                case node_state::coords:
+                    if (coords.size() == 0) this->coords = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_coordinates");
+                    break;
+                case node_state::velocity:
+                    if (vel.size() == 0) this->vel = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
+                    break;
+                case node_state::mass:
+                    if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
+                    break;
+                case node_state::temp:
+                    if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_nodes, "node_temp");
+                    break;
+                default:
+                    std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
+            }
+        }
     }; // end method
 }; // end node_t
 

@@ -250,9 +250,12 @@ public:
         fscanf(in, "%lu", &num_nodes);
         printf("Number if nodes read in %lu\n", num_nodes);
 
-        // initialize node variables
+        
         mesh.initialize_nodes(num_nodes);
-        node.initialize(rk_num_bins, num_nodes, num_dims);
+
+        // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
 
         // read the initial mesh coordinates
         // x-coords
@@ -473,7 +476,11 @@ public:
 
         // initialize node variables
         mesh.initialize_nodes(num_nodes);
-        State.node.initialize(rk_num_bins, num_nodes, num_dims);
+
+        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        std::vector<node_state> required_node_state = { node_state::coords };
+
+        State.node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
 
 
         // Copy nodes to mesh
@@ -655,7 +662,10 @@ public:
 
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
-        node.initialize(rk_num_bins, num_nodes, num_dim);
+
+        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_nodes, num_dim, required_node_state);
 
         // --- Build nodes ---
 
@@ -788,7 +798,10 @@ public:
 
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
-        node.initialize(rk_num_bins, num_nodes, num_dim);
+
+        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_nodes, num_dim, required_node_state);
 
         // populate the point data structures
         for (int j = 0; j < num_points_j; j++) {
@@ -921,9 +934,12 @@ public:
 
         int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
-        // intialize node variables
+        // intialize mesh node variables
         mesh.initialize_nodes(num_nodes);
-        node.initialize(rk_num_bins, num_nodes, num_dim);
+
+         // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_nodes, num_dim, required_node_state);
 
         // --- Build nodes ---
 
@@ -1089,7 +1105,10 @@ public:
         
         // initialize node variables
         mesh.initialize_nodes(num_points);
-        node.initialize(rk_num_bins, num_points, num_dim);
+
+        // 
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_points, num_dim, required_node_state);
         // populate the point data structures
         for (int k = 0; k < num_points_k; k++){
             for (int j = 0; j < num_points_j; j++){
@@ -1190,8 +1209,7 @@ public:
 /// \brief Class for writing out a mesh with its associated state from Fierro
 ///
 /// This class contains the requisite functions required to write out a mesh
-/// with its associated state data from solvers in Fierro. Currently only ensight
-/// outputs are supported
+/// with its associated state data from solvers in Fierro.
 ///
 /////////////////////////////////////////////////////////////////////////////
 class MeshWriter
@@ -1720,11 +1738,6 @@ public:
         double time_value,
         CArray<double> graphics_times)
     {
-        // Not yet supported
-        // throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
-
-        const int num_scalar_vars = 10;
-        const int num_vec_vars    = 2;
 
         size_t num_mats = State.MaterialPoints.size();
 
@@ -1748,15 +1761,33 @@ public:
         State.node.coords.update_host();
         State.node.vel.update_host();
         State.node.mass.update_host();
+        State.node.temp.update_host();
 
         Kokkos::fence();
 
-        const char scalar_var_names[num_scalar_vars][15] = {
+
+        const int num_cell_scalar_vars = 10;
+        const int num_cell_vec_vars    = 0;
+
+        const int num_point_scalar_vars = 1;
+        const int num_point_vec_vars = 2;
+
+
+        // Scalar values associated with a cell
+        const char cell_scalar_var_names[num_cell_scalar_vars][15] = {
             "den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch", "eroded"
         };
+        
+        const char cell_vec_var_names[num_cell_vec_vars][15] = {
+            
+        };
 
-        const char vec_var_names[num_vec_vars][15] = {
-            "pos", "vel"
+        const char point_scalar_var_names[num_point_scalar_vars][15] = {
+            "temp"
+        };
+
+        const char point_vec_var_names[num_point_vec_vars][15] = {
+            "pos", "vel" 
         };
 
         // short hand
@@ -1765,7 +1796,7 @@ public:
         const size_t num_dims  = mesh.num_dims;
 
         // save the cell state to an array for exporting to graphics files
-        auto elem_fields = CArray<double>(num_elems, num_scalar_vars);
+        auto elem_fields = CArray<double>(num_elems, num_cell_scalar_vars);
         int  elem_switch = 1;
 
         DCArrayKokkos<double> speed(num_elems);
@@ -1834,7 +1865,8 @@ public:
         } // end for elem_gid
 
         // save the vertex vector fields to an array for exporting to graphics files
-        CArray<double> vec_fields(num_nodes, num_vec_vars, 3);
+        CArray<double> vec_fields(num_nodes, num_point_vec_vars, 3);
+        CArray<double> point_scalar_fields(num_nodes, num_point_scalar_vars);
 
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             // position, var 0
@@ -1856,6 +1888,8 @@ public:
             else{
                 vec_fields(node_gid, 1, 2) = State.node.vel.host(1, node_gid, 2);
             }
+
+            point_scalar_fields(node_gid, 0) = State.node.temp.host(1,node_gid);
         } // end for loop over vertices
 
         FILE* out[20];   // the output files that are written to
@@ -1947,13 +1981,24 @@ public:
         fprintf(out[0], "POINT_DATA %zu \n", mesh.num_nodes);
 
         // vtk vector vars = (position, velocity)
-        for (int var = 0; var < num_vec_vars; var++) {
-            fprintf(out[0], "VECTORS %s float \n", vec_var_names[var]);
+        for (int var = 0; var < num_point_vec_vars; var++) {
+            fprintf(out[0], "VECTORS %s float \n", point_vec_var_names[var]);
             for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
                 fprintf(out[0], "%f %f %f\n",
                         vec_fields(node_gid, var, 0),
                         vec_fields(node_gid, var, 1),
                         vec_fields(node_gid, var, 2));
+            } // end for nodes
+        } // end for vec_vars
+
+
+        // vtk scalar vars = (temp)
+        for (int var = 0; var < num_point_scalar_vars; var++) {
+            fprintf(out[0], "SCALARS %s float 1\n", point_scalar_var_names[var]);
+            fprintf(out[0], "LOOKUP_TABLE default\n");
+            for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
+                fprintf(out[0], "%f\n",
+                        point_scalar_fields(node_gid, 0));
             } // end for nodes
         } // end for vec_vars
 
@@ -1965,13 +2010,13 @@ public:
         fprintf(out[0], "\n");
         fprintf(out[0], "CELL_DATA %zu \n", mesh.num_elems);
 
-        for (int var = 0; var < num_scalar_vars; var++) {
-            fprintf(out[0], "SCALARS %s float 1\n", scalar_var_names[var]); // the 1 is number of scalar components [1:4]
+        for (int var = 0; var < num_cell_scalar_vars; var++) {
+            fprintf(out[0], "SCALARS %s float 1\n", cell_scalar_var_names[var]); // the 1 is number of scalar components [1:4]
             fprintf(out[0], "LOOKUP_TABLE default\n");
             for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
                 fprintf(out[0], "%f\n", elem_fields(elem_gid, var));
             } // end for elem
-        } // end for scalar_vars
+        } // end for cell scalar_vars
 
         fclose(out[0]);
 

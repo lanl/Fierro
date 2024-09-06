@@ -761,7 +761,7 @@ void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
     for(size_t rk_level = 0; rk_level < rk_num_bins; rk_level++){
 
         // --- temperature ---
-        switch (region_fills(f_id).velocity) {
+        switch (region_fills(f_id).temp_distribution) {
             case init_conds::cartesian:
                 {
 
@@ -821,12 +821,7 @@ void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
                         }
                     } // end for
 
-                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature * dir[0];
-                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature * dir[1];
-                    if (num_dims == 3) {
-                        node_temp(rk_level, node_gid) = region_fills(f_id).temperature * dir[2];
-                    }
-
+                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature * radius_val;
                     break;
                 }
             case init_conds::radial_linear:
