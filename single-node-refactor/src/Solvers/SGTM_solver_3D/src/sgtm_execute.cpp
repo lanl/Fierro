@@ -144,7 +144,16 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // Write initial state at t=0
     printf("Writing outputs to file at %f \n", graphics_time);
-    mesh_writer.write_mesh(mesh, State, SimulationParamaters, time_value, graphics_times);
+    mesh_writer.write_mesh(
+        mesh, 
+        State,
+        SimulationParamaters, 
+        time_value, 
+        graphics_times,
+        SGTM3D_State::required_node_state,
+        SGTM3D_State::required_gauss_pt_state,
+        SGTM3D_State::required_material_pt_state);
+    
     graphics_time = time_value + graphics_dt_ival;
 
     // loop over the max number of time integration cycles
@@ -317,7 +326,10 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                                    State,
                                    SimulationParamaters,
                                    time_value,
-                                   graphics_times);
+                                   graphics_times,
+                                   SGTM3D_State::required_node_state,
+                                   SGTM3D_State::required_gauss_pt_state,
+                                   SGTM3D_State::required_material_pt_state);
 
             graphics_time = time_value + graphics_dt_ival;
 

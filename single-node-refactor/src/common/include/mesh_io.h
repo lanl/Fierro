@@ -689,9 +689,8 @@ public:
         }
         node.coords.update_device();
 
-        // intialize elem variables
+        // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        // GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -778,7 +777,7 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
+
         for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 2D parameters ---
@@ -831,9 +830,8 @@ public:
         }
         node.coords.update_device();
 
-        // intialize elem variables
+        // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        // GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -934,7 +932,7 @@ public:
 
         int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
-        // intialize mesh node variables
+        // initialize mesh node variables
         mesh.initialize_nodes(num_nodes);
 
          // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
@@ -967,9 +965,8 @@ public:
         }
         node.coords.update_device();
 
-        // intialize elem variables
+        // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        // GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // --- Build elems  ---
 
@@ -1009,7 +1006,7 @@ public:
         // update device side
         mesh.nodes_in_elem.update_device();
 
-        // intialize corner variables
+        // initialize corner variables
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
         // corner.initialize(num_corners, num_dim);
@@ -1077,7 +1074,6 @@ public:
         // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
 
         std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
         for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 3D parameters ---
@@ -1138,9 +1134,8 @@ public:
         node.coords.update_device();
 
 
-        // intialize elem variables
+        // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        // GaussPoints.initialize(rk_num_bins, num_elems, 3); // WARNING: Bug here, needs Pn order in initializer
 
         // --- Build elems  ---
         
@@ -1240,28 +1235,40 @@ public:
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double time_value,
-        CArray<double> graphics_times)
+        CArray<double> graphics_times,
+        std::vector<node_state> node_states,
+        std::vector<gauss_pt_state> gauss_pt_states,
+        std::vector<material_pt_state> material_pt_states)
     {
         if (SimulationParamaters.output_options.format == output_options::vtk) {
             write_vtk(mesh,
                       State,
                       SimulationParamaters,
                       time_value,
-                      graphics_times);
+                      graphics_times,
+                      node_states,
+                      gauss_pt_states,
+                      material_pt_states);
         }
         else if (SimulationParamaters.output_options.format == output_options::ensight) {
             write_ensight(mesh,
                           State,
                           SimulationParamaters,
                           time_value,
-                          graphics_times);
+                          graphics_times,
+                          node_states,
+                          gauss_pt_states,
+                          material_pt_states);
         }
         else if (SimulationParamaters.output_options.format == output_options::state) {
             write_material_point_state(mesh,
                                       State,
                                       SimulationParamaters,
                                       time_value,
-                                      graphics_times);
+                                      graphics_times,
+                                      node_states,
+                                      gauss_pt_states,
+                                      material_pt_states);
         }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
@@ -1292,7 +1299,10 @@ public:
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double time_value,
-        CArray<double> graphics_times)
+        CArray<double> graphics_times,
+        std::vector<node_state> node_states,
+        std::vector<gauss_pt_state> gauss_pt_states,
+        std::vector<material_pt_state> material_pt_states)
     {
         size_t num_mats = State.MaterialPoints.size();
 
@@ -1670,7 +1680,7 @@ public:
     }
 
     /**\brief Given (i,j,k) coordinates within the Lagrange hex, return an offset into the local connectivity (PointIds) array.
-    *
+    *"den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch", "eroded"
     * The \a order parameter must point to an array of 3 integers specifying the order
     * along each axis of the hexahedron.
     */
@@ -1736,7 +1746,10 @@ public:
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double time_value,
-        CArray<double> graphics_times)
+        CArray<double> graphics_times,
+        std::vector<node_state> node_states,
+        std::vector<gauss_pt_state> gauss_pt_states,
+        std::vector<material_pt_state> material_pt_states)
     {
 
         size_t num_mats = State.MaterialPoints.size();
@@ -2062,10 +2075,13 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_material_point_state(Mesh_t& mesh,
-    State_t& State,
-    SimulationParameters_t& SimulationParamaters,
-    double time_value,
-    CArray<double> graphics_times)
+        State_t& State,
+        SimulationParameters_t& SimulationParamaters,
+        double time_value,
+        CArray<double> graphics_times,
+        std::vector<node_state> node_states,
+        std::vector<gauss_pt_state> gauss_pt_states,
+        std::vector<material_pt_state> material_pt_states)
     {
         // WARNING WARNING WARNING:
         // This currently assumes the gauss and material point IDs are the same as the element ID
