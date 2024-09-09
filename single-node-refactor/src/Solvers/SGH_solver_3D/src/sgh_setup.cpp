@@ -39,6 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.h"
 #include "state.h"
 #include "simulation_parameters.h"
+#include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///

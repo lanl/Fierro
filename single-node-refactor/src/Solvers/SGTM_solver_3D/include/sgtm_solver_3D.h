@@ -36,16 +36,17 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SGTM3D_SOLVER_H
 
 #include "solver.h"
+#include "state.h"
 
 // Forward declare structs
 struct SimulationParameters_t;
 struct Material_t;
 struct Mesh_t;
 struct BoundaryCondition_t;
-struct State_t;
+// struct State_t;
 struct RegionFill_t;
 struct RegionFill_host_t;
-struct corners_in_mat_t;
+// struct corners_in_mat_t;
 
 using namespace mtr; // matar namespace
 
@@ -121,10 +122,7 @@ public:
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
-                    State_t& State) const override
-    {
-        // stuff goes here
-    }
+                    State_t& State) const override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///

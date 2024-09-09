@@ -42,7 +42,7 @@ using namespace mtr;
 
 
 // Possible node states, used to initialize node_t
-enum node_state
+enum class node_state
 {
     coords,
     velocity,
@@ -69,16 +69,16 @@ struct node_t
     {
         for (auto field : node_states){
             switch(field){
-                case node_states::coords:
+                case node_state::coords:
                     if (coords.size() == 0) this->coords = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_coordinates");
                     break;
-                case node_states::velocity:
+                case node_state::velocity:
                     if (vel.size() == 0) this->vel = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
                     break;
-                case node_states::mass:
+                case node_state::mass:
                     if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
                     break;
-                case node_states::temp:
+                case node_state::temp:
                     if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_nodes, "node_temp");
                     break;
                 default:
@@ -90,7 +90,7 @@ struct node_t
 
 
 // Possible gauss point states, used to initialize GaussPoint_t
-enum gauss_pt_state
+enum class gauss_pt_state
 {
     volume,
     divergence_velocity,
@@ -151,7 +151,7 @@ struct MaterialToMeshMap_t
 
 
 // Possible material point states, used to initialize MaterialPoint_t
-enum material_pt_state
+enum class material_pt_state
 {
     density,
     pressure,
@@ -233,7 +233,7 @@ struct MaterialPoint_t
 
 
 // Possible material zone states, used to initialize MaterialZone_t
-enum material_zone_state
+enum class material_zone_state
 {
     specific_internal_energy,
 };
@@ -270,7 +270,7 @@ struct MaterialZone_t
 
 
 // Possible material corner states, used to initialize MaterialCorner_t
-enum material_corner_state
+enum class material_corner_state
 {
     force, 
     heat_flux,
@@ -312,7 +312,7 @@ struct MaterialCorner_t
 
 
 // Possible material corner states, used to initialize MaterialCorner_t
-enum corner_state
+enum class corner_state
 {
     force, 
     mass,

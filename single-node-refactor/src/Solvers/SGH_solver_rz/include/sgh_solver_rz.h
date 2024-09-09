@@ -36,16 +36,17 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SGHRZ_SOLVER_RZ_H
 
 #include "solver.h"
+#include "state.h"
 
 // Forward declare structs
 struct SimulationParameters_t;
 struct Material_t;
 struct Mesh_t;
 struct BoundaryCondition_t;
-struct State_t;
+// struct State_t;
 struct RegionFill_t;
 struct RegionFill_host_t;
-struct corners_in_mat_t;
+// struct corners_in_mat_t;
 
 
 

@@ -30,6 +30,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/src/properties.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/sgtm_execute.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/time_integration.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/sgtm_setup.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/sgtm_initialize.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/include/sgtm_solver_3D.h
 PARENT_SCOPE
 )

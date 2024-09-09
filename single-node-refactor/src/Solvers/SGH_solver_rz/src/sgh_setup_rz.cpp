@@ -287,6 +287,9 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
 
     const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
+    // Calculate element volume
+    geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
+
 
     // create temporary state fields
     // Painting routine requires only 1 material per GaussPoint
