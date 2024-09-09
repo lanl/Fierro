@@ -387,8 +387,8 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
         size_t num_corners_for_mat = num_elems_for_mat*mesh.num_nodes_in_elem;
 
         State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat); 
-        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3); // aways 3D, even for 2D-RZ calcs
-        State.MaterialCorners(mat_id).initialize(num_corners_for_mat, mesh.num_dims); 
+        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3, SGHRZ_State::required_material_pt_state); // aways 3D, even for 2D-RZ calcs
+        State.MaterialCorners(mat_id).initialize(num_corners_for_mat, mesh.num_dims, SGHRZ_State::required_material_corner_state); 
         // zones are not used
     
     } // end for mat_id

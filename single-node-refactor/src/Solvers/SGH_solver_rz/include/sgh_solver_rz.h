@@ -59,7 +59,7 @@ namespace SGHRZ_State
         node_state::coords,
         node_state::velocity,
         node_state::mass,
-        node_state::temp
+        node_state::temp // Note, remove this, unused WIP
     };
 
     // Gauss point state to be initialized for the SGH solver

@@ -45,13 +45,14 @@ void SGH3D::initialize(SimulationParameters_t& SimulationParamaters,
 {
 	int num_nodes = mesh.num_nodes;
     int num_gauss_pts = mesh.num_elems;
+    int num_corners = mesh.num_corners;
     int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
     int num_dim = mesh.num_dims;
-
+    
     State.node.initialize(rk_num_bins, num_nodes, num_dim, SGH3D_State::required_node_state);
     State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, num_dim, SGH3D_State::required_gauss_pt_state);
-
+    State.corner.initialize(num_corners, num_dim, SGH3D_State::required_corner_state);
+    
     // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
-
 
 }
