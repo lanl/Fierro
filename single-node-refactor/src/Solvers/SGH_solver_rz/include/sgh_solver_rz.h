@@ -51,6 +51,51 @@ struct corners_in_mat_t;
 
 using namespace mtr; // matar namespace
 
+namespace SGHRZ_State
+{
+    // Node state to be initialized for the SGH solver
+    static const std::vector<node_state> required_node_state = 
+    { 
+        node_state::coords,
+        node_state::velocity,
+        node_state::mass,
+        node_state::temp
+    };
+
+    // Gauss point state to be initialized for the SGH solver
+    static const std::vector<gauss_pt_state> required_gauss_pt_state = 
+    { 
+        gauss_pt_state::volume,
+        gauss_pt_state::divergence_velocity
+    };
+
+    // Material point state to be initialized for the SGH solver
+    static const std::vector<material_pt_state> required_material_pt_state = 
+    { 
+        material_pt_state::density,
+        material_pt_state::pressure,
+        material_pt_state::stress,
+        material_pt_state::sound_speed,
+        material_pt_state::mass,
+        material_pt_state::volume_fraction,
+        material_pt_state::specific_internal_energy,
+        material_pt_state::eroded_flag
+    };
+
+    // Material corner state to be initialized for the SGH solver
+    static const std::vector<material_corner_state> required_material_corner_state = 
+    { 
+        material_corner_state::force
+    };
+
+    // Corner state to be initialized for the SGH solver
+    static const std::vector<corner_state> required_corner_state = 
+    { 
+        corner_state::force,
+        corner_state::mass
+    };
+}
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \class SGHRZ
@@ -72,15 +117,18 @@ public:
 
     ~SGHRZ() = default;
 
-    // Initialize data specific to the SGHRZ solver
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn Initialize
+    ///
+    /// \brief Initializes data associated with the SGHRZ solver
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
-                    State_t& State) const override
-    {
-         // stuff goes here
-    }
+                    State_t& State) const override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///

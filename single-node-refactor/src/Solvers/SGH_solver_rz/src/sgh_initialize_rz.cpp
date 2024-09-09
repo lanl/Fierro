@@ -32,12 +32,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.h"
+#include "sgh_solver_rz.h"
 #include "state.h"
 #include "mesh.h"
 #include "simulation_parameters.h"
 
-void SGH3D::initialize(SimulationParameters_t& SimulationParamaters, 
+void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters, 
                 	   Material_t& Materials, 
                 	   Mesh_t& mesh, 
                 	   BoundaryCondition_t& Boundary,
@@ -48,10 +48,8 @@ void SGH3D::initialize(SimulationParameters_t& SimulationParamaters,
     int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
     int num_dim = mesh.num_dims;
 
-    State.node.initialize(rk_num_bins, num_nodes, num_dim, SGH3D_State::required_node_state);
-    State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, num_dim, SGH3D_State::required_gauss_pt_state);
+    State.node.initialize(rk_num_bins, num_nodes, num_dim, SGHRZ_State::required_node_state);
+    State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, num_dim, SGHRZ_State::required_gauss_pt_state);
 
     // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
-
-
 }

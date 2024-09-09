@@ -90,10 +90,6 @@ void Driver::initialize()
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
     mesh.build_boundry_node_sets(mesh);
 
-    // Calculate element volume (NOTE: Consider moving this to solver initialization/setup if needed)
-    geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
-
-
     // Setup Solvers
     for (int solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 

@@ -38,15 +38,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace mtr;
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \struct node_t
-///
-/// \brief Stores state information associated with a node
-///
-/////////////////////////////////////////////////////////////////////////////
 
-// Possible node states
+
+
+// Possible node states, used to initialize node_t
 enum node_state
 {
     coords,
@@ -54,6 +49,14 @@ enum node_state
     mass,
     temp
 };
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct node_t
+///
+/// \brief Stores state information associated with a node
+///
+/////////////////////////////////////////////////////////////////////////////
 struct node_t
 {
     DCArrayKokkos<double> coords; ///< Nodal coordinates
@@ -62,20 +65,20 @@ struct node_t
     DCArrayKokkos<double> temp; ///< Nodal temperature
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims, state to allocate)
-    void initialize(size_t num_rk, size_t num_nodes, size_t num_dims, std::vector<node_state> node_state)
+    void initialize(size_t num_rk, size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
     {
-        for (auto field : node_state){
+        for (auto field : node_states){
             switch(field){
-                case node_state::coords:
+                case node_states::coords:
                     if (coords.size() == 0) this->coords = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_coordinates");
                     break;
-                case node_state::velocity:
+                case node_states::velocity:
                     if (vel.size() == 0) this->vel = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
                     break;
-                case node_state::mass:
+                case node_states::mass:
                     if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
                     break;
-                case node_state::temp:
+                case node_states::temp:
                     if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_nodes, "node_temp");
                     break;
                 default:
@@ -84,6 +87,14 @@ struct node_t
         }
     }; // end method
 }; // end node_t
+
+
+// Possible gauss point states, used to initialize GaussPoint_t
+enum gauss_pt_state
+{
+    volume,
+    divergence_velocity,
+};
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -94,16 +105,26 @@ struct node_t
 /////////////////////////////////////////////////////////////////////////////
 struct GaussPoint_t
 {
-    // const size_t num_bins = 3;
 
     DCArrayKokkos<double> vol;  ///< GaussPoint volume
     DCArrayKokkos<double> div;  ///< GaussPoint divergence of velocity
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
-    void initialize(size_t num_rk, size_t num_gauss_pnts, size_t num_dims)
+    void initialize(size_t num_rk, size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
     {
-        this->vol = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_volume");
-        this->div = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_div");
+
+        for (auto field : gauss_pt_states){
+            switch(field){
+                case gauss_pt_state::volume:
+                    if (vol.size() == 0) this->vol = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_volume");
+                    break;
+                case gauss_pt_state::divergence_velocity:
+                    if (div.size() == 0) this->div = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_div");
+                    break;
+                default:
+                    std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;
+            }
+        }
     }; // end method
 };  // end GuassPoint_t
 
@@ -127,6 +148,21 @@ struct MaterialToMeshMap_t
     }; // end method
 }; // end MaterialtoMeshMaps_t
 
+
+
+// Possible material point states, used to initialize MaterialPoint_t
+enum material_pt_state
+{
+    density,
+    pressure,
+    stress,
+    sound_speed,
+    mass,
+    volume_fraction,
+    specific_internal_energy,
+    heat_flux,
+    eroded_flag,
+};
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \struct MaterialPoint_t
@@ -143,13 +179,7 @@ struct MaterialPoint_t
     DCArrayKokkos<double> stress; ///< MaterialPoint stress
     DCArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
     DCArrayKokkos<double> mass;   ///< MaterialPoint mass
-
-    DCArrayKokkos<double> volfrac;   ///< MaterialPoint volume fraction
-
-    DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
-
     DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
-
     DCArrayKokkos<double> q_flux; ///< Heat flux
 
     // Material Models are stored on Material points
@@ -157,30 +187,56 @@ struct MaterialPoint_t
     DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
     DCArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
 
-    // initialization method (num_rk_storage_bins, num_pts_max, num_dims)
-    void initialize(size_t num_rk, size_t num_pts_max, size_t num_dims)
-    {
-        this->den    = DCArrayKokkos<double>(num_pts_max, "material_point_density");
-        this->pres   = DCArrayKokkos<double>(num_pts_max, "material_point_pressure");
-        this->stress = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, num_dims, "material_point_stress");
-        this->sspd   = DCArrayKokkos<double>(num_pts_max, "material_point_sspd");
-        this->mass   = DCArrayKokkos<double>(num_pts_max, "material_point_mass");
-        this->sie    = DCArrayKokkos<double>(num_rk, num_pts_max, "material_point_sie");
-        this->volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac");
-        this->eroded = DCArrayKokkos<bool>(num_pts_max, "material_point_eroded");
-        this->q_flux = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, "material_point_heat_flux");
-    }; // end method
 
-    // initialization method for arbitrary-order FE (num_rk_storage_bins, num_pts_max, num_dims)
-    void initialize_Pn(size_t num_rk, size_t num_pts_max, size_t num_dims)
+    DCArrayKokkos<double> volfrac;   ///< MaterialPoint volume fraction
+    DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
+
+    // initialization method (num_rk_storage_bins, num_pts_max, num_dims)
+    void initialize(size_t num_rk, size_t num_pts_max, size_t num_dims, std::vector<material_pt_state> material_pt_states)
     {
-        this->den    = DCArrayKokkos<double>(num_pts_max, "material_point_density");
-        this->pres   = DCArrayKokkos<double>(num_pts_max, "material_point_pressure");
-        this->stress = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, num_dims, "material_point_stress");
-        this->sspd   = DCArrayKokkos<double>(num_pts_max, "material_point_sspd");
-        this->mass   = DCArrayKokkos<double>(num_pts_max, "material_point_mass");
+        for (auto field : material_pt_states){
+            switch(field){
+                case material_pt_state::density:
+                    if (den.size() == 0) this->den = DCArrayKokkos<double>(num_pts_max, "material_point_density");
+                    break;
+                case material_pt_state::pressure:
+                    if (pres.size() == 0) this->pres = DCArrayKokkos<double>(num_pts_max, "material_point_pressure");
+                    break;
+                case material_pt_state::stress:
+                    if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, num_dims, "material_point_stress");
+                    break;
+                case material_pt_state::sound_speed:
+                    if (sspd.size() == 0) this->sspd = DCArrayKokkos<double>(num_pts_max, "material_point_sspd");
+                    break;
+                case material_pt_state::mass:
+                    if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_pts_max, "material_point_mass");
+                    break;
+                case material_pt_state::volume_fraction:
+                    if (volfrac.size() == 0) this->volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac");
+                    break;
+                case material_pt_state::specific_internal_energy:
+                    if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_rk, num_pts_max, "material_point_sie");
+                    break;
+                case material_pt_state::heat_flux:
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, "material_point_heat_flux");
+                    break;
+                case material_pt_state::eroded_flag:
+                    if (eroded.size() == 0) this->eroded = DCArrayKokkos<bool>(num_pts_max, "material_point_eroded");
+                    break;
+                default:
+                    std::cout<<"Desired material point state not understood in MaterialPoint_t initialize"<<std::endl;
+            }
+        }
     }; // end method
 }; // end MaterialPoint
+
+
+
+// Possible material zone states, used to initialize MaterialZone_t
+enum material_zone_state
+{
+    specific_internal_energy,
+};
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -196,11 +252,29 @@ struct MaterialZone_t
     DCArrayKokkos<double> sie;      ///< coefficients for the sie polynomial field
 
     // initialization method for arbitrary-order FE (num_rk_storage_bins, num_zones)
-    void initialize_Pn(size_t num_rk, size_t num_zones_max)
+    void initialize_Pn(size_t num_rk, size_t num_zones_max, std::vector<material_zone_state> material_zone_states)
     {
-        this->sie = DCArrayKokkos<double>(num_rk, num_zones_max, "material_zone_sie");
+        for (auto field : material_zone_states){
+            switch(field){
+                case material_zone_state::specific_internal_energy:
+                    if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_rk, num_zones_max, "material_zone_sie");
+                    break;
+                default:
+                    std::cout<<"Desired material zone state not understood in MaterialZone_t initialize"<<std::endl;
+            }
+        }
+        
     }; // end method
 }; // end MaterialZone_t
+
+
+
+// Possible material corner states, used to initialize MaterialCorner_t
+enum material_corner_state
+{
+    force, 
+    heat_flux,
+};
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -218,13 +292,32 @@ struct MaterialCorner_t
     DCArrayKokkos<double> q_flux;  ///< Corner heat flux
 
     // initialization method (num_corners, num_dims)
-    void initialize(size_t num_corners_max, size_t num_dims)
+    void initialize(size_t num_corners_max, size_t num_dims, std::vector<material_corner_state> material_corner_states)
     {
-        this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
-        this->q_flux = DCArrayKokkos<double>(2, num_corners_max, num_dims, "material_corner_heat_flux"); // WARNING: hard coding rk2
+        for (auto field : material_corner_states){
+            switch(field){
+                case material_corner_state::force:
+                    if (force.size() == 0) this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
+                    break;
+                case material_corner_state::heat_flux:
+                    if (force.size() == 0) this->q_flux = DCArrayKokkos<double>(2, num_corners_max, num_dims, "material_corner_heat_flux"); // WARNING: hard coding rk2
+                    break;
+                default:
+                    std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;
+            }
+        }
     }; // end method
 }; // end material corner
 
+
+
+// Possible material corner states, used to initialize MaterialCorner_t
+enum corner_state
+{
+    force, 
+    mass,
+    heat_flux,
+};
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \struct corner_t
@@ -239,11 +332,28 @@ struct corner_t
     DCArrayKokkos<double> q_flux;  ///< Corner heat flux
 
     // initialization method (num_corners, num_dims)
-    void initialize(size_t num_corners, size_t num_dims)
+    void initialize(size_t num_corners, size_t num_dims, std::vector<corner_state> corner_states)
     {
-        this->force = DCArrayKokkos<double>(num_corners, num_dims, "corner_force");
-        this->mass  = DCArrayKokkos<double>(num_corners, "corner_mass");
-        this->q_flux = DCArrayKokkos<double>(2, num_corners, num_dims, "corner_heat_flux"); // WARNING: hard coding rk2
+
+        for (auto field : corner_states){
+            switch(field){
+                case corner_state::force:
+                    if (force.size() == 0) this->force = DCArrayKokkos<double>(num_corners, num_dims, "corner_force");
+                    break;
+                case corner_state::mass:
+                    if (mass.size() == 0) this->mass  = DCArrayKokkos<double>(num_corners, "corner_mass");
+                    break;
+                case corner_state::heat_flux:
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(2, num_corners, num_dims, "corner_heat_flux"); // WARNING: hard coding rk2
+                    break;
+                default:
+                    std::cout<<"Desired corner state not understood in corner_t initialize"<<std::endl;
+            }
+        }
+
+        
+        
+        
     }; // end method
 }; // end corner_t
 

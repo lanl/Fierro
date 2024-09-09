@@ -309,7 +309,7 @@ public:
 
         // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
-        GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
+        // GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
 
         
         // for each cell read the list of associated nodes
@@ -350,7 +350,7 @@ public:
         // initialize corner variables
         int num_corners = num_elem * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        corner.initialize(num_corners, num_dims);
+        // corner.initialize(num_corners, num_dims);
 
         // Close mesh input file
         fclose(in);
@@ -509,7 +509,7 @@ public:
 
         // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
-        State.GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
+        // State.GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
 
 
         // for each cell read the list of associated nodes
@@ -528,7 +528,7 @@ public:
         // initialize corner variables
         int num_corners = num_elem * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        State.corner.initialize(num_corners, num_dims);
+        // State.corner.initialize(num_corners, num_dims);
 
         // Build connectivity
         mesh.build_connectivity();
@@ -691,7 +691,7 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+        // GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -728,7 +728,7 @@ public:
         // intialize corner variables
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        corner.initialize(num_corners, num_dim);
+        // corner.initialize(num_corners, num_dim);
 
         // Build connectivity
         mesh.build_connectivity();
@@ -833,7 +833,7 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+        // GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -870,7 +870,7 @@ public:
         // intialize corner variables
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        corner.initialize(num_corners, num_dim);
+        // corner.initialize(num_corners, num_dim);
 
         // Build connectivity
         mesh.build_connectivity();
@@ -969,7 +969,7 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+        // GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // --- Build elems  ---
 
@@ -1012,7 +1012,7 @@ public:
         // intialize corner variables
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        corner.initialize(num_corners, num_dim);
+        // corner.initialize(num_corners, num_dim);
 
         // Build connectivity
         mesh.build_connectivity();
@@ -1140,7 +1140,7 @@ public:
 
         // intialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        GaussPoints.initialize(rk_num_bins, num_elems, 3); // WARNING: Bug here, needs Pn order in initializer
+        // GaussPoints.initialize(rk_num_bins, num_elems, 3); // WARNING: Bug here, needs Pn order in initializer
 
         // --- Build elems  ---
         
@@ -1194,7 +1194,7 @@ public:
         // initialize corner variables
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        corner.initialize(num_corners, num_dim);
+        // corner.initialize(num_corners, num_dim);
 
         // Build connectivity
         mesh.build_connectivity();
