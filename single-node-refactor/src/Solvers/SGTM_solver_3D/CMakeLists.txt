@@ -18,19 +18,19 @@ endif()
 include_directories(include)
 include_directories(src)
 
-message("\n ****** ADDING SGH SOURCE FILES ******** \n ")
+message("\n ****** ADDING SGTM SOURCE FILES ******** \n ")
 
-set(SGH_3D_SRC_Files 
+set(SGTM_3D_SRC_Files 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/boundary.cpp 
-${CMAKE_CURRENT_SOURCE_DIR}/src/energy_sgh.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/src/force_sgh.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/energy_sgtm.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/force_sgtm.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/position.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/momentum.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/properties.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_execute.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/sgtm_execute.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/time_integration.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_initialize.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_setup.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/include/sgh_solver_3D.h
+${CMAKE_CURRENT_SOURCE_DIR}/src/sgtm_setup.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/sgtm_initialize.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/include/sgtm_solver_3D.h
 PARENT_SCOPE
 )

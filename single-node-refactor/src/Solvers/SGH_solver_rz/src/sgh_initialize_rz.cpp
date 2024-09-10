@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -32,56 +32,27 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_SOLVER_INPUT_OPTIONS_H
-#define FIERRO_SOLVER_INPUT_OPTIONS_H
-#include <stdio.h>
-#include "matar.h"
+#include "sgh_solver_rz.h"
+#include "state.h"
+#include "mesh.h"
+#include "simulation_parameters.h"
 
-namespace solver_input
+void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters, 
+                	   Material_t& Materials, 
+                	   Mesh_t& mesh, 
+                	   BoundaryCondition_t& Boundary,
+                	   State_t& State) const
 {
-// solver method
-enum method
-{
-    NONE = 0,
-    SGH3D = 1,
-    SGHRZ = 2,
-    SGTM3D = 3,
-};
-} // end of namespace
+	int num_nodes = mesh.num_nodes;
+    int num_gauss_pts = mesh.num_elems;
+    int num_corners = mesh.num_corners;
+    int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+    int num_dim = mesh.num_dims;
 
-static std::map<std::string, solver_input::method> solver_map
-{
-    { "SGH3D", solver_input::SGH3D },
-    { "SGHRZ", solver_input::SGHRZ },
-    { "SGTM3D", solver_input::SGTM3D }
-};
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \structsolver_input_t
-///
-/// \brief Struct for holding metadata on which solvers are used.
-///
-/////////////////////////////////////////////////////////////////////////////
-struct solver_input_t
-{
-    solver_input::method method = solver_input::NONE;
-}; // solver_input_t
-
-// ----------------------------------
-// valid inputs for solver options
-// ----------------------------------
-static std::vector<std::string> str_solver_inps
-{
-    "method"
-};
-
-// ----------------------------------
-// required inputs for solver options
-// ----------------------------------
-static std::vector<std::string> solver_required_inps
-{
-    "method"
-};
-
-#endif // end Header Guard
+    State.node.initialize(rk_num_bins, num_nodes, num_dim, SGHRZ_State::required_node_state);
+    State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, num_dim, SGHRZ_State::required_gauss_pt_state);
+    State.corner.initialize(num_corners, num_dim, SGHRZ_State::required_corner_state);
+    
+    // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
+}

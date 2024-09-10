@@ -85,10 +85,10 @@ int main(int argc, char* argv[])
         
 
         auto time_run = std::chrono::high_resolution_clock::now();
-        driver->run();
+        driver->execute();
         time_now = std::chrono::high_resolution_clock::now();
         calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_setup).count();
-        printf("\n**** Total time to run driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        printf("\n**** Total time to execute driver in seconds  %f ****\n\n", calc_time * 1e-9);
 
 
         driver->finalize();

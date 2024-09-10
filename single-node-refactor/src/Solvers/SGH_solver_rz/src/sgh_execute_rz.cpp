@@ -156,7 +156,15 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
     // Write initial state at t=0
     printf("Writing outputs to file at %f \n", graphics_time);
-    mesh_writer.write_mesh(mesh, State, SimulationParamaters, time_value, graphics_times);
+    mesh_writer.write_mesh(
+        mesh, 
+        State, 
+        SimulationParamaters, 
+        time_value, 
+        graphics_times,
+        SGHRZ_State::required_node_state,
+        SGHRZ_State::required_gauss_pt_state,
+        SGHRZ_State::required_material_pt_state);
     graphics_time = time_value + graphics_dt_ival;
 
 
@@ -394,7 +402,10 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                    State, 
                                    SimulationParamaters, 
                                    time_value, 
-                                   graphics_times);
+                                   graphics_times,
+                                   SGHRZ_State::required_node_state,
+                                   SGHRZ_State::required_gauss_pt_state,
+                                   SGHRZ_State::required_material_pt_state);
 
             graphics_time = time_value + graphics_dt_ival;
 

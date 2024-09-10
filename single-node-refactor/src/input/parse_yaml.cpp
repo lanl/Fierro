@@ -981,6 +981,15 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).speed = speed;
                 });
             } // speed
+            else if (a_word.compare("temperature") == 0) {
+                double temperature = root["regions"][reg_id]["fill_volume"]["temperature"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\ttemperature = " << temperature << std::endl;
+                }
+                RUN({
+                    region_fills(reg_id).temperature = temperature;
+                });
+            } // temperature
             else if (a_word.compare("u") == 0) {
                 // x-component of velocity
                 double u = root["regions"][reg_id]["fill_volume"]["u"].As<double>();
@@ -1233,6 +1242,98 @@ void parse_regions(Yaml::Node& root,
                     throw std::runtime_error("**** Velocity IC Not Understood ****");
                 } // end if
             } // end velocity fill type
+
+            else if (a_word.compare("temperature_distribution") == 0) {
+
+                // temperature_distribution fill region type
+                std::string type = root["regions"][reg_id]["fill_volume"]["temperature_distribution"].As<std::string>();
+
+                if (VERBOSE) {
+                    std::cout << "\ttemperature = " << type << std::endl;
+                }
+                // set the volume tag type NOTE: rename to remove reference to velocity, change to distribution
+                if (velocity_type_map.find(type) != velocity_type_map.end()) {
+                 
+                    // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
+                    switch(velocity_type_map[type]){
+
+                        case init_conds::cartesian:
+                            std::cout << "Setting temperature_distribution initial conditions type to cartesian " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::cartesian;
+                            });
+                            break;
+
+                         case init_conds::radial:
+                            std::cout << "Setting temperature_distribution initial conditions type to radial " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::radial;
+                            });
+                            break;
+
+                         case init_conds::spherical:
+                            std::cout << "Setting temperature_distribution initial conditions type to spherical " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::spherical;
+                            });
+                            break;
+
+                         case init_conds::radial_linear:
+                            std::cout << "Setting temperature_distribution initial conditions type to radial_linear " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::radial_linear;
+                            });
+                            break;
+
+                         case init_conds::spherical_linear:
+                            std::cout << "Setting temperature_distribution initial conditions type to spherical_linear " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::spherical_linear;
+                            });
+                            break;
+
+                         case init_conds::tg_vortex:
+                            std::cout << "Setting temperature_distribution initial conditions type to tg_vortex " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::tg_vortex;
+                            });
+                            break;
+
+                         case init_conds::no_ic_vel:
+                            std::cout << "Setting temperature_distribution initial conditions type to no temperature" << std::endl;
+                            RUN({ 
+                                region_fills(reg_id).temp_distribution = init_conds::no_ic_vel;
+                            });
+                            break;
+
+                        default:
+
+                            RUN({ 
+                                region_fills(reg_id).temp_distribution = init_conds::no_ic_vel;
+                            });
+
+                            std::cout << "ERROR: No valid temperature_distribution intial conditions type input " << std::endl;
+                            std::cout << "Valid IC types are: " << std::endl;
+                            
+                            for (const auto& pair : velocity_type_map) {
+                                std::cout << pair.second << std::endl;
+                            }
+
+                            throw std::runtime_error("**** Temperature Initial Conditions Type Not Understood ****");
+                            break;
+                    } // end switch
+
+                    if (VERBOSE) {
+                        std::cout << "\tvolume_fill = " << type << std::endl;
+                    } // end if
+
+                }
+                else{
+                    std::cout << "ERROR: invalid input: " << type << std::endl;
+                    throw std::runtime_error("**** Temperature IC Not Understood ****");
+                } // end if
+            } // end velocity fill type
+
             //
             else if (a_word.compare("type") == 0) {
 

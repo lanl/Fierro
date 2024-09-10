@@ -38,7 +38,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace init_conds
 {
-// applying initial conditions
+// initial velocity conditions distribution
+// TODO: remove references to velocity, and make it general distributions
 enum init_velocity_conds
 {
     no_ic_vel = 0,
@@ -55,6 +56,24 @@ enum init_velocity_conds
     // vortical initial conditions
     tg_vortex = 6
 };
+
+// // initial temperature conditions distribution
+// enum init_temperature_distribution
+// {
+//     no_ic_temp = 0,
+
+//     // uniform
+//     cartesian = 1,       // cart temperature
+//     radial = 2,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+//     spherical = 3,       // spherical
+
+//     // linear variation
+//     radial_linear = 4,         // linear variation from 0,0,0
+//     spherical_linear = 5,      // linear variation from 0,0,0
+
+// };
+
+
 } // end of initial conditions namespace
 
 static std::map<std::string, init_conds::init_velocity_conds> velocity_type_map

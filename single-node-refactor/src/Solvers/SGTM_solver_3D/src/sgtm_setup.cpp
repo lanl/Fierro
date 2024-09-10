@@ -32,14 +32,13 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.h"
+#include "sgtm_solver_3D.h"
 #include "mesh.h"
 #include "region_fill.h"
 #include "material.h"
 #include "boundary_conditions.h"
 #include "state.h"
 #include "simulation_parameters.h"
-#include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -52,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param corner_mass is the corner mass
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::init_corner_node_masses_zero(const Mesh_t& mesh,
+void SGTM3D::init_corner_node_masses_zero(const Mesh_t& mesh,
                                   const DCArrayKokkos<double>& node_mass,
                                   const DCArrayKokkos<double>& corner_mass) const
 {
@@ -92,20 +91,20 @@ void SGH3D::init_corner_node_masses_zero(const Mesh_t& mesh,
 /// \param rk_num_bins is number of time integration storage bins
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::fill_regions_sgh(const Material_t& Materials,
-                      const Mesh_t& mesh,
-                      const DCArrayKokkos <double>& node_coords,
-                      DCArrayKokkos <double>& node_vel,
-                      DCArrayKokkos <double>& GaussPoint_den,
-                      DCArrayKokkos <double>& GaussPoint_sie,
-                      DCArrayKokkos <size_t>& elem_mat_id,
-                      DCArrayKokkos <size_t>& voxel_elem_mat_id,
-                      const CArrayKokkos <RegionFill_t>& region_fills,
-                      const CArray <RegionFill_host_t>& region_fills_host,
-                      const size_t num_fills,
-                      const size_t num_elems,
-                      const size_t num_nodes,
-                      const size_t rk_num_bins) const
+void SGTM3D::fill_regions_sgtm(
+    const Material_t& Materials,
+    const Mesh_t& mesh,
+    State_t& State,
+    DCArrayKokkos <double>& GaussPoint_den,
+    DCArrayKokkos <double>& GaussPoint_sie,
+    DCArrayKokkos <size_t>& elem_mat_id,
+    DCArrayKokkos <size_t>& voxel_elem_mat_id,
+    const CArrayKokkos <RegionFill_t>& region_fills,
+    const CArray <RegionFill_host_t>& region_fills_host,
+    const size_t num_fills,
+    const size_t num_elems,
+    const size_t num_nodes,
+    const size_t rk_num_bins) const
 {
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
@@ -114,7 +113,6 @@ void SGH3D::fill_regions_sgh(const Material_t& Materials,
     // ---------------------------------------------
     // copy to host, enum to read a voxel file
     // ---------------------------------------------
-
     DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
 
     FOR_ALL(f_id, 0, num_fills, {
@@ -167,10 +165,10 @@ void SGH3D::fill_regions_sgh(const Material_t& Materials,
 
             // get the coordinates of the element center (using rk_level=1 or node coords)
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_coords(0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_coords(1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                elem_coords(0) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_coords(1) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3) {
-                    elem_coords(2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_coords(2) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
                 }
                 else{
                     elem_coords(2) = 0.0;
@@ -201,7 +199,7 @@ void SGH3D::fill_regions_sgh(const Material_t& Materials,
                 // default sgh paint
                 paint_gauss_den_sie(Materials,
                                     mesh,
-                                    node_coords,
+                                    State.node.coords,
                                     GaussPoint_den,
                                     GaussPoint_sie,
                                     elem_mat_id,
@@ -220,9 +218,9 @@ void SGH3D::fill_regions_sgh(const Material_t& Materials,
                     size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
                     // default sgh paint
-                    paint_node_vel(region_fills,
-                                node_vel,
-                                node_coords,
+                    paint_node_temp(region_fills,
+                                State.node.temp,
+                                State.node.coords,
                                 node_gid,
                                 mesh.num_dims,
                                 f_id,
@@ -239,7 +237,8 @@ void SGH3D::fill_regions_sgh(const Material_t& Materials,
     elem_mat_id.update_host();
     GaussPoint_den.update_host();
     GaussPoint_sie.update_host();
-    node_vel.update_host();
+    State.node.vel.update_host();
+    State.node.temp.update_host();
 
     Kokkos::fence();
 } // end SGH fill regions
@@ -251,7 +250,7 @@ void SGH3D::fill_regions_sgh(const Material_t& Materials,
 /// \brief Allocate state, setup models, and fill mesh regions per the YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::setup(SimulationParameters_t& SimulationParamaters, 
+void SGTM3D::setup(SimulationParameters_t& SimulationParamaters, 
                 Material_t& Materials, 
                 Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
@@ -266,9 +265,6 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 
     const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
-    // Calculate element volume
-    geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
-
     // create temporary state fields
     // Painting routine requires only 1 material per GaussPoint
     DCArrayKokkos<double> GaussPoint_den(num_elems);
@@ -280,10 +276,9 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // ---------------------------------------------
     // fill den, sie, and velocity on the mesh
     // ---------------------------------------------
-    fill_regions_sgh(Materials,
+    fill_regions_sgtm(Materials,
                      mesh,
-                     State.node.coords,
-                     State.node.vel,
+                     State,
                      GaussPoint_den,
                      GaussPoint_sie,
                      elem_mat_id,
@@ -349,8 +344,8 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
         size_t num_corners_for_mat = num_elems_for_mat * mesh.num_nodes_in_elem;
 
         State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat);
-        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, mesh.num_dims, SGH3D_State::required_material_pt_state);
-        State.MaterialCorners(mat_id).initialize(num_corners_for_mat, mesh.num_dims, SGH3D_State::required_material_corner_state);
+        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3, SGTM3D_State::required_material_pt_state); // aways 3D, even for 2D-RZ calcs
+        State.MaterialCorners(mat_id).initialize(num_corners_for_mat, mesh.num_dims, SGTM3D_State::required_material_corner_state);
         // zones are not used
     } // end for mat_id
 
@@ -451,54 +446,23 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     init_corner_node_masses_zero(mesh, State.node.mass, State.corner.mass);
 
     // calculate corner and node masses on the mesh
-    if (mesh.num_dims == 3) {
-        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+        size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
-            calc_corner_mass(Materials,
-                             mesh,
-                             State.node.coords,
-                             State.node.mass,
-                             State.corner.mass,
-                             State.MaterialPoints(mat_id).mass,
-                             State.MaterialToMeshMaps(mat_id).elem,
-                             num_mat_elems);
-        } // end for mat_id
+        calc_corner_mass(Materials,
+                         mesh,
+                         State.node.coords,
+                         State.node.mass,
+                         State.corner.mass,
+                         State.MaterialPoints(mat_id).mass,
+                         State.MaterialToMeshMaps(mat_id).elem,
+                         num_mat_elems);
+    } // end for mat_id
 
-        calc_node_mass(mesh,
-                       State.node.coords,
-                       State.node.mass,
-                       State.corner.mass);
-    }
-    else{
-        // 2D RZ
-        // // calculate the corner massess if 2D
-        // if (mesh.num_dims == 2) {
-        //     FOR_ALL(elem_gid, 0, mesh.num_elems, {
-        //         // facial area of the corners
-        //         double corner_areas_array[4];
+    calc_node_mass(mesh,
+                   State.node.coords,
+                   State.node.mass,
+                   State.corner.mass);
 
-        //         ViewCArrayKokkos<double> corner_areas(&corner_areas_array[0], 4);
-        //         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
 
-        //         geometry::get_area_weights2D(corner_areas, elem_gid, node_coords, elem_node_gids);
-
-        //         // loop over the corners of the element and calculate the mass
-        //         for (size_t corner_lid = 0; corner_lid < 4; corner_lid++) {
-        //             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-        //             corner_mass(corner_gid) = corner_areas(corner_lid) * MaterialPoints.den(elem_gid); // node radius is added later
-        //         } // end for over corners
-        //     });
-        //
-        //
-        //    FOR_ALL(nodes_gid=0; nodes_gid<mesh.num_nodes; nodes_gid++){
-        //        for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
-        //            size_t corner_gid    = mesh.corners_in_node(node_gid, corner_lid);
-        //            State.node.mass(node_gid) += corner.mass(corner_gid);  // sans the radius so it is areal node mass
-        //
-        //            corner.mass(corner_gid) *= State.node.coords(1, node_gid, 1); // true corner mass now
-        //        } // end for elem_lid
-        //    });
-        // } // end of
-    } // end if 2D
 } // end SGH setup

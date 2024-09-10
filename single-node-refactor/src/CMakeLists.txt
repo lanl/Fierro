@@ -69,5 +69,9 @@ add_subdirectory(Solvers/SGH_solver_3D)
 include_directories(Solvers/SGH_solver_rz/include)
 add_subdirectory(Solvers/SGH_solver_rz)
 
-add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files})
+# Add SGTM Solver
+include_directories(Solvers/SGTM_solver_3D/include)
+add_subdirectory(Solvers/SGTM_solver_3D)
+
+add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files} ${SGTM_3D_SRC_Files})
 target_link_libraries(Fierro PRIVATE matar Kokkos::kokkos) 

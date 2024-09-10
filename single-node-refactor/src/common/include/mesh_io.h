@@ -250,9 +250,12 @@ public:
         fscanf(in, "%lu", &num_nodes);
         printf("Number if nodes read in %lu\n", num_nodes);
 
-        // initialize node variables
+        
         mesh.initialize_nodes(num_nodes);
-        node.initialize(rk_num_bins, num_nodes, num_dims);
+
+        // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
 
         // read the initial mesh coordinates
         // x-coords
@@ -306,7 +309,7 @@ public:
 
         // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
-        GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
+        // GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
 
         
         // for each cell read the list of associated nodes
@@ -347,7 +350,7 @@ public:
         // initialize corner variables
         int num_corners = num_elem * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        corner.initialize(num_corners, num_dims);
+        // corner.initialize(num_corners, num_dims);
 
         // Close mesh input file
         fclose(in);
@@ -473,7 +476,11 @@ public:
 
         // initialize node variables
         mesh.initialize_nodes(num_nodes);
-        State.node.initialize(rk_num_bins, num_nodes, num_dims);
+
+        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        std::vector<node_state> required_node_state = { node_state::coords };
+
+        State.node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
 
 
         // Copy nodes to mesh
@@ -502,7 +509,7 @@ public:
 
         // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
-        State.GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
+        // State.GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
 
 
         // for each cell read the list of associated nodes
@@ -521,7 +528,7 @@ public:
         // initialize corner variables
         int num_corners = num_elem * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        State.corner.initialize(num_corners, num_dims);
+        // State.corner.initialize(num_corners, num_dims);
 
         // Build connectivity
         mesh.build_connectivity();
@@ -655,7 +662,10 @@ public:
 
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
-        node.initialize(rk_num_bins, num_nodes, num_dim);
+
+        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_nodes, num_dim, required_node_state);
 
         // --- Build nodes ---
 
@@ -679,9 +689,8 @@ public:
         }
         node.coords.update_device();
 
-        // intialize elem variables
+        // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -718,7 +727,7 @@ public:
         // intialize corner variables
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        corner.initialize(num_corners, num_dim);
+        // corner.initialize(num_corners, num_dim);
 
         // Build connectivity
         mesh.build_connectivity();
@@ -768,7 +777,7 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
+
         for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 2D parameters ---
@@ -788,7 +797,10 @@ public:
 
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
-        node.initialize(rk_num_bins, num_nodes, num_dim);
+
+        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_nodes, num_dim, required_node_state);
 
         // populate the point data structures
         for (int j = 0; j < num_points_j; j++) {
@@ -818,9 +830,8 @@ public:
         }
         node.coords.update_device();
 
-        // intialize elem variables
+        // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -857,7 +868,7 @@ public:
         // intialize corner variables
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        corner.initialize(num_corners, num_dim);
+        // corner.initialize(num_corners, num_dim);
 
         // Build connectivity
         mesh.build_connectivity();
@@ -921,9 +932,12 @@ public:
 
         int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
-        // intialize node variables
+        // initialize mesh node variables
         mesh.initialize_nodes(num_nodes);
-        node.initialize(rk_num_bins, num_nodes, num_dim);
+
+         // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_nodes, num_dim, required_node_state);
 
         // --- Build nodes ---
 
@@ -951,9 +965,8 @@ public:
         }
         node.coords.update_device();
 
-        // intialize elem variables
+        // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        GaussPoints.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
 
         // --- Build elems  ---
 
@@ -993,10 +1006,10 @@ public:
         // update device side
         mesh.nodes_in_elem.update_device();
 
-        // intialize corner variables
+        // initialize corner variables
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        corner.initialize(num_corners, num_dim);
+        // corner.initialize(num_corners, num_dim);
 
         // Build connectivity
         mesh.build_connectivity();
@@ -1061,7 +1074,6 @@ public:
         // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
 
         std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
         for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
 
         // --- 3D parameters ---
@@ -1089,7 +1101,10 @@ public:
         
         // initialize node variables
         mesh.initialize_nodes(num_points);
-        node.initialize(rk_num_bins, num_points, num_dim);
+
+        // 
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_points, num_dim, required_node_state);
         // populate the point data structures
         for (int k = 0; k < num_points_k; k++){
             for (int j = 0; j < num_points_j; j++){
@@ -1119,9 +1134,8 @@ public:
         node.coords.update_device();
 
 
-        // intialize elem variables
+        // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
-        GaussPoints.initialize(rk_num_bins, num_elems, 3); // WARNING: Bug here, needs Pn order in initializer
 
         // --- Build elems  ---
         
@@ -1175,7 +1189,7 @@ public:
         // initialize corner variables
         int num_corners = num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        corner.initialize(num_corners, num_dim);
+        // corner.initialize(num_corners, num_dim);
 
         // Build connectivity
         mesh.build_connectivity();
@@ -1190,8 +1204,7 @@ public:
 /// \brief Class for writing out a mesh with its associated state from Fierro
 ///
 /// This class contains the requisite functions required to write out a mesh
-/// with its associated state data from solvers in Fierro. Currently only ensight
-/// outputs are supported
+/// with its associated state data from solvers in Fierro.
 ///
 /////////////////////////////////////////////////////////////////////////////
 class MeshWriter
@@ -1222,28 +1235,40 @@ public:
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double time_value,
-        CArray<double> graphics_times)
+        CArray<double> graphics_times,
+        std::vector<node_state> node_states,
+        std::vector<gauss_pt_state> gauss_pt_states,
+        std::vector<material_pt_state> material_pt_states)
     {
         if (SimulationParamaters.output_options.format == output_options::vtk) {
             write_vtk(mesh,
                       State,
                       SimulationParamaters,
                       time_value,
-                      graphics_times);
+                      graphics_times,
+                      node_states,
+                      gauss_pt_states,
+                      material_pt_states);
         }
         else if (SimulationParamaters.output_options.format == output_options::ensight) {
             write_ensight(mesh,
                           State,
                           SimulationParamaters,
                           time_value,
-                          graphics_times);
+                          graphics_times,
+                          node_states,
+                          gauss_pt_states,
+                          material_pt_states);
         }
         else if (SimulationParamaters.output_options.format == output_options::state) {
             write_material_point_state(mesh,
                                       State,
                                       SimulationParamaters,
                                       time_value,
-                                      graphics_times);
+                                      graphics_times,
+                                      node_states,
+                                      gauss_pt_states,
+                                      material_pt_states);
         }
         else{
             std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
@@ -1274,7 +1299,10 @@ public:
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double time_value,
-        CArray<double> graphics_times)
+        CArray<double> graphics_times,
+        std::vector<node_state> node_states,
+        std::vector<gauss_pt_state> gauss_pt_states,
+        std::vector<material_pt_state> material_pt_states)
     {
         size_t num_mats = State.MaterialPoints.size();
 
@@ -1652,7 +1680,7 @@ public:
     }
 
     /**\brief Given (i,j,k) coordinates within the Lagrange hex, return an offset into the local connectivity (PointIds) array.
-    *
+    *"den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch", "eroded"
     * The \a order parameter must point to an array of 3 integers specifying the order
     * along each axis of the hexahedron.
     */
@@ -1718,13 +1746,11 @@ public:
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double time_value,
-        CArray<double> graphics_times)
+        CArray<double> graphics_times,
+        std::vector<node_state> node_states,
+        std::vector<gauss_pt_state> gauss_pt_states,
+        std::vector<material_pt_state> material_pt_states)
     {
-        // Not yet supported
-        // throw std::runtime_error("**** VTK OUTPUT TYPE NOT YET SUPPORTED ****");
-
-        const int num_scalar_vars = 10;
-        const int num_vec_vars    = 2;
 
         size_t num_mats = State.MaterialPoints.size();
 
@@ -1748,15 +1774,33 @@ public:
         State.node.coords.update_host();
         State.node.vel.update_host();
         State.node.mass.update_host();
+        State.node.temp.update_host();
 
         Kokkos::fence();
 
-        const char scalar_var_names[num_scalar_vars][15] = {
+
+        const int num_cell_scalar_vars = 10;
+        const int num_cell_vec_vars    = 0;
+
+        const int num_point_scalar_vars = 1;
+        const int num_point_vec_vars = 2;
+
+
+        // Scalar values associated with a cell
+        const char cell_scalar_var_names[num_cell_scalar_vars][15] = {
             "den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch", "eroded"
         };
+        
+        const char cell_vec_var_names[num_cell_vec_vars][15] = {
+            
+        };
 
-        const char vec_var_names[num_vec_vars][15] = {
-            "pos", "vel"
+        const char point_scalar_var_names[num_point_scalar_vars][15] = {
+            "temp"
+        };
+
+        const char point_vec_var_names[num_point_vec_vars][15] = {
+            "pos", "vel" 
         };
 
         // short hand
@@ -1765,7 +1809,7 @@ public:
         const size_t num_dims  = mesh.num_dims;
 
         // save the cell state to an array for exporting to graphics files
-        auto elem_fields = CArray<double>(num_elems, num_scalar_vars);
+        auto elem_fields = CArray<double>(num_elems, num_cell_scalar_vars);
         int  elem_switch = 1;
 
         DCArrayKokkos<double> speed(num_elems);
@@ -1834,7 +1878,8 @@ public:
         } // end for elem_gid
 
         // save the vertex vector fields to an array for exporting to graphics files
-        CArray<double> vec_fields(num_nodes, num_vec_vars, 3);
+        CArray<double> vec_fields(num_nodes, num_point_vec_vars, 3);
+        CArray<double> point_scalar_fields(num_nodes, num_point_scalar_vars);
 
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             // position, var 0
@@ -1856,6 +1901,8 @@ public:
             else{
                 vec_fields(node_gid, 1, 2) = State.node.vel.host(1, node_gid, 2);
             }
+
+            point_scalar_fields(node_gid, 0) = State.node.temp.host(1,node_gid);
         } // end for loop over vertices
 
         FILE* out[20];   // the output files that are written to
@@ -1947,13 +1994,24 @@ public:
         fprintf(out[0], "POINT_DATA %zu \n", mesh.num_nodes);
 
         // vtk vector vars = (position, velocity)
-        for (int var = 0; var < num_vec_vars; var++) {
-            fprintf(out[0], "VECTORS %s float \n", vec_var_names[var]);
+        for (int var = 0; var < num_point_vec_vars; var++) {
+            fprintf(out[0], "VECTORS %s float \n", point_vec_var_names[var]);
             for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
                 fprintf(out[0], "%f %f %f\n",
                         vec_fields(node_gid, var, 0),
                         vec_fields(node_gid, var, 1),
                         vec_fields(node_gid, var, 2));
+            } // end for nodes
+        } // end for vec_vars
+
+
+        // vtk scalar vars = (temp)
+        for (int var = 0; var < num_point_scalar_vars; var++) {
+            fprintf(out[0], "SCALARS %s float 1\n", point_scalar_var_names[var]);
+            fprintf(out[0], "LOOKUP_TABLE default\n");
+            for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
+                fprintf(out[0], "%f\n",
+                        point_scalar_fields(node_gid, 0));
             } // end for nodes
         } // end for vec_vars
 
@@ -1965,13 +2023,13 @@ public:
         fprintf(out[0], "\n");
         fprintf(out[0], "CELL_DATA %zu \n", mesh.num_elems);
 
-        for (int var = 0; var < num_scalar_vars; var++) {
-            fprintf(out[0], "SCALARS %s float 1\n", scalar_var_names[var]); // the 1 is number of scalar components [1:4]
+        for (int var = 0; var < num_cell_scalar_vars; var++) {
+            fprintf(out[0], "SCALARS %s float 1\n", cell_scalar_var_names[var]); // the 1 is number of scalar components [1:4]
             fprintf(out[0], "LOOKUP_TABLE default\n");
             for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
                 fprintf(out[0], "%f\n", elem_fields(elem_gid, var));
             } // end for elem
-        } // end for scalar_vars
+        } // end for cell scalar_vars
 
         fclose(out[0]);
 
@@ -2017,10 +2075,13 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_material_point_state(Mesh_t& mesh,
-    State_t& State,
-    SimulationParameters_t& SimulationParamaters,
-    double time_value,
-    CArray<double> graphics_times)
+        State_t& State,
+        SimulationParameters_t& SimulationParamaters,
+        double time_value,
+        CArray<double> graphics_times,
+        std::vector<node_state> node_states,
+        std::vector<gauss_pt_state> gauss_pt_states,
+        std::vector<material_pt_state> material_pt_states)
     {
         // WARNING WARNING WARNING:
         // This currently assumes the gauss and material point IDs are the same as the element ID
