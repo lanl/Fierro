@@ -3,7 +3,7 @@
 {% set macos_compiler_version = "16" %}
 
 package:
-  name: elements
+  name: elements-cpu
   version: {{ version }}
 
 source:
