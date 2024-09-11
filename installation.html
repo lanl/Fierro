@@ -63,15 +63,15 @@
                 </p>
                 <p>    
                     To install the finite element physics solvers in <em>Fierro</em>, please type, while within the activated Anaconda environment:
-                    <pre><code> conda install -c conda-forge -c fierromechanics fierro-cpu </code></pre>
+                    <pre><code> conda install -c conda-forge -c fierromechanics fierro-fe-cpu </code></pre>
                 </p>
                 <p style="margin : 0; padding-top:0;">    
                     The EVPFFT physics solver in  <em>Fierro</em> can be installed by typing:
-                    <pre><code> conda install -c conda-forge -c fierromechanics evpfft </code></pre>
+                    <pre><code> conda install -c conda-forge -c fierromechanics fierro-evpfft-cpu </code></pre>
                 </p>
                 <p> 
                     A GUI is offered, it can be installed by typing:    
-                    <pre><code> conda install -c conda-forge -c fierromechanics fierro_gui </code></pre>
+                    <pre><code> conda install -c conda-forge -c fierromechanics fierro-gui </code></pre>
                 </p>
                 <p> 
                     After installing the finite element solvers, it gives you access to <code>fierro-mesh-builder</code>, 
@@ -161,7 +161,7 @@
                 <p>
                     Our standalone FIERRO-GUI software can be installed with:
                 </p>
-                <pre><code>conda install -c conda-forge -c fierromechanics fierro_gui</code></pre>
+                <pre><code>conda install -c conda-forge -c fierromechanics fierro-gui</code></pre>
                 <p>
                     This will give you access to both the <code>evpfft</code> and <code>fierro-gui</code> commands to launch the comamnd line EVPFFT backend or the associated graphical user interface, respectively.
                 </p>
@@ -177,7 +177,7 @@
                 </p>
                 <h5><a id="evpfft-anchor">EVPFFT</a></h5>
                 <p>
-                    The elasto-viscoplastic fast fourier transform program simulates the response of polycrystalline microstructures under multiple types of load. It is available from the <code>fierro-evpfft</code> and <code>fierro-evpfft-cuda</code> Anaconda packages. Installing these directly will pull in all necessary dependencies and give you access to the software through the <code>evpfft</code> command. Example input files for this application can be found under <code>Fierro/src/EVPFFT/example_input_files</code>.
+                    The elasto-viscoplastic fast fourier transform program simulates the response of polycrystalline microstructures under multiple types of load. It is available from the <code>fierro-evpfft-cpu</code> Anaconda package. Installing this directly will pull in all necessary dependencies and give you access to the software through the <code>evpfft</code> command. Example input files for this application can be found under <code>Fierro/src/EVPFFT/example_input_files</code>.
                 </p>
                 <p>
                     If you wish to build this application from source, there is a comprehensive build script available to configure the environment and build all of the necessary dependencies. To invoke the script, run:
@@ -188,7 +188,7 @@ source build-evpfft.sh
                 </p>
                 <h5>Implicit Solver</h5>
                 <p>
-                    The implicit solver for solving static equations can be acquired through the <code>fierro-cpu</code>, <code>fierro-cuda</code> (coming soon), and <code>fierro-hip</code> (coming soon) Anaconda packages. Installing these directly will pull in all necessary dependencies and give you access to the software through the <code>fierro</code> command. Example input files for this application can be found under <code>Fierro/src/Parallel-Solvers/Implicit-Lagrange/example_*.yaml</code>.
+                    The implicit solver for solving static equations can be acquired through the <code>fierro-fe-cpu</code>, <code>fierro-fe-cuda</code> (coming soon), and <code>fierro-fe-hip</code> (coming soon) Anaconda packages. Installing these directly will pull in all necessary dependencies and give you access to the software through the <code>fierro</code> command. Example input files for this application can be found under <code>Fierro/src/Parallel-Solvers/Implicit-Lagrange/example_*.yaml</code>.
                 </p>
                 <p>
                     If you wish to build this application from source, there is a comprehensive build script available to configure the environment and build all of the necessary dependencies. To invoke the script, run:
@@ -200,7 +200,7 @@ source build-fierro.sh
                 </p>
                 <h5>Explicit Solver</h5>
                 <p>
-                    The explicit solver for simulating dynamic time evolution can be acquired through the <code>fierro-cpu</code>, <code>fierro-cuda</code> (coming soon), and <code>fierro-hip</code> (coming soon) Anaconda packages. Installing these directly will pull in all necessary dependencies and give you access to the software through the <code>fierro</code> command. Example input files for this application can be found under <code>Fierro/src/Parallel-Solvers/Parallel-Explicit/example_*.yaml</code>.
+                    The explicit solver for simulating dynamic time evolution can be acquired through the <code>fierro-fe-cpu</code>, <code>fierro-fe-cuda</code> (coming soon), and <code>fierro-fe-hip</code> (coming soon) Anaconda packages. Installing these directly will pull in all necessary dependencies and give you access to the software through the <code>fierro</code> command. Example input files for this application can be found under <code>Fierro/src/Parallel-Solvers/Parallel-Explicit/example_*.yaml</code>.
                 </p>
                 <p>
                     If you wish to build this application from source, there is a comprehensive build script available to configure the environment and build all of the necessary dependencies. To invoke the script, run:
