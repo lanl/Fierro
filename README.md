@@ -24,15 +24,15 @@ In this example, the enviroment is called FierroCode, but any name can be used. 
 
 To install the finite element physics solvers in **Fierro**, please type within the activated Anaconda environment:
 ```
-conda install -c conda-forge -c fierromechanics fierro-cpu
+conda install -c conda-forge -c fierromechanics fierro-fe-cpu
 ```
 The EVPFFT physics solver in **Fierro** can be installed by typing:
 ```
-conda install -c conda-forge -c fierromechanics evpfft
+conda install -c conda-forge -c fierromechanics fierro-evpfft-cpu
 ```
 A GUI is offered, it can be installed by typing:
 ```
-conda install -c conda-forge -c fierromechanics evpfft_gui
+conda install -c conda-forge -c fierromechanics fierro-gui
 ```
 
 After installing the finite element solvers, it gives you access to `fierro-mesh-builder`,`fierro-parallel-explicit`,`fierro-parallel-implicit`, and the `fierro-voxelizer` executables. These can be run by calling the appropriate executable with the desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
@@ -52,7 +52,7 @@ Sample yaml input files for the implicit finite element solver and topology opti
 
 The GUI can be run in the anaconda enviroment by typing:
 ```
-evpfft-gui
+fierro-gui
 ```
 The anaconda distributions of Fierro are located [here](https://anaconda.org/FierroMechanics).
 
