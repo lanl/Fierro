@@ -7,6 +7,7 @@ show_help() {
     echo "  --build_action=<full-app|set-env|install-trilinos|install-hdf5|install-heffte|fierro>. Default is 'full-app'"
     echo "  --machine=<darwin|chicoma|linux|mac>. Default is 'linux'"
     echo "  --build_cores=<Integers greater than 0>. Default is set 1"
+    echo "  --intel_mkl=<enabled|disabled>. Default is 'disabled'"
     echo "  --heffte_build_type=<fftw|cufft|rocfft>. Default is set 'fftw'"
     echo "  --help: Display this help message"
     echo " "
@@ -63,6 +64,7 @@ machine="linux"
 kokkos_build_type="serial"
 heffte_build_type="fftw"
 build_cores="1"
+intel_mkl="disabled"
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-trilinos" "install-hdf5" "install-heffte" "install-uncrustify" "fierro")
@@ -70,6 +72,7 @@ valid_solver=("all" "explicit" "explicit-evpfft" "explicit-ls-evpfft" "implicit"
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
 valid_machines=("darwin" "chicoma" "linux" "mac" "msu")
+valid_intel_mkl=("disabled" "enabled")
 
 # Parse command line arguments
 for arg in "$@"; do
@@ -110,6 +113,16 @@ for arg in "$@"; do
                 kokkos_build_type="$option"
             else
                 echo "Error: Invalid --kokkos_build_type specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --intel_mkl=*)
+            option="${arg#*=}"
+            if [[ " ${valid_intel_mkl[*]} " == *" $option "* ]]; then
+                intel_mkl="$option"
+            else
+                echo "Error: Invalid --intel_mkl specified."
                 show_help
                 return 1
             fi
@@ -170,6 +183,7 @@ echo "Building based on these argument options:"
 echo "Build action - ${build_action}"
 echo "Solver - ${solver}"
 echo "Kokkos backend - ${kokkos_build_type}"
+echo "Intel MKL library - ${intel_mkl}"
 echo "Machine - ${machine}"
 if [ "${solver}" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
     echo "HEFFTE - ${heffte_build_type}"
@@ -184,14 +198,14 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
     source uncrustify-install.sh
-    source trilinos-install.sh ${kokkos_build_type} ${machine}
+    source trilinos-install.sh ${kokkos_build_type} ${machine} ${intel_mkl}
     if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
         source hdf5-install.sh
         source heffte-install.sh ${heffte_build_type} ${machine}
     fi
     source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type}
 elif [ "$build_action" = "install-trilinos" ]; then
-    source trilinos-install.sh ${kokkos_build_type} ${machine}
+    source trilinos-install.sh ${kokkos_build_type} ${machine} ${intel_mkl}
 elif [ "$build_action" = "install-hdf5" ]; then
     source hdf5-install.sh
 elif [ "$build_action" = "install-heffte" ]; then

@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -33,6 +33,7 @@
  **********************************************************************************************/
 #include "state.h"
 #include "FEA_Module_SGH.h"
+#include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -54,32 +55,59 @@ void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
 {
     const size_t rk_level = rk_num_bins - 1;
     const size_t num_dims = num_dim;
+    const size_t num_lcs  = module_params->loading.size();
 
     // walk over the nodes to update the velocity
-    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-        double node_force[3];
-        for (size_t dim = 0; dim < num_dims; dim++) {
-            node_force[dim] = 0.0;
-        } // end for dim
-
-        // loop over all corners around the node and calculate the nodal force
-        for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
-            // Get corner gid
-            size_t corner_gid = corners_in_node(node_gid, corner_lid);
-
-            // loop over dimension
+    if(num_lcs){
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            double node_force[3];
             for (size_t dim = 0; dim < num_dims; dim++) {
-                node_force[dim] += corner_force(corner_gid, dim);
+                node_force[dim] = 0.0;
             } // end for dim
-        } // end for corner_lid
 
-        // update the velocity
-        for (int dim = 0; dim < num_dims; dim++) {
-            node_vel(rk_level, node_gid, dim) = node_vel(0, node_gid, dim) +
-                                                rk_alpha * dt * node_force[dim] / node_mass(node_gid);
-        } // end for dim
-    }); // end for parallel for over nodes
+            // loop over all corners around the node and calculate the nodal force
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
+                // Get corner gid
+                size_t corner_gid = corners_in_node(node_gid, corner_lid);
 
+                // loop over dimension
+                for (size_t dim = 0; dim < num_dims; dim++) {
+                    node_force[dim] += corner_force(corner_gid, dim) + corner_external_force(corner_gid, dim);
+                } // end for dim
+            } // end for corner_lid
+
+            // update the velocity
+            for (int dim = 0; dim < num_dims; dim++) {
+                node_vel(rk_level, node_gid, dim) = node_vel(0, node_gid, dim) +
+                                                    rk_alpha * dt * node_force[dim] / node_mass(node_gid);
+            } // end for dim
+        }); // end for parallel for over nodes
+    }
+    else{
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            double node_force[3];
+            for (size_t dim = 0; dim < num_dims; dim++) {
+                node_force[dim] = 0.0;
+            } // end for dim
+
+            // loop over all corners around the node and calculate the nodal force
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
+                // Get corner gid
+                size_t corner_gid = corners_in_node(node_gid, corner_lid);
+
+                // loop over dimension
+                for (size_t dim = 0; dim < num_dims; dim++) {
+                    node_force[dim] += corner_force(corner_gid, dim);
+                } // end for dim
+            } // end for corner_lid
+
+            // update the velocity
+            for (int dim = 0; dim < num_dims; dim++) {
+                node_vel(rk_level, node_gid, dim) = node_vel(0, node_gid, dim) +
+                                                    rk_alpha * dt * node_force[dim] / node_mass(node_gid);
+            } // end for dim
+        }); // end for parallel for over nodes
+    }
     return;
 } // end subroutine update_velocity
 

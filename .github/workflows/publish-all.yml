@@ -1,0 +1,37 @@
+name: Publish All
+
+on: workflow_dispatch
+
+jobs:
+  elements:
+    uses: ./.github/workflows/publish-elements.yml
+
+  evpfft-cpu:
+    uses: ./.github/workflows/publish-evpfft-cpu.yml
+
+  evpfft-dev:
+    uses: ./.github/workflows/publish-evpfft-dev.yml
+
+  evpfft-gui:
+    uses: ./.github/workflows/publish-evpfft-gui.yml
+
+  fierro-cpu:
+    uses: ./.github/workflows/publish-fierro-cpu.yml
+
+  fierro-dev:
+    uses: ./.github/workflows/publish-fierro-dev.yml
+
+  fierro-gui:
+    uses: ./.github/workflows/publish-fierro-gui.yml
+
+  heffte-cpu:
+    uses: ./.github/workflows/publish-heffte-cpu.yml
+
+  heffte-cuda:
+    uses: ./.github/workflows/publish-heffte-cuda.yml
+    
+  trilinos:
+    uses: ./.github/workflows/publish-trillinos.yml
+
+  voxelizer:
+    uses: ./.github/workflows/publish-voxelizer.yml

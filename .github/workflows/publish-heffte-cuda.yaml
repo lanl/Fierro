@@ -1,10 +1,6 @@
 name: 'Publish Heffte CUDA'
 
 on: 
-  push:
-    paths:
-      #- .conda/heffte/cuda/**
-      #- .github/workflows/publish-heffte-cuda.yaml
   workflow_dispatch:
 
 jobs:

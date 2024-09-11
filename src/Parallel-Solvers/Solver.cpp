@@ -3537,11 +3537,10 @@ void Solver::init_maps()
     // construct distributed element connectivity multivector
     global_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(all_element_map, dual_nodes_in_elem));
 
-    if (nlocal_elem_non_overlapping >= 1)
+    // construct map of nodes that belong to the non-overlapping element set (contained by ghost + local node set but not all of them)
+    std::set<GO> nonoverlap_elem_node_set;
+    if (nlocal_elem_non_overlapping)
     {
-        // construct map of nodes that belong to the non-overlapping element set (contained by ghost + local node set but not all of them)
-        std::set<GO> nonoverlap_elem_node_set;
-
         // search through local elements for global node indices not owned by this MPI rank
         if (num_dim == 2)
         {
@@ -3572,23 +3571,25 @@ void Solver::init_maps()
                 }
             }
         }
+    }
 
-        // by now the set contains, with no repeats, all the global node indices belonging to the non overlapping element list on this MPI rank
-        // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
-        nnonoverlap_elem_nodes = nonoverlap_elem_node_set.size();
-        nonoverlap_elem_nodes  = Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits>("nonoverlap_elem_nodes", nnonoverlap_elem_nodes);
+    // by now the set contains, with no repeats, all the global node indices belonging to the non overlapping element list on this MPI rank
+    // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
+    nnonoverlap_elem_nodes = nonoverlap_elem_node_set.size();
+    nonoverlap_elem_nodes  = Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits>("nonoverlap_elem_nodes", nnonoverlap_elem_nodes);
+    if(nnonoverlap_elem_nodes){
         int  inonoverlap_elem_node = 0;
         auto it = nonoverlap_elem_node_set.begin();
         while (it != nonoverlap_elem_node_set.end()) {
             nonoverlap_elem_nodes.h_view(inonoverlap_elem_node++) = *it;
             it++;
         }
-
         nonoverlap_elem_nodes.modify_host();
         nonoverlap_elem_nodes.sync_device();
-        // create a Map for ghost node indices
-        nonoverlap_element_node_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), nonoverlap_elem_nodes.d_view, 0, comm));
     }
+
+    // create a Map for node indices belonging to the non-overlapping set of elements
+    nonoverlap_element_node_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), nonoverlap_elem_nodes.d_view, 0, comm));
 
     // std::cout << "number of patches = " << mesh->num_patches() << std::endl;
     if (myrank == 0)
@@ -4001,7 +4002,7 @@ void Solver::set_rol_params(Teuchos::RCP<Teuchos::ParameterList> parlist)
     
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Print Intermediate Optimization History", false);
     parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Step Type", simparam.optimization_options.rol_params.subproblem_algorithm_string);
-    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Iteration Limit", (int) 20);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Iteration Limit", simparam.optimization_options.rol_params.subproblem_iteration_limit);
     
     parlist->sublist("Step").sublist("Moreau-Yosida Penalty").set("Initial Penalty Parameter", (double) 1e-9);
     parlist->sublist("Step").sublist("Moreau-Yosida Penalty").set("Penalty Parameter Growth Factor", (double) 1.5);

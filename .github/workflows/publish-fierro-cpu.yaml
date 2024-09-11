@@ -1,10 +1,6 @@
 name: 'Publish Fierro-CPU'
 
 on: 
-  push:
-    paths:
-      - .conda/fierro/cpu/**
-      - .github/workflows/publish-fierro-cpu.yaml
   workflow_dispatch:
 
 jobs:
@@ -13,3 +9,6 @@ jobs:
     with:
       recipe_dir: .conda/fierro/cpu
     secrets: inherit
+      
+
+  

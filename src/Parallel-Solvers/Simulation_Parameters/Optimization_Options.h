@@ -14,6 +14,7 @@ SERIALIZABLE_ENUM(FUNCTION_TYPE,
 
 SERIALIZABLE_ENUM(TO_MODULE_TYPE,
   Kinetic_Energy_Minimize,
+  Internal_Energy_Minimize,
   Multi_Objective,
   Heat_Capacity_Potential_Minimize,
   Strain_Energy_Minimize,
@@ -32,7 +33,8 @@ SERIALIZABLE_ENUM(OPTIMIZATION_PROCESS, none, topology_optimization, shape_optim
 SERIALIZABLE_ENUM(ROL_SUBPROBLEM_ALGORITHM, trust_region, line_search)
 SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, none, minimize_kinetic_energy, multi_objective,
                   minimize_compliance, minimize_thermal_resistance, maximize_compliance,
-                  maximize_kinetic_energy, maximize_thermal_resistance)
+                  maximize_kinetic_energy, maximize_thermal_resistance, minimize_internal_energy,
+                  maximize_internal_energy)
 SERIALIZABLE_ENUM(CONSTRAINT_TYPE, mass, moment_of_inertia, center_of_mass, displacement)
 SERIALIZABLE_ENUM(RELATION, equality)
 SERIALIZABLE_ENUM(DENSITY_FILTER, none, helmholtz_filter)
@@ -104,6 +106,7 @@ struct ROL_Params: Yaml::DerivedFields {
   double gradient_tolerance = 1e-5;
   double constraint_tolerance = 1e-5;
   int iteration_limit = 100;
+  int subproblem_iteration_limit = 20;
 
   std::string subproblem_algorithm_string;
 
@@ -129,7 +132,7 @@ struct ROL_Params: Yaml::DerivedFields {
 
 IMPL_YAML_SERIALIZABLE_FOR(ROL_Params, 
   subproblem_algorithm, initial_constraint_penalty, step_tolerance, constraint_tolerance,
-  gradient_tolerance, iteration_limit
+  gradient_tolerance, iteration_limit, subproblem_iteration_limit
 )
 
 struct Optimization_Options: Yaml::DerivedFields {
@@ -174,6 +177,10 @@ struct Optimization_Options: Yaml::DerivedFields {
     }
     if(use_solve_checkpoints){
       use_gradient_tally = true;
+    }
+
+    if(retain_outer_shell&&variable_outer_shell){
+      throw Yaml::ConfigurationException("Cannot specify both retain_outer_shell and variable_outer_shell as true");
     }
   }
 };

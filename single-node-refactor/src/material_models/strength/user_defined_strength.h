@@ -65,12 +65,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace UserDefinedStrengthModel {
 
     KOKKOS_FUNCTION
-    static void calc_stress(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
+    static void calc_stress(const DCArrayKokkos<double>& MaterialPoints_pres,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const size_t MaterialPoints_lid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
+        const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
         const ViewCArrayKokkos<double>& vel_grad,
@@ -79,7 +79,8 @@ namespace UserDefinedStrengthModel {
         const DCArrayKokkos<double>&    node_vel,
         const double vol,
         const double dt,
-        const double rk_alpha)
+        const double rk_alpha,
+        const RaggedRightArrayKokkos<double> &strength_global_vars)
     {
         // -----------------------------------------------------------------------------
         // Required variables are here
@@ -118,12 +119,12 @@ namespace UserDefinedStrengthModel {
 namespace NotionalStrengthModel {
     
     KOKKOS_FUNCTION
-    static void calc_stress(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
+    static void calc_stress(const DCArrayKokkos<double>& MaterialPoints_pres,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const size_t MaterialPoints_lid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
+        const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
         const ViewCArrayKokkos<double>& vel_grad,
@@ -132,14 +133,13 @@ namespace NotionalStrengthModel {
         const DCArrayKokkos<double>&    node_vel,
         const double vol,
         const double dt,
-        const double rk_alpha)
+        const double rk_alpha,
+        const RaggedRightArrayKokkos<double> &strength_global_vars)
     {
         return;
     } // end of user mat
 
 } // end namespace
-
-
 
 
 #endif // end Header Guard

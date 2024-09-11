@@ -122,6 +122,13 @@ struct Simulation_Parameters
             add_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
             optimization_options.maximize_flag = true;
             break;
+        case OPTIMIZATION_OBJECTIVE::minimize_internal_energy:
+            add_TO_module(TO_MODULE_TYPE::Internal_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            break;
+        case OPTIMIZATION_OBJECTIVE::maximize_internal_energy:
+            add_TO_module(TO_MODULE_TYPE::Internal_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.maximize_flag = true;
+            break;
         case OPTIMIZATION_OBJECTIVE::multi_objective:
             add_TO_module(TO_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});
             derive_multi_objectives();
@@ -330,6 +337,7 @@ struct Simulation_Parameters
             {TO_MODULE_TYPE::Strain_Energy_Minimize,                {FEA_MODULE_TYPE::Elasticity     }},
             {TO_MODULE_TYPE::Displacement_Constraint,               {FEA_MODULE_TYPE::Elasticity     }},
             {TO_MODULE_TYPE::Strain_Energy_Constraint,              {FEA_MODULE_TYPE::Elasticity     }},
+            {TO_MODULE_TYPE::Internal_Energy_Minimize,              {FEA_MODULE_TYPE::SGH            }},
             {TO_MODULE_TYPE::Kinetic_Energy_Minimize,               {FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity}},
         };
         if (map.count(type) == 0)

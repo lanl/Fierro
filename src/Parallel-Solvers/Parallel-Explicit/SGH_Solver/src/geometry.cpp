@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -732,199 +732,147 @@ void FEA_Module_SGH::get_vol_hex_ugradient(const ViewCArrayKokkos<double>& elem_
     double twelth = 1. / 12.;
 
     // element volume gradient
-    for (int inode = 0; inode < 8; inode++) {
-        for (int idim = 0; idim < num_dims; idim++) {
-            switch (num_dims * inode + idim) {
-            case 0:
-                gradient_result =
-                    ((y(2) * (z(1) - z(3)) + y(7) * (z(3) - z(4)) + y(5) * (-z(1) + z(4)) + y(1) * (-z(2) - z(3) + z(4) + z(5)) + y(3) * (z(1) + z(2) - z(4) - z(7)) + y(4) *
-                      (-z(1) + z(3) - z(5) + z(7)))) * twelth;
-                break;
-            case 3:
-                gradient_result =
-                    ((y(3) * (-z(0) + z(2)) + y(4) * (z(0) - z(5)) + y(0) * (z(2) + z(3) - z(4) - z(5)) + y(6) * (-z(2) + z(5)) + y(5) * (z(0) - z(2) + z(4) - z(6)) + y(2) *
-                      (-z(0) - z(3) + z(5) + z(6)))) * twelth;
-                break;
+    //x gradients
+    elem_vol_gradients(0, 0) =
+        ((y(2) * (z(1) - z(3)) + y(7) * (z(3) - z(4)) + y(5) * (-z(1) + z(4)) + y(1) * (-z(2) - z(3) + z(4) + z(5)) + y(3) * (z(1) + z(2) - z(4) - z(7)) + y(4) *
+            (-z(1) + z(3) - z(5) + z(7)))) * twelth;
+    elem_vol_gradients(1, 0) =
+        ((y(3) * (-z(0) + z(2)) + y(4) * (z(0) - z(5)) + y(0) * (z(2) + z(3) - z(4) - z(5)) + y(6) * (-z(2) + z(5)) + y(5) * (z(0) - z(2) + z(4) - z(6)) + y(2) *
+            (-z(0) - z(3) + z(5) + z(6)))) * twelth;
+    elem_vol_gradients(2, 0) =
+        ((y(0) * (-z(1) + z(3)) + y(5) * (z(1) - z(6)) + y(1) * (z(0) + z(3) - z(5) - z(6)) + y(7) * (-z(3) + z(6)) + y(6) * (z(1) - z(3) + z(5) - z(7)) + y(3) *
+            (-z(0) - z(1) + z(6) + z(7)))) * twelth;
+    elem_vol_gradients(3, 0) =
+        ((y(1) * (z(0) - z(2)) + y(7) * (-z(0) + z(2) - z(4) + z(6)) + y(6) * (z(2) - z(7)) + y(2) * (z(0) + z(1) - z(6) - z(7)) + y(4) * (-z(0) + z(7)) + y(0) *
+            (-z(1) - z(2) + z(4) + z(7)))) * twelth;
+    elem_vol_gradients(4, 0) =
+        ((y(1) * (-z(0) + z(5)) + y(7) * (z(0) + z(3) - z(5) - z(6)) + y(3) * (z(0) - z(7)) + y(0) * (z(1) - z(3) + z(5) - z(7)) + y(6) * (-z(5) + z(7)) + y(5) *
+            (-z(0) - z(1) + z(6) + z(7)))) * twelth;
+    elem_vol_gradients(5, 0) =
+        ((y(0) * (z(1) - z(4)) + y(7) * (z(4) - z(6)) + y(2) * (-z(1) + z(6)) + y(1) * (-z(0) + z(2) - z(4) + z(6)) + y(4) * (z(0) + z(1) - z(6) - z(7)) + y(6) *
+            (-z(1) - z(2) + z(4) + z(7)))) * twelth;
+    elem_vol_gradients(6, 0) =
+        ((y(1) * (z(2) - z(5)) + y(7) * (-z(2) - z(3) + z(4) + z(5)) + y(5) * (z(1) + z(2) - z(4) - z(7)) + y(4) * (z(5) - z(7)) + y(3) * (-z(2) + z(7)) + y(2) *
+            (-z(1) + z(3) - z(5) + z(7)))) * twelth;
+    elem_vol_gradients(7, 0) =
+        ((y(0) * (-z(3) + z(4)) + y(6) * (z(2) + z(3) - z(4) - z(5)) + y(2) * (z(3) - z(6)) + y(3) * (z(0) - z(2) + z(4) - z(6)) + y(5) * (-z(4) + z(6)) + y(4) *
+            (-z(0) - z(3) + z(5) + z(6)))) * twelth;
 
-            case 6:
-                gradient_result =
-                    ((y(0) * (-z(1) + z(3)) + y(5) * (z(1) - z(6)) + y(1) * (z(0) + z(3) - z(5) - z(6)) + y(7) * (-z(3) + z(6)) + y(6) * (z(1) - z(3) + z(5) - z(7)) + y(3) *
-                      (-z(0) - z(1) + z(6) + z(7)))) * twelth;
-                break;
-            case 9:
-                gradient_result =
-                    ((y(1) * (z(0) - z(2)) + y(7) * (-z(0) + z(2) - z(4) + z(6)) + y(6) * (z(2) - z(7)) + y(2) * (z(0) + z(1) - z(6) - z(7)) + y(4) * (-z(0) + z(7)) + y(0) *
-                      (-z(1) - z(2) + z(4) + z(7)))) * twelth;
-                break;
-            case 12:
-                gradient_result =
-                    ((y(1) * (-z(0) + z(5)) + y(7) * (z(0) + z(3) - z(5) - z(6)) + y(3) * (z(0) - z(7)) + y(0) * (z(1) - z(3) + z(5) - z(7)) + y(6) * (-z(5) + z(7)) + y(5) *
-                      (-z(0) - z(1) + z(6) + z(7)))) * twelth;
-                break;
-            case 15:
-                gradient_result =
-                    ((y(0) * (z(1) - z(4)) + y(7) * (z(4) - z(6)) + y(2) * (-z(1) + z(6)) + y(1) * (-z(0) + z(2) - z(4) + z(6)) + y(4) * (z(0) + z(1) - z(6) - z(7)) + y(6) *
-                      (-z(1) - z(2) + z(4) + z(7)))) * twelth;
-                break;
-            case 18:
-                gradient_result =
-                    ((y(1) * (z(2) - z(5)) + y(7) * (-z(2) - z(3) + z(4) + z(5)) + y(5) * (z(1) + z(2) - z(4) - z(7)) + y(4) * (z(5) - z(7)) + y(3) * (-z(2) + z(7)) + y(2) *
-                      (-z(1) + z(3) - z(5) + z(7)))) * twelth;
-                break;
-            case 21:
-                gradient_result =
-                    ((y(0) * (-z(3) + z(4)) + y(6) * (z(2) + z(3) - z(4) - z(5)) + y(2) * (z(3) - z(6)) + y(3) * (z(0) - z(2) + z(4) - z(6)) + y(5) * (-z(4) + z(6)) + y(4) *
-                      (-z(0) - z(3) + z(5) + z(6)))) * twelth;
-                break;
-            case 1:
-                gradient_result =
-                    (x(1) * ((z(2) + z(3) - z(4) - z(5))) +
-                     x(7) * ((-z(3) + z(4))) +
-                     x(3) * ((-z(1) - z(2) + z(4) + z(7))) +
-                     x(5) * ((z(1) - z(4))) +
-                     x(2) * ((-z(1) + z(3))) +
-                     x(4) * ((z(1) - z(3) + z(5) - z(7)))) * twelth;
-                break;
-            case 4:
-                gradient_result =
-                    (x(3) * ((z(0) - z(2))) +
-                     x(5) * ((-z(0) + z(2) - z(4) + z(6))) +
-                     x(6) * ((z(2) - z(5))) +
-                     x(0) * ((-z(2) - z(3) + z(4) + z(5))) +
-                     x(2) * ((z(0) + z(3) - z(5) - z(6))) +
-                     x(4) * ((-z(0) + z(5)))) * twelth;
-                break;
-            case 7:
-                gradient_result =
-                    (x(1) * ((-z(0) - z(3) + z(5) + z(6))) +
-                     x(7) * ((z(3) - z(6))) +
-                     x(3) * ((z(0) + z(1) - z(6) - z(7))) +
-                     x(5) * ((-z(1) + z(6))) +
-                     x(6) * ((-z(1) + z(3) - z(5) + z(7))) +
-                     x(0) * ((z(1) - z(3)))) * twelth;
-                break;
-            case 10:
-                gradient_result =
-                    (x(1) * ((-z(0) + z(2))) +
-                     x(7) * ((z(0) - z(2) + z(4) - z(6))) +
-                     x(6) * ((-z(2) + z(7))) +
-                     x(0) * ((z(1) + z(2) - z(4) - z(7))) +
-                     x(2) * ((-z(0) - z(1) + z(6) + z(7))) +
-                     x(4) * ((z(0) - z(7)))) * twelth;
-                break;
-            case 13:
-                gradient_result =
-                    (x(1) * ((z(0) - z(5))) +
-                     x(7) * ((-z(0) - z(3) + z(5) + z(6))) +
-                     x(3) * ((-z(0) + z(7))) +
-                     x(5) * ((z(0) + z(1) - z(6) - z(7))) +
-                     x(6) * ((z(5) - z(7))) +
-                     x(0) * ((-z(1) + z(3) - z(5) + z(7)))) * twelth;
-                break;
-            case 16:
-                gradient_result =
-                    (x(1) * ((z(0) - z(2) + z(4) - z(6))) +
-                     x(7) * ((-z(4) + z(6))) +
-                     x(6) * ((z(1) + z(2) - z(4) - z(7))) +
-                     x(0) * ((-z(1) + z(4))) +
-                     x(2) * ((z(1) - z(6))) +
-                     x(4) * ((-z(0) - z(1) + z(6) + z(7)))) * twelth;
-                break;
-            case 19:
-                gradient_result =
-                    (x(1) * ((-z(2) + z(5))) +
-                     x(7) * ((z(2) + z(3) - z(4) - z(5))) +
-                     x(3) * ((z(2) - z(7))) +
-                     x(5) * ((-z(1) - z(2) + z(4) + z(7))) +
-                     x(2) * ((z(1) - z(3) + z(5) - z(7))) +
-                     x(4) * ((-z(5) + z(7)))) * twelth;
-                break;
-            case 22:
-                gradient_result =
-                    (x(3) * ((-z(0) + z(2) - z(4) + z(6))) +
-                     x(5) * ((z(4) - z(6))) +
-                     x(6) * ((-z(2) - z(3) + z(4) + z(5))) +
-                     x(0) * ((z(3) - z(4))) +
-                     x(2) * ((-z(3) + z(6))) +
-                     x(4) * ((z(0) + z(3) - z(5) - z(6)))) * twelth;
-                break;
-            case 2:
-                gradient_result =
-                    (x(1) * (-y(3) + y(4) + y(5) - y(2)) +
-                     x(7) * (y(3) - y(4)) +
-                     x(3) * (y(1) - y(7) + y(2) - y(4)) +
-                     x(5) * (-y(1) + y(4)) +
-                     x(2) * (y(1) - y(3)) +
-                     x(4) * (-y(1) + y(7) + y(3) - y(5))) * twelth;
-                break;
-            case 5:
-                gradient_result =
-                    (x(3) * (y(2) - y(0)) +
-                     x(5) * (y(0) - y(2) + y(4) - y(6)) +
-                     x(6) * (y(5) - y(2)) +
-                     x(0) * (y(2) - y(5) + y(3) - y(4)) +
-                     x(2) * (-y(0) + y(5) + y(6) - y(3)) +
-                     x(4) * (y(0) - y(5))) * twelth;
-                break;
-            case 8:
-                gradient_result =
-                    (x(1) * (y(3) + y(0) - y(6) - y(5)) +
-                     x(7) * (y(6) - y(3)) +
-                     x(3) * (-y(1) + y(7) + y(6) - y(0)) +
-                     x(5) * (y(1) - y(6)) +
-                     x(6) * (y(1) - y(7) + y(5) - y(3)) +
-                     x(0) * (-y(1) + y(3))) * twelth;
-                break;
-            case 11:
-                gradient_result =
-                    (x(1) * (y(0) - y(2)) +
-                     x(7) * (-y(0) + y(6) + y(2) - y(4)) +
-                     x(6) * (-y(7) + y(2)) +
-                     x(0) * (-y(2) + y(7) - y(1) + y(4)) +
-                     x(2) * (y(0) + y(1) - y(7) - y(6)) +
-                     x(4) * (y(7) - y(0))) * twelth;
-                break;
-            case 14:
-                gradient_result =
-                    (x(1) * (-y(0) + y(5)) +
-                     x(7) * (y(0) - y(6) + y(3) - y(5)) +
-                     x(3) * (-y(7) + y(0)) +
-                     x(5) * (-y(0) + y(7) - y(1) + y(6)) +
-                     x(6) * (y(7) - y(5)) +
-                     x(0) * (-y(7) + y(5) + y(1) - y(3))) * twelth;
-                break;
-            case 17:
-                gradient_result =
-                    (x(1) * (-y(4) - y(0) + y(6) + y(2)) +
-                     x(7) * (-y(6) + y(4)) +
-                     x(6) * (-y(1) + y(7) + y(4) - y(2)) +
-                     x(0) * (y(1) - y(4)) +
-                     x(2) * (-y(1) + y(6)) +
-                     x(4) * (y(1) - y(7) + y(0) - y(6))) * twelth;
-                break;
-            case 20:
-                gradient_result =
-                    (x(1) * (-y(5) + y(2)) +
-                     x(7) * (-y(2) - y(3) + y(5) + y(4)) +
-                     x(3) * (y(7) - y(2)) +
-                     x(5) * (-y(7) + y(2) + y(1) - y(4)) +
-                     x(2) * (-y(5) - y(1) + y(7) + y(3)) +
-                     x(4) * (-y(7) + y(5))) * twelth;
-                break;
-            case 23:
-                gradient_result =
-                    (x(3) * (-y(6) - y(2) + y(4) + y(0)) +
-                     x(5) * (-y(4) + y(6)) +
-                     x(6) * (-y(5) - y(4) + y(3) + y(2)) +
-                     x(0) * (-y(3) + y(4)) +
-                     x(2) * (-y(6) + y(3)) +
-                     x(4) * (-y(3) - y(0) + y(6) + y(5))) * twelth;
-                break;
-            }
-            elem_vol_gradients(inode, idim) = gradient_result;
-        }
-    }
-    return;
+    //y gradients      
+    elem_vol_gradients(0, 1) =
+        (x(1) * ((z(2) + z(3) - z(4) - z(5))) +
+            x(7) * ((-z(3) + z(4))) +
+            x(3) * ((-z(1) - z(2) + z(4) + z(7))) +
+            x(5) * ((z(1) - z(4))) +
+            x(2) * ((-z(1) + z(3))) +
+            x(4) * ((z(1) - z(3) + z(5) - z(7)))) * twelth;
+    elem_vol_gradients(1, 1) =
+        (x(3) * ((z(0) - z(2))) +
+            x(5) * ((-z(0) + z(2) - z(4) + z(6))) +
+            x(6) * ((z(2) - z(5))) +
+            x(0) * ((-z(2) - z(3) + z(4) + z(5))) +
+            x(2) * ((z(0) + z(3) - z(5) - z(6))) +
+            x(4) * ((-z(0) + z(5)))) * twelth;
+    elem_vol_gradients(2, 1) =
+        (x(1) * ((-z(0) - z(3) + z(5) + z(6))) +
+            x(7) * ((z(3) - z(6))) +
+            x(3) * ((z(0) + z(1) - z(6) - z(7))) +
+            x(5) * ((-z(1) + z(6))) +
+            x(6) * ((-z(1) + z(3) - z(5) + z(7))) +
+            x(0) * ((z(1) - z(3)))) * twelth;
+    elem_vol_gradients(3, 1) =
+        (x(1) * ((-z(0) + z(2))) +
+            x(7) * ((z(0) - z(2) + z(4) - z(6))) +
+            x(6) * ((-z(2) + z(7))) +
+            x(0) * ((z(1) + z(2) - z(4) - z(7))) +
+            x(2) * ((-z(0) - z(1) + z(6) + z(7))) +
+            x(4) * ((z(0) - z(7)))) * twelth;
+    elem_vol_gradients(4, 1) =
+        (x(1) * ((z(0) - z(5))) +
+            x(7) * ((-z(0) - z(3) + z(5) + z(6))) +
+            x(3) * ((-z(0) + z(7))) +
+            x(5) * ((z(0) + z(1) - z(6) - z(7))) +
+            x(6) * ((z(5) - z(7))) +
+            x(0) * ((-z(1) + z(3) - z(5) + z(7)))) * twelth;
+    elem_vol_gradients(5, 1) =
+        (x(1) * ((z(0) - z(2) + z(4) - z(6))) +
+            x(7) * ((-z(4) + z(6))) +
+            x(6) * ((z(1) + z(2) - z(4) - z(7))) +
+            x(0) * ((-z(1) + z(4))) +
+            x(2) * ((z(1) - z(6))) +
+            x(4) * ((-z(0) - z(1) + z(6) + z(7)))) * twelth;
+    elem_vol_gradients(6, 1) =
+        (x(1) * ((-z(2) + z(5))) +
+            x(7) * ((z(2) + z(3) - z(4) - z(5))) +
+            x(3) * ((z(2) - z(7))) +
+            x(5) * ((-z(1) - z(2) + z(4) + z(7))) +
+            x(2) * ((z(1) - z(3) + z(5) - z(7))) +
+            x(4) * ((-z(5) + z(7)))) * twelth;
+    elem_vol_gradients(7, 1) =
+        (x(3) * ((-z(0) + z(2) - z(4) + z(6))) +
+            x(5) * ((z(4) - z(6))) +
+            x(6) * ((-z(2) - z(3) + z(4) + z(5))) +
+            x(0) * ((z(3) - z(4))) +
+            x(2) * ((-z(3) + z(6))) +
+            x(4) * ((z(0) + z(3) - z(5) - z(6)))) * twelth;
+
+    //z gradients
+    elem_vol_gradients(0, 2) =
+        (x(1) * (-y(3) + y(4) + y(5) - y(2)) +
+            x(7) * (y(3) - y(4)) +
+            x(3) * (y(1) - y(7) + y(2) - y(4)) +
+            x(5) * (-y(1) + y(4)) +
+            x(2) * (y(1) - y(3)) +
+            x(4) * (-y(1) + y(7) + y(3) - y(5))) * twelth;
+    elem_vol_gradients(1, 2) =
+        (x(3) * (y(2) - y(0)) +
+            x(5) * (y(0) - y(2) + y(4) - y(6)) +
+            x(6) * (y(5) - y(2)) +
+            x(0) * (y(2) - y(5) + y(3) - y(4)) +
+            x(2) * (-y(0) + y(5) + y(6) - y(3)) +
+            x(4) * (y(0) - y(5))) * twelth;
+    elem_vol_gradients(2, 2) =
+        (x(1) * (y(3) + y(0) - y(6) - y(5)) +
+            x(7) * (y(6) - y(3)) +
+            x(3) * (-y(1) + y(7) + y(6) - y(0)) +
+            x(5) * (y(1) - y(6)) +
+            x(6) * (y(1) - y(7) + y(5) - y(3)) +
+            x(0) * (-y(1) + y(3))) * twelth;
+    elem_vol_gradients(3, 2) =
+        (x(1) * (y(0) - y(2)) +
+            x(7) * (-y(0) + y(6) + y(2) - y(4)) +
+            x(6) * (-y(7) + y(2)) +
+            x(0) * (-y(2) + y(7) - y(1) + y(4)) +
+            x(2) * (y(0) + y(1) - y(7) - y(6)) +
+            x(4) * (y(7) - y(0))) * twelth;
+    elem_vol_gradients(4, 2) =
+        (x(1) * (-y(0) + y(5)) +
+            x(7) * (y(0) - y(6) + y(3) - y(5)) +
+            x(3) * (-y(7) + y(0)) +
+            x(5) * (-y(0) + y(7) - y(1) + y(6)) +
+            x(6) * (y(7) - y(5)) +
+            x(0) * (-y(7) + y(5) + y(1) - y(3))) * twelth;
+    elem_vol_gradients(5, 2) =
+        (x(1) * (-y(4) - y(0) + y(6) + y(2)) +
+            x(7) * (-y(6) + y(4)) +
+            x(6) * (-y(1) + y(7) + y(4) - y(2)) +
+            x(0) * (y(1) - y(4)) +
+            x(2) * (-y(1) + y(6)) +
+            x(4) * (y(1) - y(7) + y(0) - y(6))) * twelth;
+    elem_vol_gradients(6, 2) =
+        (x(1) * (-y(5) + y(2)) +
+            x(7) * (-y(2) - y(3) + y(5) + y(4)) +
+            x(3) * (y(7) - y(2)) +
+            x(5) * (-y(7) + y(2) + y(1) - y(4)) +
+            x(2) * (-y(5) - y(1) + y(7) + y(3)) +
+            x(4) * (-y(7) + y(5))) * twelth;
+    elem_vol_gradients(7, 2) =
+        (x(3) * (-y(6) - y(2) + y(4) + y(0)) +
+            x(5) * (-y(4) + y(6)) +
+            x(6) * (-y(5) - y(4) + y(3) + y(2)) +
+            x(0) * (-y(3) + y(4)) +
+            x(2) * (-y(6) + y(3)) +
+            x(4) * (-y(3) - y(0) + y(6) + y(5))) * twelth;
 } // end subroutine
 
 /////////////////////////////////////////////////////////////////////////////

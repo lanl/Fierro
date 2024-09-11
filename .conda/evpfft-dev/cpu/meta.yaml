@@ -3,7 +3,7 @@
 {% set macos_compiler_version = "16" %}
 
 package:
-  name: evpfft-dev
+  name: dev-evpfft-cpu
   version: {{ version }}
 
 build:

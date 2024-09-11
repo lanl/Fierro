@@ -43,6 +43,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <map>
 
+#include "string_utils.h"
+
 #include "matar.h"
 #include "parse_yaml.h"
 #include "simulation_parameters.h"
@@ -83,27 +85,6 @@ bool VERBOSE = false;
 // ==============================================================================
 //   Function Definitions
 // ==============================================================================
-// modified code from stack over./flow for string delimiter parsing
-std::vector<std::string> exact_array_values(std::string s, std::string delimiter)
-{
-    size_t pos_start = 0, pos_end, delim_len = delimiter.length();
-    std::string token;
-    std::vector<std::string> res;
-
-    // remove first and last char in the string, which are [ and ]
-    s.erase(s.begin());
-    s.erase(s.end() - 1);
-
-    // now parse the values in the array into a vector
-    while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
-        token     = s.substr(pos_start, pos_end - pos_start);
-        pos_start = pos_end + delim_len;
-        res.push_back(token);
-    }
-
-    res.push_back(s.substr(pos_start));
-    return res;
-} // end of extract_array_values
 
 // =================================================================================
 //    Print a yaml file to 6 levels
@@ -313,7 +294,10 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
         std::cout << "Parsing YAML regions:" << std::endl;
     }
     // parse the region yaml text into a vector of region_fills
-    parse_regions(root, SimulationParamaters.region_fills, SimulationParamaters.region_fills_host);
+    parse_regions(root, 
+                  SimulationParamaters.region_fills,
+                  SimulationParamaters.region_fills_host);
+
 
     if (VERBOSE) {
         printf("\n");
@@ -559,11 +543,6 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
                 if (VERBOSE) {
                     std::cout << "\tsource = " << source << std::endl;
                 }
-
-                if (mesh_input.source == mesh_input::generate && !mesh_input.file_path.empty()) {
-                    std::cout << "ERROR: When the mesh source is set to generate, a mesh file cannot be passed in" << std::endl;
-                    exit(0);
-                }
             }
             else{
                 std::cout << "ERROR: invalid mesh option input in YAML file: " << source << std::endl;
@@ -572,6 +551,7 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
                 for (const auto& pair : map) {
                     std::cout << "\t" << pair.first << std::endl;
                 }
+                throw std::runtime_error("**** Region Not Understood ****");
             } // end if
         } // source
         // Number of dimensions for the mesh
@@ -603,6 +583,7 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
                 for (const auto& pair : map) {
                     std::cout << "\t" << pair.first << std::endl;
                 }
+                throw std::runtime_error("**** Region Not Understood ****");
             } // end if
         } // type
         // Get mesh file path
@@ -612,18 +593,10 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
                 std::cout << "\tfile_path = " << path << std::endl;
             }
 
-            mesh_input.file_path = path;
+            // absolute path to file or local to the director where exe is run
+            mesh_input.file_path = path;  
 
-            if (mesh_input.source == mesh_input::file && mesh_input.file_path.empty()) {
-                std::cout << "ERROR: When the mesh source is a file, a file_path must be set to point to the mesh file" << std::endl;
-                std::cout << "A mesh can either be generated or read in from a file, but not both" << std::endl;
-            }
-
-            if (mesh_input.source == mesh_input::generate) {
-                std::cout << "ERROR: When the mesh source is set to generate, a mesh file cannot be passed in" << std::endl;
-                exit(0);
-            }
-        } // file path
+        } // end file path
         // Origin for the mesh
         else if (a_word.compare("origin") == 0) {
             std::string origin = root["mesh_options"][a_word].As<std::string>();
@@ -799,13 +772,38 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
             }
             throw std::runtime_error("**** Mesh Not Understood ****");
         }
+
+
+
+        // -----------------------------------------------
+        // check for consistency in input settings
+
+        if (mesh_input.source == mesh_input::file && mesh_input.file_path.empty()) {
+            std::cout << "ERROR: When the mesh source is a file, a file_path must be set to point to the mesh file" << std::endl;
+            std::cout << "A mesh can either be generated or read in from a file, but not both" << std::endl;
+        }
+
+        if (mesh_input.source == mesh_input::generate) {
+
+            // check to see if a file path was set
+            if(mesh_input.file_path.size()>0){
+                std::cout << "ERROR: When the mesh source is set to generate, a mesh file cannot be passed in" << std::endl;
+                exit(0);
+            }
+
+        }
+
+        // -----------------------------------------------
+
+
     } // end user_mesh_inputs
 } // end of parse mesh options
 
 // =================================================================================
 //    Parse Output options
 // =================================================================================
-void parse_output_options(Yaml::Node& root, output_options_t& output_options)
+void parse_output_options(Yaml::Node& root, 
+                          output_options_t& output_options)
 {
     Yaml::Node& out_opts = root["output_options"];
 
@@ -899,16 +897,16 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options)
 //    Parse Fill regions
 // =================================================================================
 void parse_regions(Yaml::Node& root, 
-                   CArrayKokkos<reg_fill_t>& region_fills, 
-                   CArray<reg_fill_host_t> &region_fills_host)
+                   CArrayKokkos<RegionFill_t>& region_fills, 
+                   CArray<RegionFill_host_t>&  region_fills_host)
+
 {
     Yaml::Node& region_yaml = root["regions"];
 
     size_t num_regions = region_yaml.Size();
 
-    region_fills = CArrayKokkos<reg_fill_t>(num_regions , "sim_param.region_fills");
-    region_fills_host = CArray<reg_fill_host_t>(num_regions); 
-
+    region_fills = CArrayKokkos<RegionFill_t>(num_regions , "sim_param.region_fills");
+    region_fills_host = CArray<RegionFill_host_t>(num_regions); 
 
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {
@@ -983,6 +981,15 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).speed = speed;
                 });
             } // speed
+            else if (a_word.compare("temperature") == 0) {
+                double temperature = root["regions"][reg_id]["fill_volume"]["temperature"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\ttemperature = " << temperature << std::endl;
+                }
+                RUN({
+                    region_fills(reg_id).temperature = temperature;
+                });
+            } // temperature
             else if (a_word.compare("u") == 0) {
                 // x-component of velocity
                 double u = root["regions"][reg_id]["fill_volume"]["u"].As<double>();
@@ -1235,6 +1242,98 @@ void parse_regions(Yaml::Node& root,
                     throw std::runtime_error("**** Velocity IC Not Understood ****");
                 } // end if
             } // end velocity fill type
+
+            else if (a_word.compare("temperature_distribution") == 0) {
+
+                // temperature_distribution fill region type
+                std::string type = root["regions"][reg_id]["fill_volume"]["temperature_distribution"].As<std::string>();
+
+                if (VERBOSE) {
+                    std::cout << "\ttemperature = " << type << std::endl;
+                }
+                // set the volume tag type NOTE: rename to remove reference to velocity, change to distribution
+                if (velocity_type_map.find(type) != velocity_type_map.end()) {
+                 
+                    // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
+                    switch(velocity_type_map[type]){
+
+                        case init_conds::cartesian:
+                            std::cout << "Setting temperature_distribution initial conditions type to cartesian " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::cartesian;
+                            });
+                            break;
+
+                         case init_conds::radial:
+                            std::cout << "Setting temperature_distribution initial conditions type to radial " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::radial;
+                            });
+                            break;
+
+                         case init_conds::spherical:
+                            std::cout << "Setting temperature_distribution initial conditions type to spherical " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::spherical;
+                            });
+                            break;
+
+                         case init_conds::radial_linear:
+                            std::cout << "Setting temperature_distribution initial conditions type to radial_linear " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::radial_linear;
+                            });
+                            break;
+
+                         case init_conds::spherical_linear:
+                            std::cout << "Setting temperature_distribution initial conditions type to spherical_linear " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::spherical_linear;
+                            });
+                            break;
+
+                         case init_conds::tg_vortex:
+                            std::cout << "Setting temperature_distribution initial conditions type to tg_vortex " << std::endl;
+                            RUN({
+                                region_fills(reg_id).temp_distribution = init_conds::tg_vortex;
+                            });
+                            break;
+
+                         case init_conds::no_ic_vel:
+                            std::cout << "Setting temperature_distribution initial conditions type to no temperature" << std::endl;
+                            RUN({ 
+                                region_fills(reg_id).temp_distribution = init_conds::no_ic_vel;
+                            });
+                            break;
+
+                        default:
+
+                            RUN({ 
+                                region_fills(reg_id).temp_distribution = init_conds::no_ic_vel;
+                            });
+
+                            std::cout << "ERROR: No valid temperature_distribution intial conditions type input " << std::endl;
+                            std::cout << "Valid IC types are: " << std::endl;
+                            
+                            for (const auto& pair : velocity_type_map) {
+                                std::cout << pair.second << std::endl;
+                            }
+
+                            throw std::runtime_error("**** Temperature Initial Conditions Type Not Understood ****");
+                            break;
+                    } // end switch
+
+                    if (VERBOSE) {
+                        std::cout << "\tvolume_fill = " << type << std::endl;
+                    } // end if
+
+                }
+                else{
+                    std::cout << "ERROR: invalid input: " << type << std::endl;
+                    throw std::runtime_error("**** Temperature IC Not Understood ****");
+                } // end if
+            } // end velocity fill type
+
             //
             else if (a_word.compare("type") == 0) {
 
@@ -1325,7 +1424,9 @@ void parse_regions(Yaml::Node& root,
                     std::cout << "\tfile_path = " << path << std::endl;
                 }
 
+                // absolute path to file or local to the director where exe is run
                 region_fills_host(reg_id).file_path = path;   // saving the absolute file path
+   
 
             } // end file path
             //
@@ -1402,7 +1503,12 @@ void parse_regions(Yaml::Node& root,
                                     "********************************************************************************************\n");
                 }
             });
-        }
+
+        }  // end if        
+
+        // -----------------------------------------------
+
+
     } // end loop over regions
 } // end of function to parse region
 
@@ -1533,6 +1639,8 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialEnums(mat_id).EOSType = model::decoupledEOSType;
                             });
+
+                            Materials.MaterialEnums.host(mat_id).EOSType = model::decoupledEOSType;
                             break;
 
                         case model::coupledEOSType:
@@ -1540,12 +1648,14 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialEnums(mat_id).EOSType = model::coupledEOSType;
                             });
+                            Materials.MaterialEnums.host(mat_id).EOSType = model::coupledEOSType;
                             break;
 
                         default:
                             RUN({ 
                                 Materials.MaterialEnums(mat_id).EOSType = model::noEOSType;
                             });
+                            Materials.MaterialEnums.host(mat_id).EOSType = model::noEOSType;
                             std::cout << "ERROR: No valid EOS type input " << std::endl;
                             std::cout << "Valid EOS types are: " << std::endl;
                             
@@ -1639,6 +1749,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialEnums(mat_id).StrengthType = model::noStrengthType;
                             });
+                            Materials.MaterialEnums.host(mat_id).StrengthType = model::noStrengthType;
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model_type_type = " << strength_model_type << std::endl;
                             }
@@ -1648,6 +1759,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialEnums(mat_id).StrengthType = model::incrementBased;
                             });
+                            Materials.MaterialEnums.host(mat_id).StrengthType = model::incrementBased;
                             
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model_type = " << strength_model_type << std::endl;
@@ -1657,6 +1769,8 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialEnums(mat_id).StrengthType = model::stateBased;
                             });
+                            Materials.MaterialEnums.host(mat_id).StrengthType = model::stateBased;
+                            
                             std::cout << "ERROR: state_based models not yet defined: " << std::endl;
                             throw std::runtime_error("**** ERROR: state_based models not yet defined ****");
                             if (VERBOSE) {
@@ -1694,6 +1808,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             break;
 
                         case model::userDefinedStrength:
+                            
                             RUN({
                                 Materials.MaterialFunctions(mat_id).calc_stress = &UserDefinedStrengthModel::calc_stress;
                             });
@@ -1723,12 +1838,16 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                     // erosion_model_map[erosion_model] returns enum value, e.g., model::erosion
                     switch(erosion_model_map[erosion_model]){
                         case model::basicErosion:
+                            Materials.MaterialEnums.host(mat_id).ErosionModels = model::basicErosion;
                             RUN({
+                                Materials.MaterialEnums(mat_id).ErosionModels = model::basicErosion;
                                 Materials.MaterialFunctions(mat_id).erode = &BasicErosionModel::erode;
                             });
                             break;
                         case model::noErosion:
+                            Materials.MaterialEnums.host(mat_id).ErosionModels = model::noErosion;
                             RUN({
+                                Materials.MaterialEnums(mat_id).ErosionModels = model::noErosion;
                                 Materials.MaterialFunctions(mat_id).erode = &NoErosionModel::erode;
                             });
                             break;
@@ -1750,15 +1869,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                 } // end if
 
             } // erosion model variables
-            else if (a_word.compare("void_mat_id") == 0) {
-                double void_mat_id = root["materials"][mat_id]["material"]["void_mat_id"].As<size_t>();
-                if (VERBOSE) {
-                    std::cout << "\tvoid_mat_id = " << void_mat_id << std::endl;
-                }
-                RUN({
-                    Materials.MaterialFunctions(mat_id).void_mat_id = void_mat_id;
-                });
-            } // blank_mat_id 
             else if (a_word.compare("erode_tension_val") == 0) {
                 double erode_tension_val = root["materials"][mat_id]["material"]["erode_tension_val"].As<double>();
                 if (VERBOSE) {

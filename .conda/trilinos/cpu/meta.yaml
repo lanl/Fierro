@@ -3,7 +3,7 @@
 {% set macos_compiler_version = "16" %}
 
 package:
-  name: fierro-trilinos-cpu
+  name: trilinos-cpu
   version: {{ version }}
 
 source:

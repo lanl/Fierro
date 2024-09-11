@@ -39,49 +39,47 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct BoundaryConditionEnums_t;
 
+namespace ReflectedVelocityBC
+{
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary velocity is on a reflected surface (normal direction is zero)
+/// \fn velocity
 ///
 /// \brief This is a function to set the velocity along a symmetry plane or
-///        a wall.  This fcn imposes a normal velocity, in the specified 
+///        a wall.  This fcn imposes a normal velocity, in the specified
 ///        direction, to be equal to zero
 ///
 /// \param Mesh object
-/// \param Boundary condition enums to select options 
+/// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
 /// \param Node velocity
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
-/// \param Boundary set local id 
+/// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace ReflectedVelocityBC {
+KOKKOS_FUNCTION
+static void velocity(const Mesh_t& mesh,
+    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+    const DCArrayKokkos<double>& bc_global_vars,
+    const DCArrayKokkos<double>& bc_state_vars,
+    const DCArrayKokkos<double>& node_vel,
+    const double time_value,
+    const size_t rk_stage,
+    const size_t bdy_node_gid,
+    const size_t bdy_set)
+{
+    // directions are:
+    // x_plane  = 0,
+    // y_plane  = 1,
+    // z_plane  = 2,
 
-    KOKKOS_FUNCTION
-    static void velocity(const mesh_t& mesh,
-                         const DCArrayKokkos <BoundaryConditionEnums_t>& BoundaryConditionEnums,
-                         const DCArrayKokkos<double>& bc_global_vars,
-                         const DCArrayKokkos<double>& bc_state_vars,
-                         const DCArrayKokkos<double>& node_vel,
-                         const double time_value,
-                         const size_t bdy_node_gid,
-                         const size_t bdy_set)
-    {
+    // Set velocity to zero in the specified direction
+    node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) = 0.0;
 
-        // directions are:
-        // x_plane  = 0,
-        // y_plane  = 1,
-        // z_plane  = 2,
-
-        // Set velocity to zero in the specified direction
-        node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) = 0.0;
-
-        return;
-    } // end func
-
+    return;
+} // end func
 } // end namespace
-
 
 #endif // end Header Guard

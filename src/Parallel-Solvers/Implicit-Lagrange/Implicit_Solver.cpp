@@ -186,8 +186,9 @@ void Implicit_Solver::run(){
     all_initial_node_coords_distributed = all_node_coords_distributed;
 
     //print element imbalance stats
-    int rnum_global_sum = 0;
-    MPI_Allreduce(&rnum_elem, &rnum_global_sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    long long int rnum_global_sum = 0;
+    long long int temp_rnum_elem = rnum_elem;
+    MPI_Allreduce(&temp_rnum_elem, &rnum_global_sum, 1, MPI_LONG_LONG_INT, MPI_SUM, MPI_COMM_WORLD);
     double local_imbalance, max_imbalance, avg_elem;
     max_imbalance = 0;
     avg_elem = rnum_global_sum/((double) nranks);

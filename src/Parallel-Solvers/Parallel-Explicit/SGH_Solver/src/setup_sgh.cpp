@@ -81,7 +81,7 @@ void FEA_Module_SGH::setup()
     // shorthand names
     const size_t num_nodes   = mesh->num_nodes;
     const size_t num_elems   = mesh->num_elems;
-    const size_t num_corners = mesh->num_corners;
+    num_corners = mesh->num_corners;
 
     // --- make dual views of data on CPU and GPU ---
     //  Notes:
@@ -114,6 +114,11 @@ void FEA_Module_SGH::setup()
     // create Dual Views of the corner struct variables
     corner_force = DViewCArrayKokkos<double>(&corner_interface.force(0, 0), num_corners, num_dim);
     corner_mass  = DViewCArrayKokkos<double>(&corner_interface.mass(0), num_corners);
+
+    //external force storage
+    if(num_lcs){
+        corner_external_force = DCArrayKokkos<double>(num_corners, num_dim);
+    }
 
     // allocate elem_vel_grad
     elem_vel_grad = DCArrayKokkos<double>(num_elems, 3, 3);

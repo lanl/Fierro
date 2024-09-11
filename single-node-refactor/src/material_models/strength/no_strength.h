@@ -32,67 +32,10 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef USER_DEFINED_STRENGTH_H
-#define USER_DEFINED_STRENGTH_H
+#ifndef NO_STRENGTH_H
+#define NO_STRENGTH_H
 
 
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn UserDefinedStrengthModel
-///
-/// \brief user defined strength model
-///
-///  This is the user material model function for the stress tensor
-///
-/// \param Element pressure
-/// \param Element stress
-/// \param Global ID for the element
-/// \param Material ID for the element
-/// \param Element state variables
-/// \param Element Sound speed
-/// \param Material density
-/// \param Material specific internal energy
-/// \param Element velocity gradient
-/// \param Element nodes IDs in the element
-/// \param Node node coordinates
-/// \param Noe velocity 
-/// \param Element volume
-/// \param Element time step
-/// \param Element coefficient in the Runge Kutta time integration
-///
-/////////////////////////////////////////////////////////////////////////////
-namespace UserDefinedStrengthModel {
-
-    KOKKOS_FUNCTION
-    static void calc_stress(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie,
-        const ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
-        const double vol,
-        const double dt,
-        const double rk_alpha)
-    {
-        // -----------------------------------------------------------------------------
-        // Required variables are here
-        // ------------------------------------------------------------------------------
-
-        // -----------------------------------------------------------------------------
-        // The user must coding goes here
-        // ------------------------------------------------------------------------------
-
-        return;
-    } // end of user mat
-
-} // end namespace
 
 // -----------------------------------------------------------------------------
 // This is the user material model function for the stress tensor
@@ -102,7 +45,7 @@ namespace NoStrengthModel {
     KOKKOS_FUNCTION
     static void calc_stress(const DCArrayKokkos<double>& elem_pres,
         const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
+        const size_t mat_pt_lid,
         const size_t mat_id,
         const DCArrayKokkos<double>& elem_state_vars,
         const DCArrayKokkos<double>& elem_sspd,
@@ -114,51 +57,8 @@ namespace NoStrengthModel {
         const DCArrayKokkos<double>&    node_vel,
         const double vol,
         const double dt,
-        const double rk_alpha)
-    {
-        return;
-    } // end of user mat
-
-} // end namespace
-
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn fcn_name
-///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
-///
-/////////////////////////////////////////////////////////////////////////////
-// -----------------------------------------------------------------------------
-// This is place holder for another user strength model
-// ------------------------------------------------------------------------------
-namespace NotionalStrengthModel {
-    
-    KOKKOS_FUNCTION
-    static void calc_stress(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie,
-        const ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
-        const double vol,
-        const double dt,
-        const double rk_alpha)
+        const double rk_alpha,
+        const RaggedRightArrayKokkos<double> &strength_global_vars)
     {
         return;
     } // end of user mat

@@ -32,20 +32,9 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <chrono>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>  // fmin, fmax, abs note: fminl is long
-#include <sys/stat.h>
-#include <set>
-
 #include "matar.h"
 #include "solver.h"
-#include "simulation_parameters.h"
+
 // debug and performance includes
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -92,6 +81,6 @@ double Solver::CPU_Time()
 /////////////////////////////////////////////////////////////////////////////
 void Solver::init_clock()
 {
-    double current_cpu = 0;
+    // double current_cpu = 0;
     initial_CPU_time = CPU_Time();
 }

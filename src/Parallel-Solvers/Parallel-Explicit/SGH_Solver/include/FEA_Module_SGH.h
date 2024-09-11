@@ -505,6 +505,9 @@ public:
     void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
                                                       unsigned long cycle, real_t global_dt);
 
+    void compute_topology_optimization_gradient_IVP(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
+                                                      unsigned long cycle, real_t global_dt);
+
     void boundary_adjoint(const mesh_t& mesh,
                           const DCArrayKokkos<boundary_t>& boundary,
                           vec_array& node_adjoint,
@@ -678,6 +681,7 @@ public:
 
     // Dual Views of the corner struct variables
     DViewCArrayKokkos<double> corner_force;
+    DCArrayKokkos<double> corner_external_force;
     DViewCArrayKokkos<double> corner_mass;
 
     // Boundary Conditions Data
@@ -700,7 +704,6 @@ public:
     int rk_num_bins;
 
     // optimization flags and data
-    bool kinetic_energy_objective;
     Teuchos::RCP<std::set<Dynamic_Checkpoint>> dynamic_checkpoint_set;
     Teuchos::RCP<std::vector<Dynamic_Checkpoint>> cached_dynamic_checkpoints;
     int num_active_checkpoints;

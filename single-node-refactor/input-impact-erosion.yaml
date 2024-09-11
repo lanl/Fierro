@@ -15,7 +15,7 @@ dynamic_options:
 mesh_options:
     source: generate
     num_dims: 3
-    type: Box
+    type: box
     origin: [0.0, 0.0, 0.0]
     length: [1.2, 1.2, 1.2]
     num_elems: [30, 30, 30]
@@ -85,20 +85,13 @@ materials:
             - 1.0E-4
             - 1.0
         erosion_model: basic
-        void_mat_id: 2   
         erode_tension_val: 2.0e-7
         erode_density_val: 0.01
-
-    # eroded material
-    - material:
-        id: 2
-        eos_model_type: decoupled
-        eos_model: void
     
 
     # background air
     - material:
-        id: 3
+        id: 2
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         # strength_model: none
@@ -115,7 +108,7 @@ regions:
     # air
     - fill_volume:
         type: global
-        material_id: 3
+        material_id: 2
         den: 0.010
         sie: 3.0e-4
         velocity: cartesian

@@ -49,8 +49,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 struct SimulationParameters_t;
 struct solver_input_t;
 struct mesh_input_t;
-struct reg_fill_t;
-struct reg_fill_host_t;
+struct RegionFill_t;
+struct RegionFill_host_t;
 struct output_options_t;
 
 struct Material_t;
@@ -73,12 +73,6 @@ static bool DoesPathExist(const std::string& s)
     struct stat buffer;
     return (stat(s.c_str(), &buffer) == 0);
 }
-
-// for string delimiter parsing
-std::vector<std::string> exact_array_values(std::string s, std::string delimiter);
-
-// retrieves multiple values between [ ]
-std::vector<double> extract_list(std::string str);
 
 // prints the contents of a parsed yaml file
 void print_yaml(Yaml::Node root);
@@ -106,7 +100,9 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input);
 void parse_output_options(Yaml::Node& root, output_options_t& output_options);
 
 // parse the region text
-void parse_regions(Yaml::Node& root, CArrayKokkos<reg_fill_t>& region_fills, CArray<reg_fill_host_t> &region_fills_host);
+void parse_regions(Yaml::Node& root, 
+                   CArrayKokkos<RegionFill_t>& region_fills,
+                   CArray<RegionFill_host_t>& region_fills_host);
 
 // parse the region text
 void parse_materials(Yaml::Node& root, Material_t& Materials);
