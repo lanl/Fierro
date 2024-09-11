@@ -7,7 +7,7 @@
 #{% set mpi_version = "4.1" %}
 
 package:
-  name: fierro-cpu
+  name: fierro-fe-cpu
   version: {{ version }}
 
 source:
