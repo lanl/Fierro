@@ -79,20 +79,23 @@ namespace SGTM3D_State
         material_pt_state::mass,
         material_pt_state::volume_fraction,
         material_pt_state::specific_internal_energy,
-        material_pt_state::eroded_flag
+        material_pt_state::eroded_flag,
+        material_pt_state::heat_flux
     };
 
     // Material corner state to be initialized for the SGH solver
     static const std::vector<material_corner_state> required_material_corner_state = 
     { 
-        material_corner_state::force
+        material_corner_state::force,
+        material_corner_state::heat_flux
     };
 
     // Corner state to be initialized for the SGH solver
     static const std::vector<corner_state> required_corner_state = 
     { 
         corner_state::force,
-        corner_state::mass
+        corner_state::mass,
+        corner_state::heat_flux
     };
 }
 
@@ -243,6 +246,26 @@ public:
         const double dt,
         const double rk_alpha) const;
 
+
+    void get_heat_flux(
+        const Material_t& Materials,
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& node_temp,
+        const DCArrayKokkos<double>& MaterialPoints_q_flux,
+        const DCArrayKokkos<double>& MaterialPoints_statev,
+        const DCArrayKokkos<double>& corner_q_flux,
+        const DCArrayKokkos<double>& MaterialCorners_q_flux,
+        const corners_in_mat_t corners_in_mat_elem,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t num_mat_elems,
+        const size_t mat_id,
+        const double fuzz,
+        const double small,
+        const double dt,
+        const double rk_alpha) const;
+
     // **** Functions defined in geometry.cpp **** //
     void update_position(
         double rk_alpha,
@@ -250,6 +273,14 @@ public:
         const size_t num_dims,
         const size_t num_nodes,
         DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& node_vel) const;
+
+    void update_temperature(
+        double rk_alpha,
+        double dt,
+        const size_t num_dims,
+        const size_t num_nodes,
+        DCArrayKokkos<double>& node_temperature,
         const DCArrayKokkos<double>& node_vel) const;
 
     // **** Functions defined in momentum.cpp **** //

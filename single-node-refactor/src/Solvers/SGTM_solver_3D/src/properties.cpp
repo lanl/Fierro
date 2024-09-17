@@ -190,22 +190,22 @@ void SGTM3D::update_state(
                         elem_gid);
 
             // --- call strength model ---
-            Materials.MaterialFunctions(mat_id).calc_stress(
-                                            MaterialPoints_pres,
-                                            MaterialPoints_stress,
-                                            mat_point_lid,
-                                            mat_id,
-                                            MaterialPoints_statev,
-                                            MaterialPoints_sspd,
-                                            MaterialPoints_den(mat_point_lid),
-                                            MaterialPoints_sie(1, mat_point_lid),
-                                            vel_grad,
-                                            elem_node_gids,
-                                            node_coords,
-                                            node_vel,
-                                            GaussPoints_vol(gauss_gid),
-                                            dt,
-                                            rk_alpha);
+            // Materials.MaterialFunctions(mat_id).calc_stress(
+            //                                 MaterialPoints_pres,
+            //                                 MaterialPoints_stress,
+            //                                 mat_point_lid,
+            //                                 mat_id,
+            //                                 MaterialPoints_statev,
+            //                                 MaterialPoints_sspd,
+            //                                 MaterialPoints_den(mat_point_lid),
+            //                                 MaterialPoints_sie(1, mat_point_lid),
+            //                                 vel_grad,
+            //                                 elem_node_gids,
+            //                                 node_coords,
+            //                                 node_vel,
+            //                                 GaussPoints_vol(gauss_gid),
+            //                                 dt,
+            //                                 rk_alpha);
         }); // end parallel for over mat elem lid
     } // end if state_based strength model
 
@@ -224,16 +224,16 @@ void SGTM3D::update_state(
             size_t gauss_gid = elem_gid;
 
             // --- Element erosion model ---
-            Materials.MaterialFunctions(mat_id).erode(
-                                   MaterialPoints_eroded,
-                                   MaterialPoints_stress,
-                                   MaterialPoints_pres(mat_point_lid),
-                                   MaterialPoints_den(mat_point_lid),
-                                   MaterialPoints_sie(1, mat_point_lid),
-                                   MaterialPoints_sspd(mat_point_lid),
-                                   Materials.MaterialFunctions(mat_id).erode_tension_val,
-                                   Materials.MaterialFunctions(mat_id).erode_density_val,
-                                   mat_point_lid);
+            // Materials.MaterialFunctions(mat_id).erode(
+            //                        MaterialPoints_eroded,
+            //                        MaterialPoints_stress,
+            //                        MaterialPoints_pres(mat_point_lid),
+            //                        MaterialPoints_den(mat_point_lid),
+            //                        MaterialPoints_sie(1, mat_point_lid),
+            //                        MaterialPoints_sspd(mat_point_lid),
+            //                        Materials.MaterialFunctions(mat_id).erode_tension_val,
+            //                        Materials.MaterialFunctions(mat_id).erode_density_val,
+            //                        mat_point_lid);
 
             // apply a void eos if mat_point is eroded
             if (MaterialPoints_eroded(mat_point_lid)) {

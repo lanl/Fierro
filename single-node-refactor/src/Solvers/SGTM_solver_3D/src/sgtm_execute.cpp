@@ -158,6 +158,9 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
+
+        // std::cout<<std::endl;
+        // std::cout<<"CYCLE =   "<< cycle <<std::endl;
         
         // stop calculation if flag
         if (stop_calc == 1) {
@@ -176,28 +179,30 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             double dt_mat = dt;
 
             // get the stable time step
-            get_timestep(mesh,
-                         State.node.coords,
-                         State.node.vel,
-                         State.GaussPoints.vol,
-                         State.MaterialPoints(mat_id).sspd,
-                         State.MaterialPoints(mat_id).eroded,
-                         State.MaterialToMeshMaps(mat_id).elem,
-                         State.MaterialToMeshMaps(mat_id).num_material_elems,
-                         time_value,
-                         graphics_time,
-                         time_final,
-                         dt_max,
-                         dt_min,
-                         dt_cfl,
-                         dt_mat,
-                         fuzz);
+            // get_timestep(mesh,
+            //              State.node.coords,
+            //              State.node.vel,
+            //              State.GaussPoints.vol,
+            //              State.MaterialPoints(mat_id).sspd,
+            //              State.MaterialPoints(mat_id).eroded,
+            //              State.MaterialToMeshMaps(mat_id).elem,
+            //              State.MaterialToMeshMaps(mat_id).num_material_elems,
+            //              time_value,
+            //              graphics_time,
+            //              time_final,
+            //              dt_max,
+            //              dt_min,
+            //              dt_cfl,
+            //              dt_mat,
+            //              fuzz);
 
             // save the smallest dt of all materials
             min_dt_calc = fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
 
-        dt = min_dt_calc;  // save this dt time step
+        // dt = min_dt_calc;  // save this dt time step
+
+        dt = dt_start;
 
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
@@ -211,6 +216,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
         // ---------------------------------------------------------------------
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+            
             // save the values at t_n
             rk_init(State.node.coords,
                     State.node.vel,
@@ -226,48 +232,78 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
 
+            double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
+
+            // Set corner heat flux to zero
+            FOR_ALL(corner_gid, 0, mesh.num_corners, {
+                for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+                    State.corner.q_flux(0, corner_gid, dim) = 0.0;
+                }
+            }); // end parallel for corners
 
             // ---- calculate the temperature gradient  ----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
                 size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
-
-                // get_temp_gradient();
-
-                // calc_elem_heat_flux();
-
-
-
-                // get_force(Materials,
-                //           mesh,
-                //           State.GaussPoints.vol,
-                //           State.GaussPoints.div,
-                //           State.MaterialPoints(mat_id).eroded,
-                //           State.corner.force,
-                //           State.node.coords,
-                //           State.node.vel,
-                //           State.MaterialPoints(mat_id).den,
-                //           State.MaterialPoints(mat_id).sie,
-                //           State.MaterialPoints(mat_id).pres,
-                //           State.MaterialPoints(mat_id).stress,
-                //           State.MaterialPoints(mat_id).sspd,
-                //           State.MaterialPoints(mat_id).statev,
-                //           State.MaterialCorners(mat_id).force,
-                //           State.MaterialPoints(mat_id).volfrac,
-                //           State.corners_in_mat_elem,
-                //           State.MaterialToMeshMaps(mat_id).elem,
-                //           num_mat_elems,
-                //           mat_id,
-                //           fuzz,
-                //           small,
-                //           dt,
-                //           rk_alpha);
+                get_heat_flux(
+                    Materials,
+                    mesh,
+                    State.GaussPoints.vol,
+                    State.node.coords,
+                    State.node.temp,
+                    State.MaterialPoints(mat_id).q_flux,
+                    State.MaterialPoints(mat_id).statev,
+                    State.corner.q_flux,
+                    State.MaterialCorners(mat_id).q_flux,
+                    State.corners_in_mat_elem,
+                    State.MaterialToMeshMaps(mat_id).elem,
+                    num_mat_elems,
+                    mat_id,
+                    fuzz,
+                    small,
+                    dt, 
+                    rk_alpha);
 
             } // end for mat_id
 
             // ---- Update nodal temperature ---- //
 
+            // loop over all the nodes in the mesh
+            FOR_ALL(node_gid, 0, mesh.num_nodes, {
+                double node_grad[3];
+                double node_flux = 0.0;
+                for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+                    node_grad[dim] = 0.0;
+                } // end for dim
+
+                // loop over all corners around the node and calculate the nodal gradient
+                for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
+                    
+                    // Get corner gid
+                    size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
+
+                    // // loop over dimension and tally the nodal temperature gradient
+                    // for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+                    //     node_grad[dim] += State.corner.q_flux(1, corner_gid, dim);
+                    // } // end for dim
+
+                    node_flux += State.corner.q_flux(1, corner_gid, 0);
+
+
+                } // end for corner_lid
+
+                // std::cout<<"Node  "<< node_gid <<" temp flux = "<< node_flux << std::endl;
+
+                // update the temperature
+
+                State.node.temp(1, node_gid) = State.node.temp(0, node_gid) + rk_alpha * dt * node_flux / State.node.mass(node_gid);
+
+                // std::cout<<"Node  "<< node_gid <<" rk_alpha = "<< rk_alpha<<" :: dt ="<< dt <<" :: mass = "<< State.node.mass(node_gid) <<std::endl;
+                // std::cout<<"Node  "<< node_gid <<" temperature = "<< State.node.temp(0, node_gid) <<std::endl;
+                // std::cout<<"Node  "<< node_gid <<" new temperature = "<< State.node.temp(1, node_gid) <<std::endl;
+
+            }); // end for parallel for over nodes
 
             // ---- apply temperature boundary conditions to the boundary patches---- //
 
@@ -280,24 +316,9 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             //     size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
-            //     update_state(Materials,
-            //                  mesh,
-            //                  State.node.coords,
-            //                  State.node.vel,
-            //                  State.MaterialPoints(mat_id).den,
-            //                  State.MaterialPoints(mat_id).pres,
-            //                  State.MaterialPoints(mat_id).stress,
-            //                  State.MaterialPoints(mat_id).sspd,
-            //                  State.MaterialPoints(mat_id).sie,
-            //                  State.GaussPoints.vol,
-            //                  State.MaterialPoints(mat_id).mass,
-            //                  State.MaterialPoints(mat_id).statev,
-            //                  State.MaterialPoints(mat_id).eroded,
-            //                  State.MaterialToMeshMaps(mat_id).elem,
-            //                  dt,
-            //                  rk_alpha,
-            //                  num_mat_elems,
-            //                  mat_id);
+            //     update_state
+
+
             // } // end for mat_id
 
         } // end of RK loop

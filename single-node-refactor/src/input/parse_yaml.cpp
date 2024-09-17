@@ -1249,7 +1249,7 @@ void parse_regions(Yaml::Node& root,
                 std::string type = root["regions"][reg_id]["fill_volume"]["temperature_distribution"].As<std::string>();
 
                 if (VERBOSE) {
-                    std::cout << "\ttemperature = " << type << std::endl;
+                    std::cout << "\ttemperature_distribution = " << type << std::endl;
                 }
                 // set the volume tag type NOTE: rename to remove reference to velocity, change to distribution
                 if (velocity_type_map.find(type) != velocity_type_map.end()) {

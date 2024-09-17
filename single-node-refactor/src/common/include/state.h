@@ -79,7 +79,7 @@ struct node_t
                     if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
                     break;
                 case node_state::temp:
-                    if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_nodes, "node_temp");
+                    if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_rk, num_nodes, "node_temp");
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
@@ -300,7 +300,7 @@ struct MaterialCorner_t
                     if (force.size() == 0) this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
                     break;
                 case material_corner_state::heat_flux:
-                    if (force.size() == 0) this->q_flux = DCArrayKokkos<double>(2, num_corners_max, num_dims, "material_corner_heat_flux"); // WARNING: hard coding rk2
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(2, num_corners_max, num_dims, "material_corner_heat_flux"); // WARNING: hard coding rk2
                     break;
                 default:
                     std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;

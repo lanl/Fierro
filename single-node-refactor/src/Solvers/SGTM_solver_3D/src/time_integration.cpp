@@ -67,7 +67,7 @@ void SGTM3D::rk_init(DCArrayKokkos<double>& node_coords,
             for (size_t j = 0; j < 3; j++) {
                 MaterialPoints_stress(0, matpt_lid, i, j) = MaterialPoints_stress(1, matpt_lid, i, j);
             }
-            MaterialPoints_q_flux(0, matpt_lid, i) = MaterialPoints_q_flux(1, matpt_lid, i);
+            MaterialPoints_q_flux(0, matpt_lid, i) = 0.0; // MaterialPoints_q_flux(1, matpt_lid, i);
         }  // end for
 
     }); // end parallel for
@@ -80,6 +80,7 @@ void SGTM3D::rk_init(DCArrayKokkos<double>& node_coords,
         }
         node_temp(0, node_gid) = node_temp(1, node_gid);
     }); // end parallel for
+
     Kokkos::fence();
 
     return;

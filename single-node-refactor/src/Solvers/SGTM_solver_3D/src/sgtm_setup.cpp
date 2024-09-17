@@ -39,6 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.h"
 #include "state.h"
 #include "simulation_parameters.h"
+#include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -208,9 +209,6 @@ void SGTM3D::fill_regions_sgtm(
                                     elem_gid,
                                     f_id);
 
-                // add user defined paint here
-                // user_defined_sgh_state();
-
                 // technically, not thread safe, but making it a separate loop created bad fill behavior
                 // loop over the nodes of this element and apply velocity
                 for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -264,6 +262,9 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
     const size_t num_nodes = mesh.num_nodes;
 
     const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
+
+    // Calculate element volume
+    geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
     // create temporary state fields
     // Painting routine requires only 1 material per GaussPoint
