@@ -386,8 +386,11 @@ struct Simulation_Parameters
      */
     size_t ensure_module(std::shared_ptr<FEA_Module_Parameters> module) {
         size_t i = find_module(module->type);
-        if (i == fea_module_parameters.size())
+        size_t current_size = fea_module_parameters.size();
+        if (i == current_size){
             fea_module_parameters.push_back(module);
+            fea_module_parameters[current_size]->requires_conditions = false;
+        }
         return i;
     }
 
