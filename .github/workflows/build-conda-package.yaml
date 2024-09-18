@@ -37,7 +37,7 @@ jobs:
           #miniforge-variant: Mambaforge
           #miniforge-version: latest
           activate-environment: build-env
-          use-mamba: false
+          #use-mamba: false
           condarc-file: .etc/condarc.yaml
 
       # - name: Get Date
