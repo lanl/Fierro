@@ -18,7 +18,7 @@ mesh_options:
     type: box
     origin: [0.0, 0.0, 0.0]
     length: [1.2, 1.2, 1.2]
-    num_elems: [12, 12, 12]
+    num_elems: [48, 48, 48]
 
 
 output_options:
