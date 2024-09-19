@@ -606,6 +606,7 @@ public:
     Teuchos::RCP<MV> force_gradient_design;
     Teuchos::RCP<MV> force_gradient_position;
     Teuchos::RCP<MV> force_gradient_velocity;
+    TpetraMVArray<real_t, array_layout, device_type, memory_traits> mtr_node_velocities_distributed;
 
     // Local FEA data
     DCArrayKokkos<size_t, array_layout, device_type, memory_traits>      Global_Gradient_Matrix_Assembly_Map; // Maps element local nodes to columns on ragged right node connectivity graph

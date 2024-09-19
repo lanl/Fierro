@@ -206,6 +206,10 @@ FEA_Module_SGH::FEA_Module_SGH(
     
     num_active_checkpoints = 0;
     have_loading_conditions = false;
+    if(module_params->matar_mpi_test){
+        mtr_node_velocities_distributed = TpetraMVArray<real_t, array_layout, device_type, memory_traits>(all_node_map->getLocalNumElements(), num_dim, all_node_map, "mtr_node_velocities_distributed");
+        mtr_node_velocities_distributed.own_comm_setup(map);
+    }
 }
 
 FEA_Module_SGH::~FEA_Module_SGH()

@@ -31,6 +31,7 @@ struct FEA_Module_Parameters
     std::vector<std::shared_ptr<Loading_Condition>> loading_conditions;
     bool requires_conditions = true;
     bool replace_import_bcs = false;
+    bool matar_mpi_test = false;    //development test flag; may be removed later
     // Non-serialized Fields
     DCArrayKokkos <loading_t>  loading;
     DCArrayKokkos <boundary_t> boundary;
