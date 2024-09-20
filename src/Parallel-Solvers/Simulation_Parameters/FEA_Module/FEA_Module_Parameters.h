@@ -62,7 +62,7 @@ struct FEA_Module_Parameters
 YAML_ADD_REQUIRED_FIELDS_FOR(FEA_Module_Parameters, type, material_id)
 IMPL_YAML_SERIALIZABLE_FOR(FEA_Module_Parameters, type,
     material_id, boundary_conditions, loading_conditions,
-    replace_import_bcs
+    replace_import_bcs, matar_mpi_test
 )
 
 #endif
