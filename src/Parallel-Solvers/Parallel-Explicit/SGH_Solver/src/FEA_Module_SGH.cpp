@@ -206,15 +206,32 @@ FEA_Module_SGH::FEA_Module_SGH(
     
     num_active_checkpoints = 0;
     have_loading_conditions = false;
-    if(module_params->matar_mpi_test){
-        mtr_node_velocities_distributed = TpetraMVArray<real_t, array_layout, device_type, memory_traits>(all_node_map->getLocalNumElements(), num_dim, all_node_map, "mtr_node_velocities_distributed");
-        //all_node_map->describe(*fos, Teuchos::VERB_EXTREME);
-        // for(int i = 0; i < all_node_map->getLocalNumElements(); i++){
-        //     mtr_node_velocities_distributed(i) = 1;
-        //     //std::cout << mtr_node_velocities_distributed(i);
-        // }
-        mtr_node_velocities_distributed.own_comm_setup(map);
-    }
+    // if(module_params->matar_mpi_test){
+    //     //test partition map wrappers
+    //     DCArrayKokkos<long long int, array_layout, device_type, memory_traits> input_indices = DCArrayKokkos<long long int, array_layout, device_type, memory_traits>(all_node_map->getLocalNumElements(), "map_indices_test");
+    //     auto map_indices = all_node_map->getMyGlobalIndices();
+    //     for(int i =0; i < all_node_map->getLocalNumElements(); i++){
+    //         input_indices(i) = map_indices(i);
+    //     }
+    //     mtr_map = TpetraPartitionMap<long long int, array_layout, device_type, memory_traits>(input_indices);
+
+    //     DCArrayKokkos<long long int, array_layout, device_type, memory_traits> input_local_indices = DCArrayKokkos<long long int, array_layout, device_type, memory_traits>(map->getLocalNumElements(), "local_map_indices_test");
+    //     map_indices = map->getMyGlobalIndices();
+    //     for(int i =0; i < map->getLocalNumElements(); i++){
+    //         input_local_indices(i) = map_indices(i);
+    //     }
+    //     mtr_local_map = TpetraPartitionMap<long long int, array_layout, device_type, memory_traits>(input_local_indices);
+
+    //     //mtr_map.tpetra_map->describe(*fos, Teuchos::VERB_EXTREME);
+    //     //mtr_node_velocities_distributed = TpetraMVArray<real_t, array_layout, device_type, memory_traits>(all_node_map->getLocalNumElements(), num_dim, all_node_map, "mtr_node_velocities_distributed");
+    //     mtr_node_velocities_distributed = TpetraMVArray<real_t, array_layout, device_type, memory_traits>(all_node_map->getLocalNumElements(), num_dim, mtr_map, "mtr_node_velocities_distributed");
+    //     //all_node_map->describe(*fos, Teuchos::VERB_EXTREME);
+    //     // for(int i = 0; i < all_node_map->getLocalNumElements(); i++){
+    //     //     mtr_node_velocities_distributed(i) = 1;
+    //     //     //std::cout << mtr_node_velocities_distributed(i);
+    //     // }
+    //     mtr_node_velocities_distributed.own_comm_setup(mtr_local_map);
+    // }
 }
 
 FEA_Module_SGH::~FEA_Module_SGH()
@@ -1350,64 +1367,64 @@ void FEA_Module_SGH::sgh_solve()
             // first comm time interval point
             double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
             
-            if(module_params->matar_mpi_test){
+            // if(module_params->matar_mpi_test){
+            //     FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            //         for (int idim = 0; idim < num_dim; idim++) {
+            //             mtr_node_velocities_distributed(node_gid, idim) = node_vel(rk_level, node_gid, idim);
+            //         }
+            //     }); // end parallel for
+            //     Kokkos::fence();
+            //     mtr_node_velocities_distributed.update_host();
+            // }
+
+            // view scope
+            {
+                vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                     for (int idim = 0; idim < num_dim; idim++) {
-                        mtr_node_velocities_distributed(node_gid, idim) = node_vel(rk_level, node_gid, idim);
+                        node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                     }
                 }); // end parallel for
-                Kokkos::fence();
-                mtr_node_velocities_distributed.update_host();
-            }
-            else{
-                // view scope
-                {
-                    vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-                    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                        for (int idim = 0; idim < num_dim; idim++) {
-                            node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
-                        }
-                    }); // end parallel for
-                } // end view scope
-                Kokkos::fence();
-            }
+            } // end view scope
+            Kokkos::fence();
+
             // active view scope
             {
                 const_host_vec_array node_velocities_host = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
             }
             double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
             Explicit_Solver_Pointer_->dev2host_time += comm_time2 - comm_time1;
+
             // communicate ghost velocities
-            if(module_params->matar_mpi_test){
-                mtr_node_velocities_distributed.perform_comms();
-                mtr_node_velocities_distributed.update_device();
-            }
-            else{
-                Explicit_Solver_Pointer_->comm_velocities();
-            }
+            // if(module_params->matar_mpi_test){
+            //     mtr_node_velocities_distributed.perform_comms();
+            //     mtr_node_velocities_distributed.update_device();
+            // }
+
+            Explicit_Solver_Pointer_->comm_velocities();
 
             double comm_time3 = Explicit_Solver_Pointer_->CPU_Time();
-            if(module_params->matar_mpi_test){
+            // if(module_params->matar_mpi_test){
+            //     FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
+            //         for (int idim = 0; idim < num_dim; idim++) {
+            //             node_vel(rk_level, node_gid, idim) = mtr_node_velocities_distributed(node_gid, idim);
+            //         }
+            //     }); // end parallel for
+            //     Kokkos::fence();
+            // }
+
+            // this is forcing a copy to the device
+            // view scope
+            {
+                vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
                     for (int idim = 0; idim < num_dim; idim++) {
-                        node_vel(rk_level, node_gid, idim) = mtr_node_velocities_distributed(node_gid, idim);
+                        node_vel(rk_level, node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                     }
                 }); // end parallel for
-                Kokkos::fence();
-            }
-            else{
-                // this is forcing a copy to the device
-                // view scope
-                {
-                    vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-                    FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
-                        for (int idim = 0; idim < num_dim; idim++) {
-                            node_vel(rk_level, node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
-                        }
-                    }); // end parallel for
-                } // end view scope
-                Kokkos::fence();
-            }
+            } // end view scope
+            Kokkos::fence();
+            
             double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
             Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
             Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
