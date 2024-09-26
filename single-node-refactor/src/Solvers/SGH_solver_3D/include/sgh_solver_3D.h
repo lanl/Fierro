@@ -36,18 +36,65 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SGH3D_SOLVER_H
 
 #include "solver.h"
+#include "state.h"
 
 // Forward declare structs
 struct SimulationParameters_t;
 struct Material_t;
 struct Mesh_t;
 struct BoundaryCondition_t;
-struct State_t;
+// struct State_t;
 struct RegionFill_t;
 struct RegionFill_host_t;
-struct corners_in_mat_t;
+// struct corners_in_mat_t;
 
 using namespace mtr; // matar namespace
+
+
+namespace SGH3D_State
+{
+    // Node state to be initialized for the SGH solver
+    static const std::vector<node_state> required_node_state = 
+    { 
+        node_state::coords,
+        node_state::velocity,
+        node_state::mass,
+        node_state::temp // Note, remove this, unused WIP
+    };
+
+    // Gauss point state to be initialized for the SGH solver
+    static const std::vector<gauss_pt_state> required_gauss_pt_state = 
+    { 
+        gauss_pt_state::volume,
+        gauss_pt_state::divergence_velocity
+    };
+
+    // Material point state to be initialized for the SGH solver
+    static const std::vector<material_pt_state> required_material_pt_state = 
+    { 
+        material_pt_state::density,
+        material_pt_state::pressure,
+        material_pt_state::stress,
+        material_pt_state::sound_speed,
+        material_pt_state::mass,
+        material_pt_state::volume_fraction,
+        material_pt_state::specific_internal_energy,
+        material_pt_state::eroded_flag
+    };
+
+    // Material corner state to be initialized for the SGH solver
+    static const std::vector<material_corner_state> required_material_corner_state = 
+    { 
+        material_corner_state::force
+    };
+
+    // Corner state to be initialized for the SGH solver
+    static const std::vector<corner_state> required_corner_state = 
+    { 
+        corner_state::force,
+        corner_state::mass
+    };
+}
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -75,10 +122,7 @@ public:
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
-                    State_t& State) const override
-    {
-        // stuff goes here
-    }
+                    State_t& State) const override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -328,18 +372,6 @@ public:
         const double dt,
         const double rk_alpha);
 };
-
-void calc_extensive_node_mass(const CArrayKokkos<double>& node_extensive_mass,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass,
-    const double num_dims,
-    const double num_nodes);
-
-void calc_node_areal_mass(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass,
-    CArrayKokkos<double> node_extensive_mass,
-    double tiny);
 
 double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
     const DCArrayKokkos<double>& MaterialPoints_sie,

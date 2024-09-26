@@ -55,37 +55,55 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 namespace VoidEOSModel {
 
-    KOKKOS_FUNCTION
-    static void calc_pressure(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t mat_pt_lid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie,
-        const RaggedRightArrayKokkos<double> &eos_global_vars)
+    // host side function
+    static void initialize(const DCArrayKokkos<double>& MaterialPoints_pres,
+                           const DCArrayKokkos<double>& MaterialPoints_stress,
+                           const size_t mat_pt_lid,
+                           const size_t mat_id,
+                           const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                           const DCArrayKokkos<double>& MaterialPoints_sspd,
+                           const double den,
+                           const double sie,
+                           const RaggedRightArrayKokkos<double> &eos_global_vars,
+                           const size_t num_vars)
     {
-        // pressure of a void is 0
-        elem_pres(mat_pt_lid) = 0.0;
+
+
 
         return;
     } // end func
 
     KOKKOS_FUNCTION
-    static void calc_sound_speed(const DCArrayKokkos<double>& elem_pres,
-        const DCArrayKokkos<double>& elem_stress,
-        const size_t mat_pt_lid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& elem_state_vars,
-        const DCArrayKokkos<double>& elem_sspd,
-        const double den,
-        const double sie,
-        const RaggedRightArrayKokkos<double> &eos_global_vars)
+    static void calc_pressure(const DCArrayKokkos<double>& MaterialPoints_pres,
+                              const DCArrayKokkos<double>& MaterialPoints_stress,
+                              const size_t mat_pt_lid,
+                              const size_t mat_id,
+                              const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                              const DCArrayKokkos<double>& MaterialPoints_sspd,
+                              const double den,
+                              const double sie,
+                              const RaggedRightArrayKokkos<double> &eos_global_vars)
+    {
+        // pressure of a void is 0
+        MaterialPoints_pres(mat_pt_lid) = 0.0;
+
+        return;
+    } // end func
+
+    KOKKOS_FUNCTION
+    static void calc_sound_speed(const DCArrayKokkos<double>& MaterialPoints_pres,
+                                 const DCArrayKokkos<double>& MaterialPoints_stress,
+                                 const size_t mat_pt_lid,
+                                 const size_t mat_id,
+                                 const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                                 const DCArrayKokkos<double>& MaterialPoints_sspd,
+                                 const double den,
+                                 const double sie,
+                                 const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
 
         // sound speed of a void is 0, machine small must be used for CFL calculation
-        elem_sspd(mat_pt_lid) = 1.0e-32;
+        MaterialPoints_sspd(mat_pt_lid) = 1.0e-32;
 
         return;
     } // end func

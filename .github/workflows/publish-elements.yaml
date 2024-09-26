@@ -1,10 +1,6 @@
 name: 'Publish Elements'
 
 on: 
-  push:
-    paths:
-      - .conda/elements/**
-      - .github/workflows/publish-elements.yaml
   workflow_dispatch:
 
 jobs:

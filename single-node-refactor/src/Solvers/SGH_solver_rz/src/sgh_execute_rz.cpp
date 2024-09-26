@@ -64,7 +64,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
     int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
 
-    double time_initial = SimulationParamaters.dynamic_options.time_initial;
+    // double time_initial = SimulationParamaters.dynamic_options.time_initial;
     double time_final   = SimulationParamaters.dynamic_options.time_final;
     double dt_min   = SimulationParamaters.dynamic_options.dt_min;
     double dt_max   = SimulationParamaters.dynamic_options.dt_max;
@@ -81,19 +81,13 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
-    // --- num vars ----
-
+    // --- graphics vars ----
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = 0.0;
     double graphics_time = 0.0; // the times for writing graphics dump
-    size_t graphics_id   = 0;
 
 
     double cached_pregraphics_dt = dt_start;
-
-    // printf("Writing outputs to file at %f \n", time_value);
-    // mesh_writer.write_mesh(mesh, MaterialPoints, node, corner, SimulationParamaters, time_value, graphics_times);
-
     CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
     
     // calculate the extensive node mass, its key to 2D
@@ -162,7 +156,15 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
     // Write initial state at t=0
     printf("Writing outputs to file at %f \n", graphics_time);
-    mesh_writer.write_mesh(mesh, State, SimulationParamaters, time_value, graphics_times);
+    mesh_writer.write_mesh(
+        mesh, 
+        State, 
+        SimulationParamaters, 
+        time_value, 
+        graphics_times,
+        SGHRZ_State::required_node_state,
+        SGHRZ_State::required_gauss_pt_state,
+        SGHRZ_State::required_material_pt_state);
     graphics_time = time_value + graphics_dt_ival;
 
 
@@ -400,7 +402,10 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                    State, 
                                    SimulationParamaters, 
                                    time_value, 
-                                   graphics_times);
+                                   graphics_times,
+                                   SGHRZ_State::required_node_state,
+                                   SGHRZ_State::required_gauss_pt_state,
+                                   SGHRZ_State::required_material_pt_state);
 
             graphics_time = time_value + graphics_dt_ival;
 
