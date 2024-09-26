@@ -1,10 +1,6 @@
 name: 'Publish Fierro-dev'
 
 on: 
-  push:
-    paths:
-      - .conda/fierro-dev/cpu/**
-      - .github/workflows/publish-fierro-dev.yaml
   workflow_dispatch:
 
 jobs:

@@ -35,6 +35,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "driver.h"
 
 
+// Headers for solver classes
+#include "sgh_solver_3D.h"
+#include "sgh_solver_rz.h"
+//#include "sgtm_solver_3D.h"
+
+
 // Initialize driver data.  Solver type, number of solvers
 // Will be parsed from YAML input
 void Driver::initialize()
@@ -84,10 +90,7 @@ void Driver::initialize()
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
     mesh.build_boundry_node_sets(mesh);
 
-    // Calculate element volume
-    geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
-
-    
+    // Setup Solvers
     for (int solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
@@ -113,7 +116,19 @@ void Driver::initialize()
                                    State);
 
             solvers.push_back(sgh_solver_rz);
-        } // end if SGH solver
+        } // end if SGHRZ solver
+        //else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
+
+        //    SGTM3D* sgtm_solver_3d = new SGTM3D(); 
+        //
+        //    sgtm_solver_3d->initialize(SimulationParamaters, 
+        //                               Materials, 
+        //                               mesh, 
+        //                               BoundaryConditions,
+        //                               State);
+        //
+        //    solvers.push_back(sgtm_solver_3d);
+        //} // end if SGTM solver
 
     } // end for loop over solvers
 
@@ -144,14 +159,14 @@ void Driver::setup()
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn run
+/// \fn execute
 ///
 /// \brief Calls the execute function for each of the created solvers
 ///
 /////////////////////////////////////////////////////////////////////////////
-void Driver::run()
+void Driver::execute()
 {
-    std::cout << "Inside driver run" << std::endl;
+    std::cout << "Inside driver execute" << std::endl;
     for (auto& solver : solvers) {
         solver->execute(SimulationParamaters, 
                         Materials, 

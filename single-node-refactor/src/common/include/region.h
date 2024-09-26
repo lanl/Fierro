@@ -95,8 +95,11 @@ struct RegionFill_t
     double radius1 = 0.0;   ///< Inner radius to fill for sphere
     double radius2 = 0.0;   ///< Outer radius to fill for sphere
 
-    // initial conditions
+    // initial condition velocity distribution
     init_conds::init_velocity_conds velocity;  ///< Initial conditions for this region
+
+    // initial condition temperature distribution
+    init_conds::init_velocity_conds temp_distribution;
 
     // velocity coefficients by component
     double u = 0.0; ///< U component of velocity
@@ -104,6 +107,8 @@ struct RegionFill_t
     double w = 0.0; ///< W component of velocity
 
     double speed = 0.0; ///< velocity magnitude for radial velocity initialization
+
+    double temperature = 0.0; ///< temperature magnitude for radial velocity initialization
 
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
@@ -153,6 +158,7 @@ static std::vector<std::string> str_region_inps
     "v",
     "w",
     "speed",
+    "temperature",
     "sie",
     "ie",
     "den",

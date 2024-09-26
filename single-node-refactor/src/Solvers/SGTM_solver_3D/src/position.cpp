@@ -1,5 +1,5 @@
 /**********************************************************************************************
-ï¿½ 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -31,27 +31,34 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
-
-#ifndef FIERRO_SIM_STATE_H
-#define FIERRO_SIM_STATE_H
-#include <stdio.h>
-#include "matar.h"
-
-#include "state.h"
+#include "sgtm_solver_3D.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct simulation_state_t
+/// \fn update_position
 ///
-/// \brief Struct for holding state entities for Fierro, currently unused...
+/// \brief Updates the nodal positions based on the nodal velocity
+///
+/// \param Runge Kutta time integration alpha value
+/// \param Time step size
+/// \param Number of dimensions in the mesh (REMOVE)
+/// \param Number of nodes in the mesh
+/// \param View of nodal position data
+/// \param View of nodal velocity data
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct simulation_state_t
+void SGTM3D::update_position(double rk_alpha,
+    double dt,
+    const size_t num_dims,
+    const size_t num_nodes,
+    DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel) const
 {
-    // MaterialPoint_t MaterialPoints;
-    // node_t node;
-    // corner_t corner;
-    // zone_t zone;
-}; // simulation_state_t
-
-#endif // end Header Guard
+    // loop over all the nodes in the mesh
+    FOR_ALL(node_gid, 0, num_nodes, {
+        for (int dim = 0; dim < num_dims; dim++) {
+            double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
+            node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha * dt * half_vel;
+        }
+    }); // end parallel for over nodes
+} // end subroutine

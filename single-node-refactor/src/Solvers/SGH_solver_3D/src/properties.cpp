@@ -205,7 +205,8 @@ void SGH3D::update_state(
                                             node_vel,
                                             GaussPoints_vol(gauss_gid),
                                             dt,
-                                            rk_alpha);
+                                            rk_alpha,
+                                            Materials.strength_global_vars);
         }); // end parallel for over mat elem lid
     } // end if state_based strength model
 

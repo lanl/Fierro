@@ -39,9 +39,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "geometry_new.h"
 
-// Headers for SGH solver classes
-#include "sgh_solver_3D.h"
-#include "sgh_solver_rz.h"
+// // Headers for solver classes
+// #include "sgh_solver_3D.h"
+// #include "sgh_solver_rz.h"
+// #include "sgtm_solver_3D.h"
 
 
 // Physical state data
@@ -112,12 +113,12 @@ public:
 
     /////////////////////////////////////////////////////////////////////////////
     ///
-    /// \fn run
+    /// \fn execute
     ///
     /// \brief Calls the execute function for each of the created solvers
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void run();
+    void execute();
 
 
     /////////////////////////////////////////////////////////////////////////////

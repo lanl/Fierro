@@ -36,18 +36,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ********** WARNING WARNING WARNING: TO BE REPLACED BY ELEMENTS ****************///
 /////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef GEOMETRY_NEW_H
-#define GEOMETRY_NEW_H
 
-#include "matar.h"
-#include "mesh.h"
-#include "boundary_conditions.h"
+#include "geometry_new.h"
 
-struct BoundaryConditionEnums_t;
-struct BoundaryConditionSetup_t;
-
-namespace geometry
-{
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn get_bmatrix
@@ -67,8 +58,8 @@ namespace geometry
 /// \param View of the elements node ids
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
-void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
+KOKKOS_FUNCTION
+void geometry::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
     const DCArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
@@ -261,7 +252,7 @@ void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
         + x(4) * (+y(5) - y(6) )
         + x(5) * (+y(1) + y(3) - y(4) - y(6) )
         + x(6) * (-y(3) - y(2) + y(4) + y(5) ) ) * twelth;
-}     // end subroutine
+} // end get_bmatrix
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -275,8 +266,8 @@ void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
 /// \param Global ids of the nodes in this element
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
-void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
+KOKKOS_FUNCTION
+void geometry::get_vol_quad(const DCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
     const DCArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
@@ -307,7 +298,7 @@ void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
         
     elem_vol(elem_gid) = fmax(elem_vol(elem_gid), 1.0E-14);
     return;
-}     // end subroutine
+} // end get_vol_quad
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -321,8 +312,8 @@ void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
 /// \param Runge Kutta time integration level
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
-void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
+KOKKOS_FUNCTION
+void geometry::get_vol_hex(const DCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
     const DCArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
@@ -364,7 +355,7 @@ void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
     elem_vol(elem_gid) = fmax(elem_vol(elem_gid), 1.0E-14);
 
     return;
-}     // end subroutine
+} // end get_vol_hex
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -373,7 +364,7 @@ void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 /// \brief Compute Volume of each finite element
 ///
 /////////////////////////////////////////////////////////////////////////////
-inline void get_vol(const DCArrayKokkos<double>& elem_vol,
+void geometry::get_vol(const DCArrayKokkos<double>& elem_vol,
     const DCArrayKokkos<double>& node_coords,
     const Mesh_t& mesh)
 {
@@ -397,7 +388,8 @@ inline void get_vol(const DCArrayKokkos<double>& elem_vol,
     }     // end if
 
     return;
-}     // end subroutine
+} // end get_vol
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -411,8 +403,8 @@ inline void get_vol(const DCArrayKokkos<double>& elem_vol,
 /// \param Global indices of the nodes of this element
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
-void get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
+KOKKOS_FUNCTION
+void geometry::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
     const DCArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
@@ -471,7 +463,8 @@ void get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
      */
 
     return;
-}     // end subroutine
+} // end get_bmatrix2D
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -486,8 +479,8 @@ void get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
 /// \return Elements face area (double)
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
-double get_area_quad(const size_t   elem_gid,
+KOKKOS_FUNCTION
+double geometry::get_area_quad(const size_t   elem_gid,
     const DCArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
@@ -516,7 +509,7 @@ double get_area_quad(const size_t   elem_gid,
     elem_area = 0.5 * ((x(0) - x(2)) * (y(1) - y(3)) + (x(3) - x(1)) * (y(0) - y(2)));
 
     return elem_area;
-}     // end subroutine
+} // end get_area_quad
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -534,8 +527,8 @@ double get_area_quad(const size_t   elem_gid,
 /// \return Triangle area (double)
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
-double heron(const double x1,
+KOKKOS_FUNCTION
+double geometry::heron(const double x1,
     const double y1,
     const double x2,
     const double y2,
@@ -556,7 +549,8 @@ double heron(const double x1,
     area = sqrt(S * (S - a) * (S - b) * (S - c));
 
     return area;
-}
+} // end heron
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -570,8 +564,8 @@ double heron(const double x1,
 /// \param Node global IDs associated with this element
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
-void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
+KOKKOS_FUNCTION
+void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     const size_t elem_gid,
     const DCArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
@@ -612,8 +606,8 @@ void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     corner_areas(3) = (5. * A41 + A12 + A23 + 5. * A34) / 12.;
 
     return;
-}     // end subroutine
-} // end namespace
+} // end get_area_weights2D
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -628,7 +622,7 @@ void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 /// \param Nodal coordinates
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 size_t check_bdy(const size_t patch_gid,
     const int     this_bc_tag,
     const double  val,
@@ -702,6 +696,7 @@ size_t check_bdy(const size_t patch_gid,
     return is_on_bdy;
 } // end method to check bdy
 
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn tag_bdys
@@ -713,7 +708,7 @@ size_t check_bdy(const size_t patch_gid,
 /// \param Nodal coordinates
 ///
 /////////////////////////////////////////////////////////////////////////////
-inline void tag_bdys(const BoundaryCondition_t& boundary,
+void tag_bdys(const BoundaryCondition_t& boundary,
     Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords)
 {
@@ -753,5 +748,3 @@ inline void tag_bdys(const BoundaryCondition_t& boundary,
 
     return;
 } // end tag
-
-#endif

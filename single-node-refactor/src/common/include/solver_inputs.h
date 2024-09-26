@@ -31,40 +31,57 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
-#ifndef FIERRO_IC_H
-#define FIERRO_IC_H
 
-#include <map>
+#ifndef FIERRO_SOLVER_INPUT_OPTIONS_H
+#define FIERRO_SOLVER_INPUT_OPTIONS_H
+#include <stdio.h>
+#include "matar.h"
 
-namespace init_conds
+namespace solver_input
 {
-// applying initial conditions
-enum init_velocity_conds
+// solver method
+enum method
 {
-    no_ic_vel = 0,
-
-    // uniform
-    cartesian = 1,       // cart velocity
-    radial = 2,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
-    spherical = 3,       // spherical
-
-    // linear variation
-    radial_linear = 4,         // linear variation from 0,0,0
-    spherical_linear = 5,      // linear variation from 0,0,0
-
-    // vortical initial conditions
-    tg_vortex = 6
+    NONE = 0,
+    SGH3D = 1,
+    SGHRZ = 2,
+    SGTM3D = 3,
 };
-} // end of initial conditions namespace
+} // end of namespace
 
-static std::map<std::string, init_conds::init_velocity_conds> velocity_type_map
+static std::map<std::string, solver_input::method> solver_map
 {
-    { "cartesian", init_conds::cartesian },
-    { "radial", init_conds::radial },
-    { "spherical", init_conds::spherical },
-    { "radial_linear", init_conds::radial_linear },
-    { "spherical_linear", init_conds::spherical_linear },
-    { "tg_vortex", init_conds::tg_vortex }
+    { "SGH3D", solver_input::SGH3D },
+    { "SGHRZ", solver_input::SGHRZ },
+    { "SGTM3D", solver_input::SGTM3D }
+};
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \structsolver_input_t
+///
+/// \brief Struct for holding metadata on which solvers are used.
+///
+/////////////////////////////////////////////////////////////////////////////
+struct solver_input_t
+{
+    solver_input::method method = solver_input::NONE;
+}; // solver_input_t
+
+// ----------------------------------
+// valid inputs for solver options
+// ----------------------------------
+static std::vector<std::string> str_solver_inps
+{
+    "method"
+};
+
+// ----------------------------------
+// required inputs for solver options
+// ----------------------------------
+static std::vector<std::string> solver_required_inps
+{
+    "method"
 };
 
 #endif // end Header Guard
