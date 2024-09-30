@@ -334,7 +334,7 @@ void Explicit_Solver::run() {
     // ---------------------------------------------------------------------  
       //sgh_module->sgh_solve();
       for(int imodule = 0; imodule < nfea_modules; imodule++){
-        if(myrank == 0)
+        if(myrank == 0) //TODO; implement solve bool so modules like the inertial module dont print this
           std::cout << "Starting solve for FEA module " << imodule <<std::endl <<std::flush;
         //allocate and fill sparse structures needed for global solution in each FEA module
         fea_modules[imodule]->solve();
@@ -344,8 +344,6 @@ void Explicit_Solver::run() {
   // clean up all material models
   //sgh_module->cleanup_material_models();
   for(int imodule = 0; imodule < nfea_modules; imodule++){
-    if(myrank == 0)
-      std::cout << "Starting solve for FEA module " << imodule <<std::endl <<std::flush;
     //allocate and fill sparse structures needed for global solution in each FEA module
     fea_modules[imodule]->module_cleanup();
   }
