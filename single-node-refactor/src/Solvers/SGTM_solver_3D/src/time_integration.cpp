@@ -109,6 +109,9 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
                        DCArrayKokkos<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,
                        DCArrayKokkos<double>& MaterialPoints_sspd,
+                       DCArrayKokkos<double>& MaterialPoints_conductivity,
+                       DCArrayKokkos<double>& MaterialPoints_density,
+                       DCArrayKokkos<double>& MaterialPoints_specific_heat,
                        DCArrayKokkos<bool>&   MaterialPoints_eroded,
                        DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                        size_t num_mat_elems,
@@ -178,11 +181,22 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
+        double dt_cfl = dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
+
+        dt_cfl = 1.0; // WARNING: Fix once evolving position
+
+        // Local dt calc based on thermal conductivity (VN Stability)
+        double dt_vn = MaterialPoints_density(mat_elem_lid) * MaterialPoints_specific_heat(mat_elem_lid) * dist_min * dist_min;
+
+        dt_vn /= (2.0*MaterialPoints_conductivity(mat_elem_lid));
 
         if (MaterialPoints_eroded(mat_elem_lid) == true) {
-            dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
+            dt_cfl = 1.0e32;  // a huge time step as this element doesn't exist
         }
+
+        // get minimum between VN stability and CFL
+
+        double dt_lcl_ = fmin(dt_cfl, dt_vn);
 
         // make dt be in bounds
         dt_lcl_ = fmin(dt_lcl_, dt_max);    // make dt small than dt_max

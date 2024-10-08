@@ -990,6 +990,24 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).temperature = temperature;
                 });
             } // temperature
+            else if (a_word.compare("specific_heat") == 0) {
+                double specific_heat = root["regions"][reg_id]["fill_volume"]["specific_heat"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\tspecific_heat = " << specific_heat << std::endl;
+                }
+                RUN({
+                    region_fills(reg_id).specific_heat = specific_heat;
+                });
+            } // specific_heat
+            else if (a_word.compare("thermal_conductivity") == 0) {
+                double thermal_conductivity = root["regions"][reg_id]["fill_volume"]["thermal_conductivity"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\tthermal_conductivity = " << thermal_conductivity << std::endl;
+                }
+                RUN({
+                    region_fills(reg_id).thermal_conductivity = thermal_conductivity;
+                });
+            } // thermal_conductivity
             else if (a_word.compare("u") == 0) {
                 // x-component of velocity
                 double u = root["regions"][reg_id]["fill_volume"]["u"].As<double>();

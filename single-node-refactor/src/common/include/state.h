@@ -161,6 +161,8 @@ enum class material_pt_state
     volume_fraction,
     specific_internal_energy,
     heat_flux,
+    thermal_conductivity,
+    specific_heat,
     eroded_flag,
 };
 /////////////////////////////////////////////////////////////////////////////
@@ -181,6 +183,8 @@ struct MaterialPoint_t
     DCArrayKokkos<double> mass;   ///< MaterialPoint mass
     DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
     DCArrayKokkos<double> q_flux; ///< Heat flux
+    DCArrayKokkos<double> conductivity; ///< Thermal conductivity
+    DCArrayKokkos<double> specific_heat; ///< Specific Heat
 
     // Material Models are stored on Material points
     DCArrayKokkos<double> statev; // a place holder to get things to compile
@@ -219,6 +223,12 @@ struct MaterialPoint_t
                     break;
                 case material_pt_state::heat_flux:
                     if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, "material_point_heat_flux");
+                    break;
+                case material_pt_state::thermal_conductivity:
+                    if (q_flux.size() == 0) this->conductivity = DCArrayKokkos<double>(num_pts_max, "material_point_thermal_conductivity");
+                    break;
+                case material_pt_state::specific_heat:
+                    if (q_flux.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_pts_max, "material_point_specific_heat");
                     break;
                 case material_pt_state::eroded_flag:
                     if (eroded.size() == 0) this->eroded = DCArrayKokkos<bool>(num_pts_max, "material_point_eroded");

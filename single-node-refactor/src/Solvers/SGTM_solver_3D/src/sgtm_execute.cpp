@@ -89,53 +89,10 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_temperature(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
 
-    // extensive energy tallies over the entire mesh
-    double IE_t0 = 0.0;
-    double KE_t0 = 0.0;
-    double TE_t0 = 0.0;
-
     double cached_pregraphics_dt = fuzz;
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
-
-    // extensive IE
-    for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
-
-        IE_t0 += sum_domain_internal_energy(State.MaterialPoints(mat_id).mass,
-                                            State.MaterialPoints(mat_id).sie,
-                                            num_mat_points);
-    } // end loop over mat_id
-
-    // extensive KE
-    KE_t0 = sum_domain_kinetic_energy(mesh,
-                                      State.node.vel,
-                                      State.node.coords,
-                                      State.node.mass);
-    // extensive TE
-    TE_t0 = IE_t0 + KE_t0;
-
-    // domain mass for each material (they are at material points)
-    double mass_domain_all_mats_t0 = 0.0;
-    double mass_domain_nodes_t0    = 0.0;
-
-    for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
-
-        double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints(mat_id).mass,
-                                                          num_mat_points);
-
-        mass_domain_all_mats_t0 += mass_domain_mat;
-        printf("material %zu mass in domain = %f \n", mat_id, mass_domain_mat);
-    } // end for
-
-    // node mass of the domain
-    mass_domain_nodes_t0 = sum_domain_node_mass(mesh,
-                                                State.node.coords,
-                                                State.node.mass);
-
-    printf("nodal mass domain = %f \n", mass_domain_nodes_t0);
 
     // a flag to exit the calculation
     size_t stop_calc = 0;
@@ -283,25 +240,12 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     // Get corner gid
                     size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
 
-                    // // loop over dimension and tally the nodal temperature gradient
-                    // for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-                    //     node_grad[dim] += State.corner.q_flux(1, corner_gid, dim);
-                    // } // end for dim
-
                     node_flux += State.corner.q_flux(1, corner_gid, 0);
-
 
                 } // end for corner_lid
 
-                // std::cout<<"Node  "<< node_gid <<" temp flux = "<< node_flux << std::endl;
-
                 // update the temperature
-
                 State.node.temp(1, node_gid) = State.node.temp(0, node_gid) + rk_alpha * dt * node_flux / State.node.mass(node_gid);
-
-                // std::cout<<"Node  "<< node_gid <<" rk_alpha = "<< rk_alpha<<" :: dt ="<< dt <<" :: mass = "<< State.node.mass(node_gid) <<std::endl;
-                // std::cout<<"Node  "<< node_gid <<" temperature = "<< State.node.temp(0, node_gid) <<std::endl;
-                // std::cout<<"Node  "<< node_gid <<" new temperature = "<< State.node.temp(1, node_gid) <<std::endl;
 
             }); // end for parallel for over nodes
 
@@ -313,12 +257,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
             // for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
             //     size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
-            //     update_state
-
-
             // } // end for mat_id
 
         } // end of RK loop
@@ -368,162 +307,4 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
-    // ---- Calculate energy tallies ----
-    double IE_tend = 0.0;
-    double KE_tend = 0.0;
-    double TE_tend = 0.0;
-
-    // extensive IE
-    for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
-
-        IE_tend += sum_domain_internal_energy(State.MaterialPoints(mat_id).mass,
-                                              State.MaterialPoints(mat_id).sie,
-                                              num_mat_points);
-    } // end loop over mat_id
-
-    // extensive KE
-    KE_tend = sum_domain_kinetic_energy(mesh,
-                                        State.node.vel,
-                                        State.node.coords,
-                                        State.node.mass);
-    // extensive TE
-    TE_tend = IE_tend + KE_tend;
-
-    printf("Time=0:   KE = %.14f, IE = %.14f, TE = %.14f \n", KE_t0, IE_t0, TE_t0);
-    printf("Time=End: KE = %.14f, IE = %.14f, TE = %.14f \n", KE_tend, IE_tend, TE_tend);
-    printf("total energy change = %.15e \n\n", TE_tend - TE_t0);
-
-    // domain mass for each material (they are at material points)
-    double mass_domain_all_mats_tend = 0.0;
-    double mass_domain_nodes_tend    = 0.0;
-
-    for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
-
-        double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints(mat_id).mass,
-                                                          num_mat_points);
-
-        mass_domain_all_mats_tend += mass_domain_mat;
-    } // end for
-
-    // node mass of the domain
-    mass_domain_nodes_tend = sum_domain_node_mass(mesh,
-                                                  State.node.coords,
-                                                  State.node.mass);
-
-    printf("material mass conservation error = %f \n", mass_domain_all_mats_tend - mass_domain_all_mats_t0);
-    printf("nodal mass conservation error = %f \n", mass_domain_nodes_tend - mass_domain_nodes_t0);
-    printf("nodal and material mass error = %f \n\n", mass_domain_nodes_tend - mass_domain_all_mats_tend);
 } // end of SGH execute
-
-
-// a function to tally the internal energy
-double SGTM3D::sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<double>& MaterialPoints_sie,
-    size_t num_mat_points)
-{
-    double IE_sum = 0.0;
-    double IE_loc_sum;
-
-    // loop over the material points and tally IE
-    REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
-        IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(1, matpt_lid);
-    }, IE_sum);
-    Kokkos::fence();
-
-    return IE_sum;
-} // end function
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn sum_domain_kinetic_energy
-///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
-///
-/////////////////////////////////////////////////////////////////////////////
-double SGTM3D::sum_domain_kinetic_energy(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass)
-{
-    // extensive KE
-    double KE_sum = 0.0;
-    double KE_loc_sum;
-
-    REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
-        double ke = 0;
-
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node_vel(1, node_gid, dim) * node_vel(1, node_gid, dim); // 1/2 at end
-        } // end for
-
-        KE_loc_sum += node_mass(node_gid) * ke;
-
-    }, KE_sum);
-    Kokkos::fence();
-
-    return 0.5 * KE_sum;
-} // end function
-
-// a function to tally the material point masses
-double SGTM3D::sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
-    const size_t num_mat_points)
-{
-    double mass_domain = 0.0;
-    double mass_loc_domain;
-
-    REDUCE_SUM(matpt_lid, 0, num_mat_points, mass_loc_domain, {
-        mass_loc_domain += MaterialPoints_mass(matpt_lid);
-    }, mass_domain);
-    Kokkos::fence();
-
-    return mass_domain;
-} // end function
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn sum_domain_node_mass
-///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
-///
-/////////////////////////////////////////////////////////////////////////////
-double SGTM3D::sum_domain_node_mass(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass)
-{
-    double mass_domain = 0.0;
-    double mass_loc_domain;
-
-    REDUCE_SUM(node_gid, 0, mesh.num_nodes, mass_loc_domain, {
-        if (mesh.num_dims == 2) {
-            mass_loc_domain += node_mass(node_gid) * node_coords(1, node_gid, 1);
-        }
-        else{
-            mass_loc_domain += node_mass(node_gid);
-        }
-    }, mass_domain);
-    Kokkos::fence();
-
-    return mass_domain;
-} // end function
-

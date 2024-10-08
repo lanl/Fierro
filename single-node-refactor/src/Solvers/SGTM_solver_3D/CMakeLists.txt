@@ -22,7 +22,7 @@ message("\n ****** ADDING SGTM SOURCE FILES ******** \n ")
 
 set(SGTM_3D_SRC_Files 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/boundary.cpp 
-${CMAKE_CURRENT_SOURCE_DIR}/src/energy_sgtm.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/temperature_sgtm.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/force_sgtm.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/position.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/momentum.cpp

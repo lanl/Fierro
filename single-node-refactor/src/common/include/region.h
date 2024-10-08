@@ -108,11 +108,13 @@ struct RegionFill_t
 
     double speed = 0.0; ///< velocity magnitude for radial velocity initialization
 
-    double temperature = 0.0; ///< temperature magnitude for radial velocity initialization
+    double temperature = 0.0; ///< temperature magnitude for radial initialization
 
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
+    double specific_heat;
+    double thermal_conductivity;
 
     double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region
 };
@@ -159,6 +161,8 @@ static std::vector<std::string> str_region_inps
     "w",
     "speed",
     "temperature",
+    "specific_heat",
+    "thermal_conductivity",
     "sie",
     "ie",
     "den",

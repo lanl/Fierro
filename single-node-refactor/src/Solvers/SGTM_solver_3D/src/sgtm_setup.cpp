@@ -99,7 +99,6 @@ void SGTM3D::fill_regions_sgtm(
     DCArrayKokkos <double>& GaussPoint_den,
     DCArrayKokkos <double>& GaussPoint_sie,
     DCArrayKokkos <size_t>& elem_mat_id,
-    DCArrayKokkos <size_t>& voxel_elem_mat_id,
     const CArrayKokkos <RegionFill_t>& region_fills,
     const CArray <RegionFill_host_t>& region_fills_host,
     const size_t num_fills,
@@ -107,53 +106,16 @@ void SGTM3D::fill_regions_sgtm(
     const size_t num_nodes,
     const size_t rk_num_bins) const
 {
-    double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
-    double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
-    size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
+
 
     // ---------------------------------------------
     // copy to host, enum to read a voxel file
     // ---------------------------------------------
-    DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
-
-    FOR_ALL(f_id, 0, num_fills, {
-        if (region_fills(f_id).volume == region::readVoxelFile) {
-            read_voxel_file(f_id) = region::readVoxelFile;  // read the  voxel file
-        }
-        // add other mesh voxel files
-        else{
-            read_voxel_file(f_id) = 0;
-        }
-    }); // end parallel for
-    read_voxel_file.update_host(); // copy to CPU if code is to read a file
-    Kokkos::fence();
+    
     // ---------------------------------------------
 
     // loop over the fill instructions
     for (size_t f_id = 0; f_id < num_fills; f_id++) {
-        // ----
-        // voxel mesh setup
-        if (read_voxel_file.host(f_id) == region::readVoxelFile) {
-            // read voxel mesh to get the values in the fcn interface
-            user_voxel_init(voxel_elem_mat_id,
-                            voxel_dx,
-                            voxel_dy,
-                            voxel_dz,
-                            orig_x,
-                            orig_y,
-                            orig_z,
-                            voxel_num_i,
-                            voxel_num_j,
-                            voxel_num_k,
-                            region_fills_host(f_id).scale_x,
-                            region_fills_host(f_id).scale_y,
-                            region_fills_host(f_id).scale_z,
-                            region_fills_host(f_id).file_path);
-
-            // copy values read from file to device
-            voxel_elem_mat_id.update_device();
-        } // endif
-          // add else if for other mesh reads including STL-2-voxel
 
         // parallel loop over elements in mesh
         FOR_ALL(elem_gid, 0, num_elems, {
@@ -227,6 +189,26 @@ void SGTM3D::fill_regions_sgtm(
                     // add user defined paint here
                     // user_defined_vel_state();
                 } // end loop over the nodes in elem
+
+
+                // Paint on specific heat and thermal conductivity
+                // loop over the Gauss points in the element
+                {
+                    
+                    const size_t gauss_gid = elem_gid;  // 1 gauss point per element
+
+
+                        
+                    // --- density ---
+                    GaussPoint_den(gauss_gid) = region_fills(f_id).den;
+
+                    // --- specific internal energy ---
+                    GaussPoint_sie(gauss_gid) = region_fills(f_id).sie;
+
+                    
+                } // end loop over gauss points in element
+
+
             } // end if fill this
         }); // end FOR_ALL node loop
         Kokkos::fence();

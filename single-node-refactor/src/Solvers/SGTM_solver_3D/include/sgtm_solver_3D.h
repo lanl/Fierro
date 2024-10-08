@@ -80,7 +80,9 @@ namespace SGTM3D_State
         material_pt_state::volume_fraction,
         material_pt_state::specific_internal_energy,
         material_pt_state::eroded_flag,
-        material_pt_state::heat_flux
+        material_pt_state::heat_flux,
+        material_pt_state::thermal_conductivity,
+        material_pt_state::specific_heat
     };
 
     // Material corner state to be initialized for the SGH solver
@@ -292,28 +294,6 @@ public:
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
 
-    KOKKOS_FUNCTION
-    void get_velgrad(
-        ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_vel,
-        const ViewCArrayKokkos<double>& b_matrix,
-        const double GaussPoints_vol,
-        const size_t elem_gid) const;
-
-    void get_divergence(
-        DCArrayKokkos<double>& GaussPoints_div,
-        const Mesh_t mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& GaussPoints_vol) const;
-
-    KOKKOS_FUNCTION
-    void decompose_vel_grad(
-        const ViewCArrayKokkos<double>& D_tensor,
-        const ViewCArrayKokkos<double>& W_tensor,
-        const ViewCArrayKokkos<double>& vel_grad) const;
-
     // **** Functions defined in properties.cpp **** //
     void update_state(
         const Material_t& Materials,
@@ -354,6 +334,9 @@ public:
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
         DCArrayKokkos<double>& MaterialPoints_sspd,
+        DCArrayKokkos<double>& MaterialPoints_conductivity,
+        DCArrayKokkos<double>& MaterialPoints_density,
+        DCArrayKokkos<double>& MaterialPoints_specific_heat,
         DCArrayKokkos<bool>&   MaterialPoints_eroded,
         DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         size_t num_mat_elems,
@@ -366,61 +349,6 @@ public:
         double&      dt,
         const double fuzz) const;
 
-    // **** Functions defined in user_mat.cpp **** //
-    // NOTE: Pull up into high level
-    KOKKOS_FUNCTION
-    void user_eos_model(
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& MaterialPoints_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const double den,
-        const double sie);
-
-    KOKKOS_FUNCTION
-    void user_strength_model(
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const size_t elem_gid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& MaterialPoints_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const double den,
-        const double sie,
-        const ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
-        const double vol,
-        const double dt,
-        const double rk_alpha);
-
-
-    double sum_domain_internal_energy(
-        const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
-        const size_t num_mat_points);
-
-    double sum_domain_kinetic_energy(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_mass);
-
-    double sum_domain_material_mass(
-        const DCArrayKokkos<double>& MaterialPoints_mass,
-        const size_t num_mat_points);
-
-    double sum_domain_node_mass(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_mass);
-
-    void set_corner_force_zero(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& corner_force);
 };
 
 
