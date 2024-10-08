@@ -1,9 +1,9 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 2.0
+    time_final: 5.0
     dt_min: 1.e-8
-    dt_max: 1.e-2
+    dt_max: 1.e-1
     dt_start: 1.e-4
     cycle_stop: 1000000
 
