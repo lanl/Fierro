@@ -270,7 +270,31 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                           dt,
                           rk_alpha);
 
+                if (Materials.MaterialEnums(mat_id).StrengthType == model::incrementBased) {
+                    update_stress(Materials,
+                                  mesh,
+                                  State.GaussPoints.vol,
+                                  State.node.coords,
+                                  State.node.vel,
+                                  State.MaterialPoints(mat_id).den,
+                                  State.MaterialPoints(mat_id).sie,
+                                  State.MaterialPoints(mat_id).pres,
+                                  State.MaterialPoints(mat_id).stress,
+                                  State.MaterialPoints(mat_id).sspd,
+                                  State.MaterialPoints(mat_id).statev,
+                                  State.MaterialToMeshMaps(mat_id).elem,
+                                  num_mat_elems,
+                                  mat_id,
+                                  fuzz,
+                                  small,
+                                  time_value,
+                                  dt,
+                                  rk_alpha,
+                                  cycle);
+                } // end if on increment
+
             } // end for mat_id
+            
 
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
