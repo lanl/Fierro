@@ -396,16 +396,11 @@ void SGH3D::tag_regions(
                                                      voxel_num_j,
                                                      voxel_num_k,
                                                      f_id);
-
-
             if (fill_this == 1) {
                 // the material id
                 size_t mat_id = region_fills(f_id).material_id;
                 node_region_id(node_gid) = f_id;
             } // end if fill this
-
-
-
 
         }); // end FOR_ALL node loop
         Kokkos::fence();
