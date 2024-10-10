@@ -287,7 +287,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 dt,
                                 rk_alpha);
                 
-                if (Materials.MaterialEnums(mat_id).StrengthType == model::incrementBased) {
+                if (Materials.MaterialEnums.host(mat_id).StrengthType == model::incrementBased) {
                     update_stress(Materials,
                                   mesh,
                                   State.GaussPoints.vol,
