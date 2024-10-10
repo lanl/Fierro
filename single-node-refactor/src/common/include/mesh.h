@@ -956,8 +956,6 @@ struct Mesh_t
         node_ordering_in_elem.update_device();
         Kokkos::fence();
 
-        printf("done building node ordering \n");
-
         // for saving the hash keys of the patches and then the neighboring elem_gid
         CArrayKokkos<int> hash_keys_in_elem(num_elems, num_patches_in_elem, num_nodes_in_patch, "hash_keys_in_elem"); // always 4 ids in 3D
 
@@ -1289,7 +1287,6 @@ struct Mesh_t
         }); // end for boundary node_gid
 
         // printf("Num boundary nodes = %lu \n", num_bdy_nodes);
-
         return;
     } // end patch connectivity method
 
@@ -1428,9 +1425,16 @@ struct Mesh_t
     void build_connectivity()
     {
         build_corner_connectivity();
+        printf("done building corner connectivity \n");
+
         build_elem_elem_connectivity();
+        printf("done building element-element connectivity \n");
+
         build_patch_connectivity();
+        printf("done building patch connectivity \n");
+
         build_node_node_connectivity();
+        printf("done building node-node connectivity \n");
     }
 
     /////////////////////////////////////////////////////////////////////////////

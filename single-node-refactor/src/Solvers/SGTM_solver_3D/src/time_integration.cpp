@@ -181,20 +181,23 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_cfl = dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
+        double dt_cfl = 1.0; //dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
 
-        dt_cfl = 1.0; // WARNING: Fix once evolving position
+        // dt_cfl = 1.0; // WARNING: Fix once evolving position
+
+        // Thermal diffusivity
+        double alpha = MaterialPoints_conductivity(mat_elem_lid) / 
+            (MaterialPoints_density(mat_elem_lid)*MaterialPoints_specific_heat(mat_elem_lid));
 
         // Local dt calc based on thermal conductivity (VN Stability)
-        double dt_vn = MaterialPoints_density(mat_elem_lid) * MaterialPoints_specific_heat(mat_elem_lid) * dist_min * dist_min;
-
-        dt_vn /= (2.0*MaterialPoints_conductivity(mat_elem_lid));
+        double h = (0.5*dist_min);
+        double dt_vn = (h * h)/(6.0*alpha);
 
         dt_vn *= 0.95; // stability factor
  
-        if (MaterialPoints_eroded(mat_elem_lid) == true) {
-            dt_cfl = 1.0e32;  // a huge time step as this element doesn't exist
-        }
+        // if (MaterialPoints_eroded(mat_elem_lid) == true) {
+        //     dt_cfl = 1.0e32;  // a huge time step as this element doesn't exist
+        // }
 
         // get minimum between VN stability and CFL
 

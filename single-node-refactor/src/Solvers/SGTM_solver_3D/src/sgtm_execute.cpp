@@ -250,20 +250,16 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                 } // end for corner_lid
 
                 // update the temperature
-                State.node.temp(1, node_gid) = State.node.temp(0, node_gid) + rk_alpha * dt * node_flux / State.node.mass(node_gid);
+                State.node.temp(1, node_gid) = State.node.temp(0, node_gid) + rk_alpha * dt * node_flux / (State.node.mass(node_gid)*903.0);
 
             }); // end for parallel for over nodes
 
             // ---- apply temperature boundary conditions to the boundary patches---- //
 
-
             // ---- Calculate cell volume for next time step ----
-            geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
+            // geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
-            // for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-            //     size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-            // } // end for mat_id
 
         } // end of RK loop
 
@@ -287,6 +283,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
+            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
             mesh_writer.write_mesh(mesh,
                                    State,
                                    SimulationParamaters,

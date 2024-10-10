@@ -110,6 +110,7 @@ void SGTM3D::get_heat_flux(
 
         // element volume
         double vol = GaussPoints_vol(elem_gid);
+        // printf("Elem vol = %e\n", vol);
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
@@ -118,7 +119,6 @@ void SGTM3D::get_heat_flux(
         geometry::get_bmatrix(b_matrix, elem_gid, node_coords, elem_node_gids);
 
         // --- Calculate the temperature gradient ---
-
         double temp_array[num_nodes_in_elem];
         ViewCArrayKokkos<double> temp(temp_array, num_nodes_in_elem); // x-direction velocity component
 
@@ -142,7 +142,7 @@ void SGTM3D::get_heat_flux(
 
         for(int dim = 0; dim < mesh.num_dims; dim++){
             for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-                temp_grad(dim) += 1.0 * temp(node_lid) * b_matrix(node_lid, dim);
+                temp_grad(dim) += temp(node_lid) * b_matrix(node_lid, dim); // Note: B matrix is outward normals from cell center
             }
         }
        
@@ -203,7 +203,7 @@ void SGTM3D::get_heat_flux(
 
             for(int dim = 0; dim < mesh.num_dims; dim++){
 
-                MaterialCorners_q_flux(1, mat_corner_lid, 0) += MaterialPoints_q_flux(0, mat_point_lid, dim) * b_matrix(node_lid, dim);
+                MaterialCorners_q_flux(1, mat_corner_lid, 0) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (-1.0*b_matrix(node_lid, dim));
 
                 corner_q_flux(1, corner_gid, 0) += MaterialPoints_q_flux(0, mat_point_lid, dim) * b_matrix(node_lid, dim);
 
