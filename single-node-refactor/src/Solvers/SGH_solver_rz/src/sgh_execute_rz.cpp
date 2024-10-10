@@ -377,8 +377,10 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 State.MaterialPoints(mat_id).strength_state_vars,
                                 State.MaterialPoints(mat_id).eroded,
                                 State.MaterialToMeshMaps(mat_id).elem,
+                                time_value,
                                 dt,
                                 rk_alpha,
+                                cycle,
                                 num_mat_elems,
                                 mat_id);
 

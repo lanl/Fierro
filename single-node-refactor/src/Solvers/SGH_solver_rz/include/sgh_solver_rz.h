@@ -313,8 +313,10 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
         const DCArrayKokkos<bool>&   GaussPoints_eroded,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const double time_value,
         const double dt,
         const double rk_alpha,
+        const size_t cycle,
         const size_t num_material_elems,
         const size_t mat_id) const;
 

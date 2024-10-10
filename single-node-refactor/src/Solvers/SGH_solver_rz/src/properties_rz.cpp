@@ -80,8 +80,10 @@ void SGHRZ::update_state_rz(
     const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const double time_value,
     const double dt,
     const double rk_alpha,
+    const size_t cycle,
     const size_t num_material_elems,
     const size_t mat_id) const
 {
@@ -209,22 +211,27 @@ void SGHRZ::update_state_rz(
 
                 // --- call strength model ---
                 Materials.MaterialFunctions(mat_id).calc_stress(
-                                             MaterialPoints_pres,
-                                             MaterialPoints_stress,
-                                             mat_point_lid,
-                                             mat_id,
-                                             MaterialPoints_strength_state_vars,
-                                             MaterialPoints_sspd,
-                                             MaterialPoints_den(mat_point_lid),
-                                             MaterialPoints_sie(1,mat_point_lid),
-                                             vel_grad,
-                                             elem_node_gids,
-                                             node_coords,
-                                             node_vel,
-                                             GaussPoints_vol(gauss_gid),
-                                             dt,
-                                             rk_alpha,
-                                             Materials.strength_global_vars);
+                                        vel_grad,
+                                        node_coords,
+                                        node_vel,
+                                        elem_node_gids,
+                                        MaterialPoints_pres,
+                                        MaterialPoints_stress,
+                                        MaterialPoints_sspd,
+                                        MaterialPoints_eos_state_vars,
+                                        MaterialPoints_strength_state_vars,
+                                        MaterialPoints_den(mat_point_lid),
+                                        MaterialPoints_sie(1,mat_point_lid),
+                                        MaterialToMeshMaps_elem,
+                                        Materials.eos_global_vars,
+                                        Materials.strength_global_vars,
+                                        GaussPoints_vol(elem_gid),
+                                        dt,
+                                        rk_alpha,
+                                        time_value,
+                                        cycle,
+                                        mat_point_lid,
+                                        mat_id);
 
 
         }); // end parallel for over mat elem lid
@@ -395,22 +402,27 @@ void SGHRZ::update_stress(const Material_t& Materials,
 
         // --- call strength model ---
         Materials.MaterialFunctions(mat_id).calc_stress(
-                                        MaterialPoints_pres,
-                                        MaterialPoints_stress,
-                                        mat_point_lid,
-                                        mat_id,
-                                        MaterialPoints_strength_state_vars,
-                                        MaterialPoints_sspd,
-                                        MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(1,mat_point_lid),
                                         vel_grad,
-                                        elem_node_gids,
                                         node_coords,
                                         node_vel,
+                                        elem_node_gids,
+                                        MaterialPoints_pres,
+                                        MaterialPoints_stress,
+                                        MaterialPoints_sspd,
+                                        MaterialPoints_eos_state_vars,
+                                        MaterialPoints_strength_state_vars,
+                                        MaterialPoints_den(mat_point_lid),
+                                        MaterialPoints_sie(1,mat_point_lid),
+                                        MaterialToMeshMaps_elem,
+                                        Materials.eos_global_vars,
+                                        Materials.strength_global_vars,
                                         GaussPoints_vol(elem_gid),
                                         dt,
                                         rk_alpha,
-                                        Materials.strength_global_vars);
+                                        time_value,
+                                        cycle,
+                                        mat_point_lid,
+                                        mat_id);
 
     });  // end parallel for over elems that have the materials
 
