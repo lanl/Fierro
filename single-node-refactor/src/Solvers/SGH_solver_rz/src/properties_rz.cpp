@@ -43,21 +43,25 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// \brief Updates the state for 2D elements
 ///
-/// \param An array of material_t that contains material specific data
+/// \param Material that contains material specific data
 /// \param The simulation mesh
-/// \param A view into the nodal position array
-/// \param A view into the nodal velocity array
-/// \param A view into the element density array
-/// \param A view into the element pressure array
-/// \param A view into the element stress array
-/// \param A view into the element sound speed array
-/// \param A view into the element specific internal energy array
-/// \param A view into the element volume array
-/// \param A view into the element mass
-/// \param A view into the element material identifier array
-/// \param A view into the element state variables
+/// \param DualArrays for the nodal position 
+/// \param DualArrays for the nodal velocity 
+/// \param DualArrays for the material point density 
+/// \param DualArrays for the material point pressure 
+/// \param DualArrays for the material point stress 
+/// \param DualArrays for the material point sound speed 
+/// \param DualArrays for the material point specific internal energy 
+/// \param DualArrays for the gauss point volume 
+/// \param DualArrays for the material point mass
+/// \param DualArrays for the material point eos state vars
+/// \param DualArrays for the material point strength state vars
+/// \param DualArrays for the material point identifier for erosion
+/// \param DualArrays for the element that the material lives inside
 /// \param Time step size
 /// \param The current Runge Kutta integration alpha value
+/// \param The number of material elems
+/// \param The material id
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::update_state_rz(
@@ -72,7 +76,8 @@ void SGHRZ::update_state_rz(
     const DCArrayKokkos<double>& MaterialPoints_sie,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<double>& MaterialPoints_statev,
+    const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+    const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const double dt,
@@ -82,6 +87,7 @@ void SGHRZ::update_state_rz(
 {
     
     const size_t num_dims = mesh.num_dims;
+
 
     // --- Density ---
     // loop over all the elements the material lives in
@@ -126,7 +132,7 @@ void SGHRZ::update_state_rz(
                                         MaterialPoints_stress,
                                         mat_point_lid,
                                         mat_id,
-                                        MaterialPoints_statev,
+                                        MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(0, mat_point_lid),
@@ -137,7 +143,7 @@ void SGHRZ::update_state_rz(
                                         MaterialPoints_stress,
                                         mat_point_lid,
                                         mat_id,
-                                        MaterialPoints_statev,
+                                        MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(0, mat_point_lid),
@@ -207,7 +213,7 @@ void SGHRZ::update_state_rz(
                                              MaterialPoints_stress,
                                              mat_point_lid,
                                              mat_id,
-                                             MaterialPoints_statev,
+                                             MaterialPoints_strength_state_vars,
                                              MaterialPoints_sspd,
                                              MaterialPoints_den(mat_point_lid),
                                              MaterialPoints_sie(1,mat_point_lid),
@@ -287,7 +293,8 @@ void SGHRZ::update_state_rz(
 /// \param DualArray for mat point pressure 
 /// \param DualArray for mat point stress 
 /// \param DualArray for mat point sound speed 
-/// \param DualArray for mat point statev
+/// \param DualArray for mat point eos_state_vars
+/// \param DualArray for mat point strength_state_vars
 /// \param DualArray for the mapping from mat lid to elem
 /// \param num_mat_elems
 /// \param material id
@@ -309,7 +316,8 @@ void SGHRZ::update_stress(const Material_t& Materials,
                           const DCArrayKokkos<double>& MaterialPoints_pres,
                           const DCArrayKokkos<double>& MaterialPoints_stress,
                           const DCArrayKokkos<double>& MaterialPoints_sspd,
-                          const DCArrayKokkos<double>& MaterialPoints_statev,
+                          const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                          const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
                           const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                           const size_t num_mat_elems,
                           const size_t mat_id,
@@ -326,6 +334,17 @@ void SGHRZ::update_stress(const Material_t& Materials,
 
     const size_t num_dims = 2;
     const size_t num_nodes_in_elem = 4;
+
+
+    // ==================================================
+    // add a host launced material model interface here
+    // ==================================================
+
+
+    
+    // ============================================
+    // --- Device launched modle is here
+    // ============================================
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
@@ -380,7 +399,7 @@ void SGHRZ::update_stress(const Material_t& Materials,
                                         MaterialPoints_stress,
                                         mat_point_lid,
                                         mat_id,
-                                        MaterialPoints_statev,
+                                        MaterialPoints_strength_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(1,mat_point_lid),

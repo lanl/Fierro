@@ -45,19 +45,23 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// \param Material that contains material specific data
 /// \param The simulation mesh
-/// \param A view into the nodal position array
-/// \param A view into the nodal velocity array
-/// \param A view into the element density array
-/// \param A view into the element pressure array
-/// \param A view into the element stress array
-/// \param A view into the element sound speed array
-/// \param A view into the element specific internal energy array
-/// \param A view into the element volume array
-/// \param A view into the element mass
-/// \param A view into the element material identifier array
-/// \param A view into the element state variables
+/// \param DualArrays for the nodal position 
+/// \param DualArrays for the nodal velocity 
+/// \param DualArrays for the material point density 
+/// \param DualArrays for the material point pressure 
+/// \param DualArrays for the material point stress 
+/// \param DualArrays for the material point sound speed 
+/// \param DualArrays for the material point specific internal energy 
+/// \param DualArrays for the gauss point volume 
+/// \param DualArrays for the material point mass
+/// \param DualArrays for the material point eos state vars
+/// \param DualArrays for the material point strength state vars
+/// \param DualArrays for the material point identifier for erosion
+/// \param DualArrays for the element that the material lives inside
 /// \param Time step size
 /// \param The current Runge Kutta integration alpha value
+/// \param The number of material elems
+/// \param The material id
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::update_state(
@@ -72,7 +76,8 @@ void SGH3D::update_state(
     const DCArrayKokkos<double>& MaterialPoints_sie,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<double>& MaterialPoints_statev,
+    const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+    const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const double dt,
@@ -105,7 +110,7 @@ void SGH3D::update_state(
                                         MaterialPoints_stress,
                                         mat_point_lid,
                                         mat_id,
-                                        MaterialPoints_statev,
+                                        MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(1, mat_point_lid),
@@ -117,7 +122,7 @@ void SGH3D::update_state(
                                         MaterialPoints_stress,
                                         mat_point_lid,
                                         mat_id,
-                                        MaterialPoints_statev,
+                                        MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(1, mat_point_lid),
@@ -195,7 +200,7 @@ void SGH3D::update_state(
                                             MaterialPoints_stress,
                                             mat_point_lid,
                                             mat_id,
-                                            MaterialPoints_statev,
+                                            MaterialPoints_strength_state_vars,
                                             MaterialPoints_sspd,
                                             MaterialPoints_den(mat_point_lid),
                                             MaterialPoints_sie(1, mat_point_lid),
@@ -272,7 +277,8 @@ void SGH3D::update_state(
 /// \param DualArray for mat point pressure 
 /// \param DualArray for mat point stress 
 /// \param DualArray for mat point sound speed 
-/// \param DualArray for mat point statev
+/// \param DualArray for mat point eos state vars
+/// \param DualArray for mat point strength state vars
 /// \param DualArray for the mapping from mat lid to elem
 /// \param num_mat_elems
 /// \param material id
@@ -284,26 +290,28 @@ void SGH3D::update_state(
 /// \param Cycle in the calculation
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::update_stress(const Material_t& Materials,
-                          const Mesh_t& mesh,
-                          const DCArrayKokkos<double>& GaussPoints_vol,
-                          const DCArrayKokkos<double>& node_coords,
-                          const DCArrayKokkos<double>& node_vel,
-                          const DCArrayKokkos<double>& MaterialPoints_den,
-                          const DCArrayKokkos<double>& MaterialPoints_sie,
-                          const DCArrayKokkos<double>& MaterialPoints_pres,
-                          const DCArrayKokkos<double>& MaterialPoints_stress,
-                          const DCArrayKokkos<double>& MaterialPoints_sspd,
-                          const DCArrayKokkos<double>& MaterialPoints_statev,
-                          const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                          const size_t num_mat_elems,
-                          const size_t mat_id,
-                          const double fuzz,
-                          const double small,
-                          const double time_value,
-                          const double dt,
-                          const double rk_alpha,
-                          const size_t cycle) const
+void SGH3D::update_stress(
+    const Material_t& Materials,
+    const Mesh_t& mesh,
+    const DCArrayKokkos<double>& GaussPoints_vol,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& MaterialPoints_den,
+    const DCArrayKokkos<double>& MaterialPoints_sie,
+    const DCArrayKokkos<double>& MaterialPoints_pres,
+    const DCArrayKokkos<double>& MaterialPoints_stress,
+    const DCArrayKokkos<double>& MaterialPoints_sspd,
+    const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+    const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+    const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const size_t num_mat_elems,
+    const size_t mat_id,
+    const double fuzz,
+    const double small,
+    const double time_value,
+    const double dt,
+    const double rk_alpha,
+    const size_t cycle) const
 {
     // --- Update Stress ---
     // calculate the new stress at the next rk level, if it is a increment_based model
@@ -311,6 +319,16 @@ void SGH3D::update_stress(const Material_t& Materials,
 
     const size_t num_dims = 3;
     const size_t num_nodes_in_elem = 8;
+
+
+    // ==================================================
+    // add a host launced material model interface here
+    // ==================================================
+
+
+    // ============================================
+    // --- Device launched modle is here
+    // ============================================
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
@@ -359,7 +377,7 @@ void SGH3D::update_stress(const Material_t& Materials,
                                         MaterialPoints_stress,
                                         mat_point_lid,
                                         mat_id,
-                                        MaterialPoints_statev,
+                                        MaterialPoints_strength_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(1,mat_point_lid),
