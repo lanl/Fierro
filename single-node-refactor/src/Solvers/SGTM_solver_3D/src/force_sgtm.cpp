@@ -72,6 +72,8 @@ void SGTM3D::get_heat_flux(
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_temp,
     const DCArrayKokkos<double>& MaterialPoints_q_flux,
+    const DCArrayKokkos<double>& MaterialPoints_conductivity,
+    const DCArrayKokkos<double>& MaterialPoints_temp_grad,
     const DCArrayKokkos<double>& MaterialPoints_statev,
     const DCArrayKokkos<double>& corner_q_flux,
     const DCArrayKokkos<double>& MaterialCorners_q_flux,
@@ -104,7 +106,7 @@ void SGTM3D::get_heat_flux(
 
         // temperature gradient
         double temp_grad_array[3];
-        ViewCArrayKokkos<double> temp_grad(temp_grad_array, num_dims);
+        ViewCArrayKokkos<double> temp_grad(&temp_grad_array[0], 3);
 
         // element volume
         double vol = GaussPoints_vol(elem_gid);
@@ -140,22 +142,25 @@ void SGTM3D::get_heat_flux(
 
         for(int dim = 0; dim < mesh.num_dims; dim++){
             for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-                temp_grad(dim) += -1.0 * temp(node_lid) * b_matrix(node_lid, dim);
+                temp_grad(dim) += 1.0 * temp(node_lid) * b_matrix(node_lid, dim);
             }
         }
-
-        
-
+       
         for(int dim = 0; dim < mesh.num_dims; dim++){
             temp_grad(dim) *= inverse_vol;
         }
 
+        MaterialPoints_temp_grad(elem_gid, 0) = temp_grad(0);
+        MaterialPoints_temp_grad(elem_gid, 1) = temp_grad(1);
+        MaterialPoints_temp_grad(elem_gid, 2) = temp_grad(2);
+
+
         // std::cout<<"Element "<< elem_gid<<" temp gradient = "<< temp_grad(0)<<", "<<temp_grad(1)<<", "<<temp_grad(2)<<std::endl;
 
-        double thermal_conductivity = 1.0;
+        double conductivity = MaterialPoints_conductivity(mat_point_lid);
 
         for(int dim = 0; dim < mesh.num_dims; dim++){
-            MaterialPoints_q_flux(0, mat_point_lid, dim) = 1.0 * thermal_conductivity * temp_grad(dim);
+            MaterialPoints_q_flux(0, mat_point_lid, dim) = -1.0 * conductivity * temp_grad(dim);
         }
 
         // std::cout<<"Element "<< elem_gid<<" temp flux = "<< 
@@ -202,16 +207,8 @@ void SGTM3D::get_heat_flux(
 
                 corner_q_flux(1, corner_gid, 0) += MaterialPoints_q_flux(0, mat_point_lid, dim) * b_matrix(node_lid, dim);
 
-                // Tally to mesh corners?
             }
-
-            // std::cout<<"Corner "<< corner_gid<<" temp flux = "<< 
-            //     corner_q_flux(1, corner_gid, 0)<<std::endl;
         }
-
-
-
-
     }); // end parallel for loop over elements
 
     return;

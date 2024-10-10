@@ -180,20 +180,15 @@ public:
     }
 
     // **** Functions defined in sgtm_setup.cpp **** //
-    void fill_regions_sgtm(
-        const Material_t& Materials,
-        const Mesh_t&     mesh,
-        State_t& State,
-        DCArrayKokkos<double>& GaussPoint_den,
-        DCArrayKokkos<double>& GaussPoint_sie,
-        DCArrayKokkos<size_t>& elem_mat_id,
-        DCArrayKokkos<size_t>& voxel_elem_mat_id,
+    void tag_regions(
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>& node_coords,
+        DCArrayKokkos <size_t>& elem_mat_id,
+        DCArrayKokkos <size_t>& voxel_elem_mat_id,
+        DCArrayKokkos <size_t>& elem_region_id,
+        DCArrayKokkos <size_t>& node_region_id,
         const CArrayKokkos<RegionFill_t>& region_fills,
-        const CArray<RegionFill_host_t>&  region_fills_host,
-        const size_t num_fills,
-        const size_t num_elems,
-        const size_t num_nodes,
-        const size_t rk_num_bins) const;
+        const CArray<RegionFill_host_t>&  region_fills_host) const;
 
     void init_corner_node_masses_zero(
         const Mesh_t& mesh,
@@ -258,6 +253,8 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_q_flux,
         const DCArrayKokkos<double>& MaterialPoints_statev,
         const DCArrayKokkos<double>& corner_q_flux,
+        const DCArrayKokkos<double>& MaterialPoints_conductivity,
+        const DCArrayKokkos<double>& MaterialPoints_temp_grad,
         const DCArrayKokkos<double>& MaterialCorners_q_flux,
         const corners_in_mat_t corners_in_mat_elem,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,

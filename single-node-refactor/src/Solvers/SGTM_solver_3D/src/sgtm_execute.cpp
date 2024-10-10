@@ -136,30 +136,33 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             double dt_mat = dt;
 
             // get the stable time step
-            // get_timestep(mesh,
-            //              State.node.coords,
-            //              State.node.vel,
-            //              State.GaussPoints.vol,
-            //              State.MaterialPoints(mat_id).sspd,
-            //              State.MaterialPoints(mat_id).eroded,
-            //              State.MaterialToMeshMaps(mat_id).elem,
-            //              State.MaterialToMeshMaps(mat_id).num_material_elems,
-            //              time_value,
-            //              graphics_time,
-            //              time_final,
-            //              dt_max,
-            //              dt_min,
-            //              dt_cfl,
-            //              dt_mat,
-            //              fuzz);
+            get_timestep(mesh,
+                         State.node.coords,
+                         State.node.vel,
+                         State.GaussPoints.vol,
+                         State.MaterialPoints(mat_id).sspd,
+                         State.MaterialPoints(mat_id).conductivity,
+                         State.MaterialPoints(mat_id).den,
+                         State.MaterialPoints(mat_id).specific_heat,
+                         State.MaterialPoints(mat_id).eroded,
+                         State.MaterialToMeshMaps(mat_id).elem,
+                         State.MaterialToMeshMaps(mat_id).num_material_elems,
+                         time_value,
+                         graphics_time,
+                         time_final,
+                         dt_max,
+                         dt_min,
+                         dt_cfl,
+                         dt_mat,
+                         fuzz);
 
             // save the smallest dt of all materials
             min_dt_calc = fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
 
-        // dt = min_dt_calc;  // save this dt time step
+        dt = min_dt_calc;  // save this dt time step
 
-        dt = dt_start;
+        // dt = dt_start;
 
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
@@ -210,6 +213,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.node.coords,
                     State.node.temp,
                     State.MaterialPoints(mat_id).q_flux,
+                    State.MaterialPoints(mat_id).conductivity,
+                    State.MaterialPoints(mat_id).temp_grad,
                     State.MaterialPoints(mat_id).statev,
                     State.corner.q_flux,
                     State.MaterialCorners(mat_id).q_flux,

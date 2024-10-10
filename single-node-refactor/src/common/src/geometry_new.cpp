@@ -718,6 +718,10 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     //    exit(0);
     // } // end if
 
+    std::cout<<"NUM BOUNDARY SETS = "<<mesh.num_bdy_sets<<std::endl;
+
+    if(mesh.num_bdy_sets == 0) return;
+
     FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
         // tag boundaries
         int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).geometry;

@@ -66,59 +66,79 @@ void SGTM3D::init_corner_node_masses_zero(const Mesh_t& mesh,
     });  // end parallel over corners
 } // end setting masses equal to zero
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn fill_regions_sgh
-///
-/// \brief a function to paint den, sie, vel, and mat_ids on the mesh
-/// The arrays populated (on host and device) are:
-///       elem_mat_id
-///       GaussPoint_den
-///       GaussPoint_sie
-///       node_vel
-///
-/// \param Materials holds the material models and global parameters
-/// \param mesh is the simulation mesh
-/// \param node_coords are the coordinates of the nodes
-/// \param node_vel is the nodal velocity array
-/// \param region_fills are the instructures to paint state on the mesh
-/// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh
-/// \param GaussPoint_den is density at the GaussPoints on the mesh
-/// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
-/// \param elem_mat_id is the material id in an element
-/// \param num_fills is number of fill instruction
-/// \param num_elems is number of elements on the mesh
-/// \param num_nodes is number of nodes on the mesh
-/// \param rk_num_bins is number of time integration storage bins
-///
-/////////////////////////////////////////////////////////////////////////////
-void SGTM3D::fill_regions_sgtm(
-    const Material_t& Materials,
-    const Mesh_t& mesh,
-    State_t& State,
-    DCArrayKokkos <double>& GaussPoint_den,
-    DCArrayKokkos <double>& GaussPoint_sie,
-    DCArrayKokkos <size_t>& elem_mat_id,
-    const CArrayKokkos <RegionFill_t>& region_fills,
-    const CArray <RegionFill_host_t>& region_fills_host,
-    const size_t num_fills,
-    const size_t num_elems,
-    const size_t num_nodes,
-    const size_t rk_num_bins) const
-{
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn tag_regions
+///
+/// \brief a function to tag what materials are on what regions of the mesh
+///
+/// \param 
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGTM3D::tag_regions(
+    const Mesh_t& mesh,
+    const DCArrayKokkos<double>& node_coords,
+    DCArrayKokkos <size_t>& elem_mat_id,
+    DCArrayKokkos <size_t>& voxel_elem_mat_id,
+    DCArrayKokkos <size_t>& elem_region_id,
+    DCArrayKokkos <size_t>& node_region_id,
+    const CArrayKokkos<RegionFill_t>& region_fills,
+    const CArray<RegionFill_host_t>&  region_fills_host) const
+{
+    std::cout << "Tagging Regions" << std::endl;
+    double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
+    double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
+    size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
+
+    size_t num_fills = region_fills.size();
 
     // ---------------------------------------------
     // copy to host, enum to read a voxel file
     // ---------------------------------------------
-    
+
+    DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
+
+    FOR_ALL(f_id, 0, num_fills, {
+        if (region_fills(f_id).volume == region::readVoxelFile) {
+            read_voxel_file(f_id) = region::readVoxelFile;  // read the  voxel file
+        }
+        // add other mesh voxel files
+        else{
+            read_voxel_file(f_id) = 0;
+        }
+    }); // end parallel for
+    read_voxel_file.update_host(); // copy to CPU if code is to read a file
+    Kokkos::fence();
     // ---------------------------------------------
 
     // loop over the fill instructions
     for (size_t f_id = 0; f_id < num_fills; f_id++) {
+        // ----
+        // voxel mesh setup
+        if (read_voxel_file.host(f_id) == region::readVoxelFile) {
+            // read voxel mesh to get the values in the fcn interface
+            user_voxel_init(voxel_elem_mat_id,
+                            voxel_dx,
+                            voxel_dy,
+                            voxel_dz,
+                            orig_x,
+                            orig_y,
+                            orig_z,
+                            voxel_num_i,
+                            voxel_num_j,
+                            voxel_num_k,
+                            region_fills_host(f_id).scale_x,
+                            region_fills_host(f_id).scale_y,
+                            region_fills_host(f_id).scale_z,
+                            region_fills_host(f_id).file_path);
 
+            // copy values read from file to device
+            voxel_elem_mat_id.update_device();
+        } // end if voxel mesh
+        
         // parallel loop over elements in mesh
-        FOR_ALL(elem_gid, 0, num_elems, {
+        FOR_ALL(elem_gid, 0, mesh.num_elems, {
             // calculate the coordinates and radius of the element
             double elem_coords_1D[3]; // note:initialization with a list won't work
             ViewCArrayKokkos<double> elem_coords(&elem_coords_1D[0], 3);
@@ -128,15 +148,18 @@ void SGTM3D::fill_regions_sgtm(
 
             // get the coordinates of the element center (using rk_level=1 or node coords)
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_coords(0) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_coords(1) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                elem_coords(0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_coords(1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3) {
-                    elem_coords(2) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_coords(2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
                 }
                 else{
                     elem_coords(2) = 0.0;
                 }
             } // end loop over nodes in element
+            
+
+
             elem_coords(0) = (elem_coords(0) / mesh.num_nodes_in_elem);
             elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
             elem_coords(2) = (elem_coords(2) / mesh.num_nodes_in_elem);
@@ -159,69 +182,60 @@ void SGTM3D::fill_regions_sgtm(
 
             // paint the material state on the element if fill_this=1
             if (fill_this == 1) {
-                // default sgh paint
-                paint_gauss_den_sie(Materials,
-                                    mesh,
-                                    State.node.coords,
-                                    GaussPoint_den,
-                                    GaussPoint_sie,
-                                    elem_mat_id,
-                                    region_fills,
-                                    elem_coords,
-                                    elem_gid,
-                                    f_id);
+                // the material id
+                size_t mat_id = region_fills(f_id).material_id;
 
-                // technically, not thread safe, but making it a separate loop created bad fill behavior
-                // loop over the nodes of this element and apply velocity
-                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                    // get the mesh node index
-                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                // --- material_id in elem ---
+                elem_mat_id(elem_gid) = mat_id;
+                elem_region_id(elem_gid) = f_id;
+            } // end if fill this
+        }); // end FOR_ALL element loop
+        Kokkos::fence();
 
-                    // default sgh paint
-                    paint_node_temp(region_fills,
-                                State.node.temp,
-                                State.node.coords,
-                                node_gid,
-                                mesh.num_dims,
-                                f_id,
-                                rk_num_bins);
+        // parallel loop over nodes in mesh
+        FOR_ALL(node_gid, 0, mesh.num_nodes, {
 
-                    // add user defined paint here
-                    // user_defined_vel_state();
-                } // end loop over the nodes in elem
+            // Get the nodal coordinates
+            double coords_1D[3]; // note:initialization with a list won't work
+            ViewCArrayKokkos<double> coords(&coords_1D[0], 3);
+            
+            coords(0) = node_coords(1, node_gid, 0);
+            coords(1) = node_coords(1, node_gid, 1);
+            coords(2) = node_coords(1, node_gid, 2);
 
-
-                // Paint on specific heat and thermal conductivity
-                // loop over the Gauss points in the element
-                {
-                    
-                    const size_t gauss_gid = elem_gid;  // 1 gauss point per element
-
-
-                        
-                    // --- density ---
-                    GaussPoint_den(gauss_gid) = region_fills(f_id).den;
-
-                    // --- specific internal energy ---
-                    GaussPoint_sie(gauss_gid) = region_fills(f_id).sie;
-
-                    
-                } // end loop over gauss points in element
+            // calc if we are to fill this element
+            size_t fill_this = fill_geometric_region(mesh,
+                                                     voxel_elem_mat_id,
+                                                     region_fills,
+                                                     coords,
+                                                     voxel_dx,
+                                                     voxel_dy,
+                                                     voxel_dz,
+                                                     orig_x,
+                                                     orig_y,
+                                                     orig_z,
+                                                     voxel_num_i,
+                                                     voxel_num_j,
+                                                     voxel_num_k,
+                                                     f_id);
 
 
+            if (fill_this == 1) {
+                // the material id
+                size_t mat_id = region_fills(f_id).material_id;
+                node_region_id(node_gid) = f_id;
             } // end if fill this
         }); // end FOR_ALL node loop
         Kokkos::fence();
     } // end for loop over fills
 
     elem_mat_id.update_host();
-    GaussPoint_den.update_host();
-    GaussPoint_sie.update_host();
-    State.node.vel.update_host();
-    State.node.temp.update_host();
+    elem_region_id.update_host();
+    voxel_elem_mat_id.update_host();
+    node_region_id.update_host();
 
     Kokkos::fence();
-} // end SGH fill regions
+} // end SGH tag regions
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -248,34 +262,29 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
     // Calculate element volume
     geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
-    // create temporary state fields
-    // Painting routine requires only 1 material per GaussPoint
-    DCArrayKokkos<double> GaussPoint_den(num_elems);
-    DCArrayKokkos<double> GaussPoint_sie(num_elems);
+    // Temporary arrays to tag regions and materials, used to generate material centric data structures
     DCArrayKokkos<size_t> elem_mat_id(num_elems); // the mat_id in the elem
+    DCArrayKokkos<size_t> elem_region_id(num_elems); // the region id of the element
+    DCArrayKokkos<size_t> node_region_id(num_nodes); // the region id of the node
+
 
     DCArrayKokkos<size_t> voxel_elem_mat_id;       // 1 or 0 if material exist, or it is the material_id
 
-    // ---------------------------------------------
-    // fill den, sie, and velocity on the mesh
-    // ---------------------------------------------
-    fill_regions_sgtm(Materials,
-                     mesh,
-                     State,
-                     GaussPoint_den,
-                     GaussPoint_sie,
-                     elem_mat_id,
-                     voxel_elem_mat_id,
-                     SimulationParamaters.region_fills,
-                     SimulationParamaters.region_fills_host,
-                     num_fills,
-                     num_elems,
-                     num_nodes,
-                     rk_num_bins);
-
+    // -------------------------------------------------------------
+    // Tag elements and nodes associated with each region/material
+    // --------------------------------------------------------------
+    tag_regions(
+        mesh, 
+        State.node.coords,
+        elem_mat_id,
+        voxel_elem_mat_id, 
+        elem_region_id,
+        node_region_id,
+        SimulationParamaters.region_fills,
+        SimulationParamaters.region_fills_host);
     // note: the device and host side are updated in the above function
     // ---------------------------------------------
-
+    std::cout << "After Tagging Regions" << std::endl;
     // ----------------------------------------------------------------
     //  Walk over the mesh and find dimensions of material storage arrays
     // ----------------------------------------------------------------
@@ -302,6 +311,7 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
     // ---------------------------------------
     //  SGH allocation of maps and state
     // ---------------------------------------
+    std::cout << "Before maps" << std::endl;
     State.MaterialToMeshMaps = CArray<MaterialToMeshMap_t>(num_mats);
 
     State.MaterialPoints  = CArray<MaterialPoint_t>(num_mats);
@@ -317,9 +327,10 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
         State.MaterialPoints(mat_id).num_material_points    = num_elems_saved_for_mat.host(mat_id) * num_mat_pts_in_elem;
         State.MaterialCorners(mat_id).num_material_corners  = num_elems_saved_for_mat.host(mat_id) * mesh.num_nodes_in_elem;
 
-        // -----
+
+        // ---------------------------------------------
         //  Allocation after here will include a buffer
-        // -----
+        // ---------------------------------------------
         size_t buffer = 0; // memory buffer to push back into
         size_t num_elems_for_mat = num_elems_saved_for_mat.host(mat_id) + buffer; // has a memory buffer for ALE
 
@@ -347,9 +358,18 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
     // ---------------------------------------
     State.GaussPoints.vol.update_host();
     Kokkos::fence();
+    std::cout << "Before region fills" << std::endl;
+
+    DCArrayKokkos<double> init_den(1);
+    DCArrayKokkos<double> init_sie(1);
+    DCArrayKokkos<double> init_sh(1);
+    DCArrayKokkos<double> init_tc(1);
+
+
 
     // the following loop is not thread safe
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+        
         // get the material_id in this element
         size_t mat_id = elem_mat_id.host(elem_gid);
 
@@ -359,10 +379,22 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
         // --- mapping from material elem lid to elem ---
         State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
 
+
+        // Get initial conditions from region_fills
+        RUN({
+            init_den(0) = SimulationParamaters.region_fills(elem_region_id(elem_gid)).den;
+            init_sie(0) = SimulationParamaters.region_fills(elem_region_id(elem_gid)).sie;
+            init_sh(0) = SimulationParamaters.region_fills(elem_region_id(elem_gid)).specific_heat;
+            init_tc(0) = SimulationParamaters.region_fills(elem_region_id(elem_gid)).thermal_conductivity;
+        });
+        init_den.update_host();
+        init_sie.update_host();
+        init_sh.update_host();
+        init_tc.update_host();
+
         // -----------------------
         // Save MaterialPoints
         // -----------------------
-
         // LOOP OVER Guass points in the element
         {
             size_t gauss_gid = elem_gid;  // 1 gauss point per element
@@ -370,8 +402,8 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
             size_t mat_point_lid = mat_elem_lid; // for more than 1 gauss point, this must increment
 
             // --- density and mass ---
-            State.MaterialPoints(mat_id).den.host(mat_point_lid)  = GaussPoint_den.host(gauss_gid);
-            State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(gauss_gid) * State.GaussPoints.vol.host(gauss_gid);
+            State.MaterialPoints(mat_id).den.host(mat_point_lid) =  init_den.host(0); //SimulationParamaters.region_fills(elem_region_id(elem_gid)).den;
+            State.MaterialPoints(mat_id).mass.host(mat_point_lid) = State.MaterialPoints(mat_id).den.host(mat_point_lid) * State.GaussPoints.vol.host(gauss_gid);
 
             // --- volume fraction ---
             State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = 1.0;
@@ -382,8 +414,14 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
             // --- specific internal energy ---
             // save state, that is integrated in time, at the RK levels
             for (size_t rk_level = 0; rk_level < rk_num_bins; rk_level++) {
-                State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = GaussPoint_sie.host(gauss_gid);
+                State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = init_sie.host(0); //SimulationParamaters.region_fills(elem_region_id(elem_gid)).sie;
             }
+
+            // --- Specific heat and thermal conductivity
+            State.MaterialPoints(mat_id).specific_heat.host(mat_point_lid) = init_sh.host(0); //SimulationParamaters.region_fills(elem_region_id(elem_gid)).specific_heat;
+            State.MaterialPoints(mat_id).conductivity.host(mat_point_lid) = init_tc.host(0); //SimulationParamaters.region_fills(elem_region_id(elem_gid)).thermal_conductivity;
+
+
         } // end loop over gauss points in element
 
         // -----------------------
@@ -395,11 +433,40 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
         num_elems_saved_for_mat.host(mat_id)++;
     } // end serial for loop over all elements
 
+    std::cout << "after region fills" << std::endl;
+    // Paint nodal state
+    // parallel loop over nodes in mesh
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        paint_node_vel(SimulationParamaters.region_fills,
+                       State.node.vel,
+                       State.node.coords,
+                       node_gid,
+                       mesh.num_dims,
+                       node_region_id(node_gid),
+                       rk_num_bins);
+
+        // Paint on initial temperature
+        double temperature = SimulationParamaters.region_fills(node_region_id(node_gid)).temperature;
+        paint_node_scalar(temperature,
+                          SimulationParamaters.region_fills,
+                          State.node.temp,
+                          State.node.coords, 
+                          node_gid, 
+                          mesh.num_dims,
+                          node_region_id(node_gid),
+                          rk_num_bins);
+
+
+    }); // end FOR_ALL node loop
+    Kokkos::fence();
+
     // copy the state to the device
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
         State.MaterialPoints(mat_id).den.update_device();
         State.MaterialPoints(mat_id).mass.update_device();
         State.MaterialPoints(mat_id).sie.update_device();
+        State.MaterialPoints(mat_id).specific_heat.update_device();
+        State.MaterialPoints(mat_id).conductivity.update_device();
 
         State.MaterialPoints(mat_id).volfrac.update_device();
         State.MaterialPoints(mat_id).eroded.update_device();

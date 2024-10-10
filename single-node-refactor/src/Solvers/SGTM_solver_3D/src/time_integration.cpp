@@ -190,6 +190,8 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
 
         dt_vn /= (2.0*MaterialPoints_conductivity(mat_elem_lid));
 
+        dt_vn *= 0.95; // stability factor
+ 
         if (MaterialPoints_eroded(mat_elem_lid) == true) {
             dt_cfl = 1.0e32;  // a huge time step as this element doesn't exist
         }

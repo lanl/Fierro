@@ -113,8 +113,8 @@ struct RegionFill_t
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
-    double specific_heat;
-    double thermal_conductivity;
+    double specific_heat = 0.0;
+    double thermal_conductivity = 0.0;
 
     double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region
 };

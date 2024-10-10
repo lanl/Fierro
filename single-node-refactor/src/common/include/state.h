@@ -195,9 +195,16 @@ struct MaterialPoint_t
     DCArrayKokkos<double> volfrac;   ///< MaterialPoint volume fraction
     DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
 
+
+
+    DCArrayKokkos<double> temp_grad; ///< Specific Heat
+
     // initialization method (num_rk_storage_bins, num_pts_max, num_dims)
     void initialize(size_t num_rk, size_t num_pts_max, size_t num_dims, std::vector<material_pt_state> material_pt_states)
     {
+
+        this->temp_grad = DCArrayKokkos<double>(num_pts_max, 3, "material_point_temperature_gradient");
+
         for (auto field : material_pt_states){
             switch(field){
                 case material_pt_state::density:
@@ -225,10 +232,10 @@ struct MaterialPoint_t
                     if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, "material_point_heat_flux");
                     break;
                 case material_pt_state::thermal_conductivity:
-                    if (q_flux.size() == 0) this->conductivity = DCArrayKokkos<double>(num_pts_max, "material_point_thermal_conductivity");
+                    if (conductivity.size() == 0) this->conductivity = DCArrayKokkos<double>(num_pts_max, "material_point_thermal_conductivity");
                     break;
                 case material_pt_state::specific_heat:
-                    if (q_flux.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_pts_max, "material_point_specific_heat");
+                    if (specific_heat.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_pts_max, "material_point_specific_heat");
                     break;
                 case material_pt_state::eroded_flag:
                     if (eroded.size() == 0) this->eroded = DCArrayKokkos<bool>(num_pts_max, "material_point_eroded");
