@@ -7,7 +7,7 @@ import math
 import glob
 
 # Builds being tested
-builds = ["cuda"]
+builds = ["openmp"]
 
 # Name(s) of the solver being used
 solvers = ["Fierro"]

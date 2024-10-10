@@ -275,7 +275,6 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 State.MaterialPoints(mat_id).pres,
                                 State.MaterialPoints(mat_id).stress,
                                 State.MaterialPoints(mat_id).sspd,
-                                State.MaterialPoints(mat_id).statev,
                                 State.MaterialCorners(mat_id).force,
                                 State.MaterialPoints(mat_id).volfrac,
                                 State.corners_in_mat_elem,
@@ -288,6 +287,29 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 dt,
                                 rk_alpha);
                 
+                if (Materials.MaterialEnums.host(mat_id).StrengthType == model::incrementBased) {
+                    update_stress(Materials,
+                                  mesh,
+                                  State.GaussPoints.vol,
+                                  State.node.coords,
+                                  State.node.vel,
+                                  State.MaterialPoints(mat_id).den,
+                                  State.MaterialPoints(mat_id).sie,
+                                  State.MaterialPoints(mat_id).pres,
+                                  State.MaterialPoints(mat_id).stress,
+                                  State.MaterialPoints(mat_id).sspd,
+                                  State.MaterialPoints(mat_id).eos_state_vars,
+                                  State.MaterialPoints(mat_id).strength_state_vars,
+                                  State.MaterialToMeshMaps(mat_id).elem,
+                                  num_mat_elems,
+                                  mat_id,
+                                  fuzz,
+                                  small,
+                                  time_value,
+                                  dt,
+                                  rk_alpha,
+                                  cycle);
+                } // end if on increment
 
             } // end for mat_id
 
@@ -351,11 +373,14 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 State.MaterialPoints(mat_id).sie,
                                 State.GaussPoints.vol,
                                 State.MaterialPoints(mat_id).mass,
-                                State.MaterialPoints(mat_id).statev,
+                                State.MaterialPoints(mat_id).eos_state_vars,
+                                State.MaterialPoints(mat_id).strength_state_vars,
                                 State.MaterialPoints(mat_id).eroded,
                                 State.MaterialToMeshMaps(mat_id).elem,
+                                time_value,
                                 dt,
                                 rk_alpha,
+                                cycle,
                                 num_mat_elems,
                                 mat_id);
 

@@ -39,11 +39,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn UserDefinedStrengthModel
+/// \fn LargeANNStrengthModel
 ///
-/// \brief user defined strength model
+/// \brief Large Artificial Neural Network strength model
 ///
-///  This is the user material model function for the stress tensor
+///  This is the ANN model that returns the stress tensor, the parallelism is
+///  inside this model, thus it is launched from the CPU
 ///
 /// \param Element pressure
 /// \param Element stress
@@ -62,7 +63,43 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Time coefficient in the Runge Kutta time integration step
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace UserDefinedStrengthModel {
+
+// the number of nodes in each layer of the ANN
+std::vector <size_t> num_nodes_in_layer = {64000, 30000, 8000, 4000, 100, 25, 6}
+
+// array of ANN structs
+struct ANNLayer_t{
+
+    DCArrayKokkos <float> outputs;  // dims = [layer]
+    DFArrayKokkos <float> weights;  // dims = [layer-1, layer]
+    DCArrayKokkos <float> biases;   // dims = [layer]  
+
+}; // end struct
+
+void set_biases(const DCArrayKokkos <float> &biases){
+    const size_t num_j = biases.size();
+
+    FOR_ALL(j,0,num_j, {
+		    biases(j) = 0.0;
+	}); // end parallel for
+
+}; // end function
+
+void set_weights(const DFArrayKokkos <float> &weights){
+
+    const size_t num_i = weights.dims(0);
+    const size_t num_j = weights.dims(1);
+    
+	FOR_ALL(i,0,num_i,
+	        j,0,num_j, {
+		    
+		    weights(i,j) = 1.0;
+	}); // end parallel for
+
+}; // end function
+
+
+namespace LargeANNStrengthModel {
 
     void init_strength_state_vars(
         const DCArrayKokkos <Material_t> &material,
@@ -75,25 +112,63 @@ namespace UserDefinedStrengthModel {
         const size_t mat_id)
     {
 
-        // walk over all elements that have this material
-        FOR_ALL(mat_points_lid, 0, num_material_points, {
-            
-            // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_points_lid); // might be used with some models
+        // =================================================================
+        // allocate arrays
+        // =================================================================
 
-            // first index is matpt, second index is the number of vars
-            size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
-            
-            for(size_t var=0; var<num_strength_state_vars; var++){
-                MaterialPoints_strength_state_vars(mat_points_lid,var) = 0.0;
-            } // end for
+        // note: the num_nodes_in_layer has the inputs into the ANN, so subtract 1 for the layers
+        size_t num_layers = num_nodes_in_layer.size()-1;  
 
-        });  // end parallel for
+        CMatrix <ANNLayer_t> ANNLayers(num_layers); // starts at 1 and goes to num_layers
+
+        // input and ouput values to ANN
+        DCArrayKokkos <float> inputs(num_nodes_in_layer[0]);
+
+
+        // set the strides
+        // layer 0 are the inputs to the ANN
+        // layer n-1 are the outputs from the ANN
+        for (size_t layer=1; layer<=num_layers; layer++){
+
+            // dimensions
+            size_t num_i = num_nodes_in_layer[layer-1];
+            size_t num_j = num_nodes_in_layer[layer];
+
+            // allocate the weights in this layer
+            ANNLayers(layer).weights = DFArrayKokkos <float> (num_i, num_j); 
+            ANNLayers(layer).outputs = DCArrayKokkos <float> (num_j);
+            ANNLayers(layer).biases = DCArrayKokkos <float> (num_j);
+
+        } // end for
+
+
+        // =================================================================
+        // set weights, biases, and inputs
+        // =================================================================
+        
+        // inputs to ANN
+        for (size_t i=0; i<num_nodes_in_layer[0]; i++) {
+            inputs.host(i) = 1.0;
+        }
+        inputs.update_device();  // copy inputs to device
+
+        // weights of the ANN
+        for (size_t layer=1; layer<=num_layers; layer++){
+
+            // dimensions
+            size_t num_i = num_nodes_in_layer[layer-1];
+            size_t num_j = num_nodes_in_layer[layer];
+
+
+            set_weights(ANNLayers(layer).weights);
+            set_biases(ANNLayers(layer).biases);
+
+        } // end for over layers
 
     }  // end of init_strength_state_vars
 
 
-    KOKKOS_FUNCTION
+    // this model is launched from the CPU, coding inside is run on GPUS
     static void calc_stress(
         const ViewCArrayKokkos<double>& vel_grad,
         const DCArrayKokkos <double> &node_coords,
@@ -146,98 +221,6 @@ namespace UserDefinedStrengthModel {
 
 
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn fcn_name
-///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
-///
-/////////////////////////////////////////////////////////////////////////////
-// -----------------------------------------------------------------------------
-// This is place holder for another user strength model
-// ------------------------------------------------------------------------------
-namespace NotionalStrengthModel {
-
-    void init_strength_state_vars(
-        const DCArrayKokkos <Material_t> &material,
-        const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const size_t num_material_points,
-        const size_t mat_id)
-    {
-
-        // walk over all elements that have this material
-        FOR_ALL(mat_points_lid, 0, num_material_points, {
-            
-            // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_points_lid); // might be used with some models
-            
-            // first index is matpt, second index is the number of vars
-            size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
-            
-            for(size_t var=0; var<num_strength_state_vars; var++){
-                MaterialPoints_strength_state_vars(mat_points_lid,var) = 0.0;
-            } // end for
-
-        });  // end parallel for
-
-    }  // end of init_strength_state_vars
-
-    
-    KOKKOS_FUNCTION
-    static void calc_stress(
-        const ViewCArrayKokkos<double>& vel_grad,
-        const DCArrayKokkos <double> &node_coords,
-        const DCArrayKokkos <double> &node_vel,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
-        const double MaterialPoints_den,
-        const double MaterialPoints_sie,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const double vol,
-        const double dt,
-        const double rk_alpha,
-        const double time,
-        const size_t cycle,
-        const size_t MaterialPoints_lid,
-        const size_t mat_id)
-    {
-        return;
-    } // end of user mat
-
-
-    void destroy(
-        const DCArrayKokkos <Material_t> &material,
-        const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const size_t num_material_points,
-        const size_t mat_ids)
-    {
-
-    } // end destory
-
-} // end namespace
 
 
 #endif // end Header Guard

@@ -43,21 +43,25 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// \brief Updates the state for 2D elements
 ///
-/// \param An array of material_t that contains material specific data
+/// \param Material that contains material specific data
 /// \param The simulation mesh
-/// \param A view into the nodal position array
-/// \param A view into the nodal velocity array
-/// \param A view into the element density array
-/// \param A view into the element pressure array
-/// \param A view into the element stress array
-/// \param A view into the element sound speed array
-/// \param A view into the element specific internal energy array
-/// \param A view into the element volume array
-/// \param A view into the element mass
-/// \param A view into the element material identifier array
-/// \param A view into the element state variables
+/// \param DualArrays for the nodal position 
+/// \param DualArrays for the nodal velocity 
+/// \param DualArrays for the material point density 
+/// \param DualArrays for the material point pressure 
+/// \param DualArrays for the material point stress 
+/// \param DualArrays for the material point sound speed 
+/// \param DualArrays for the material point specific internal energy 
+/// \param DualArrays for the gauss point volume 
+/// \param DualArrays for the material point mass
+/// \param DualArrays for the material point eos state vars
+/// \param DualArrays for the material point strength state vars
+/// \param DualArrays for the material point identifier for erosion
+/// \param DualArrays for the element that the material lives inside
 /// \param Time step size
 /// \param The current Runge Kutta integration alpha value
+/// \param The number of material elems
+/// \param The material id
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::update_state_rz(
@@ -72,16 +76,20 @@ void SGHRZ::update_state_rz(
     const DCArrayKokkos<double>& MaterialPoints_sie,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<double>& MaterialPoints_statev,
+    const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+    const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const double time_value,
     const double dt,
     const double rk_alpha,
+    const size_t cycle,
     const size_t num_material_elems,
     const size_t mat_id) const
 {
     
     const size_t num_dims = mesh.num_dims;
+
 
     // --- Density ---
     // loop over all the elements the material lives in
@@ -126,7 +134,7 @@ void SGHRZ::update_state_rz(
                                         MaterialPoints_stress,
                                         mat_point_lid,
                                         mat_id,
-                                        MaterialPoints_statev,
+                                        MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(0, mat_point_lid),
@@ -137,7 +145,7 @@ void SGHRZ::update_state_rz(
                                         MaterialPoints_stress,
                                         mat_point_lid,
                                         mat_id,
-                                        MaterialPoints_statev,
+                                        MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(0, mat_point_lid),
@@ -203,22 +211,27 @@ void SGHRZ::update_state_rz(
 
                 // --- call strength model ---
                 Materials.MaterialFunctions(mat_id).calc_stress(
-                                             MaterialPoints_pres,
-                                             MaterialPoints_stress,
-                                             mat_point_lid,
-                                             mat_id,
-                                             MaterialPoints_statev,
-                                             MaterialPoints_sspd,
-                                             MaterialPoints_den(mat_point_lid),
-                                             MaterialPoints_sie(1,mat_point_lid),
-                                             vel_grad,
-                                             elem_node_gids,
-                                             node_coords,
-                                             node_vel,
-                                             GaussPoints_vol(gauss_gid),
-                                             dt,
-                                             rk_alpha,
-                                             Materials.strength_global_vars);
+                                        vel_grad,
+                                        node_coords,
+                                        node_vel,
+                                        elem_node_gids,
+                                        MaterialPoints_pres,
+                                        MaterialPoints_stress,
+                                        MaterialPoints_sspd,
+                                        MaterialPoints_eos_state_vars,
+                                        MaterialPoints_strength_state_vars,
+                                        MaterialPoints_den(mat_point_lid),
+                                        MaterialPoints_sie(1,mat_point_lid),
+                                        MaterialToMeshMaps_elem,
+                                        Materials.eos_global_vars,
+                                        Materials.strength_global_vars,
+                                        GaussPoints_vol(elem_gid),
+                                        dt,
+                                        rk_alpha,
+                                        time_value,
+                                        cycle,
+                                        mat_point_lid,
+                                        mat_id);
 
 
         }); // end parallel for over mat elem lid
@@ -268,3 +281,149 @@ void SGHRZ::update_state_rz(
 
     return;
 } // end method to update state_rz
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_stress
+///
+/// \brief This function calculates the corner forces and the evolves stress
+///
+/// \param Material that contains material specific data
+/// \param The simulation mesh
+/// \param DualArray for gauss point vol
+/// \param DualArray for nodal node coords
+/// \param DualArray for nodal velocity
+/// \param DualArray for mat point density
+/// \param DualArray for mat point specific internal energy 
+/// \param DualArray for mat point pressure 
+/// \param DualArray for mat point stress 
+/// \param DualArray for mat point sound speed 
+/// \param DualArray for mat point eos_state_vars
+/// \param DualArray for mat point strength_state_vars
+/// \param DualArray for the mapping from mat lid to elem
+/// \param num_mat_elems
+/// \param material id
+/// \param fuzz
+/// \param small
+/// \param time_value
+/// \param Time step size
+/// \param The current Runge Kutta integration alpha value
+/// \param Cycle in the calculation
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGHRZ::update_stress(const Material_t& Materials,
+                          const Mesh_t& mesh,
+                          const DCArrayKokkos<double>& GaussPoints_vol,
+                          const DCArrayKokkos<double>& node_coords,
+                          const DCArrayKokkos<double>& node_vel,
+                          const DCArrayKokkos<double>& MaterialPoints_den,
+                          const DCArrayKokkos<double>& MaterialPoints_sie,
+                          const DCArrayKokkos<double>& MaterialPoints_pres,
+                          const DCArrayKokkos<double>& MaterialPoints_stress,
+                          const DCArrayKokkos<double>& MaterialPoints_sspd,
+                          const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                          const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                          const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                          const size_t num_mat_elems,
+                          const size_t mat_id,
+                          const double fuzz,
+                          const double small,
+                          const double time_value,
+                          const double dt,
+                          const double rk_alpha,
+                          const size_t cycle) const
+{
+    // --- Update Stress ---
+    // calculate the new stress at the next rk level, if it is a increment_based model
+    // increment_based strength model
+
+    const size_t num_dims = 2;
+    const size_t num_nodes_in_elem = 4;
+
+
+    // ==================================================
+    // add a host launced material model interface here
+    // ==================================================
+
+
+    
+    // ============================================
+    // --- Device launched modle is here
+    // ============================================
+
+    // --- calculate the forces acting on the nodes from the element ---
+    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+        // get elem gid
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
+        // the material point index = the material elem index for a 1-point element
+        size_t mat_point_lid = mat_elem_lid;
+
+        double area_normal_array[8]; // 4 corners and 2 directions
+
+        // velocity gradient
+        double vel_grad_array[9];
+
+        // --- Create views of arrays to calculate velocity gradient ---
+        ViewCArrayKokkos<double> area_normal(area_normal_array, num_nodes_in_elem, num_dims);
+        ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
+
+        // element volume
+        double vol = GaussPoints_vol(elem_gid);
+
+
+        // cut out the node_gids for this element
+        ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+
+
+        // get the B matrix which are the OUTWARD corner area normals
+        geometry::get_bmatrix2D(area_normal,
+                                elem_gid,
+                                node_coords,
+                                elem_node_gids);
+        // NOTE: I added a minus in bmatrix2D, it should be outward pointing now?
+
+        // facial area of the element
+        double elem_area = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
+
+
+        // --- Calculate the velocity gradient ---
+        get_velgrad_rz(vel_grad,
+                       elem_node_gids,
+                       node_vel,
+                       area_normal,
+                       GaussPoints_vol(elem_gid),
+                       elem_area,
+                       elem_gid);
+
+
+        // --- call strength model ---
+        Materials.MaterialFunctions(mat_id).calc_stress(
+                                        vel_grad,
+                                        node_coords,
+                                        node_vel,
+                                        elem_node_gids,
+                                        MaterialPoints_pres,
+                                        MaterialPoints_stress,
+                                        MaterialPoints_sspd,
+                                        MaterialPoints_eos_state_vars,
+                                        MaterialPoints_strength_state_vars,
+                                        MaterialPoints_den(mat_point_lid),
+                                        MaterialPoints_sie(1,mat_point_lid),
+                                        MaterialToMeshMaps_elem,
+                                        Materials.eos_global_vars,
+                                        Materials.strength_global_vars,
+                                        GaussPoints_vol(elem_gid),
+                                        dt,
+                                        rk_alpha,
+                                        time_value,
+                                        cycle,
+                                        mat_point_lid,
+                                        mat_id);
+
+    });  // end parallel for over elems that have the materials
+
+}; // end function to increment stress tensor

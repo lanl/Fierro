@@ -203,22 +203,28 @@ struct MaterialFunctions_t
     // -- Strength --
 
     // Material strength model function pointers
-    void (*calc_stress)(const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const size_t MaterialPoints_lid,
-        const size_t mat_id,
-        const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const double den,
-        const double sie,
+    void (*calc_stress)(
         const ViewCArrayKokkos<double>& vel_grad,
+        const DCArrayKokkos <double> &node_coords,
+        const DCArrayKokkos <double> &node_vel,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
+        const DCArrayKokkos<double>& MaterialPoints_pres,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
+        const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
+        const double MaterialPoints_den,
+        const double MaterialPoints_sie,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const RaggedRightArrayKokkos <double> &eos_global_vars,
+        const RaggedRightArrayKokkos <double> &strength_global_vars,
         const double vol,
         const double dt,
         const double rk_alpha,
-        const RaggedRightArrayKokkos<double> &strength_global_vars) = NULL;
+        const double time,
+        const size_t cycle,
+        const size_t MaterialPoints_lid,
+        const size_t mat_id) = NULL;
 
     // -- Erosion --
 

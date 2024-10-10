@@ -9,7 +9,7 @@ dynamic_options:
 
 mesh_options:
     source: file
-    file_path: /var/tmp/repos/Fierro/single-node-refactor/regression_tests/standard_inputs/meshes/abaqus.inp
+    file_path: ./standard_inputs/meshes/abaqus.inp
     num_dims: 3
 
 # mesh_options:

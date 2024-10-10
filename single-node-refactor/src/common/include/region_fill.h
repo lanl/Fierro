@@ -177,12 +177,13 @@ void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
 ///
 /// \param Materials holds the material models and global parameters
 /// \param mesh is the simulation mesh
-/// \param GaussPoint_den is density at the GaussPoints on the mesh
-/// \param GaussPoint_pres is pressure at the GaussPoints on the mesh
-/// \param GaussPoint_stress is stress at the GaussPoints on the mesh
-/// \param GaussPoint_sspd is sound speed at the GaussPoints on the mesh
-/// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
-/// \param GaussPoint_statev are the state variables at the GaussPoints on the mesh
+/// \param DualArrays for density at the material points on the mesh
+/// \param DualArrays for pressure at the material points on the mesh
+/// \param DualArrays for stress at the material points on the mesh
+/// \param DualArrays for sound speed at the material points on the mesh
+/// \param DualArrays for specific internal energy at the material points on the mesh
+/// \param DualArrays for the material point eos state vars
+/// \param DualArrays for the material point strength state vars
 /// \param num_mat_pts is the number of material points for mat_id
 /// \param mat_id is material id
 /// \param rk_num_bins is number of time integration storage bins
@@ -195,7 +196,8 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const DCArrayKokkos<double>& MaterialPoints_stress,
                             const DCArrayKokkos<double>& MaterialPoints_sspd,
                             const DCArrayKokkos<double>& MaterialPoints_sie,
-                            const DCArrayKokkos<double>& MaterialPoints_statev,
+                            const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
+                            const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
                             const size_t rk_num_bins,
                             const size_t num_mat_pts,
                             const size_t mat_id);

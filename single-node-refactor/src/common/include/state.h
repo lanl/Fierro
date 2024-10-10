@@ -183,7 +183,6 @@ struct MaterialPoint_t
     DCArrayKokkos<double> q_flux; ///< Heat flux
 
     // Material Models are stored on Material points
-    DCArrayKokkos<double> statev; // a place holder to get things to compile
     DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
     DCArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
 
