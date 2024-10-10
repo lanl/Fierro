@@ -258,7 +258,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                           State.MaterialPoints(mat_id).pres,
                           State.MaterialPoints(mat_id).stress,
                           State.MaterialPoints(mat_id).sspd,
-                          State.MaterialPoints(mat_id).statev,
                           State.MaterialCorners(mat_id).force,
                           State.MaterialPoints(mat_id).volfrac,
                           State.corners_in_mat_elem,
@@ -294,7 +293,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 } // end if on increment
 
             } // end for mat_id
-            
+
 
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,

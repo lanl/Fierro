@@ -231,7 +231,6 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_pres,
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& MaterialPoints_statev,
         const DCArrayKokkos<double>& MaterialCorners_force,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const corners_in_mat_t,
