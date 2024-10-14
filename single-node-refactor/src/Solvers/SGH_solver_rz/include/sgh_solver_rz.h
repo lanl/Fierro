@@ -80,7 +80,8 @@ namespace SGHRZ_State
         material_pt_state::mass,
         material_pt_state::volume_fraction,
         material_pt_state::specific_internal_energy,
-        material_pt_state::eroded_flag
+        material_pt_state::eroded_flag,
+        material_pt_state::shear_modulii
     };
 
     // Material corner state to be initialized for the SGH solver
@@ -311,7 +312,8 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-        const DCArrayKokkos<bool>&   GaussPoints_eroded,
+        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const double time_value,
         const double dt,
@@ -333,6 +335,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
         const size_t mat_id,

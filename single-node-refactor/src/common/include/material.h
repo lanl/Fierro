@@ -40,53 +40,65 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace model
 {
-// strength model types
-enum StrengthType
-{
-    noStrengthType = 0, ///<  No strength model used
-    incrementBased = 1, ///<  Model evaluation is inline with the time integration
-    stateBased = 2,     ///<  Model is based on the state after each stage of the time step
-};
+    // strength model types
+    enum StrengthType
+    {
+        noStrengthType = 0, ///<  No strength model used
+        incrementBased = 1, ///<  Model evaluation is inline with the time integration
+        stateBased = 2,     ///<  Model is based on the state after each stage of the time step
+    };
 
-// Specific strength models
-enum StrengthModels
-{
-    noStrengthModel = 0,
-    userDefinedStrength = 1,
-};
+    // Specific strength models
+    enum StrengthModels
+    {
+        noStrengthModel = 0,
+        userDefinedStrength = 1,
+    };
 
-// EOS model types
-enum EOSType
-{
-    noEOSType = 0,          ///< No EOS used
-    decoupledEOSType = 1,   ///< only an EOS, or an EOS plus deviatoric stress model
-    coupledEOSType = 2,     ///< EOS is part of a full stress tensor evolution model
-};
+    // EOS model types
+    enum EOSType
+    {
+        noEOSType = 0,          ///< No EOS used
+        decoupledEOSType = 1,   ///< only an EOS, or an EOS plus deviatoric stress model
+        coupledEOSType = 2,     ///< EOS is part of a full stress tensor evolution model
+    };
 
-// The names of the eos models
-enum EOSModels
-{
-    noEOS = 0,          ///<  no model evaluation
-    gammaLawGasEOS = 1, ///<  gamma law gas
-    voidEOS = 2,        ///<  a void material, no sound speed and no pressure
-    userDefinedEOS = 3, ///<  an eos function defined by the user
-};
+    // The names of the eos models
+    enum EOSModels
+    {
+        noEOS = 0,          ///<  no model evaluation
+        gammaLawGasEOS = 1, ///<  gamma law gas
+        voidEOS = 2,        ///<  a void material, no sound speed and no pressure
+        userDefinedEOS = 3, ///<  an eos function defined by the user
+    };
 
-// failure models
-enum FailureModels
-{
-    noFailure = 0,      ///< Material does not fail
-    brittleFailure = 1, ///< Material fails after exceeding yield stress
-    ductileFailure = 2, ///< Material grows voids that lead to complete failure
-};
+    // failure models
+    enum FailureModels
+    {
+        noFailure = 0,      ///< Material does not fail
+        brittleFailure = 1, ///< Material fails after exceeding yield stress
+        ductileFailure = 2, ///< Material grows voids that lead to complete failure
+    };
 
-// erosion model t
-enum ErosionModels
-{
-    noErosion = 1,      ///<  no element erosion
-    basicErosion = 2,   ///<  basic element erosion
-};
+    // erosion model t
+    enum ErosionModels
+    {
+        noErosion = 1,      ///<  no element erosion
+        basicErosion = 2,   ///<  basic element erosion
+    };
+    
+    // Model run locations
+    enum RunLocation
+    {
+        device = 0,     ///<  run on device e.g., GPUs
+        host = 1,       ///<  run on the host, which is always the CPU
+        dual = 2,       ///<  multi-scale solver, solver is on cpu and solver calls model on device
+    };
+
 } // end model namespace
+
+
+
 
 static std::map<std::string, model::StrengthType> strength_type_map
 {
@@ -99,6 +111,13 @@ static std::map<std::string, model::StrengthModels> strength_models_map
 {
     { "no_strength", model::noStrengthModel },
     { "user_defined_strength", model::userDefinedStrength },
+};
+
+static std::map<std::string, model::RunLocation> strength_run_location_map
+{
+    { "device", model::device },
+    { "host", model::host },
+    { "dual", model::dual },
 };
 
 static std::map<std::string, model::EOSType> eos_type_map
@@ -115,6 +134,15 @@ static std::map<std::string, model::EOSModels> eos_models_map
     { "void", model::voidEOS },
     { "user_defined_eos", model::userDefinedEOS },
 };
+
+
+static std::map<std::string, model::RunLocation> eos_run_location_map
+{
+    { "device", model::device },
+    { "host", model::host },
+    { "both", model::dual },
+};
+
 
 static std::map<std::string, model::ErosionModels> erosion_model_map
 {
@@ -158,8 +186,14 @@ struct MaterialEnums_t
     // none, decoupled, or coupled eos
     model::EOSType EOSType = model::noEOSType;
 
+    // call a second solver, which then calls the eos model
+    model::RunLocation EOSRunLocation = model::device;
+
     // Strength model type: none, or increment- or state-based
     model::StrengthType StrengthType = model::noStrengthType;
+
+    // call a second solver, which then calls the strength model
+    model::RunLocation StrengthRunLocation = model::device;
 
     // Erosion model type: none or basis
     model::ErosionModels ErosionModels = model::noErosion;
@@ -198,6 +232,7 @@ struct MaterialFunctions_t
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const RaggedRightArrayKokkos<double>& eos_global_vars) = NULL;
 
     // -- Strength --

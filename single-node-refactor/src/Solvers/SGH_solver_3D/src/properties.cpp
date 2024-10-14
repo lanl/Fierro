@@ -79,6 +79,7 @@ void SGH3D::update_state(
     const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
     const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+    const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const double time_value,
     const double dt,
@@ -128,7 +129,9 @@ void SGH3D::update_state(
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(1, mat_point_lid),
+                                        MaterialPoints_shear_modulii,
                                         Materials.eos_global_vars);
+
         }); // end parallel for over mat elem lid
     } // if decoupled EOS
     else {
@@ -310,6 +313,7 @@ void SGH3D::update_stress(
     const DCArrayKokkos<double>& MaterialPoints_sspd,
     const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
     const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+    const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const size_t num_mat_elems,
     const size_t mat_id,
@@ -329,79 +333,86 @@ void SGH3D::update_stress(
 
 
     // ==================================================
-    // add a host launced material model interface here
+    // launcing another solver, which then calls the material model interface
     // ==================================================
+    if (Materials.MaterialEnums.host(mat_id).StrengthRunLocation == model::host ||
+        Materials.MaterialEnums.host(mat_id).StrengthRunLocation == model::dual){
 
+
+    } // call another solver on the host, which then calls strength
 
     // ============================================
-    // --- Device launched modle is here
+    // --- Device launched model is here
     // ============================================
+    else {
 
-    // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+        // --- calculate the forces acting on the nodes from the element ---
+        FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
-        // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+            // get elem gid
+            size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
-        // the material point index = the material elem index for a 1-point element
-        size_t mat_point_lid = mat_elem_lid;
+            // the material point index = the material elem index for a 1-point element
+            size_t mat_point_lid = mat_elem_lid;
 
-        // corner area normals
-        double area_normal_array[24];
+            // corner area normals
+            double area_normal_array[24];
 
-        // velocity gradient
-        double vel_grad_array[9];
+            // velocity gradient
+            double vel_grad_array[9];
 
-        // --- Create views of arrays to calculate velocity gradient ---
-        ViewCArrayKokkos<double> area_normal(area_normal_array, num_nodes_in_elem, num_dims);
-        ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
+            // --- Create views of arrays to calculate velocity gradient ---
+            ViewCArrayKokkos<double> area_normal(area_normal_array, num_nodes_in_elem, num_dims);
+            ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
 
-        // element volume
-        double vol = GaussPoints_vol(elem_gid);
-
-
-        // cut out the node_gids for this element
-        ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
-
-        // get the B matrix which are the OUTWARD corner area normals
-        geometry::get_bmatrix(area_normal,
-                              elem_gid,
-                              node_coords,
-                              elem_node_gids);
-
-        // --- Calculate the velocity gradient ---
-        SGH3D::get_velgrad(vel_grad,
-                    elem_node_gids,
-                    node_vel,
-                    area_normal,
-                    vol,
-                    elem_gid);
+            // element volume
+            double vol = GaussPoints_vol(elem_gid);
 
 
-        // --- call strength model ---
-        Materials.MaterialFunctions(mat_id).calc_stress(
-                                        vel_grad,
-                                        node_coords,
-                                        node_vel,
-                                        elem_node_gids,
-                                        MaterialPoints_pres,
-                                        MaterialPoints_stress,
-                                        MaterialPoints_sspd,
-                                        MaterialPoints_eos_state_vars,
-                                        MaterialPoints_strength_state_vars,
-                                        MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(1,mat_point_lid),
-                                        MaterialToMeshMaps_elem,
-                                        Materials.eos_global_vars,
-                                        Materials.strength_global_vars,
-                                        GaussPoints_vol(elem_gid),
-                                        dt,
-                                        rk_alpha,
-                                        time_value,
-                                        cycle,
-                                        mat_point_lid,
-                                        mat_id);
+            // cut out the node_gids for this element
+            ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
-    });  // end parallel for over elems that have the materials
+            // get the B matrix which are the OUTWARD corner area normals
+            geometry::get_bmatrix(area_normal,
+                                elem_gid,
+                                node_coords,
+                                elem_node_gids);
+
+            // --- Calculate the velocity gradient ---
+            SGH3D::get_velgrad(vel_grad,
+                        elem_node_gids,
+                        node_vel,
+                        area_normal,
+                        vol,
+                        elem_gid);
+
+
+            // --- call strength model ---
+            Materials.MaterialFunctions(mat_id).calc_stress(
+                                            vel_grad,
+                                            node_coords,
+                                            node_vel,
+                                            elem_node_gids,
+                                            MaterialPoints_pres,
+                                            MaterialPoints_stress,
+                                            MaterialPoints_sspd,
+                                            MaterialPoints_eos_state_vars,
+                                            MaterialPoints_strength_state_vars,
+                                            MaterialPoints_den(mat_point_lid),
+                                            MaterialPoints_sie(1,mat_point_lid),
+                                            MaterialToMeshMaps_elem,
+                                            Materials.eos_global_vars,
+                                            Materials.strength_global_vars,
+                                            GaussPoints_vol(elem_gid),
+                                            dt,
+                                            rk_alpha,
+                                            time_value,
+                                            cycle,
+                                            mat_point_lid,
+                                            mat_id);
+
+        });  // end parallel for over elems that have the materials
+
+    } // end if run on device
 
 }; // end function to increment stress tensor
