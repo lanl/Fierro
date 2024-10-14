@@ -66,7 +66,8 @@ enum BCHydro
     reflectedVelocityBC = 3,
     zeroVelocityBC = 4,
     userDefinedVelocityBC = 5,
-    pistonVelocityBC = 6
+    pistonVelocityBC = 6,
+    temperature = 7
 };
 // future options:
 //    displacement          = 6,
@@ -109,7 +110,8 @@ static std::map<std::string, boundary_conditions::BCHydro> bc_type_map
     { "reflected_velocity", boundary_conditions::reflectedVelocityBC },
     { "zero_velocity", boundary_conditions::zeroVelocityBC },
     { "user_defined_velocity", boundary_conditions::userDefinedVelocityBC },
-    { "piston_velocity", boundary_conditions::pistonVelocityBC }
+    { "piston_velocity", boundary_conditions::pistonVelocityBC },
+    { "temperature", boundary_conditions::temperature}
 };
 // future options
 //    { "displacement",          boundary_conditions::displacement          },
@@ -143,6 +145,9 @@ struct BoundaryConditionSetup_t
     boundary_conditions::BdyTag geometry;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
     double origin[3] = { 0.0, 0.0, 0.0 };   ///< origin of surface being tagged, e.g., sphere or cylinder surface
     double value     = 0.0;                 ///< value = position, radius, etc. defining the geometric shape
+
+    // double velocity = 0.0;
+    double temp = 0.0;  ///< temp = temperature value for temp boundary conditions
 }; // end boundary condition setup
 
 /////////////////////////////////////////////////////////////////////////////
@@ -174,6 +179,18 @@ struct BoundaryConditionFunctions_t
 {
     // function pointer for velocity BC's
     void (*velocity) (const Mesh_t& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const DCArrayKokkos<double>& bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const DCArrayKokkos<double>& node_vel,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set) = NULL;
+
+
+    // function pointer for temperature BC's
+    void (*temperature) (const Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const DCArrayKokkos<double>& bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
@@ -231,7 +248,8 @@ static std::vector<std::string> str_bc_inps
     "hydro_bc_vel_0",
     "hydro_bc_vel_1",
     "hydro_bc_vel_t_start",
-    "hydro_bc_vel_t_end"
+    "hydro_bc_vel_t_end",
+    "temperature"
 };
 
 // ----------------------------------

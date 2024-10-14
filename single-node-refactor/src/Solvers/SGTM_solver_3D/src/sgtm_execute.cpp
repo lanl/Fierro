@@ -99,6 +99,27 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
+
+    for(int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
+
+        int a=rand()%2;
+
+        double da = (double)a;
+
+        State.node.coords.host(0, node_gid, 0) += da*0.0002*sin(5000.0 * State.node.coords.host(0, node_gid, 0));
+        State.node.coords.host(0, node_gid, 1) += da*0.0002*sin(9000.0 * State.node.coords.host(0, node_gid, 1));
+        State.node.coords.host(1, node_gid, 0) += da*0.0002*sin(5000.0 * State.node.coords.host(1, node_gid, 0));
+        State.node.coords.host(1, node_gid, 1) += da*0.0002*sin(9000.0 * State.node.coords.host(1, node_gid, 1));
+    }
+
+    State.node.coords.update_device();
+        // Tweak the nodal positions on the mesh
+    // FOR_ALL(node_gid, 0, mesh.num_nodes, {
+
+        
+
+    // }); // end for parallel for over nodes
+
     // Write initial state at t=0
     printf("Writing outputs to file at %f \n", graphics_time);
     mesh_writer.write_mesh(
@@ -112,6 +133,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         SGTM3D_State::required_material_pt_state);
     
     graphics_time = time_value + graphics_dt_ival;
+
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -194,12 +216,12 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
-            // Set corner heat flux to zero
-            FOR_ALL(corner_gid, 0, mesh.num_corners, {
-                for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-                    State.corner.q_flux(0, corner_gid, dim) = 0.0;
-                }
-            }); // end parallel for corners
+            // Set corner heat divergence to zero (done in heat_flux.cpp)
+            // FOR_ALL(corner_gid, 0, mesh.num_corners, {
+            //     for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+            //         State.corner.q_flux(0, corner_gid, dim) = 0.0;
+            //     }
+            // }); // end parallel for corners
 
             // ---- calculate the temperature gradient  ----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -216,8 +238,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.MaterialPoints(mat_id).conductivity,
                     State.MaterialPoints(mat_id).temp_grad,
                     State.MaterialPoints(mat_id).statev,
-                    State.corner.q_flux,
-                    State.MaterialCorners(mat_id).q_flux,
+                    State.corner.q_div,
+                    State.MaterialCorners(mat_id).q_div,
                     State.corners_in_mat_elem,
                     State.MaterialToMeshMaps(mat_id).elem,
                     num_mat_elems,
@@ -230,29 +252,17 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             } // end for mat_id
 
             // ---- Update nodal temperature ---- //
+            update_temperature(
+                mesh,
+                State.corner.q_div, // NOTE: RENAME TO CORNER DIV
+                State.node.temp,
+                State.node.mass,
+                rk_alpha,
+                dt);
 
-            // loop over all the nodes in the mesh
-            FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                double node_grad[3];
-                double node_flux = 0.0;
-                for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-                    node_grad[dim] = 0.0;
-                } // end for dim
+            // Find the element average temperature
 
-                // loop over all corners around the node and calculate the nodal gradient
-                for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
-                    
-                    // Get corner gid
-                    size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
-
-                    node_flux += State.corner.q_flux(1, corner_gid, 0);
-
-                } // end for corner_lid
-
-                // update the temperature
-                State.node.temp(1, node_gid) = State.node.temp(0, node_gid) + rk_alpha * dt * node_flux / (State.node.mass(node_gid)*903.0);
-
-            }); // end for parallel for over nodes
+            
 
             // ---- apply temperature boundary conditions to the boundary patches---- //
 
@@ -262,6 +272,68 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
 
         } // end of RK loop
+
+        // printf("Loop over Materials  %e \n");
+        // for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+        //     size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+        //     // --- calculate the forces acting on the nodes from the element ---
+        //     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+
+        //         //printf("Loop over elements in Materials  %e \n");
+        //         // get elem gid
+        //         size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem(mat_elem_lid); 
+
+        //         // the material point index = the material elem index for a 1-point element
+        //         size_t mat_point_lid = mat_elem_lid;
+
+        //         double elem_avg_temp = 0.0;
+        //         for (size_t node_lid = 0; node_lid < 8; node_lid++) {
+                    
+        //             // Get node gid
+        //             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+
+        //             elem_avg_temp += State.node.temp(1, node_gid);   
+
+        //             // std::cout<<"Node  "<< node_gid <<" temp  = "<< temp(node_lid)<<std::endl;     
+        //         } // end for
+
+        //         elem_avg_temp /= 8.0;
+
+        //         // elem_avg_temp *= 2.
+
+        //         // NOTE: Using DIV as storage for element temperature
+        //         // State.MaterialPoints(mat_id).sie(0, mat_point_lid) = elem_avg_temp;
+        //         State.GaussPoints.div(elem_gid) = elem_avg_temp;
+
+        //         // printf("Elem AVG Temp =  %e \n", elem_avg_temp);
+
+        //     }); // end parallel for loop over elements
+        // } // End loop over materials
+
+        // Average the element temperature back to the nodes
+        // walk over the nodes to update the velocity
+        // FOR_ALL(node_gid, 0, mesh.num_nodes, {
+
+        //     double avg_temp = 0.0;
+        //     // loop over all elements around the node to calculate the average temperature
+        //     for (size_t elem_lid = 0; elem_lid < mesh.num_corners_in_node(node_gid); elem_lid++) {
+        //         size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
+
+        //         avg_temp += State.GaussPoints.div(elem_gid);
+
+        //     }
+
+        //     avg_temp /= (double)mesh.num_corners_in_node(node_gid);
+
+        //     // printf("Node AVG Temp =  %e \n", avg_temp);
+
+        //     State.node.temp(1, node_gid) = avg_temp;
+
+        // }); // end for parallel for over nodes
+
+
 
         // increment the time
         time_value += dt;

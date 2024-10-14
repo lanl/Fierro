@@ -89,7 +89,7 @@ namespace SGTM3D_State
     static const std::vector<material_corner_state> required_material_corner_state = 
     { 
         material_corner_state::force,
-        material_corner_state::heat_flux
+        material_corner_state::heat_flux_divergence
     };
 
     // Corner state to be initialized for the SGH solver
@@ -97,7 +97,7 @@ namespace SGTM3D_State
     { 
         corner_state::force,
         corner_state::mass,
-        corner_state::heat_flux
+        corner_state::heat_flux_divergence
     };
 }
 
@@ -204,46 +204,14 @@ public:
 
     // **** Functions defined in energy_sgtm.cpp **** //
     void update_temperature(
-        const double  rk_alpha,
-        const double  dt,
         const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
-        const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<double>& MaterialCorners_force,
-        const corners_in_mat_t corners_in_mat_elem,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const size_t num_mat_elems) const;
+        const DCArrayKokkos<double>& corner_div,
+        const DCArrayKokkos<double>& node_temp,
+        const DCArrayKokkos<double>& node_mass,
+        const double rk_alpha,
+        const double dt) const;
 
-    // **** Functions defined in force_sgtm.cpp **** //
-    void get_force(
-        const Material_t& Materials,
-        const Mesh_t&     mesh,
-        const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& GaussPoints_div,
-        const DCArrayKokkos<bool>&   GaussPoints_eroded,
-        const DCArrayKokkos<double>& corner_force,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& MaterialPoints_den,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& MaterialPoints_statev,
-        const DCArrayKokkos<double>& MaterialCorners_force,
-        const DCArrayKokkos<double>& MaterialPoints_volfrac,
-        const corners_in_mat_t,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const size_t num_mat_elems,
-        const size_t mat_id,
-        const double fuzz,
-        const double small,
-        const double dt,
-        const double rk_alpha) const;
-
-
+    // **** Functions defined in heat_flux.cpp **** //
     void get_heat_flux(
         const Material_t& Materials,
         const Mesh_t& mesh,
@@ -252,10 +220,10 @@ public:
         const DCArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& MaterialPoints_q_flux,
         const DCArrayKokkos<double>& MaterialPoints_statev,
-        const DCArrayKokkos<double>& corner_q_flux,
+        const DCArrayKokkos<double>& corner_q_div,
         const DCArrayKokkos<double>& MaterialPoints_conductivity,
         const DCArrayKokkos<double>& MaterialPoints_temp_grad,
-        const DCArrayKokkos<double>& MaterialCorners_q_flux,
+        const DCArrayKokkos<double>& MaterialCorners_q_div,
         const corners_in_mat_t corners_in_mat_elem,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
@@ -274,13 +242,6 @@ public:
         DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel) const;
 
-    void update_temperature(
-        double rk_alpha,
-        double dt,
-        const size_t num_dims,
-        const size_t num_nodes,
-        DCArrayKokkos<double>& node_temperature,
-        const DCArrayKokkos<double>& node_vel) const;
 
     // **** Functions defined in momentum.cpp **** //
     void update_velocity(

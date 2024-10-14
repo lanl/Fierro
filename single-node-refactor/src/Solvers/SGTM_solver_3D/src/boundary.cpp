@@ -61,17 +61,16 @@ void SGTM3D::boundary_temperature(const Mesh_t&      mesh,
             // get the global index for this node on the boundary
             size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
-            // evaluate velocity on this boundary node
-            // BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(
-            //     mesh,
-            //     BoundaryConditions.BoundaryConditionEnums,
-            //     BoundaryConditions.bc_global_vars,
-            //     BoundaryConditions.bc_state_vars,
-            //     node_vel,
-            //     time_value,
-            //     1, // rk_stage
-            //     bdy_node_gid,
-            //     bdy_set);
+            // evaluate temperature on this boundary node
+            BoundaryConditions.BoundaryConditionFunctions(bdy_set).temperature(mesh,
+                                                                  BoundaryConditions.BoundaryConditionEnums,
+                                                                  BoundaryConditions.bc_global_vars,
+                                                                  BoundaryConditions.bc_state_vars,
+                                                                  node_temp,
+                                                                  time_value,
+                                                                  1, // rk_stage
+                                                                  bdy_node_gid,
+                                                                  bdy_set);
         }); // end for bdy_node_lid
     } // end for bdy_set
 

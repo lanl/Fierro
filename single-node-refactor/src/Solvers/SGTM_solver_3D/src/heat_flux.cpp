@@ -75,8 +75,8 @@ void SGTM3D::get_heat_flux(
     const DCArrayKokkos<double>& MaterialPoints_conductivity,
     const DCArrayKokkos<double>& MaterialPoints_temp_grad,
     const DCArrayKokkos<double>& MaterialPoints_statev,
-    const DCArrayKokkos<double>& corner_q_flux,
-    const DCArrayKokkos<double>& MaterialCorners_q_flux,
+    const DCArrayKokkos<double>& corner_q_div,
+    const DCArrayKokkos<double>& MaterialCorners_q_div,
     const corners_in_mat_t corners_in_mat_elem,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const size_t num_mat_elems,
@@ -163,17 +163,8 @@ void SGTM3D::get_heat_flux(
             MaterialPoints_q_flux(0, mat_point_lid, dim) = -1.0 * conductivity * temp_grad(dim);
         }
 
-        // std::cout<<"Element "<< elem_gid<<" temp flux = "<< 
-        //     MaterialPoints_q_flux(0, mat_point_lid, 0)<<", "<<
-        //     MaterialPoints_q_flux(0, mat_point_lid, 1)<<", "<<
-        //     MaterialPoints_q_flux(0, mat_point_lid, 2)<<std::endl;
-
-        // --- Calculate flux contribution to the corners \lambda_{c} = q_z \cdot \hat B_c 
-
-        // Zero out flux at material corners
-        // loop over the each node in the elem
+        // --- Calculate flux contribution to the divergence at the corners \lambda_{c} = q_z \cdot \hat B_c 
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-
             // the local corner id is the local node id
             size_t corner_lid = node_lid;
 
@@ -183,14 +174,13 @@ void SGTM3D::get_heat_flux(
             // Get the material corner lid
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
-            for(int dim = 0; dim < mesh.num_dims; dim++){
-                MaterialCorners_q_flux(1, mat_corner_lid, dim) = 0.0;
-                corner_q_flux(1, corner_gid, dim) = 0.0;
-            }
+            // Zero out flux at material corners
+            MaterialCorners_q_div(1, mat_corner_lid) = 0.0;
+            corner_q_div(1, corner_gid) = 0.0;
+
         }
 
-
-        // Partition the flux to the corners
+        // --- Calculate flux contribution to the divergence at the corners \lambda_{c} = q_z \cdot \hat B_c 
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // the local corner id is the local node id
             size_t corner_lid = node_lid;
@@ -201,13 +191,56 @@ void SGTM3D::get_heat_flux(
             // Get the material corner lid
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
+            // Zero out flux at material corners
+            // MaterialCorners_q_div(1, mat_corner_lid) = 0.0;
+            // corner_q_div(1, corner_gid) = 0.0;
+
+
+            // decompose B matrix vector into i,j,k components
+            // double temp_array[9];
+            // ViewCArrayKokkos<double> b_dcmp(&temp_array[0], 3, 3);
+
+            // b_dcmp(0,0) = b_matrix(node_lid, 0);
+            // b_dcmp(0,1) = 0.0;
+            // b_dcmp(0,2) = 0.0;
+
+            // b_dcmp(1,0) = 0.0;
+            // b_dcmp(1,1) = b_matrix(node_lid, 1);
+            // b_dcmp(1,2) = 0.0;
+
+            // b_dcmp(2,0) = 0.0;
+            // b_dcmp(2,1) = 0.0;
+            // b_dcmp(2,2) = b_matrix(node_lid, 2);
+
+            // double val = 0.0; // Holder variable
+            
+            // // Loop over each of the components of the corner normal vector
+            // for(int i = 0; i < 3; i++){
+
+            //     // dot the flux into the decompose corner normal for each decomposition
+            //     double in_val = 0.0;
+            //     for(int dim = 0; dim < mesh.num_dims; dim++){
+            //         in_val += MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_dcmp(i, dim));
+            //     }
+            //     if(in_val < 0.0) in_val = 0.0;
+
+            //     val += in_val;
+
+            // }
+            // corner_q_div(1, corner_gid) = val;
+
+
+            // Dot the flux into the fill corner normal
             for(int dim = 0; dim < mesh.num_dims; dim++){
 
-                MaterialCorners_q_flux(1, mat_corner_lid, 0) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (-1.0*b_matrix(node_lid, dim));
+                // double val = MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_dcmp(dim, i));
 
-                corner_q_flux(1, corner_gid, 0) += MaterialPoints_q_flux(0, mat_point_lid, dim) * b_matrix(node_lid, dim);
+                // if (val < 0.0) printf("Val = %e\n", val);
 
+                // MaterialCorners_q_div(1, mat_corner_lid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (-1.0*b_matrix(node_lid, dim));
+                corner_q_div(1, corner_gid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
             }
+
         }
     }); // end parallel for loop over elements
 

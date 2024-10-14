@@ -2023,7 +2023,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
     BoundaryConditions.BoundaryConditionEnums  = DCArrayKokkos<BoundaryConditionEnums_t> (num_bcs,"bc_enums");  
 
     // the state for boundary conditions
-    BoundaryConditions.bc_global_vars = DCArrayKokkos<double>(num_bcs, 4, "bc_global_values"); // increase 4 for more params
+    BoundaryConditions.bc_global_vars = DCArrayKokkos<double>(num_bcs, 5, "bc_global_values"); // increase 4 for more params
     BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
 
 
@@ -2135,6 +2135,14 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::pistonVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
+                            });
+                            break;   
+                        case boundary_conditions::temperature:
+                            std::cout << "Setting temperature bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::temperature;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).temperature = &ConstantTempBC::temperature;
                             });
                             break;                        
                         default:
@@ -2267,6 +2275,12 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                     BoundaryConditions.bc_global_vars(bc_id,2) = w;
                 });
             } // w
+            else if (a_word.compare("temperature") == 0) {
+                double temperature = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
+                RUN({
+                    BoundaryConditions.bc_global_vars(bc_id,4) = temperature;
+                });
+            } // temperature
             // set the bc_vel_0
             else if (a_word.compare("hydro_bc_vel_0") == 0) {
                 double hydro_bc_vel_0 = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();

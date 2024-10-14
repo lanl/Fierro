@@ -32,33 +32,54 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgtm_solver_3D.h"
-#include "mesh.h"
-#include "geometry_new.h"
+#ifndef BOUNDARY_TEMP_CONSTANT_H
+#define BOUNDARY_TEMP_CONSTANT_H
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn update_velocity
-///
-/// \brief This function evolves the velocity at the nodes of the mesh
-///
-/// \param Runge Kutta time integration alpha
-/// \param Time step size
-/// \param View of the nodal velocity array
-/// \param View of the nodal mass array
-/// \param View of the corner forces
-///
-/////////////////////////////////////////////////////////////////////////////
-void SGTM3D::update_velocity(double rk_alpha,
-    double dt,
-    const Mesh_t& mesh,
-    DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_mass,
-    const DCArrayKokkos<double>& corner_force) const
+#include "boundary_conditions.h"
+
+struct BoundaryConditionEnums_t;
+
+namespace ConstantTempBC
 {
-    // const size_t num_dims = mesh.num_dims;
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn velocity
+///
+/// \brief This is a function to set the velocity along a symmetry plane or
+///        a wall.  This fcn imposes a normal velocity, in the specified
+///        direction, to be equal to zero
+///
+/// \param Mesh object
+/// \param Boundary condition enums to select options
+/// \param Boundary condition global variables array
+/// \param Boundary condition state variables array
+/// \param Node velocity
+/// \param Time of the simulation
+/// \param Boundary global index for the surface node
+/// \param Boundary set local id
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+static void temperature(const Mesh_t& mesh,
+    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+    const DCArrayKokkos<double>& bc_global_vars,
+    const DCArrayKokkos<double>& bc_state_vars,
+    const DCArrayKokkos<double>& node_temp,
+    const double time_value,
+    const size_t rk_stage,
+    const size_t bdy_node_gid,
+    const size_t bdy_set)
+{
+    // directions are:
+    // x_plane  = 0,
+    // y_plane  = 1,
+    // z_plane  = 2,
 
+    // Set velocity to zero in the specified direction
+    node_temp(1, bdy_node_gid) = bc_global_vars(4);
 
-    // return;
-} // end subroutine update_velocity
+    return;
+} // end func
+} // end namespace
 
+#endif // end Header Guard
