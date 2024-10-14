@@ -42,6 +42,8 @@ namespace test
         box = 11,
 
         TaylorGreen = 12,
+        TaylorGreenYZ = 13,
+        TaylorGreenXZ = 14
 
     };
     
@@ -77,18 +79,18 @@ void input(CArrayKokkos <material_t> &material,
     // ---- time variables and cycle info ----
     time_final = 1.0;  // 1.0 for Sedov
     dt_min = 1.e-8;
-    dt_max = 1.e-2;
+    dt_max = 1.e-3;
     dt_start = 1.e-5;
     cycle_stop = 100000;
 
 
     // ---- graphics information ----
     graphics_cyc_ival = 1000000;
-    graphics_dt_ival  = 0.1;
+    graphics_dt_ival  = 0.01;
 
     
     // --- number of material regions ---
-    num_materials = 1; // usually 1, but 3 for triple point (really, it's 1 but this is simple)
+    num_materials = 1; // usually 1, but 3 for triple point
     material = CArrayKokkos <material_t> (num_materials); // create material
     
     
@@ -107,7 +109,7 @@ void input(CArrayKokkos <material_t> &material,
     boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---
-    test_problem = test::TaylorGreen;//test::TriplePoint;//test::Sedov3D;//test::Noh3D;//test::TaylorAnvil;//test::box;//
+    test_problem = test::TaylorGreen;//test::Sod3DX;//test::Noh3D;//test::Sedov3D;//test::TriplePoint;//test::TaylorAnvil;//test::box;//
     
     
     // ---- fill instructions and intial conditions ---- //
@@ -138,7 +140,7 @@ void input(CArrayKokkos <material_t> &material,
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 3;  // actual num_state_vars
-            state_vars(0,0) = 5.0/3.0; // 1.4;//  // gamma value
+            state_vars(0,0) = 5.0/3.0; //  // gamma value
             state_vars(0,1) = 1.0E-14; // minimum sound speed
             state_vars(0,2) = 1.0;     // specific heat
             
@@ -204,6 +206,262 @@ void input(CArrayKokkos <material_t> &material,
         });  // end RUN
 
     } // end if Sedov
+
+    if (test_problem == test::Sod3DX){
+
+        time_final = 0.25;
+
+        material(0).eos_model = ideal_gas; // EOS model is required
+            
+        material(0).strength_type = model::none;
+        material(0).strength_setup = model_init::input; // not need, the input is the default
+        material(0).strength_model = NULL;  // not needed, but illistrates the syntax
+        material(0).q1        = 1.0;       // accoustic coefficient
+        material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+        material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+        material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
+        
+        material(0).num_state_vars = 3;  // actual num_state_vars
+        state_vars(0,0) = 1.4; //  // gamma value
+        state_vars(0,1) = 1.0E-14; // minimum sound speed
+        state_vars(0,2) = 1.0;     // specific heat
+        
+            
+        // Global instructions
+        mat_fill(0).volume = region::global;   // fill everywhere
+        mat_fill(0).mat_id = 0;                // material id
+        mat_fill(0).den = 1.0;                   // intial density
+        mat_fill(0).sie = 2.5;                  // intial specific internal energy
+        mat_fill(0).velocity = init_conds::cartesian;
+        mat_fill(0).u = 0.0;                   // initial x-dir velocity
+        mat_fill(0).v = 0.0;
+        mat_fill(0).w = 0.0;
+        
+        // Specific instructions
+        mat_fill(1).volume = region::box; // fill a box
+        mat_fill(1).mat_id = 0;             // material id
+        
+        mat_fill(1).x1 = 0.5;          // 
+        mat_fill(1).x2 = 1.0;           // 
+        
+        mat_fill(1).y1 = 0.0;          // 
+        mat_fill(1).y2 = 0.1;          // 
+        
+        mat_fill(1).z1 = 0.0;          // 
+        mat_fill(1).z2 = 0.1;          // 
+        
+        mat_fill(1).den = 0.125;            
+        
+        mat_fill(1).sie = 2.0;
+        
+        mat_fill(1).velocity = init_conds::cartesian;
+        mat_fill(1).u = 0.0;              // initial x-dir velocity
+        mat_fill(1).v = 0.0;
+        mat_fill(1).w = 0.0;
+            
+ 
+        // Tag X = 0 plane
+        boundary(0).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+        boundary(0).value = 0.0;
+        boundary(0).hydro_bc = bdy::reflected;
+        
+        // Tag Y = 0 plane
+        boundary(1).surface = bdy::y_plane;
+        boundary(1).value = 0.0;
+        boundary(1).hydro_bc = bdy::reflected;
+        
+        // Tag Z = 0 plane
+        boundary(2).surface = bdy::z_plane;
+        boundary(2).value = 0.0;
+        boundary(2).hydro_bc = bdy::reflected;
+        
+        // Tag X = 1 plane
+        boundary(3).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+        boundary(3).value = 1.0;
+        boundary(3).hydro_bc = bdy::reflected;
+        
+        // Tag Y = 1 plane
+        boundary(4).surface = bdy::y_plane;
+        boundary(4).value = 0.1;
+        boundary(4).hydro_bc = bdy::reflected;
+        
+        // Tag Z = 1 plane
+        boundary(5).surface = bdy::z_plane;
+        boundary(5).value = 0.1;
+        boundary(5).hydro_bc = bdy::reflected;
+    
+    }
+
+    if (test_problem == test::Sod3DY){
+
+        time_final = 0.25;
+
+        material(0).eos_model = ideal_gas; // EOS model is required
+            
+        material(0).strength_type = model::none;
+        material(0).strength_setup = model_init::input; // not need, the input is the default
+        material(0).strength_model = NULL;  // not needed, but illistrates the syntax
+        material(0).q1        = 1.0;       // accoustic coefficient
+        material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+        material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+        material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
+        
+        material(0).num_state_vars = 3;  // actual num_state_vars
+        state_vars(0,0) = 1.4; //  // gamma value
+        state_vars(0,1) = 1.0E-14; // minimum sound speed
+        state_vars(0,2) = 1.0;     // specific heat
+        
+            
+        // Global instructions
+        mat_fill(0).volume = region::global;   // fill everywhere
+        mat_fill(0).mat_id = 0;                // material id
+        mat_fill(0).den = 1.0;                   // intial density
+        mat_fill(0).sie = 2.5;                  // intial specific internal energy
+        mat_fill(0).velocity = init_conds::cartesian;
+        mat_fill(0).u = 0.0;                   // initial x-dir velocity
+        mat_fill(0).v = 0.0;
+        mat_fill(0).w = 0.0;
+        
+        // Specific instructions
+        mat_fill(1).volume = region::box; // fill a box
+        mat_fill(1).mat_id = 0;             // material id
+        
+        mat_fill(1).x1 = 0.0;          // 
+        mat_fill(1).x2 = 0.1;           // 
+        
+        mat_fill(1).y1 = 0.5;          // 
+        mat_fill(1).y2 = 1.0;          // 
+        
+        mat_fill(1).z1 = 0.0;          // 
+        mat_fill(1).z2 = 0.1;          // 
+        
+        mat_fill(1).den = 0.125;            
+        
+        mat_fill(1).sie = 2.0;
+        
+        mat_fill(1).velocity = init_conds::cartesian;
+        mat_fill(1).u = 0.0;              // initial x-dir velocity
+        mat_fill(1).v = 0.0;
+        mat_fill(1).w = 0.0;
+            
+ 
+        // Tag X = 0 plane
+        boundary(0).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+        boundary(0).value = 0.0;
+        boundary(0).hydro_bc = bdy::reflected;
+        
+        // Tag Y = 0 plane
+        boundary(1).surface = bdy::y_plane;
+        boundary(1).value = 0.0;
+        boundary(1).hydro_bc = bdy::reflected;
+        
+        // Tag Z = 0 plane
+        boundary(2).surface = bdy::z_plane;
+        boundary(2).value = 0.0;
+        boundary(2).hydro_bc = bdy::reflected;
+        
+        // Tag X = 1 plane
+        boundary(3).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+        boundary(3).value = 0.1;
+        boundary(3).hydro_bc = bdy::reflected;
+        
+        // Tag Y = 1 plane
+        boundary(4).surface = bdy::y_plane;
+        boundary(4).value = 1.0;
+        boundary(4).hydro_bc = bdy::reflected;
+        
+        // Tag Z = 1 plane
+        boundary(5).surface = bdy::z_plane;
+        boundary(5).value = 0.1;
+        boundary(5).hydro_bc = bdy::reflected;
+    
+    }
+
+    if (test_problem == test::Sod3DZ){
+
+        time_final = 0.25;
+
+        material(0).eos_model = ideal_gas; // EOS model is required
+            
+        material(0).strength_type = model::none;
+        material(0).strength_setup = model_init::input; // not need, the input is the default
+        material(0).strength_model = NULL;  // not needed, but illistrates the syntax
+        material(0).q1        = 1.0;       // accoustic coefficient
+        material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+        material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+        material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
+        
+        material(0).num_state_vars = 3;  // actual num_state_vars
+        state_vars(0,0) = 1.4; //  // gamma value
+        state_vars(0,1) = 1.0E-14; // minimum sound speed
+        state_vars(0,2) = 1.0;     // specific heat
+        
+            
+        // Global instructions
+        mat_fill(0).volume = region::global;   // fill everywhere
+        mat_fill(0).mat_id = 0;                // material id
+        mat_fill(0).den = 1.0;                   // intial density
+        mat_fill(0).sie = 2.5;                  // intial specific internal energy
+        mat_fill(0).velocity = init_conds::cartesian;
+        mat_fill(0).u = 0.0;                   // initial x-dir velocity
+        mat_fill(0).v = 0.0;
+        mat_fill(0).w = 0.0;
+        
+        // Specific instructions
+        mat_fill(1).volume = region::box; // fill a box
+        mat_fill(1).mat_id = 0;             // material id
+        
+        mat_fill(1).x1 = 0.0;          // 
+        mat_fill(1).x2 = 0.1;           // 
+        
+        mat_fill(1).y1 = 0.0;          // 
+        mat_fill(1).y2 = 0.1;          // 
+        
+        mat_fill(1).z1 = 0.5;          // 
+        mat_fill(1).z2 = 1.0;          // 
+        
+        mat_fill(1).den = 0.125;            
+        
+        mat_fill(1).sie = 2.0;
+        
+        mat_fill(1).velocity = init_conds::cartesian;
+        mat_fill(1).u = 0.0;              // initial x-dir velocity
+        mat_fill(1).v = 0.0;
+        mat_fill(1).w = 0.0;
+            
+ 
+        // Tag X = 0 plane
+        boundary(0).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+        boundary(0).value = 0.0;
+        boundary(0).hydro_bc = bdy::reflected;
+        
+        // Tag Y = 0 plane
+        boundary(1).surface = bdy::y_plane;
+        boundary(1).value = 0.0;
+        boundary(1).hydro_bc = bdy::reflected;
+        
+        // Tag Z = 0 plane
+        boundary(2).surface = bdy::z_plane;
+        boundary(2).value = 0.0;
+        boundary(2).hydro_bc = bdy::reflected;
+        
+        // Tag X = 1 plane
+        boundary(3).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+        boundary(3).value = 0.1;
+        boundary(3).hydro_bc = bdy::reflected;
+        
+        // Tag Y = 1 plane
+        boundary(4).surface = bdy::y_plane;
+        boundary(4).value = 0.1;
+        boundary(4).hydro_bc = bdy::reflected;
+        
+        // Tag Z = 1 plane
+        boundary(5).surface = bdy::z_plane;
+        boundary(5).value = 1.0;
+        boundary(5).hydro_bc = bdy::reflected;
+    
+    }
+
     
     // 2D RZ Sedov blast wave test case
     if (test_problem == test::SedovRZ){
@@ -317,7 +575,7 @@ void input(CArrayKokkos <material_t> &material,
             mat_fill(0).volume = region::global;   // fill everywhere
             mat_fill(0).mat_id = 0;                // material id
             mat_fill(0).den = 1.0;                   // intial density
-            mat_fill(0).sie = 1e-9;             // initial specific internal energy
+            mat_fill(0).sie = 1e-12;             // initial specific internal energy
             
             mat_fill(0).velocity = init_conds::spherical;
             mat_fill(0).speed = -1.0;
@@ -485,7 +743,7 @@ void input(CArrayKokkos <material_t> &material,
     // Triple point
     if (test_problem == test::TriplePoint){
         
-        time_final = 3.3; 
+        time_final = 3.3;
         
         RUN({
             // gamma law model
@@ -662,7 +920,7 @@ void input(CArrayKokkos <material_t> &material,
     // Taylor-Green Vortex
     if (test_problem == test::TaylorGreen){
 
-        time_final = 0.5;
+        time_final = 0.3;
         
         RUN({
             
@@ -720,6 +978,141 @@ void input(CArrayKokkos <material_t> &material,
             // Tag Z plane
             boundary(5).surface = bdy::z_plane;
             boundary(5).value = 0.33;
+            boundary(5).hydro_bc = bdy::reflected;
+            
+            
+        });  // end RUN
+        
+    } // end if Taylor-Green Vortex
+
+
+    if (test_problem == test::TaylorGreenYZ){
+
+        time_final = 0.3;
+        
+        RUN({
+            
+            material(0).eos_model = ideal_gas; // EOS model
+            material(0).q1        = 1.0;       // accoustic coefficient
+            material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+            material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
+            
+            material(0).num_state_vars = 3;  // actual num_state_vars
+            state_vars(0,0) = 5.0/3.0; // gamma value
+            state_vars(0,1) = 1.0E-14; // minimum sound speed
+            state_vars(0,2) = 1.0;     // specific heat c_v
+            
+            // Global instructions
+            mat_fill(0).volume = region::global;   // fill everywhere
+            mat_fill(0).mat_id = 0;                // material id
+            mat_fill(0).den = 1.0;                   // intial density
+            mat_fill(0).sie = 0.0;             // initial specific internal energy
+            
+            mat_fill(0).velocity = init_conds::tg_vortex;
+            mat_fill(0).u = 0.0;   // initial x-dir velocity
+            mat_fill(0).v = 0.0;   // initial y-dir velocity
+            mat_fill(0).w = 0.0;   // initial z-dir velocity
+            
+            // ---- boundary conditions ---- //
+            
+            // Tag X plane
+            boundary(0).surface = bdy::x_plane; 
+            boundary(0).value = 0.0;
+            boundary(0).hydro_bc = bdy::reflected;
+            
+            
+            // Tag Y plane
+            boundary(1).surface = bdy::y_plane;
+            boundary(1).value = 0.0;
+            boundary(1).hydro_bc = bdy::reflected;
+            
+            // Tag Z plane
+            boundary(2).surface = bdy::z_plane;
+            boundary(2).value = 0.0;
+            boundary(2).hydro_bc = bdy::reflected;
+
+            // Tag X plane
+            boundary(3).surface = bdy::x_plane; 
+            boundary(3).value = 0.33;
+            boundary(3).hydro_bc = bdy::reflected;
+            
+            
+            // Tag Y plane
+            boundary(4).surface = bdy::y_plane;
+            boundary(4).value = 1.0;
+            boundary(4).hydro_bc = bdy::reflected;
+            
+            // Tag Z plane
+            boundary(5).surface = bdy::z_plane;
+            boundary(5).value = 1.0;
+            boundary(5).hydro_bc = bdy::reflected;
+            
+            
+        });  // end RUN
+        
+    } // end if Taylor-Green Vortex
+
+    if (test_problem == test::TaylorGreenXZ){
+
+        time_final = 0.3;
+        
+        RUN({
+            
+            material(0).eos_model = ideal_gas; // EOS model
+            material(0).q1        = 1.0;       // accoustic coefficient
+            material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+            material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
+            
+            material(0).num_state_vars = 3;  // actual num_state_vars
+            state_vars(0,0) = 5.0/3.0; // gamma value
+            state_vars(0,1) = 1.0E-14; // minimum sound speed
+            state_vars(0,2) = 1.0;     // specific heat c_v
+            
+            // Global instructions
+            mat_fill(0).volume = region::global;   // fill everywhere
+            mat_fill(0).mat_id = 0;                // material id
+            mat_fill(0).den = 1.0;                   // intial density
+            mat_fill(0).sie = 0.0;             // initial specific internal energy
+            
+            mat_fill(0).velocity = init_conds::tg_vortex;
+            mat_fill(0).u = 0.0;   // initial x-dir velocity
+            mat_fill(0).v = 0.0;   // initial y-dir velocity
+            mat_fill(0).w = 0.0;   // initial z-dir velocity
+            
+            // ---- boundary conditions ---- //
+            
+            // Tag X plane
+            boundary(0).surface = bdy::x_plane; 
+            boundary(0).value = 0.0;
+            boundary(0).hydro_bc = bdy::reflected;
+            
+            
+            // Tag Y plane
+            boundary(1).surface = bdy::y_plane;
+            boundary(1).value = 0.0;
+            boundary(1).hydro_bc = bdy::reflected;
+            
+            // Tag Z plane
+            boundary(2).surface = bdy::z_plane;
+            boundary(2).value = 0.0;
+            boundary(2).hydro_bc = bdy::reflected;
+
+            // Tag X plane
+            boundary(3).surface = bdy::x_plane; 
+            boundary(3).value = 1.0;
+            boundary(3).hydro_bc = bdy::reflected;
+            
+            
+            // Tag Y plane
+            boundary(4).surface = bdy::y_plane;
+            boundary(4).value = 0.33;
+            boundary(4).hydro_bc = bdy::reflected;
+            
+            // Tag Z plane
+            boundary(5).surface = bdy::z_plane;
+            boundary(5).value = 1.0;
             boundary(5).hydro_bc = bdy::reflected;
             
             

@@ -27,9 +27,26 @@ void assemble_L2(   CArrayKokkos <double> &L2,
     } );// end FOR_ALL
     Kokkos::fence();
 
-    FOR_ALL( node_gid_1, 0, mesh.num_nodes,{
+    // FOR_ALL( elem_gid, 0, mesh.num_elems, {
+    //      for( int node_lid_1 = 0; node_lid_1 < mesh.num_nodes_in_elem; node_lid_1++){
+    //         int node_gid_1 = mesh.nodes_in_elem(elem_gid, node_lid_1);
+    //         for (int node_lid_2 = 0; node_lid_2 < mesh.num_nodes_in_elem; node_lid_2++){
+    //             int node_gid_2 = mesh.nodes_in_elem(elem_gid, node_lid_2);
 
+    //             for (int dim = 0; dim < mesh.num_dims; dim++){
+
+    //                 M_dot_u(node_gid_1, dim ) += mass_matrix(node_gid_1, node_gid_2)*node_vel(stage, node_gid_2, dim) 
+    //                                             - mass_matrix(node_gid_1, node_gid_2)*node_vel(0, node_gid_2, dim);
+
+    //             }//
+    //         }// 
                 
+    //     } 
+    // });
+    // Kokkos::fence();
+
+
+    FOR_ALL( node_gid_1, 0, mesh.num_nodes,{         
         // Compute \int F.1 dt
         for (int dim = 0; dim < mesh.num_dims; dim++){
             for (int zone_gid = 0; zone_gid < mesh.num_zones; zone_gid++){            
@@ -41,6 +58,21 @@ void assemble_L2(   CArrayKokkos <double> &L2,
     } );// end FOR_ALL
     Kokkos::fence();
 
+    // FOR_ALL( elem_gid, 0, mesh.num_elems, {
+    //      for( int node_lid_1 = 0; node_lid_1 < mesh.num_nodes_in_elem; node_lid_1++){
+    //         int node_gid_1 = mesh.nodes_in_elem(elem_gid, node_lid_1);
+            
+    //         for (int dim = 0; dim < mesh.num_dims; dim++){
+    //             for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){            
+    //                 int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+    //                 F_dot_ones(node_gid_1, dim) += 0.5*( force_tensor(stage, node_gid_1, zone_gid, dim) + force_tensor(0, node_gid_1, zone_gid, dim) );
+    //             }
+    //         }// end loop over zone_lid
+    //     }
+    // } );// end FOR_ALL
+    // Kokkos::fence();
+
+
     FOR_ALL( node_gid_1, 0, mesh.num_nodes,{
 
         for (int dim = 0; dim < mesh.num_dims; dim++){
@@ -50,7 +82,19 @@ void assemble_L2(   CArrayKokkos <double> &L2,
         }// 
             
     } );// end FOR_ALL
-    Kokkos::fence();    
+    Kokkos::fence();   
+
+    // FOR_ALL( elem_gid, 0, mesh.num_elems, {
+    //      for( int node_lid_1 = 0; node_lid_1 < mesh.num_nodes_in_elem; node_lid_1++){
+    //         int node_gid_1 = mesh.nodes_in_elem(elem_gid, node_lid_1);
+            
+    //         for (int dim = 0; dim < mesh.num_dims; dim++){ 
+    //             L2(stage, node_gid_1, dim) = M_dot_u(node_gid_1, dim) + dt*F_dot_ones(node_gid_1, dim);
+
+    //         }// 
+    //      }  
+    // } );// end FOR_ALL
+    // Kokkos::fence();  
     
 
     // for (int elem_gid =0; elem_gid < mesh.num_elems; elem_gid++){

@@ -20,8 +20,9 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
         
         // grad^s u = 0.5*( \nabla u + (\nabla u)^T ) //
         CArrayKokkos <double> grad_u(mesh.num_elems*mesh.num_leg_gauss_in_elem, mesh.num_dims, mesh.num_dims, "grad_u");
+        CArrayKokkos <double> nabla_u(mesh.num_elems*mesh.num_leg_gauss_in_elem, mesh.num_dims, mesh.num_dims, "grad_u");
         CArrayKokkos <double> curl_u(mesh.num_elems*mesh.num_leg_gauss_in_elem, mesh.num_dims, "curl_u");
-        // CArrayKokkos <double> l2_curl_u(mesh.num_elems*mesh.num_leg_gauss_in_elem, "l2_curl_u");
+        CArrayKokkos <double> l2_curl_u(mesh.num_elems*mesh.num_leg_gauss_in_elem, "l2_curl_u");
         CArrayKokkos <double> l2_grad_u(mesh.num_elems*mesh.num_leg_gauss_in_elem, "l2_grad_u");
         CArrayKokkos <double> Delta_u(mesh.num_elems*mesh.num_leg_gauss_in_elem, "l2_grad_u");
 
@@ -56,16 +57,18 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 Delta_u(gauss_gid) = 0.0;
                 l2_JJ0Inv_dot_u(gauss_gid) = 0.0;
                 l2_vel_inv(gauss_gid) = 0.0;
-                // l2_curl_u(gauss_gid) = 0.0;
+                l2_curl_u(gauss_gid) = 0.0;
                 l2_grad_u(gauss_gid) = 0.0;
 
 
                 for(int i = 0; i < mesh.num_dims; i++){
                     JJ0Inv_dot_u(gauss_gid, i) = 0.0;
+                    curl_u(gauss_gid, i) = 0.0;
                     for (int j = 0; j < mesh.num_dims; j++){
                         
                         sigma_a(stage, gauss_gid, i, j) = 0.0;
                         grad_u(gauss_gid, i, j) = 0.0;
+                        nabla_u(gauss_gid, i, j) = 0.0;
                         JJ0Inv(gauss_gid, i, j) = 0.0;
 
                     }// j
@@ -130,6 +133,26 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
         });// elem_gid
         Kokkos::fence();
 
+        // fill grad u
+        FOR_ALL(elem_gid, 0, mesh.num_elems,{
+            for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
+                int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+                for(int i = 0; i < mesh.num_dims; i++){
+                    for (int j = 0; j < mesh.num_dims; j++){
+                        double temp = 0.0;
+                        for (int dof = 0; dof < ref_elem.num_basis; dof++){
+                            int dof_gid = mesh.nodes_in_elem(elem_gid, dof);
+                            
+                            temp += ( J_dot_nabla(elem_gid, gauss_lid, dof, i)*vel(stage, dof_gid, j ) );
+
+                        }// dof
+                        nabla_u(gauss_gid, i, j) = temp;
+                    }// j
+                }// i
+            }// gauss_lid
+        });// elem_gid
+        Kokkos::fence();
+
 
         // || div u ||_{F}
         FOR_ALL(elem_gid, 0, mesh.num_elems,{
@@ -177,6 +200,37 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
         });// elem_gid
         Kokkos::fence();
 
+        // fill curl u
+        FOR_ALL(elem_gid, 0, mesh.num_elems,{
+            for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
+                int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+                
+                curl_u(gauss_gid, 0) = nabla_u(gauss_gid, 2, 1) - nabla_u(gauss_gid, 1,2);
+                curl_u(gauss_gid, 1) = nabla_u(gauss_gid, 0, 2) - nabla_u(gauss_gid, 2,0);
+                curl_u(gauss_gid, 2) = nabla_u(gauss_gid, 1, 0) - nabla_u(gauss_gid, 0,1);
+                        
+            }// gauss_lid
+        });// elem_gid
+        Kokkos::fence();
+
+        FOR_ALL(elem_gid, 0, mesh.num_elems,{
+            for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
+                int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+                for(int i = 0; i < mesh.num_dims; i++){
+                l2_curl_u(gauss_gid) += curl_u(gauss_gid,i)*curl_u(gauss_gid,i);
+                }// i
+            }// gauss_lid
+        });// elem_gid
+        Kokkos::fence();
+
+        FOR_ALL(elem_gid, 0, mesh.num_elems,{
+            for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
+                int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+                l2_curl_u(gauss_gid) = sqrt(l2_curl_u(gauss_gid));
+            }// gauss_lid
+        });// elem_gid
+        Kokkos::fence();
+
         // // get char_length_t0 perturbation
         // JJ0Inv
         FOR_ALL(elem_gid, 0, mesh.num_elems,{
@@ -206,7 +260,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 for(int i = 0; i < mesh.num_dims; i++){
                     double temp = 0.0;
                     for (int j = 0; j < mesh.num_dims; j++){
-                        temp += JJ0Inv(gauss_gid, i, j)*(mat_pt_vel(gauss_gid, j)-u_star(elem_gid, j));
+                        temp += JJ0Inv(gauss_gid, i, j)*(mat_pt_vel(gauss_gid, j)-0.0*u_star(elem_gid, j));
                     }// j
                     JJ0Inv_dot_u(gauss_gid, i) = temp;
                     //printf(" JJ0Inv_dot_u : %f \n", mat_pt_vel(gauss_gid, i));
@@ -223,7 +277,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 for(int i = 0; i < mesh.num_dims; i++){
                     
                     l2_JJ0Inv_dot_u(gauss_gid) += JJ0Inv_dot_u(gauss_gid, i)*JJ0Inv_dot_u(gauss_gid, i);
-                    l2_vel_inv(gauss_gid) += (mat_pt_vel(gauss_gid, i) - u_star(elem_gid, i))*(mat_pt_vel(gauss_gid, i) - u_star(elem_gid, i));
+                    l2_vel_inv(gauss_gid) += (mat_pt_vel(gauss_gid, i) - 0.0*u_star(elem_gid, i))*(mat_pt_vel(gauss_gid, i) - 0.0*u_star(elem_gid, i));
 
                 }// i
             }// gauss_lid
@@ -257,10 +311,10 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 for(int i = 0; i < mesh.num_dims; i++){
                     double temp2 = 0.0;
                     for (int j = 0; j < mesh.num_dims; j++){
-                        temp2 += grad_u(gauss_gid, i, j)*(mat_pt_vel(gauss_gid, j)-u_star(elem_gid, j));
+                        temp2 += grad_u(gauss_gid, i, j)*(mat_pt_vel(gauss_gid, j)-0.0*u_star(elem_gid, j));//curl_u(gauss_gid, j);//
                     }// j
 
-                    temp1 += (mat_pt_vel(gauss_gid, i)-u_star(elem_gid, i))*temp2;
+                    temp1 += (mat_pt_vel(gauss_gid, i)-0.0*u_star(elem_gid, i))*temp2;//curl_u(gauss_gid, i)*temp2;//
                 }// i
                 Delta_u(gauss_gid) = temp1*l2_vel_inv(gauss_gid);
                 Du(elem_gid) = Delta_u(gauss_gid) < Du(elem_gid) ? Delta_u(gauss_gid) : Du(elem_gid);
@@ -274,25 +328,38 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
 
             double h = pow( vol(elem_gid), 1.0/mesh.num_dims )/mesh.Pn;
             
+            
             for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
                 int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
                 
-                double h_pert = 0.0;
-                                
+                double h_pert = 0.0;                                
                 h_pert = h*sqrt( l2_vel_inv(gauss_gid)*l2_JJ0Inv_dot_u(gauss_gid) );
                 //printf( "h : %f \n", h_pert);
+
+                mat_pt_h(gauss_gid) = h_pert;//pow( vol(elem_gid), 1.0/mesh.num_dims )/mesh.num_leg_gauss_in_elem;
                 
-                double coeff = 1.0/( 1.0 + exp( Delta_u(gauss_gid) ));//Du(elem_gid) ) );//Du_min(0) ) );//
+                double sigmoid = 1.0/( 1.0 + exp( 100.0*Du(elem_gid) ) );//Delta_u(gauss_gid) ));// ) );//Du_min(0) ));//
+                double coeff = 0.0;//
+
+                double eps = 1.0e-12;
+                double y = (Du(elem_gid) - eps) / (2.0 * eps);
+                if (y < 0.0) 
+                { coeff = 0.0; }
+                else if (y > 1.0) 
+                { coeff = 1.0; }
+                else {
+                    coeff = (3.0 - 2.0 * y) * y * y;
+                }
+                                
+                // double phi_curl = fmin(1.0,div_u(gauss_gid)/(div_u(gauss_gid)*0.005 + l2_curl_u(gauss_gid)));//(2.0/3.14159)*atan(div_u(gauss_gid)/(0.0005*l2_curl_u(gauss_gid)));//1.0/( 1.0 + exp( -div_u(gauss_gid)/(0.005*l2_curl_u(gauss_gid)) ));//*1.0;
 
                 double phi_curl = 1.0;
-
                 if (l2_grad_u(gauss_gid) > 0.0){
                     phi_curl = abs(div_u(gauss_gid)/l2_grad_u(gauss_gid));
                 }
                 
-                mu(gauss_gid) = coeff*phi_curl*den(gauss_gid)*h_pert*sspd(gauss_gid);
-
-                mu(gauss_gid) += coeff*2.0*den(gauss_gid)*h_pert*h_pert*pow( abs( Du(elem_gid) ), 1 );//Du_min(0) ), 1 );//Delta_u(gauss_gid) ),  1);
+                mu(gauss_gid) = 0.5*phi_curl*den(gauss_gid)*h_pert*sspd(gauss_gid)*sigmoid;//*(1.0 - coeff);//
+                mu(gauss_gid) += 2.0*den(gauss_gid)*h_pert*h_pert*abs( Du(elem_gid) )*sigmoid;//;//Du_min(0) );//Delta_u(gauss_gid) );//
 
             }// gauss_lid
         });// elem_gid
@@ -303,7 +370,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
                 for(int i = 0; i < mesh.num_dims; i++){
                     for(int j = 0; j < mesh.num_dims; j++){
-                        sigma_a(stage, gauss_gid, i, j) = mu(gauss_gid)*grad_u(gauss_gid, i, j);
+                        sigma_a(stage, gauss_gid, i, j) = 0.0*mu(gauss_gid)*grad_u(gauss_gid, i, j);
                         //printf("sigma_a : %f \n", sigma_a(stage, gauss_gid, i, j));
                     }// j
                 }// i
@@ -311,15 +378,15 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
         });
         Kokkos::fence();
 
-       //  FOR_ALL(elem_gid, 0, mesh.num_elems,{
-       //      for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
-       //          int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
-       //          for(int i = 0; i < mesh.num_dims; i++){
-       //              sigma_a(stage, gauss_gid, i, i) += mu(gauss_gid)*div_u(gauss_gid);
-       //          }// i
-       //      }// gauss_lid
-       //  });
-       //  Kokkos::fence();
+        // FOR_ALL(elem_gid, 0, mesh.num_elems,{
+        //     for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
+        //         int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+        //         for(int i = 0; i < mesh.num_dims; i++){
+        //             sigma_a(stage, gauss_gid, i, i) += mu(gauss_gid)*div_u(gauss_gid);
+        //         }// i
+        //     }// gauss_lid
+        // });
+        // Kokkos::fence();
 
         
 
@@ -349,33 +416,4 @@ void append_artificial_viscosity(DViewCArrayKokkos <double> &sigma,
 }// end append_artificial_viscosity
 
 
-// fill curl u
-    // FOR_ALL(elem_gid, 0, mesh.num_elems,{
-    //     for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
-    //         int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
-            
-    //         curl_u(gauss_gid, 0) = grad_u(gauss_gid, 2, 1) - grad_u(gauss_gid, 1,2);
-    //         curl_u(gauss_gid, 1) = grad_u(gauss_gid, 0, 2) - grad_u(gauss_gid, 2,0);
-    //         curl_u(gauss_gid, 2) = grad_u(gauss_gid, 1, 0) - grad_u(gauss_gid, 0,1);
-                    
-    //     }// gauss_lid
-    // });// elem_gid
-    // Kokkos::fence();
 
-    // FOR_ALL(elem_gid, 0, mesh.num_elems,{
-    //     for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
-    //         int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
-    //         for(int i = 0; i < mesh.num_dims; i++){
-    //           l2_curl_u(gauss_gid) += curl_u(gauss_gid,i)*curl_u(gauss_gid,i);
-    //         }// i
-    //     }// gauss_lid
-    // });// elem_gid
-    // Kokkos::fence();
-
-    // FOR_ALL(elem_gid, 0, mesh.num_elems,{
-    //     for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
-    //         int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
-    //           l2_curl_u(gauss_gid) = sqrt(l2_curl_u(gauss_gid));
-    //     }// gauss_lid
-    // });// elem_gid
-    // Kokkos::fence();

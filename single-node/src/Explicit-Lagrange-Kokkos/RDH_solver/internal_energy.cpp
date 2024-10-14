@@ -23,17 +23,31 @@ void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
 
         for (int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
             for (int dim = 0; dim < mesh.num_dims; dim++){
+                double vel = 0.0;
+                if (stage == 0){
+                    vel = node_vel(1, node_gid, dim);
+                }
+                if (stage == 1){
+                    vel = 0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
+                }
                 F_dot_u(zone_gid_1) += 0.5*( force_tensor(stage, node_gid, zone_gid_1, dim)
                                               + force_tensor(0, node_gid, zone_gid_1, dim) )
-                                       *0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
+                                       *vel;//0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
 
             }
         }// end loop over zone_lid
 
         for (int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
             for (int dim = 0; dim < mesh.num_dims; dim++){
+                double vel = 0.0;
+                if (stage == 0){
+                    vel = node_vel(1, node_gid, dim);
+                }
+                if (stage == 1){
+                    vel = 0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
+                }
                 Fc_dot_u(zone_gid_1) += (1.0/(1.0 + double(stage)))*( Fc(node_gid, zone_gid_1, dim))
-                                        *0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
+                                        *vel;//0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
 
             }
         }// end loop over zone_lid
@@ -53,23 +67,29 @@ void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
                     (source(stage, zone_gid_2) + source(0, zone_gid_2));
         }
 
-        RHS = RHS1 + RHS2;
+        RHS = RHS1;// + RHS2;
 
         zone_sie( 1, zone_gid_1 ) = zone_sie( 0, zone_gid_1 ) + dt*RHS;
-        //zone_sie(1, zone_gid_1) = zone_sie( 0, zone_gid_1 ) + dt*F_dot_u(zone_gid_1)/lumped_mass(zone_gid_1);
 
 
         if (zone_sie( 1, zone_gid_1 ) <= 0.0){
             // printf("NEGATIVE INTERNAL ENERGY %f \n", zone_sie( 1, zone_gid_1 ));
-            // printf("Switching to lumped mass at thermo dof %d \n", zone_gid_1);
+            printf("Negative sie. Switching to lumped mass \n");// at thermo dof %d \n", zone_gid_1);
 
             zone_sie(1, zone_gid_1) = 0.0;
-            zone_sie(1, zone_gid_1) = zone_sie( 0, zone_gid_1 ) + dt*( F_dot_u(zone_gid_1) + 0.0*Fc_dot_u(zone_gid_1))/lumped_mass(zone_gid_1);
-            zone_sie(1, zone_gid_1) += dt*0.5*(source(stage, zone_gid_1) + source(0, zone_gid_1))/lumped_mass(zone_gid_1);
+            zone_sie(1, zone_gid_1) = zone_sie( 0, zone_gid_1 ) + dt*( F_dot_u(zone_gid_1) + 0.0*Fc_dot_u(zone_gid_1) )/lumped_mass(zone_gid_1);
+            // zone_sie(1, zone_gid_1) += dt*0.5*(source(stage, zone_gid_1) + source(0, zone_gid_1))/lumped_mass(zone_gid_1);
 
 
             if (zone_sie( 1, zone_gid_1 ) <= 0.0){
-                printf("INTERNAL ENERGY IS NEGATIVE AFTER MASS LUMPING%f \n", zone_sie( 1, zone_gid_1 ));
+
+                printf("INTERNAL ENERGY IS NEGATIVE AFTER MASS LUMPING \n");// AND REMOVING CORRECTION \n");
+                // zone_sie(1, zone_gid_1) = 0.0;
+                // zone_sie(1, zone_gid_1) = zone_sie( 0, zone_gid_1 ) + dt*( F_dot_u(zone_gid_1) )/lumped_mass(zone_gid_1);
+                // //zone_sie(1, zone_gid_1) += dt*0.5*(source(stage, zone_gid_1) + source(0, zone_gid_1))/lumped_mass(zone_gid_1);
+                // if (zone_sie( 1, zone_gid_1 ) <= 0.0){
+                //     printf("INTERNAL ENERGY IS NEGATIVE AFTER MASS LUMPING \n");// AND REMOVING CORRECTION \n");
+                // }
             }
         }
 

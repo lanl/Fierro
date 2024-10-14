@@ -57,7 +57,7 @@ show_help() {
 build_action="full-app"
 solver="explicit"
 machine="darwin"
-kokkos_build_type="serial"
+kokkos_build_type="cuda"
 heffte_build_type="fftw"
 build_cores="32"
 

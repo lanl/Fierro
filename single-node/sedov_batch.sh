@@ -13,4 +13,4 @@ module list
 
 export OMP_PROC_BIND=spread OMP_PLACES=threads OMP_NUM_THREADS=56
 
-srun ./build-RDH-openmp/bin/FierroRDH ./meshes/Sedov_16_Q2Q1.vtk > ./Sedov_batch_output/Sedov_${SLURM_JOB_ID}.out 2> ./Sedov_batch_output/Sedov_${SLURM_JOB_ID}.err
+srun ./build-RDH-openmp/bin/FierroRDH ./meshes/Sedov_8_Q3Q2.vtk > ./Sedov_batch_output/Sedov_${SLURM_JOB_ID}.out 2> ./Sedov_batch_output/Sedov_${SLURM_JOB_ID}.err

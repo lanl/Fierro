@@ -228,7 +228,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
 
 
         // integrate solution forward in time        
-        for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
+        for (size_t rk_stage = 0; rk_stage < 1; rk_stage++){//rk_num_stages; rk_stage++){
             
             get_grad_vel(grad_vel,
                               node_vel,
@@ -361,12 +361,14 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             });
             Kokkos::fence();
 
-            // correct_force_tensor(Fc, rk_stage, mesh, L2, M_V, lumped_mass, F_dot_ones, dt);
+            // if (rk_stage == 1){
+                // correct_force_tensor(Fc, rk_stage, mesh, L2, M_V, lumped_mass, F_dot_ones, dt);
+            // }
             
             CArrayKokkos <double> Thermo_L2(mesh.num_zones,"Thermo_L2");
             CArrayKokkos <double> M_dot_e(mesh.num_zones,"M delta e");
-            CArrayKokkos <double> F_dot_u( mesh.num_zones, "F_dot_ones" );
-            CArrayKokkos <double> Fc_dot_u( mesh.num_zones, "F_dot_ones" );
+            CArrayKokkos <double> F_dot_u( mesh.num_zones, "F_dot_u" );
+            CArrayKokkos <double> Fc_dot_u( mesh.num_zones, "Fc_dot_u" );
 
             
             FOR_ALL(i, 0, mesh.num_zones,{
@@ -379,41 +381,42 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             
             
             // internal energy update //
-            //get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
+            // get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
 
-            //update_internal_energy(zone_sie, rk_stage, mesh, zone.M_e_inv, force_tensor, F_dot_u, Fc, Fc_dot_u, source, node_vel, zone.zonal_mass, dt);//T_L2, zone.zonal_mass);
-            FOR_ALL(elem_gid,  0, mesh.num_elems, {
+            update_internal_energy(zone_sie, rk_stage, mesh, zone.M_e_inv, force_tensor, F_dot_u, Fc, Fc_dot_u, source, node_vel, zone.zonal_mass, dt);//T_L2, zone.zonal_mass);
+            // FOR_ALL(elem_gid,  0, mesh.num_elems, {
                 
-                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+            //     for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
                         
-                    int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+            //         int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
                     
-                    double zone_coords[3]; 
-                    zone_coords[0] = 0.0;
-                    zone_coords[1] = 0.0;
-                    zone_coords[2] = 0.0;
+            //         double zone_coords[3]; 
+            //         zone_coords[0] = 0.0;
+            //         zone_coords[1] = 0.0;
+            //         zone_coords[2] = 0.0;
 
-                    // get the coordinates of the zone center
-                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
-                        zone_coords[0] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 0);
-                        zone_coords[1] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 1);
-                        if (mesh.num_dims == 3){
-                            zone_coords[2] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 2);
-                        } else
-                        {
-                            zone_coords[2] = 0.0;
-                        }
-                    } // end loop over nodes in element
+            //         // get the coordinates of the zone center
+            //         for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
+            //             zone_coords[0] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 0);
+            //             zone_coords[1] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 1);
+            //             if (mesh.num_dims == 3){
+            //                 zone_coords[2] += node_coords(rk_stage, mesh.nodes_in_zone(zone_gid, node_lid), 2);
+            //             } else
+            //             {
+            //                 zone_coords[2] = 0.0;
+            //             }
+            //         } // end loop over nodes in element
 
-                    zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
-                    zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
-                    zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
+            //         zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
+            //         zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
+            //         zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
                     
 
-                    zone_sie(1, zone_gid) = zone_sie(0, zone_gid) + dt*(3.0/8.0)*PI*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
+            //         zone_sie(1, zone_gid) = zone_sie(0, zone_gid) + dt*(3.0/8.0)*PI*( cos(3.0*PI*zone_coords[0])*cos(PI*zone_coords[1]) - cos(PI*zone_coords[0])*cos(3.0*PI*zone_coords[1]) );
 
-                }// end loop over zones
-            });// end loop over elems
+            //     }// end loop over zones
+            // });// end loop over elems
+            
             FOR_ALL(elem_gid, 0, mesh.num_elems,{
                 for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
                     int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
@@ -426,9 +429,9 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                     }// node_lid
                     zone_sie(1, zone_gid) = interp;
 
-                    if (zone_sie( 1, zone_gid ) <= 0.0){
-                        printf("NEGATIVE INTERNAL ENERGY AFTER INTERPOLATION %f \n", zone_sie( 1, zone_gid ));
-                    }
+                    // if (zone_sie( 1, zone_gid ) <= 0.0){
+                    //     printf("NEGATIVE INTERNAL ENERGY AFTER INTERPOLATION %f \n", zone_sie( 1, zone_gid ));
+                    // }
                    
                 }// gauss_lid
             });// for_all
@@ -499,7 +502,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                         int T_dof_gid = mesh.zones_in_elem(elem_gid, T_dof);
                         interp_sie += ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*zone_sie(1, T_dof_gid);
                     }
-                    mat_pt_sie(leg_gid) = interp_sie;
+                    mat_pt_sie(leg_gid) = fmax(1.0e-16, interp_sie);
 
                     // --- Pressure and stress ---
                     material(mat_id).eos_model( mat_pt_pres,
@@ -556,7 +559,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             // make dt be exact for final time
             dt = fmin(dt, time_final-time_value);
         // increment the time
-            if (dt < 0.85*dt_vol_old){
+            if (dt < 0.80*dt_vol_old){
                 time_value = time_value;
             cycle -= 1;
                 printf("dt_vol decreased too much; restarting step. \n");

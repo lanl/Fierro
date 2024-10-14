@@ -1,4 +1,6 @@
 rm -rf TGV_batch_output/
 rm -rf vtk_TGV_*
 rm -rf TGV_convergence/*
+rm -rf TGV_CONV_PLOTS/*
+rm -rf TGV_EOC_TABLE/*
 

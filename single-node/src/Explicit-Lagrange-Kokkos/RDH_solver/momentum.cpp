@@ -14,8 +14,12 @@ void update_momentum(DViewCArrayKokkos <double> &node_vel,
     FOR_ALL(node_gid, 0, mesh.num_nodes,{
 
         for (int dim = 0; dim < mesh.num_dims; dim++){
- 
-            node_vel( 1, node_gid, dim ) = node_vel(stage, node_gid, dim) - L2(stage, node_gid, dim)/lumped_mass(node_gid);
+            
+            double vel_pred = node_vel(stage, node_gid, dim);
+            node_vel( 1, node_gid, dim ) = vel_pred - L2(stage, node_gid, dim)/lumped_mass(node_gid);
+            // if (dim == 1 ){
+            //     printf("L2 is : %f\n ", L2(stage, node_gid, dim));
+            // }
 
         }
         
