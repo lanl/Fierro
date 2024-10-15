@@ -244,7 +244,6 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_pres,
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& MaterialPoints_statev,
         const DCArrayKokkos<double>& MaterialCorners_force,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const corners_in_mat_t,
@@ -297,7 +296,7 @@ public:
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vol) const;
 
-
+    // **** Functions defined in properties.cpp **** //
     void update_state_rz(
         const Material_t& Materials,
         const Mesh_t& mesh,
@@ -310,13 +309,40 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<double>& MaterialPoints_statev,
+        const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
         const DCArrayKokkos<bool>&   GaussPoints_eroded,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const double time_value,
         const double dt,
         const double rk_alpha,
+        const size_t cycle,
         const size_t num_material_elems,
         const size_t mat_id) const;
+
+    void update_stress(
+        const Material_t& Materials,
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& MaterialPoints_den,
+        const DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_pres,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t num_mat_elems,
+        const size_t mat_id,
+        const double fuzz,
+        const double small,
+        const double time_value,
+        const double dt,
+        const double rk_alpha,
+        const size_t cycle) const;
+
 
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up

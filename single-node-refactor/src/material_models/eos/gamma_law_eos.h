@@ -54,12 +54,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 namespace GammaLawGasEOSModel {
 
-    // statev(0) = gamma
-    // statev(1) = minimum sound speed
-    // statev(2) = specific heat c_v
-    // statev(3) = ref temperature
-    // statev(4) = ref density
-    // statev(5) = ref specific internal energy
+    // eos_state_vars(0) = gamma
+    // eos_state_vars(1) = minimum sound speed
+    // eos_state_vars(2) = specific heat c_v
+    // eos_state_vars(3) = ref temperature
+    // eos_state_vars(4) = ref density
+    // eos_state_vars(5) = ref specific internal energy
     enum VarNames
     {
         gamma = 0,

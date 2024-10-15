@@ -76,7 +76,6 @@ void SGTM3D::get_force(const Material_t& Materials,
                       const DCArrayKokkos<double>& MaterialPoints_pres,
                       const DCArrayKokkos<double>& MaterialPoints_stress,
                       const DCArrayKokkos<double>& MaterialPoints_sspd,
-                      const DCArrayKokkos<double>& MaterialPoints_statev,
                       const DCArrayKokkos<double>& MaterialCorners_force,
                       const DCArrayKokkos<double>& MaterialPoints_volfrac,
                       const corners_in_mat_t corners_in_mat_elem,
@@ -411,30 +410,7 @@ void SGTM3D::get_force(const Material_t& Materials,
 
         } // end for loop over nodes in elem
 
-        // --- Update Stress ---
-        // calculate the new stress at the next rk level, if it is a increment_based model
-        // increment_based strength model
-        if (Materials.MaterialEnums(mat_id).StrengthType == model::incrementBased) {
-            // cut out the node_gids for this element
-            ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
-            // --- call strength model ---
-            Materials.MaterialFunctions(mat_id).calc_stress(MaterialPoints_pres,
-                                         MaterialPoints_stress,
-                                         mat_point_lid,
-                                         mat_id,
-                                         MaterialPoints_statev,
-                                         MaterialPoints_sspd,
-                                         MaterialPoints_den(mat_point_lid),
-                                         MaterialPoints_sie(1,mat_point_lid),
-                                         vel_grad,
-                                         elem_node_gids,
-                                         node_coords,
-                                         node_vel,
-                                         GaussPoints_vol(elem_gid),
-                                         dt,
-                                         rk_alpha);
-        } // end logical on increment_based strength model
     }); // end parallel for loop over elements
 
     return;
