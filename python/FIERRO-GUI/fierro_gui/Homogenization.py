@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication)
+from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog)
 from PySide6.QtCore import (QCoreApplication, QProcess)
 import re
 import csv
@@ -7,9 +7,10 @@ import subprocess
 import os
 #import paraview.simple as paraview.simple
 from paraview.simple import *
-from EVPFFT_Lattice_WInput import *
+from Homogenization_WInput import *
 import DeveloperInputs
 from importlib import reload
+#from ReadHDF5 import *
 
 # ==============================================
 # ======= EVPFFT SOLVER LATTICE PIPELINE =======
@@ -21,12 +22,13 @@ def warning_message(msg):
     message.setText(msg)
     message.exec()
 
-def EVPFFT_Lattice(self):
+def Homogenization(self):
     # Connect tab buttons to settings windows
-    self.BImportPart.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(2))
-    self.BDefineMaterial.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(4))
-    self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(7))
-    self.BGlobalMesh.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(1))
+    #self.BImportPart.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(2))
+    #self.BImportHDF5Part.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(5))
+    #self.BDefineMaterial.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(4))
+    #self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(7))
+    #self.BGlobalMesh.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(1))
     
     # Apply Material
     def material_type():
@@ -44,7 +46,7 @@ def EVPFFT_Lattice(self):
     self.INSolidGas.currentIndexChanged.connect(material_type)
     
     def material_region():
-        if str(self.INRegion.currentText()) == 'Void':
+        if str(self.INRegion.currentText()) == 'global':
             # Remove all objects from window view
             SetActiveView(self.render_view)
             renderer = self.render_view.GetRenderer()
@@ -53,8 +55,8 @@ def EVPFFT_Lattice(self):
             self.render_view.StillRender()
             
             # Show void region only
-            self.threshold = paraview.simple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-            paraview.simple.Show(self.threshold, self.render_view)
+            setattr(self, self.variable_name, paraview.simple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0))
+            self.display = paraview.simple.Show(getattr(self, self.variable_name), self.render_view)
             self.render_view.ResetCamera()
             self.render_view.StillRender()
         else:
@@ -66,8 +68,8 @@ def EVPFFT_Lattice(self):
             self.render_view.StillRender()
             
             # Show material region only
-            self.threshold = paraview.simple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-            paraview.simple.Show(self.threshold, self.render_view)
+            setattr(self, self.variable_name, paraview.simple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0))
+            self.display = paraview.simple.Show(getattr(self, self.variable_name), self.render_view)
             self.render_view.ResetCamera()
             self.render_view.StillRender()
     self.INRegion.currentIndexChanged.connect(material_region)
@@ -81,6 +83,8 @@ def EVPFFT_Lattice(self):
             self.MaterialTypeTool.setCurrentIndex(3)
         if str(self.INMaterialType.currentText()) == 'Anisotropic':
             self.MaterialTypeTool.setCurrentIndex(2)
+        if str(self.INMaterialType.currentText()) == 'Ideal Gas':
+            self.MaterialTypeTool.setCurrentIndex(4)
     self.INMaterialType.currentIndexChanged.connect(material_class)
     
     def add_material():
@@ -102,11 +106,15 @@ def EVPFFT_Lattice(self):
                     self.INMaterialName.text().strip())
                 )
                 self.TMaterials.setItem(row, 1, QTableWidgetItem(
-                    str(self.INRegion.currentText()))
-                )
-                self.TMaterials.setItem(row, 2, QTableWidgetItem(
                     str(self.INMaterialType.currentText()))
                 )
+                
+                # Add material as an option for material assignment
+                self.INMaterial.clear()
+                for i in range(self.TMaterials.rowCount()):
+                    self.INMaterial.addItem(self.TMaterials.item(i,0).text())
+                
+                # Clear fields
                 self.INMaterialName.clear()
         else:
             if str(self.INMaterialType.currentText()) == 'Isotropic':
@@ -309,49 +317,54 @@ def EVPFFT_Lattice(self):
                 self.TMaterials.setItem(row, 0, QTableWidgetItem(
                     self.INMaterialName.text().strip())
                 )
-                self.TMaterials.setItem(row, 1, QTableWidgetItem(
-                    str(self.INRegion.currentText()))
-                )
                 if str(self.INMaterialType.currentText()) == 'Transversely Isotropic':
-                    self.TMaterials.setItem(row, 2, QTableWidgetItem(
+                    self.TMaterials.setItem(row, 1, QTableWidgetItem(
                         str(self.INMaterialType.currentText() + ' ' + self.INIsotropicPlane.currentText()))
                     )
                 else:
-                    self.TMaterials.setItem(row, 2, QTableWidgetItem(
+                    self.TMaterials.setItem(row, 1, QTableWidgetItem(
                         str(self.INMaterialType.currentText()))
                     )
                 self.TMaterials.setItem(
-                    row, 3, QTableWidgetItem(str(C11))
+                    row, 2, QTableWidgetItem(str(C11))
                 )
                 self.TMaterials.setItem(
-                    row, 4, QTableWidgetItem(str(C12))
+                    row, 3, QTableWidgetItem(str(C12))
                 )
                 self.TMaterials.setItem(
-                    row, 5, QTableWidgetItem(str(C13))
+                    row, 4, QTableWidgetItem(str(C13))
                 )
                 self.TMaterials.setItem(
-                    row, 9, QTableWidgetItem(str(C22))
+                    row, 8, QTableWidgetItem(str(C22))
                 )
                 self.TMaterials.setItem(
-                    row, 10, QTableWidgetItem(str(C23))
+                    row, 9, QTableWidgetItem(str(C23))
                 )
                 self.TMaterials.setItem(
-                    row, 14, QTableWidgetItem(str(C33))
+                    row, 13, QTableWidgetItem(str(C33))
                 )
                 self.TMaterials.setItem(
-                    row, 18, QTableWidgetItem(str(C44))
+                    row, 17, QTableWidgetItem(str(C44))
                 )
                 self.TMaterials.setItem(
-                    row, 21, QTableWidgetItem(str(C55))
+                    row, 20, QTableWidgetItem(str(C55))
                 )
                 self.TMaterials.setItem(
-                    row, 23, QTableWidgetItem(str(C66))
+                    row, 22, QTableWidgetItem(str(C66))
                 )
-                for i in [6,7,8,11,12,13,15,16,17,19,20,22]:
+                for i in [5,6,7,10,11,12,14,15,16,18,19,21]:
                    self.TMaterials.setItem(row, i, QTableWidgetItem('0'))
+                
+                # Add material as an option for material assignment
+                self.INMaterial.clear()
+                for i in range(self.TMaterials.rowCount()):
+                    self.INMaterial.addItem(self.TMaterials.item(i,0).text())
+                
+                # Clear fields
                 self.INMaterialName.clear()
             else:
                 warning_flag = 0
+    self.BAddMaterial.clicked.connect(add_material)
             
     def delete_material():
         current_row = self.TMaterials.currentRow()
@@ -367,6 +380,11 @@ def EVPFFT_Lattice(self):
         )
         if button == QMessageBox.StandardButton.Yes:
             self.TMaterials.removeRow(current_row)
+            # delete from material assignment options
+            self.INMaterial.clear()
+            for i in range(self.TMaterials.rowCount()):
+                self.INMaterial.addItem(self.TMaterials.item(i,0).text())
+    self.BDeleteMaterial.clicked.connect(delete_material)
             
     def regenerate_elastic_constants():
         current_row = self.TMaterials.currentRow()
@@ -374,9 +392,9 @@ def EVPFFT_Lattice(self):
             return QMessageBox.warning(QMessageBox(),"Warning","Please select a material from the table")
             
         # Define Stiffness Matrix
-        Mstiffness = [[float(self.TMaterials.item(current_row,3).text()), float(self.TMaterials.item(current_row,4).text()), float(self.TMaterials.item(current_row,5).text()),  float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,7).text()), float(self.TMaterials.item(current_row,8).text())], [float(self.TMaterials.item(current_row,4).text()), float(self.TMaterials.item(current_row,9).text()), float(self.TMaterials.item(current_row,10).text()),  float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,12).text()), float(self.TMaterials.item(current_row,13).text())], [float(self.TMaterials.item(current_row,5).text()), float(self.TMaterials.item(current_row,10).text()), float(self.TMaterials.item(current_row,14).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,16).text()), float(self.TMaterials.item(current_row,17).text())], [float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,18).text()), float(self.TMaterials.item(current_row,19).text()), float(self.TMaterials.item(current_row,20).text())], [float(self.TMaterials.item(current_row,7).text()), float(self.TMaterials.item(current_row,12).text()), float(self.TMaterials.item(current_row,16).text()), float(self.TMaterials.item(current_row,19).text()), float(self.TMaterials.item(current_row,21).text()), float(self.TMaterials.item(current_row,22).text())], [float(self.TMaterials.item(current_row,8).text()), float(self.TMaterials.item(current_row,13).text()), float(self.TMaterials.item(current_row,17).text()), float(self.TMaterials.item(current_row,20).text()), float(self.TMaterials.item(current_row,22).text()), float(self.TMaterials.item(current_row,23).text())]]
+        Mstiffness = [[float(self.TMaterials.item(current_row,2).text()), float(self.TMaterials.item(current_row,3).text()), float(self.TMaterials.item(current_row,4).text()),  float(self.TMaterials.item(current_row,5).text()), float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,7).text())], [float(self.TMaterials.item(current_row,3).text()), float(self.TMaterials.item(current_row,8).text()), float(self.TMaterials.item(current_row,9).text()),  float(self.TMaterials.item(current_row,10).text()), float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,12).text())], [float(self.TMaterials.item(current_row,4).text()), float(self.TMaterials.item(current_row,9).text()), float(self.TMaterials.item(current_row,13).text()), float(self.TMaterials.item(current_row,14).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,16).text())], [float(self.TMaterials.item(current_row,5).text()), float(self.TMaterials.item(current_row,10).text()), float(self.TMaterials.item(current_row,14).text()), float(self.TMaterials.item(current_row,17).text()), float(self.TMaterials.item(current_row,18).text()), float(self.TMaterials.item(current_row,19).text())], [float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,18).text()), float(self.TMaterials.item(current_row,20).text()), float(self.TMaterials.item(current_row,21).text())], [float(self.TMaterials.item(current_row,7).text()), float(self.TMaterials.item(current_row,12).text()), float(self.TMaterials.item(current_row,16).text()), float(self.TMaterials.item(current_row,19).text()), float(self.TMaterials.item(current_row,21).text()), float(self.TMaterials.item(current_row,22).text())]]
         Mcompliance = np.linalg.inv(Mstiffness)
-        if self.TMaterials.item(current_row,2).text() == 'Isotropic':
+        if self.TMaterials.item(current_row,1).text() == 'Isotropic':
             self.MaterialTypeTool.setCurrentIndex(0)
             self.INMaterialType.setCurrentIndex(0)
             self.INMaterialName.clear()
@@ -387,7 +405,7 @@ def EVPFFT_Lattice(self):
             self.INMaterialName.insert(self.TMaterials.item(current_row,0).text())
             self.INYoungsModulus.insert(str(E))
             self.INPoissonsRatio.insert(str(nu))
-        elif 'Transversely Isotropic' in self.TMaterials.item(current_row,2).text():
+        elif 'Transversely Isotropic' in self.TMaterials.item(current_row,1).text():
             self.MaterialTypeTool.setCurrentIndex(1)
             self.INMaterialType.setCurrentIndex(1)
             self.INMaterialName.clear()
@@ -396,7 +414,7 @@ def EVPFFT_Lattice(self):
             self.INEop.clear()
             self.INNUop.clear()
             self.INGop.clear()
-            if 'x-y plane' in self.TMaterials.item(current_row,2).text():
+            if 'x-y plane' in self.TMaterials.item(current_row,1).text():
                 Eip = 1/Mcompliance[0][0]
                 nuip = -Mcompliance[0][1]*Eip
                 Eop = 1/Mcompliance[2][2]
@@ -409,7 +427,7 @@ def EVPFFT_Lattice(self):
                 self.INNUop.insert(str(nuop))
                 self.INGop.insert(str(Gop))
                 self.INIsotropicPlane.setCurrentIndex(0)
-            elif 'x-z plane' in self.TMaterials.item(current_row,2).text():
+            elif 'x-z plane' in self.TMaterials.item(current_row,1).text():
                 Eip = 1/Mcompliance[0][0]
                 nuip = -Mcompliance[0][2]*Eip
                 Eop = 1/Mcompliance[1][1]
@@ -422,7 +440,7 @@ def EVPFFT_Lattice(self):
                 self.INNUop.insert(str(nuop))
                 self.INGop.insert(str(Gop))
                 self.INIsotropicPlane.setCurrentIndex(1)
-            elif 'y-z plane' in self.TMaterials.item(current_row,2).text():
+            elif 'y-z plane' in self.TMaterials.item(current_row,1).text():
                 Eip = 1/Mcompliance[1][1]
                 nuip = -Mcompliance[1][2]*Eip
                 Eop = 1/Mcompliance[0][0]
@@ -435,7 +453,7 @@ def EVPFFT_Lattice(self):
                 self.INNUop.insert(str(nuop))
                 self.INGop.insert(str(Gop))
                 self.INIsotropicPlane.setCurrentIndex(2)
-        elif self.TMaterials.item(current_row,2).text() == 'Orthotropic':
+        elif self.TMaterials.item(current_row,1).text() == 'Orthotropic':
             self.MaterialTypeTool.setCurrentIndex(3)
             self.INMaterialType.setCurrentIndex(2)
             self.INMaterialName.clear()
@@ -480,10 +498,54 @@ def EVPFFT_Lattice(self):
                         i, j, QTableWidgetItem(self.TMaterials.item(current_row,k).text())
                     )
                     k += 1
-                    
-    self.BAddMaterial.clicked.connect(add_material)
-    self.BDeleteMaterial.clicked.connect(delete_material)
     self.BRegenElasticConstants.clicked.connect(regenerate_elastic_constants)
+    
+    # Add material assignment to region
+    def add_material_assignment():
+        warning_flag = 0
+        for i in range(self.TMaterialAssignment.rowCount()):
+            if str(self.INRegion.currentText()) == self.TMaterialAssignment.item(i,0).text():
+                warning_message('ERROR: There is already a material assigned to this region')
+                warning_flag = 1
+        if warning_flag == 0:
+            row = self.TMaterialAssignment.rowCount()
+            self.TMaterialAssignment.insertRow(row)
+            self.TMaterialAssignment.setItem(row, 0, QTableWidgetItem(self.INRegion.currentText()))
+            self.TMaterialAssignment.setItem(row, 1, QTableWidgetItem(self.INMaterial.currentText()))
+        else:
+            warning_flag = 0
+    self.BAddMaterialAssignment.clicked.connect(add_material_assignment)
+    
+    # Delete regional material assignment
+    def delete_material_assignemnt():
+        current_row = self.TMaterialAssignment.currentRow()
+        if current_row < 0:
+            return QMessageBox.warning(QMessageBox(),"Warning","Please select a record to delete")
+
+        button = QMessageBox.question(
+            QMessageBox(),
+            'Confirmation',
+            'Are you sure that you want to delete the materail assignemnt?',
+            QMessageBox.Yes |
+            QMessageBox.No
+        )
+        if button == QMessageBox.StandardButton.Yes:
+            self.TMaterialAssignment.removeRow(current_row)
+    self.BDeleteMaterialAssignment.clicked.connect(delete_material_assignemnt)
+    
+    # Warn user if no material assignment was made
+    def warning_no_material():
+        index = self.NavigationMenu.currentIndex()
+        if index > 4 and self.TMaterialAssignment.rowCount() == 0:
+            warning_message('WARNING: No materials were assigned')
+    self.NavigationMenu.currentChanged.connect(warning_no_material)
+    
+    # Show results immediately when postprocessing tab is pressed
+    def show_results():
+        index = self.NavigationMenu.currentIndex()
+        if index == 8 and self.run == 1:
+            preview_results_click()
+    self.NavigationMenu.currentChanged.connect(show_results)
     
     # Boundary Conditions
     def BC_direction():
@@ -502,118 +564,69 @@ def EVPFFT_Lattice(self):
             self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"6 RVE BCs", None))
     self.INBoundaryCondition.currentTextChanged.connect(BC_direction)
     
-    def add_bcs():
-        row = self.TBCs.rowCount()
-        if self.INBoundaryCondition.currentText() == 'Homogenization':
-            # Tension x-direction
-            self.TBCs.insertRow(row)
-            self.TBCs.setItem(row, 0, QTableWidgetItem("Tension"))
-            self.TBCs.setItem(row, 1, QTableWidgetItem("x"))
-            # Tension y-direction
-            self.TBCs.insertRow(row+1)
-            self.TBCs.setItem(row+1, 0, QTableWidgetItem("Tension"))
-            self.TBCs.setItem(row+1, 1, QTableWidgetItem("y"))
-            # Tension z-direction
-            self.TBCs.insertRow(row+2)
-            self.TBCs.setItem(row+2, 0, QTableWidgetItem("Tension"))
-            self.TBCs.setItem(row+2, 1, QTableWidgetItem("z"))
-            # Shear xy-direction
-            self.TBCs.insertRow(row+3)
-            self.TBCs.setItem(row+3, 0, QTableWidgetItem("Shear"))
-            self.TBCs.setItem(row+3, 1, QTableWidgetItem("xy"))
-            # Shear xz-direction
-            self.TBCs.insertRow(row+4)
-            self.TBCs.setItem(row+4, 0, QTableWidgetItem("Shear"))
-            self.TBCs.setItem(row+4, 1, QTableWidgetItem("xz"))
-            # Shear yz-direction
-            self.TBCs.insertRow(row+5)
-            self.TBCs.setItem(row+5, 0, QTableWidgetItem("Shear"))
-            self.TBCs.setItem(row+5, 1, QTableWidgetItem("yz"))
-        else:
-            self.TBCs.insertRow(row)
-            self.TBCs.setItem(row, 0, QTableWidgetItem(str(
-                self.INBoundaryCondition.currentText()))
-            )
-            self.TBCs.setItem(
-                row, 1, QTableWidgetItem(str(self.INBCDirection.currentText()))
-            )
-
-    def delete_bcs():
-        current_row = self.TBCs.currentRow()
-        if current_row < 0:
-            return QMessageBox.warning(self, 'Warning','Please select a record to delete')
-
-        button = QMessageBox.question(
-            QMessageBox(),
-            'Confirmation',
-            'Are you sure that you want to delete the selected row?',
-            QMessageBox.StandardButton.Yes |
-            QMessageBox.StandardButton.No
-        )
-        if button == QMessageBox.StandardButton.Yes:
-            if 'Homogenization' in self.TBCs.item(current_row,0).text():
-                Hrmv = []
-                for i in range(self.TBCs.rowCount()):
-                    if 'Homogenization' in self.TBCs.item(i,0).text():
-                        Hrmv.append(i)
-                Hcnt = 0
-                for i in Hrmv:
-                    self.TBCs.removeRow(i-Hcnt)
-                    Hcnt += 1
-            else:
-                self.TBCs.removeRow(current_row)
-            
-    self.BAddBC.clicked.connect(add_bcs)
-    self.BDeleteBC.clicked.connect(delete_bcs)
+    # Solver Settings
+    def settings():
+        if self.INHomogenizationSettingC.isChecked():
+            self.INNumberOfSteps.setEnabled(True)
+            self.INErrorTolerance.setEnabled(True)
+            self.INMaxIterations.setEnabled(True)
+        elif self.INHomogenizationSettingD.isChecked():
+            self.INNumberOfSteps.setText('1')
+            self.INErrorTolerance.setText('0.00001')
+            self.INMaxIterations.setText('50')
+            self.INNumberOfSteps.setEnabled(False)
+            self.INErrorTolerance.setEnabled(False)
+            self.INMaxIterations.setEnabled(False)
+    self.INHomogenizationSettingC.toggled.connect(settings)
+    self.INHomogenizationSettingD.toggled.connect(settings)
     
     # Single Run of EVPFFT
     self.run_cnt = 0
     def single_EVPFFT(BC_index):
-        if self.p == None:
-            EVPFFT_Lattice_WInput(self,BC_index)
-            reload(DeveloperInputs)
-            if self.UserConfig == "Developer":
-                executable_path = DeveloperInputs.fierro_evpfft_exe
-            elif self.UserConfig == "User":
-                executable_path = "evpfft"
-            arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
-            
-            # Make a new directory to store all of the outputs
-            if BC_index == 0:
-                folder1 = "Tension"
-                folder2 = "x"
-            if BC_index == 1:
-                folder1 = "Tension"
-                folder2 = "y"
-            if BC_index == 2:
-                folder1 = "Tension"
-                folder2 = "z"
-            if BC_index == 3:
-                folder1 = "Shear"
-                folder2 = "xy"
-            if BC_index == 4:
-                folder1 = "Shear"
-                folder2 = "xz"
-            if BC_index == 5:
-                folder1 = "Shear"
-                folder2 = "yz"
-            self.working_directory = os.path.join(self.evpfft_dir, 'outputs', folder1, folder2)
-            if not os.path.exists(self.working_directory):
-                os.makedirs(self.working_directory)
-            
-            self.p = QProcess()
-            self.p.setWorkingDirectory(self.working_directory)
-            self.p.readyReadStandardOutput.connect(handle_stdout)
-            self.p.readyReadStandardError.connect(handle_stderr)
-            self.p.stateChanged.connect(handle_state)
-            self.p.finished.connect(lambda: process_finished(BC_index))
-            try:
-                self.p.start(executable_path, arguments)
-            except Exception as e:
-                self.warning_message("ERROR: evpfft executable")
-                return
-            self.progress_re = re.compile("       Current  Time  STEP = (\\d+)")
-            self.run_cnt += 1            
+        Homogenization_WInput(self,BC_index)
+        reload(DeveloperInputs)
+        if self.UserConfig == "Developer":
+            executable_path = DeveloperInputs.fierro_evpfft_exe
+        elif self.UserConfig == "User":
+            executable_path = "evpfft"
+        arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
+        
+        # Make a new directory to store all of the outputs
+        if BC_index == 0:
+            folder1 = "Tension"
+            folder2 = "x"
+        if BC_index == 1:
+            folder1 = "Tension"
+            folder2 = "y"
+        if BC_index == 2:
+            folder1 = "Tension"
+            folder2 = "z"
+        if BC_index == 3:
+            folder1 = "Shear"
+            folder2 = "xy"
+        if BC_index == 4:
+            folder1 = "Shear"
+            folder2 = "xz"
+        if BC_index == 5:
+            folder1 = "Shear"
+            folder2 = "yz"
+        self.working_directory = os.path.join(self.evpfft_dir, 'outputs', folder1, folder2)
+        if not os.path.exists(self.working_directory):
+            os.makedirs(self.working_directory)
+        
+        self.p = QProcess()
+        self.p.setWorkingDirectory(self.working_directory)
+        self.p.readyReadStandardOutput.connect(handle_stdout)
+        self.p.readyReadStandardError.connect(handle_stderr)
+        self.p.stateChanged.connect(handle_state)
+        self.p.finished.connect(lambda: process_finished(BC_index))
+        try:
+            self.p.start(executable_path, arguments)
+        except Exception as e:
+            self.warning_message("ERROR: evpfft executable")
+            return
+        self.progress_re = re.compile("       Current  Time  STEP = (\\d+)")
+        self.run_cnt += 1
             
     def simple_percent_parser(output):
         m = self.progress_re.search(output)
@@ -647,7 +660,7 @@ def EVPFFT_Lattice(self):
     # Batch Run of EVPFFT
     def batch_EVPFFT():
         for BC_index in range(6):
-            self.BRunEVPFFT.clicked.connect(single_EVPFFT(BC_index))
+            single_EVPFFT(BC_index)
             self.p.waitForStarted()
             while self.p != None:
                 QApplication.processEvents()
@@ -657,31 +670,31 @@ def EVPFFT_Lattice(self):
             with open(os.path.join(self.working_directory, 'str_str.out'), newline='') as f:
                 reader = csv.reader(f)
                 self.ss_data = list(reader)
-            s11 = [0 for i in range(self.EVPFFTSteps-1)]
-            s22 = [0 for i in range(self.EVPFFTSteps-1)]
-            s33 = [0 for i in range(self.EVPFFTSteps-1)]
-            s12 = [0 for i in range(self.EVPFFTSteps-1)]
-            s13 = [0 for i in range(self.EVPFFTSteps-1)]
-            s23 = [0 for i in range(self.EVPFFTSteps-1)]
-            e11 = [0 for i in range(self.EVPFFTSteps-1)]
-            e22 = [0 for i in range(self.EVPFFTSteps-1)]
-            e33 = [0 for i in range(self.EVPFFTSteps-1)]
-            e12 = [0 for i in range(self.EVPFFTSteps-1)]
-            e13 = [0 for i in range(self.EVPFFTSteps-1)]
-            e23 = [0 for i in range(self.EVPFFTSteps-1)]
-            for i in range(self.EVPFFTSteps-1):
-                s11[i] = float(self.ss_data[i+2][6])
-                s22[i] = float(self.ss_data[i+2][7])
-                s33[i] = float(self.ss_data[i+2][8])
-                s12[i] = float(self.ss_data[i+2][11])
-                s13[i] = float(self.ss_data[i+2][10])
-                s23[i] = float(self.ss_data[i+2][9])
-                e11[i] = float(self.ss_data[i+2][0])
-                e22[i] = float(self.ss_data[i+2][1])
-                e33[i] = float(self.ss_data[i+2][2])
-                e12[i] = float(self.ss_data[i+2][5])
-                e13[i] = float(self.ss_data[i+2][4])
-                e23[i] = float(self.ss_data[i+2][3])
+            s11 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            s22 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            s33 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            s12 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            s13 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            s23 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            e11 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            e22 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            e33 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            e12 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            e13 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            e23 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
+            for i in range(int(self.INNumberOfSteps.text())):
+                s11[i+1] = float(self.ss_data[i+1][6])
+                s22[i+1] = float(self.ss_data[i+1][7])
+                s33[i+1] = float(self.ss_data[i+1][8])
+                s12[i+1] = float(self.ss_data[i+1][11])
+                s13[i+1] = float(self.ss_data[i+1][10])
+                s23[i+1] = float(self.ss_data[i+1][9])
+                e11[i+1] = float(self.ss_data[i+1][0])
+                e22[i+1] = float(self.ss_data[i+1][1])
+                e33[i+1] = float(self.ss_data[i+1][2])
+                e12[i+1] = float(self.ss_data[i+1][5])
+                e13[i+1] = float(self.ss_data[i+1][4])
+                e23[i+1] = float(self.ss_data[i+1][3])
             # Tension in the x-direction
             if BC_index == 0:
                 self.HE11 = np.polyfit(e11,s11,1)
@@ -689,41 +702,65 @@ def EVPFFT_Lattice(self):
                 self.HNU13 = np.polyfit(e11,e33,1)
                 self.THomogenization.setItem(0,0,QTableWidgetItem(str(self.HE11[0])))
                 self.THomogenization.setItem(3,0,QTableWidgetItem(str(-self.HNU12[0])))
-                self.THomogenization.setItem(5,0,QTableWidgetItem(str(-self.HNU13[0])))
+#                self.THomogenization.setItem(5,0,QTableWidgetItem(str(-self.HNU13[0])))
             # Tension in the y-direction
             if BC_index == 1:
                 self.HE22 = np.polyfit(e22,s22,1)
                 self.HNU21 = np.polyfit(e22,e11,1)
                 self.HNU23 = np.polyfit(e22,e33,1)
                 self.THomogenization.setItem(1,0,QTableWidgetItem(str(self.HE22[0])))
-                self.THomogenization.setItem(4,0,QTableWidgetItem(str(-self.HNU21[0])))
-                self.THomogenization.setItem(7,0,QTableWidgetItem(str(-self.HNU23[0])))
+#                self.THomogenization.setItem(4,0,QTableWidgetItem(str(-self.HNU21[0])))
+                self.THomogenization.setItem(5,0,QTableWidgetItem(str(-self.HNU23[0])))
             # Tension in the z-direction
             if BC_index == 2:
                 self.HE33 = np.polyfit(e33,s33,1)
                 self.HNU31 = np.polyfit(e33,e11,1)
                 self.HNU32 = np.polyfit(e33,e22,1)
                 self.THomogenization.setItem(2,0,QTableWidgetItem(str(self.HE33[0])))
-                self.THomogenization.setItem(6,0,QTableWidgetItem(str(-self.HNU31[0])))
-                self.THomogenization.setItem(8,0,QTableWidgetItem(str(-self.HNU32[0])))
+                self.THomogenization.setItem(4,0,QTableWidgetItem(str(-self.HNU31[0])))
+#                self.THomogenization.setItem(8,0,QTableWidgetItem(str(-self.HNU32[0])))
             # Shear in the xy-direction
             if BC_index == 3:
                 self.HG12 = np.polyfit(np.multiply(e12,2.),s12,1)
-                self.THomogenization.setItem(9,0,QTableWidgetItem(str(self.HG12[0])))
+                self.THomogenization.setItem(6,0,QTableWidgetItem(str(self.HG12[0])))
             # Shear in the xz-direction
             if BC_index == 4:
                 self.HG13 = np.polyfit(np.multiply(e13,2.),s13,1)
-                self.THomogenization.setItem(10,0,QTableWidgetItem(str(self.HG13[0])))
+                self.THomogenization.setItem(7,0,QTableWidgetItem(str(self.HG13[0])))
             # Shear in the yz-direction
             if BC_index == 5:
                 self.HG23 = np.polyfit(np.multiply(e23,2.),s23,1)
-                self.THomogenization.setItem(11,0,QTableWidgetItem(str(self.HG23[0])))
+                self.THomogenization.setItem(8,0,QTableWidgetItem(str(self.HG23[0])))
+                
+                # Write output file of all homogenized constants
+                self.homogenized_constants = os.path.join(self.evpfft_dir, 'outputs', "MaterialConstants.txt")
+                with open(self.homogenized_constants, "w") as file:
+                    file.write(f'Exx, {self.THomogenization.item(0,0).text()}, {self.THomogenization.item(0,1).text()}\n')
+                    file.write(f'Eyy, {self.THomogenization.item(1,0).text()}, {self.THomogenization.item(1,1).text()}\n')
+                    file.write(f'Ezz, {self.THomogenization.item(2,0).text()}, {self.THomogenization.item(2,1).text()}\n')
+                    file.write(f'NUxy, {self.THomogenization.item(3,0).text()}, \n')
+                    file.write(f'NUyz, {self.THomogenization.item(5,0).text()}, \n')
+                    file.write(f'NUzx, {self.THomogenization.item(4,0).text()}, \n')
+                    file.write(f'Gxy, {self.THomogenization.item(6,0).text()}, {self.THomogenization.item(6,1).text()}\n')
+                    file.write(f'Gyz, {self.THomogenization.item(8,0).text()}, {self.THomogenization.item(8,1).text()}\n')
+                    file.write(f'Gzx, {self.THomogenization.item(7,0).text()}, {self.THomogenization.item(7,1).text()}\n')
     
     # Connect run button to indiviual or batch run
     self.p = None
+    self.run = 0
     def run_click():
         batch_EVPFFT()
-    self.BRunEVPFFT.clicked.connect(run_click)
+        self.run = 1
+    self.BRunEVPFFT2.clicked.connect(run_click)
+
+#    # Upload HDF5
+#    def upload_hdf5_click():
+#        global hdf5_filename
+#        hdf5_filename = QFileDialog.getOpenFileName(
+#            filter="HDF5 File (*.h5, *.hdf5, *.dream3d)",
+#        )
+#        ReadHDF5(hdf5_filename, "data")
+    #self.BUploadHDF5.clicked.connect(upload_hdf5_click)
     
     # Preview Results
     def preview_results_click():
@@ -743,7 +780,7 @@ def EVPFFT_Lattice(self):
         # Display .xdmf data
         output_name = str(self.INBCFile.currentText())
         output_parts = output_name.split()
-        file_name = "micro_state_timestep_" + str(self.EVPFFTSteps) + ".xdmf"
+        file_name = "micro_state_timestep_" + str(self.INNumberOfSteps.text()) + ".xdmf"
         self.output_directory = os.path.join(self.evpfft_dir, 'outputs', output_parts[0], output_parts[1], file_name)
         self.results_reader = paraview.simple.XDMFReader(FileNames=self.output_directory)
         
@@ -769,8 +806,18 @@ def EVPFFT_Lattice(self):
         # View Results
         self.render_view.ResetCamera()
         self.render_view.StillRender()
-    self.BPreviewResults.clicked.connect(preview_results_click)
-    self.BPreviewResults.clicked.connect(lambda: self.OutputWindows.setCurrentIndex(0))
+#    self.BPreviewResults.clicked.connect(preview_results_click)
+#    self.BPreviewResults.clicked.connect(lambda: self.OutputWindows.setCurrentIndex(0))
+    self.INBCFile.currentIndexChanged.connect(preview_results_click)
+    self.INPreviewResults.currentIndexChanged.connect(preview_results_click)
+    self.INResultRegion.currentIndexChanged.connect(preview_results_click)
+    
+    # Show results immediately when postprocessing tab is pressed
+    def show_results():
+        index = self.NavigationMenu.currentIndex()
+        if index == 8 and self.run == 1:
+            preview_results_click()
+    self.NavigationMenu.currentChanged.connect(show_results)
     
     # Open Paraview
     def open_paraview_click():
