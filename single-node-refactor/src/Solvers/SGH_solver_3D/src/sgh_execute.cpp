@@ -228,14 +228,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
-            // ---- Calculate velocity divergence for the element ----
+            // ---- Calculate velocity gradient for the element ----
 
-            get_divergence(State.GaussPoints.div,
-                           mesh,
-                           State.node.coords,
-                           State.node.vel,
-                           State.GaussPoints.vol);
-
+            get_velgrad(State.GaussPoints.vel_grad,
+                        mesh,
+                        State.node.coords,
+                        State.node.vel,
+                        State.GaussPoints.vol);
 
             set_corner_force_zero(mesh, State.corner.force);
 
@@ -248,7 +247,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 get_force(Materials,
                           mesh,
                           State.GaussPoints.vol,
-                          State.GaussPoints.div,
+                          State.GaussPoints.vel_grad,
                           State.MaterialPoints(mat_id).eroded,
                           State.corner.force,
                           State.node.coords,
@@ -275,6 +274,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                   State.GaussPoints.vol,
                                   State.node.coords,
                                   State.node.vel,
+                                  State.GaussPoints.vel_grad,
                                   State.MaterialPoints(mat_id).den,
                                   State.MaterialPoints(mat_id).sie,
                                   State.MaterialPoints(mat_id).pres,
@@ -348,6 +348,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                              mesh,
                              State.node.coords,
                              State.node.vel,
+                             State.GaussPoints.vel_grad,
                              State.MaterialPoints(mat_id).den,
                              State.MaterialPoints(mat_id).pres,
                              State.MaterialPoints(mat_id).stress,

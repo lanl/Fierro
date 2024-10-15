@@ -66,7 +66,7 @@ namespace SGH3D_State
     static const std::vector<gauss_pt_state> required_gauss_pt_state = 
     { 
         gauss_pt_state::volume,
-        gauss_pt_state::divergence_velocity
+        gauss_pt_state::gradient_velocity
     };
 
     // Material point state to be initialized for the SGH solver
@@ -229,7 +229,7 @@ public:
         const Material_t& Materials,
         const Mesh_t&     mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& GaussPoints_div,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos<bool>&   GaussPoints_eroded,
         const DCArrayKokkos<double>& corner_force,
         const DCArrayKokkos<double>& node_coords,
@@ -270,12 +270,11 @@ public:
 
     KOKKOS_FUNCTION
     void get_velgrad(
-        ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_vel,
-        const ViewCArrayKokkos<double>& b_matrix,
-        const double GaussPoints_vol,
-        const size_t elem_gid) const;
+        DCArrayKokkos<double>& vel_grad,
+        const Mesh_t mesh,
+        const DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& elem_vol) const;
 
     void get_divergence(
         DCArrayKokkos<double>& GaussPoints_div,
@@ -296,6 +295,7 @@ public:
         const Mesh_t&     mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_pres,
         const DCArrayKokkos<double>& MaterialPoints_stress,
@@ -321,6 +321,7 @@ public:
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_pres,
@@ -392,7 +393,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
-        const ViewCArrayKokkos<double>& vel_grad,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
         const DCArrayKokkos<double>&    node_coords,
         const DCArrayKokkos<double>&    node_vel,

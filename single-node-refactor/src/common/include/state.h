@@ -94,6 +94,7 @@ enum class gauss_pt_state
 {
     volume,
     divergence_velocity,
+    gradient_velocity,
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -108,6 +109,7 @@ struct GaussPoint_t
 
     DCArrayKokkos<double> vol;  ///< GaussPoint volume
     DCArrayKokkos<double> div;  ///< GaussPoint divergence of velocity
+    DCArrayKokkos<double> vel_grad;  ///< GaussPoint velocity gradient tensor
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
@@ -120,6 +122,9 @@ struct GaussPoint_t
                     break;
                 case gauss_pt_state::divergence_velocity:
                     if (div.size() == 0) this->div = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_div");
+                    break;
+                case gauss_pt_state::gradient_velocity:
+                    if (div.size() == 0) this->vel_grad = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_vel_grad");
                     break;
                 default:
                     std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;

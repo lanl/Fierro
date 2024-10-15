@@ -67,7 +67,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGHRZ::get_force_rz(const Material_t& Materials,
                          const Mesh_t& mesh,
                          const DCArrayKokkos<double>& GaussPoints_vol,
-                         const DCArrayKokkos<double>& GaussPoints_div,
+                         const DCArrayKokkos<double>& GaussPoints_vel_grad,
                          const DCArrayKokkos<bool>&   MaterialPoints_eroded,
                          const DCArrayKokkos<double>& corner_force,
                          const DCArrayKokkos<double>& node_coords,
@@ -122,9 +122,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         // Riemann velocity
         double vel_star_array[2];
 
-        // velocity gradient
-        double vel_grad_array[9];
-
         // --- Create views of arrays to aid the force calculation ---
 
         ViewCArrayKokkos<double> tau(tau_array, 3, 3);
@@ -133,7 +130,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         ViewCArrayKokkos<double> sum(sum_array, 4);
         ViewCArrayKokkos<double> muc(muc_array, num_nodes_in_elem);
         ViewCArrayKokkos<double> vel_star(vel_star_array, num_dims);
-        ViewCArrayKokkos<double> vel_grad(vel_grad_array, 3, 3);
 
         // create a view of the stress_matrix
         ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, mat_point_lid, 0, 0), 3, 3);
@@ -157,14 +153,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
         geometry::get_area_weights2D(corner_areas, elem_gid, node_coords, elem_node_gids);
 
-        // --- Calculate the velocity gradient ---
-        get_velgrad_rz(vel_grad,
-                       elem_node_gids,
-                       node_vel,
-                       area_normal,
-                       GaussPoints_vol(elem_gid),
-                       elem_area,
-                       elem_gid);
 
         // the -1 is for the inward surface area normal,
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -173,13 +161,16 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
             } // end for
         } // end for
 
-        double div = GaussPoints_div(elem_gid);
+        // with RZ-coords, div of velocity is 3 terms
+        double div = GaussPoints_vel_grad(elem_gid, 0, 0) + 
+                     GaussPoints_vel_grad(elem_gid, 1, 1) + 
+                     GaussPoints_vel_grad(elem_gid, 2, 2);
 
         // vel = [u,v]
         //            [du/dx,  du/dy]
         // vel_grad = [dv/dx,  dv/dy]
         double curl;
-        curl = vel_grad(1, 0) - vel_grad(0, 1);  // dv/dx - du/dy
+        curl = GaussPoints_vel_grad(1, 0) - GaussPoints_vel_grad(0, 1);  // dv/dx - du/dy
 
         double mag_curl = curl;
 
@@ -338,7 +329,9 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
             size_t neighbor_gid = mesh.elems_in_elem(elem_gid, elem_lid);
 
             // calculate the velocity divergence in neighbor
-            double div_neighbor = GaussPoints_div(neighbor_gid);
+            double div_neighbor = GaussPoints_vel_grad(neighbor_gid, 0, 0) + 
+                                  GaussPoints_vel_grad(neighbor_gid, 1, 1) + 
+                                  GaussPoints_vel_grad(neighbor_gid, 2, 2);
 
             r_face = r_coef * (div_neighbor + small) / (div + small);
 

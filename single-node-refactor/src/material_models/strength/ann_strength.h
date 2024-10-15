@@ -218,6 +218,7 @@ namespace ANNStrengthModelHost {
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,

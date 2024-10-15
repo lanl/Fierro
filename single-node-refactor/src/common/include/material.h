@@ -239,7 +239,7 @@ struct MaterialFunctions_t
 
     // Material strength model function pointers
     void (*calc_stress)(
-        const ViewCArrayKokkos<double>& vel_grad,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos <double> &node_coords,
         const DCArrayKokkos <double> &node_vel,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
@@ -250,6 +250,7 @@ struct MaterialFunctions_t
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
@@ -296,8 +297,8 @@ struct Material_t
 
     DCArrayKokkos<MaterialSetup_t> MaterialSetup;  // vars to setup and initialize the material
 
-    // device functions and associated data
-    CArrayKokkos<MaterialFunctions_t> MaterialFunctions; // struct with function pointers
+    // device functions and associated data, the host side is for host functions
+    DCArrayKokkos<MaterialFunctions_t> MaterialFunctions; // struct with function pointers
 
     // note: host functions are launched via enums
 

@@ -69,6 +69,7 @@ void SGHRZ::update_state_rz(
     const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& GuassPoints_vel_grad,
     const DCArrayKokkos<double>& MaterialPoints_den,
     const DCArrayKokkos<double>& MaterialPoints_pres,
     const DCArrayKokkos<double>& MaterialPoints_stress,
@@ -90,6 +91,7 @@ void SGHRZ::update_state_rz(
 {
     
     const size_t num_dims = mesh.num_dims;
+    const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
 
 
     // --- Density ---
@@ -164,8 +166,6 @@ void SGHRZ::update_state_rz(
     // state_based elastic plastic model
     if (Materials.MaterialEnums.host(mat_id).StrengthType == model::stateBased) {
 
-        const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
-
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
 
@@ -189,52 +189,30 @@ void SGHRZ::update_state_rz(
             MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
 
 
-                // corner area normals
-                double area_array[24];
-                ViewCArrayKokkos<double> area(area_array, num_nodes_in_elem, num_dims);
-
-                // velocity gradient
-                double vel_grad_array[9];
-                ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
-
-                // get the B matrix which are the OUTWARD corner area normals
-                geometry::get_bmatrix2D(area, elem_gid, node_coords, elem_node_gids);
-
-                // calculate the area of the quad
-                double elem_area = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
-
-                // --- Calculate the velocity gradient ---
-                get_velgrad_rz(vel_grad,
-                               elem_node_gids,
-                               node_vel,
-                               area,
-                               GaussPoints_vol(elem_gid),
-                               elem_area,
-                               elem_gid);
-
-                // --- call strength model ---
-                Materials.MaterialFunctions(mat_id).calc_stress(
-                                        vel_grad,
-                                        node_coords,
-                                        node_vel,
-                                        elem_node_gids,
-                                        MaterialPoints_pres,
-                                        MaterialPoints_stress,
-                                        MaterialPoints_sspd,
-                                        MaterialPoints_eos_state_vars,
-                                        MaterialPoints_strength_state_vars,
-                                        MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(1,mat_point_lid),
-                                        MaterialToMeshMaps_elem,
-                                        Materials.eos_global_vars,
-                                        Materials.strength_global_vars,
-                                        GaussPoints_vol(elem_gid),
-                                        dt,
-                                        rk_alpha,
-                                        time_value,
-                                        cycle,
-                                        mat_point_lid,
-                                        mat_id);
+            // --- call strength model ---
+            Materials.MaterialFunctions(mat_id).calc_stress(
+                                    GuassPoints_vel_grad,
+                                    node_coords,
+                                    node_vel,
+                                    elem_node_gids,
+                                    MaterialPoints_pres,
+                                    MaterialPoints_stress,
+                                    MaterialPoints_sspd,
+                                    MaterialPoints_eos_state_vars,
+                                    MaterialPoints_strength_state_vars,
+                                    MaterialPoints_den(mat_point_lid),
+                                    MaterialPoints_sie(1,mat_point_lid),
+                                    MaterialPoints_shear_modulii,
+                                    MaterialToMeshMaps_elem,
+                                    Materials.eos_global_vars,
+                                    Materials.strength_global_vars,
+                                    GaussPoints_vol(elem_gid),
+                                    dt,
+                                    rk_alpha,
+                                    time_value,
+                                    cycle,
+                                    mat_point_lid,
+                                    mat_id);
 
 
         }); // end parallel for over mat elem lid
@@ -321,6 +299,7 @@ void SGHRZ::update_stress(const Material_t& Materials,
                           const DCArrayKokkos<double>& GaussPoints_vol,
                           const DCArrayKokkos<double>& node_coords,
                           const DCArrayKokkos<double>& node_vel,
+                          const DCArrayKokkos<double>& GuassPoints_vel_grad,
                           const DCArrayKokkos<double>& MaterialPoints_den,
                           const DCArrayKokkos<double>& MaterialPoints_sie,
                           const DCArrayKokkos<double>& MaterialPoints_pres,
@@ -374,47 +353,12 @@ void SGHRZ::update_stress(const Material_t& Materials,
             // the material point index = the material elem index for a 1-point element
             size_t mat_point_lid = mat_elem_lid;
 
-            double area_normal_array[8]; // 4 corners and 2 directions
-
-            // velocity gradient
-            double vel_grad_array[9];
-
-            // --- Create views of arrays to calculate velocity gradient ---
-            ViewCArrayKokkos<double> area_normal(area_normal_array, num_nodes_in_elem, num_dims);
-            ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
-
-            // element volume
-            double vol = GaussPoints_vol(elem_gid);
-
-
             // cut out the node_gids for this element
-            ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
-
-
-            // get the B matrix which are the OUTWARD corner area normals
-            geometry::get_bmatrix2D(area_normal,
-                                    elem_gid,
-                                    node_coords,
-                                    elem_node_gids);
-            // NOTE: I added a minus in bmatrix2D, it should be outward pointing now?
-
-            // facial area of the element
-            double elem_area = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
-
-
-            // --- Calculate the velocity gradient ---
-            get_velgrad_rz(vel_grad,
-                        elem_node_gids,
-                        node_vel,
-                        area_normal,
-                        GaussPoints_vol(elem_gid),
-                        elem_area,
-                        elem_gid);
-
+            ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(
-                                            vel_grad,
+                                            GuassPoints_vel_grad,
                                             node_coords,
                                             node_vel,
                                             elem_node_gids,
@@ -425,6 +369,7 @@ void SGHRZ::update_stress(const Material_t& Materials,
                                             MaterialPoints_strength_state_vars,
                                             MaterialPoints_den(mat_point_lid),
                                             MaterialPoints_sie(1,mat_point_lid),
+                                            MaterialPoints_shear_modulii,
                                             MaterialToMeshMaps_elem,
                                             Materials.eos_global_vars,
                                             Materials.strength_global_vars,

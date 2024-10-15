@@ -1530,7 +1530,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
     Materials.MaterialSetup = DCArrayKokkos<MaterialSetup_t>(num_materials, "material_setup");
 
     // function pointers to material models
-    Materials.MaterialFunctions = CArrayKokkos<MaterialFunctions_t>(num_materials, "material_functions");
+    Materials.MaterialFunctions = DCArrayKokkos<MaterialFunctions_t>(num_materials, "material_functions");
 
     // enums
     Materials.MaterialEnums = DCArrayKokkos<MaterialEnums_t>(num_materials, "material_enums");
