@@ -32,8 +32,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef USER_DEFINED_STRENGTH_H
-#define USER_DEFINED_STRENGTH_H
+#ifndef HOST_ANN_STRENGTH_H
+#define HOST_ANN_STRENGTH_H
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -41,7 +41,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 
 // the number of nodes in each layer of the ANN
-std::vector <size_t> num_nodes_in_layer = {64000, 30000, 8000, 4000, 100, 25, 6}
+std::vector <size_t> num_nodes_in_layer = {64000, 30000, 8000, 4000, 100, 25, 6};
 
 // array of ANN structs
 struct ANNLayer_t{
@@ -138,6 +138,10 @@ void forward_propagate_layer_host(const DCArrayKokkos <float> &inputs,
 /////////////////////////////////////////////////////////////////////////////
 namespace ANNStrengthModelHost {
 
+    CMatrix <ANNLayer_t> ANNLayers;
+    DCArrayKokkos <float> inputs;
+    size_t num_layers;
+
     void init_strength_state_vars(
         const DCArrayKokkos <Material_t> &material,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
@@ -154,7 +158,7 @@ namespace ANNStrengthModelHost {
         // =================================================================
 
         // note: the num_nodes_in_layer has the inputs into the ANN, so subtract 1 for the layers
-        size_t num_layers = num_nodes_in_layer.size()-1;  
+        num_layers = num_nodes_in_layer.size()-1;  
 
         CMatrix <ANNLayer_t> ANNLayers(num_layers); // starts at 1 and goes to num_layers
 
@@ -197,7 +201,7 @@ namespace ANNStrengthModelHost {
             size_t num_j = num_nodes_in_layer[layer];
 
 
-            set_weight_host(ANNLayers(layer).weights);
+            set_weights_host(ANNLayers(layer).weights);
             set_biases_host(ANNLayers(layer).biases);
 
         } // end for over layers
@@ -231,10 +235,10 @@ namespace ANNStrengthModelHost {
         const size_t mat_id)
     {
         // layer 1, hidden layer 0, uses the inputs as the input values
-        forward_propagate_layer(inputs,
-                                ANNLayers(1).outputs,
-                                ANNLayers(1).weights,
-                                ANNLayers(1).biases); 
+        forward_propagate_layer_host(inputs,
+                                     ANNLayers(1).outputs,
+                                     ANNLayers(1).weights,
+                                     ANNLayers(1).biases); 
 
         // layer 2 through n-1, layer n-1 goes to the output
         for (size_t layer=2; layer<=num_layers; layer++){

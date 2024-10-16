@@ -32,8 +32,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef USER_DEFINED_STRENGTH_H
-#define USER_DEFINED_STRENGTH_H
+#ifndef HOST_USER_DEFINED_STRENGTH_H
+#define HOST_USER_DEFINED_STRENGTH_H
 
 
 
