@@ -65,10 +65,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "no_eos.h"
 #include "user_defined_eos.h"
 #include "void_eos.h"
+#include "host_user_defined_eos.h"
 
 // strength
 #include "no_strength.h"
 #include "user_defined_strength.h"
+#include "host_user_defined_strength.h"
+#include "host_ann_strength.h"
 
 // erosion files
 #include "basic_erosion.h"
@@ -1690,8 +1693,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                                 Materials.MaterialFunctions(mat_id).calc_pressure    = &NoEOSModel::calc_pressure;
                                 Materials.MaterialFunctions(mat_id).calc_sound_speed = &NoEOSModel::calc_sound_speed;
                             });
-                            Materials.MaterialFunctions.host(mat_id).calc_pressure    = &NoEOSModel::calc_pressure;
-                            Materials.MaterialFunctions.host(mat_id).calc_sound_speed = &NoEOSModel::calc_sound_speed;
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
@@ -1702,8 +1703,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                                 Materials.MaterialFunctions(mat_id).calc_pressure    = &GammaLawGasEOSModel::calc_pressure;
                                 Materials.MaterialFunctions(mat_id).calc_sound_speed = &GammaLawGasEOSModel::calc_sound_speed;
                             });
-                            Materials.MaterialFunctions.host(mat_id).calc_pressure    = &GammaLawGasEOSModel::calc_pressure;
-                            Materials.MaterialFunctions.host(mat_id).calc_sound_speed = &GammaLawGasEOSModel::calc_sound_speed;
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
@@ -1714,8 +1713,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                                 Materials.MaterialFunctions(mat_id).calc_pressure    = &VoidEOSModel::calc_pressure;
                                 Materials.MaterialFunctions(mat_id).calc_sound_speed = &VoidEOSModel::calc_sound_speed;
                             });
-                            Materials.MaterialFunctions.host(mat_id).calc_pressure    = &VoidEOSModel::calc_pressure;
-                            Materials.MaterialFunctions.host(mat_id).calc_sound_speed = &VoidEOSModel::calc_sound_speed;
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
@@ -1726,8 +1723,19 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                                 Materials.MaterialFunctions(mat_id).calc_pressure    = &UserDefinedEOSModel::calc_pressure;
                                 Materials.MaterialFunctions(mat_id).calc_sound_speed = &UserDefinedEOSModel::calc_sound_speed;
                             });
-                            Materials.MaterialFunctions.host(mat_id).calc_pressure    = &UserDefinedEOSModel::calc_pressure;
-                            Materials.MaterialFunctions.host(mat_id).calc_sound_speed = &UserDefinedEOSModel::calc_sound_speed;
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
+                            break;
+                        // --------
+                        // adding host run EOSs
+                        case model::hostUserDefinedEOS:
+                            Materials.MaterialFunctions.host(mat_id).calc_pressure    = &HostUserDefinedEOSModel::calc_pressure;
+                            Materials.MaterialFunctions.host(mat_id).calc_sound_speed = &HostUserDefinedEOSModel::calc_sound_speed;
+
+                            RUN({Materials.MaterialEnums(mat_id).EOSRunLocation = model::host;});
+                            Materials.MaterialEnums.host(mat_id).EOSRunLocation = model::host;
+
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }

@@ -70,6 +70,7 @@ namespace model
         gammaLawGasEOS = 1, ///<  gamma law gas
         voidEOS = 2,        ///<  a void material, no sound speed and no pressure
         userDefinedEOS = 3, ///<  an eos function defined by the user
+        hostUserDefinedEOS = 4, 
     };
 
     // failure models
