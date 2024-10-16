@@ -1,11 +1,11 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 1.0
+    time_final: 7
     dt_min: 1.e-8
     dt_max: 5.e-2
     dt_start: 1.e-5
-    cycle_stop: 1000000
+    cycle_stop: 100000
 
 
 # mesh_options:
@@ -16,15 +16,15 @@ mesh_options:
     source: generate
     num_dims: 3
     type: box
-    origin: [0.0, 0.0, 0.0]
-    length: [0.2, 0.2, 0.01]
-    num_elems: [200, 200, 10]
+    origin: [0.0, 0.00, 0.0]
+    length: [0.1, 0.1, 0.001]
+    num_elems: [100, 100, 1]
 
 
 output_options:
     timer_output_level: thorough
     output_file_format: vtk
-    graphics_time_step: 0.25
+    graphics_time_step: 0.05
     # graphics_iteration_step: 1
 
 solver_options:
@@ -35,8 +35,43 @@ solver_options:
         #  - blah
         #  - blah
 
+boundary_conditions:
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: y_plane
+        direction: y_dir
+        value: 0.1
+        temperature: 0
+        type:  temperature
 
-  
+        # Tag X = 0.1 plane
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: x_plane
+        direction: x_dir
+        value: 0.1
+        temperature: 0
+        type:  temperature
+
+
+    # Tag X = 0 plane
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: x_plane
+        direction: x_dir
+        value: 0.0
+        temperature: 0
+        type:  temperature
+
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: y_plane
+        direction: y_dir
+        value: 0.0
+        temperature: 0
+        type:  temperature
+
+
 materials:
     - material:
         id: 0
@@ -84,23 +119,23 @@ regions:
     #     thermal_conductivity: 1.0
     #     specific_heat: 1.0
 
-    - fill_volume:
-        type: box
-        origin: [5.0, 0.5, 1.0]
-        x1 : 0.09
-        x2 : 0.11
-        y1 : 0.09
-        y2 : 0.11
-        z1 : 0.008
-        z2 : 0.01
-        material_id: 0
-        den: 2710
-        # ie: 0.25833839995946534
-        sie: 1.e-10 # 963.652344
-        temperature_distribution: cartesian
-        temperature : 1.0
-        thermal_conductivity: 237
-        specific_heat: 903
+    # - fill_volume:
+    #     type: box
+    #     origin: [0.0, 0.0, 0.0]
+    #     x1 : 0.04
+    #     x2 : 0.06
+    #     y1 : 0.04
+    #     y2 : 0.06
+    #     z1 : 0.005
+    #     z2 : 0.011
+    #     material_id: 0
+    #     den: 2710
+    #     # ie: 0.25833839995946534
+    #     sie: 1.e-10 # 963.652344
+    #     temperature_distribution: cartesian
+    #     temperature : 1000.0
+    #     thermal_conductivity: 237
+    #     specific_heat: 903
 
     # energy source initial conditions
     # - fill_volume:
@@ -155,3 +190,39 @@ regions:
 #         direction: z_dir
 #         value: 0.0
 #         type: reflected_velocity
+# boundary_conditions:
+
+#     - boundary_condition:
+#         solver: SGTM3D
+#         geometry: y_plane
+#         direction: y_dir
+#         value: 0.1
+#         temperature: 0
+#         type:  temperature
+
+#         # Tag X = 0.1 plane
+#     - boundary_condition:
+#         solver: SGTM3D
+#         geometry: x_plane
+#         direction: x_dir
+#         value: 0.1
+#         temperature: 0
+#         type:  temperature
+
+
+#     # Tag X = 0 plane
+#     - boundary_condition:
+#         solver: SGTM3D
+#         geometry: x_plane
+#         direction: x_dir
+#         value: 0.0
+#         temperature: 10
+#         type:  temperature
+
+#     - boundary_condition:
+#         solver: SGTM3D
+#         geometry: y_plane
+#         direction: y_dir
+#         value: 0.0
+#         temperature: 10
+#         type:  temperature

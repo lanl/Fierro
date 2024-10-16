@@ -87,7 +87,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     double graphics_time = 0.0; // the times for writing graphics dump
 
     std::cout << "Applying initial boundary conditions" << std::endl;
-    boundary_temperature(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
+    boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value); // Time value = 0.0;
 
     double cached_pregraphics_dt = fuzz;
 
@@ -100,19 +100,19 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     auto time_1 = std::chrono::high_resolution_clock::now();
 
 
-    for(int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
+    // for(int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
 
-        int a=rand()%2;
+    //     int a=rand()%2;
 
-        double da = (double)a;
+    //     double da = (double)a;
 
-        State.node.coords.host(0, node_gid, 0) += da*0.0002*sin(5000.0 * State.node.coords.host(0, node_gid, 0));
-        State.node.coords.host(0, node_gid, 1) += da*0.0002*sin(9000.0 * State.node.coords.host(0, node_gid, 1));
-        State.node.coords.host(1, node_gid, 0) += da*0.0002*sin(5000.0 * State.node.coords.host(1, node_gid, 0));
-        State.node.coords.host(1, node_gid, 1) += da*0.0002*sin(9000.0 * State.node.coords.host(1, node_gid, 1));
-    }
+    //     State.node.coords.host(0, node_gid, 0) += da*0.0002*sin(5000.0 * State.node.coords.host(0, node_gid, 0));
+    //     State.node.coords.host(0, node_gid, 1) += da*0.0002*sin(9000.0 * State.node.coords.host(0, node_gid, 1));
+    //     State.node.coords.host(1, node_gid, 0) += da*0.0002*sin(5000.0 * State.node.coords.host(1, node_gid, 0));
+    //     State.node.coords.host(1, node_gid, 1) += da*0.0002*sin(9000.0 * State.node.coords.host(1, node_gid, 1));
+    // }
 
-    State.node.coords.update_device();
+    // State.node.coords.update_device();
         // Tweak the nodal positions on the mesh
     // FOR_ALL(node_gid, 0, mesh.num_nodes, {
 
@@ -134,6 +134,38 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     
     graphics_time = time_value + graphics_dt_ival;
 
+
+    DCArrayKokkos<double> sphere_velocity(3, "sphere_velocity");
+
+    sphere_velocity.host(0) = 0.1; // 0.1 meters in 30 seconds
+    sphere_velocity.host(1) = 0.1; // 0.1 meters in 30 seconds
+    sphere_velocity.host(2) = 0.0 ; // 0.0 meters in 30 seconds
+
+    sphere_velocity.update_device();
+
+
+    DCArrayKokkos<double> sphere_position(3, "sphere_position");
+
+    sphere_position.host(0) = 0.0;
+    sphere_position.host(1) = 0.0;
+    sphere_position.host(2) = 0.0;
+
+
+    double sx = 0.05;
+    double sy = 0.05;
+
+    double fy = 20.0;
+    double fx = 10.0;
+
+    sphere_position.host(0) = 0.03*cos(fx*time_value) + sx;
+    sphere_position.host(1) = 0.03*sin(fy*time_value) + sy;
+
+
+    // sphere_position.host(0) = fmod(time_value, 0.02) + 0.01;
+    // sphere_position.host(1) = 0.05;
+    
+
+    sphere_position.update_device();
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -241,6 +273,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.corner.q_div,
                     State.MaterialCorners(mat_id).q_div,
                     State.corners_in_mat_elem,
+                    State.MaterialPoints(mat_id).eroded,
                     State.MaterialToMeshMaps(mat_id).elem,
                     num_mat_elems,
                     mat_id,
@@ -248,6 +281,89 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     small,
                     dt, 
                     rk_alpha);
+
+                moving_flux(
+                    Materials,
+                    mesh,
+                    State.GaussPoints.vol,
+                    State.node.coords,
+                    State.corner.q_div,
+                    State.MaterialCorners(mat_id).q_div,
+                    sphere_position,
+                    State.corners_in_mat_elem,
+                    State.MaterialToMeshMaps(mat_id).elem,
+                    num_mat_elems,
+                    mat_id,
+                    fuzz,
+                    small,
+                    dt, 
+                    rk_alpha
+                    );
+
+                // // ---- apply heat flux boundary conditions ----
+                // FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+                //     // get elem gid
+                //     size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem(mat_elem_lid); 
+
+                //     // the material point index = the material elem index for a 1-point element
+                //     size_t mat_point_lid = mat_elem_lid;
+
+
+                //     // check if element center is within the sphere
+
+                //     // calculate the coordinates and radius of the element
+                //     double elem_coords_1D[3]; // note:initialization with a list won't work
+                //     ViewCArrayKokkos<double> elem_coords(&elem_coords_1D[0], 3);
+                //     elem_coords(0) = 0.0;
+                //     elem_coords(1) = 0.0;
+                //     elem_coords(2) = 0.0;
+
+                //     // get the coordinates of the element center (using rk_level=1 or node coords)
+                //     for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                //         elem_coords(0) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                //         elem_coords(1) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                //         elem_coords(2) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                //     } // end loop over nodes in element
+                //     elem_coords(0) = (elem_coords(0) / mesh.num_nodes_in_elem);
+                //     elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
+                //     elem_coords(2) = (elem_coords(2) / mesh.num_nodes_in_elem);
+
+                //     double radius = 0.005;
+                //     double radius_squared = radius * radius;
+
+                //     double dist_squared = 0.0;
+                //     for(int dim = 0; dim < mesh.num_dims; dim++){
+                //         dist_squared +=  (sphere_position(dim) - elem_coords(dim))*(sphere_position(dim) - elem_coords(dim));
+                //     }
+
+                //     double dist = sqrt(dist_squared);
+
+                //     if(dist <= radius){
+
+                //         // printf("Painting temperature");
+                //         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+
+                //             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+
+
+                //             // the local corner id is the local node id
+                //             size_t corner_lid = node_lid;
+
+                //             // Get corner gid
+                //             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+
+                //             // Get the material corner lid
+                //             // size_t mat_corner_lid = State.corners_in_mat_elem(mat_elem_lid, corner_lid);
+
+                //             // State.node.temp(1, node_gid) = 10.0;
+
+                //             State.corner.q_div(1, corner_gid) += 100.0;
+
+                //         }
+                //     }
+                    
+
+                // }); // end parallel for loop over elements
 
             } // end for mat_id
 
@@ -259,6 +375,10 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                 State.node.mass,
                 rk_alpha,
                 dt);
+
+
+            // ---- apply temperature boundary conditions to the boundary patches----
+            boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
 
             // Find the element average temperature
 
@@ -272,6 +392,21 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
 
         } // end of RK loop
+
+
+        // Update the spheres position
+        RUN({
+
+            sphere_position(0) = 0.03*cos(fx*time_value) + sx;
+            sphere_position(1) = 0.03*sin(fy*time_value) + sy;
+
+
+            // sphere_position(0) = 4 * fmod(time_value, 0.02) + 0.01;
+            // sphere_position(1) = 0.05;
+
+            // sphere_position(2) = 0.05*time_value/10.0;;
+        });
+        
 
         // printf("Loop over Materials  %e \n");
         // for(size_t mat_id = 0; mat_id < num_mats; mat_id++){

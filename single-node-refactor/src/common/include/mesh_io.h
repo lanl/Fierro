@@ -1878,7 +1878,7 @@ public:
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
-            elem_fields(elem_gid, 8) = e_switch;
+            elem_fields(elem_gid, 8) = State.GaussPoints.div.host(elem_gid);
             elem_switch *= -1;
         } // end for elem_gid
 

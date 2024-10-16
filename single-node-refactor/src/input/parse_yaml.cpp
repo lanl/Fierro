@@ -59,6 +59,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "user_defined_velocity_bc.h"
 #include "zero_velocity_bc.h"
 
+// temperature bc files
+#include "constant_temp_bc.h"
+
 
 // eos files
 #include "gamma_law_eos.h"

@@ -42,7 +42,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn get_force
+/// \fn get_heat_flux
 ///
 /// \brief This function calculates the corner forces and the evolves stress
 ///
@@ -78,6 +78,7 @@ void SGTM3D::get_heat_flux(
     const DCArrayKokkos<double>& corner_q_div,
     const DCArrayKokkos<double>& MaterialCorners_q_div,
     const corners_in_mat_t corners_in_mat_elem,
+    const DCArrayKokkos<bool>&   MaterialPoints_eroded,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const size_t num_mat_elems,
     const size_t mat_id,
@@ -124,14 +125,25 @@ void SGTM3D::get_heat_flux(
 
 
         // get the vertex temperatures for the cell
+
+        double avg_temp = 0.0;
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
 
             temp(node_lid) = node_temp(0, node_gid);   
 
+            avg_temp += temp(node_lid) / (double)num_nodes_in_elem;
+
             // std::cout<<"Node  "<< node_gid <<" temp  = "<< temp(node_lid)<<std::endl;     
         } // end for
+
+
+        if(avg_temp >= 900){
+            // printf("Melted!");
+            MaterialPoints_eroded(mat_elem_lid) = true;
+        } 
+
 
         // --- calculate the velocity gradient terms ---
         double inverse_vol = 1.0 / vol;
@@ -246,3 +258,118 @@ void SGTM3D::get_heat_flux(
 
     return;
 } // end of routine
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_heat_flux
+///
+/// \brief This function calculates the corner forces and the evolves stress
+///
+/// \param Materials in the simulation
+/// \param The simulation mesh
+/// \param Gauss point (element) volume
+/// \param Nodal position array
+/// \param Nodal temperature array
+/// \param Material point heat flux array
+/// \param Material Point state variables
+/// \param Material corner heat flux array
+/// \param Map from material to corners
+/// \param Maps from the material to the mesh
+/// \param Number of elements associated with a given material
+/// \param Material ID
+/// \param fuzz
+/// \param small
+/// \param Element state variable array
+/// \param Time step size
+/// \param The current Runge Kutta integration alpha value
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGTM3D::moving_flux(
+    const Material_t& Materials,
+    const Mesh_t& mesh,
+    const DCArrayKokkos<double>& GaussPoints_vol,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& corner_q_div,
+    const DCArrayKokkos<double>& MaterialCorners_q_div,
+    const DCArrayKokkos<double>& sphere_position,
+    const corners_in_mat_t corners_in_mat_elem,
+    const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const size_t num_mat_elems,
+    const size_t mat_id,
+    const double fuzz,
+    const double small,
+    const double dt,
+    const double rk_alpha) const
+{
+
+
+    // ---- apply heat flux boundary conditions ----
+    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+        
+        // get elem gid
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
+        // the material point index = the material elem index for a 1-point element
+        size_t mat_point_lid = mat_elem_lid;
+
+
+        // check if element center is within the sphere
+
+        // calculate the coordinates and radius of the element
+        double elem_coords_1D[3]; // note:initialization with a list won't work
+        ViewCArrayKokkos<double> elem_coords(&elem_coords_1D[0], 3);
+        elem_coords(0) = 0.0;
+        elem_coords(1) = 0.0;
+        elem_coords(2) = 0.0;
+
+        // get the coordinates of the element center (using rk_level=1 or node coords)
+        for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+            elem_coords(0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+            elem_coords(1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+            elem_coords(2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+        } // end loop over nodes in element
+        elem_coords(0) = (elem_coords(0) / mesh.num_nodes_in_elem);
+        elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
+        elem_coords(2) = (elem_coords(2) / mesh.num_nodes_in_elem);
+
+        double radius = 0.005;
+        double radius_squared = radius * radius;
+
+        double dist_squared = 0.0;
+        for(int dim = 0; dim < mesh.num_dims; dim++){
+            dist_squared +=  (sphere_position(dim) - elem_coords(dim))*(sphere_position(dim) - elem_coords(dim));
+        }
+
+        double dist = sqrt(dist_squared);
+
+        if(dist <= radius){
+
+            // printf("Painting temperature");
+            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+
+                size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+
+
+                // the local corner id is the local node id
+                size_t corner_lid = node_lid;
+
+                // Get corner gid
+                size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+
+                // Get the material corner lid
+                // size_t mat_corner_lid = State.corners_in_mat_elem(mat_elem_lid, corner_lid);
+
+                corner_q_div(1, corner_gid) += 20.0;
+
+            }
+        }
+
+    }); // end parallel for loop over elements
+
+
+    return;
+}
+

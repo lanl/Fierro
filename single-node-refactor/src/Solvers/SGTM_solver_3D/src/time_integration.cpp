@@ -191,9 +191,9 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
 
         // Local dt calc based on thermal conductivity (VN Stability)
         double h = (dist_min); // maybe half?
-        double dt_vn = (h * h)/(6.0*alpha); // maybe 6
+        double dt_vn = (h * h)/(2.0*alpha); // maybe 6
 
-        dt_vn *= 0.25; // stability factor
+        dt_vn *= 0.9; // stability factor
  
         // if (MaterialPoints_eroded(mat_elem_lid) == true) {
         //     dt_cfl = 1.0e32;  // a huge time step as this element doesn't exist

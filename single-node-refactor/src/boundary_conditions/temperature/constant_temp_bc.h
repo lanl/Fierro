@@ -70,13 +70,11 @@ static void temperature(const Mesh_t& mesh,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    // directions are:
-    // x_plane  = 0,
-    // y_plane  = 1,
-    // z_plane  = 2,
+    // Temperature to set the boundary to = bc_global_vars(4)
+    // printf("In constant temp BC function");
 
     // Set velocity to zero in the specified direction
-    node_temp(1, bdy_node_gid) = bc_global_vars(4);
+    node_temp(rk_stage, bdy_node_gid) = bc_global_vars(bdy_set,4);// bc_global_vars(4);
 
     return;
 } // end func
