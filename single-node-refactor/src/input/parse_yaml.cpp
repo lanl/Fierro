@@ -1740,6 +1740,20 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
                             break;
+#ifdef ANALYTIC_DEFINED_EOS_H
+                        // call Gruneisen
+                        case model::GruneisenEOS:
+                            Materials.MaterialFunctions.host(mat_id).calc_pressure    = &GruneisenEOSModel::calc_pressure;
+                            Materials.MaterialFunctions.host(mat_id).calc_sound_speed = &GruneisenEOSModel::calc_sound_speed;
+                            if (VERBOSE) {
+                                std::cout << "\teos_model = " << eos << std::endl;
+                            }
+                            break;  
+
+                        // add other analytic EOS models here, e.g., Johnson-Cook etc.
+                        // ....
+
+#endif // end Header Guard
                         default:
                             std::cout << "ERROR: invalid input: " << eos << std::endl;
                             throw std::runtime_error("**** EOS Not Understood ****");
@@ -1832,6 +1846,19 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
                             }
                             break;
+#ifdef DECOUPLED_STREGTH_H
+                        // call elastic plastic model
+                        case model::hypoElasticPlasticModel:
+                            Materials.MaterialFunctions.host(mat_id).calc_pressure    = &HypoElasticPlasticModel::calc_stress;
+                            if (VERBOSE) {
+                                std::cout << "\tstrength_model = " << strength_model << std::endl;
+                            }
+                            break;  
+
+                        // add other elastic plastic models here, e.g., Johnson-Cook strength etc.
+                        // ....
+                        
+#endif // end Header Guard
                         default:
                             std::cout << "ERROR: invalid strength input: " << strength_model << std::endl;
                             throw std::runtime_error("**** Strength model Not Understood ****");
