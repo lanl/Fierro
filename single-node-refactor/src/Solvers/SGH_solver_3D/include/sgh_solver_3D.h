@@ -268,7 +268,6 @@ public:
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
 
-    KOKKOS_FUNCTION
     void get_velgrad(
         DCArrayKokkos<double>& vel_grad,
         const Mesh_t mesh,
