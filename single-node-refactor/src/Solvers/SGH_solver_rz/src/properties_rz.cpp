@@ -212,7 +212,8 @@ void SGHRZ::update_state_rz(
                                     time_value,
                                     cycle,
                                     mat_point_lid,
-                                    mat_id);
+                                    mat_id,
+                                    gauss_gid);
 
 
         }); // end parallel for over mat elem lid
@@ -353,6 +354,9 @@ void SGHRZ::update_stress(const Material_t& Materials,
             // the material point index = the material elem index for a 1-point element
             size_t mat_point_lid = mat_elem_lid;
 
+            // for this method, gauss point is equal to elem_gid
+            size_t gauss_gid = elem_gid;
+
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
@@ -379,7 +383,8 @@ void SGHRZ::update_stress(const Material_t& Materials,
                                             time_value,
                                             cycle,
                                             mat_point_lid,
-                                            mat_id);
+                                            mat_id,
+                                            gauss_gid);
 
         });  // end parallel for over elems that have the materials
     } // end if run location is device

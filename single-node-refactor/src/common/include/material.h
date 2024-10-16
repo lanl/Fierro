@@ -53,6 +53,9 @@ namespace model
     {
         noStrengthModel = 0,
         userDefinedStrength = 1,
+        hypoElasticPlasticStrength = 2,
+        hypoElasticPlasticStrengthRZ = 3,
+        hostANNStrength = 4,
     };
 
     // EOS model types
@@ -71,6 +74,7 @@ namespace model
         voidEOS = 2,        ///<  a void material, no sound speed and no pressure
         userDefinedEOS = 3, ///<  an eos function defined by the user
         hostUserDefinedEOS = 4, 
+        mieGruneisenEOS = 5,
     };
 
     // failure models
@@ -112,14 +116,11 @@ static std::map<std::string, model::StrengthModels> strength_models_map
 {
     { "no_strength", model::noStrengthModel },
     { "user_defined_strength", model::userDefinedStrength },
+    { "hypo_elastic_plastic_strength", model::hypoElasticPlasticStrength },
+    { "hypo_elastic_plastic_strength_rz", model::hypoElasticPlasticStrengthRZ },
+    { "host_ann_strength", model::hostANNStrength },
 };
 
-static std::map<std::string, model::RunLocation> strength_run_location_map
-{
-    { "device", model::device },
-    { "host", model::host },
-    { "dual", model::dual },
-};
 
 static std::map<std::string, model::EOSType> eos_type_map
 {
@@ -134,14 +135,7 @@ static std::map<std::string, model::EOSModels> eos_models_map
     { "gamma_law_gas", model::gammaLawGasEOS },
     { "void", model::voidEOS },
     { "user_defined_eos", model::userDefinedEOS },
-};
-
-
-static std::map<std::string, model::RunLocation> eos_run_location_map
-{
-    { "device", model::device },
-    { "host", model::host },
-    { "both", model::dual },
+    { "mie_gruneisen_eos", model::mieGruneisenEOS },
 };
 
 
@@ -261,7 +255,8 @@ struct MaterialFunctions_t
         const double time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
-        const size_t mat_id) = NULL;
+        const size_t mat_id,
+        const size_t gauss_gid) = NULL;
 
     // -- Erosion --
 

@@ -201,7 +201,8 @@ void SGH3D::update_state(
                                         time_value,
                                         cycle,
                                         mat_point_lid,
-                                        mat_id);
+                                        mat_id,
+                                        gauss_gid);
         }); // end parallel for over mat elem lid
     } // end if state_based strength model
 
@@ -341,6 +342,8 @@ void SGH3D::update_stress(
             // get elem gid
             size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
+            size_t gauss_gid = elem_gid;
+
             // the material point index = the material elem index for a 1-point element
             size_t mat_point_lid = mat_elem_lid;
 
@@ -370,7 +373,8 @@ void SGH3D::update_stress(
                                             time_value,
                                             cycle,
                                             mat_point_lid,
-                                            mat_id);
+                                            mat_id,
+                                            gauss_gid);
 
         });  // end parallel for over elems that have the materials
 

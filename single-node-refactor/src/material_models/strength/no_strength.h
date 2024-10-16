@@ -94,7 +94,8 @@ namespace NoStrengthModel {
         const double time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
-        const size_t mat_id)
+        const size_t mat_id,
+        const size_t gauss_gid)
     {
 
         // -----------------------------------------------------------------------------

@@ -136,7 +136,7 @@ void forward_propagate_layer_host(const DCArrayKokkos <float> &inputs,
 /// \param Time coefficient in the Runge Kutta time integration step
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace ANNStrengthModelHost {
+namespace HostANNStrengthModel {
 
     CMatrix <ANNLayer_t> ANNLayers;
     DCArrayKokkos <float> inputs;
@@ -211,7 +211,7 @@ namespace ANNStrengthModelHost {
 
     // this model is launched from the CPU, coding inside is run on GPUS
     static void calc_stress(
-        const ViewCArrayKokkos<double>& vel_grad,
+        const DCArrayKokkos<double>& vel_grad,
         const DCArrayKokkos <double> &node_coords,
         const DCArrayKokkos <double> &node_vel,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
@@ -232,7 +232,8 @@ namespace ANNStrengthModelHost {
         const double time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
-        const size_t mat_id)
+        const size_t mat_id,
+        const size_t gauss_gid)
     {
         // layer 1, hidden layer 0, uses the inputs as the input values
         forward_propagate_layer_host(inputs,

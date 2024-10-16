@@ -36,7 +36,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define USER_DEFINED_STRENGTH_H
 
 
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn UserDefinedStrengthModel
@@ -116,7 +115,8 @@ namespace UserDefinedStrengthModel {
         const double time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
-        const size_t mat_id)
+        const size_t mat_id,
+        const size_t gauss_gid)
     {
         // -----------------------------------------------------------------------------
         // Required variables are here
@@ -219,7 +219,8 @@ namespace NotionalStrengthModel {
         const double time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
-        const size_t mat_id)
+        const size_t mat_id,
+        const size_t gauss_gid)
     {
         return;
     } // end of user mat
