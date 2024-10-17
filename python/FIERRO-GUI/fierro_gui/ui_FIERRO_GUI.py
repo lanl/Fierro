@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIpvvQEc.ui'
+## Form generated from reading UI file 'FIERRO_GUIvbvinS.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -498,10 +498,10 @@ class Ui_MainWindow(object):
         self.frame_8.setObjectName(u"frame_8")
         self.frame_8.setFrameShape(QFrame.NoFrame)
         self.frame_8.setFrameShadow(QFrame.Raised)
-        self.formLayout_9 = QFormLayout(self.frame_8)
-        self.formLayout_9.setObjectName(u"formLayout_9")
-        self.formLayout_9.setHorizontalSpacing(-1)
-        self.formLayout_9.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout_17 = QGridLayout(self.frame_8)
+        self.gridLayout_17.setObjectName(u"gridLayout_17")
+        self.gridLayout_17.setHorizontalSpacing(-1)
+        self.gridLayout_17.setContentsMargins(0, 0, 0, 0)
         self.LNumberOfVoxelsX = QLabel(self.frame_8)
         self.LNumberOfVoxelsX.setObjectName(u"LNumberOfVoxelsX")
         self.LNumberOfVoxelsX.setEnabled(True)
@@ -514,39 +514,39 @@ class Ui_MainWindow(object):
         self.LNumberOfVoxelsX.setFont(font8)
         self.LNumberOfVoxelsX.setTextFormat(Qt.PlainText)
 
-        self.formLayout_9.setWidget(0, QFormLayout.LabelRole, self.LNumberOfVoxelsX)
+        self.gridLayout_17.addWidget(self.LNumberOfVoxelsX, 0, 0, 1, 1)
+
+        self.INNumberOfVoxelsX = QLineEdit(self.frame_8)
+        self.INNumberOfVoxelsX.setObjectName(u"INNumberOfVoxelsX")
+        self.INNumberOfVoxelsX.setEnabled(True)
+
+        self.gridLayout_17.addWidget(self.INNumberOfVoxelsX, 0, 1, 1, 1)
 
         self.LNumberOfVoxelsY = QLabel(self.frame_8)
         self.LNumberOfVoxelsY.setObjectName(u"LNumberOfVoxelsY")
         self.LNumberOfVoxelsY.setEnabled(True)
         self.LNumberOfVoxelsY.setFont(font5)
 
-        self.formLayout_9.setWidget(1, QFormLayout.LabelRole, self.LNumberOfVoxelsY)
+        self.gridLayout_17.addWidget(self.LNumberOfVoxelsY, 1, 0, 1, 1)
+
+        self.INNumberOfVoxelsY = QLineEdit(self.frame_8)
+        self.INNumberOfVoxelsY.setObjectName(u"INNumberOfVoxelsY")
+        self.INNumberOfVoxelsY.setEnabled(True)
+
+        self.gridLayout_17.addWidget(self.INNumberOfVoxelsY, 1, 1, 1, 1)
 
         self.LNumberOfVoxelsZ = QLabel(self.frame_8)
         self.LNumberOfVoxelsZ.setObjectName(u"LNumberOfVoxelsZ")
         self.LNumberOfVoxelsZ.setEnabled(True)
         self.LNumberOfVoxelsZ.setFont(font5)
 
-        self.formLayout_9.setWidget(2, QFormLayout.LabelRole, self.LNumberOfVoxelsZ)
-
-        self.INNumberOfVoxelsX = QLineEdit(self.frame_8)
-        self.INNumberOfVoxelsX.setObjectName(u"INNumberOfVoxelsX")
-        self.INNumberOfVoxelsX.setEnabled(True)
-
-        self.formLayout_9.setWidget(0, QFormLayout.FieldRole, self.INNumberOfVoxelsX)
-
-        self.INNumberOfVoxelsY = QLineEdit(self.frame_8)
-        self.INNumberOfVoxelsY.setObjectName(u"INNumberOfVoxelsY")
-        self.INNumberOfVoxelsY.setEnabled(True)
-
-        self.formLayout_9.setWidget(1, QFormLayout.FieldRole, self.INNumberOfVoxelsY)
+        self.gridLayout_17.addWidget(self.LNumberOfVoxelsZ, 2, 0, 1, 1)
 
         self.INNumberOfVoxelsZ = QLineEdit(self.frame_8)
         self.INNumberOfVoxelsZ.setObjectName(u"INNumberOfVoxelsZ")
         self.INNumberOfVoxelsZ.setEnabled(True)
 
-        self.formLayout_9.setWidget(2, QFormLayout.FieldRole, self.INNumberOfVoxelsZ)
+        self.gridLayout_17.addWidget(self.INNumberOfVoxelsZ, 2, 1, 1, 1)
 
 
         self.verticalLayout_8.addWidget(self.frame_8)
@@ -1172,6 +1172,59 @@ class Ui_MainWindow(object):
         self.BVTKCustomProperties.setObjectName(u"BVTKCustomProperties")
 
         self.verticalLayout_14.addWidget(self.BVTKCustomProperties)
+
+        self.label_7 = QLabel(self.page_8)
+        self.label_7.setObjectName(u"label_7")
+        self.label_7.setEnabled(False)
+        self.label_7.setFont(font)
+
+        self.verticalLayout_14.addWidget(self.label_7)
+
+        self.frame_22 = QFrame(self.page_8)
+        self.frame_22.setObjectName(u"frame_22")
+        self.frame_22.setFrameShape(QFrame.NoFrame)
+        self.frame_22.setFrameShadow(QFrame.Raised)
+        self.gridLayout_16 = QGridLayout(self.frame_22)
+        self.gridLayout_16.setObjectName(u"gridLayout_16")
+        self.gridLayout_16.setContentsMargins(0, 0, 0, 0)
+        self.INvtkvy = QLineEdit(self.frame_22)
+        self.INvtkvy.setObjectName(u"INvtkvy")
+        self.INvtkvy.setEnabled(False)
+
+        self.gridLayout_16.addWidget(self.INvtkvy, 1, 1, 1, 1)
+
+        self.Lvtkvy = QLabel(self.frame_22)
+        self.Lvtkvy.setObjectName(u"Lvtkvy")
+        self.Lvtkvy.setEnabled(False)
+
+        self.gridLayout_16.addWidget(self.Lvtkvy, 1, 0, 1, 1)
+
+        self.Lvtkvx = QLabel(self.frame_22)
+        self.Lvtkvx.setObjectName(u"Lvtkvx")
+        self.Lvtkvx.setEnabled(False)
+
+        self.gridLayout_16.addWidget(self.Lvtkvx, 0, 0, 1, 1)
+
+        self.INvtkvx = QLineEdit(self.frame_22)
+        self.INvtkvx.setObjectName(u"INvtkvx")
+        self.INvtkvx.setEnabled(False)
+
+        self.gridLayout_16.addWidget(self.INvtkvx, 0, 1, 1, 1)
+
+        self.Lvtkvz = QLabel(self.frame_22)
+        self.Lvtkvz.setObjectName(u"Lvtkvz")
+        self.Lvtkvz.setEnabled(False)
+
+        self.gridLayout_16.addWidget(self.Lvtkvz, 2, 0, 1, 1)
+
+        self.INvtkvz = QLineEdit(self.frame_22)
+        self.INvtkvz.setObjectName(u"INvtkvz")
+        self.INvtkvz.setEnabled(False)
+
+        self.gridLayout_16.addWidget(self.INvtkvz, 2, 1, 1, 1)
+
+
+        self.verticalLayout_14.addWidget(self.frame_22)
 
         self.label_4 = QLabel(self.page_8)
         self.label_4.setObjectName(u"label_4")
@@ -3472,11 +3525,130 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_12.addWidget(self.BRunSGH)
 
+        self.verticalSpacer_19 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_12.addItem(self.verticalSpacer_19)
+
         self.RunOptions.addWidget(self.page_20)
         self.page_21 = QWidget()
         self.page_21.setObjectName(u"page_21")
         self.verticalLayout_13 = QVBoxLayout(self.page_21)
         self.verticalLayout_13.setObjectName(u"verticalLayout_13")
+        self.frame_16 = QFrame(self.page_21)
+        self.frame_16.setObjectName(u"frame_16")
+        self.frame_16.setFrameShape(QFrame.NoFrame)
+        self.frame_16.setFrameShadow(QFrame.Raised)
+        self.formLayout = QFormLayout(self.frame_16)
+        self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setContentsMargins(0, 5, 0, 5)
+        self.INSingleJob = QRadioButton(self.frame_16)
+        self.INSingleJob.setObjectName(u"INSingleJob")
+        self.INSingleJob.setChecked(True)
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.INSingleJob)
+
+        self.INBatchJob = QRadioButton(self.frame_16)
+        self.INBatchJob.setObjectName(u"INBatchJob")
+
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.INBatchJob)
+
+
+        self.verticalLayout_13.addWidget(self.frame_16)
+
+        self.HomogenizationBatch = QStackedWidget(self.page_21)
+        self.HomogenizationBatch.setObjectName(u"HomogenizationBatch")
+        self.page_5 = QWidget()
+        self.page_5.setObjectName(u"page_5")
+        self.HomogenizationBatch.addWidget(self.page_5)
+        self.page_6 = QWidget()
+        self.page_6.setObjectName(u"page_6")
+        self.verticalLayout_17 = QVBoxLayout(self.page_6)
+        self.verticalLayout_17.setObjectName(u"verticalLayout_17")
+        self.verticalLayout_17.setContentsMargins(0, 0, 0, 0)
+        self.frame_19 = QFrame(self.page_6)
+        self.frame_19.setObjectName(u"frame_19")
+        self.frame_19.setFrameShape(QFrame.NoFrame)
+        self.frame_19.setFrameShadow(QFrame.Raised)
+        self.formLayout_7 = QFormLayout(self.frame_19)
+        self.formLayout_7.setObjectName(u"formLayout_7")
+        self.formLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.LBatchType = QLabel(self.frame_19)
+        self.LBatchType.setObjectName(u"LBatchType")
+
+        self.formLayout_7.setWidget(0, QFormLayout.LabelRole, self.LBatchType)
+
+        self.INBatchType = QComboBox(self.frame_19)
+        self.INBatchType.addItem("")
+        self.INBatchType.setObjectName(u"INBatchType")
+
+        self.formLayout_7.setWidget(0, QFormLayout.FieldRole, self.INBatchType)
+
+
+        self.verticalLayout_17.addWidget(self.frame_19)
+
+        self.frame_17 = QFrame(self.page_6)
+        self.frame_17.setObjectName(u"frame_17")
+        sizePolicy.setHeightForWidth(self.frame_17.sizePolicy().hasHeightForWidth())
+        self.frame_17.setSizePolicy(sizePolicy)
+        self.frame_17.setFrameShape(QFrame.NoFrame)
+        self.frame_17.setFrameShadow(QFrame.Raised)
+        self.formLayout_2 = QFormLayout(self.frame_17)
+        self.formLayout_2.setObjectName(u"formLayout_2")
+        self.formLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.INSaveMaterialFiles = QRadioButton(self.frame_17)
+        self.INSaveMaterialFiles.setObjectName(u"INSaveMaterialFiles")
+        self.INSaveMaterialFiles.setChecked(True)
+
+        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.INSaveMaterialFiles)
+
+        self.INSaveAllFiles = QRadioButton(self.frame_17)
+        self.INSaveAllFiles.setObjectName(u"INSaveAllFiles")
+
+        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.INSaveAllFiles)
+
+
+        self.verticalLayout_17.addWidget(self.frame_17, 0, Qt.AlignHCenter)
+
+        self.BSelectGeometryFiles = QPushButton(self.page_6)
+        self.BSelectGeometryFiles.setObjectName(u"BSelectGeometryFiles")
+
+        self.verticalLayout_17.addWidget(self.BSelectGeometryFiles)
+
+        self.frame_21 = QFrame(self.page_6)
+        self.frame_21.setObjectName(u"frame_21")
+        self.frame_21.setFrameShape(QFrame.NoFrame)
+        self.frame_21.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout = QHBoxLayout(self.frame_21)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.LHomogenizingFile = QLabel(self.frame_21)
+        self.LHomogenizingFile.setObjectName(u"LHomogenizingFile")
+        self.LHomogenizingFile.setEnabled(False)
+        font12 = QFont()
+        font12.setItalic(True)
+        self.LHomogenizingFile.setFont(font12)
+
+        self.horizontalLayout.addWidget(self.LHomogenizingFile)
+
+        self.INFileNumber = QLabel(self.frame_21)
+        self.INFileNumber.setObjectName(u"INFileNumber")
+        self.INFileNumber.setEnabled(False)
+
+        self.horizontalLayout.addWidget(self.INFileNumber)
+
+
+        self.verticalLayout_17.addWidget(self.frame_21, 0, Qt.AlignHCenter)
+
+        self.INHomogenizationBatchFile = QLineEdit(self.page_6)
+        self.INHomogenizationBatchFile.setObjectName(u"INHomogenizationBatchFile")
+        self.INHomogenizationBatchFile.setEnabled(False)
+
+        self.verticalLayout_17.addWidget(self.INHomogenizationBatchFile)
+
+        self.HomogenizationBatch.addWidget(self.page_6)
+
+        self.verticalLayout_13.addWidget(self.HomogenizationBatch, 0, Qt.AlignTop)
+
         self.BRunEVPFFT2 = QPushButton(self.page_21)
         self.BRunEVPFFT2.setObjectName(u"BRunEVPFFT2")
 
@@ -4084,6 +4256,7 @@ class Ui_MainWindow(object):
         self.BoundaryConditionsOptions.setCurrentIndex(0)
         self.SolverSettingsOptions.setCurrentIndex(0)
         self.RunOptions.setCurrentIndex(0)
+        self.HomogenizationBatch.setCurrentIndex(0)
         self.tabWidget_2.setCurrentIndex(0)
         self.PostprocessingOptions.setCurrentIndex(0)
         self.OutputWindows.setCurrentIndex(0)
@@ -4245,6 +4418,10 @@ class Ui_MainWindow(object):
         self.label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:14pt; font-weight:700;\">Geometry Settings</span></p></body></html>", None))
         self.BVTKFileProperties.setText(QCoreApplication.translate("MainWindow", u"File Properties", None))
         self.BVTKCustomProperties.setText(QCoreApplication.translate("MainWindow", u"Custom Properties", None))
+        self.label_7.setText(QCoreApplication.translate("MainWindow", u"Voxel Count", None))
+        self.Lvtkvy.setText(QCoreApplication.translate("MainWindow", u"Y", None))
+        self.Lvtkvx.setText(QCoreApplication.translate("MainWindow", u"X", None))
+        self.Lvtkvz.setText(QCoreApplication.translate("MainWindow", u"Z", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-weight:700;\">Origin Point</span></p></body></html>", None))
         self.Lvoz.setText(QCoreApplication.translate("MainWindow", u"Z", None))
         self.Lvoy.setText(QCoreApplication.translate("MainWindow", u"Y", None))
@@ -4662,7 +4839,17 @@ class Ui_MainWindow(object):
         self.INRunSelection.setItemText(1, QCoreApplication.translate("MainWindow", u"Homogenization", None))
 
         self.BRunSGH.setText(QCoreApplication.translate("MainWindow", u"Run SGH Solver", None))
-        self.BRunEVPFFT2.setText(QCoreApplication.translate("MainWindow", u"Run EVPFFT Solver", None))
+        self.INSingleJob.setText(QCoreApplication.translate("MainWindow", u"Single Job", None))
+        self.INBatchJob.setText(QCoreApplication.translate("MainWindow", u"Batch Job", None))
+        self.LBatchType.setText(QCoreApplication.translate("MainWindow", u"Batch Type:", None))
+        self.INBatchType.setItemText(0, QCoreApplication.translate("MainWindow", u"Geometry", None))
+
+        self.INSaveMaterialFiles.setText(QCoreApplication.translate("MainWindow", u"Save Material Constants Files", None))
+        self.INSaveAllFiles.setText(QCoreApplication.translate("MainWindow", u"Save All Files", None))
+        self.BSelectGeometryFiles.setText(QCoreApplication.translate("MainWindow", u"Select Geometry Files", None))
+        self.LHomogenizingFile.setText(QCoreApplication.translate("MainWindow", u"Homogenizing File:", None))
+        self.INFileNumber.setText(QCoreApplication.translate("MainWindow", u"1/1", None))
+        self.BRunEVPFFT2.setText(QCoreApplication.translate("MainWindow", u"Run Homogenization", None))
         self.LPostprocessing.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><img src=\":/Blue Icons/Blue Icons/lens.svg\" width=\"40\" height=\"40\"/></p><p align=\"center\"><span style=\" font-size:16pt; font-weight:700;\">Postprocessing</span></p></body></html>", None))
         self.INSelectPostprocessing.setItemText(0, QCoreApplication.translate("MainWindow", u"SGH", None))
         self.INSelectPostprocessing.setItemText(1, QCoreApplication.translate("MainWindow", u"Homogenization", None))

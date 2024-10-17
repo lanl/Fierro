@@ -10,6 +10,7 @@ from paraview.simple import *
 from Homogenization_WInput import *
 import DeveloperInputs
 from importlib import reload
+from ImageToVTK import *
 #from ReadHDF5 import *
 
 # ==============================================
@@ -540,12 +541,12 @@ def Homogenization(self):
             warning_message('WARNING: No materials were assigned')
     self.NavigationMenu.currentChanged.connect(warning_no_material)
     
-    # Show results immediately when postprocessing tab is pressed
-    def show_results():
-        index = self.NavigationMenu.currentIndex()
-        if index == 8 and self.run == 1:
-            preview_results_click()
-    self.NavigationMenu.currentChanged.connect(show_results)
+#    # Show results immediately when postprocessing tab is pressed
+#    def show_results():
+#        index = self.NavigationMenu.currentIndex()
+#        if index == 8 and self.run == 1:
+#            preview_results_click()
+#    self.NavigationMenu.currentChanged.connect(show_results)
     
     # Boundary Conditions
     def BC_direction():
@@ -583,7 +584,19 @@ def Homogenization(self):
     # Single Run of EVPFFT
     self.run_cnt = 0
     def single_EVPFFT(BC_index):
+        # Create location to save files
+        self.working_directory = os.path.join(self.evpfft_dir, f'{self.job_name}')
+        if not os.path.exists(self.working_directory):
+            os.makedirs(self.working_directory)
+            
+        # Create input files
+        self.ELASTIC_PARAMETERS_0 = os.path.join(self.working_directory, 'elastic_parameters_0.txt')
+        self.ELASTIC_PARAMETERS_1 = os.path.join(self.working_directory, 'elastic_parameters_1.txt')
+        self.PLASTIC_PARAMETERS = os.path.join(self.working_directory, 'plastic_parameters.txt')
+        self.EVPFFT_INPUT = os.path.join(self.working_directory, 'evpfft_lattice_input.txt')
         Homogenization_WInput(self,BC_index)
+        
+        # Define executable path
         reload(DeveloperInputs)
         if self.UserConfig == "Developer":
             executable_path = DeveloperInputs.fierro_evpfft_exe
@@ -610,12 +623,12 @@ def Homogenization(self):
         if BC_index == 5:
             folder1 = "Shear"
             folder2 = "yz"
-        self.working_directory = os.path.join(self.evpfft_dir, 'outputs', folder1, folder2)
-        if not os.path.exists(self.working_directory):
-            os.makedirs(self.working_directory)
+        self.simulation_directory = os.path.join(self.working_directory, folder1, folder2)
+        if not os.path.exists(self.simulation_directory):
+            os.makedirs(self.simulation_directory)
         
         self.p = QProcess()
-        self.p.setWorkingDirectory(self.working_directory)
+        self.p.setWorkingDirectory(self.simulation_directory)
         self.p.readyReadStandardOutput.connect(handle_stdout)
         self.p.readyReadStandardError.connect(handle_stderr)
         self.p.stateChanged.connect(handle_state)
@@ -657,8 +670,8 @@ def Homogenization(self):
         self.state_name = states[state]
         self.RunOutputWindow.appendPlainText(f"{self.state_name}")
     
-    # Batch Run of EVPFFT
-    def batch_EVPFFT():
+    # Run homogenization simulations (6 in total for generating orthotropic properties)
+    def run_homogenization():
         for BC_index in range(6):
             single_EVPFFT(BC_index)
             self.p.waitForStarted()
@@ -667,7 +680,7 @@ def Homogenization(self):
 
             # Generate Homogenized Elastic Constants
             self.THomogenization.setEnabled(True)
-            with open(os.path.join(self.working_directory, 'str_str.out'), newline='') as f:
+            with open(os.path.join(self.simulation_directory, 'str_str.out'), newline='') as f:
                 reader = csv.reader(f)
                 self.ss_data = list(reader)
             s11 = [0 for i in range(int(self.INNumberOfSteps.text())+1)]
@@ -733,7 +746,9 @@ def Homogenization(self):
                 self.THomogenization.setItem(8,0,QTableWidgetItem(str(self.HG23[0])))
                 
                 # Write output file of all homogenized constants
-                self.homogenized_constants = os.path.join(self.evpfft_dir, 'outputs', "MaterialConstants.txt")
+                self.homogenized_constants = os.path.join(self.evpfft_dir, 'MaterialConstants', "MaterialConstants_" + f'{self.mat_name}' + ".txt")
+                if not os.path.exists(os.path.join(self.evpfft_dir, 'MaterialConstants')):
+                        os.makedirs(os.path.join(self.evpfft_dir, 'MaterialConstants'))
                 with open(self.homogenized_constants, "w") as file:
                     file.write(f'Exx, {self.THomogenization.item(0,0).text()}, {self.THomogenization.item(0,1).text()}\n')
                     file.write(f'Eyy, {self.THomogenization.item(1,0).text()}, {self.THomogenization.item(1,1).text()}\n')
@@ -745,14 +760,292 @@ def Homogenization(self):
                     file.write(f'Gyz, {self.THomogenization.item(8,0).text()}, {self.THomogenization.item(8,1).text()}\n')
                     file.write(f'Gzx, {self.THomogenization.item(7,0).text()}, {self.THomogenization.item(7,1).text()}\n')
     
-    # Connect run button to indiviual or batch run
+    # Connect homogenization run button
     self.p = None
     self.run = 0
     def run_click():
-        batch_EVPFFT()
-        self.run = 1
+        if self.INSingleJob.isChecked():
+            self.mat_name = self.TParts.item(0,0).text()
+            self.job_name = "simulation_files"
+            run_homogenization()
+            self.run = 1
+        elif self.INBatchJob.isChecked():
+            # loop over all files
+            for i in range(len(self.file_paths)):
+                # Output information
+                self.mat_name = f'{self.file_names[i]}'
+                self.INFileNumber.setText(f'{i+1}/{self.number_of_files}')
+                self.INHomogenizationBatchFile.setText(f'{self.file_paths[i]}')
+                if self.INSaveMaterialFiles.isChecked():
+                    self.INPartName.setText("Homogenization")
+                    self.job_name = "simulation_files"
+                elif self.INSaveAllFiles.isChecked():
+                    self.INPartName.setText(f'{self.file_names[i]}')
+                    self.job_name = f'{self.file_names[i]}'
+                    
+                # Get file type for image stacks
+                if self.folders:
+                    self.file_type = os.path.splitext(os.listdir(self.file_paths[i])[1])[1]
+                    self.is_file_names = sorted([os.path.join(self.file_paths[i], f) for f in os.listdir(self.file_paths[i]) if f.endswith(self.file_type)])
+            
+                # Delete everything in paraview window
+                sources = paraview.simple.GetSources()
+                for source in sources.values():
+                    paraview.simple.Delete(source)
+                
+                # Import Geometry [.stl]
+                if ".stl" in self.file_type:
+                    # Show the stl part
+                    self.stl = paraview.simple.STLReader(FileNames = self.file_paths[i])
+                    self.display = paraview.simple.Show(self.stl, self.render_view)
+                    paraview.simple.ResetCamera()
+                    
+                    # Define number of voxels based on previous inputs
+                    self.INNumberOfVoxelsX.setText(self.TParts.item(0,7).text())
+                    self.INNumberOfVoxelsY.setText(self.TParts.item(0,8).text())
+                    self.INNumberOfVoxelsZ.setText(self.TParts.item(0,9).text())
+                    
+                    # Define geometry size based on previous inputs
+                    if self.BStlDimensions.isChecked():
+                        # Get the bounds of the stl
+                        self.stl.UpdatePipeline()
+                        self.bounds = self.stl.GetDataInformation().GetBounds()
+                        self.stlLx = round(self.bounds[1] - self.bounds[0],4)
+                        self.stlLy = round(self.bounds[3] - self.bounds[2],4)
+                        self.stlLz = round(self.bounds[5] - self.bounds[4],4)
+                        self.stlOx = self.bounds[0]
+                        self.stlOy = self.bounds[2]
+                        self.stlOz = self.bounds[4]
+                        
+                        # Open voxelization tab and fill out data
+                        self.INOriginX.setText(str(self.stlOx))
+                        self.INOriginY.setText(str(self.stlOy))
+                        self.INOriginZ.setText(str(self.stlOz))
+                        self.INLengthX.setText(str(self.stlLx))
+                        self.INLengthY.setText(str(self.stlLy))
+                        self.INLengthZ.setText(str(self.stlLz))
+                    elif self.BCustomDimensions.isChecked():
+                        # Open voxelization tab and fill out data
+                        self.INOriginX.setText(self.TParts.item(0,1).text())
+                        self.INOriginY.setText(self.TParts.item(0,2).text())
+                        self.INOriginZ.setText(self.TParts.item(0,3).text())
+                        self.INLengthX.setText(self.TParts.item(0,4).text())
+                        self.INLengthY.setText(self.TParts.item(0,5).text())
+                        self.INLengthZ.setText(self.TParts.item(0,6).text())
+                        
+                    # Voxelize geometry
+                    self.BVoxelizeGeometry.click()
+                            
+                # Import Image Stack [.png, jpg, .tiff]
+                elif ".png" in self.file_type or ".jpg" in self.file_type or ".jpeg" in self.file_type or ".tif" in self.file_type or ".tiff" in self.file_type:
+                    # Display image stack in Paraview window
+                    if self.file_type == ".png":
+                        self.imagestack_reader = paraview.simple.PNGSeriesReader(FileNames=self.is_file_names)
+                        paraview.simple.SetDisplayProperties(Representation = "Surface")
+                        text = self.INPartName.text()
+                        self.variable_name = f"part_{text}"
+                        setattr(self, self.variable_name, paraview.simple.Threshold(Input = self.imagestack_reader, ThresholdMethod = "Above Upper Threshold", UpperThreshold = 255))
+                        self.display = paraview.simple.Show(getattr(self, self.variable_name), self.render_view)
+                        paraview.simple.Hide(self.imagestack_reader)
+                        self.render_view.ResetCamera()
+                        self.render_view.StillRender()
+                    elif self.file_type == ".jpg" or self.file_type == ".jpeg":
+                        self.imagestack_reader = paraview.simple.JPEGSeriesReader(FileNames=self.is_file_names)
+                        paraview.simple.UpdatePipeline()
+                        self.imagestack_reader = paraview.simple.ExtractComponent(Input = self.imagestack_reader)
+                        paraview.simple.SetDisplayProperties(self.imagestack_reader, Representation = "Surface")
+                        text = self.INPartName.text()
+                        self.variable_name = f"part_{text}"
+                        setattr(self, self.variable_name, paraview.simple.Threshold(Input = self.imagestack_reader, ThresholdMethod = "Above Upper Threshold", UpperThreshold = 128))
+                        self.display = paraview.simple.Show(getattr(self, self.variable_name), self.render_view)
+                        paraview.simple.Hide(self.imagestack_reader)
+                        self.render_view.ResetCamera()
+                        self.render_view.StillRender()
+                    elif self.file_type == ".tif" or self.file_type == ".tiff":
+                        self.imagestack_reader = paraview.simple.TIFFSeriesReader(FileNames=self.is_file_names)
+                        paraview.simple.SetDisplayProperties(Representation = "Surface")
+                        text = self.INPartName.text()
+                        self.variable_name = f"part_{text}"
+                        setattr(self, self.variable_name, paraview.simple.Threshold(Input = self.imagestack_reader, ThresholdMethod = "Above Upper Threshold", UpperThreshold = 128))
+                        self.display = paraview.simple.Show(getattr(self, self.variable_name), self.render_view)
+                        paraview.simple.Hide(self.imagestack_reader)
+                        self.render_view.ResetCamera()
+                        self.render_view.StillRender()
+                        
+                    # create initial vtk file
+                    ImageToVTK(self.file_paths[i], 'VTK_Geometry_' + self.INPartName.text(), self.voxelizer_dir, self.file_type)
+                    
+                    if self.BVTKFileProperties.isChecked():
+                        # Get the bounds of the image stack
+                        self.imagestack_reader.UpdatePipeline()
+                        self.bounds = self.imagestack_reader.GetDataInformation().GetBounds()
+                        self.vtkLx = round(self.bounds[1] - self.bounds[0],4)
+                        self.vtkLy = round(self.bounds[3] - self.bounds[2],4)
+                        self.vtkLz = round(self.bounds[5] - self.bounds[4],4)
+                        self.vtkOx = self.bounds[0]
+                        self.vtkOy = self.bounds[2]
+                        self.vtkOz = self.bounds[4]
+                        self.extents = self.imagestack_reader.GetDataInformation().GetExtent()
+                        self.vtkNx = int(self.extents[1] - self.extents[0])+1
+                        self.vtkNy = int(self.extents[3] - self.extents[2])+1
+                        self.vtkNz = int(self.extents[5] - self.extents[4])+1
+                    
+                        # Set file properties
+                        self.INvtkvx.setText(str(self.vtkNx))
+                        self.INvtkvy.setText(str(self.vtkNy))
+                        self.INvtkvz.setText(str(self.vtkNz))
+                        self.INvox.setText(str(self.vtkOx))
+                        self.INvoy.setText(str(self.vtkOy))
+                        self.INvoz.setText(str(self.vtkOz))
+                        self.INvlx.setText(str(self.vtkLx))
+                        self.INvly.setText(str(self.vtkLy))
+                        self.INvlz.setText(str(self.vtkLz))
+                        
+                    elif self.BVTKCustomProperties.isChecked():
+                        # Open voxelization tab and fill out data
+                        self.INvox.setText(self.TParts.item(0,1).text())
+                        self.INvoy.setText(self.TParts.item(0,2).text())
+                        self.INvoz.setText(self.TParts.item(0,3).text())
+                        self.INvlx.setText(self.TParts.item(0,4).text())
+                        self.INvly.setText(self.TParts.item(0,5).text())
+                        self.INvlz.setText(self.TParts.item(0,6).text())
+                        self.INvtkvx.setText(str(self.vtkNx))
+                        self.INvtkvy.setText(str(self.vtkNy))
+                        self.INvtkvz.setText(str(self.vtkNz))
+                        
+                    # Alter vtk file to new specifications
+                    
+                    self.BAddVTKGeometry.click()
+                    
+                # Import Data Set [.vtk, .xdmf]
+                elif ".vtk" in self.file_type or ".xdmf" in self.file_type:
+                    # VTK IMPORT
+                    if self.file_type == ".vtk":
+                        # Paraview window
+                        self.vtk_reader = paraview.simple.LegacyVTKReader(FileNames = self.file_paths[i])
+                        paraview.simple.SetDisplayProperties(Representation = "Surface")
+                        text = self.INPartName.text()
+                        self.variable_name = f"part_{text}"
+                        setattr(self, self.variable_name, paraview.simple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0))
+                        self.display = paraview.simple.Show(getattr(self, self.variable_name), self.render_view)
+                        paraview.simple.Hide(self.vtk_reader)
+                        self.render_view.ResetCamera()
+                        self.render_view.StillRender()
+                        
+                        # Read what type of vtk file this is
+                        with open(self.file_paths[i], 'r') as file:
+                            for index, line in enumerate(file):
+                                if index == 3:
+                                    vtk_type = line.strip()
+                                    break
+                                    
+                        # Get the voxels in the vtk
+                        self.extents = self.vtk_reader.GetDataInformation().GetExtent()
+                        self.vtkNx = int(self.extents[1] - self.extents[0])
+                        self.vtkNy = int(self.extents[3] - self.extents[2])
+                        self.vtkNz = int(self.extents[5] - self.extents[4])
+                                    
+                        # STRUCTURED_POINTS vtk file
+                        if "STRUCTURED_POINTS" in vtk_type:
+                            # adjust number of voxels
+                            self.vtkNx += 1
+                            self.vtkNy += 1
+                            self.vtkNz += 1
+                        
+                        # Define geometry size based on previous inputs
+                        if self.BVTKFileProperties.isChecked():
+                            # Get the length of the vtk
+                            self.vtk_reader.UpdatePipeline()
+                            self.bounds = self.vtk_reader.GetDataInformation().GetBounds()
+                            self.vtkLx = round(self.bounds[1] - self.bounds[0],4)
+                            self.vtkLy = round(self.bounds[3] - self.bounds[2],4)
+                            self.vtkLz = round(self.bounds[5] - self.bounds[4],4)
+                            
+                            # Get the origin of the vtk
+                            self.vtkOx = self.bounds[0]
+                            self.vtkOy = self.bounds[2]
+                            self.vtkOz = self.bounds[4]
+                            
+                            # Open vtk tab and fill out data
+                            self.INvox.setText(str(self.vtkOx))
+                            self.INvoy.setText(str(self.vtkOy))
+                            self.INvoz.setText(str(self.vtkOz))
+                            self.INvlx.setText(str(self.vtkLx))
+                            self.INvly.setText(str(self.vtkLy))
+                            self.INvlz.setText(str(self.vtkLz))
+                            self.INvtkvx.setText(str(self.vtkNx))
+                            self.INvtkvy.setText(str(self.vtkNy))
+                            self.INvtkvz.setText(str(self.vtkNz))
+                        elif self.BVTKCustomProperties.isChecked():
+                            # Open voxelization tab and fill out data
+                            self.INvox.setText(self.TParts.item(0,1).text())
+                            self.INvoy.setText(self.TParts.item(0,2).text())
+                            self.INvoz.setText(self.TParts.item(0,3).text())
+                            self.INvlx.setText(self.TParts.item(0,4).text())
+                            self.INvly.setText(self.TParts.item(0,5).text())
+                            self.INvlz.setText(self.TParts.item(0,6).text())
+                            self.INvtkvx.setText(str(self.vtkNx))
+                            self.INvtkvy.setText(str(self.vtkNy))
+                            self.INvtkvz.setText(str(self.vtkNz))
+                        # Alter vtk file to new specifications
+                        self.BAddVTKGeometry.click()
+                            
+                    # XDMF IMPORT
+                    elif self.file_type == ".xdmf":
+                        warning_message("Batch xdmf files are currently not supported")
+                            
+                # Delete previously existing part geometries
+                self.TParts.removeRow(0)
+                            
+                # Run homogenization
+                run_homogenization()
     self.BRunEVPFFT2.clicked.connect(run_click)
+    
+    # Select geometry files for batch run
+    def batch_geometry():
+        # Ask user to select a folder
+        selected_folder = QFileDialog.getExistingDirectory(None, "Select Folder")
 
+        # Get list of all items in the folder
+        items = os.listdir(selected_folder)
+        
+        # Initialize lists to store folders and file types
+        self.folders = []
+        file_types = set()
+        
+        # Iterate through items
+        for item in items:
+            item_path = os.path.join(selected_folder, item)
+            if os.path.isdir(item_path):
+                self.folders.append(item)
+            else:
+                # Get file extension
+                _, extension = os.path.splitext(item)
+                if extension:
+                    file_types.add(extension.lower())
+        
+        # Check if there are folders inside the selected folder
+        if self.folders:
+            self.file_paths = sorted([os.path.join(selected_folder, f) for f in items if not f.startswith('.')])
+            self.file_names = sorted([os.path.splitext(f)[0] for f in items if not f.startswith('.')])
+        else:
+            # File information
+            if not file_types:
+                warning_message("WARNING: the file type could not be determined for the batch job")
+            self.file_type = list(file_types)[0]
+            self.file_paths = sorted([os.path.join(selected_folder, f) for f in items if f.endswith(self.file_type)])
+            self.file_names = sorted([os.path.splitext(f)[0] for f in items if f.endswith(self.file_type)])
+
+        # Output Information
+        self.number_of_files = len(self.file_paths)
+        self.INFileNumber.setText(f'1/{self.number_of_files}')
+        self.INHomogenizationBatchFile.setText(f'{self.file_paths[0]}')
+    self.BSelectGeometryFiles.clicked.connect(batch_geometry)
+    
+    # Select single job or batch job
+    self.INSingleJob.toggled.connect(lambda: self.HomogenizationBatch.setCurrentIndex(0))
+    self.INBatchJob.toggled.connect(lambda: self.HomogenizationBatch.setCurrentIndex(1))
+    
 #    # Upload HDF5
 #    def upload_hdf5_click():
 #        global hdf5_filename
@@ -781,7 +1074,7 @@ def Homogenization(self):
         output_name = str(self.INBCFile.currentText())
         output_parts = output_name.split()
         file_name = "micro_state_timestep_" + str(self.INNumberOfSteps.text()) + ".xdmf"
-        self.output_directory = os.path.join(self.evpfft_dir, 'outputs', output_parts[0], output_parts[1], file_name)
+        self.output_directory = os.path.join(self.working_directory, output_parts[0], output_parts[1], file_name)
         self.results_reader = paraview.simple.XDMFReader(FileNames=self.output_directory)
         
         # Apply threshold to view certain phase id's

@@ -362,14 +362,16 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.INLengthZ.setText(str(self.stlLz))
                         
             # Import Image Stack [.png, jpg, .tiff]
-            elif ".png" in self.INSelectGeometryImport.currentText() or ".jpg" in self.INSelectGeometryImport.currentText():
+            elif ".png" in self.INSelectGeometryImport.currentText() or ".jpg" in self.INSelectGeometryImport.currentText() or ".tif" in self.INSelectGeometryImport.currentText():
                 # get global variables
                 global ct_folder_path
                 ct_dialog = QFileDialog
                 ct_folder_path = ct_dialog.getExistingDirectory(None, "Select Folder")
 
                 # get file type
-                file_type = os.path.splitext(os.listdir(ct_folder_path)[0])[1]
+                file_type = os.path.splitext(os.listdir(ct_folder_path)[1])[1]
+                if file_type == "":
+                    warning_message("WARNING: might be hidden files in foler, couldn't determine file type")
                 
                 # Display image stack in Paraview window
                 all_files = os.listdir(ct_folder_path)
@@ -387,7 +389,6 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.render_view.ResetCamera()
                     self.render_view.StillRender()
                 elif file_type == ".jpg" or file_type == ".jpeg":
-                    print("ENTERED JPG LOOP")
                     self.imagestack_reader = pvsimple.JPEGSeriesReader(FileNames=file_names)
                     pvsimple.UpdatePipeline()
                     self.imagestack_reader = pvsimple.ExtractComponent(Input = self.imagestack_reader)
@@ -433,6 +434,9 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.GeometryOptions.setCurrentIndex(5)
                 
                 # Set file properties
+                self.INvtkvx.setText(str(self.vtkNx))
+                self.INvtkvy.setText(str(self.vtkNy))
+                self.INvtkvz.setText(str(self.vtkNz))
                 self.INvox.setText(str(self.vtkOx))
                 self.INvoy.setText(str(self.vtkOy))
                 self.INvoz.setText(str(self.vtkOz))
@@ -509,6 +513,9 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.GeometryOptions.setCurrentIndex(5)
                     
                     # Set file properties
+                    self.INvtkvx.setText(str(self.vtkNx))
+                    self.INvtkvy.setText(str(self.vtkNy))
+                    self.INvtkvz.setText(str(self.vtkNz))
                     self.INvox.setText(str(self.vtkOx))
                     self.INvoy.setText(str(self.vtkOy))
                     self.INvoz.setText(str(self.vtkOz))
@@ -605,25 +612,12 @@ class FIERRO_GUI(Ui_MainWindow):
 
         # Convert image stack to .vtk
         def image_to_VTK():
-            if file_type == ".png" or file_type == ".jpg" or file_type == ".jpeg":
-                print ("PNG/JPG")
-                # Call ImageToVTK function in python file of same name
-                worker = Worker(self.RunImageToVTK) # Any other args, kwargs are passed to the run function
+            # Call ImageToVTK function in python file of same name
+            worker = Worker(self.RunImageToVTK) # Any other args, kwargs are passed to the run function
 
-                # Execute
-                self.threadpool.start(worker)
-                loadingAnimation()
-                
-            elif file_type == ".tif":
-                print ("TIFF")
-                # Call TiffImageToVTK function in python file of same name, specifying to save only .vtk output
-                worker = Worker(self.RunImageToVTK) # Any other args, kwargs are passed to the run function
-
-                # Execute
-                self.threadpool.start(worker)
-                loadingAnimation()
-                
-                #TiffImageToVTK(ct_folder_path, 'VTK_Geometry_' + self.INPartName.text(), self.voxelizer_dir, '.vtk')
+            # Execute
+            self.threadpool.start(worker)
+            loadingAnimation()
             stopLoadingAnimation()
         
         # Voxelize Geometry
@@ -631,7 +625,12 @@ class FIERRO_GUI(Ui_MainWindow):
             if not self.INNumberOfVoxelsX.text() or not self.INNumberOfVoxelsY.text() or not self.INNumberOfVoxelsZ.text() or not self.INLengthX.text() or not self.INLengthY.text() or not self.INLengthZ.text() or not self.INOriginX.text() or not self.INOriginY.text() or not self.INOriginZ.text():
                 self.warning_message('ERROR: Geometry Input Settins Are Missing')
             else:
-                # Get the vtk location
+                # Get the input file location
+                if self.INBatchJob.isChecked() and self.INHomogenizationBatchFile.text() != "":
+                    global Geometry_filename
+                    Geometry_filename = self.INHomogenizationBatchFile.text()
+            
+                # Get the output vtk location
                 vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
                 
                 # Voxelize STL files
@@ -733,6 +732,22 @@ class FIERRO_GUI(Ui_MainWindow):
         
         # Modiffy vtk file
         def modify_vtk():
+            # Batch geometry run information
+            if self.INBatchJob.isChecked() and self.INHomogenizationBatchFile.text() != "":
+                # Rename the file and save it to directory location
+                self.new_file_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
+                Data_filename = self.INHomogenizationBatchFile.text()
+                if Data_filename != self.new_file_path and os.path.isfile(Data_filename):
+                    shutil.copy(Data_filename, self.new_file_path)
+                # Read what type of vtk file this is
+                with open(self.new_file_path, 'r') as file:
+                    for index, line in enumerate(file):
+                        if index == 3:
+                            vtk_type = line.strip()
+                            break
+                if "STRUCTURED_POINTS" in vtk_type:
+                    self.structured_flag == 1
+                    
             # Fully modify vtk file if it is a structured_points format or the user made changes
             if self.BVTKCustomProperties.isChecked() or self.structured_flag == 1:
                 # read lines of original file
@@ -748,14 +763,17 @@ class FIERRO_GUI(Ui_MainWindow):
                     file.write("DATASET RECTILINEAR_GRID\n")
                     
                     # number of nodes
-                    nodesx = self.vtkNx+1
-                    nodesy = self.vtkNy+1
-                    nodesz = self.vtkNz+1
+                    nodesx = int(self.INvtkvx.text())+1
+                    nodesy = int(self.INvtkvy.text())+1
+                    nodesz = int(self.INvtkvz.text())+1
+#                    nodesx = self.vtkNx+1
+#                    nodesy = self.vtkNy+1
+#                    nodesz = self.vtkNz+1
                     
                     # spacing of nodes
-                    spacex = float(self.INvlx.text())/float(self.vtkNx)
-                    spacey = float(self.INvly.text())/float(self.vtkNy)
-                    spacez = float(self.INvlz.text())/float(self.vtkNz)
+                    spacex = float(self.INvlx.text())/float(self.INvtkvx.text())
+                    spacey = float(self.INvly.text())/float(self.INvtkvy.text())
+                    spacez = float(self.INvlz.text())/float(self.INvtkvz.text())
                     
                     # write the node data
                     file.write(f'DIMENSIONS {nodesx} {nodesy} {nodesz}\n')
@@ -776,7 +794,7 @@ class FIERRO_GUI(Ui_MainWindow):
                     file.write("\n\n")
                     
                     # write the cell data
-                    num_elems = self.vtkNx*self.vtkNy*self.vtkNz
+                    num_elems = int(self.INvtkvx.text())*int(self.INvtkvy.text())*int(self.INvtkvz.text())
                     file.write(f'CELL_DATA {num_elems}\n')
                     file.write("SCALARS density float 1\n")
                     file.write("LOOKUP_TABLE default\n")
@@ -808,9 +826,9 @@ class FIERRO_GUI(Ui_MainWindow):
             self.TParts.setItem(row, 4, QTableWidgetItem(self.INvlx.text()))
             self.TParts.setItem(row, 5, QTableWidgetItem(self.INvly.text()))
             self.TParts.setItem(row, 6, QTableWidgetItem(self.INvlz.text()))
-            self.TParts.setItem(row, 7, QTableWidgetItem(str(self.vtkNx)))
-            self.TParts.setItem(row, 8, QTableWidgetItem(str(self.vtkNy)))
-            self.TParts.setItem(row, 9, QTableWidgetItem(str(self.vtkNz)))
+            self.TParts.setItem(row, 7, QTableWidgetItem(self.INvtkvx.text()))
+            self.TParts.setItem(row, 8, QTableWidgetItem(self.INvtkvy.text()))
+            self.TParts.setItem(row, 9, QTableWidgetItem(self.INvtkvz.text()))
             self.INPartName.clear()
             self.INvox.clear()
             self.INvoy.clear()
@@ -963,12 +981,8 @@ class FIERRO_GUI(Ui_MainWindow):
             os.makedirs(self.voxelizer_dir, exist_ok=True)
             
             # Create temp files for evpfft
-            self.evpfft_dir = os.path.join(self.directory, 'evpfft')
+            self.evpfft_dir = os.path.join(self.directory, 'homogenization')
             os.makedirs(self.evpfft_dir, exist_ok=True)
-            self.ELASTIC_PARAMETERS_0 = os.path.join(self.evpfft_dir, 'elastic_parameters_0.txt')
-            self.ELASTIC_PARAMETERS_1 = os.path.join(self.evpfft_dir, 'elastic_parameters_1.txt')
-            self.PLASTIC_PARAMETERS = os.path.join(self.evpfft_dir, 'plastic_parameters.txt')
-            self.EVPFFT_INPUT = os.path.join(self.evpfft_dir, 'evpfft_lattice_input.txt')
             
             # Create a temp file for the global mesh
             self.global_mesh_dir = os.path.join(self.directory, 'global_mesh')
