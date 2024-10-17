@@ -321,12 +321,51 @@ void SGH3D::update_stress(
         Materials.MaterialEnums.host(mat_id).StrengthRunLocation == model::dual){
 
 
-            for (size_t mat_elem_lid=0; mat_elem_lid<num_mat_elems; mat_elem_lid++){
+        for (size_t mat_elem_lid=0; mat_elem_lid<num_mat_elems; mat_elem_lid++){
 
-                // get elem gid
-                size_t elem_gid = MaterialToMeshMaps_elem.host(mat_elem_lid); 
+            // get elem gid
+            size_t elem_gid = MaterialToMeshMaps_elem.host(mat_elem_lid); 
 
-            } // end serial loop over the material_elem_lids
+
+            size_t gauss_gid = elem_gid;
+
+            // the material point index = the material elem index for a 1-point element
+            size_t mat_point_lid = mat_elem_lid;
+
+            // cut out the node_gids for this element
+            ViewCArrayKokkos<size_t> elem_node_gids;
+            RUN({
+                // slice the nodes on the device side
+                auto elem_node_gids = ViewCArrayKokkos<size_t>(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
+            });
+
+            // --- call strength model from the host side ---
+            Materials.MaterialFunctions.host(mat_id).calc_stress(
+                                            GaussPoints_vel_grad,
+                                            node_coords,
+                                            node_vel,
+                                            elem_node_gids,
+                                            MaterialPoints_pres,
+                                            MaterialPoints_stress,
+                                            MaterialPoints_sspd,
+                                            MaterialPoints_eos_state_vars,
+                                            MaterialPoints_strength_state_vars,
+                                            MaterialPoints_den(mat_point_lid),
+                                            MaterialPoints_sie(1,mat_point_lid),
+                                            MaterialPoints_shear_modulii,
+                                            MaterialToMeshMaps_elem,
+                                            Materials.eos_global_vars,
+                                            Materials.strength_global_vars,
+                                            GaussPoints_vol(elem_gid),
+                                            dt,
+                                            rk_alpha,
+                                            time_value,
+                                            cycle,
+                                            mat_point_lid,
+                                            mat_id,
+                                            gauss_gid);
+
+        } // end serial loop over the material_elem_lids
 
 
     } // call another solver on the host, which then calls strength
