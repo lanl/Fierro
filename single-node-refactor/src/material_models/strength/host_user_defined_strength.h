@@ -32,13 +32,14 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef USER_DEFINED_STRENGTH_H
-#define USER_DEFINED_STRENGTH_H
+#ifndef HOST_USER_DEFINED_STRENGTH_H
+#define HOST_USER_DEFINED_STRENGTH_H
+
 
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn UserDefinedStrengthModel
+/// \fn HostUserDefinedStrengthModel
 ///
 /// \brief user defined strength model
 ///
@@ -61,7 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Time coefficient in the Runge Kutta time integration step
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace UserDefinedStrengthModel {
+namespace HostUserDefinedStrengthModel {
 
     void init_strength_state_vars(
         const DCArrayKokkos <Material_t> &material,
@@ -91,8 +92,7 @@ namespace UserDefinedStrengthModel {
 
     }  // end of init_strength_state_vars
 
-
-    KOKKOS_FUNCTION
+    // function is accessed on the Host
     static void calc_stress(
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos <double> &node_coords,
@@ -123,7 +123,11 @@ namespace UserDefinedStrengthModel {
         // ------------------------------------------------------------------------------
 
         // -----------------------------------------------------------------------------
-        // The user must coding goes here
+        // The user must coding goes here ...
+        //  
+        // REMINDER:
+        // The user must write there own fine-grained parallelism on the device
+        // using, for example, FOR_ALL, FOR_REDUCE_SUM, etc. macros
         // ------------------------------------------------------------------------------
 
         return;
@@ -166,7 +170,7 @@ namespace UserDefinedStrengthModel {
 // -----------------------------------------------------------------------------
 // This is place holder for another user strength model
 // ------------------------------------------------------------------------------
-namespace NotionalStrengthModel {
+namespace HostNotionalStrengthModel {
 
     void init_strength_state_vars(
         const DCArrayKokkos <Material_t> &material,
@@ -197,7 +201,7 @@ namespace NotionalStrengthModel {
     }  // end of init_strength_state_vars
 
     
-    KOKKOS_FUNCTION
+    // function is accessed on the Host
     static void calc_stress(
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos <double> &node_coords,
@@ -219,9 +223,20 @@ namespace NotionalStrengthModel {
         const double time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
-        const size_t mat_id,
-        const size_t gauss_gid)
+        const size_t mat_id)
     {
+
+        // -----------------------------------------------------------------------------
+        // Required variables are here
+        // ------------------------------------------------------------------------------
+
+        // -----------------------------------------------------------------------------
+        // The user must coding goes here ...
+        //  
+        // REMINDER:
+        // The user must write there own fine-grained parallelism on the device
+        // using, for example, FOR_ALL, FOR_REDUCE_SUM, etc. macros
+        // ------------------------------------------------------------------------------
         return;
     } // end of user mat
 

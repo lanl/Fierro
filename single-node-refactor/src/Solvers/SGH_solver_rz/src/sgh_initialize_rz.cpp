@@ -51,7 +51,7 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters,
 
 
     State.node.initialize(rk_num_bins, num_nodes, num_dim, SGHRZ_State::required_node_state);
-    State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, num_dim, SGHRZ_State::required_gauss_pt_state);
+    State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, 3, SGHRZ_State::required_gauss_pt_state);  // note: dims is always 3 
     State.corner.initialize(num_corners, num_dim, SGHRZ_State::required_corner_state);
     
     // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps

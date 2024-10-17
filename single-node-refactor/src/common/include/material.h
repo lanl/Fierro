@@ -40,53 +40,70 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace model
 {
-// strength model types
-enum StrengthType
-{
-    noStrengthType = 0, ///<  No strength model used
-    incrementBased = 1, ///<  Model evaluation is inline with the time integration
-    stateBased = 2,     ///<  Model is based on the state after each stage of the time step
-};
+    // strength model types
+    enum StrengthType
+    {
+        noStrengthType = 0, ///<  No strength model used
+        incrementBased = 1, ///<  Model evaluation is inline with the time integration
+        stateBased = 2,     ///<  Model is based on the state after each stage of the time step
+    };
 
-// Specific strength models
-enum StrengthModels
-{
-    noStrengthModel = 0,
-    userDefinedStrength = 1,
-};
+    // Specific strength models
+    enum StrengthModels
+    {
+        noStrengthModel = 0,
+        userDefinedStrength = 1,
+        hypoElasticPlasticStrength = 2,
+        hypoElasticPlasticStrengthRZ = 3,
+        hostANNStrength = 4,
+    };
 
-// EOS model types
-enum EOSType
-{
-    noEOSType = 0,          ///< No EOS used
-    decoupledEOSType = 1,   ///< only an EOS, or an EOS plus deviatoric stress model
-    coupledEOSType = 2,     ///< EOS is part of a full stress tensor evolution model
-};
+    // EOS model types
+    enum EOSType
+    {
+        noEOSType = 0,          ///< No EOS used
+        decoupledEOSType = 1,   ///< only an EOS, or an EOS plus deviatoric stress model
+        coupledEOSType = 2,     ///< EOS is part of a full stress tensor evolution model
+    };
 
-// The names of the eos models
-enum EOSModels
-{
-    noEOS = 0,          ///<  no model evaluation
-    gammaLawGasEOS = 1, ///<  gamma law gas
-    voidEOS = 2,        ///<  a void material, no sound speed and no pressure
-    userDefinedEOS = 3, ///<  an eos function defined by the user
-};
+    // The names of the eos models
+    enum EOSModels
+    {
+        noEOS = 0,          ///<  no model evaluation
+        gammaLawGasEOS = 1, ///<  gamma law gas
+        voidEOS = 2,        ///<  a void material, no sound speed and no pressure
+        userDefinedEOS = 3, ///<  an eos function defined by the user
+        hostUserDefinedEOS = 4, 
+        mieGruneisenEOS = 5,
+    };
 
-// failure models
-enum FailureModels
-{
-    noFailure = 0,      ///< Material does not fail
-    brittleFailure = 1, ///< Material fails after exceeding yield stress
-    ductileFailure = 2, ///< Material grows voids that lead to complete failure
-};
+    // failure models
+    enum FailureModels
+    {
+        noFailure = 0,      ///< Material does not fail
+        brittleFailure = 1, ///< Material fails after exceeding yield stress
+        ductileFailure = 2, ///< Material grows voids that lead to complete failure
+    };
 
-// erosion model t
-enum ErosionModels
-{
-    noErosion = 1,      ///<  no element erosion
-    basicErosion = 2,   ///<  basic element erosion
-};
+    // erosion model t
+    enum ErosionModels
+    {
+        noErosion = 1,      ///<  no element erosion
+        basicErosion = 2,   ///<  basic element erosion
+    };
+    
+    // Model run locations
+    enum RunLocation
+    {
+        device = 0,     ///<  run on device e.g., GPUs
+        host = 1,       ///<  run on the host, which is always the CPU
+        dual = 2,       ///<  multi-scale solver, solver is on cpu and solver calls model on device
+    };
+
 } // end model namespace
+
+
+
 
 static std::map<std::string, model::StrengthType> strength_type_map
 {
@@ -99,7 +116,11 @@ static std::map<std::string, model::StrengthModels> strength_models_map
 {
     { "no_strength", model::noStrengthModel },
     { "user_defined_strength", model::userDefinedStrength },
+    { "hypo_elastic_plastic_strength", model::hypoElasticPlasticStrength },
+    { "hypo_elastic_plastic_strength_rz", model::hypoElasticPlasticStrengthRZ },
+    { "host_ann_strength", model::hostANNStrength },
 };
+
 
 static std::map<std::string, model::EOSType> eos_type_map
 {
@@ -114,7 +135,9 @@ static std::map<std::string, model::EOSModels> eos_models_map
     { "gamma_law_gas", model::gammaLawGasEOS },
     { "void", model::voidEOS },
     { "user_defined_eos", model::userDefinedEOS },
+    { "mie_gruneisen_eos", model::mieGruneisenEOS },
 };
+
 
 static std::map<std::string, model::ErosionModels> erosion_model_map
 {
@@ -158,8 +181,14 @@ struct MaterialEnums_t
     // none, decoupled, or coupled eos
     model::EOSType EOSType = model::noEOSType;
 
+    // call a second solver, which then calls the eos model
+    model::RunLocation EOSRunLocation = model::device;
+
     // Strength model type: none, or increment- or state-based
     model::StrengthType StrengthType = model::noStrengthType;
+
+    // call a second solver, which then calls the strength model
+    model::RunLocation StrengthRunLocation = model::device;
 
     // Erosion model type: none or basis
     model::ErosionModels ErosionModels = model::noErosion;
@@ -198,13 +227,14 @@ struct MaterialFunctions_t
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const RaggedRightArrayKokkos<double>& eos_global_vars) = NULL;
 
     // -- Strength --
 
     // Material strength model function pointers
     void (*calc_stress)(
-        const ViewCArrayKokkos<double>& vel_grad,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos <double> &node_coords,
         const DCArrayKokkos <double> &node_vel,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
@@ -215,6 +245,7 @@ struct MaterialFunctions_t
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
@@ -224,7 +255,8 @@ struct MaterialFunctions_t
         const double time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
-        const size_t mat_id) = NULL;
+        const size_t mat_id,
+        const size_t gauss_gid) = NULL;
 
     // -- Erosion --
 
@@ -261,8 +293,8 @@ struct Material_t
 
     DCArrayKokkos<MaterialSetup_t> MaterialSetup;  // vars to setup and initialize the material
 
-    // device functions and associated data
-    CArrayKokkos<MaterialFunctions_t> MaterialFunctions; // struct with function pointers
+    // device functions and associated data, the host side is for host functions
+    DCArrayKokkos<MaterialFunctions_t> MaterialFunctions; // struct with function pointers
 
     // note: host functions are launched via enums
 

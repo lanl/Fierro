@@ -66,7 +66,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH3D::get_force(const Material_t& Materials,
                       const Mesh_t& mesh,
                       const DCArrayKokkos<double>& GaussPoints_vol,
-                      const DCArrayKokkos<double>& GaussPoints_div,
+                      const DCArrayKokkos<double>& GaussPoints_vel_grad,
                       const DCArrayKokkos<bool>&   MaterialPoints_eroded,
                       const DCArrayKokkos<double>& corner_force,
                       const DCArrayKokkos<double>& node_coords,
@@ -120,8 +120,7 @@ void SGH3D::get_force(const Material_t& Materials,
         // Riemann velocity
         double vel_star_array[3];
 
-        // velocity gradient
-        double vel_grad_array[9];
+
 
         // --- Create views of arrays to aid the force calculation ---
 
@@ -131,7 +130,7 @@ void SGH3D::get_force(const Material_t& Materials,
         ViewCArrayKokkos<double> sum(sum_array, 4);
         ViewCArrayKokkos<double> muc(muc_array, num_nodes_in_elem);
         ViewCArrayKokkos<double> vel_star(vel_star_array, num_dims);
-        ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
+
 
         // element volume
         double vol = GaussPoints_vol(elem_gid);
@@ -149,13 +148,6 @@ void SGH3D::get_force(const Material_t& Materials,
                               node_coords,
                               elem_node_gids);
 
-        // --- Calculate the velocity gradient ---
-        SGH3D::get_velgrad(vel_grad,
-                    elem_node_gids,
-                    node_vel,
-                    area_normal,
-                    vol,
-                    elem_gid);
 
         // the -1 is for the inward surface area normal,
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -164,16 +156,18 @@ void SGH3D::get_force(const Material_t& Materials,
             } // end for
         } // end for
 
-        double div = GaussPoints_div(elem_gid);
+        double div = GaussPoints_vel_grad(elem_gid, 0, 0) + 
+                     GaussPoints_vel_grad(elem_gid, 1, 1) + 
+                     GaussPoints_vel_grad(elem_gid, 2, 2);
 
         // vel = [u,v,w]
         //            [du/dx,  du/dy,  du/dz]
         // vel_grad = [dv/dx,  dv/dy,  dv/dz]
         //            [dw/dx,  dw/dy,  dw/dz]
         double curl[3];
-        curl[0] = vel_grad(2, 1) - vel_grad(1, 2);  // dw/dy - dv/dz
-        curl[1] = vel_grad(0, 2) - vel_grad(2, 0);  // du/dz - dw/dx
-        curl[2] = vel_grad(1, 0) - vel_grad(0, 1);  // dv/dx - du/dy
+        curl[0] = GaussPoints_vel_grad(elem_gid, 2, 1) - GaussPoints_vel_grad(elem_gid, 1, 2);  // dw/dy - dv/dz
+        curl[1] = GaussPoints_vel_grad(elem_gid, 0, 2) - GaussPoints_vel_grad(elem_gid, 2, 0);  // du/dz - dw/dx
+        curl[2] = GaussPoints_vel_grad(elem_gid, 1, 0) - GaussPoints_vel_grad(elem_gid, 0, 1);  // dv/dx - du/dy
 
         double mag_curl = sqrt(curl[0] * curl[0] + curl[1] * curl[1] + curl[2] * curl[2]);
 
@@ -336,7 +330,9 @@ void SGH3D::get_force(const Material_t& Materials,
             size_t neighbor_gid = mesh.elems_in_elem(elem_gid, elem_lid);
 
             // calculate the velocity divergence in neighbor
-            double div_neighbor = GaussPoints_div(neighbor_gid);
+            double div_neighbor = GaussPoints_vel_grad(neighbor_gid, 0, 0) + 
+                                  GaussPoints_vel_grad(neighbor_gid, 1, 1) + 
+                                  GaussPoints_vel_grad(neighbor_gid, 2, 2);
 
             r_face = r_coef * (div_neighbor + small) / (div + small);
 

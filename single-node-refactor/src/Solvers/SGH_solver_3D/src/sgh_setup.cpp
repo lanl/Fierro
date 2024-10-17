@@ -443,6 +443,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                             State.MaterialPoints(mat_id).sie,
                             State.MaterialPoints(mat_id).eos_state_vars,
                             State.MaterialPoints(mat_id).strength_state_vars,
+                            State.MaterialPoints(mat_id).shear_modulii,
                             rk_num_bins,
                             num_mat_points,
                             mat_id);
@@ -452,54 +453,22 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     init_corner_node_masses_zero(mesh, State.node.mass, State.corner.mass);
 
     // calculate corner and node masses on the mesh
-    if (mesh.num_dims == 3) {
-        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+        size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
-            calc_corner_mass(Materials,
-                             mesh,
-                             State.node.coords,
-                             State.node.mass,
-                             State.corner.mass,
-                             State.MaterialPoints(mat_id).mass,
-                             State.MaterialToMeshMaps(mat_id).elem,
-                             num_mat_elems);
-        } // end for mat_id
+        calc_corner_mass(Materials,
+                            mesh,
+                            State.node.coords,
+                            State.node.mass,
+                            State.corner.mass,
+                            State.MaterialPoints(mat_id).mass,
+                            State.MaterialToMeshMaps(mat_id).elem,
+                            num_mat_elems);
+    } // end for mat_id
 
-        calc_node_mass(mesh,
-                       State.node.coords,
-                       State.node.mass,
-                       State.corner.mass);
-    }
-    else{
-        // 2D RZ
-        // // calculate the corner massess if 2D
-        // if (mesh.num_dims == 2) {
-        //     FOR_ALL(elem_gid, 0, mesh.num_elems, {
-        //         // facial area of the corners
-        //         double corner_areas_array[4];
-
-        //         ViewCArrayKokkos<double> corner_areas(&corner_areas_array[0], 4);
-        //         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
-
-        //         geometry::get_area_weights2D(corner_areas, elem_gid, node_coords, elem_node_gids);
-
-        //         // loop over the corners of the element and calculate the mass
-        //         for (size_t corner_lid = 0; corner_lid < 4; corner_lid++) {
-        //             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-        //             corner_mass(corner_gid) = corner_areas(corner_lid) * MaterialPoints.den(elem_gid); // node radius is added later
-        //         } // end for over corners
-        //     });
-        //
-        //
-        //    FOR_ALL(nodes_gid=0; nodes_gid<mesh.num_nodes; nodes_gid++){
-        //        for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
-        //            size_t corner_gid    = mesh.corners_in_node(node_gid, corner_lid);
-        //            State.node.mass(node_gid) += corner.mass(corner_gid);  // sans the radius so it is areal node mass
-        //
-        //            corner.mass(corner_gid) *= State.node.coords(1, node_gid, 1); // true corner mass now
-        //        } // end for elem_lid
-        //    });
-        // } // end of
-    } // end if 2D
+    calc_node_mass(mesh,
+                   State.node.coords,
+                   State.node.mass,
+                   State.corner.mass);
+    
 } // end SGH setup

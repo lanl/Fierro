@@ -890,17 +890,50 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const DCArrayKokkos<double>& MaterialPoints_stress,
                             const DCArrayKokkos<double>& MaterialPoints_sspd,
                             const DCArrayKokkos<double>& MaterialPoints_sie,
-                            const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
-                            const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
+                            const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                            const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                            const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
                             const size_t rk_num_bins,
                             const size_t num_mat_pts,
                             const size_t mat_id)
 {
 
-
     // -------
     // the call to the model initialization goes here
     // -------
+
+    // --- Shear modulus ---
+    // loop over the material points
+    FOR_ALL(mat_point_lid, 0, num_mat_pts, {
+
+        // setting shear modulii to zero, corresponds to a gas
+        for(size_t i; i<3; i++){
+            MaterialPoints_shear_modulii(mat_point_lid,i) = 0.0;
+        } // end for
+
+    });
+
+
+    // --- stress tensor ---
+    for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){                
+
+        FOR_ALL(mat_point_lid, 0, num_mat_pts, {
+
+            // always 3D even for 2D-RZ
+            for (size_t i = 0; i < 3; i++) {
+                for (size_t j = 0; j < 3; j++) {
+
+                    // ===============
+                    //  Call the strength model here
+                    // ===============
+                    MaterialPoints_stress(rk_level, mat_point_lid, i, j) = 0.0;
+                }
+            }  // end for i,j
+                             
+        }); // end parallel for over matpt storage
+
+    }// end for rk_level
+
 
     // --- pressure and sound speed ---
     // loop over the material points
@@ -928,25 +961,12 @@ void init_press_sspd_stress(const Material_t& Materials,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(0, mat_point_lid),
+                                        MaterialPoints_shear_modulii,
                                         Materials.eos_global_vars);
     }); // end pressure and sound speed
 
 
-    // --- stress tensor ---
-    for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){                
 
-        FOR_ALL(mat_point_lid, 0, num_mat_pts, {
-
-            // always 3D even for 2D-RZ
-            for (size_t i = 0; i < 3; i++) {
-                for (size_t j = 0; j < 3; j++) {
-                    MaterialPoints_stress(rk_level, mat_point_lid, i, j) = 0.0;
-                }
-            }  // end for i,j
-                             
-        }); // end parallel for over matpt storage
-
-    }// end for rk_level
 
 } // end function
 
