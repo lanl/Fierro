@@ -67,18 +67,23 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "void_eos.h"
 #include "host_user_defined_eos.h"
 
-//#ifdef ANALYTIC_DEFINED_EOS_H
+// ----
+#if __has_include("analytic_defined_eos.h")
 #include "analytic_defined_eos.h"
-//#endif
+#endif
+// ----
 
 // strength
 #include "no_strength.h"
 #include "user_defined_strength.h"
 #include "host_user_defined_strength.h"
 #include "host_ann_strength.h"
-//#ifdef DECOUPLED_STRENGTH_H
+
+// ----
+#if __has_include("decoupled_strength.h")
 #include "decoupled_strength.h"
-//#endif
+#endif
+// ----
 
 // erosion files
 #include "basic_erosion.h"
@@ -1747,7 +1752,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }
                             break;
-//#ifdef ANALYTIC_DEFINED_EOS_H
+#ifdef ANALYTIC_DEFINED_EOS_H
                         // call Gruneisen
                         case model::mieGruneisenEOS:
                             Materials.MaterialFunctions.host(mat_id).calc_pressure    = &MieGruneisenEOSModel::calc_pressure;
@@ -1760,7 +1765,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                         // add other analytic EOS models here, e.g., Johnson-Cook etc.
                         // ....
 
-//#endif
+#endif
                         default:
                             std::cout << "ERROR: invalid input: " << eos << std::endl;
                             throw std::runtime_error("**** EOS Not Understood ****");
@@ -1867,7 +1872,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
                             }
                             break;
-//#ifdef DECOUPLED_STRENGTH_H
+#ifdef DECOUPLED_STRENGTH_H
                         // call elastic plastic model
                         case model::hypoElasticPlasticStrength:
                             Materials.MaterialFunctions.host(mat_id).calc_stress = &HypoElasticPlasticModel::calc_stress;
@@ -1886,7 +1891,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                         // add other elastic plastic models here, e.g., Johnson-Cook strength etc.
                         // ....
                         
-//#endif
+#endif
                         default:
                             std::cout << "ERROR: invalid strength input: " << strength_model << std::endl;
                             throw std::runtime_error("**** Strength model Not Understood ****");
