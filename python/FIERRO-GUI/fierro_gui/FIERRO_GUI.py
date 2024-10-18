@@ -54,6 +54,7 @@ from Homogenization import *
 from Mesh_Builder_WInput import *
 from FIERRO_Setup import *
 from ImageToVTK import *
+from Save_Load import *
 #from TiffImageToVTK import *
 #from Dream3DReader import *
 import DeveloperInputs
@@ -191,7 +192,13 @@ class FIERRO_GUI(Ui_MainWindow):
         
         # Fierro Setup Menu
         self.actionChange_Working_Directory.triggered.connect(self.open_fierro_setup_dialog)
-
+        
+        # Save menu
+        self.actionSaveAs.triggered.connect(self.open_save_dialog)
+        
+        # Load menu
+        self.actionOpen.triggered.connect(self.open_load_dialog)
+        
         def loadingAnimation():
             hi = 1
 #            print ("Start load animation")
@@ -997,6 +1004,14 @@ class FIERRO_GUI(Ui_MainWindow):
         
         else:
             self.warning_message("ERROR: Working directory was not defined")
+            
+    # Save file
+    def open_save_dialog(self):
+        Save(self)
+        
+    # Load file
+    def open_load_dialog(self):
+        Load(self)
     
     # Output which user profile the user selected
     def handleSettingChanged(self, setting):

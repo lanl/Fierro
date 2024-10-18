@@ -352,7 +352,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>6</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -7546,6 +7546,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionOpen"/>
+    <addaction name="actionSaveAs"/>
     <addaction name="actionChange_Working_Directory"/>
    </widget>
    <addaction name="menuFile"/>
@@ -7558,7 +7560,22 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="actionChange_Working_Directory">
    <property name="text">
-    <string>Change Fierro Setup</string>
+    <string>Change Working Directory</string>
+   </property>
+  </action>
+  <action name="actionSaveAs">
+   <property name="text">
+    <string>Save as..</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>Help</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open</string>
    </property>
   </action>
  </widget>
