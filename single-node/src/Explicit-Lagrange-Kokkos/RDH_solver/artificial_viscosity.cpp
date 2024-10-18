@@ -370,7 +370,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
                 for(int i = 0; i < mesh.num_dims; i++){
                     for(int j = 0; j < mesh.num_dims; j++){
-                        sigma_a(stage, gauss_gid, i, j) = 0.0*mu(gauss_gid)*grad_u(gauss_gid, i, j);
+                        sigma_a(stage, gauss_gid, i, j) = mu(gauss_gid)*grad_u(gauss_gid, i, j);
                         //printf("sigma_a : %f \n", sigma_a(stage, gauss_gid, i, j));
                     }// j
                 }// i

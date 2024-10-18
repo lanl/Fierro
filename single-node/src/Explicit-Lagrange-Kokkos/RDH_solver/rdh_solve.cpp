@@ -228,7 +228,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
 
 
         // integrate solution forward in time        
-        for (size_t rk_stage = 0; rk_stage < 1; rk_stage++){//rk_num_stages; rk_stage++){
+        for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
             
             get_grad_vel(grad_vel,
                               node_vel,
@@ -362,7 +362,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             Kokkos::fence();
 
             // if (rk_stage == 1){
-                // correct_force_tensor(Fc, rk_stage, mesh, L2, M_V, lumped_mass, F_dot_ones, dt);
+            correct_force_tensor(Fc, rk_stage, mesh, L2, M_V, lumped_mass, F_dot_ones, dt);
             // }
             
             CArrayKokkos <double> Thermo_L2(mesh.num_zones,"Thermo_L2");

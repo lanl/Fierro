@@ -122,8 +122,8 @@ void build_force_tensor( CArrayKokkos <double> &force_tensor,
     });
     Kokkos::fence();
                     
-    // FOR_ALL(elem_gid, 0, mesh.num_elems, {
-    for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
+    FOR_ALL(elem_gid, 0, mesh.num_elems, {
+    // for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
         for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++){
             int global_K_dof = mesh.nodes_in_elem(elem_gid, K_dof);
 
@@ -145,9 +145,9 @@ void build_force_tensor( CArrayKokkos <double> &force_tensor,
                 }// end loop over dimension
             }// end loop over thermodynamic dofs
         }// end loop over kinematic dofs
-    }
-    // });// end FOR_ALL over elements
-    // Kokkos::fence();
+    // }
+    });// end FOR_ALL over elements
+    Kokkos::fence();
     
 }// end function
 

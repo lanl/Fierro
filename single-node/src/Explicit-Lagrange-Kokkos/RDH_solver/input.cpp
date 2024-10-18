@@ -90,7 +90,7 @@ void input(CArrayKokkos <material_t> &material,
 
     
     // --- number of material regions ---
-    num_materials = 1; // usually 1, but 3 for triple point
+    num_materials = 3; // usually 1, but 3 for triple point
     material = CArrayKokkos <material_t> (num_materials); // create material
     
     
@@ -100,7 +100,7 @@ void input(CArrayKokkos <material_t> &material,
     
     
     // --- number of fill regions ---
-    num_fills = 1;  // =2 for Sedov,Sod; =3 for Triple point; =1 Noh3D,TGV, material (box)
+    num_fills = 3;  // =2 for Sedov,Sod; =3 for Triple point; =1 Noh3D,TGV, material (box)
     mat_fill = CArrayKokkos <mat_fill_t> (num_fills); // create fills
     
     
@@ -109,7 +109,7 @@ void input(CArrayKokkos <material_t> &material,
     boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---
-    test_problem = test::TaylorGreen;//test::Sod3DX;//test::Noh3D;//test::Sedov3D;//test::TriplePoint;//test::TaylorAnvil;//test::box;//
+    test_problem = test::TriplePoint;//test::TaylorGreen;//test::Sod3DX;//test::Noh3D;//test::Sedov3D;//test::TaylorAnvil;//test::box;//
     
     
     // ---- fill instructions and intial conditions ---- //
