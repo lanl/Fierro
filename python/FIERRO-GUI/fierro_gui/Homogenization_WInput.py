@@ -81,13 +81,18 @@ def Homogenization_WInput(self, BC_index):
             else:
                 if i == 0:
                     efile = f'{self.ELASTIC_PARAMETERS_0}'
+                    phase1 = '*INFORMATION ABOUT PHASE #1\n' + \
+                             '0                          igas(iph)\n' + \
+                             '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  \
+                             f'{self.PLASTIC_PARAMETERS}\n' + \
+                             efile + '\n'
                 else:
                     efile = f'{self.ELASTIC_PARAMETERS_1}'
-                phase2 = '*INFORMATION ABOUT PHASE #2\n' + \
-                         '0                          igas(iph)\n' + \
-                         '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  \
-                         f'{self.PLASTIC_PARAMETERS}\n' + \
-                         efile + '\n'
+                    phase2 = '*INFORMATION ABOUT PHASE #2\n' + \
+                             '0                          igas(iph)\n' + \
+                             '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  \
+                             f'{self.PLASTIC_PARAMETERS}\n' + \
+                             efile + '\n'
         else:
             phase1 = '*INFORMATION ABOUT PHASE #1\n' + \
                      '1                          igas(iph)\n' + \
