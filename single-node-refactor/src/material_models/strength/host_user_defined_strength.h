@@ -65,7 +65,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace HostUserDefinedStrengthModel {
 
     void init_strength_state_vars(
-        const DCArrayKokkos <Material_t> &material,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
@@ -135,7 +134,6 @@ namespace HostUserDefinedStrengthModel {
 
     
     void destroy(
-        const DCArrayKokkos <Material_t> &material,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
@@ -173,7 +171,6 @@ namespace HostUserDefinedStrengthModel {
 namespace HostNotionalStrengthModel {
 
     void init_strength_state_vars(
-        const DCArrayKokkos <Material_t> &material,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
@@ -242,7 +239,6 @@ namespace HostNotionalStrengthModel {
 
 
     void destroy(
-        const DCArrayKokkos <Material_t> &material,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,

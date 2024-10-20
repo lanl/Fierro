@@ -181,14 +181,17 @@ struct MaterialEnums_t
     // none, decoupled, or coupled eos
     model::EOSType EOSType = model::noEOSType;
 
-    // call a second solver, which then calls the eos model
+    // eos model run location
     model::RunLocation EOSRunLocation = model::device;
 
     // Strength model type: none, or increment- or state-based
     model::StrengthType StrengthType = model::noStrengthType;
 
-    // call a second solver, which then calls the strength model
+    // strength model run location
     model::RunLocation StrengthRunLocation = model::device;
+
+    // strength model intialization location    
+    model::RunLocation StrengthSetupLocation = model::host;
 
     // Erosion model type: none or basis
     model::ErosionModels ErosionModels = model::noErosion;
@@ -257,6 +260,16 @@ struct MaterialFunctions_t
         const size_t MaterialPoints_lid,
         const size_t mat_id,
         const size_t gauss_gid) = NULL;
+    
+    void (*init_strength_state_vars)(
+        const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
+        const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
+        const RaggedRightArrayKokkos <double> &eos_global_vars,
+        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t num_material_points,
+        const size_t mat_id) = NULL;
+
 
     // -- Erosion --
 

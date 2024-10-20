@@ -434,19 +434,30 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
         size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
 
+        // call the initialization function for state vars
+        init_state_vars(Materials,
+                        mesh,
+                        State.MaterialPoints(mat_id).eos_state_vars,
+                        State.MaterialPoints(mat_id).strength_state_vars,
+                        State.MaterialToMeshMaps(mat_id).elem,
+                        rk_num_bins,
+                        num_mat_points,
+                        mat_id);
+
+        // call the init function for pressure, sound speed, and stress
         init_press_sspd_stress(Materials,
-                            mesh,
-                            State.MaterialPoints(mat_id).den,
-                            State.MaterialPoints(mat_id).pres,
-                            State.MaterialPoints(mat_id).stress,
-                            State.MaterialPoints(mat_id).sspd,
-                            State.MaterialPoints(mat_id).sie,
-                            State.MaterialPoints(mat_id).eos_state_vars,
-                            State.MaterialPoints(mat_id).strength_state_vars,
-                            State.MaterialPoints(mat_id).shear_modulii,
-                            rk_num_bins,
-                            num_mat_points,
-                            mat_id);
+                               mesh,
+                               State.MaterialPoints(mat_id).den,
+                               State.MaterialPoints(mat_id).pres,
+                               State.MaterialPoints(mat_id).stress,
+                               State.MaterialPoints(mat_id).sspd,
+                               State.MaterialPoints(mat_id).sie,
+                               State.MaterialPoints(mat_id).eos_state_vars,
+                               State.MaterialPoints(mat_id).strength_state_vars,
+                               State.MaterialPoints(mat_id).shear_modulii,
+                               rk_num_bins,
+                               num_mat_points,
+                               mat_id);
     } // for loop over mat_id
 
     // set corner and node masses to zero

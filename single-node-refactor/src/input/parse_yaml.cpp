@@ -1846,6 +1846,16 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialFunctions(mat_id).calc_stress = &NoStrengthModel::calc_stress;
                             });
+                            // note: default run location for strength is device
+
+                            Materials.MaterialFunctions.host(mat_id).init_strength_state_vars = &NoStrengthModel::init_strength_state_vars;
+                            
+                            // the default run location for the initialization function is host, but below here shows how to set it
+                            RUN({
+                                Materials.MaterialEnums(mat_id).StrengthSetupLocation = model::host;
+                            });
+                            Materials.MaterialEnums.host(mat_id).StrengthSetupLocation = model::host;
+
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
                             }
@@ -1856,6 +1866,12 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                             RUN({
                                 Materials.MaterialFunctions(mat_id).calc_stress = &UserDefinedStrengthModel::calc_stress;
                             });
+                            // note: default run location for strength is device
+
+                            Materials.MaterialFunctions.host(mat_id).init_strength_state_vars = &UserDefinedStrengthModel::init_strength_state_vars;
+                            // note: default run location for initialization is always host
+                            
+
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
                             }
@@ -1863,10 +1879,17 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
 
                         case model::hostANNStrength:
                             
+                            // set the stress function
                             Materials.MaterialFunctions.host(mat_id).calc_stress = &HostANNStrengthModel::calc_stress;
 
-                            RUN({Materials.MaterialEnums(mat_id).StrengthRunLocation = model::host;});
+                            // set the run location for strength
+                            Materials.MaterialEnums(mat_id).StrengthRunLocation = model::host;
                             Materials.MaterialEnums.host(mat_id).StrengthRunLocation = model::host;
+
+                            // set the strength initialization function
+                            Materials.MaterialFunctions.host(mat_id).init_strength_state_vars = &HostANNStrengthModel::init_strength_state_vars;
+                            // note: default run location for initialization is always host
+
 
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
@@ -1875,14 +1898,33 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
 #ifdef DECOUPLED_STRENGTH_H
                         // call elastic plastic model
                         case model::hypoElasticPlasticStrength:
-                            Materials.MaterialFunctions.host(mat_id).calc_stress = &HypoElasticPlasticModel::calc_stress;
+
+                            // set the stress function
+                            RUN({
+                                Materials.MaterialFunctions(mat_id).calc_stress = &HypoElasticPlasticModel::calc_stress;
+                            });
+                            // note: default run location for strength is device
+
+                            // set the strength initialization function
+                            Materials.MaterialFunctions.host(mat_id).init_strength_state_vars = &HypoElasticPlasticModel::init_strength_state_vars;
+                            // note: default run location for initialization is always host
+
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
                             }
                             break;  
                         
                         case model::hypoElasticPlasticStrengthRZ:
-                            Materials.MaterialFunctions.host(mat_id).calc_stress = &HypoElasticPlasticRZModel::calc_stress;
+
+                            RUN({
+                                Materials.MaterialFunctions(mat_id).calc_stress = &HypoElasticPlasticRZModel::calc_stress;
+                            });
+                            // note: default run location for strength is device
+
+                            // set the strength initialization function
+                            Materials.MaterialFunctions.host(mat_id).init_strength_state_vars = &HypoElasticPlasticRZModel::init_strength_state_vars;
+                            // note: default run location for initialization is always host
+
                             if (VERBOSE) {
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
                             }

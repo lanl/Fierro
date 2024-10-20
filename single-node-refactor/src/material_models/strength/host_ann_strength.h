@@ -41,7 +41,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 
 // the number of nodes in each layer of the ANN
-std::vector <size_t> num_nodes_in_layer = {64000, 30000, 8000, 4000, 100, 25, 6};
+std::vector <size_t> num_nodes_in_layer = {6, 3, 1}; //{64000, 30000, 8000, 4000, 100, 25, 6};
 
 // array of ANN structs
 struct ANNLayer_t{
@@ -79,8 +79,12 @@ void forward_propagate_layer_host(const DCArrayKokkos <float> &inputs,
                                   const DFArrayKokkos <float> &weights,
                                   const DCArrayKokkos <float> &biases){
     
+    printf("hello inside forward propogate \n");
+
     const size_t num_i = inputs.size();
     const size_t num_j = outputs.size();
+
+    printf("num i and j = %zu and %zu \n", num_i, num_j);
 
 
     // For a GPU, use the nested parallelism below here
@@ -92,10 +96,16 @@ void forward_propagate_layer_host(const DCArrayKokkos <float> &inputs,
         int j = team_h.league_rank();
         Kokkos::parallel_reduce (Kokkos::TeamThreadRange (team_h, num_i),
                         [&] (int i, float& lsum) {
+
+            printf("bias = %f \n", biases(j));
             lsum += inputs(i)*weights(i,j) + biases(j);
+
+            
         }, sum); // end parallel reduce
 
         outputs(j) = 1.0/(1.0 + exp(-sum)); 
+
+        
 
     }); // end parallel for
     
@@ -143,7 +153,6 @@ namespace HostANNStrengthModel {
     size_t num_layers;
 
     void init_strength_state_vars(
-        const DCArrayKokkos <Material_t> &material,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
@@ -163,7 +172,7 @@ namespace HostANNStrengthModel {
         CMatrix <ANNLayer_t> ANNLayers(num_layers); // starts at 1 and goes to num_layers
 
         // input and ouput values to ANN
-        DCArrayKokkos <float> inputs(num_nodes_in_layer[0]);
+        inputs = DCArrayKokkos <float> (num_nodes_in_layer[0]);
 
 
         // set the strides
@@ -206,6 +215,8 @@ namespace HostANNStrengthModel {
 
         } // end for over layers
 
+        printf("hello inside ANN init fcn \n");
+
     }  // end of init_strength_state_vars
 
 
@@ -235,6 +246,9 @@ namespace HostANNStrengthModel {
         const size_t mat_id,
         const size_t gauss_gid)
     {
+
+        printf("hello inside ANN stress \n");
+
         // layer 1, hidden layer 0, uses the inputs as the input values
         forward_propagate_layer_host(inputs,
                                      ANNLayers(1).outputs,
@@ -256,7 +270,6 @@ namespace HostANNStrengthModel {
 
     
     void destroy(
-        const DCArrayKokkos <Material_t> &material,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,

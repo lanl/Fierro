@@ -339,6 +339,8 @@ void SGH3D::update_stress(
                 auto elem_node_gids = ViewCArrayKokkos<size_t>(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
             });
 
+            printf("hello from host model call \n");
+
             // --- call strength model from the host side ---
             Materials.MaterialFunctions.host(mat_id).calc_stress(
                                             GaussPoints_vel_grad,

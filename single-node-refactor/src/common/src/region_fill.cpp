@@ -862,6 +862,61 @@ void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
 
 
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_state_vars
+///
+/// \brief a function to initialize eos and stress state vars
+///
+/// \param Materials holds the material models and global parameters
+/// \param mesh is the simulation mesh
+/// \param DualArrays for the material point eos state vars
+/// \param DualArrays for the material point strength state vars
+/// \param rk_num_bins is number of time integration storage bins
+/// \param num_mat_pts is the number of material points for mat_id
+/// \param mat_id is material id
+///
+/////////////////////////////////////////////////////////////////////////////
+void init_state_vars(const Material_t& Materials,
+                     const Mesh_t& mesh,
+                     const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                     const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                     const size_t rk_num_bins,
+                     const size_t num_mat_pts,
+                     const size_t mat_id)
+{
+
+    // -------
+    // the call to the model initialization
+    // -------
+    if (Materials.MaterialEnums.host(mat_id).StrengthType == model::incrementBased ||
+        Materials.MaterialEnums.host(mat_id).StrengthType == model::stateBased) {
+
+            if (Materials.MaterialEnums.host(mat_id).StrengthSetupLocation == model::host){
+
+                Materials.MaterialFunctions(mat_id).init_strength_state_vars(
+                                MaterialPoints_eos_state_vars,
+                                MaterialPoints_strength_state_vars,
+                                Materials.eos_global_vars,
+                                Materials.strength_global_vars,
+                                MaterialToMeshMaps_elem,
+                                num_mat_pts,
+                                mat_id);
+
+            } // end if
+            else {
+                // --- running setup function on the device
+
+                printf("Calling initial condition function on GPU is NOT yet supported \n");
+
+            }
+
+    } // end if
+
+} // end of set values in eos and strength state vars
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -897,10 +952,6 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const size_t num_mat_pts,
                             const size_t mat_id)
 {
-
-    // -------
-    // the call to the model initialization goes here
-    // -------
 
     // --- Shear modulus ---
     // loop over the material points
