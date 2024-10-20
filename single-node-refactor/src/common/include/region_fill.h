@@ -169,6 +169,31 @@ void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
                     const size_t f_id,
                     const size_t rk_num_bins);
 
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_state_vars
+///
+/// \brief a function to initialize eos and stress state vars
+///
+/// \param Materials holds the material models and global parameters
+/// \param mesh is the simulation mesh
+/// \param DualArrays for the material point eos state vars
+/// \param DualArrays for the material point strength state vars
+/// \param rk_num_bins is number of time integration storage bins
+/// \param num_mat_pts is the number of material points for mat_id
+/// \param mat_id is material id
+///
+/////////////////////////////////////////////////////////////////////////////
+void init_state_vars(const Material_t& Materials,
+                     const Mesh_t& mesh,
+                     const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                     const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                     const size_t rk_num_bins,
+                     const size_t num_mat_pts,
+                     const size_t mat_id);
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn init_press_sspd_stress
@@ -196,8 +221,9 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const DCArrayKokkos<double>& MaterialPoints_stress,
                             const DCArrayKokkos<double>& MaterialPoints_sspd,
                             const DCArrayKokkos<double>& MaterialPoints_sie,
-                            const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
-                            const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
+                            const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                            const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                            const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
                             const size_t rk_num_bins,
                             const size_t num_mat_pts,
                             const size_t mat_id);

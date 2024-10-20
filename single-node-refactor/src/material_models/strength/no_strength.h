@@ -43,7 +43,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace NoStrengthModel {
 
     void init_strength_state_vars(
-        const DCArrayKokkos <Material_t> &material,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
@@ -73,7 +72,7 @@ namespace NoStrengthModel {
 
     KOKKOS_FUNCTION
     static void calc_stress(
-        const ViewCArrayKokkos<double>& vel_grad,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos <double> &node_coords,
         const DCArrayKokkos <double> &node_vel,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
@@ -84,6 +83,7 @@ namespace NoStrengthModel {
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
@@ -93,7 +93,8 @@ namespace NoStrengthModel {
         const double time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
-        const size_t mat_id)
+        const size_t mat_id,
+        const size_t gauss_gid)
     {
 
         // -----------------------------------------------------------------------------
@@ -109,7 +110,6 @@ namespace NoStrengthModel {
 
     
     void destroy(
-        const DCArrayKokkos <Material_t> &material,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,

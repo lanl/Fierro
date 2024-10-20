@@ -75,6 +75,7 @@ void SGTM3D::update_state(
     const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
     const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+    const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const double dt,
     const double rk_alpha,
@@ -122,6 +123,7 @@ void SGTM3D::update_state(
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
                                         MaterialPoints_sie(1, mat_point_lid),
+                                        MaterialPoints_shear_modulii,
                                         Materials.eos_global_vars);
         }); // end parallel for over mat elem lid
     } // if decoupled EOS

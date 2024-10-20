@@ -32,14 +32,14 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef USER_DEFINED_EOS_H
-#define USER_DEFINED_EOS_H
+#ifndef HOST_USER_DEFINED_EOS_H
+#define HOST_USER_DEFINED_EOS_H
 
 
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn UserDefinedEOSModel
+/// \fn HostUserDefinedEOSModel
 ///
 /// \brief user defined EOS model
 ///
@@ -58,7 +58,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Material specific internal energy
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace UserDefinedEOSModel
+namespace HostUserDefinedEOSModel
 {
     // host side function
     static void initialize(const DCArrayKokkos<double>& MaterialPoints_pres,
@@ -78,7 +78,6 @@ namespace UserDefinedEOSModel
         return;
     } // end func
 
-    KOKKOS_FUNCTION
     static void calc_pressure(const DCArrayKokkos<double>& MaterialPoints_pres,
                               const DCArrayKokkos<double>& MaterialPoints_stress,
                               const size_t mat_pt_lid,
@@ -94,13 +93,17 @@ namespace UserDefinedEOSModel
         // ------------------------------------------------------------------------------
 
         // -----------------------------------------------------------------------------
-        // The user must coding goes here
+        // The user must coding goes here ...
+        //  
+        // REMINDER:
+        // The user must write there own fine-grained parallelism on the device
+        // using, for example, FOR_ALL, FOR_REDUCE_SUM, etc. macros
         // ------------------------------------------------------------------------------
 
         return;
     } // end for user_eos_model
 
-    KOKKOS_FUNCTION
+
     static void calc_sound_speed(const DCArrayKokkos<double>& MaterialPoints_pres,
                                  const DCArrayKokkos<double>& MaterialPoints_stress,
                                  const size_t mat_pt_lid,
@@ -117,8 +120,13 @@ namespace UserDefinedEOSModel
         // Required variables are here
         // ------------------------------------------------------------------------------
 
+
         // -----------------------------------------------------------------------------
-        // The user must coding goes here
+        // The user must coding goes here ...
+        //  
+        // REMINDER:
+        // The user must write there own fine-grained parallelism on the device
+        // using, for example, FOR_ALL, FOR_REDUCE_SUM, etc. macros
         // ------------------------------------------------------------------------------
 
         return;
@@ -147,7 +155,7 @@ namespace UserDefinedEOSModel
 // -----------------------------------------------------------------------------
 // This is a place holder EOS interface to add another user defined EOS
 // ------------------------------------------------------------------------------
-namespace NotionalEOSModel {
+namespace HostNotionalEOSModel {
 
     // host side function
     static void initialize(const DCArrayKokkos<double>& MaterialPoints_pres,
@@ -167,7 +175,7 @@ namespace NotionalEOSModel {
         return;
     } // end func
 
-    KOKKOS_FUNCTION
+
     static void calc_pressure(const DCArrayKokkos<double>& MaterialPoints_pres,
                               const DCArrayKokkos<double>& MaterialPoints_stress,
                               const size_t mat_pt_lid,
@@ -178,13 +186,21 @@ namespace NotionalEOSModel {
                               const double sie,
                               const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
-        // pressure of a void is 0
-        MaterialPoints_pres(mat_pt_lid) = 0.0;
+        
+
+        // -----------------------------------------------------------------------------
+        // The user must coding goes here ...
+        //  
+        // REMINDER:
+        // The user must write there own fine-grained parallelism on the device
+        // using, for example, FOR_ALL, FOR_REDUCE_SUM, etc. macros
+        // ------------------------------------------------------------------------------
+
 
         return;
     } // end func
 
-    KOKKOS_FUNCTION
+
     static void calc_sound_speed(const DCArrayKokkos<double>& MaterialPoints_pres,
                                  const DCArrayKokkos<double>& MaterialPoints_stress,
                                  const size_t mat_pt_lid,
@@ -196,9 +212,15 @@ namespace NotionalEOSModel {
                                  const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
                                  const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
+        
+        // -----------------------------------------------------------------------------
+        // The user must coding goes here ...
+        //  
+        // REMINDER:
+        // The user must write there own fine-grained parallelism on the device
+        // using, for example, FOR_ALL, FOR_REDUCE_SUM, etc. macros
+        // ------------------------------------------------------------------------------
 
-        // sound speed of a void is 0, machine small must be used for CFL calculation
-        MaterialPoints_sspd(mat_pt_lid) = 1.0e-32;
 
         return;
     } // end func
