@@ -588,11 +588,11 @@ class FIERRO_GUI(Ui_MainWindow):
                     
                     # Add part as an option for material assignment
                     self.INRegion.clear()
-                    self.INRegion.addItem("global")
                     for i in range(self.TParts.rowCount()):
                         self.INRegion.addItem(self.TParts.item(i,0).text())
                     for i in range(self.TBasicGeometries.rowCount()):
                         self.INRegion.addItem(self.TBasicGeometries.item(i,0).text())
+                    self.INRegion.addItem("global")
         self.BUploadGeometryFile.clicked.connect(geometry_upload_click)
         
         # Warn User if no geometry was uploaded
@@ -920,11 +920,11 @@ class FIERRO_GUI(Ui_MainWindow):
                 
                 # delete from material assignment options
                 self.INMaterial.clear()
-                self.INMaterial.addItem("global")
                 for i in range(table.rowCount()):
-                    self.INPartMaterial.addItem(table.item(i,0).text())
+                    self.INMaterial.addItem(table.item(i,0).text())
                 for i in range(self.TBasicGeometries.rowCount()):
-                    self.INPartMaterial.addItem(self.TBasicGeometries.item(i,0).text())
+                    self.INMaterial.addItem(self.TBasicGeometries.item(i,0).text())
+                self.INMaterial.addItem("global")
 
         # Function to set what table to delete part from
         def set_table(table_selection):
@@ -1019,13 +1019,25 @@ class FIERRO_GUI(Ui_MainWindow):
         # Load GUI
         Load(self)
         # Load visualizations
-        self.in_file_path = self.TParts.item(0,10).text()
-        self.file_type = os.path.splitext(self.in_file_path)[1].lower()
-        Reload_Geometry(self)
+        if self.TParts.item(0,10):
+            self.in_file_path = self.TParts.item(0,10).text()
+            self.file_type = os.path.splitext(self.in_file_path)[1].lower()
+            Reload_Geometry(self)
         # Load variables
-        if self.INPipelineSelection.currentText() == "Homogenization" and self.INHomogenizationJobDir.text() != "":
-            self.working_directory = self.INHomogenizationJobDir.text()
-            self.THomogenization.setEnabled(True)
+        if self.INPipelineSelection.currentText() == "Homogenization":
+            # Load working directory where job files are saved
+            if self.INHomogenizationJobDir.text() != "":
+                self.working_directory = self.INHomogenizationJobDir.text()
+                self.THomogenization.setEnabled(True)
+            # Update material selections
+            self.INRegion.clear()
+            for i in range(self.TParts.rowCount()):
+                self.INRegion.addItem(self.TParts.item(i,0).text())
+            self.INRegion.addItem("global")
+            self.INMaterial.clear()
+            for i in range(self.TParts.rowCount()):
+                self.INMaterial.addItem(self.TMaterials.item(i,0).text())
+            
         # Reconnect unit function
         self.INUnits.currentIndexChanged.connect(self.units)
         self.old_units = self.INUnits.currentText()

@@ -1,5 +1,5 @@
 import json
-from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog, QComboBox, QLineEdit, QTableWidget, QRadioButton)
+from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog, QComboBox, QLineEdit, QTableWidget, QRadioButton, QLabel)
 from Reload_Geometry import *
 
 # ===============================================
@@ -12,7 +12,8 @@ def Save(self):
     state = {"comboboxes": {},
              "line_edits": {},
              "tables": {},
-             "radio_buttons": {}}
+             "radio_buttons": {},
+             "labels": {}}
              
     # Save widget states
     for attr_name, attr_value in self.__dict__.items():
@@ -31,6 +32,8 @@ def Save(self):
             state["tables"][attr_name] = table_data
         elif isinstance(attr_value, QRadioButton):
             state["radio_buttons"][attr_name] = attr_value.isChecked()
+        elif isinstance(attr_value, QLabel):
+            state["labels"][attr_name] = attr_value.text()
             
     # Save the state to a file
     if self.save_file_name:
@@ -62,4 +65,6 @@ def Load(self):
                         attr_value.setItem(row, col, QTableWidgetItem(cell_data))
             elif isinstance(attr_value, QRadioButton) and attr_name in state["radio_buttons"]:
                 attr_value.setChecked(state["radio_buttons"][attr_name])
+            elif isinstance(attr_value, QLabel) and attr_name in state["labels"]:
+                attr_value.setText(state["labels"][attr_name])
     
