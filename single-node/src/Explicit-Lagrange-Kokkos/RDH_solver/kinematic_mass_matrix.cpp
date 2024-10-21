@@ -33,15 +33,19 @@ void assemble_kinematic_mass_matrix(CArrayKokkos <double> &M_V,
                 for (int legendre_lid = 0; legendre_lid < mesh.num_leg_gauss_in_elem; legendre_lid++){
                     int legendre_gid = mesh.legendre_in_elem(elem_gid, legendre_lid);
 
-                    M_V( global_i, global_j) += density(legendre_gid)*legendre_weights(legendre_lid)
-                                               *legendre_jacobian_det(legendre_gid)
-                                               *basis(legendre_lid, i)
-                                               *basis(legendre_lid, j); 
+                    // M_V( global_i, global_j) += density(legendre_gid)*legendre_weights(legendre_lid)
+                    //                            *legendre_jacobian_det(legendre_gid)
+                    //                            *basis(legendre_lid, i)
+                    //                            *basis(legendre_lid, j); 
+                    Kokkos::atomic_add(&M_V( global_i, global_j), density(legendre_gid)*legendre_weights(legendre_lid)*legendre_jacobian_det(legendre_gid)*basis(legendre_lid, i)*basis(legendre_lid, j));
+                    
 
                 }// end loop over legendre_lid
 
                 // compute lumped mass as row sum of mass matrix
                 lumped_mass(global_i) += M_V(global_i, global_j);
+                Kokkos::atomic_add(&lumped_mass(global_i), M_V(global_i, global_j));
+
 
             }// end loop over j
         }// end loop over i

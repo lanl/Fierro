@@ -108,7 +108,7 @@ struct fe_ref_elem_t{
         else{
             
             num_gauss_lob_1d = 2 * p_order + 1; // num gauss lobatto points in 1d
-            num_dual_gauss_lob_1d = 2*p_order - 1;
+            num_dual_gauss_lob_1d = 2*(p_order-1) + 1;
             num_gauss_leg_1d = 2*p_order;
 
             num_dofs_1d = p_order+1;

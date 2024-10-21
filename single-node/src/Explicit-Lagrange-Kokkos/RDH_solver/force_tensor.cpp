@@ -53,23 +53,121 @@
 // This funciton assembles the global force tensor F_{i,j} = \int (\sigma : \nabla \varphi_{i} ) \psi_{j} dx,
 // where \sigma  is the stress tensor, \varphi are kinematic basis functions and \psi are thermodynamic basis functions.
 
-void build_force_tensor( CArrayKokkos <double> &force_tensor,
+// void build_force_tensor( CArrayKokkos <double> &force_tensor,
+//                          const size_t stage,
+//                          const mesh_t &mesh,
+//                          const DViewCArrayKokkos <double> &stress_tensor,
+//                          const CArrayKokkos <double> &legendre_grad_basis,
+//                          const CArrayKokkos <double> &thermo_basis,
+//                          const CArrayKokkos <double> &legendre_weights,
+//                          const CArrayKokkos <double> &legendre_jacobian_det,
+//                          const CArrayKokkos <double> &legendre_jacobian_inverse ){
+    
+//     CArrayKokkos <double> sigma_dot_Jinv(mesh.num_elems, mesh.num_leg_gauss_in_elem, mesh.num_dims, mesh.num_dims);
+
+//     FOR_ALL(elem_gid, 0, mesh.num_elems,{
+//         for (int  leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+//             int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
+//             for (int i = 0; i < mesh.num_dims; i++){
+//                 for (int j = 0; j < mesh.num_dims; j++){
+//                     sigma_dot_Jinv(elem_gid, leg_lid, i, j) = 0.0;
+//                 }
+//             }
+//         }
+//     });
+//     Kokkos::fence();
+
+//     FOR_ALL(elem_gid, 0, mesh.num_elems,{
+//         for (int  leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+//             int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
+//             for (int i = 0; i < mesh.num_dims; i++){
+//                 for (int j = 0; j < mesh.num_dims; j++){
+//                     for (int k = 0; k < mesh.num_dims; k++){
+//                         sigma_dot_Jinv(elem_gid, leg_lid, i, j) += stress_tensor(stage, leg_gid, i, k)
+//                                                                 *legendre_jacobian_inverse(leg_gid, j, k);
+//                     } 
+//                 }
+//             }
+//         }
+//     });
+//     Kokkos::fence();
+
+//     CArrayKokkos <double> sigma_dot_Jinv_dot_nabla(mesh.num_elems, mesh.num_nodes_in_elem, mesh.num_leg_gauss_in_elem, mesh.num_dims);
+
+//     FOR_ALL(elem_gid, 0, mesh.num_elems,{
+//         for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++){
+//             for (int  leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+//                 int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
+//                 for (int i = 0; i < mesh.num_dims; i++){
+//                     sigma_dot_Jinv_dot_nabla(elem_gid, K_dof, leg_lid, i) = 0.0;
+//                 }
+//             }
+//         }
+//     });
+//     Kokkos::fence();
+
+    
+//     FOR_ALL(elem_gid, 0, mesh.num_elems,{
+//         for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++){
+//             for (int  leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+//                 int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
+//                 for (int i = 0; i < mesh.num_dims; i++){
+//                     for (int j = 0; j < mesh.num_dims; j++){
+//                         sigma_dot_Jinv_dot_nabla(elem_gid, K_dof, leg_lid, i) += sigma_dot_Jinv(elem_gid, leg_lid, i, j)
+//                                                                                  *legendre_grad_basis( leg_lid, K_dof, j);
+//                     }
+//                 }
+//             }
+//         }
+//     });
+//     Kokkos::fence();
+                    
+//     FOR_ALL(elem_gid, 0, mesh.num_elems, {
+//     // for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
+//         for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++){
+//             int global_K_dof = mesh.nodes_in_elem(elem_gid, K_dof);
+
+//             for (int T_dof = 0; T_dof < mesh.num_zones_in_elem; T_dof++){
+//                 int global_T_dof = mesh.zones_in_elem(elem_gid, T_dof);
+
+//                 for (int dim = 0; dim < mesh.num_dims; dim++){
+
+//                     for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+//                         int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
+
+                        
+//                         force_tensor( stage, global_K_dof, global_T_dof, dim) +=  sigma_dot_Jinv_dot_nabla(elem_gid, K_dof, leg_lid, dim)
+//                                                                                 * thermo_basis(leg_lid, T_dof)
+//                                                                                 * legendre_weights(leg_lid)
+//                                                                                 * legendre_jacobian_det(leg_gid);
+                        
+//                     }// end loop over legendre quadrature nodes
+//                 }// end loop over dimension
+//             }// end loop over thermodynamic dofs
+//         }// end loop over kinematic dofs
+//     // }
+//     });// end FOR_ALL over elements
+//     Kokkos::fence();
+    
+// }// end function
+
+
+void build_force_tensor(CArrayKokkos<double> &force_tensor,
                          const size_t stage,
                          const mesh_t &mesh,
-                         const DViewCArrayKokkos <double> &stress_tensor,
-                         const CArrayKokkos <double> &legendre_grad_basis,
-                         const CArrayKokkos <double> &thermo_basis,
-                         const CArrayKokkos <double> &legendre_weights,
-                         const CArrayKokkos <double> &legendre_jacobian_det,
-                         const CArrayKokkos <double> &legendre_jacobian_inverse ){
-    
-    CArrayKokkos <double> sigma_dot_Jinv(mesh.num_elems, mesh.num_leg_gauss_in_elem, mesh.num_dims, mesh.num_dims);
+                         const DViewCArrayKokkos<double> &stress_tensor,
+                         const CArrayKokkos<double> &legendre_grad_basis,
+                         const CArrayKokkos<double> &thermo_basis,
+                         const CArrayKokkos<double> &legendre_weights,
+                         const CArrayKokkos<double> &legendre_jacobian_det,
+                         const CArrayKokkos<double> &legendre_jacobian_inverse) {
+    CArrayKokkos<double> sigma_dot_Jinv(mesh.num_elems, mesh.num_leg_gauss_in_elem, mesh.num_dims, mesh.num_dims);
 
-    FOR_ALL(elem_gid, 0, mesh.num_elems,{
-        for (int  leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
-            int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
-            for (int i = 0; i < mesh.num_dims; i++){
-                for (int j = 0; j < mesh.num_dims; j++){
+    // Initialize sigma_dot_Jinv
+    Kokkos::parallel_for("initialize_sigma_dot_Jinv", mesh.num_elems, KOKKOS_LAMBDA(const int elem_gid) {
+        for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++) {
+            for (int i = 0; i < mesh.num_dims; i++) {
+                for (int j = 0; j < mesh.num_dims; j++) {
                     sigma_dot_Jinv(elem_gid, leg_lid, i, j) = 0.0;
                 }
             }
@@ -77,28 +175,29 @@ void build_force_tensor( CArrayKokkos <double> &force_tensor,
     });
     Kokkos::fence();
 
-    FOR_ALL(elem_gid, 0, mesh.num_elems,{
-        for (int  leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+    // Compute sigma_dot_Jinv
+    Kokkos::parallel_for("compute_sigma_dot_Jinv", mesh.num_elems, KOKKOS_LAMBDA(const int elem_gid) {
+        for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++) {
             int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
-            for (int i = 0; i < mesh.num_dims; i++){
-                for (int j = 0; j < mesh.num_dims; j++){
-                    for (int k = 0; k < mesh.num_dims; k++){
-                        sigma_dot_Jinv(elem_gid, leg_lid, i, j) += stress_tensor(stage, leg_gid, i, k)
-                                                                *legendre_jacobian_inverse(leg_gid, j, k);
-                    } 
+            for (int i = 0; i < mesh.num_dims; i++) {
+                for (int j = 0; j < mesh.num_dims; j++) {
+                    for (int k = 0; k < mesh.num_dims; k++) {
+                        Kokkos::atomic_add(&sigma_dot_Jinv(elem_gid, leg_lid, i, j),
+                                           stress_tensor(stage, leg_gid, i, k) * legendre_jacobian_inverse(leg_gid, j, k));
+                    }
                 }
             }
         }
     });
     Kokkos::fence();
 
-    CArrayKokkos <double> sigma_dot_Jinv_dot_nabla(mesh.num_elems, mesh.num_nodes_in_elem, mesh.num_leg_gauss_in_elem, mesh.num_dims);
+    CArrayKokkos<double> sigma_dot_Jinv_dot_nabla(mesh.num_elems, mesh.num_nodes_in_elem, mesh.num_leg_gauss_in_elem, mesh.num_dims);
 
-    FOR_ALL(elem_gid, 0, mesh.num_elems,{
-        for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++){
-            for (int  leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
-                int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
-                for (int i = 0; i < mesh.num_dims; i++){
+    // Initialize sigma_dot_Jinv_dot_nabla
+    Kokkos::parallel_for("initialize_sigma_dot_Jinv_dot_nabla", mesh.num_elems, KOKKOS_LAMBDA(const int elem_gid) {
+        for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++) {
+            for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++) {
+                for (int i = 0; i < mesh.num_dims; i++) {
                     sigma_dot_Jinv_dot_nabla(elem_gid, K_dof, leg_lid, i) = 0.0;
                 }
             }
@@ -106,49 +205,41 @@ void build_force_tensor( CArrayKokkos <double> &force_tensor,
     });
     Kokkos::fence();
 
-    
-    FOR_ALL(elem_gid, 0, mesh.num_elems,{
-        for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++){
-            for (int  leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
-                int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
-                for (int i = 0; i < mesh.num_dims; i++){
-                    for (int j = 0; j < mesh.num_dims; j++){
-                        sigma_dot_Jinv_dot_nabla(elem_gid, K_dof, leg_lid, i) += sigma_dot_Jinv(elem_gid, leg_lid, i, j)
-                                                                                 *legendre_grad_basis( leg_lid, K_dof, j);
+    // Compute sigma_dot_Jinv_dot_nabla
+    Kokkos::parallel_for("compute_sigma_dot_Jinv_dot_nabla", mesh.num_elems, KOKKOS_LAMBDA(const int elem_gid) {
+        for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++) {
+            for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++) {
+                for (int i = 0; i < mesh.num_dims; i++) {
+                    for (int j = 0; j < mesh.num_dims; j++) {
+                        Kokkos::atomic_add(&sigma_dot_Jinv_dot_nabla(elem_gid, K_dof, leg_lid, i),
+                                           sigma_dot_Jinv(elem_gid, leg_lid, i, j) * legendre_grad_basis(leg_lid, K_dof, j));
                     }
                 }
             }
         }
     });
     Kokkos::fence();
-                    
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
-    // for (int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
-        for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++){
+
+    // Compute force_tensor
+    Kokkos::parallel_for("compute_force_tensor", mesh.num_elems, KOKKOS_LAMBDA(const int elem_gid) {
+        for (int K_dof = 0; K_dof < mesh.num_nodes_in_elem; K_dof++) {
             int global_K_dof = mesh.nodes_in_elem(elem_gid, K_dof);
 
-            for (int T_dof = 0; T_dof < mesh.num_zones_in_elem; T_dof++){
+            for (int T_dof = 0; T_dof < mesh.num_zones_in_elem; T_dof++) {
                 int global_T_dof = mesh.zones_in_elem(elem_gid, T_dof);
 
-                for (int dim = 0; dim < mesh.num_dims; dim++){
-
-                    for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+                for (int dim = 0; dim < mesh.num_dims; dim++) {
+                    for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++) {
                         int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
 
-                        
-                        force_tensor( stage, global_K_dof, global_T_dof, dim) +=  sigma_dot_Jinv_dot_nabla(elem_gid, K_dof, leg_lid, dim)
-                                                                                * thermo_basis(leg_lid, T_dof)
-                                                                                * legendre_weights(leg_lid)
-                                                                                * legendre_jacobian_det(leg_gid);
-                        
-                    }// end loop over legendre quadrature nodes
-                }// end loop over dimension
-            }// end loop over thermodynamic dofs
-        }// end loop over kinematic dofs
-    // }
-    });// end FOR_ALL over elements
+                        Kokkos::atomic_add(&force_tensor(stage, global_K_dof, global_T_dof, dim),
+                                           sigma_dot_Jinv_dot_nabla(elem_gid, K_dof, leg_lid, dim) * thermo_basis(leg_lid, T_dof) * legendre_weights(leg_lid) * legendre_jacobian_det(leg_gid));
+                    }
+                }
+            }
+        }
+    });
     Kokkos::fence();
-    
-}// end function
+}
 
 // }// end assemble force tensor routine

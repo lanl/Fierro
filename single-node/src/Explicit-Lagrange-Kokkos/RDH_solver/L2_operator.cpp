@@ -18,9 +18,10 @@ void assemble_L2(   CArrayKokkos <double> &L2,
         for (int node_gid_2 = 0; node_gid_2 < mesh.num_nodes; node_gid_2++){
             for (int dim = 0; dim < mesh.num_dims; dim++){
 
-                M_dot_u(node_gid_1, dim ) += mass_matrix(node_gid_1, node_gid_2)*node_vel(stage, node_gid_2, dim) 
-                                             - mass_matrix(node_gid_1, node_gid_2)*node_vel(0, node_gid_2, dim);
-
+                // M_dot_u(node_gid_1, dim ) += mass_matrix(node_gid_1, node_gid_2)*node_vel(stage, node_gid_2, dim) 
+                //                              - mass_matrix(node_gid_1, node_gid_2)*node_vel(0, node_gid_2, dim);
+                Kokkos::atomic_add(&M_dot_u(node_gid_1, dim ), mass_matrix(node_gid_1, node_gid_2)*node_vel(stage, node_gid_2, dim) 
+                                             - mass_matrix(node_gid_1, node_gid_2)*node_vel(0, node_gid_2, dim));
             }//
         }// 
             
@@ -51,7 +52,8 @@ void assemble_L2(   CArrayKokkos <double> &L2,
         for (int dim = 0; dim < mesh.num_dims; dim++){
             for (int zone_gid = 0; zone_gid < mesh.num_zones; zone_gid++){            
         
-                F_dot_ones(node_gid_1, dim) += 0.5*( force_tensor(stage, node_gid_1, zone_gid, dim) + force_tensor(0, node_gid_1, zone_gid, dim) );
+                // F_dot_ones(node_gid_1, dim) += 0.5*( force_tensor(stage, node_gid_1, zone_gid, dim) + force_tensor(0, node_gid_1, zone_gid, dim) );
+                Kokkos::atomic_add(&F_dot_ones(node_gid_1, dim), 0.5*( force_tensor(stage, node_gid_1, zone_gid, dim) + force_tensor(0, node_gid_1, zone_gid, dim) ));
             }
         }// end loop over zone_lid
 

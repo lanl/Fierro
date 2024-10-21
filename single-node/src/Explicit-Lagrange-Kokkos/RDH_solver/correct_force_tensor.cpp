@@ -30,7 +30,8 @@ void correct_force_tensor(CArrayKokkos <double> &F_c,
         FOR_ALL(node_gid, 0, mesh.num_nodes,{
             for (int n_gid = 0; n_gid < mesh.num_nodes; n_gid++){
                 for(int dim = 0; dim < mesh.num_dims; dim++){
-                     M_dot_L2(node_gid, dim) += ( 1.0/( 2.0 - double(stage)) )*M(node_gid, n_gid)*(L2(stage, n_gid, dim) + L2(0, n_gid, dim))/m(node_gid);
+                    //  M_dot_L2(node_gid, dim) += ( 1.0/( 2.0 - double(stage)) )*M(node_gid, n_gid)*(L2(stage, n_gid, dim) + L2(0, n_gid, dim))/m(node_gid);
+                     Kokkos::atomic_add(&M_dot_L2(node_gid, dim),  ( 1.0/( 2.0 - double(stage)) )*M(node_gid, n_gid)*(L2(stage, n_gid, dim) + L2(0, n_gid, dim))/m(node_gid));
                 }// dim
             }
         });// FOR_ALL

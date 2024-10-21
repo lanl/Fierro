@@ -1,6 +1,7 @@
 #include "ref_elem.h"
 #include "mesh.h"
 #include "state.h"
+#include "linear_algebra.h"
 
 void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                               const DViewCArrayKokkos <double> &vel,
@@ -217,7 +218,8 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
             for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
                 int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
                 for(int i = 0; i < mesh.num_dims; i++){
-                l2_curl_u(gauss_gid) += curl_u(gauss_gid,i)*curl_u(gauss_gid,i);
+                // l2_curl_u(gauss_gid) += curl_u(gauss_gid,i)*curl_u(gauss_gid,i);
+                Kokkos::atomic_add(&l2_curl_u(gauss_gid), curl_u(gauss_gid,i)*curl_u(gauss_gid,i));
                 }// i
             }// gauss_lid
         });// elem_gid
@@ -257,10 +259,18 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
         FOR_ALL(elem_gid, 0, mesh.num_elems,{
             for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
                 int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+                
+                ViewCArrayKokkos grad_u_at_gp(&grad_u(gauss_gid, 0,0), 3,3);
+                double lambda_1 = 0.0;
+                double s_1[3];
+
+                for (int i = 0; i < 3; i++) s_1[i] = 0.0;
+
+                min_eigenvalue_eigenvector(grad_u_at_gp, lambda_1, s_1);
                 for(int i = 0; i < mesh.num_dims; i++){
                     double temp = 0.0;
                     for (int j = 0; j < mesh.num_dims; j++){
-                        temp += JJ0Inv(gauss_gid, i, j)*(mat_pt_vel(gauss_gid, j)-0.0*u_star(elem_gid, j));
+                        temp += JJ0Inv(gauss_gid, i, j)*s_1[j];//(mat_pt_vel(gauss_gid, j)-0.0*u_star(elem_gid, j));
                     }// j
                     JJ0Inv_dot_u(gauss_gid, i) = temp;
                     //printf(" JJ0Inv_dot_u : %f \n", mat_pt_vel(gauss_gid, i));
@@ -274,10 +284,21 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
         FOR_ALL(elem_gid, 0, mesh.num_elems,{
             for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
                 int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+                ViewCArrayKokkos grad_u_at_gp(&grad_u(gauss_gid, 0,0), 3,3);
+                double lambda_1 = 0.0;
+                double s_1[3];
+
+                for (int i = 0; i < 3; i++) s_1[i] = 0.0;
+
+                min_eigenvalue_eigenvector(grad_u_at_gp, lambda_1, s_1);
+
                 for(int i = 0; i < mesh.num_dims; i++){
                     
-                    l2_JJ0Inv_dot_u(gauss_gid) += JJ0Inv_dot_u(gauss_gid, i)*JJ0Inv_dot_u(gauss_gid, i);
-                    l2_vel_inv(gauss_gid) += (mat_pt_vel(gauss_gid, i) - 0.0*u_star(elem_gid, i))*(mat_pt_vel(gauss_gid, i) - 0.0*u_star(elem_gid, i));
+                    // l2_JJ0Inv_dot_u(gauss_gid) += JJ0Inv_dot_u(gauss_gid, i)*JJ0Inv_dot_u(gauss_gid, i);
+                    Kokkos::atomic_add(&l2_JJ0Inv_dot_u(gauss_gid), JJ0Inv_dot_u(gauss_gid, i)*JJ0Inv_dot_u(gauss_gid, i));
+                    // l2_vel_inv(gauss_gid) += (mat_pt_vel(gauss_gid, i) - 0.0*u_star(elem_gid, i))*(mat_pt_vel(gauss_gid, i) - 0.0*u_star(elem_gid, i));
+                    Kokkos::atomic_add(&l2_vel_inv(gauss_gid), s_1[i]*s_1[i]);//(mat_pt_vel(gauss_gid, i) - 0.0*u_star(elem_gid, i))*(mat_pt_vel(gauss_gid, i) - 0.0*u_star(elem_gid, i)));
+
 
                 }// i
             }// gauss_lid
@@ -295,33 +316,33 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
         Kokkos::fence();
 
         // fill Delta_u
-        CArrayKokkos <double> Du(mesh.num_elems);
-        CArrayKokkos <double> Du_min(1);
-        RUN({
-            Du_min(0) = 1.0e+12;
-        });
-        FOR_ALL(elem_gid, 0, mesh.num_elems,{
-            Du(elem_gid) = 1.0e+12;
-        });// elem_gid
+        // CArrayKokkos <double> Du(mesh.num_elems);
+        // CArrayKokkos <double> Du_min(1);
+        // RUN({
+        //     Du_min(0) = 1.0e+12;
+        // });
+        // FOR_ALL(elem_gid, 0, mesh.num_elems,{
+        //     Du(elem_gid) = 1.0e+12;
+        // });// elem_gid
 
-        FOR_ALL(elem_gid, 0, mesh.num_elems,{
-            for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
-                int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
-                double temp1 =0.0;
-                for(int i = 0; i < mesh.num_dims; i++){
-                    double temp2 = 0.0;
-                    for (int j = 0; j < mesh.num_dims; j++){
-                        temp2 += grad_u(gauss_gid, i, j)*(mat_pt_vel(gauss_gid, j)-0.0*u_star(elem_gid, j));//curl_u(gauss_gid, j);//
-                    }// j
+        // FOR_ALL(elem_gid, 0, mesh.num_elems,{
+        //     for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
+        //         int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+        //         double temp1 =0.0;
+        //         for(int i = 0; i < mesh.num_dims; i++){
+        //             double temp2 = 0.0;
+        //             for (int j = 0; j < mesh.num_dims; j++){
+        //                 temp2 += grad_u(gauss_gid, i, j)*(mat_pt_vel(gauss_gid, j)-0.0*u_star(elem_gid, j));//curl_u(gauss_gid, j);//
+        //             }// j
 
-                    temp1 += (mat_pt_vel(gauss_gid, i)-0.0*u_star(elem_gid, i))*temp2;//curl_u(gauss_gid, i)*temp2;//
-                }// i
-                Delta_u(gauss_gid) = temp1*l2_vel_inv(gauss_gid);
-                Du(elem_gid) = Delta_u(gauss_gid) < Du(elem_gid) ? Delta_u(gauss_gid) : Du(elem_gid);
-                Du_min(0) = Delta_u(gauss_gid) < Du_min(0) ? Delta_u(gauss_gid) : Du_min(0);
-            }// gauss_lid
-        });// elem_gid
-        Kokkos::fence();
+        //             temp1 += (mat_pt_vel(gauss_gid, i)-0.0*u_star(elem_gid, i))*temp2;//curl_u(gauss_gid, i)*temp2;//
+        //         }// i
+        //         Delta_u(gauss_gid) = temp1*l2_vel_inv(gauss_gid);
+        //         Du(elem_gid) = Delta_u(gauss_gid) < Du(elem_gid) ? Delta_u(gauss_gid) : Du(elem_gid);
+        //         Du_min(0) = Delta_u(gauss_gid) < Du_min(0) ? Delta_u(gauss_gid) : Du_min(0);
+        //     }// gauss_lid
+        // });// elem_gid
+        // Kokkos::fence();
 
         // fill mu
         FOR_ALL(elem_gid, 0, mesh.num_elems,{
@@ -331,18 +352,26 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
             
             for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
                 int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
-                
+
+                ViewCArrayKokkos grad_u_at_gp(&grad_u(gauss_gid, 0,0), 3,3);
+                double lambda_1 = 0.0;
+                double s_1[3];
+
+                for (int i = 0; i < 3; i++) s_1[i] = 0.0;
+
+                min_eigenvalue_eigenvector(grad_u_at_gp, lambda_1, s_1);
+
                 double h_pert = 0.0;                                
                 h_pert = h*sqrt( l2_vel_inv(gauss_gid)*l2_JJ0Inv_dot_u(gauss_gid) );
                 //printf( "h : %f \n", h_pert);
 
                 mat_pt_h(gauss_gid) = h_pert;//pow( vol(elem_gid), 1.0/mesh.num_dims )/mesh.num_leg_gauss_in_elem;
                 
-                double sigmoid = 1.0/( 1.0 + exp( 100.0*Du(elem_gid) ) );//Delta_u(gauss_gid) ));// ) );//Du_min(0) ));//
+                double sigmoid = 1.0/( 1.0 + exp( lambda_1 ));//Du(elem_gid) ) );//Delta_u(gauss_gid) ));// ) );//Du_min(0) ));//
                 double coeff = 0.0;//
 
                 double eps = 1.0e-12;
-                double y = (Du(elem_gid) - eps) / (2.0 * eps);
+                double y = (lambda_1 - eps) / (2.0 * eps);
                 if (y < 0.0) 
                 { coeff = 0.0; }
                 else if (y > 1.0) 
@@ -359,7 +388,8 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 }
                 
                 mu(gauss_gid) = 0.5*phi_curl*den(gauss_gid)*h_pert*sspd(gauss_gid)*sigmoid;//*(1.0 - coeff);//
-                mu(gauss_gid) += 2.0*den(gauss_gid)*h_pert*h_pert*abs( Du(elem_gid) )*sigmoid;//;//Du_min(0) );//Delta_u(gauss_gid) );//
+                // mu(gauss_gid) += 2.0*den(gauss_gid)*h_pert*h_pert*abs( Du(elem_gid) )*sigmoid;//;//Du_min(0) );//Delta_u(gauss_gid) );//
+                Kokkos::atomic_add(&mu(gauss_gid), 2.0*den(gauss_gid)*h_pert*h_pert*lambda_1*sigmoid);//Du(elem_gid) )*sigmoid);
 
             }// gauss_lid
         });// elem_gid
@@ -404,7 +434,8 @@ void append_artificial_viscosity(DViewCArrayKokkos <double> &sigma,
             for(int i = 0; i < mesh.num_dims; i++){
                 for(int j = 0; j < mesh.num_dims; j++){
 
-                    sigma(stage, gauss_gid, i, j) += sigma_a(stage, gauss_gid, i, j);
+                    // sigma(stage, gauss_gid, i, j) += sigma_a(stage, gauss_gid, i, j);
+                    Kokkos::atomic_add(&sigma(stage, gauss_gid, i, j), sigma_a(stage, gauss_gid, i, j));
 
                 }// j
             }// i

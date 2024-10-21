@@ -80,7 +80,7 @@ void get_grad_vel(CArrayKokkos <double> &grad_vel,
                     for (int dof = 0; dof < ref_elem.num_basis; dof++){
                         int dof_gid = mesh.nodes_in_elem(elem_gid, dof);
                         
-                        temp = J_dot_nabla(elem_gid, gauss_lid, dof, i)*vel(stage, dof_gid, j );
+                        temp += J_dot_nabla(elem_gid, gauss_lid, dof, i)*vel(stage, dof_gid, j );
 
                     }// dof
                     grad_vel(gauss_gid, i, j) = temp;

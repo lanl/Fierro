@@ -322,8 +322,10 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                         double interp = 0.0;
                         for (int dof_id = 0; dof_id < mesh.num_nodes_in_elem; dof_id++){
                             int dof_gid = mesh.nodes_in_elem(elem_gid, dof_id);
-                            interp += ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
-                                                             *node_vel(1, dof_gid, dim);
+                            // interp += ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
+                            //                                  *node_vel(1, dof_gid, dim);
+                            Kokkos::atomic_add(&interp, ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
+                                                             *node_vel(1, dof_gid, dim));
                         }// dim
                         node_vel(1, node_gid, dim) = interp;
                     }// node_lid
@@ -344,7 +346,8 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
                             int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
                         
-                                interp += ref_elem.gauss_leg_basis(gauss_lid, node_lid)*node_vel(1, node_gid, dim);
+                                // interp += ref_elem.gauss_leg_basis(gauss_lid, node_lid)*node_vel(1, node_gid, dim);
+                                Kokkos::atomic_add(&interp, ref_elem.gauss_leg_basis(gauss_lid, node_lid)*node_vel(1, node_gid, dim));
                         }// node_lid
                         mat_pt_vel(gauss_gid, dim) = interp;
                     }// dim
@@ -362,7 +365,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             Kokkos::fence();
 
             // if (rk_stage == 1){
-            correct_force_tensor(Fc, rk_stage, mesh, L2, M_V, lumped_mass, F_dot_ones, dt);
+            // correct_force_tensor(Fc, rk_stage, mesh, L2, M_V, lumped_mass, F_dot_ones, dt);
             // }
             
             CArrayKokkos <double> Thermo_L2(mesh.num_zones,"Thermo_L2");
@@ -381,7 +384,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             
             
             // internal energy update //
-            // get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
+            get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
 
             update_internal_energy(zone_sie, rk_stage, mesh, zone.M_e_inv, force_tensor, F_dot_u, Fc, Fc_dot_u, source, node_vel, zone.zonal_mass, dt);//T_L2, zone.zonal_mass);
             // FOR_ALL(elem_gid,  0, mesh.num_elems, {
@@ -425,7 +428,8 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                     double interp = 0.0;
                     for (int dof_id = 0; dof_id < mesh.num_zones_in_elem; dof_id++){
                         int dof_gid = mesh.zones_in_elem(elem_gid, dof_id);
-                        interp += ref_elem.zone_interp_basis(lobatto_lid, dof_id)*zone_sie(1, dof_gid);
+                        // interp += ref_elem.zone_interp_basis(lobatto_lid, dof_id)*zone_sie(1, dof_gid);
+                        Kokkos::atomic_add(&interp, ref_elem.zone_interp_basis(lobatto_lid, dof_id)*zone_sie(1, dof_gid));
                     }// node_lid
                     zone_sie(1, zone_gid) = interp;
 
@@ -450,8 +454,10 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                         double interp = 0.0;
                         for (int dof_id = 0; dof_id < mesh.num_nodes_in_elem; dof_id++){
                             int dof_gid = mesh.nodes_in_elem(elem_gid, dof_id);
-                            interp += ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
-                                                             *node_coords(1, dof_gid, dim);
+                            // interp += ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
+                            //                                  *node_coords(1, dof_gid, dim);
+                            Kokkos::atomic_add(&interp, ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
+                                                             *node_coords(1, dof_gid, dim));
                         }// dim
                         node_coords(1, node_gid, dim) = interp;
                     }// node_lid
@@ -466,7 +472,8 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
                             int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
                         
-                                interp += ref_elem.gauss_leg_basis(gauss_lid, node_lid)*node_coords(1, node_gid, dim);
+                                // interp += ref_elem.gauss_leg_basis(gauss_lid, node_lid)*node_coords(1, node_gid, dim);
+                                Kokkos::atomic_add(&interp, ref_elem.gauss_leg_basis(gauss_lid, node_lid)*node_coords(1, node_gid, dim));
                         }// node_lid
                         mat_pt_coords(gauss_gid, dim) = interp;
                     }// dim
@@ -500,7 +507,8 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                     double interp_sie = 0.0;
                     for (int T_dof = 0; T_dof < ref_elem.num_elem_basis; T_dof++){
                         int T_dof_gid = mesh.zones_in_elem(elem_gid, T_dof);
-                        interp_sie += ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*zone_sie(1, T_dof_gid);
+                        // interp_sie += ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*zone_sie(1, T_dof_gid);
+                        Kokkos::atomic_add(&interp_sie, ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*zone_sie(1, T_dof_gid));
                     }
                     mat_pt_sie(leg_gid) = fmax(1.0e-16, interp_sie);
 

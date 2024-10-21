@@ -269,8 +269,11 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
                         size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
                         //printf(" legendre grad basis =  : %f \n", ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j));
                         //printf(" node_coords at node %d and dim %d is %f \n", node_gid, dim_i, node_coords(1, node_gid , dim_i));
-                        gauss_legendre_jacobian(gauss_gid, dim_i, dim_j) += ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j) 
-                                                                            * node_coords(1, node_gid , dim_i);
+
+                        // gauss_legendre_jacobian(gauss_gid, dim_i, dim_j) += ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j) 
+                        //                                                     * node_coords(1, node_gid , dim_i);
+                        Kokkos::atomic_add(&gauss_legendre_jacobian(gauss_gid, dim_i, dim_j), ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j) 
+                                                                            * node_coords(1, node_gid , dim_i) );
 
                     }// end loop node_id
                 } // end dim_j
@@ -336,7 +339,8 @@ void get_vol(DViewCArrayKokkos <double> &elem_vol,
               //printf("legendre J det : %f\n", legendre_jacobian_det(gauss_gid) );//elem.gauss_legendre_det_j(gauss_gid));
               //printf("legendre gid : %d\n", gauss_gid);
 
-              elem_vol(elem_gid) += legendre_weights(gauss_lid)*legendre_jacobian_det(gauss_gid);
+            //   elem_vol(elem_gid) += legendre_weights(gauss_lid)*legendre_jacobian_det(gauss_gid);
+              Kokkos::atomic_add(&elem_vol(elem_gid), legendre_weights(gauss_lid)*legendre_jacobian_det(gauss_gid));
             }
             //printf("elem_vol for elem %d inside loop = %f \n", elem_gid, elem_vol(elem_gid));
             //get_vol_jacobi(elem_vol, elem_gid, node_coords, elem_node_gids);//  

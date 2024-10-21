@@ -30,9 +30,11 @@ void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
                 if (stage == 1){
                     vel = 0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
                 }
-                F_dot_u(zone_gid_1) += 0.5*( force_tensor(stage, node_gid, zone_gid_1, dim)
-                                              + force_tensor(0, node_gid, zone_gid_1, dim) )
-                                       *vel;//0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
+                // F_dot_u(zone_gid_1) += 0.5*( force_tensor(stage, node_gid, zone_gid_1, dim)
+                //                               + force_tensor(0, node_gid, zone_gid_1, dim) )
+                //                        *vel;//0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
+                Kokkos::atomic_add(&F_dot_u(zone_gid_1), 0.5*( force_tensor(stage, node_gid, zone_gid_1, dim)
+                                              + force_tensor(0, node_gid, zone_gid_1, dim))*vel);
 
             }
         }// end loop over zone_lid
@@ -46,8 +48,9 @@ void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
                 if (stage == 1){
                     vel = 0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
                 }
-                Fc_dot_u(zone_gid_1) += (1.0/(1.0 + double(stage)))*( Fc(node_gid, zone_gid_1, dim))
-                                        *vel;//0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
+                // Fc_dot_u(zone_gid_1) += (1.0/(1.0 + double(stage)))*( Fc(node_gid, zone_gid_1, dim))
+                //                         *vel;//0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
+                Kokkos::atomic_add(&Fc_dot_u(zone_gid_1), (1.0/(1.0 + double(stage)))*( Fc(node_gid, zone_gid_1, dim))*vel);
 
             }
         }// end loop over zone_lid
@@ -61,13 +64,16 @@ void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
         double RHS = 0.0;
 
         for (int zone_gid_2 = 0; zone_gid_2 < mesh.num_zones; zone_gid_2++){
-            RHS1 += M_e_inv(zone_gid_1, zone_gid_2)*(F_dot_u(zone_gid_2) + Fc_dot_u(zone_gid_2));
+            // RHS1 += M_e_inv(zone_gid_1, zone_gid_2)*(F_dot_u(zone_gid_2) + 0.0*Fc_dot_u(zone_gid_2));
+            Kokkos::atomic_add(&RHS1, M_e_inv(zone_gid_1, zone_gid_2)*(F_dot_u(zone_gid_2) + 0.0*Fc_dot_u(zone_gid_2)) );
         
-            RHS2 += 0.5*M_e_inv(zone_gid_1, zone_gid_2)*
-                    (source(stage, zone_gid_2) + source(0, zone_gid_2));
+            // RHS2 += 0.5*M_e_inv(zone_gid_1, zone_gid_2)*
+            //         (source(stage, zone_gid_2) + source(0, zone_gid_2));
+            Kokkos::atomic_add(&RHS2, 0.5*M_e_inv(zone_gid_1, zone_gid_2)*(source(stage, zone_gid_2) + source(0, zone_gid_2)) );
         }
 
-        RHS = RHS1;// + RHS2;
+        RHS = RHS1 + RHS2;
+        // printf("RHS %f \n", RHS);
 
         zone_sie( 1, zone_gid_1 ) = zone_sie( 0, zone_gid_1 ) + dt*RHS;
 
@@ -77,13 +83,15 @@ void update_internal_energy(DViewCArrayKokkos <double> &zone_sie,
             printf("Negative sie. Switching to lumped mass \n");// at thermo dof %d \n", zone_gid_1);
 
             zone_sie(1, zone_gid_1) = 0.0;
-            zone_sie(1, zone_gid_1) = zone_sie( 0, zone_gid_1 ) + dt*( F_dot_u(zone_gid_1) + Fc_dot_u(zone_gid_1) )/lumped_mass(zone_gid_1);
+            zone_sie(1, zone_gid_1) = zone_sie( 0, zone_gid_1 ) + dt*( F_dot_u(zone_gid_1) + 0.0*Fc_dot_u(zone_gid_1) )/lumped_mass(zone_gid_1);
             // zone_sie(1, zone_gid_1) += dt*0.5*(source(stage, zone_gid_1) + source(0, zone_gid_1))/lumped_mass(zone_gid_1);
+            // Kokkos::atomic_add(&zone_sie(1, zone_gid_1),dt*0.5*(source(stage, zone_gid_1) + source(0, zone_gid_1))/lumped_mass(zone_gid_1) );
 
 
             if (zone_sie( 1, zone_gid_1 ) <= 0.0){
 
                 printf("INTERNAL ENERGY IS NEGATIVE AFTER MASS LUMPING \n");// AND REMOVING CORRECTION \n");
+                
                 // zone_sie(1, zone_gid_1) = 0.0;
                 // zone_sie(1, zone_gid_1) = zone_sie( 0, zone_gid_1 ) + dt*( F_dot_u(zone_gid_1) )/lumped_mass(zone_gid_1);
                 // //zone_sie(1, zone_gid_1) += dt*0.5*(source(stage, zone_gid_1) + source(0, zone_gid_1))/lumped_mass(zone_gid_1);

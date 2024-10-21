@@ -11,6 +11,7 @@
 #include "mesh.h"
 #include "state.h"
 #include "matar.h"
+#include "linear_algebra.h"
 
 using namespace mtr;
 
@@ -375,7 +376,7 @@ int main(int argc, char *argv[]){
         graphics_times(0) = 0.0;
         graphics_time = graphics_dt_ival;  // the times for writing graphics dump
         
-        //printf("here\n");
+
         assemble_kinematic_mass_matrix(node.M_V, 
                                        node.lumped_mass, 
                                        mesh, 
@@ -384,7 +385,10 @@ int main(int argc, char *argv[]){
                                        mat_pt.gauss_legendre_det_j, 
                                        mat_pt_den);
         Kokkos::fence();
-        //printf("here\n");
+        printf("Global Kinematic Mass Matrix Assembled\n");
+
+        Kokkos::View<double**> temp("temp", mesh.num_zones_in_elem, mesh.num_zones_in_elem);
+        Kokkos::View<double**> temp_inv("temp_inv", mesh.num_zones_in_elem, mesh.num_zones_in_elem);
         assemble_thermodynamic_mass_matrix(zone.M_e,
                                           zone.zonal_mass,
                                           zone.M_e_inv,
@@ -392,12 +396,14 @@ int main(int argc, char *argv[]){
                                           ref_elem.gauss_leg_elem_basis,
                                           ref_elem.gauss_leg_weights,
                                           mat_pt.gauss_legendre_det_j, 
-                                          mat_pt_den);
+                                          mat_pt_den,
+                                          temp,
+                                          temp_inv);
         Kokkos::fence();
         // printf( " ############### \n");
         // printf(" thermo mass matrix \n");
         // printf( " ############### \n");
-        
+        printf("Thermodynamic Mass Matrices Assembled Per Element\n");
         
         // RUN({
         //     for (int i =  0; i <  mesh.num_zones; i++){ 

@@ -2013,11 +2013,20 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                               const fe_ref_elem_t &ref_elem,
                               const size_t stage);
 
-KOKKOS_FUNCTION
-void invert_matrix(CArrayKokkos <double> &mtx_inv,
-                   CArrayKokkos <double> &mtx,
-                   const mesh_t &mesh,
-                   const int size);
+// KOKKOS_FUNCTION
+// void invert_matrix(ViewCArrayKokkos <double> &mtx_inv,
+//                    ViewCArrayKokkos <double> &mtx,
+//                    const mesh_t &mesh,
+//                    const int size);
+// KOKKOS_INLINE_FUNCTION
+// void invert_matrix(Kokkos::View<double**> mtx, Kokkos::View<double**> mtx_inv, int size);
+
+// KOKKOS_INLINE_FUNCTION
+// int lu_decomp(Kokkos::View<double**> source_mat, Kokkos::View<int*> indx, int &parity, const int n);
+
+// KOKKOS_INLINE_FUNCTION
+// void lu_invert(Kokkos::View<double**> lu_mtx, Kokkos::View<double**> mtx_inv, Kokkos::View<double*> col, Kokkos::View<int*> indx, int n);
+
 
 void append_artificial_viscosity(DViewCArrayKokkos <double> &sigma,
                                  const CArrayKokkos <double> &sigma_a,
@@ -2106,7 +2115,9 @@ void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
                                     const CArrayKokkos <double> &basis,
                                     const CArrayKokkos <double> &legendre_weights,
                                     const CArrayKokkos <double> &legendre_jacobian_det,
-                                    const DViewCArrayKokkos <double> &density );
+                                    const DViewCArrayKokkos <double> &density,
+                                    Kokkos::View<double**> temp,
+                                        Kokkos::View<double**> temp_inv );
 
 void assemble_L2(   CArrayKokkos <double> &L2,
                     const size_t stage,
