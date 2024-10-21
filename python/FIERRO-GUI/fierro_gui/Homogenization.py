@@ -800,10 +800,13 @@ def Homogenization(self):
                     
                 # Reload geometry
                 self.in_file_path = self.file_paths[i]
-                Reload_Geometry(self)
+                Upload_Batch_Geometry(self)
                             
                 # Run homogenization
                 run_homogenization()
+                
+        # Save job directory
+        self.INHomogenizationJobDir.setText(f'{self.working_directory}')
     self.BRunEVPFFT2.clicked.connect(run_click)
     
     # Select geometry files for batch run

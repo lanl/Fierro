@@ -24,7 +24,7 @@ def Homogenization_WInput(self, BC_index):
             if self.TMaterialAssignment.item(j,1).text() == self.TMaterials.item(i,0).text():
                 materials_used.append(i)
                 if self.TMaterials.item(i,1).text() == 'Isotropic' or 'Transversely Isotropic' in self.TMaterials.item(i,1).text() or self.TMaterials.item(i,1).text() == 'Orthotropic':
-                    if i == 0:
+                    if j == 0:
                         elastic_parameters = open(self.ELASTIC_PARAMETERS_0,"w")
                     else:
                         elastic_parameters = open(self.ELASTIC_PARAMETERS_1,"w")
@@ -67,28 +67,31 @@ def Homogenization_WInput(self, BC_index):
     dz = float(self.TParts.item(0,6).text())/Nz
     nph_delt = '2                      number of phases (nph)\n' + f'{dx:.4f} {dy:.4f} {dz:.4f}             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
     evpfft_lattice_input.write(nph_delt)
-    vtkfile = self.voxelizer_dir + '/VTK_Geometry_' + str(self.TParts.item(0,0).text()) + '.vtk\n'
+#    vtkfile = self.voxelizer_dir + '/VTK_Geometry_' + str(self.TParts.item(0,0).text()) + '.vtk\n'
+    vtkfile = str(self.TParts.item(0,10).text()) + '\n'
     evpfft_lattice_input.write(vtkfile)
     for i in range(2):
         if i < len(materials_used):
             j = materials_used[i]
-            if self.TMaterialAssignment.item(i,0).text() == 'global' and self.TMaterials.item(j,1).text() == 'Ideal Gas':
-                phase1 = '*INFORMATION ABOUT PHASE #1\n' + \
-                         '1                          igas(iph)\n' + \
-                         '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + \
-                         'dummy\n' + \
-                         'dummy\n'
+            if i == 0:
+                efile = f'{self.ELASTIC_PARAMETERS_0}'
             else:
-                if i == 0:
-                    efile = f'{self.ELASTIC_PARAMETERS_0}'
+                efile = f'{self.ELASTIC_PARAMETERS_1}'
+            if self.TMaterialAssignment.item(i,0).text() == 'global':
+                if self.TMaterials.item(j,1).text() == 'Ideal Gas':
                     phase1 = '*INFORMATION ABOUT PHASE #1\n' + \
+                             '1                          igas(iph)\n' + \
+                             '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + \
+                             'dummy\n' + \
+                             'dummy\n'
+                else:
+                    phase1 = '*INFORMATION ABOUT PHASE #2\n' + \
                              '0                          igas(iph)\n' + \
                              '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  \
                              f'{self.PLASTIC_PARAMETERS}\n' + \
                              efile + '\n'
-                else:
-                    efile = f'{self.ELASTIC_PARAMETERS_1}'
-                    phase2 = '*INFORMATION ABOUT PHASE #2\n' + \
+            else:
+                phase2 = '*INFORMATION ABOUT PHASE #2\n' + \
                              '0                          igas(iph)\n' + \
                              '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  \
                              f'{self.PLASTIC_PARAMETERS}\n' + \

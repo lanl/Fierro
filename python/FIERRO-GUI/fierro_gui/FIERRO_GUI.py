@@ -325,6 +325,7 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.INErrorTolerance.setText('10')
             self.old_units = self.INUnits.currentText()
         self.INUnits.currentIndexChanged.connect(units)
+        self.units = units
             
         # Upload Geometry
         def geometry_upload_click():
@@ -682,6 +683,7 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.TParts.setItem(row, 7, QTableWidgetItem(self.INNumberOfVoxelsX.text()))
                 self.TParts.setItem(row, 8, QTableWidgetItem(self.INNumberOfVoxelsY.text()))
                 self.TParts.setItem(row, 9, QTableWidgetItem(self.INNumberOfVoxelsZ.text()))
+                self.TParts.setItem(row, 10, QTableWidgetItem(vtk_location))
                 self.INPartName.clear()
                 self.INOriginX.clear()
                 self.INOriginY.clear()
@@ -836,6 +838,7 @@ class FIERRO_GUI(Ui_MainWindow):
             self.TParts.setItem(row, 7, QTableWidgetItem(self.INvtkvx.text()))
             self.TParts.setItem(row, 8, QTableWidgetItem(self.INvtkvy.text()))
             self.TParts.setItem(row, 9, QTableWidgetItem(self.INvtkvz.text()))
+            self.TParts.setItem(row, 10, QTableWidgetItem(self.new_file_path))
             self.INPartName.clear()
             self.INvox.clear()
             self.INvoy.clear()
@@ -1011,7 +1014,22 @@ class FIERRO_GUI(Ui_MainWindow):
         
     # Load file
     def open_load_dialog(self):
+        # Temporairly disconnect unit function
+        self.INUnits.currentIndexChanged.disconnect()
+        # Load GUI
         Load(self)
+        # Load visualizations
+        self.in_file_path = self.TParts.item(0,10).text()
+        self.file_type = os.path.splitext(self.in_file_path)[1].lower()
+        Reload_Geometry(self)
+        # Load variables
+        if self.INPipelineSelection.currentText() == "Homogenization" and self.INHomogenizationJobDir.text() != "":
+            self.working_directory = self.INHomogenizationJobDir.text()
+            self.THomogenization.setEnabled(True)
+        # Reconnect unit function
+        self.INUnits.currentIndexChanged.connect(self.units)
+        self.old_units = self.INUnits.currentText()
+        self.new_units = 'new'
     
     # Output which user profile the user selected
     def handleSettingChanged(self, setting):

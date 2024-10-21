@@ -1,6 +1,6 @@
 from paraview.simple import *
 
-def Reload_Geometry(self):
+def Upload_Batch_Geometry(self):
     # Import Geometry [.stl]
     if ".stl" in self.file_type:
         # Show the stl part
@@ -204,3 +204,18 @@ def Reload_Geometry(self):
                 
     # Delete previously existing part geometries
     self.TParts.removeRow(0)
+    
+def Reload_Geometry(self):
+    if self.file_type == ".vtk":
+        # Paraview window
+        self.vtk_reader = paraview.simple.LegacyVTKReader(FileNames = self.in_file_path)
+        paraview.simple.SetDisplayProperties(Representation = "Surface")
+        text = self.INPartName.text()
+        self.variable_name = f"part_{text}"
+        setattr(self, self.variable_name, paraview.simple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0))
+        self.display = paraview.simple.Show(getattr(self, self.variable_name), self.render_view)
+        paraview.simple.Hide(self.vtk_reader)
+        self.render_view.ResetCamera()
+        self.render_view.StillRender()
+    else:
+        print("ERROR: can only reload visualizations for vtk files at the moment")
