@@ -396,7 +396,7 @@ struct fe_ref_elem_t{
                         //printf(" point value = %f \n", point(dim) );
                     }
 
-                    get_basis(temp_nodal_basis, val_1d, val_3d, point);
+                    get_bernstein_basis(temp_nodal_basis, val_1d, val_3d, point);
                     
                     //double check_basis = 0.0;
 
@@ -422,7 +422,7 @@ struct fe_ref_elem_t{
                         point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
                     }
                     
-                    get_elem_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                    get_bernstein_elem_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
                     //get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
                     //double check_basis = 0.0;
 
@@ -472,8 +472,8 @@ struct fe_ref_elem_t{
                         point(dim) = dual_gauss_lob_positions(dual_gauss_lob_rid, dim);
                     }
                     
-                    get_elem_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
-                    //get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                    // get_elem_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                    get_bernstein_elem_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
                     //double check_basis = 0.0;
 
                     for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
@@ -544,9 +544,13 @@ struct fe_ref_elem_t{
                         point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
                     }
 
-                    partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
-                    partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
-                    partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                    // partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                    // partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                    // partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
+
+                    partial_xi_bernstein_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                    partial_eta_bernstein_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                    partial_mu_bernstein_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
                     
                     double check[3];
                     for (int i = 0; i < 3; i++) check[i] = 0.0;
@@ -1995,63 +1999,345 @@ void partial_mu_basis(const CArrayKokkos <double> &partial_mu,
         }
 }
 
-// KOKKOS_FUNCTION
-// void get_bernstein_basis(const CArrayKokkos <double> &elem_basis,
-//                const CArrayKokkos <double> &elem_val_1d,
-//                const CArrayKokkos <double> &elem_val_3d,
-//                const CArrayKokkos <double> &point) const {
 
-//         // initialize to zero //
-//         for (int i =0; i< num_elem_dofs_1d; i++){
-//           elem_val_1d(i) = 0.0;
-//         }
+KOKKOS_FUNCTION
+void partial_xi_bernstein_basis(const CArrayKokkos <double> &partial_xi,
+                      const CArrayKokkos <double> &val_1d,
+                      const CArrayKokkos <double> &val_3d,
+                      const CArrayKokkos <double> &Dval_1d,
+                      const CArrayKokkos <double> &Dval_3d,
+                      const CArrayKokkos <double> &point) const {
         
-//         // Calculate 1D basis for the X coordinate of the point
-//         bernstein_basis_1D(elem_val_1d, point(0));
-        
-//         // Save the basis value at the point to a temp array and zero out the temp array
-//         for(int i = 0; i < num_elem_dofs_1d; i++){
-//             elem_val_3d(i,0) = elem_val_1d(i);
-//             elem_val_1d(i) = 0.0;
-//         }
+        //initialize//
+        for (int i = 0; i < num_dofs_1d; i++){
+           val_1d(i) = 0.0;
+           Dval_1d(i) = 0.0;
+        }
 
-//         // Calculate 1D basis for the Y coordinate of the point
-//         bernstein_basis_1D(elem_val_1d, point(1));
-        
-//         // Save the basis value at the point to a temp array and zero out the temp array
-//         for(int i = 0; i < num_elem_dofs_1d; i++){
-//             elem_val_3d(i,1) = elem_val_1d(i);
-//             elem_val_1d(i) = 0.0;
-//         }
 
-//         // Calculate 1D basis for the Z coordinate of the point
-//         bernstein_basis_1D(elem_val_1d, point(2));
-        
-//         // Save the basis value at the point to a temp array and zero out the temp array
-//         for(int i = 0; i < num_elem_dofs_1d; i++){
-//             elem_val_3d(i,2) = elem_val_1d(i);
-//             elem_val_1d(i) = 0.0;
-//         }
-        
-//         // Multiply the i, j, k components of the basis from each node
-//         // to get the tensor product basis for the node
-//         for(int k = 0; k < num_elem_dofs_1d; k++){
-//             for(int j = 0; j < num_elem_dofs_1d; j++){
-//                 for(int i = 0; i < num_elem_dofs_1d; i++){
+        // Calculate 1D partial w.r.t. xi for the X coordinate of the point
+        bernstein_derivative_1D(Dval_1d, point(0));
 
-//                     int dof_rlid = elem_dof_rid(i,j,k);
-//                     elem_basis(dof_rlid) = elem_val_3d(i,0)*elem_val_3d(j,1)*elem_val_3d(k,2);
-//                 }
-//             }
-//         }
 
-//         for (int i =0; i< num_elem_dofs_1d; i++){
-//           elem_val_1d(i) = 0.0;
-//           elem_val_3d(i,0) = 0.0;
-//           elem_val_3d(i,1) = 0.0;
-//           elem_val_3d(i,2) = 0.0;
-//         }
-// }
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            
+            Dval_3d(i,0) = Dval_1d(i);
+            Dval_1d(i) = 0.0;
+        }
+
+
+        // Calculate 1D basis for the Y coordinate of the point
+        bernstein_basis_1D(val_1d, point(1));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            
+            val_3d(i,1) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+
+
+        // Calculate 1D basis for the Z coordinate of the point
+        bernstein_basis_1D(val_1d, point(2));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            
+            val_3d(i,2) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+
+        // Multiply the i, j, k components of the basis and partial_xi from each node
+        // to get the tensor product partial derivatives of the basis at each node
+        for(int k = 0; k < num_dofs_1d; k++){
+            for(int j = 0; j < num_dofs_1d; j++){
+                for(int i = 0; i < num_dofs_1d; i++){
+                    
+                    int dof_rlid = dof_rid(i,j,k);
+
+                    // Partial w.r.t xi
+                    partial_xi(dof_rlid) = Dval_3d(i, 0)*val_3d(j, 1)*val_3d(k, 2);
+
+                }
+            }
+        }
+
+        for (int i =0; i< num_dofs_1d; i++){
+          val_1d(i) = 0.0;
+          val_3d(i,0) = 0.0;
+          val_3d(i,1) = 0.0;
+          val_3d(i,2) = 0.0;
+          Dval_1d(i) = 0.0;
+          Dval_3d(i,0) = 0.0;
+          Dval_3d(i,1) = 0.0;
+          Dval_3d(i,2) = 0.0;
+        }
+}
+
+KOKKOS_FUNCTION
+void partial_eta_bernstein_basis(const CArrayKokkos <double> &partial_eta,
+                       const CArrayKokkos <double> &val_1d,
+                       const CArrayKokkos <double> &val_3d,
+                       const CArrayKokkos <double> &Dval_1d,
+                       const CArrayKokkos <double> &Dval_3d,
+                       const CArrayKokkos <double> &point) const {   
+
+        //initialize//
+        for (int i = 0; i < num_dofs_1d; i++){
+           val_1d(i) = 0.0;
+           Dval_1d(i) = 0.0;
+        }
+
+        // Calculate 1D basis for the Y coordinate of the point
+        bernstein_basis_1D(val_1d, point(0));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){            
+            val_3d(i,0) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+
+        // Calculate 1D partial w.r.t. eta for the Y coordinate of the point
+        bernstein_derivative_1D(Dval_1d, point(1));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            
+            Dval_3d(i,1) = Dval_1d(i);
+
+            Dval_1d(i) = 0.0;
+        }
+
+
+        // Calculate 1D basis for the Z coordinate of the point
+        bernstein_basis_1D(val_1d, point(2));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            
+            val_3d(i,2) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+
+        // Multiply the i, j, k components of the basis and partial_eta from each node
+        // to get the tensor product partial derivatives of the basis at each node
+        for(int k = 0; k < num_dofs_1d; k++){
+            for(int j = 0; j < num_dofs_1d; j++){
+                for(int i = 0; i < num_dofs_1d; i++){
+                    
+                    int dof_rlid = dof_rid(i,j,k);
+
+                    // Partial w.r.t xi
+                    partial_eta(dof_rlid) = val_3d(i, 0)*Dval_3d(j, 1)*val_3d(k, 2);
+
+                }
+            }
+        }
+
+        for (int i =0; i< num_dofs_1d; i++){
+          val_1d(i) = 0.0;
+          val_3d(i,0) = 0.0;
+          val_3d(i,1) = 0.0;
+          val_3d(i,2) = 0.0;
+          Dval_1d(i) = 0.0;
+          Dval_3d(i,0) = 0.0;
+          Dval_3d(i,1) = 0.0;
+          Dval_3d(i,2) = 0.0;
+        }
+}
+
+
+KOKKOS_FUNCTION
+void partial_mu_bernstein_basis(const CArrayKokkos <double> &partial_mu, 
+                      const CArrayKokkos <double> &val_1d,
+                      const CArrayKokkos <double> &val_3d,
+                      const CArrayKokkos <double> &Dval_1d,
+                      const CArrayKokkos <double> &Dval_3d,
+                      const CArrayKokkos <double> &point) const {
+
+        //initialize//
+        for (int i = 0; i < num_dofs_1d; i++){
+           val_1d(i) = 0.0;
+           Dval_1d(i) = 0.0;
+        }
+
+        // Calculate 1D basis for the X coordinate of the point
+        bernstein_basis_1D(val_1d, point(0));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            
+            val_3d(i,0) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+
+
+        // Calculate 1D basis for the Y coordinate of the point
+        bernstein_basis_1D(val_1d, point(1));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            
+            val_3d(i,1) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+
+
+        // Calculate 1D partial w.r.t. mu for the Z coordinate of the point
+        bernstein_derivative_1D(Dval_1d, point(2));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            
+            Dval_3d(i,2) = Dval_1d(i);
+            Dval_1d(i) = 0.0;
+        }
+
+        // Multiply the i, j, k components of the basis and partial_xi from each node
+        // to get the tensor product partial derivatives of the basis at each node
+        for(int k = 0; k < num_dofs_1d; k++){
+            for(int j = 0; j < num_dofs_1d; j++){
+                for(int i = 0; i < num_dofs_1d; i++){
+                    
+                    int dof_rlid = dof_rid(i,j,k);
+
+                    // Partial w.r.t mu
+                    partial_mu(dof_rlid) = val_3d(i, 0)*val_3d(j, 1)*Dval_3d(k, 2);
+
+                }
+            }
+        }
+
+        for (int i =0; i< num_dofs_1d; i++){
+          val_1d(i) = 0.0;
+          val_3d(i,0) = 0.0;
+          val_3d(i,1) = 0.0;
+          val_3d(i,2) = 0.0;
+          Dval_1d(i) = 0.0;
+          Dval_3d(i,0) = 0.0;
+          Dval_3d(i,1) = 0.0;
+          Dval_3d(i,2) = 0.0;
+        }
+}
+
+KOKKOS_FUNCTION
+void get_bernstein_basis(const CArrayKokkos <double> &basis,
+               const CArrayKokkos <double> &val_1d,
+               const CArrayKokkos <double> &val_3d,
+               const CArrayKokkos <double> &point) const {
+
+        // initialize to zero //
+        for (int i =0; i< num_dofs_1d; i++){
+          val_1d(i) = 0.0;
+        }
+        
+        // Calculate 1D basis for the X coordinate of the point
+        bernstein_basis_1D(val_1d, point(0));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            val_3d(i,0) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+
+        // Calculate 1D basis for the Y coordinate of the point
+        bernstein_basis_1D(val_1d, point(1));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            val_3d(i,1) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+
+        // Calculate 1D basis for the Z coordinate of the point
+        bernstein_basis_1D(val_1d, point(2));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_dofs_1d; i++){
+            val_3d(i,2) = val_1d(i);
+            val_1d(i) = 0.0;
+        }
+        
+        // Multiply the i, j, k components of the basis from each node
+        // to get the tensor product basis for the node
+        for(int k = 0; k < num_dofs_1d; k++){
+            for(int j = 0; j < num_dofs_1d; j++){
+                for(int i = 0; i < num_dofs_1d; i++){
+
+                    int dof_rlid = dof_rid(i,j,k);
+                    basis(dof_rlid) = val_3d(i,0)*val_3d(j,1)*val_3d(k,2);
+                }
+            }
+        }
+
+        for (int i =0; i< num_elem_dofs_1d; i++){
+          val_1d(i) = 0.0;
+          val_3d(i,0) = 0.0;
+          val_3d(i,1) = 0.0;
+          val_3d(i,2) = 0.0;
+        }
+}
+
+
+
+KOKKOS_FUNCTION
+void get_bernstein_elem_basis(const CArrayKokkos <double> &elem_basis,
+               const CArrayKokkos <double> &elem_val_1d,
+               const CArrayKokkos <double> &elem_val_3d,
+               const CArrayKokkos <double> &point) const {
+
+        // initialize to zero //
+        for (int i =0; i< num_elem_dofs_1d; i++){
+          elem_val_1d(i) = 0.0;
+        }
+        
+        // Calculate 1D basis for the X coordinate of the point
+        bernstein_elem_basis_1D(elem_val_1d, point(0));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_elem_dofs_1d; i++){
+            elem_val_3d(i,0) = elem_val_1d(i);
+            elem_val_1d(i) = 0.0;
+        }
+
+        // Calculate 1D basis for the Y coordinate of the point
+        bernstein_elem_basis_1D(elem_val_1d, point(1));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_elem_dofs_1d; i++){
+            elem_val_3d(i,1) = elem_val_1d(i);
+            elem_val_1d(i) = 0.0;
+        }
+
+        // Calculate 1D basis for the Z coordinate of the point
+        bernstein_elem_basis_1D(elem_val_1d, point(2));
+        
+        // Save the basis value at the point to a temp array and zero out the temp array
+        for(int i = 0; i < num_elem_dofs_1d; i++){
+            elem_val_3d(i,2) = elem_val_1d(i);
+            elem_val_1d(i) = 0.0;
+        }
+        
+        // Multiply the i, j, k components of the basis from each node
+        // to get the tensor product basis for the node
+        for(int k = 0; k < num_elem_dofs_1d; k++){
+            for(int j = 0; j < num_elem_dofs_1d; j++){
+                for(int i = 0; i < num_elem_dofs_1d; i++){
+
+                    int dof_rlid = elem_dof_rid(i,j,k);
+                    elem_basis(dof_rlid) = elem_val_3d(i,0)*elem_val_3d(j,1)*elem_val_3d(k,2);
+                }
+            }
+        }
+
+        for (int i =0; i< num_elem_dofs_1d; i++){
+          elem_val_1d(i) = 0.0;
+          elem_val_3d(i,0) = 0.0;
+          elem_val_3d(i,1) = 0.0;
+          elem_val_3d(i,2) = 0.0;
+        }
+}
 
 KOKKOS_FUNCTION
 void lagrange_basis_1D(
@@ -2169,29 +2455,84 @@ void lagrange_derivative_1D(
         } // end loop over all nodes
 } // end of Lagrange_1D function
 
-// KOKKOS_INLINE_FUNCTION
-// void bernstein_basis_1D(
-//         const CArrayKokkos <double> &interp,
-//         const double X) const {
-      
-//       for( int dof_i = 0; dof_i < num_elem_dofs_1d; dof_i++){
-//         interp(dof_i) = eval_bernstein(num_elem_dofs_1d-1, dof_i, X);
-//       }
-// }
 
-// // WARNING WARNING WARNING: Change to for loop? //
-// KOKKOS_INLINE_FUNCTION
-// double eval_bernstein (
-//         const size_t n,// polynomial order
-//         const size_t v,// index
-//         const double X) const { // point at which to evaluate polynomial 
+KOKKOS_INLINE_FUNCTION
+void bernstein_basis_1D(
+        const CArrayKokkos <double> &interp,
+        const double X) const {
       
-//       if ( n == 0 && v != 0 ) return 0.0;
-//       if ( n == 0 && v == 0 ) return 1.0;
-//       if ( n < v ) return 0.0;
-//       return 0.5*((1.0-X)*eval_bernstein(n-1, v, X) + (1.0+X)*eval_bernstein(n-1, v-1, X)); 
-// }
+      for( int dof_i = 0; dof_i < num_dofs_1d; dof_i++){
+        interp(dof_i) = eval_bernstein(num_dofs_1d-1, dof_i, X);
+      }
+}
 
+KOKKOS_INLINE_FUNCTION
+void bernstein_derivative_1D(
+        const CArrayKokkos <double> &interp,
+        const double X) const {
+      
+      for( int dof_i = 0; dof_i < num_dofs_1d; dof_i++){
+        interp(dof_i) = eval_bernstein_derivative(num_dofs_1d-1, dof_i, X);
+      }
+}
+
+KOKKOS_INLINE_FUNCTION
+void bernstein_elem_basis_1D(
+        const CArrayKokkos <double> &interp,
+        const double X) const {
+      
+      for( int dof_i = 0; dof_i < num_elem_dofs_1d; dof_i++){
+        interp(dof_i) = eval_bernstein(num_elem_dofs_1d-1, dof_i, X);
+      }
+}
+
+KOKKOS_INLINE_FUNCTION
+double eval_bernstein (
+        const size_t n,// polynomial order
+        const size_t v,// index
+        const double X) const { // point at which to evaluate polynomial 
+      
+    //   if ( n == 0 && v != 0 ) return 0.0;
+    //   if ( n == 0 && v == 0 ) return 1.0;
+    //   if ( n < v ) return 0.0;
+    //   return 0.5*((1.0-X)*eval_bernstein(n-1, v, X) + (1.0+X)*eval_bernstein(n-1, v-1, X));
+
+    if (v > n) return 0.0;
+    
+    double coeff = 1.0; 
+    double one_plus_X_pow_v = 1.0; 
+    double one_minus_X_pow_n_minus_v = 1.0;
+
+    for (size_t i = 0; i < v; i++) {
+        one_plus_X_pow_v *= (1.0 + X);
+    }
+    for (size_t i = 0; i < (n - v); i++) {
+        one_minus_X_pow_n_minus_v *= (1.0 - X);
+    }
+    
+    // Calculate (n choose v)
+    for (size_t i = 0; i < v; i++) {
+        coeff *= static_cast<double>(n - i) / static_cast<double>(i + 1);
+    }
+    
+    return coeff * one_plus_X_pow_v * one_minus_X_pow_n_minus_v;
+}
+
+KOKKOS_INLINE_FUNCTION
+double eval_bernstein_derivative(
+        const size_t n,  // polynomial order
+        const size_t v,  // index
+        const double X) const { // point at which to evaluate the derivative
+
+    if (v > n) return 0.0;
+
+    if (n == 0) return 0.0; 
+
+    double bernstein_v_minus_1 = (v == 0) ? 0.0 : eval_bernstein(n - 1, v - 1, X);
+    double bernstein_v = eval_bernstein(n - 1, v, X);
+
+    return n * (bernstein_v_minus_1 - bernstein_v);
+}
 
 };
 
