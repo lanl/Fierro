@@ -126,7 +126,7 @@ def Upload_Batch_Geometry(self):
         self.BAddVTKGeometry.click()
         
     # Import Data Set [.vtk, .xdmf]
-    elif ".vtk" in self.file_type or ".xdmf" in self.file_type:
+    elif ".vtk" in self.file_type or ".txt" in self.file_type:
         # VTK IMPORT
         if self.file_type == ".vtk":
             # Paraview window
@@ -199,8 +199,8 @@ def Upload_Batch_Geometry(self):
             self.BAddVTKGeometry.click()
                 
         # XDMF IMPORT
-        elif self.file_type == ".xdmf":
-            warning_message("Batch xdmf files are currently not supported")
+        elif self.file_type == ".txt":
+            warning_message("Batch text files are currently not supported")
                 
     # Delete previously existing part geometries
     self.TParts.removeRow(0)
@@ -217,5 +217,40 @@ def Reload_Geometry(self):
         paraview.simple.Hide(self.vtk_reader)
         self.render_view.ResetCamera()
         self.render_view.StillRender()
+    elif self.file_type == ".txt":
+        # output file location
+        vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + self.TParts.item(0,0).text() + '.vtk'
+        print(vtk_location)
+        
+        # Paraview window
+        self.txt_reader = paraview.simple.LegacyVTKReader(FileNames = vtk_location)
+        paraview.simple.SetDisplayProperties(Representation = "Surface")
+        text = self.INPartName.text()
+        self.variable_name = f"part_{text}"
+        setattr(self, self.variable_name, self.txt_reader)
+        self.display = paraview.simple.Show(getattr(self, self.variable_name), self.render_view)
+        paraview.simple.Show(self.txt_reader)
+        self.render_view.ResetCamera()
+        self.render_view.StillRender()
+        
+        # Open up window to change color map
+        self.SAGeometryScrollArea.verticalScrollBar().setValue(0)
+        self.GeometryOptions.setCurrentIndex(3)
+
+        # Get the avaliable arrays for coloring
+        self.txt_reader.UpdatePipeline()
+        data_maps = get_paraview_variables(self.txt_reader)
+        self.INSelectColorBy.clear()
+        self.INSelectColorBy.addItems(data_maps) # add options to combo box
     else:
         print("ERROR: can only reload visualizations for vtk files at the moment")
+        
+# Function to get avaliable variables from Paraview
+def get_paraview_variables(data_reader):
+    output = data_reader.GetClientSideObject().GetOutputDataObject(0)
+    point_data = output.GetPointData()
+    cell_data = output.GetCellData()
+    point_arrays = [point_data.GetArrayName(i) for i in range(point_data.GetNumberOfArrays())]
+    cell_arrays = [cell_data.GetArrayName(i) for i in range(cell_data.GetNumberOfArrays())]
+    all_arrays = point_arrays + cell_arrays
+    return all_arrays

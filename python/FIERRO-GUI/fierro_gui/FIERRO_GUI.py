@@ -604,13 +604,13 @@ class FIERRO_GUI(Ui_MainWindow):
                     los_alamos_to_vtk(Data_filename, vtk_location)
                     
                     # Paraview window
-                    self.vtk_reader = pvsimple.LegacyVTKReader(FileNames = vtk_location)
+                    self.txt_reader = pvsimple.LegacyVTKReader(FileNames = vtk_location)
                     pvsimple.SetDisplayProperties(Representation = "Surface")
                     text = self.INPartName.text()
                     self.variable_name = f"part_{text}"
-                    setattr(self, self.variable_name, self.vtk_reader)
+                    setattr(self, self.variable_name, self.txt_reader)
                     self.display = pvsimple.Show(getattr(self, self.variable_name), self.render_view)
-                    pvsimple.Show(self.vtk_reader)
+                    pvsimple.Show(self.txt_reader)
                     self.render_view.ResetCamera()
                     self.render_view.StillRender()
                     
@@ -619,10 +619,51 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.GeometryOptions.setCurrentIndex(3)
 
                     # Get the avaliable arrays for coloring
-                    self.vtk_reader.UpdatePipeline()
-                    data_maps = get_paraview_variables(self.vtk_reader)
+                    self.txt_reader.UpdatePipeline()
+                    data_maps = get_paraview_variables(self.txt_reader)
                     self.INSelectColorBy.clear()
                     self.INSelectColorBy.addItems(data_maps) # add options to combo box
+                    
+                    # Get the length of the xdmf
+                    self.bounds = self.txt_reader.GetDataInformation().GetBounds()
+                    self.vtkLx = round(self.bounds[1] - self.bounds[0],4)
+                    self.vtkLy = round(self.bounds[3] - self.bounds[2],4)
+                    self.vtkLz = round(self.bounds[5] - self.bounds[4],4)
+                    
+                    # Get the origin of the xdmf
+                    self.vtkOx = self.bounds[0]
+                    self.vtkOy = self.bounds[2]
+                    self.vtkOz = self.bounds[4]
+                    
+                    # Get the voxels in the xdmf
+                    self.extents = self.txt_reader.GetDataInformation().GetExtent()
+                    self.vtkNx = int(self.extents[1] - self.extents[0])
+                    self.vtkNy = int(self.extents[3] - self.extents[2])
+                    self.vtkNz = int(self.extents[5] - self.extents[4])
+                    
+                    # Add part to the table
+                    row = self.TParts.rowCount()
+                    self.TParts.insertRow(row)
+                    self.TParts.setItem(row, 0, QTableWidgetItem(self.INPartName.text()))
+                    self.TParts.setItem(row, 1, QTableWidgetItem(str(self.vtkOx)))
+                    self.TParts.setItem(row, 2, QTableWidgetItem(str(self.vtkOy)))
+                    self.TParts.setItem(row, 3, QTableWidgetItem(str(self.vtkOz)))
+                    self.TParts.setItem(row, 4, QTableWidgetItem(str(self.vtkLx)))
+                    self.TParts.setItem(row, 5, QTableWidgetItem(str(self.vtkLy)))
+                    self.TParts.setItem(row, 6, QTableWidgetItem(str(self.vtkLz)))
+                    self.TParts.setItem(row, 7, QTableWidgetItem(str(self.vtkNx)))
+                    self.TParts.setItem(row, 8, QTableWidgetItem(str(self.vtkNy)))
+                    self.TParts.setItem(row, 9, QTableWidgetItem(str(self.vtkNz)))
+                    self.TParts.setItem(row, 10, QTableWidgetItem(Data_filename))
+                    self.INPartName.clear()
+                    
+                    # Add part as an option for material assignment
+                    self.INRegion.clear()
+                    for i in range(self.TParts.rowCount()):
+                        self.INRegion.addItem(self.TParts.item(i,0).text())
+                    for i in range(self.TBasicGeometries.rowCount()):
+                        self.INRegion.addItem(self.TBasicGeometries.item(i,0).text())
+                    self.INRegion.addItem("global")
                     
         self.BUploadGeometryFile.clicked.connect(geometry_upload_click)
         
@@ -1061,13 +1102,17 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.working_directory = self.INHomogenizationJobDir.text()
                 self.THomogenization.setEnabled(True)
             # Update material selections
-            self.INRegion.clear()
-            for i in range(self.TParts.rowCount()):
-                self.INRegion.addItem(self.TParts.item(i,0).text())
-            self.INRegion.addItem("global")
-            self.INMaterial.clear()
-            for i in range(self.TParts.rowCount()):
-                self.INMaterial.addItem(self.TMaterials.item(i,0).text())
+            rows = self.TParts.rowCount()
+            if rows > 0:
+                self.INRegion.clear()
+                for i in range(rows):
+                    self.INRegion.addItem(self.TParts.item(i,0).text())
+                self.INRegion.addItem("global")
+            rows = self.TMaterials.rowCount()
+            if rows > 0:
+                self.INMaterial.clear()
+                for i in range(rows):
+                    self.INMaterial.addItem(self.TMaterials.item(i,0).text())
             
         # Reconnect unit function
         self.INUnits.currentIndexChanged.connect(self.units)
