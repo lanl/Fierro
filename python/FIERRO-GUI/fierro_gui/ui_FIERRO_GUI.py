@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIUQxews.ui'
+## Form generated from reading UI file 'FIERRO_GUIOmYTAs.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -4083,7 +4083,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1326, 24))
+        self.menubar.setGeometry(QRect(0, 0, 1326, 37))
         self.menuHelp = QMenu(self.menubar)
         self.menuHelp.setObjectName(u"menuHelp")
         self.menuFile = QMenu(self.menubar)
@@ -4355,7 +4355,7 @@ class Ui_MainWindow(object):
         self.LPartSelection.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Selection:</p></body></html>", None))
         self.INSelectGeometryImport.setItemText(0, QCoreApplication.translate("MainWindow", u"Import Geometry (.stl)", None))
         self.INSelectGeometryImport.setItemText(1, QCoreApplication.translate("MainWindow", u"Import Image Stack (.png, .jpg, .tif)", None))
-        self.INSelectGeometryImport.setItemText(2, QCoreApplication.translate("MainWindow", u"Import Data Set (.vtk, .xdmf)", None))
+        self.INSelectGeometryImport.setItemText(2, QCoreApplication.translate("MainWindow", u"Import Data Set (.vtk, .txt)", None))
         self.INSelectGeometryImport.setItemText(3, QCoreApplication.translate("MainWindow", u"Create Basic Part", None))
 
         self.LPartName.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Part Name:</p></body></html>", None))

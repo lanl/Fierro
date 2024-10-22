@@ -55,6 +55,7 @@ from Mesh_Builder_WInput import *
 from FIERRO_Setup import *
 from ImageToVTK import *
 from Save_Load import *
+from LAFFT2VTK import *
 #from TiffImageToVTK import *
 #from Dream3DReader import *
 import DeveloperInputs
@@ -144,14 +145,14 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.INSelectGeometryImport.clear()
                 self.INSelectGeometryImport.addItem("Import Geometry (.stl)")
                 self.INSelectGeometryImport.addItem("Import Image Stack (.png)")
-                self.INSelectGeometryImport.addItem("Import Data Set (.vtk, .xdmf)")
+                self.INSelectGeometryImport.addItem("Import Data Set (.vtk, .txt)")
                 self.INSelectGeometryImport.addItem("Create Basic Part")
             elif (selection == 1): # Homogenization Solver
                 # Define geometry imports
                 self.INSelectGeometryImport.clear()
                 self.INSelectGeometryImport.addItem("Import Geometry (.stl)")
                 self.INSelectGeometryImport.addItem("Import Image Stack (.png, .jpg, .tif)")
-                self.INSelectGeometryImport.addItem("Import Data Set (.vtk, .xdmf)")
+                self.INSelectGeometryImport.addItem("Import Data Set (.vtk, .txt)")
                 
                 # Turn off tabs
                 self.NavigationMenu.setTabEnabled(3, False)
@@ -453,11 +454,11 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.INvlz.setText(str(self.vtkLz))
                 
             # Import Data Set [.vtk, .xdmf]
-            elif ".vtk" in self.INSelectGeometryImport.currentText() or ".xdmf" in self.INSelectGeometryImport.currentText():
+            elif ".vtk" in self.INSelectGeometryImport.currentText() or ".txt" in self.INSelectGeometryImport.currentText():
                 # Get filename
                 global Data_filename
                 Data_filename, _ = QFileDialog.getOpenFileName(
-                    filter="Data Set File (*.vtk *.xdmf)",
+                    filter="Data Set File (*.vtk *.txt)",
                 )
                 file_type = os.path.splitext(Data_filename)[1].lower()
                 
@@ -593,6 +594,36 @@ class FIERRO_GUI(Ui_MainWindow):
                     for i in range(self.TBasicGeometries.rowCount()):
                         self.INRegion.addItem(self.TBasicGeometries.item(i,0).text())
                     self.INRegion.addItem("global")
+                    
+                # Text file
+                elif file_type == ".txt":
+                    # output file location
+                    vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
+                    
+                    # convert text file to vtk file for visualization
+                    los_alamos_to_vtk(Data_filename, vtk_location)
+                    
+                    # Paraview window
+                    self.vtk_reader = pvsimple.LegacyVTKReader(FileNames = vtk_location)
+                    pvsimple.SetDisplayProperties(Representation = "Surface")
+                    text = self.INPartName.text()
+                    self.variable_name = f"part_{text}"
+                    setattr(self, self.variable_name, self.vtk_reader)
+                    self.display = pvsimple.Show(getattr(self, self.variable_name), self.render_view)
+                    pvsimple.Show(self.vtk_reader)
+                    self.render_view.ResetCamera()
+                    self.render_view.StillRender()
+                    
+                    # Open up window to change color map
+                    self.SAGeometryScrollArea.verticalScrollBar().setValue(0)
+                    self.GeometryOptions.setCurrentIndex(3)
+
+                    # Get the avaliable arrays for coloring
+                    self.vtk_reader.UpdatePipeline()
+                    data_maps = get_paraview_variables(self.vtk_reader)
+                    self.INSelectColorBy.clear()
+                    self.INSelectColorBy.addItems(data_maps) # add options to combo box
+                    
         self.BUploadGeometryFile.clicked.connect(geometry_upload_click)
         
         # Warn User if no geometry was uploaded
