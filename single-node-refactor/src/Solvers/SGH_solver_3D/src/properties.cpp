@@ -183,7 +183,7 @@ void SGH3D::update_state(
                                         GaussPoints_vel_grad,
                                         node_coords,
                                         node_vel,
-                                        elem_node_gids,
+                                        mesh.nodes_in_elem,
                                         MaterialPoints_pres,
                                         MaterialPoints_stress,
                                         MaterialPoints_sspd,
@@ -202,7 +202,8 @@ void SGH3D::update_state(
                                         cycle,
                                         mat_point_lid,
                                         mat_id,
-                                        gauss_gid);
+                                        gauss_gid,
+                                        elem_gid);
         }); // end parallel for over mat elem lid
     } // end if state_based strength model
 
@@ -317,10 +318,12 @@ void SGH3D::update_stress(
     // ==================================================
     // launcing another solver, which then calls the material model interface
     // ==================================================
+
+    
     if (Materials.MaterialEnums.host(mat_id).StrengthRunLocation == model::host ||
         Materials.MaterialEnums.host(mat_id).StrengthRunLocation == model::dual){
 
-
+        CArrayKokkos<size_t> elem_node_gids(num_nodes_in_elem); 
         for (size_t mat_elem_lid=0; mat_elem_lid<num_mat_elems; mat_elem_lid++){
 
             // get elem gid
@@ -332,13 +335,6 @@ void SGH3D::update_stress(
             // the material point index = the material elem index for a 1-point element
             size_t mat_point_lid = mat_elem_lid;
 
-            // cut out the node_gids for this element
-            ViewCArrayKokkos<size_t> elem_node_gids;
-            RUN({
-                // slice the nodes on the device side
-                auto elem_node_gids = ViewCArrayKokkos<size_t>(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
-            });
-
             printf("hello from host model call \n");
 
             // --- call strength model from the host side ---
@@ -346,7 +342,7 @@ void SGH3D::update_stress(
                                             GaussPoints_vel_grad,
                                             node_coords,
                                             node_vel,
-                                            elem_node_gids,
+                                            mesh.nodes_in_elem,
                                             MaterialPoints_pres,
                                             MaterialPoints_stress,
                                             MaterialPoints_sspd,
@@ -365,7 +361,8 @@ void SGH3D::update_stress(
                                             cycle,
                                             mat_point_lid,
                                             mat_id,
-                                            gauss_gid);
+                                            gauss_gid,
+                                            elem_gid);
 
         } // end serial loop over the material_elem_lids
 
@@ -396,7 +393,7 @@ void SGH3D::update_stress(
                                             GaussPoints_vel_grad,
                                             node_coords,
                                             node_vel,
-                                            elem_node_gids,
+                                            mesh.nodes_in_elem,
                                             MaterialPoints_pres,
                                             MaterialPoints_stress,
                                             MaterialPoints_sspd,
@@ -415,7 +412,8 @@ void SGH3D::update_stress(
                                             cycle,
                                             mat_point_lid,
                                             mat_id,
-                                            gauss_gid);
+                                            gauss_gid,
+                                            elem_gid);
 
         });  // end parallel for over elems that have the materials
 

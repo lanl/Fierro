@@ -194,7 +194,7 @@ void SGHRZ::update_state_rz(
                                     GuassPoints_vel_grad,
                                     node_coords,
                                     node_vel,
-                                    elem_node_gids,
+                                    mesh.nodes_in_elem,
                                     MaterialPoints_pres,
                                     MaterialPoints_stress,
                                     MaterialPoints_sspd,
@@ -213,7 +213,8 @@ void SGHRZ::update_state_rz(
                                     cycle,
                                     mat_point_lid,
                                     mat_id,
-                                    gauss_gid);
+                                    gauss_gid,
+                                    elem_gid);
 
 
         }); // end parallel for over mat elem lid
@@ -365,7 +366,7 @@ void SGHRZ::update_stress(const Material_t& Materials,
                                             GuassPoints_vel_grad,
                                             node_coords,
                                             node_vel,
-                                            elem_node_gids,
+                                            mesh.nodes_in_elem,
                                             MaterialPoints_pres,
                                             MaterialPoints_stress,
                                             MaterialPoints_sspd,
@@ -384,7 +385,8 @@ void SGHRZ::update_stress(const Material_t& Materials,
                                             cycle,
                                             mat_point_lid,
                                             mat_id,
-                                            gauss_gid);
+                                            gauss_gid,
+                                            elem_gid);
 
         });  // end parallel for over elems that have the materials
     } // end if run location is device
