@@ -96,6 +96,7 @@ namespace NoEOSModel {
                                  const DCArrayKokkos<double>& MaterialPoints_sspd,
                                  const double den,
                                  const double sie,
+                                 const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
                                  const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
 

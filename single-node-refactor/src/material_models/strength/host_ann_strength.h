@@ -32,19 +32,100 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef USER_DEFINED_STRENGTH_H
-#define USER_DEFINED_STRENGTH_H
+#ifndef HOST_ANN_STRENGTH_H
+#define HOST_ANN_STRENGTH_H
 
+
+/////////////////////////////////////////////////////////////////////////////
+// helper functions
+/////////////////////////////////////////////////////////////////////////////
+
+// the number of nodes in each layer of the ANN
+std::vector <size_t> num_nodes_in_layer = {6, 3, 1}; //{64000, 30000, 8000, 4000, 100, 25, 6};
+
+// array of ANN structs
+struct ANNLayer_t{
+
+    DCArrayKokkos <float> outputs;  // dims = [layer]
+    DFArrayKokkos <float> weights;  // dims = [layer-1, layer]
+    DCArrayKokkos <float> biases;   // dims = [layer]  
+
+}; // end struct
+
+void set_biases_host(const DCArrayKokkos <float> &biases){
+    const size_t num_j = biases.size();
+
+    FOR_ALL(j,0,num_j, {
+		    biases(j) = 0.0;
+	}); // end parallel for
+
+}; // end function
+
+void set_weights_host(const DFArrayKokkos <float> &weights){
+
+    const size_t num_i = weights.dims(0);
+    const size_t num_j = weights.dims(1);
+    
+	FOR_ALL(i,0,num_i,
+	        j,0,num_j, {
+		    
+		    weights(i,j) = 1.0;
+	}); // end parallel for
+
+}; // end function
+
+void forward_propagate_layer_host(const DCArrayKokkos <float> &inputs,
+                                  const DCArrayKokkos <float> &outputs, 
+                                  const DFArrayKokkos <float> &weights,
+                                  const DCArrayKokkos <float> &biases){
+    
+
+
+    const size_t num_i = inputs.size();
+    const size_t num_j = outputs.size();
+
+
+
+    // For a GPU, use the nested parallelism below here
+    using team_t = typename Kokkos::TeamPolicy<>::member_type;
+    Kokkos::parallel_for ("MatVec", Kokkos::TeamPolicy<> (num_j, Kokkos::AUTO),
+                 KOKKOS_LAMBDA (const team_t& team_h) {
+
+        float sum = 0;
+        int j = team_h.league_rank();
+        Kokkos::parallel_reduce (Kokkos::TeamThreadRange (team_h, num_i),
+                        [&] (int i, float& lsum) {
+
+            lsum += inputs(i)*weights(i,j) + biases(j);
+
+            
+        }, sum); // end parallel reduce
+
+        outputs(j) = 1.0/(1.0 + exp(-sum)); 
+
+        
+
+    }); // end parallel for
+    
+
+
+    return;
+
+}; // end function
 
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn LargeANNStrengthModel
+/// \fn ANNStrengthModelHost
 ///
 /// \brief Large Artificial Neural Network strength model
 ///
 ///  This is the ANN model that returns the stress tensor, the parallelism is
-///  inside this model, thus it is launched from the CPU
+///  inside this model, thus it is launched from the CPU.  The loop is serial
+///  over the elements of the mesh, and  nested parallelism is used in the
+///  material model (i.e., the ANN).  For performance, there must be more ANN
+///  nodes than elements, otherwise, use parallelism over elements and 
+///  launch the ANN material model in serial on the device (e.g., GPU).
 ///
 /// \param Element pressure
 /// \param Element stress
@@ -63,46 +144,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Time coefficient in the Runge Kutta time integration step
 ///
 /////////////////////////////////////////////////////////////////////////////
+namespace HostANNStrengthModel {
 
-// the number of nodes in each layer of the ANN
-std::vector <size_t> num_nodes_in_layer = {64000, 30000, 8000, 4000, 100, 25, 6}
+    CMatrix <ANNLayer_t> ANNLayers;
+    DCArrayKokkos <float> inputs;
+    size_t num_layers;
 
-// array of ANN structs
-struct ANNLayer_t{
-
-    DCArrayKokkos <float> outputs;  // dims = [layer]
-    DFArrayKokkos <float> weights;  // dims = [layer-1, layer]
-    DCArrayKokkos <float> biases;   // dims = [layer]  
-
-}; // end struct
-
-void set_biases(const DCArrayKokkos <float> &biases){
-    const size_t num_j = biases.size();
-
-    FOR_ALL(j,0,num_j, {
-		    biases(j) = 0.0;
-	}); // end parallel for
-
-}; // end function
-
-void set_weights(const DFArrayKokkos <float> &weights){
-
-    const size_t num_i = weights.dims(0);
-    const size_t num_j = weights.dims(1);
-    
-	FOR_ALL(i,0,num_i,
-	        j,0,num_j, {
-		    
-		    weights(i,j) = 1.0;
-	}); // end parallel for
-
-}; // end function
-
-
-namespace LargeANNStrengthModel {
-
-    void init_strength_state_vars(
-        const DCArrayKokkos <Material_t> &material,
+    static void init_strength_state_vars(
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
@@ -117,12 +165,12 @@ namespace LargeANNStrengthModel {
         // =================================================================
 
         // note: the num_nodes_in_layer has the inputs into the ANN, so subtract 1 for the layers
-        size_t num_layers = num_nodes_in_layer.size()-1;  
+        num_layers = num_nodes_in_layer.size()-1;  
 
-        CMatrix <ANNLayer_t> ANNLayers(num_layers); // starts at 1 and goes to num_layers
+        ANNLayers = CMatrix <ANNLayer_t> (num_layers); // starts at 1 and goes to num_layers
 
         // input and ouput values to ANN
-        DCArrayKokkos <float> inputs(num_nodes_in_layer[0]);
+        inputs = DCArrayKokkos <float> (num_nodes_in_layer[0]);
 
 
         // set the strides
@@ -159,28 +207,29 @@ namespace LargeANNStrengthModel {
             size_t num_i = num_nodes_in_layer[layer-1];
             size_t num_j = num_nodes_in_layer[layer];
 
-
-            set_weights(ANNLayers(layer).weights);
-            set_biases(ANNLayers(layer).biases);
+            set_weights_host(ANNLayers(layer).weights);
+            set_biases_host(ANNLayers(layer).biases);
 
         } // end for over layers
+
 
     }  // end of init_strength_state_vars
 
 
     // this model is launched from the CPU, coding inside is run on GPUS
     static void calc_stress(
-        const ViewCArrayKokkos<double>& vel_grad,
+        const DCArrayKokkos<double>  &GaussPoints_vel_grad,
         const DCArrayKokkos <double> &node_coords,
         const DCArrayKokkos <double> &node_vel,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DCArrayKokkos<size_t>  &nodes_in_elem,
+        const DCArrayKokkos<double>  &MaterialPoints_pres,
+        const DCArrayKokkos<double>  &MaterialPoints_stress,
+        const DCArrayKokkos<double>  &MaterialPoints_sspd,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
@@ -190,22 +239,32 @@ namespace LargeANNStrengthModel {
         const double time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
-        const size_t mat_id)
+        const size_t mat_id,
+        const size_t gauss_gid,
+        const size_t elem_gid)
     {
-        // -----------------------------------------------------------------------------
-        // Required variables are here
-        // ------------------------------------------------------------------------------
 
-        // -----------------------------------------------------------------------------
-        // The user must coding goes here
-        // ------------------------------------------------------------------------------
+        // layer 1, hidden layer 0, uses the inputs as the input values
+        forward_propagate_layer_host(inputs,
+                                     ANNLayers(1).outputs,
+                                     ANNLayers(1).weights,
+                                     ANNLayers(1).biases); 
+
+        // layer 2 through n-1, layer n-1 goes to the output
+        for (size_t layer=2; layer<=num_layers; layer++){
+
+            // go through this layer, the fcn takes(inputs, outputs, weights, biases)
+            forward_propagate_layer_host(ANNLayers(layer-1).outputs, 
+                                         ANNLayers(layer).outputs,
+                                         ANNLayers(layer).weights,
+                                         ANNLayers(1).biases); 
+        } // end for
 
         return;
     } // end of user mat
 
     
     void destroy(
-        const DCArrayKokkos <Material_t> &material,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,

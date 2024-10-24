@@ -93,92 +93,103 @@ void SGH3D::update_velocity(double rk_alpha,
 /// \brief This function calculates the velocity gradient
 ///
 /// \param Velocity gradient
-/// \param Global ids of the nodes in this element
-/// \param View of the nodal velocity data
-/// \param The finite element B matrix
+/// \param mesh object
+/// \param node coordinates
+/// \param node velocity
 /// \param The volume of the particular element
-/// \param The global id of this particular element
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-void SGH3D::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
-    const ViewCArrayKokkos<size_t>& elem_node_gids,
-    const DCArrayKokkos<double>&    node_vel,
-    const ViewCArrayKokkos<double>& b_matrix,
-    const double elem_vol,
-    const size_t elem_gid) const
+void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
+    const Mesh_t mesh,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& elem_vol) const
 {
     const size_t num_nodes_in_elem = 8;
+    const size_t num_dims = 3;
 
-    double u_array[num_nodes_in_elem];
-    double v_array[num_nodes_in_elem];
-    double w_array[num_nodes_in_elem];
-    ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-direction velocity component
-    ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-direction velocity component
-    ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-direction velocity component
+    // --- calculate the forces acting on the nodes from the element ---
+    FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
-    // get the vertex velocities for the cell
-    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-        // Get node gid
-        size_t node_gid = elem_node_gids(node_lid);
 
-        u(node_lid) = node_vel(1, node_gid, 0);
-        v(node_lid) = node_vel(1, node_gid, 1);
-        w(node_lid) = node_vel(1, node_gid, 2);
-    } // end for
+        double u_array[num_nodes_in_elem];
+        double v_array[num_nodes_in_elem];
+        double w_array[num_nodes_in_elem];
+        ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
+        ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
+        ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir vel component
 
-    // --- calculate the velocity gradient terms ---
-    double inverse_vol = 1.0 / elem_vol;
+        // cut out the node_gids for this element
+        ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
-    // x-dir
-    vel_grad(0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
-        + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
-        + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
-        + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
+        // The b_matrix are the outward corner area normals
+        double b_matrix_array[24];
+        ViewCArrayKokkos<double> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
+        geometry::get_bmatrix(b_matrix, elem_gid, node_coords, elem_node_gids);
 
-    vel_grad(0, 1) = (u(0) * b_matrix(0, 1) + u(1) * b_matrix(1, 1)
-        + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)
-        + u(4) * b_matrix(4, 1) + u(5) * b_matrix(5, 1)
-        + u(6) * b_matrix(6, 1) + u(7) * b_matrix(7, 1)) * inverse_vol;
+        // get the vertex velocities for the elem
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            // Get node gid
+            size_t node_gid = elem_node_gids(node_lid);
 
-    vel_grad(0, 2) = (u(0) * b_matrix(0, 2) + u(1) * b_matrix(1, 2)
-        + u(2) * b_matrix(2, 2) + u(3) * b_matrix(3, 2)
-        + u(4) * b_matrix(4, 2) + u(5) * b_matrix(5, 2)
-        + u(6) * b_matrix(6, 2) + u(7) * b_matrix(7, 2)) * inverse_vol;
+            u(node_lid) = node_vel(1, node_gid, 0);
+            v(node_lid) = node_vel(1, node_gid, 1);
+            w(node_lid) = node_vel(1, node_gid, 2);
+        } // end for
 
-    // y-dir
-    vel_grad(1, 0) = (v(0) * b_matrix(0, 0) + v(1) * b_matrix(1, 0)
-        + v(2) * b_matrix(2, 0) + v(3) * b_matrix(3, 0)
-        + v(4) * b_matrix(4, 0) + v(5) * b_matrix(5, 0)
-        + v(6) * b_matrix(6, 0) + v(7) * b_matrix(7, 0)) * inverse_vol;
+        // --- calculate the velocity gradient terms ---
+        double inverse_vol = 1.0 / elem_vol(elem_gid);
 
-    vel_grad(1, 1) = (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
-        + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)
-        + v(4) * b_matrix(4, 1) + v(5) * b_matrix(5, 1)
-        + v(6) * b_matrix(6, 1) + v(7) * b_matrix(7, 1)) * inverse_vol;
-    vel_grad(1, 2) = (v(0) * b_matrix(0, 2) + v(1) * b_matrix(1, 2)
-        + v(2) * b_matrix(2, 2) + v(3) * b_matrix(3, 2)
-        + v(4) * b_matrix(4, 2) + v(5) * b_matrix(5, 2)
-        + v(6) * b_matrix(6, 2) + v(7) * b_matrix(7, 2)) * inverse_vol;
+        // x-dir
+        vel_grad(elem_gid, 0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
+            + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
+            + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
+            + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
 
-    // z-dir
-    vel_grad(2, 0) = (w(0) * b_matrix(0, 0) + w(1) * b_matrix(1, 0)
-        + w(2) * b_matrix(2, 0) + w(3) * b_matrix(3, 0)
-        + w(4) * b_matrix(4, 0) + w(5) * b_matrix(5, 0)
-        + w(6) * b_matrix(6, 0) + w(7) * b_matrix(7, 0)) * inverse_vol;
+        vel_grad(elem_gid, 0, 1) = (u(0) * b_matrix(0, 1) + u(1) * b_matrix(1, 1)
+            + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)
+            + u(4) * b_matrix(4, 1) + u(5) * b_matrix(5, 1)
+            + u(6) * b_matrix(6, 1) + u(7) * b_matrix(7, 1)) * inverse_vol;
 
-    vel_grad(2, 1) = (w(0) * b_matrix(0, 1) + w(1) * b_matrix(1, 1)
-        + w(2) * b_matrix(2, 1) + w(3) * b_matrix(3, 1)
-        + w(4) * b_matrix(4, 1) + w(5) * b_matrix(5, 1)
-        + w(6) * b_matrix(6, 1) + w(7) * b_matrix(7, 1)) * inverse_vol;
+        vel_grad(elem_gid, 0, 2) = (u(0) * b_matrix(0, 2) + u(1) * b_matrix(1, 2)
+            + u(2) * b_matrix(2, 2) + u(3) * b_matrix(3, 2)
+            + u(4) * b_matrix(4, 2) + u(5) * b_matrix(5, 2)
+            + u(6) * b_matrix(6, 2) + u(7) * b_matrix(7, 2)) * inverse_vol;
 
-    vel_grad(2, 2) = (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
-        + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
-        + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
-        + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;
+        // y-dir
+        vel_grad(elem_gid, 1, 0) = (v(0) * b_matrix(0, 0) + v(1) * b_matrix(1, 0)
+            + v(2) * b_matrix(2, 0) + v(3) * b_matrix(3, 0)
+            + v(4) * b_matrix(4, 0) + v(5) * b_matrix(5, 0)
+            + v(6) * b_matrix(6, 0) + v(7) * b_matrix(7, 0)) * inverse_vol;
+
+        vel_grad(elem_gid, 1, 1) = (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
+            + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)
+            + v(4) * b_matrix(4, 1) + v(5) * b_matrix(5, 1)
+            + v(6) * b_matrix(6, 1) + v(7) * b_matrix(7, 1)) * inverse_vol;
+        vel_grad(elem_gid, 1, 2) = (v(0) * b_matrix(0, 2) + v(1) * b_matrix(1, 2)
+            + v(2) * b_matrix(2, 2) + v(3) * b_matrix(3, 2)
+            + v(4) * b_matrix(4, 2) + v(5) * b_matrix(5, 2)
+            + v(6) * b_matrix(6, 2) + v(7) * b_matrix(7, 2)) * inverse_vol;
+
+        // z-dir
+        vel_grad(elem_gid, 2, 0) = (w(0) * b_matrix(0, 0) + w(1) * b_matrix(1, 0)
+            + w(2) * b_matrix(2, 0) + w(3) * b_matrix(3, 0)
+            + w(4) * b_matrix(4, 0) + w(5) * b_matrix(5, 0)
+            + w(6) * b_matrix(6, 0) + w(7) * b_matrix(7, 0)) * inverse_vol;
+
+        vel_grad(elem_gid, 2, 1) = (w(0) * b_matrix(0, 1) + w(1) * b_matrix(1, 1)
+            + w(2) * b_matrix(2, 1) + w(3) * b_matrix(3, 1)
+            + w(4) * b_matrix(4, 1) + w(5) * b_matrix(5, 1)
+            + w(6) * b_matrix(6, 1) + w(7) * b_matrix(7, 1)) * inverse_vol;
+
+        vel_grad(elem_gid, 2, 2) = (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
+            + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
+            + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
+            + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;
+    });  // end parallel for over elem_gid
 
     return;
-} // end function
+} // end subroutine
 
 
 /////////////////////////////////////////////////////////////////////////////
