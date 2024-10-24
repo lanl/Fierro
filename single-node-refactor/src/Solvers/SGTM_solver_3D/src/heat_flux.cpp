@@ -75,8 +75,8 @@ void SGTM3D::get_heat_flux(
     const DCArrayKokkos<double>& MaterialPoints_conductivity,
     const DCArrayKokkos<double>& MaterialPoints_temp_grad,
     const DCArrayKokkos<double>& MaterialPoints_statev,
-    const DCArrayKokkos<double>& corner_q_div,
-    const DCArrayKokkos<double>& MaterialCorners_q_div,
+    const DCArrayKokkos<double>& corner_q_flux,
+    const DCArrayKokkos<double>& MaterialCorners_q_flux,
     const corners_in_mat_t corners_in_mat_elem,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -175,7 +175,7 @@ void SGTM3D::get_heat_flux(
             MaterialPoints_q_flux(0, mat_point_lid, dim) = -1.0 * conductivity * temp_grad(dim);
         }
 
-        // --- Calculate flux contribution to the divergence at the corners \lambda_{c} = q_z \cdot \hat B_c 
+        // --- Calculate flux through each corner the corners \lambda_{c} = q_z \cdot \hat B_c 
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // the local corner id is the local node id
             size_t corner_lid = node_lid;
@@ -187,12 +187,12 @@ void SGTM3D::get_heat_flux(
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
             // Zero out flux at material corners
-            MaterialCorners_q_div(1, mat_corner_lid) = 0.0;
-            corner_q_div(1, corner_gid) = 0.0;
+            MaterialCorners_q_flux(1, mat_corner_lid) = 0.0;
+            corner_q_flux(1, corner_gid) = 0.0;
 
         }
 
-        // --- Calculate flux contribution to the divergence at the corners \lambda_{c} = q_z \cdot \hat B_c 
+        // --- Calculate flux through each corner the corners \lambda_{c} = q_z \cdot \hat B_c 
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // the local corner id is the local node id
             size_t corner_lid = node_lid;
@@ -204,8 +204,8 @@ void SGTM3D::get_heat_flux(
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
             // Zero out flux at material corners
-            // MaterialCorners_q_div(1, mat_corner_lid) = 0.0;
-            // corner_q_div(1, corner_gid) = 0.0;
+            // MaterialCorners_q_flux(1, mat_corner_lid) = 0.0;
+            // corner_q_flux(1, corner_gid) = 0.0;
 
 
             // decompose B matrix vector into i,j,k components
@@ -239,18 +239,14 @@ void SGTM3D::get_heat_flux(
             //     val += in_val;
 
             // }
-            // corner_q_div(1, corner_gid) = val;
+            // corner_q_flux(1, corner_gid) = val;
 
 
             // Dot the flux into the fill corner normal
             for(int dim = 0; dim < mesh.num_dims; dim++){
 
-                // double val = MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_dcmp(dim, i));
-
-                // if (val < 0.0) printf("Val = %e\n", val);
-
-                // MaterialCorners_q_div(1, mat_corner_lid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (-1.0*b_matrix(node_lid, dim));
-                corner_q_div(1, corner_gid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
+                // MaterialCorners_q_flux(1, mat_corner_lid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (-1.0*b_matrix(node_lid, dim));
+                corner_q_flux(1, corner_gid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
             }
 
         }
@@ -292,8 +288,8 @@ void SGTM3D::moving_flux(
     const Mesh_t& mesh,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& corner_q_div,
-    const DCArrayKokkos<double>& MaterialCorners_q_div,
+    const DCArrayKokkos<double>& corner_q_flux,
+    const DCArrayKokkos<double>& MaterialCorners_q_flux,
     const DCArrayKokkos<double>& sphere_position,
     const corners_in_mat_t corners_in_mat_elem,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -343,11 +339,10 @@ void SGTM3D::moving_flux(
             dist_squared +=  (sphere_position(dim) - elem_coords(dim))*(sphere_position(dim) - elem_coords(dim));
         }
 
-        double dist = sqrt(dist_squared);
+        // double dist = sqrt(dist_squared);
 
-        if(dist <= radius){
+        if(dist_squared <= radius_squared){
 
-            // printf("Painting temperature");
             for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
 
                 size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
@@ -362,7 +357,8 @@ void SGTM3D::moving_flux(
                 // Get the material corner lid
                 // size_t mat_corner_lid = State.corners_in_mat_elem(mat_elem_lid, corner_lid);
 
-                corner_q_div(1, corner_gid) += 20.0;
+                // Note: this will be 1/8th the volumetric flux
+                corner_q_flux(1, corner_gid) += 20.0;
 
             }
         }

@@ -113,12 +113,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // }
 
     // State.node.coords.update_device();
-        // Tweak the nodal positions on the mesh
-    // FOR_ALL(node_gid, 0, mesh.num_nodes, {
 
-        
-
-    // }); // end for parallel for over nodes
 
     // Write initial state at t=0
     printf("Writing outputs to file at %f \n", graphics_time);
@@ -154,8 +149,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     double sx = 0.05;
     double sy = 0.05;
 
-    double fy = 20.0;
-    double fx = 10.0;
+    double fy = 0.0;
+    double fx = 6.283;
 
     sphere_position.host(0) = 0.03*cos(fx*time_value) + sx;
     sphere_position.host(1) = 0.03*sin(fy*time_value) + sy;
@@ -270,8 +265,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.MaterialPoints(mat_id).conductivity,
                     State.MaterialPoints(mat_id).temp_grad,
                     State.MaterialPoints(mat_id).statev,
-                    State.corner.q_div,
-                    State.MaterialCorners(mat_id).q_div,
+                    State.corner.q_flux,
+                    State.MaterialCorners(mat_id).q_flux,
                     State.corners_in_mat_elem,
                     State.MaterialPoints(mat_id).eroded,
                     State.MaterialToMeshMaps(mat_id).elem,
@@ -287,8 +282,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     mesh,
                     State.GaussPoints.vol,
                     State.node.coords,
-                    State.corner.q_div,
-                    State.MaterialCorners(mat_id).q_div,
+                    State.corner.q_flux,
+                    State.MaterialCorners(mat_id).q_flux,
                     sphere_position,
                     State.corners_in_mat_elem,
                     State.MaterialToMeshMaps(mat_id).elem,
@@ -300,77 +295,18 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     rk_alpha
                     );
 
-                // // ---- apply heat flux boundary conditions ----
-                // FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
-                //     // get elem gid
-                //     size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem(mat_elem_lid); 
-
-                //     // the material point index = the material elem index for a 1-point element
-                //     size_t mat_point_lid = mat_elem_lid;
-
-
-                //     // check if element center is within the sphere
-
-                //     // calculate the coordinates and radius of the element
-                //     double elem_coords_1D[3]; // note:initialization with a list won't work
-                //     ViewCArrayKokkos<double> elem_coords(&elem_coords_1D[0], 3);
-                //     elem_coords(0) = 0.0;
-                //     elem_coords(1) = 0.0;
-                //     elem_coords(2) = 0.0;
-
-                //     // get the coordinates of the element center (using rk_level=1 or node coords)
-                //     for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                //         elem_coords(0) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                //         elem_coords(1) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
-                //         elem_coords(2) += State.node.coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
-                //     } // end loop over nodes in element
-                //     elem_coords(0) = (elem_coords(0) / mesh.num_nodes_in_elem);
-                //     elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
-                //     elem_coords(2) = (elem_coords(2) / mesh.num_nodes_in_elem);
-
-                //     double radius = 0.005;
-                //     double radius_squared = radius * radius;
-
-                //     double dist_squared = 0.0;
-                //     for(int dim = 0; dim < mesh.num_dims; dim++){
-                //         dist_squared +=  (sphere_position(dim) - elem_coords(dim))*(sphere_position(dim) - elem_coords(dim));
-                //     }
-
-                //     double dist = sqrt(dist_squared);
-
-                //     if(dist <= radius){
-
-                //         // printf("Painting temperature");
-                //         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-
-                //             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-
-
-                //             // the local corner id is the local node id
-                //             size_t corner_lid = node_lid;
-
-                //             // Get corner gid
-                //             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-
-                //             // Get the material corner lid
-                //             // size_t mat_corner_lid = State.corners_in_mat_elem(mat_elem_lid, corner_lid);
-
-                //             // State.node.temp(1, node_gid) = 10.0;
-
-                //             State.corner.q_div(1, corner_gid) += 100.0;
-
-                //         }
-                //     }
-                    
-
-                // }); // end parallel for loop over elements
-
             } // end for mat_id
+
+            // ---- apply flux boundary conditions (convection/radiation)  ---- //
+
+
+
+
 
             // ---- Update nodal temperature ---- //
             update_temperature(
                 mesh,
-                State.corner.q_div, // NOTE: RENAME TO CORNER DIV
+                State.corner.q_flux,
                 State.node.temp,
                 State.node.mass,
                 rk_alpha,
@@ -401,10 +337,10 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             sphere_position(1) = 0.03*sin(fy*time_value) + sy;
 
 
-            // sphere_position(0) = 4 * fmod(time_value, 0.02) + 0.01;
+            // sphere_position(0) = 2 * fmod(time_value, 0.02) + 0.01;
             // sphere_position(1) = 0.05;
 
-            // sphere_position(2) = 0.05*time_value/10.0;;
+            sphere_position(2) = 0.05*time_value/10.0;
         });
         
 

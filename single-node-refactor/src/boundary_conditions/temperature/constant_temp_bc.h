@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -43,11 +43,10 @@ namespace ConstantTempBC
 {
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn velocity
+/// \fn temperature
 ///
-/// \brief This is a function to set the velocity along a symmetry plane or
-///        a wall.  This fcn imposes a normal velocity, in the specified
-///        direction, to be equal to zero
+/// \brief This is a function to set the nodal temperature along a symmetry 
+///        plane or a wall. 
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
@@ -71,13 +70,12 @@ static void temperature(const Mesh_t& mesh,
     const size_t bdy_set)
 {
     // Temperature to set the boundary to = bc_global_vars(4)
-    // printf("In constant temp BC function");
-
     // Set velocity to zero in the specified direction
     node_temp(rk_stage, bdy_node_gid) = bc_global_vars(bdy_set,4);// bc_global_vars(4);
 
     return;
 } // end func
+
 } // end namespace
 
 #endif // end Header Guard

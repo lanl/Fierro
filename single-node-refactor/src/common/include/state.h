@@ -290,7 +290,7 @@ struct MaterialZone_t
 enum class material_corner_state
 {
     force, 
-    heat_flux_divergence,
+    heat_flux,
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -306,7 +306,7 @@ struct MaterialCorner_t
 
     DCArrayKokkos<double> force;   ///< Corner force for the material
 
-    DCArrayKokkos<double> q_div;  ///< Corner divergence of heat flux
+    DCArrayKokkos<double> q_flux;  ///< Corner heat flux
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners_max, size_t num_dims, std::vector<material_corner_state> material_corner_states)
@@ -316,8 +316,8 @@ struct MaterialCorner_t
                 case material_corner_state::force:
                     if (force.size() == 0) this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
                     break;
-                case material_corner_state::heat_flux_divergence:
-                    if (q_div.size() == 0) this->q_div = DCArrayKokkos<double>(2, num_corners_max, "material_corner__div_heat_flux"); // WARNING: hard coding rk2
+                case material_corner_state::heat_flux:
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(2, num_corners_max, "material_corner_heat_flux"); // WARNING: hard coding rk2
                     break;
                 default:
                     std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;
@@ -333,7 +333,7 @@ enum class corner_state
 {
     force, 
     mass,
-    heat_flux_divergence,
+    heat_flux,
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -346,7 +346,7 @@ struct corner_t
 {
     DCArrayKokkos<double> force; ///< Corner force
     DCArrayKokkos<double> mass; ///< Corner mass
-    DCArrayKokkos<double> q_div;  ///< Corner heat flux
+    DCArrayKokkos<double> q_flux;  ///< Corner heat flux
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims, std::vector<corner_state> corner_states)
@@ -360,8 +360,8 @@ struct corner_t
                 case corner_state::mass:
                     if (mass.size() == 0) this->mass  = DCArrayKokkos<double>(num_corners, "corner_mass");
                     break;
-                case corner_state::heat_flux_divergence:
-                    if (q_div.size() == 0) this->q_div = DCArrayKokkos<double>(2, num_corners, "corner_divergence_heat_flux"); // WARNING: hard coding rk2
+                case corner_state::heat_flux:
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(2, num_corners, "corner_heat_flux"); // WARNING: hard coding rk2
                     break;
                 default:
                     std::cout<<"Desired corner state not understood in corner_t initialize"<<std::endl;

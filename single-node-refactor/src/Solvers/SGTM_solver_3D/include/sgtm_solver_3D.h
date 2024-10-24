@@ -89,7 +89,7 @@ namespace SGTM3D_State
     static const std::vector<material_corner_state> required_material_corner_state = 
     { 
         material_corner_state::force,
-        material_corner_state::heat_flux_divergence
+        material_corner_state::heat_flux
     };
 
     // Corner state to be initialized for the SGH solver
@@ -97,7 +97,7 @@ namespace SGTM3D_State
     { 
         corner_state::force,
         corner_state::mass,
-        corner_state::heat_flux_divergence
+        corner_state::heat_flux
     };
 }
 
@@ -202,6 +202,12 @@ public:
         DCArrayKokkos<double>&     node_temp,
         const double time_value) const;
 
+    void boundary_heat_flux(
+        const Mesh_t& mesh,
+        const BoundaryCondition_t& Boundary,
+        DCArrayKokkos<double>&     node_temp,
+        const double time_value) const;
+
     // **** Functions defined in energy_sgtm.cpp **** //
     void update_temperature(
         const Mesh_t& mesh,
@@ -220,10 +226,10 @@ public:
         const DCArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& MaterialPoints_q_flux,
         const DCArrayKokkos<double>& MaterialPoints_statev,
-        const DCArrayKokkos<double>& corner_q_div,
+        const DCArrayKokkos<double>& corner_q_flux,
         const DCArrayKokkos<double>& MaterialPoints_conductivity,
         const DCArrayKokkos<double>& MaterialPoints_temp_grad,
-        const DCArrayKokkos<double>& MaterialCorners_q_div,
+        const DCArrayKokkos<double>& MaterialCorners_q_flux,
         const corners_in_mat_t corners_in_mat_elem,
         const DCArrayKokkos<bool>&   MaterialPoints_eroded,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -239,8 +245,8 @@ public:
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& corner_q_div,
-        const DCArrayKokkos<double>& MaterialCorners_q_div,
+        const DCArrayKokkos<double>& corner_q_flux,
+        const DCArrayKokkos<double>& MaterialCorners_q_flux,
         const DCArrayKokkos<double>& sphere_position,
         const corners_in_mat_t corners_in_mat_elem,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,

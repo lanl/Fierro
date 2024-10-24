@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 7
+    time_final: 15
     dt_min: 1.e-8
     dt_max: 5.e-2
     dt_start: 1.e-5
@@ -16,15 +16,15 @@ mesh_options:
     source: generate
     num_dims: 3
     type: box
-    origin: [0.0, 0.00, 0.0]
-    length: [0.1, 0.1, 0.001]
-    num_elems: [100, 100, 1]
+    origin: [0.00, 0.02, 0.0]
+    length: [0.06, 0.06, 0.05]
+    num_elems: [60, 60, 50]
 
 
 output_options:
     timer_output_level: thorough
     output_file_format: vtk
-    graphics_time_step: 0.05
+    graphics_time_step: 1.0
     # graphics_iteration_step: 1
 
 solver_options:
@@ -36,20 +36,14 @@ solver_options:
         #  - blah
 
 boundary_conditions:
-    - boundary_condition:
-        solver: SGTM3D
-        geometry: y_plane
-        direction: y_dir
-        value: 0.1
-        temperature: 0
-        type:  temperature
+    
 
-        # Tag X = 0.1 plane
+    # Tag X = 0.1 plane
     - boundary_condition:
         solver: SGTM3D
         geometry: x_plane
         direction: x_dir
-        value: 0.1
+        value: 0.0
         temperature: 0
         type:  temperature
 
@@ -59,7 +53,7 @@ boundary_conditions:
         solver: SGTM3D
         geometry: x_plane
         direction: x_dir
-        value: 0.0
+        value: 0.06
         temperature: 0
         type:  temperature
 
@@ -67,7 +61,24 @@ boundary_conditions:
         solver: SGTM3D
         geometry: y_plane
         direction: y_dir
-        value: 0.0
+        value: 0.02
+        temperature: 0
+        type:  temperature
+
+
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: y_plane
+        direction: y_dir
+        value: 0.08
+        temperature: 0
+        type:  temperature
+
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: z_plane
+        direction: z_dir
+        value: 0.05
         temperature: 0
         type:  temperature
 
