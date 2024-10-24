@@ -316,7 +316,7 @@ void SGH3D::update_stress(
 
 
     // ==================================================
-    // launcing another solver, which then calls the material model interface
+    // launching another solver, which then calls the material model interface
     // ==================================================
 
     
@@ -383,7 +383,7 @@ void SGH3D::update_stress(
 
             // the material point index = the material elem index for a 1-point element
             size_t mat_point_lid = mat_elem_lid;
-            
+
 
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(
