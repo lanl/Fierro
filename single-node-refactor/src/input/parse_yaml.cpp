@@ -1899,6 +1899,8 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                         // call elastic plastic model
                         case model::hypoElasticPlasticStrength:
 
+
+
                             // set the stress function
                             RUN({
                                 Materials.MaterialFunctions(mat_id).calc_stress = &HypoElasticPlasticModel::calc_stress;
@@ -1913,6 +1915,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                                 std::cout << "\tstrength_model = " << strength_model << std::endl;
                             }
                             break;  
+
                         
                         case model::hypoElasticPlasticStrengthRZ:
 

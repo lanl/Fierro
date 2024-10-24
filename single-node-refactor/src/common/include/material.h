@@ -238,14 +238,14 @@ struct MaterialFunctions_t
     // Material strength model function pointers
     void (*calc_stress)(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const DCArrayKokkos <double> &node_coords,
-        const DCArrayKokkos <double> &node_vel,
+        const DCArrayKokkos<double>  &node_coords,
+        const DCArrayKokkos<double>  &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DCArrayKokkos<double>  &MaterialPoints_pres,
         const DCArrayKokkos<double>  &MaterialPoints_stress,
         const DCArrayKokkos<double>  &MaterialPoints_sspd,
-        const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
+        const DCArrayKokkos<double>  &MaterialPoints_eos_state_vars,
+        const DCArrayKokkos<double>  &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
@@ -277,7 +277,8 @@ struct MaterialFunctions_t
     double erode_tension_val;   ///< tension threshold to initiate erosion
     double erode_density_val;   ///< density threshold to initiate erosion
     // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
-    void (*erode)(const DCArrayKokkos<bool>& MaterialPoints_eroded,
+    void (*erode)(
+        const DCArrayKokkos<bool>& MaterialPoints_eroded,
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const double MaterialPoint_pres,
         const double MaterialPoint_den,

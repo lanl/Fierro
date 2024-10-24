@@ -42,7 +42,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ------------------------------------------------------------------------------
 namespace NoStrengthModel {
 
-    void init_strength_state_vars(
+    static void init_strength_state_vars(
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
@@ -110,7 +110,7 @@ namespace NoStrengthModel {
     } // end of user mat
 
     
-    void destroy(
+    static void destroy(
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,

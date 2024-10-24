@@ -150,7 +150,7 @@ namespace HostANNStrengthModel {
     DCArrayKokkos <float> inputs;
     size_t num_layers;
 
-    void init_strength_state_vars(
+    static void init_strength_state_vars(
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,

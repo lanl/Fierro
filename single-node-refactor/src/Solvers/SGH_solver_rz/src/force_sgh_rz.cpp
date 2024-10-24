@@ -170,7 +170,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         //            [du/dx,  du/dy]
         // vel_grad = [dv/dx,  dv/dy]
         double curl;
-        curl = GaussPoints_vel_grad(1, 0) - GaussPoints_vel_grad(0, 1);  // dv/dx - du/dy
+        curl = GaussPoints_vel_grad(elem_gid, 1, 0) - GaussPoints_vel_grad(elem_gid, 0, 1);  // dv/dx - du/dy
 
         double mag_curl = curl;
 

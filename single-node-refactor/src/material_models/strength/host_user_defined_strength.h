@@ -64,7 +64,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 namespace HostUserDefinedStrengthModel {
 
-    void init_strength_state_vars(
+    static void init_strength_state_vars(
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
@@ -133,7 +133,7 @@ namespace HostUserDefinedStrengthModel {
     } // end of user mat
 
     
-    void destroy(
+    static void destroy(
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
@@ -170,7 +170,7 @@ namespace HostUserDefinedStrengthModel {
 // ------------------------------------------------------------------------------
 namespace HostNotionalStrengthModel {
 
-    void init_strength_state_vars(
+    static void init_strength_state_vars(
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
@@ -241,7 +241,7 @@ namespace HostNotionalStrengthModel {
     } // end of user mat
 
 
-    void destroy(
+    static void destroy(
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
