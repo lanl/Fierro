@@ -895,7 +895,7 @@ void init_state_vars(const Material_t& Materials,
 
             if (Materials.MaterialEnums.host(mat_id).StrengthSetupLocation == model::host){
 
-                Materials.MaterialFunctions(mat_id).init_strength_state_vars(
+                Materials.MaterialFunctions.host(mat_id).init_strength_state_vars(
                                 MaterialPoints_eos_state_vars,
                                 MaterialPoints_strength_state_vars,
                                 Materials.eos_global_vars,

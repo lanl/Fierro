@@ -335,7 +335,6 @@ void SGH3D::update_stress(
             // the material point index = the material elem index for a 1-point element
             size_t mat_point_lid = mat_elem_lid;
 
-            printf("hello from host model call \n");
 
             // --- call strength model from the host side ---
             Materials.MaterialFunctions.host(mat_id).calc_stress(
@@ -384,9 +383,7 @@ void SGH3D::update_stress(
 
             // the material point index = the material elem index for a 1-point element
             size_t mat_point_lid = mat_elem_lid;
-
-            // cut out the node_gids for this element
-            ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
+            
 
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(

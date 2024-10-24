@@ -1755,8 +1755,10 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
 #ifdef ANALYTIC_DEFINED_EOS_H
                         // call Gruneisen
                         case model::mieGruneisenEOS:
-                            Materials.MaterialFunctions.host(mat_id).calc_pressure    = &MieGruneisenEOSModel::calc_pressure;
-                            Materials.MaterialFunctions.host(mat_id).calc_sound_speed = &MieGruneisenEOSModel::calc_sound_speed;
+                            RUN({
+                                Materials.MaterialFunctions(mat_id).calc_pressure    = &MieGruneisenEOSModel::calc_pressure;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &MieGruneisenEOSModel::calc_sound_speed;
+                            });
                             if (VERBOSE) {
                                 std::cout << "\teos_model = " << eos << std::endl;
                             }

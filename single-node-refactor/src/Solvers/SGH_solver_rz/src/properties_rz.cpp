@@ -358,9 +358,6 @@ void SGHRZ::update_stress(const Material_t& Materials,
             // for this method, gauss point is equal to elem_gid
             size_t gauss_gid = elem_gid;
 
-            // cut out the node_gids for this element
-            ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
-
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(
                                             GuassPoints_vel_grad,
