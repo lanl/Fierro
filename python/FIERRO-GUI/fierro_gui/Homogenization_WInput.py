@@ -53,9 +53,23 @@ def Homogenization_WInput(self, BC_index):
                                 f'  {self.TMaterials.item(i,7).text()}  {self.TMaterials.item(i,12).text()}  {self.TMaterials.item(i,16).text()}  {self.TMaterials.item(i,19).text()}  {self.TMaterials.item(i,21).text()}  {self.TMaterials.item(i,22).text()}\n'
                     elastic_parameters.write(stiffness)
                     elastic_parameters.close()
+    # Select number of material phases based on input file type (.vtk = 2, .txt = 1)
+    vtkfile = self.TParts.item(0,10).text() + '\n'
+    file_type = os.path.splitext(vtkfile)[1]
+    
     # EVPFFT input parameters file
     evpfft_lattice_input = open(self.EVPFFT_INPUT,"w")
-    modes = '2 0 0 0               NPHMX, NMODMX, NTWMMX, NSYSMX\n'
+    if ".vtk" in file_type:
+        modes = '2 0 0 0               NPHMX, NMODMX, NTWMMX, NSYSMX\n'
+        phases = '2                      number of phases (nph)\n'
+        nphases = 2
+    elif ".txt" in file_type:
+        modes = '1 0 0 0               NPHMX, NMODMX, NTWMMX, NSYSMX\n'
+        phases = '1                      number of phases (nph)\n'
+        nphases = 1
+    else:
+        print("WARNING: bad file type for homogenization solver")
+
     evpfft_lattice_input.write(modes)
     Nx = int(self.TParts.item(0,7).text())
     Ny = int(self.TParts.item(0,8).text())
@@ -65,16 +79,19 @@ def Homogenization_WInput(self, BC_index):
     dx = float(self.TParts.item(0,4).text())/Nx
     dy = float(self.TParts.item(0,5).text())/Ny
     dz = float(self.TParts.item(0,6).text())/Nz
-    nph_delt = '2                      number of phases (nph)\n' + f'{dx:.4f} {dy:.4f} {dz:.4f}             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
+    nph_delt = phases + f'{dx:.4f} {dy:.4f} {dz:.4f}             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
     evpfft_lattice_input.write(nph_delt)
-#    vtkfile = self.voxelizer_dir + '/VTK_Geometry_' + str(self.TParts.item(0,0).text()) + '.vtk\n'
-    vtkfile = str(self.TParts.item(0,10).text()) + '\n'
     evpfft_lattice_input.write(vtkfile)
-    for i in range(2):
+    for i in range(nphases):
         if i < len(materials_used):
             j = materials_used[i]
             if i == 0:
                 efile = f'{self.ELASTIC_PARAMETERS_0}'
+                phase1 = '*INFORMATION ABOUT PHASE #1\n' + \
+                         '0                          igas(iph)\n' + \
+                         '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  \
+                         f'{self.PLASTIC_PARAMETERS}\n' + \
+                         efile + '\n'
             else:
                 efile = f'{self.ELASTIC_PARAMETERS_1}'
             if self.TMaterialAssignment.item(i,0).text() == 'global':
@@ -85,7 +102,7 @@ def Homogenization_WInput(self, BC_index):
                              'dummy\n' + \
                              'dummy\n'
                 else:
-                    phase1 = '*INFORMATION ABOUT PHASE #2\n' + \
+                    phase1 = '*INFORMATION ABOUT PHASE #1\n' + \
                              '0                          igas(iph)\n' + \
                              '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  \
                              f'{self.PLASTIC_PARAMETERS}\n' + \
@@ -102,8 +119,13 @@ def Homogenization_WInput(self, BC_index):
                      '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + \
                      'dummy\n' + \
                      'dummy\n'
-    evpfft_lattice_input.write(phase1)
-    evpfft_lattice_input.write(phase2)
+    if nphases == 2:
+        evpfft_lattice_input.write(phase1)
+        evpfft_lattice_input.write(phase2)
+    elif nphases == 1:
+        evpfft_lattice_input.write(phase1)
+    else:
+        print("ERROR: Number of phases is greater than 2 or less than 1")
     # Tension x-direction
     if BC_index == 0:
         test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + \

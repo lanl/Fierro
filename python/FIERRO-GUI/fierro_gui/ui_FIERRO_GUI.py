@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIOmYTAs.ui'
+## Form generated from reading UI file 'FIERRO_GUIOZcjuK.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -16,15 +16,14 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplication, QComboBox,
-    QFormLayout, QFrame, QGridLayout, QHBoxLayout,
-    QHeaderView, QLabel, QLayout, QLineEdit,
-    QMainWindow, QMenu, QMenuBar, QPlainTextEdit,
-    QProgressBar, QPushButton, QRadioButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QSplitter, QStackedWidget,
-    QStatusBar, QTabWidget, QTableWidget, QTableWidgetItem,
-    QToolButton, QVBoxLayout, QWidget)
-import IconResourceFile_rc
+from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplication, QCheckBox,
+    QComboBox, QFormLayout, QFrame, QGridLayout,
+    QHBoxLayout, QHeaderView, QLabel, QLayout,
+    QLineEdit, QMainWindow, QMenu, QMenuBar,
+    QPlainTextEdit, QProgressBar, QPushButton, QRadioButton,
+    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
+    QStackedWidget, QStatusBar, QTabWidget, QTableWidget,
+    QTableWidgetItem, QToolButton, QVBoxLayout, QWidget)
 import IconResourceFile_rc
 
 class Ui_MainWindow(object):
@@ -2289,14 +2288,11 @@ class Ui_MainWindow(object):
 
         self.gridLayout_7.addWidget(self.LMaterialName_2, 0, 0, 1, 1)
 
-        self.frame_34 = QFrame(self.MaterialInputs)
-        self.frame_34.setObjectName(u"frame_34")
-        self.frame_34.setFrameShape(QFrame.NoFrame)
-        self.horizontalLayout_11 = QHBoxLayout(self.frame_34)
-        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
-        self.horizontalLayout_11.setContentsMargins(0, 0, 0, 0)
+        self.INMaterialName = QLineEdit(self.MaterialInputs)
+        self.INMaterialName.setObjectName(u"INMaterialName")
+        self.INMaterialName.setMinimumSize(QSize(93, 0))
 
-        self.gridLayout_7.addWidget(self.frame_34, 1, 5, 1, 1)
+        self.gridLayout_7.addWidget(self.INMaterialName, 0, 1, 1, 1)
 
         self.frame_35 = QFrame(self.MaterialInputs)
         self.frame_35.setObjectName(u"frame_35")
@@ -2305,14 +2301,40 @@ class Ui_MainWindow(object):
         self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
         self.horizontalLayout_15.setContentsMargins(0, 0, 0, 0)
 
-        self.gridLayout_7.addWidget(self.frame_35, 2, 5, 1, 1)
+        self.gridLayout_7.addWidget(self.frame_35, 0, 2, 1, 1)
 
-        self.LType = QLabel(self.MaterialInputs)
+        self.frame_34 = QFrame(self.MaterialInputs)
+        self.frame_34.setObjectName(u"frame_34")
+        self.frame_34.setFrameShape(QFrame.NoFrame)
+        self.horizontalLayout_11 = QHBoxLayout(self.frame_34)
+        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
+        self.horizontalLayout_11.setContentsMargins(0, 0, 0, 0)
+
+        self.gridLayout_7.addWidget(self.frame_34, 0, 3, 1, 1)
+
+
+        self.verticalLayout_51.addWidget(self.MaterialInputs)
+
+        self.tabWidget = QTabWidget(self.DefineMaterialsEVPFFT)
+        self.tabWidget.setObjectName(u"tabWidget")
+        self.Elastic = QWidget()
+        self.Elastic.setObjectName(u"Elastic")
+        self.verticalLayout_23 = QVBoxLayout(self.Elastic)
+        self.verticalLayout_23.setObjectName(u"verticalLayout_23")
+        self.verticalLayout_23.setContentsMargins(6, 12, 6, 0)
+        self.frame_24 = QFrame(self.Elastic)
+        self.frame_24.setObjectName(u"frame_24")
+        self.frame_24.setFrameShape(QFrame.NoFrame)
+        self.frame_24.setFrameShadow(QFrame.Raised)
+        self.gridLayout_19 = QGridLayout(self.frame_24)
+        self.gridLayout_19.setObjectName(u"gridLayout_19")
+        self.gridLayout_19.setContentsMargins(0, 0, 0, 0)
+        self.LType = QLabel(self.frame_24)
         self.LType.setObjectName(u"LType")
 
-        self.gridLayout_7.addWidget(self.LType, 1, 0, 1, 1)
+        self.gridLayout_19.addWidget(self.LType, 0, 0, 1, 1)
 
-        self.frame_36 = QFrame(self.MaterialInputs)
+        self.frame_36 = QFrame(self.frame_24)
         self.frame_36.setObjectName(u"frame_36")
         self.frame_36.setFrameShape(QFrame.NoFrame)
         self.horizontalLayout_18 = QHBoxLayout(self.frame_36)
@@ -2336,52 +2358,46 @@ class Ui_MainWindow(object):
         self.horizontalLayout_18.addWidget(self.INMaterialType)
 
 
-        self.gridLayout_7.addWidget(self.frame_36, 1, 1, 1, 1)
-
-        self.INMaterialName = QLineEdit(self.MaterialInputs)
-        self.INMaterialName.setObjectName(u"INMaterialName")
-        self.INMaterialName.setMinimumSize(QSize(93, 0))
-
-        self.gridLayout_7.addWidget(self.INMaterialName, 0, 1, 1, 1)
+        self.gridLayout_19.addWidget(self.frame_36, 0, 1, 1, 1)
 
 
-        self.verticalLayout_51.addWidget(self.MaterialInputs)
+        self.verticalLayout_23.addWidget(self.frame_24)
 
-        self.MaterialTypeTool = QStackedWidget(self.DefineMaterialsEVPFFT)
+        self.MaterialTypeTool = QStackedWidget(self.Elastic)
         self.MaterialTypeTool.setObjectName(u"MaterialTypeTool")
         self.Isotropic = QWidget()
         self.Isotropic.setObjectName(u"Isotropic")
         self.gridLayout_13 = QGridLayout(self.Isotropic)
         self.gridLayout_13.setObjectName(u"gridLayout_13")
         self.gridLayout_13.setContentsMargins(-1, -1, -1, 12)
-        self.INYoungsModulus = QLineEdit(self.Isotropic)
-        self.INYoungsModulus.setObjectName(u"INYoungsModulus")
+        self.LPoissonsRatio = QLabel(self.Isotropic)
+        self.LPoissonsRatio.setObjectName(u"LPoissonsRatio")
 
-        self.gridLayout_13.addWidget(self.INYoungsModulus, 0, 1, 1, 1)
+        self.gridLayout_13.addWidget(self.LPoissonsRatio, 1, 0, 1, 1)
 
         self.INPoissonsRatio = QLineEdit(self.Isotropic)
         self.INPoissonsRatio.setObjectName(u"INPoissonsRatio")
 
         self.gridLayout_13.addWidget(self.INPoissonsRatio, 1, 1, 1, 1)
 
-        self.LYoungsModulus = QLabel(self.Isotropic)
-        self.LYoungsModulus.setObjectName(u"LYoungsModulus")
+        self.INYoungsModulus = QLineEdit(self.Isotropic)
+        self.INYoungsModulus.setObjectName(u"INYoungsModulus")
 
-        self.gridLayout_13.addWidget(self.LYoungsModulus, 0, 0, 1, 1)
+        self.gridLayout_13.addWidget(self.INYoungsModulus, 0, 1, 1, 1)
+
+        self.verticalSpacer_14 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.gridLayout_13.addItem(self.verticalSpacer_14, 2, 1, 1, 1)
 
         self.UPressure1 = QLabel(self.Isotropic)
         self.UPressure1.setObjectName(u"UPressure1")
 
         self.gridLayout_13.addWidget(self.UPressure1, 0, 2, 1, 1)
 
-        self.LPoissonsRatio = QLabel(self.Isotropic)
-        self.LPoissonsRatio.setObjectName(u"LPoissonsRatio")
+        self.LYoungsModulus = QLabel(self.Isotropic)
+        self.LYoungsModulus.setObjectName(u"LYoungsModulus")
 
-        self.gridLayout_13.addWidget(self.LPoissonsRatio, 1, 0, 1, 1)
-
-        self.verticalSpacer_14 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.gridLayout_13.addItem(self.verticalSpacer_14, 2, 1, 1, 1)
+        self.gridLayout_13.addWidget(self.LYoungsModulus, 0, 0, 1, 1)
 
         self.MaterialTypeTool.addWidget(self.Isotropic)
         self.TransverselyIsotropic = QWidget()
@@ -2748,7 +2764,62 @@ class Ui_MainWindow(object):
         self.page_4.setObjectName(u"page_4")
         self.MaterialTypeTool.addWidget(self.page_4)
 
-        self.verticalLayout_51.addWidget(self.MaterialTypeTool, 0, Qt.AlignTop)
+        self.verticalLayout_23.addWidget(self.MaterialTypeTool)
+
+        icon10 = QIcon()
+        icon10.addFile(u":/Blue Icons/Blue Icons/Elastic.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.tabWidget.addTab(self.Elastic, icon10, "")
+        self.Plastic = QWidget()
+        self.Plastic.setObjectName(u"Plastic")
+        self.verticalLayout_24 = QVBoxLayout(self.Plastic)
+        self.verticalLayout_24.setObjectName(u"verticalLayout_24")
+        self.verticalLayout_24.setContentsMargins(6, 12, 6, 0)
+        self.BPlasticity = QCheckBox(self.Plastic)
+        self.BPlasticity.setObjectName(u"BPlasticity")
+
+        self.verticalLayout_24.addWidget(self.BPlasticity)
+
+        self.PlasticDefinition = QStackedWidget(self.Plastic)
+        self.PlasticDefinition.setObjectName(u"PlasticDefinition")
+        self.page_10 = QWidget()
+        self.page_10.setObjectName(u"page_10")
+        self.PlasticDefinition.addWidget(self.page_10)
+        self.page_12 = QWidget()
+        self.page_12.setObjectName(u"page_12")
+        self.gridLayout_20 = QGridLayout(self.page_12)
+        self.gridLayout_20.setObjectName(u"gridLayout_20")
+        self.gridLayout_20.setContentsMargins(0, 0, 0, 0)
+        self.LSlipSystem = QLabel(self.page_12)
+        self.LSlipSystem.setObjectName(u"LSlipSystem")
+
+        self.gridLayout_20.addWidget(self.LSlipSystem, 0, 1, 1, 1)
+
+        self.INSlipSystem = QComboBox(self.page_12)
+        self.INSlipSystem.addItem("")
+        self.INSlipSystem.setObjectName(u"INSlipSystem")
+
+        self.gridLayout_20.addWidget(self.INSlipSystem, 0, 2, 1, 1)
+
+        self.LNSlipSystem = QLabel(self.page_12)
+        self.LNSlipSystem.setObjectName(u"LNSlipSystem")
+
+        self.gridLayout_20.addWidget(self.LNSlipSystem, 1, 1, 1, 1)
+
+        self.INNSlipSystem = QComboBox(self.page_12)
+        self.INNSlipSystem.addItem("")
+        self.INNSlipSystem.setObjectName(u"INNSlipSystem")
+
+        self.gridLayout_20.addWidget(self.INNSlipSystem, 1, 2, 1, 1)
+
+        self.PlasticDefinition.addWidget(self.page_12)
+
+        self.verticalLayout_24.addWidget(self.PlasticDefinition, 0, Qt.AlignHCenter|Qt.AlignTop)
+
+        icon11 = QIcon()
+        icon11.addFile(u":/Blue Icons/Blue Icons/Plastic.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.tabWidget.addTab(self.Plastic, icon11, "")
+
+        self.verticalLayout_51.addWidget(self.tabWidget)
 
         self.BAddMaterial = QPushButton(self.DefineMaterialsEVPFFT)
         self.BAddMaterial.setObjectName(u"BAddMaterial")
@@ -3086,9 +3157,9 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_56.addWidget(self.AssignMaterialsOptions)
 
-        icon10 = QIcon()
-        icon10.addFile(u":/Blue Icons/Blue Icons/Clipboard.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.tabWidget_3.addTab(self.AssignMaterials, icon10, "")
+        icon12 = QIcon()
+        icon12.addFile(u":/Blue Icons/Blue Icons/Clipboard.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.tabWidget_3.addTab(self.AssignMaterials, icon12, "")
 
         self.verticalLayout_5.addWidget(self.tabWidget_3)
 
@@ -3737,9 +3808,9 @@ class Ui_MainWindow(object):
         self.horizontalLayout_12.setContentsMargins(0, 0, 0, 0)
         self.BFirstFrame = QToolButton(self.frame_13)
         self.BFirstFrame.setObjectName(u"BFirstFrame")
-        icon11 = QIcon()
-        icon11.addFile(u":/Blue Icons/Blue Icons/FirstFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BFirstFrame.setIcon(icon11)
+        icon13 = QIcon()
+        icon13.addFile(u":/Blue Icons/Blue Icons/FirstFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BFirstFrame.setIcon(icon13)
         self.BFirstFrame.setIconSize(QSize(32, 32))
         self.BFirstFrame.setPopupMode(QToolButton.DelayedPopup)
         self.BFirstFrame.setToolButtonStyle(Qt.ToolButtonIconOnly)
@@ -3750,27 +3821,27 @@ class Ui_MainWindow(object):
 
         self.BPreviousFrame = QToolButton(self.frame_13)
         self.BPreviousFrame.setObjectName(u"BPreviousFrame")
-        icon12 = QIcon()
-        icon12.addFile(u":/Blue Icons/Blue Icons/PreviousFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BPreviousFrame.setIcon(icon12)
+        icon14 = QIcon()
+        icon14.addFile(u":/Blue Icons/Blue Icons/PreviousFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BPreviousFrame.setIcon(icon14)
         self.BPreviousFrame.setIconSize(QSize(32, 32))
 
         self.horizontalLayout_12.addWidget(self.BPreviousFrame)
 
         self.BNextFrame = QToolButton(self.frame_13)
         self.BNextFrame.setObjectName(u"BNextFrame")
-        icon13 = QIcon()
-        icon13.addFile(u":/Blue Icons/Blue Icons/NextFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BNextFrame.setIcon(icon13)
+        icon15 = QIcon()
+        icon15.addFile(u":/Blue Icons/Blue Icons/NextFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BNextFrame.setIcon(icon15)
         self.BNextFrame.setIconSize(QSize(32, 32))
 
         self.horizontalLayout_12.addWidget(self.BNextFrame)
 
         self.BLastFrame = QToolButton(self.frame_13)
         self.BLastFrame.setObjectName(u"BLastFrame")
-        icon14 = QIcon()
-        icon14.addFile(u":/Blue Icons/Blue Icons/LastFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BLastFrame.setIcon(icon14)
+        icon16 = QIcon()
+        icon16.addFile(u":/Blue Icons/Blue Icons/LastFrame.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BLastFrame.setIcon(icon16)
         self.BLastFrame.setIconSize(QSize(32, 32))
 
         self.horizontalLayout_12.addWidget(self.BLastFrame)
@@ -3796,9 +3867,9 @@ class Ui_MainWindow(object):
 
         self.BThreshold = QToolButton(self.frame_14)
         self.BThreshold.setObjectName(u"BThreshold")
-        icon15 = QIcon()
-        icon15.addFile(u":/Blue Icons/Blue Icons/crop.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BThreshold.setIcon(icon15)
+        icon17 = QIcon()
+        icon17.addFile(u":/Blue Icons/Blue Icons/crop.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BThreshold.setIcon(icon17)
         self.BThreshold.setIconSize(QSize(32, 32))
         self.BThreshold.setToolButtonStyle(Qt.ToolButtonIconOnly)
 
@@ -3944,10 +4015,10 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_46.addWidget(self.PostprocessingOptions)
 
-        icon16 = QIcon()
-        icon16.addFile(u":/Blue Icons/Blue Icons/magnify.svg", QSize(), QIcon.Normal, QIcon.Off)
-        icon16.addFile(u":/Blue Icons/Blue Icons/magnify.svg", QSize(), QIcon.Selected, QIcon.On)
-        self.tabWidget_2.addTab(self.Results, icon16, "")
+        icon18 = QIcon()
+        icon18.addFile(u":/Blue Icons/Blue Icons/magnify.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon18.addFile(u":/Blue Icons/Blue Icons/magnify.svg", QSize(), QIcon.Selected, QIcon.On)
+        self.tabWidget_2.addTab(self.Results, icon18, "")
 
         self.verticalLayout_18.addWidget(self.tabWidget_2)
 
@@ -4083,7 +4154,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1326, 37))
+        self.menubar.setGeometry(QRect(0, 0, 1326, 24))
         self.menuHelp = QMenu(self.menubar)
         self.menuHelp.setObjectName(u"menuHelp")
         self.menuFile = QMenu(self.menubar)
@@ -4283,7 +4354,9 @@ class Ui_MainWindow(object):
         self.MeshInputs2.setCurrentIndex(0)
         self.tabWidget_3.setCurrentIndex(0)
         self.DefineMaterialsOptions.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(0)
         self.MaterialTypeTool.setCurrentIndex(0)
+        self.PlasticDefinition.setCurrentIndex(0)
         self.AssignMaterialsOptions.setCurrentIndex(0)
         self.BoundaryConditionsOptions.setCurrentIndex(0)
         self.SolverSettingsOptions.setCurrentIndex(0)
@@ -4665,9 +4738,9 @@ class Ui_MainWindow(object):
         self.INMaterialType.setItemText(2, QCoreApplication.translate("MainWindow", u"Orthotropic", None))
         self.INMaterialType.setItemText(3, QCoreApplication.translate("MainWindow", u"Anisotropic", None))
 
-        self.LYoungsModulus.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>E: </p></body></html>", None))
-        self.UPressure1.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None))
         self.LPoissonsRatio.setText(QCoreApplication.translate("MainWindow", u"nu: ", None))
+        self.UPressure1.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None))
+        self.LYoungsModulus.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>E: </p></body></html>", None))
         self.LIsotropicPlane.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Isotropic Plane: </p></body></html>", None))
         self.INIsotropicPlane.setItemText(0, QCoreApplication.translate("MainWindow", u"x-y plane", None))
         self.INIsotropicPlane.setItemText(1, QCoreApplication.translate("MainWindow", u"x-z plane", None))
@@ -4700,6 +4773,15 @@ class Ui_MainWindow(object):
         self.LEz.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>E<span style=\" vertical-align:sub;\">z</span>: </p></body></html>", None))
         self.LGxz.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>G<span style=\" vertical-align:sub;\">xz</span>: </p></body></html>", None))
         self.UPressure6.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Elastic), QCoreApplication.translate("MainWindow", u"Elastic", None))
+        self.BPlasticity.setText(QCoreApplication.translate("MainWindow", u"Enable Plasticity", None))
+        self.LSlipSystem.setText(QCoreApplication.translate("MainWindow", u"Slip System Definition:", None))
+        self.INSlipSystem.setItemText(0, QCoreApplication.translate("MainWindow", u"FCC <110>(111)", None))
+
+        self.LNSlipSystem.setText(QCoreApplication.translate("MainWindow", u"Number of Slip Systems:", None))
+        self.INNSlipSystem.setItemText(0, QCoreApplication.translate("MainWindow", u"12", None))
+
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Plastic), QCoreApplication.translate("MainWindow", u"Plastic", None))
         self.BAddMaterial.setText(QCoreApplication.translate("MainWindow", u"Add", None))
         ___qtablewidgetitem33 = self.TMaterials.horizontalHeaderItem(0)
         ___qtablewidgetitem33.setText(QCoreApplication.translate("MainWindow", u"Name", None));

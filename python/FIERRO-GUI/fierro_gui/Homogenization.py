@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog)
-from PySide6.QtCore import (QCoreApplication, QProcess)
+from PySide6.QtCore import (QCoreApplication, QProcess, Qt)
 import re
 import csv
 import numpy as np
@@ -31,6 +31,9 @@ def Homogenization(self):
     #self.BDefineMaterial.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(4))
     #self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(7))
     #self.BGlobalMesh.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(1))
+    
+    # Connect plastic button
+    self.BPlasticity.stateChanged.connect(lambda: self.PlasticDefinition.setCurrentIndex(1 if self.BPlasticity.isChecked() else 0))
     
     # Apply Material
     def material_type():
@@ -95,6 +98,12 @@ def Homogenization(self):
     
     def add_material():
         warning_flag = 0
+        in_file_path = self.TParts.item(0,10).text()
+        file_type = os.path.splitext(in_file_path)[1].lower()
+        if ".txt" in file_type:
+            warning_message('ERROR: Crystal properties cannot be isotropic')
+            warning_flag = 1
+        
         for i in range(self.TMaterials.rowCount()):
             if str(self.INRegion.currentText()) == self.TMaterials.item(i,1).text():
                 warning_message('ERROR: There is already a material assigned to this region')
@@ -316,6 +325,10 @@ def Homogenization(self):
                             k += 1
                     self.INMaterialName.clear()
                     warning_flag = 1
+                    # Add material as an option for material assignment
+                    self.INMaterial.clear()
+                    for i in range(self.TMaterials.rowCount()):
+                        self.INMaterial.addItem(self.TMaterials.item(i,0).text())
             if warning_flag == 0:
                 # Fill out material definition table
                 row = self.TMaterials.rowCount()
@@ -602,12 +615,17 @@ def Homogenization(self):
         Homogenization_WInput(self,BC_index)
         
         # Define executable path
+        in_file_path = self.TParts.item(0,10).text()
+        file_type = os.path.splitext(in_file_path)[1].lower()
         reload(DeveloperInputs)
         if self.UserConfig == "Developer":
             executable_path = DeveloperInputs.fierro_evpfft_exe
         elif self.UserConfig == "User":
             executable_path = "evpfft"
-        arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
+        if ".vtk" in file_type:
+            arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
+        else:
+            arguments = ["-f", self.EVPFFT_INPUT]
         
         # Make a new directory to store all of the outputs
         if BC_index == 0:
@@ -886,17 +904,24 @@ def Homogenization(self):
         self.results_reader = paraview.simple.XDMFReader(FileNames=self.output_directory)
         
         # Apply threshold to view certain phase id's
-        if hasattr(self, 'threshold'):
-            paraview.simple.Hide(self.threshold)
-        if str(self.INResultRegion.currentText()) == "Part + Void":
+        in_file_path = self.TParts.item(0,10).text()
+        file_type = os.path.splitext(in_file_path)[1].lower()
+        if ".vtk" in file_type:
+            if hasattr(self, 'threshold'):
+                paraview.simple.Hide(self.threshold)
+            if str(self.INResultRegion.currentText()) == "Part + Void":
+                paraview.simple.SetDisplayProperties(Representation="Surface")
+                self.display = Show(self.results_reader, self.render_view)
+            elif str(self.INResultRegion.currentText()) == "Part":
+                self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 2, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+                self.display = Show(self.threshold, self.render_view)
+            elif str(self.INResultRegion.currentText()) == "Void":
+                self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 1, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+                self.display = Show(self.threshold, self.render_view)
+        else:
+            self.INResultRegion.setEnabled(False)
             paraview.simple.SetDisplayProperties(Representation="Surface")
             self.display = Show(self.results_reader, self.render_view)
-        elif str(self.INResultRegion.currentText()) == "Part":
-            self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 2, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-            self.display = Show(self.threshold, self.render_view)
-        elif str(self.INResultRegion.currentText()) == "Void":
-            self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 1, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-            self.display = Show(self.threshold, self.render_view)
         
         # Color by the selected variable
         selected_variable = str(self.INPreviewResults.currentText())

@@ -352,7 +352,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>4</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -3631,7 +3631,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>1</number>
+              <number>0</number>
              </property>
              <property name="iconSize">
               <size>
@@ -4135,28 +4135,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
                         </property>
                        </widget>
                       </item>
-                      <item row="1" column="5">
-                       <widget class="QFrame" name="frame_34">
-                        <property name="frameShape">
-                         <enum>QFrame::NoFrame</enum>
+                      <item row="0" column="1">
+                       <widget class="QLineEdit" name="INMaterialName">
+                        <property name="minimumSize">
+                         <size>
+                          <width>93</width>
+                          <height>0</height>
+                         </size>
                         </property>
-                        <layout class="QHBoxLayout" name="horizontalLayout_11">
-                         <property name="leftMargin">
-                          <number>0</number>
-                         </property>
-                         <property name="topMargin">
-                          <number>0</number>
-                         </property>
-                         <property name="rightMargin">
-                          <number>0</number>
-                         </property>
-                         <property name="bottomMargin">
-                          <number>0</number>
-                         </property>
-                        </layout>
                        </widget>
                       </item>
-                      <item row="2" column="5">
+                      <item row="0" column="2">
                        <widget class="QFrame" name="frame_35">
                         <property name="frameShape">
                          <enum>QFrame::NoFrame</enum>
@@ -4177,19 +4166,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                         </layout>
                        </widget>
                       </item>
-                      <item row="1" column="0">
-                       <widget class="QLabel" name="LType">
-                        <property name="text">
-                         <string>Type:</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="1" column="1">
-                       <widget class="QFrame" name="frame_36">
+                      <item row="0" column="3">
+                       <widget class="QFrame" name="frame_34">
                         <property name="frameShape">
                          <enum>QFrame::NoFrame</enum>
                         </property>
-                        <layout class="QHBoxLayout" name="horizontalLayout_18">
+                        <layout class="QHBoxLayout" name="horizontalLayout_11">
                          <property name="leftMargin">
                           <number>0</number>
                          </property>
@@ -4202,191 +4184,50 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <property name="bottomMargin">
                           <number>0</number>
                          </property>
-                         <item>
-                          <widget class="QComboBox" name="INSolidGas">
-                           <property name="minimumSize">
-                            <size>
-                             <width>82</width>
-                             <height>0</height>
-                            </size>
-                           </property>
-                           <item>
-                            <property name="text">
-                             <string>Solid</string>
-                            </property>
-                           </item>
-                           <item>
-                            <property name="text">
-                             <string>Gas</string>
-                            </property>
-                           </item>
-                          </widget>
-                         </item>
-                         <item>
-                          <widget class="QComboBox" name="INMaterialType">
-                           <item>
-                            <property name="text">
-                             <string>Isotropic</string>
-                            </property>
-                           </item>
-                           <item>
-                            <property name="text">
-                             <string>Transversely Isotropic</string>
-                            </property>
-                           </item>
-                           <item>
-                            <property name="text">
-                             <string>Orthotropic</string>
-                            </property>
-                           </item>
-                           <item>
-                            <property name="text">
-                             <string>Anisotropic</string>
-                            </property>
-                           </item>
-                          </widget>
-                         </item>
                         </layout>
-                       </widget>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QLineEdit" name="INMaterialName">
-                        <property name="minimumSize">
-                         <size>
-                          <width>93</width>
-                          <height>0</height>
-                         </size>
-                        </property>
                        </widget>
                       </item>
                      </layout>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignTop">
-                    <widget class="QStackedWidget" name="MaterialTypeTool">
-                     <property name="currentIndex">
-                      <number>3</number>
+                   <item>
+                    <widget class="QTabWidget" name="tabWidget">
+                     <property name="enabled">
+                      <bool>true</bool>
                      </property>
-                     <widget class="QWidget" name="Isotropic">
-                      <layout class="QGridLayout" name="gridLayout_13">
-                       <property name="bottomMargin">
-                        <number>12</number>
-                       </property>
-                       <item row="0" column="1">
-                        <widget class="QLineEdit" name="INYoungsModulus"/>
-                       </item>
-                       <item row="1" column="1">
-                        <widget class="QLineEdit" name="INPoissonsRatio"/>
-                       </item>
-                       <item row="0" column="0">
-                        <widget class="QLabel" name="LYoungsModulus">
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QLabel" name="UPressure1">
-                         <property name="text">
-                          <string>[Pa]</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="1" column="0">
-                        <widget class="QLabel" name="LPoissonsRatio">
-                         <property name="text">
-                          <string>nu: </string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="2" column="1">
-                        <spacer name="verticalSpacer_14">
-                         <property name="orientation">
-                          <enum>Qt::Vertical</enum>
-                         </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>20</width>
-                           <height>40</height>
-                          </size>
-                         </property>
-                        </spacer>
-                       </item>
-                      </layout>
-                     </widget>
-                     <widget class="QWidget" name="TransverselyIsotropic">
-                      <layout class="QVBoxLayout" name="verticalLayout_52">
-                       <property name="spacing">
-                        <number>0</number>
-                       </property>
+                     <property name="currentIndex">
+                      <number>0</number>
+                     </property>
+                     <widget class="QWidget" name="Elastic">
+                      <attribute name="icon">
+                       <iconset resource="Icons/IconResourceFile.qrc">
+                        <normaloff>:/Blue Icons/Blue Icons/Elastic.svg</normaloff>:/Blue Icons/Blue Icons/Elastic.svg</iconset>
+                      </attribute>
+                      <attribute name="title">
+                       <string>Elastic</string>
+                      </attribute>
+                      <layout class="QVBoxLayout" name="verticalLayout_23">
                        <property name="leftMargin">
-                        <number>0</number>
+                        <number>6</number>
                        </property>
                        <property name="topMargin">
-                        <number>0</number>
+                        <number>12</number>
                        </property>
                        <property name="rightMargin">
-                        <number>0</number>
+                        <number>6</number>
                        </property>
                        <property name="bottomMargin">
                         <number>0</number>
                        </property>
-                       <item alignment="Qt::AlignTop">
-                        <widget class="QFrame" name="frame_37">
+                       <item>
+                        <widget class="QFrame" name="frame_24">
                          <property name="frameShape">
                           <enum>QFrame::NoFrame</enum>
                          </property>
                          <property name="frameShadow">
                           <enum>QFrame::Raised</enum>
                          </property>
-                         <layout class="QFormLayout" name="formLayout_27">
-                          <property name="leftMargin">
-                           <number>0</number>
-                          </property>
-                          <property name="topMargin">
-                           <number>0</number>
-                          </property>
-                          <property name="bottomMargin">
-                           <number>0</number>
-                          </property>
-                          <item row="0" column="0">
-                           <widget class="QLabel" name="LIsotropicPlane">
-                            <property name="text">
-                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Isotropic Plane: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="0" column="1">
-                           <widget class="QComboBox" name="INIsotropicPlane">
-                            <item>
-                             <property name="text">
-                              <string>x-y plane</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>x-z plane</string>
-                             </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>y-z plane</string>
-                             </property>
-                            </item>
-                           </widget>
-                          </item>
-                         </layout>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QFrame" name="TransverslyIsotropicMat">
-                         <property name="frameShape">
-                          <enum>QFrame::NoFrame</enum>
-                         </property>
-                         <layout class="QHBoxLayout" name="horizontalLayout_19">
-                          <property name="spacing">
-                           <number>0</number>
-                          </property>
+                         <layout class="QGridLayout" name="gridLayout_19">
                           <property name="leftMargin">
                            <number>0</number>
                           </property>
@@ -4399,99 +4240,24 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           <property name="bottomMargin">
                            <number>0</number>
                           </property>
-                          <item>
-                           <widget class="QFrame" name="TransverseInPlane">
-                            <property name="frameShape">
-                             <enum>QFrame::NoFrame</enum>
+                          <item row="0" column="0">
+                           <widget class="QLabel" name="LType">
+                            <property name="text">
+                             <string>Type:</string>
                             </property>
-                            <layout class="QVBoxLayout" name="verticalLayout_53">
-                             <property name="spacing">
-                              <number>0</number>
-                             </property>
-                             <property name="leftMargin">
-                              <number>0</number>
-                             </property>
-                             <property name="topMargin">
-                              <number>12</number>
-                             </property>
-                             <property name="rightMargin">
-                              <number>0</number>
-                             </property>
-                             <property name="bottomMargin">
-                              <number>0</number>
-                             </property>
-                             <item>
-                              <widget class="QLabel" name="LInPlane">
-                               <property name="text">
-                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;In-Plane&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QFrame" name="TransverseInPlaneMat">
-                               <property name="frameShape">
-                                <enum>QFrame::NoFrame</enum>
-                               </property>
-                               <layout class="QGridLayout" name="gridLayout_14">
-                                <item row="1" column="1">
-                                 <widget class="QLineEdit" name="INNUip"/>
-                                </item>
-                                <item row="1" column="0">
-                                 <widget class="QLabel" name="LNUip">
-                                  <property name="minimumSize">
-                                   <size>
-                                    <width>31</width>
-                                    <height>0</height>
-                                   </size>
-                                  </property>
-                                  <property name="text">
-                                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;IP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                                  </property>
-                                 </widget>
-                                </item>
-                                <item row="0" column="0">
-                                 <widget class="QLabel" name="LEip">
-                                  <property name="minimumSize">
-                                   <size>
-                                    <width>31</width>
-                                    <height>0</height>
-                                   </size>
-                                  </property>
-                                  <property name="text">
-                                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;IP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                                  </property>
-                                 </widget>
-                                </item>
-                                <item row="0" column="1">
-                                 <widget class="QLineEdit" name="INEip"/>
-                                </item>
-                                <item row="0" column="2">
-                                 <widget class="QLabel" name="UPressure2">
-                                  <property name="text">
-                                   <string>[Pa]</string>
-                                  </property>
-                                 </widget>
-                                </item>
-                               </layout>
-                              </widget>
-                             </item>
-                            </layout>
                            </widget>
                           </item>
-                          <item>
-                           <widget class="QFrame" name="TransverseOutOfPlane">
+                          <item row="0" column="1">
+                           <widget class="QFrame" name="frame_36">
                             <property name="frameShape">
                              <enum>QFrame::NoFrame</enum>
                             </property>
-                            <layout class="QVBoxLayout" name="verticalLayout_54">
-                             <property name="spacing">
-                              <number>0</number>
-                             </property>
+                            <layout class="QHBoxLayout" name="horizontalLayout_18">
                              <property name="leftMargin">
                               <number>0</number>
                              </property>
                              <property name="topMargin">
-                              <number>12</number>
+                              <number>0</number>
                              </property>
                              <property name="rightMargin">
                               <number>0</number>
@@ -4500,106 +4266,47 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               <number>0</number>
                              </property>
                              <item>
-                              <widget class="QLabel" name="LOutOfPlane">
-                               <property name="text">
-                                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;Out-Of-Plane&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                              <widget class="QComboBox" name="INSolidGas">
+                               <property name="minimumSize">
+                                <size>
+                                 <width>82</width>
+                                 <height>0</height>
+                                </size>
                                </property>
+                               <item>
+                                <property name="text">
+                                 <string>Solid</string>
+                                </property>
+                               </item>
+                               <item>
+                                <property name="text">
+                                 <string>Gas</string>
+                                </property>
+                               </item>
                               </widget>
                              </item>
                              <item>
-                              <widget class="QFrame" name="TransverseOutOfPlaneMat">
-                               <property name="frameShape">
-                                <enum>QFrame::NoFrame</enum>
-                               </property>
-                               <layout class="QGridLayout" name="gridLayout_15">
-                                <item row="1" column="1">
-                                 <widget class="QLineEdit" name="INNUop"/>
-                                </item>
-                                <item row="2" column="1">
-                                 <widget class="QLineEdit" name="INGop"/>
-                                </item>
-                                <item row="0" column="0">
-                                 <widget class="QLabel" name="LEop">
-                                  <property name="minimumSize">
-                                   <size>
-                                    <width>31</width>
-                                    <height>0</height>
-                                   </size>
-                                  </property>
-                                  <property name="maximumSize">
-                                   <size>
-                                    <width>31</width>
-                                    <height>16777215</height>
-                                   </size>
-                                  </property>
-                                  <property name="text">
-                                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;OP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                                  </property>
-                                 </widget>
-                                </item>
-                                <item row="1" column="0">
-                                 <widget class="QLabel" name="LNUop">
-                                  <property name="minimumSize">
-                                   <size>
-                                    <width>31</width>
-                                    <height>0</height>
-                                   </size>
-                                  </property>
-                                  <property name="maximumSize">
-                                   <size>
-                                    <width>31</width>
-                                    <height>16777215</height>
-                                   </size>
-                                  </property>
-                                  <property name="text">
-                                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;OP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                                  </property>
-                                 </widget>
-                                </item>
-                                <item row="2" column="0">
-                                 <widget class="QLabel" name="LGop">
-                                  <property name="minimumSize">
-                                   <size>
-                                    <width>31</width>
-                                    <height>0</height>
-                                   </size>
-                                  </property>
-                                  <property name="maximumSize">
-                                   <size>
-                                    <width>31</width>
-                                    <height>16777215</height>
-                                   </size>
-                                  </property>
-                                  <property name="text">
-                                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;OP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                                  </property>
-                                 </widget>
-                                </item>
-                                <item row="0" column="1">
-                                 <widget class="QLineEdit" name="INEop">
-                                  <property name="minimumSize">
-                                   <size>
-                                    <width>0</width>
-                                    <height>0</height>
-                                   </size>
-                                  </property>
-                                 </widget>
-                                </item>
-                                <item row="0" column="2">
-                                 <widget class="QLabel" name="UPressure3">
-                                  <property name="text">
-                                   <string>[Pa]</string>
-                                  </property>
-                                 </widget>
-                                </item>
-                                <item row="2" column="2">
-                                 <widget class="QLabel" name="UPressure4">
-                                  <property name="text">
-                                   <string>[Pa]</string>
-                                  </property>
-                                 </widget>
-                                </item>
-                               </layout>
+                              <widget class="QComboBox" name="INMaterialType">
+                               <item>
+                                <property name="text">
+                                 <string>Isotropic</string>
+                                </property>
+                               </item>
+                               <item>
+                                <property name="text">
+                                 <string>Transversely Isotropic</string>
+                                </property>
+                               </item>
+                               <item>
+                                <property name="text">
+                                 <string>Orthotropic</string>
+                                </property>
+                               </item>
+                               <item>
+                                <property name="text">
+                                 <string>Anisotropic</string>
+                                </property>
+                               </item>
                               </widget>
                              </item>
                             </layout>
@@ -4609,419 +4316,861 @@ li.checked::marker { content: &quot;\2612&quot;; }
                         </widget>
                        </item>
                        <item>
-                        <spacer name="verticalSpacer_22">
-                         <property name="orientation">
-                          <enum>Qt::Vertical</enum>
+                        <widget class="QStackedWidget" name="MaterialTypeTool">
+                         <property name="currentIndex">
+                          <number>0</number>
                          </property>
-                         <property name="sizeHint" stdset="0">
-                          <size>
-                           <width>20</width>
-                           <height>40</height>
-                          </size>
-                         </property>
-                        </spacer>
+                         <widget class="QWidget" name="Isotropic">
+                          <property name="enabled">
+                           <bool>true</bool>
+                          </property>
+                          <layout class="QGridLayout" name="gridLayout_13">
+                           <property name="bottomMargin">
+                            <number>12</number>
+                           </property>
+                           <item row="1" column="0">
+                            <widget class="QLabel" name="LPoissonsRatio">
+                             <property name="text">
+                              <string>nu: </string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="1" column="1">
+                            <widget class="QLineEdit" name="INPoissonsRatio"/>
+                           </item>
+                           <item row="0" column="1">
+                            <widget class="QLineEdit" name="INYoungsModulus"/>
+                           </item>
+                           <item row="2" column="1">
+                            <spacer name="verticalSpacer_14">
+                             <property name="orientation">
+                              <enum>Qt::Vertical</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                              <size>
+                               <width>20</width>
+                               <height>40</height>
+                              </size>
+                             </property>
+                            </spacer>
+                           </item>
+                           <item row="0" column="2">
+                            <widget class="QLabel" name="UPressure1">
+                             <property name="text">
+                              <string>[Pa]</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="0">
+                            <widget class="QLabel" name="LYoungsModulus">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                          </layout>
+                         </widget>
+                         <widget class="QWidget" name="TransverselyIsotropic">
+                          <layout class="QVBoxLayout" name="verticalLayout_52">
+                           <property name="spacing">
+                            <number>0</number>
+                           </property>
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
+                           <item alignment="Qt::AlignTop">
+                            <widget class="QFrame" name="frame_37">
+                             <property name="frameShape">
+                              <enum>QFrame::NoFrame</enum>
+                             </property>
+                             <property name="frameShadow">
+                              <enum>QFrame::Raised</enum>
+                             </property>
+                             <layout class="QFormLayout" name="formLayout_27">
+                              <property name="leftMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="topMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="bottomMargin">
+                               <number>0</number>
+                              </property>
+                              <item row="0" column="0">
+                               <widget class="QLabel" name="LIsotropicPlane">
+                                <property name="text">
+                                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Isotropic Plane: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item row="0" column="1">
+                               <widget class="QComboBox" name="INIsotropicPlane">
+                                <item>
+                                 <property name="text">
+                                  <string>x-y plane</string>
+                                 </property>
+                                </item>
+                                <item>
+                                 <property name="text">
+                                  <string>x-z plane</string>
+                                 </property>
+                                </item>
+                                <item>
+                                 <property name="text">
+                                  <string>y-z plane</string>
+                                 </property>
+                                </item>
+                               </widget>
+                              </item>
+                             </layout>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QFrame" name="TransverslyIsotropicMat">
+                             <property name="frameShape">
+                              <enum>QFrame::NoFrame</enum>
+                             </property>
+                             <layout class="QHBoxLayout" name="horizontalLayout_19">
+                              <property name="spacing">
+                               <number>0</number>
+                              </property>
+                              <property name="leftMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="topMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="rightMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="bottomMargin">
+                               <number>0</number>
+                              </property>
+                              <item>
+                               <widget class="QFrame" name="TransverseInPlane">
+                                <property name="frameShape">
+                                 <enum>QFrame::NoFrame</enum>
+                                </property>
+                                <layout class="QVBoxLayout" name="verticalLayout_53">
+                                 <property name="spacing">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="leftMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="topMargin">
+                                  <number>12</number>
+                                 </property>
+                                 <property name="rightMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="bottomMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <item>
+                                  <widget class="QLabel" name="LInPlane">
+                                   <property name="text">
+                                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;In-Plane&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                   </property>
+                                  </widget>
+                                 </item>
+                                 <item>
+                                  <widget class="QFrame" name="TransverseInPlaneMat">
+                                   <property name="frameShape">
+                                    <enum>QFrame::NoFrame</enum>
+                                   </property>
+                                   <layout class="QGridLayout" name="gridLayout_14">
+                                    <item row="1" column="1">
+                                     <widget class="QLineEdit" name="INNUip"/>
+                                    </item>
+                                    <item row="1" column="0">
+                                     <widget class="QLabel" name="LNUip">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                      <property name="text">
+                                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;IP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="0" column="0">
+                                     <widget class="QLabel" name="LEip">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                      <property name="text">
+                                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;IP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="0" column="1">
+                                     <widget class="QLineEdit" name="INEip"/>
+                                    </item>
+                                    <item row="0" column="2">
+                                     <widget class="QLabel" name="UPressure2">
+                                      <property name="text">
+                                       <string>[Pa]</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                   </layout>
+                                  </widget>
+                                 </item>
+                                </layout>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QFrame" name="TransverseOutOfPlane">
+                                <property name="frameShape">
+                                 <enum>QFrame::NoFrame</enum>
+                                </property>
+                                <layout class="QVBoxLayout" name="verticalLayout_54">
+                                 <property name="spacing">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="leftMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="topMargin">
+                                  <number>12</number>
+                                 </property>
+                                 <property name="rightMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="bottomMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <item>
+                                  <widget class="QLabel" name="LOutOfPlane">
+                                   <property name="text">
+                                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;Out-Of-Plane&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                   </property>
+                                  </widget>
+                                 </item>
+                                 <item>
+                                  <widget class="QFrame" name="TransverseOutOfPlaneMat">
+                                   <property name="frameShape">
+                                    <enum>QFrame::NoFrame</enum>
+                                   </property>
+                                   <layout class="QGridLayout" name="gridLayout_15">
+                                    <item row="1" column="1">
+                                     <widget class="QLineEdit" name="INNUop"/>
+                                    </item>
+                                    <item row="2" column="1">
+                                     <widget class="QLineEdit" name="INGop"/>
+                                    </item>
+                                    <item row="0" column="0">
+                                     <widget class="QLabel" name="LEop">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                      <property name="maximumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>16777215</height>
+                                       </size>
+                                      </property>
+                                      <property name="text">
+                                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;OP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="1" column="0">
+                                     <widget class="QLabel" name="LNUop">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                      <property name="maximumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>16777215</height>
+                                       </size>
+                                      </property>
+                                      <property name="text">
+                                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;OP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="2" column="0">
+                                     <widget class="QLabel" name="LGop">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                      <property name="maximumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>16777215</height>
+                                       </size>
+                                      </property>
+                                      <property name="text">
+                                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;OP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="0" column="1">
+                                     <widget class="QLineEdit" name="INEop">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>0</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="0" column="2">
+                                     <widget class="QLabel" name="UPressure3">
+                                      <property name="text">
+                                       <string>[Pa]</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="2" column="2">
+                                     <widget class="QLabel" name="UPressure4">
+                                      <property name="text">
+                                       <string>[Pa]</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                   </layout>
+                                  </widget>
+                                 </item>
+                                </layout>
+                               </widget>
+                              </item>
+                             </layout>
+                            </widget>
+                           </item>
+                           <item>
+                            <spacer name="verticalSpacer_22">
+                             <property name="orientation">
+                              <enum>Qt::Vertical</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                              <size>
+                               <width>20</width>
+                               <height>40</height>
+                              </size>
+                             </property>
+                            </spacer>
+                           </item>
+                          </layout>
+                         </widget>
+                         <widget class="QWidget" name="Anisotropic">
+                          <layout class="QVBoxLayout" name="verticalLayout_55">
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
+                           <item>
+                            <widget class="QLabel" name="label_2">
+                             <property name="text">
+                              <string>Define The Stiffness Matrix [C]:</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QTableWidget" name="TAnisotropic">
+                             <property name="rowCount">
+                              <number>6</number>
+                             </property>
+                             <property name="columnCount">
+                              <number>6</number>
+                             </property>
+                             <attribute name="horizontalHeaderMinimumSectionSize">
+                              <number>21</number>
+                             </attribute>
+                             <attribute name="horizontalHeaderDefaultSectionSize">
+                              <number>50</number>
+                             </attribute>
+                             <row/>
+                             <row/>
+                             <row/>
+                             <row/>
+                             <row/>
+                             <row/>
+                             <column/>
+                             <column/>
+                             <column/>
+                             <column/>
+                             <column/>
+                             <column/>
+                             <item row="0" column="0">
+                              <property name="text">
+                               <string/>
+                              </property>
+                             </item>
+                             <item row="1" column="0">
+                              <property name="text">
+                               <string/>
+                              </property>
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="2" column="0">
+                              <property name="text">
+                               <string/>
+                              </property>
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="2" column="1">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="3" column="0">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="3" column="1">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="3" column="2">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="4" column="0">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="4" column="1">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="4" column="2">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="4" column="3">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="5" column="0">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="5" column="1">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="5" column="2">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="5" column="3">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="5" column="4">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                            </widget>
+                           </item>
+                          </layout>
+                         </widget>
+                         <widget class="QWidget" name="Orthotropic">
+                          <layout class="QGridLayout" name="gridLayout_8">
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="horizontalSpacing">
+                            <number>6</number>
+                           </property>
+                           <property name="verticalSpacing">
+                            <number>0</number>
+                           </property>
+                           <item row="3" column="2">
+                            <widget class="QLineEdit" name="INGxy"/>
+                           </item>
+                           <item row="3" column="1">
+                            <widget class="QLabel" name="LGxy">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;xy&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="7">
+                            <widget class="QLabel" name="UPressure5">
+                             <property name="text">
+                              <string>[Pa]</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="1">
+                            <widget class="QLabel" name="LEx">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;x&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="2" column="4">
+                            <widget class="QLineEdit" name="INNUxz"/>
+                           </item>
+                           <item row="2" column="1">
+                            <widget class="QLabel" name="LNUxy">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;xy&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="3">
+                            <widget class="QLabel" name="LEy">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;y&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="3" column="6">
+                            <widget class="QLineEdit" name="INGyz"/>
+                           </item>
+                           <item row="2" column="3">
+                            <widget class="QLabel" name="LNUxz">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;xz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="4">
+                            <widget class="QLineEdit" name="INEy"/>
+                           </item>
+                           <item row="3" column="5">
+                            <widget class="QLabel" name="LGyz">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;yz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="6">
+                            <widget class="QLineEdit" name="INEz"/>
+                           </item>
+                           <item row="2" column="6">
+                            <widget class="QLineEdit" name="INNUyz"/>
+                           </item>
+                           <item row="3" column="4">
+                            <widget class="QLineEdit" name="INGxz"/>
+                           </item>
+                           <item row="2" column="5">
+                            <widget class="QLabel" name="LNUyz">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;yz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="5">
+                            <widget class="QLabel" name="LEz">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;z&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="2" column="2">
+                            <widget class="QLineEdit" name="INNUxy"/>
+                           </item>
+                           <item row="0" column="2">
+                            <widget class="QLineEdit" name="INEx"/>
+                           </item>
+                           <item row="3" column="3">
+                            <widget class="QLabel" name="LGxz">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;xz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="3" column="7">
+                            <widget class="QLabel" name="UPressure6">
+                             <property name="text">
+                              <string>[Pa]</string>
+                             </property>
+                            </widget>
+                           </item>
+                          </layout>
+                         </widget>
+                         <widget class="QWidget" name="page_4"/>
+                        </widget>
                        </item>
                       </layout>
                      </widget>
-                     <widget class="QWidget" name="Anisotropic">
-                      <layout class="QVBoxLayout" name="verticalLayout_55">
+                     <widget class="QWidget" name="Plastic">
+                      <property name="enabled">
+                       <bool>false</bool>
+                      </property>
+                      <attribute name="icon">
+                       <iconset resource="Icons/IconResourceFile.qrc">
+                        <normaloff>:/Blue Icons/Blue Icons/Plastic.svg</normaloff>:/Blue Icons/Blue Icons/Plastic.svg</iconset>
+                      </attribute>
+                      <attribute name="title">
+                       <string>Plastic</string>
+                      </attribute>
+                      <layout class="QVBoxLayout" name="verticalLayout_24">
                        <property name="leftMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="topMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="rightMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>0</number>
-                       </property>
-                       <item>
-                        <widget class="QLabel" name="label_2">
-                         <property name="text">
-                          <string>Define The Stiffness Matrix [C]:</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QTableWidget" name="TAnisotropic">
-                         <property name="rowCount">
-                          <number>6</number>
-                         </property>
-                         <property name="columnCount">
-                          <number>6</number>
-                         </property>
-                         <attribute name="horizontalHeaderMinimumSectionSize">
-                          <number>21</number>
-                         </attribute>
-                         <attribute name="horizontalHeaderDefaultSectionSize">
-                          <number>50</number>
-                         </attribute>
-                         <row/>
-                         <row/>
-                         <row/>
-                         <row/>
-                         <row/>
-                         <row/>
-                         <column/>
-                         <column/>
-                         <column/>
-                         <column/>
-                         <column/>
-                         <column/>
-                         <item row="0" column="0">
-                          <property name="text">
-                           <string/>
-                          </property>
-                         </item>
-                         <item row="1" column="0">
-                          <property name="text">
-                           <string/>
-                          </property>
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="2" column="0">
-                          <property name="text">
-                           <string/>
-                          </property>
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="2" column="1">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="3" column="0">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="3" column="1">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="3" column="2">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="4" column="0">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="4" column="1">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="4" column="2">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="4" column="3">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="5" column="0">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="5" column="1">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="5" column="2">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="5" column="3">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                         <item row="5" column="4">
-                          <property name="background">
-                           <brush brushstyle="SolidPattern">
-                            <color alpha="255">
-                             <red>235</red>
-                             <green>235</green>
-                             <blue>235</blue>
-                            </color>
-                           </brush>
-                          </property>
-                          <property name="flags">
-                           <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-                          </property>
-                         </item>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
-                     <widget class="QWidget" name="Orthotropic">
-                      <layout class="QGridLayout" name="gridLayout_8">
-                       <property name="leftMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="topMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="rightMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>0</number>
-                       </property>
-                       <property name="horizontalSpacing">
                         <number>6</number>
                        </property>
-                       <property name="verticalSpacing">
+                       <property name="topMargin">
+                        <number>12</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>6</number>
+                       </property>
+                       <property name="bottomMargin">
                         <number>0</number>
                        </property>
-                       <item row="3" column="2">
-                        <widget class="QLineEdit" name="INGxy"/>
-                       </item>
-                       <item row="3" column="1">
-                        <widget class="QLabel" name="LGxy">
+                       <item>
+                        <widget class="QCheckBox" name="BPlasticity">
                          <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;xy&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          <string>Enable Plasticity</string>
                          </property>
                         </widget>
                        </item>
-                       <item row="0" column="7">
-                        <widget class="QLabel" name="UPressure5">
-                         <property name="text">
-                          <string>[Pa]</string>
+                       <item alignment="Qt::AlignHCenter|Qt::AlignTop">
+                        <widget class="QStackedWidget" name="PlasticDefinition">
+                         <property name="currentIndex">
+                          <number>1</number>
                          </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QLabel" name="LEx">
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;x&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="2" column="4">
-                        <widget class="QLineEdit" name="INNUxz"/>
-                       </item>
-                       <item row="2" column="1">
-                        <widget class="QLabel" name="LNUxy">
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;xy&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="3">
-                        <widget class="QLabel" name="LEy">
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;y&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="3" column="6">
-                        <widget class="QLineEdit" name="INGyz"/>
-                       </item>
-                       <item row="2" column="3">
-                        <widget class="QLabel" name="LNUxz">
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;xz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="4">
-                        <widget class="QLineEdit" name="INEy"/>
-                       </item>
-                       <item row="3" column="5">
-                        <widget class="QLabel" name="LGyz">
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;yz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="6">
-                        <widget class="QLineEdit" name="INEz"/>
-                       </item>
-                       <item row="2" column="6">
-                        <widget class="QLineEdit" name="INNUyz"/>
-                       </item>
-                       <item row="3" column="4">
-                        <widget class="QLineEdit" name="INGxz"/>
-                       </item>
-                       <item row="2" column="5">
-                        <widget class="QLabel" name="LNUyz">
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;yz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="5">
-                        <widget class="QLabel" name="LEz">
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;z&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="2" column="2">
-                        <widget class="QLineEdit" name="INNUxy"/>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QLineEdit" name="INEx"/>
-                       </item>
-                       <item row="3" column="3">
-                        <widget class="QLabel" name="LGxz">
-                         <property name="text">
-                          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;xz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="3" column="7">
-                        <widget class="QLabel" name="UPressure6">
-                         <property name="text">
-                          <string>[Pa]</string>
-                         </property>
+                         <widget class="QWidget" name="page_10"/>
+                         <widget class="QWidget" name="page_12">
+                          <layout class="QGridLayout" name="gridLayout_20">
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
+                           <item row="0" column="1">
+                            <widget class="QLabel" name="LSlipSystem">
+                             <property name="text">
+                              <string>Slip System Definition:</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="2">
+                            <widget class="QComboBox" name="INSlipSystem">
+                             <item>
+                              <property name="text">
+                               <string>FCC &lt;110&gt;(111)</string>
+                              </property>
+                             </item>
+                            </widget>
+                           </item>
+                           <item row="1" column="1">
+                            <widget class="QLabel" name="LNSlipSystem">
+                             <property name="text">
+                              <string>Number of Slip Systems:</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="1" column="2">
+                            <widget class="QComboBox" name="INNSlipSystem">
+                             <item>
+                              <property name="text">
+                               <string>12</string>
+                              </property>
+                             </item>
+                            </widget>
+                           </item>
+                          </layout>
+                         </widget>
                         </widget>
                        </item>
                       </layout>
                      </widget>
-                     <widget class="QWidget" name="page_4"/>
                     </widget>
                    </item>
                    <item>
@@ -7579,7 +7728,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <x>0</x>
      <y>0</y>
      <width>1326</width>
-     <height>24</height>
+     <height>37</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">
@@ -7804,7 +7953,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <tabstop>BDeleteMaterialAssignment</tabstop>
  </tabstops>
  <resources>
-  <include location="Icons/IconResourceFile.qrc"/>
   <include location="Icons/IconResourceFile.qrc"/>
  </resources>
  <connections/>
