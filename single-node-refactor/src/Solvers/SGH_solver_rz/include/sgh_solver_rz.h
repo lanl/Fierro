@@ -67,7 +67,7 @@ namespace SGHRZ_State
     static const std::vector<gauss_pt_state> required_gauss_pt_state = 
     { 
         gauss_pt_state::volume,
-        gauss_pt_state::divergence_velocity
+        gauss_pt_state::gradient_velocity
     };
 
     // Material point state to be initialized for the SGH solver
@@ -80,7 +80,8 @@ namespace SGHRZ_State
         material_pt_state::mass,
         material_pt_state::volume_fraction,
         material_pt_state::specific_internal_energy,
-        material_pt_state::eroded_flag
+        material_pt_state::eroded_flag,
+        material_pt_state::shear_modulii
     };
 
     // Material corner state to be initialized for the SGH solver
@@ -234,7 +235,7 @@ public:
         const Material_t& Materials,
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& GaussPoints_div,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos<bool>&   MaterialPoints_eroded,
         const DCArrayKokkos<double>& corner_force,
         const DCArrayKokkos<double>& node_coords,
@@ -274,15 +275,12 @@ public:
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
 
-    KOKKOS_FUNCTION
     void get_velgrad_rz(
-        ViewCArrayKokkos<double>& vel_grad,
-        const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_vel,
-        const ViewCArrayKokkos<double>& b_matrix,
-        const double GaussPoints_vol,
-        const double elem_area,
-        const size_t elem_gid) const;
+        DCArrayKokkos<double>& elem_vel_grad,
+        const Mesh_t mesh,
+        const DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& elem_vol) const;
 
     KOKKOS_FUNCTION
     void decompose_vel_grad_rz(const ViewCArrayKokkos<double>& D_tensor,
@@ -302,6 +300,7 @@ public:
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_pres,
         const DCArrayKokkos<double>& MaterialPoints_stress,
@@ -311,7 +310,8 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-        const DCArrayKokkos<bool>&   GaussPoints_eroded,
+        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const double time_value,
         const double dt,
@@ -326,6 +326,7 @@ public:
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_pres,
@@ -333,6 +334,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
