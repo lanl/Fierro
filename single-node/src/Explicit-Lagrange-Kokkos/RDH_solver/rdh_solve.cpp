@@ -181,7 +181,33 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                 zone_sie,
                 mat_pt_stress);
         //printf("Values at t_n initialized \n");
+
+        Kokkos::View<double**> BV("Bernstein-Vandermonde mtx", mesh.num_nodes_in_elem, mesh.num_nodes_in_elem);
+        Kokkos::View<double**> thermo_BV("thermo Bernstein-Vandermonde mtx", mesh.num_zones_in_elem, mesh.num_zones_in_elem);
+        Kokkos::View<double**> BV_inv("Bernstein-Vandermonde mtx inv", mesh.num_nodes_in_elem, mesh.num_nodes_in_elem);
+        Kokkos::View<double**> thermo_BV_inv("thermo Bernstein-Vandermonde mtx inv", mesh.num_zones_in_elem, mesh.num_zones_in_elem);
+
+        CArrayKokkos <double> temp_vel(mesh.num_nodes_in_elem, mesh.num_dims);
+        CArrayKokkos <double> temp_sie(mesh.num_zones_in_elem);
+    
+        get_control_coefficients(BV,
+                                thermo_BV,
+                                BV_inv,
+                                thermo_BV_inv,
+                                temp_vel,
+                                temp_sie,
+                                node_vel,
+                                zone_sie,
+                                mesh,
+                                ref_elem);
 	    
+        // FOR_ALL(node_gid, 0, mesh.num_nodes, {
+
+        //     printf("vel val dim 0: %f \n", node_vel(1, node_gid, 0));
+        //     printf("vel val dim 1: %f \n", node_vel(1, node_gid, 1));
+        //     printf("vel val dim 2: %f \n", node_vel(1, node_gid, 2));
+
+        // });
         
         CArrayKokkos <double> force_tensor(rk_num_stages, mesh.num_nodes, mesh.num_zones, mesh.num_dims, "F");
         CArrayKokkos <double> sigma_a(rk_num_stages, mat_pt.num_leg_pts, mesh.num_dims, mesh.num_dims, "sigma_a");
@@ -230,6 +256,8 @@ void rdh_solve(CArrayKokkos <material_t> &material,
         // integrate solution forward in time        
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
             
+            
+            
             get_grad_vel(grad_vel,
                               node_vel,
                               mat_pt.gauss_legendre_jacobian_inverse,
@@ -263,22 +291,22 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             
             get_stress_tensor( mat_pt_stress, rk_stage, mesh, mat_pt_pres );
                         
-            get_artificial_viscosity(sigma_a,
-                                    node_vel,
-                                    mat_pt_vel,
-                                    mat_pt_den,
-                                    mat_pt_sspd,
-                                    elem_vol,
-                                    mat_pt_h,
-                                    mat_pt.gauss_legendre_jacobian_inverse,
-                                    mat_pt.gauss_legendre_jacobian,
-                                    J_inverse_t0,
-                                    char_length_t0,
-                                    mesh,
-                                    ref_elem,
-                                    rk_stage);
+            // get_artificial_viscosity(sigma_a,
+            //                         node_vel,
+            //                         mat_pt_vel,
+            //                         mat_pt_den,
+            //                         mat_pt_sspd,
+            //                         elem_vol,
+            //                         mat_pt_h,
+            //                         mat_pt.gauss_legendre_jacobian_inverse,
+            //                         mat_pt.gauss_legendre_jacobian,
+            //                         J_inverse_t0,
+            //                         char_length_t0,
+            //                         mesh,
+            //                         ref_elem,
+            //                         rk_stage);
 
-            append_artificial_viscosity(mat_pt_stress, sigma_a, mesh, rk_stage);
+            // append_artificial_viscosity(mat_pt_stress, sigma_a, mesh, rk_stage);
             
 
             // build the force tensor at the current stage
@@ -385,8 +413,14 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             
             // internal energy update //
             get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
+            // FOR_ALL(i, 0, mesh.num_zones,{
+            //         printf("source val : %f \n", source(rk_stage, i));
+            // });
+            // Kokkos::fence();
 
             update_internal_energy(zone_sie, rk_stage, mesh, zone.M_e_inv, force_tensor, F_dot_u, Fc, Fc_dot_u, source, node_vel, zone.zonal_mass, dt);//T_L2, zone.zonal_mass);
+            
+            
             // FOR_ALL(elem_gid,  0, mesh.num_elems, {
                 
             //     for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
@@ -510,7 +544,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                         // interp_sie += ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*zone_sie(1, T_dof_gid);
                         Kokkos::atomic_add(&interp_sie, ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*zone_sie(1, T_dof_gid));
                     }
-                    mat_pt_sie(leg_gid) = fmax(1.0e-16, interp_sie);
+                    mat_pt_sie(leg_gid) = interp_sie;//fmax(1.0e-16, interp_sie);
 
                     // --- Pressure and stress ---
                     material(mat_id).eos_model( mat_pt_pres,

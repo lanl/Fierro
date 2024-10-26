@@ -226,7 +226,7 @@ struct fe_ref_elem_t{
             });
             Kokkos::fence();
 
-            // WARNING WARNING WARNING: Assumes p > 0 ...
+            
             RUN_CLASS({
                 size_t dof_rid = 0;
                 for (int k = 0; k < num_gauss_lob_1d; k=k+2){
@@ -373,7 +373,7 @@ struct fe_ref_elem_t{
 
                     }
 
-                    get_basis(temp_nodal_basis, val_1d, val_3d, point);
+                    get_bernstein_basis(temp_nodal_basis, val_1d, val_3d, point);
                     //double check_basis = 0.0;
 
                     for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
@@ -447,7 +447,7 @@ struct fe_ref_elem_t{
                         point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
                     }
                     
-                    get_elem_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                    get_bernstein_elem_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
                     //get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
                     //double check_basis = 0.0;
 
@@ -510,9 +510,9 @@ struct fe_ref_elem_t{
                     //double check[3];
                     //for (int i = 0; i < 3; i++) check[i] = 0.0;
 
-                    partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
-                    partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
-                    partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                    partial_xi_bernstein_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                    partial_eta_bernstein_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                    partial_mu_bernstein_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
 
                     for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
 
@@ -2514,6 +2514,7 @@ double eval_bernstein (
     for (size_t i = 0; i < v; i++) {
         coeff *= static_cast<double>(n - i) / static_cast<double>(i + 1);
     }
+    coeff *= pow(1.0/2.0, n);
     
     return coeff * one_plus_X_pow_v * one_minus_X_pow_n_minus_v;
 }

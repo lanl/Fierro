@@ -2026,7 +2026,16 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
 
 // KOKKOS_INLINE_FUNCTION
 // void lu_invert(Kokkos::View<double**> lu_mtx, Kokkos::View<double**> mtx_inv, Kokkos::View<double*> col, Kokkos::View<int*> indx, int n);
-
+void get_control_coefficients(Kokkos::View<double**> &BV,
+                              Kokkos::View<double**> &thermo_BV,
+                              Kokkos::View<double**> &BV_inv,
+                              Kokkos::View<double**> &thermo_BV_inv,
+                              CArrayKokkos<double> &temp_vel,
+                              CArrayKokkos<double> &temp_sie,
+                              DViewCArrayKokkos<double> &node_vel,
+                              DViewCArrayKokkos <double> &zone_sie,
+                              const mesh_t &mesh,
+                              const fe_ref_elem_t &ref_elem);
 
 void append_artificial_viscosity(DViewCArrayKokkos <double> &sigma,
                                  const CArrayKokkos <double> &sigma_a,

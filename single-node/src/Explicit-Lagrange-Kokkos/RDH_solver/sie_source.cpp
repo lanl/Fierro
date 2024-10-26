@@ -78,6 +78,7 @@ void get_sie_source(CArrayKokkos <double> source,
                                             *ref_elem.gauss_leg_weights(gauss_lid)
                                             *ref_elem.gauss_leg_elem_basis(gauss_lid, z_lid)
                                             *ref_elem.gauss_leg_elem_basis(gauss_lid, zone_lid));
+                    
                 }// gauss_lid 
             }//zone_lid
             

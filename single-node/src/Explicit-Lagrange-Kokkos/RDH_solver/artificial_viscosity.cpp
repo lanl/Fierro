@@ -360,6 +360,10 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 for (int i = 0; i < 3; i++) s_1[i] = 0.0;
 
                 min_eigenvalue_eigenvector(grad_u_at_gp, lambda_1, s_1);
+                // printf("lambda = %f \n", lambda_1);
+                // printf("s_1(0) = %f \n", s_1[0]);
+                // printf("s_1(0) = %f \n", s_1[1]);
+                // printf("s_1(0) = %f \n", s_1[2]);
 
                 double h_pert = 0.0;                                
                 h_pert = h*sqrt( l2_vel_inv(gauss_gid)*l2_JJ0Inv_dot_u(gauss_gid) );
@@ -367,7 +371,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
 
                 mat_pt_h(gauss_gid) = h_pert;//pow( vol(elem_gid), 1.0/mesh.num_dims )/mesh.num_leg_gauss_in_elem;
                 
-                double sigmoid = 1.0/( 1.0 + exp( lambda_1 ));//Du(elem_gid) ) );//Delta_u(gauss_gid) ));// ) );//Du_min(0) ));//
+                // double sigmoid = 1.0/( 1.0 + exp( Du(elem_gid) ) );//lambda_1 ));//Delta_u(gauss_gid) ));// ) );//Du_min(0) ));//
                 double coeff = 0.0;//
 
                 double eps = 1.0e-12;
@@ -387,9 +391,9 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                     phi_curl = abs(div_u(gauss_gid)/l2_grad_u(gauss_gid));
                 }
                 
-                mu(gauss_gid) = 0.5*phi_curl*den(gauss_gid)*h_pert*sspd(gauss_gid)*sigmoid;//*(1.0 - coeff);//
+                mu(gauss_gid) = 0.5*phi_curl*den(gauss_gid)*h_pert*sspd(gauss_gid);//*(1.0 - coeff);//*sigmoid;//
                 // mu(gauss_gid) += 2.0*den(gauss_gid)*h_pert*h_pert*abs( Du(elem_gid) )*sigmoid;//;//Du_min(0) );//Delta_u(gauss_gid) );//
-                Kokkos::atomic_add(&mu(gauss_gid), 2.0*den(gauss_gid)*h_pert*h_pert*lambda_1*sigmoid);//Du(elem_gid) )*sigmoid);
+                Kokkos::atomic_add(&mu(gauss_gid), 2.0*den(gauss_gid)*h_pert*h_pert*lambda_1);//*sigmoid);//Du(elem_gid) )*sigmoid);
 
             }// gauss_lid
         });// elem_gid
@@ -400,7 +404,7 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                 int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
                 for(int i = 0; i < mesh.num_dims; i++){
                     for(int j = 0; j < mesh.num_dims; j++){
-                        sigma_a(stage, gauss_gid, i, j) = mu(gauss_gid)*grad_u(gauss_gid, i, j);
+                        sigma_a(stage, gauss_gid, i, j) = 0.0*mu(gauss_gid)*grad_u(gauss_gid, i, j);
                         //printf("sigma_a : %f \n", sigma_a(stage, gauss_gid, i, j));
                     }// j
                 }// i
