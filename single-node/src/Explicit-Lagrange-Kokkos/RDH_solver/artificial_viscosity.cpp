@@ -387,9 +387,9 @@ void get_artificial_viscosity(CArrayKokkos <double> &sigma_a,
                     phi_curl = abs(div_u(gauss_gid)/l2_grad_u(gauss_gid));
                 }
                 
-                mu(gauss_gid) = 0.5*phi_curl*den(gauss_gid)*h_pert*sspd(gauss_gid)*sigmoid;//*(1.0 - coeff);//
+                mu(gauss_gid) = 0.5*phi_curl*den(gauss_gid)*h_pert*sspd(gauss_gid)*(1.0 - coeff);//*sigmoid;//
                 // mu(gauss_gid) += 2.0*den(gauss_gid)*h_pert*h_pert*abs( Du(elem_gid) )*sigmoid;//;//Du_min(0) );//Delta_u(gauss_gid) );//
-                Kokkos::atomic_add(&mu(gauss_gid), 2.0*den(gauss_gid)*h_pert*h_pert*lambda_1*sigmoid);//Du(elem_gid) )*sigmoid);
+                Kokkos::atomic_add(&mu(gauss_gid), 2.0*den(gauss_gid)*h_pert*h_pert*abs(lambda_1));//*sigmoid);//Du(elem_gid) )*sigmoid);
 
             }// gauss_lid
         });// elem_gid

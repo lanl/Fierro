@@ -384,7 +384,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             
             
             // internal energy update //
-            get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
+            // get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
 
             update_internal_energy(zone_sie, rk_stage, mesh, zone.M_e_inv, force_tensor, F_dot_u, Fc, Fc_dot_u, source, node_vel, zone.zonal_mass, dt);//T_L2, zone.zonal_mass);
             // FOR_ALL(elem_gid,  0, mesh.num_elems, {
