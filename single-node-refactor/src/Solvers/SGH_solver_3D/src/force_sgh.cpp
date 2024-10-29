@@ -95,6 +95,14 @@ void SGH3D::get_force(const Material_t& Materials,
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
+        // extract the artificial viscosity parameters
+        double q1   = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::q1);
+        double q1ex = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::q1ex);
+        double q2   = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::q2);
+        double q2ex = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::q2ex);
+        double phi_floor = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::phiFloor); 
+
+
         // get elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
@@ -253,13 +261,13 @@ void SGH3D::get_force(const Material_t& Materials,
             // cell divergence indicates compression or expansions
             if (div < 0) { // element in compression
                 muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(mat_point_lid) + 
-                                 Materials.MaterialFunctions(mat_id).q2 * mag_vel);
+                                (q1 * MaterialPoints_sspd(mat_point_lid) + 
+                                 q2 * mag_vel);
             }
             else{  // element in expansion
                 muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(mat_point_lid) + 
-                                 Materials.MaterialFunctions(mat_id).q2ex * mag_vel);
+                                (q1ex * MaterialPoints_sspd(mat_point_lid) + 
+                                 q2ex * mag_vel);
             } // end if on divergence sign
 
             size_t use_shock_dir = 0;
@@ -272,8 +280,8 @@ void SGH3D::get_force(const Material_t& Materials,
                 // direction
                 mu_term = muc(node_lid) *
                           fabs(shock_dir(0) * area_normal(node_lid, 0)
-                        + shock_dir(1) * area_normal(node_lid, 1)
-                        + shock_dir(2) * area_normal(node_lid, 2) );
+                             + shock_dir(1) * area_normal(node_lid, 1)
+                             + shock_dir(2) * area_normal(node_lid, 2) );
             }
             else{
                 // Using a full tensoral Riemann jump relation
@@ -360,6 +368,9 @@ void SGH3D::get_force(const Material_t& Materials,
         // curl limiter on Q
         double phi_curl = fmin(1.0, 1.0 * fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
         // phi = phi_curl*phi;
+
+        // if phi_floor>0, ensure a small amount of dissipation is present
+        phi = fmax(phi_floor, phi);
 
         // ---- Calculate the Riemann force on each node ----
 
