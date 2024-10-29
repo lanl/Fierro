@@ -2147,6 +2147,14 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::temperature;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).temperature = &ConstantTempBC::temperature;
                             });
+                            break;     
+                        case boundary_conditions::convection:
+                            std::cout << "Setting convection bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::convection;
+                                // BoundaryConditions.BoundaryConditionFunctions(bc_id).convection = &ConstantTempBC::convection;
+                            });
                             break;                        
                         default:
                             

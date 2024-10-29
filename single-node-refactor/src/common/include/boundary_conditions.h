@@ -67,7 +67,9 @@ enum BCHydro
     zeroVelocityBC = 4,
     userDefinedVelocityBC = 5,
     pistonVelocityBC = 6,
-    temperature = 7
+    temperature = 7,
+    convection = 8,
+    radiation = 9
 };
 // future options:
 //    displacement          = 6,
@@ -111,7 +113,9 @@ static std::map<std::string, boundary_conditions::BCHydro> bc_type_map
     { "zero_velocity", boundary_conditions::zeroVelocityBC },
     { "user_defined_velocity", boundary_conditions::userDefinedVelocityBC },
     { "piston_velocity", boundary_conditions::pistonVelocityBC },
-    { "temperature", boundary_conditions::temperature}
+    { "temperature", boundary_conditions::temperature},
+    { "convection", boundary_conditions::convection},
+    { "radiation", boundary_conditions::radiation}
 };
 // future options
 //    { "displacement",          boundary_conditions::displacement          },
@@ -194,7 +198,17 @@ struct BoundaryConditionFunctions_t
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const DCArrayKokkos<double>& bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
-        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& node_temp,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set) = NULL;
+
+    void (*flux) (const Mesh_t& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const DCArrayKokkos<double>& bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const DCArrayKokkos<double>& node_temp,
         const double time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,

@@ -158,6 +158,12 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // sphere_position.host(0) = fmod(time_value, 0.02) + 0.01;
     // sphere_position.host(1) = 0.05;
+
+
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        State.node.q_flux(0, node_gid) = 0.0;
+        State.node.q_flux(1, node_gid) = 0.0;
+    }); // end for parallel for over nodes
     
 
     sphere_position.update_device();
@@ -224,12 +230,16 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------------
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
         // ---------------------------------------------------------------------
+        
+
+
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
             
             // save the values at t_n
             rk_init(State.node.coords,
                     State.node.vel,
                     State.node.temp,
+                    State.node.q_flux,
                     State.MaterialPoints(mat_id).q_flux,
                     State.MaterialPoints(mat_id).stress,
                     mesh.num_dims,
@@ -239,16 +249,18 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         } // end for mat_id
 
         // integrate solution forward in time
+
+
+
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
 
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
-            // Set corner heat divergence to zero (done in heat_flux.cpp)
-            // FOR_ALL(corner_gid, 0, mesh.num_corners, {
-            //     for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            //         State.corner.q_flux(0, corner_gid, dim) = 0.0;
-            //     }
-            // }); // end parallel for corners
+            // This works 
+            FOR_ALL(node_gid, 0, mesh.num_nodes, {
+                State.node.q_flux(0, node_gid) = 0.0;
+                State.node.q_flux(1, node_gid) = 0.0;
+            }); // end for parallel for over nodes
 
             // ---- calculate the temperature gradient  ----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -277,31 +289,32 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     dt, 
                     rk_alpha);
 
-                moving_flux(
-                    Materials,
-                    mesh,
-                    State.GaussPoints.vol,
-                    State.node.coords,
-                    State.corner.q_flux,
-                    State.MaterialCorners(mat_id).q_flux,
-                    sphere_position,
-                    State.corners_in_mat_elem,
-                    State.MaterialToMeshMaps(mat_id).elem,
-                    num_mat_elems,
-                    mat_id,
-                    fuzz,
-                    small,
-                    dt, 
-                    rk_alpha
-                    );
+                // moving_flux(
+                //     Materials,
+                //     mesh,
+                //     State.GaussPoints.vol,
+                //     State.node.coords,
+                //     State.corner.q_flux,
+                //     State.MaterialCorners(mat_id).q_flux,
+                //     sphere_position,
+                //     State.corners_in_mat_elem,
+                //     State.MaterialToMeshMaps(mat_id).elem,
+                //     num_mat_elems,
+                //     mat_id,
+                //     fuzz,
+                //     small,
+                //     dt, 
+                //     rk_alpha
+                //     );
 
             } // end for mat_id
 
             // ---- apply flux boundary conditions (convection/radiation)  ---- //
 
+            //boundary_radiation(mesh, BoundaryConditions, State.corner.q_flux, time_value);
 
-
-
+            boundary_convection(mesh, BoundaryConditions, State.corner.q_flux, State.node.temp, State.node.q_flux, State.node.coords, time_value);
+            boundary_radiation(mesh, BoundaryConditions, State.corner.q_flux, State.node.temp, State.node.q_flux, State.node.coords, time_value);
 
             // ---- Update nodal temperature ---- //
             update_temperature(
@@ -309,12 +322,15 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                 State.corner.q_flux,
                 State.node.temp,
                 State.node.mass,
+                State.node.q_flux,
                 rk_alpha,
                 dt);
 
 
             // ---- apply temperature boundary conditions to the boundary patches----
             boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
+
+            
 
             // Find the element average temperature
 
@@ -327,8 +343,14 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
 
+            // Zero out the nodal flux
+            
+
         } // end of RK loop
 
+        // FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        //     State.node.q_flux(node_gid) = 0.0;
+        // }); // end for parallel for over nodes
 
         // Update the spheres position
         RUN({
@@ -425,6 +447,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // write outputs
         if (write == 1) {
+
+            dt = cached_pregraphics_dt;
             printf("Writing outputs to file at %f \n", graphics_time);
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
             mesh_writer.write_mesh(mesh,
@@ -438,7 +462,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             graphics_time = time_value + graphics_dt_ival;
 
-            dt = cached_pregraphics_dt;
+            
         } // end if
 
         // end of calculation

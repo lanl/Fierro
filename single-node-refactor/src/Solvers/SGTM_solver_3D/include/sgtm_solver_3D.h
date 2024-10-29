@@ -59,7 +59,8 @@ namespace SGTM3D_State
         node_state::coords,
         node_state::velocity,
         node_state::mass,
-        node_state::temp
+        node_state::temp,
+        node_state::q_flux
     };
 
     // Gauss point state to be initialized for the SGH solver
@@ -202,6 +203,25 @@ public:
         DCArrayKokkos<double>&     node_temp,
         const double time_value) const;
 
+    void boundary_convection(
+        const Mesh_t& mesh,
+        const BoundaryCondition_t& BoundaryConditions,
+        DCArrayKokkos<double>& corner_flux,
+        const DCArrayKokkos<double>& node_temp,
+        const DCArrayKokkos<double>& node_flux,
+        const DCArrayKokkos<double>& node_coords,
+        const double time_value) const;
+
+
+    void boundary_radiation(
+        const Mesh_t& mesh,
+        const BoundaryCondition_t& BoundaryConditions,
+        DCArrayKokkos<double>& corner_flux,
+        const DCArrayKokkos<double>& node_temp,
+        const DCArrayKokkos<double>& node_flux,
+        const DCArrayKokkos<double>& node_coords,
+        const double time_value) const;
+
     void boundary_heat_flux(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
@@ -211,9 +231,10 @@ public:
     // **** Functions defined in energy_sgtm.cpp **** //
     void update_temperature(
         const Mesh_t& mesh,
-        const DCArrayKokkos<double>& corner_div,
+        const DCArrayKokkos<double>& corner_flux,
         const DCArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& node_mass,
+        const DCArrayKokkos<double>& node_flux,
         const double rk_alpha,
         const double dt) const;
 
@@ -303,6 +324,7 @@ public:
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& node_temp,
+        DCArrayKokkos<double>& node_flux,
         DCArrayKokkos<double>& MaterialPoints_q_flux,
         DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,

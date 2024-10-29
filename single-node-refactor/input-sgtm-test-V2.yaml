@@ -1,9 +1,9 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 15
+    time_final: 10
     dt_min: 1.e-8
-    dt_max: 5.e-2
+    dt_max: 1.e-2
     dt_start: 1.e-5
     cycle_stop: 100000
 
@@ -16,9 +16,9 @@ mesh_options:
     source: generate
     num_dims: 3
     type: box
-    origin: [0.00, 0.02, 0.0]
-    length: [0.06, 0.06, 0.05]
-    num_elems: [60, 60, 50]
+    origin: [0.0, 0.0, 0.0]
+    length: [1.0, 1.0, 1.0]
+    num_elems: [5, 5, 5]
 
 
 output_options:
@@ -38,50 +38,55 @@ solver_options:
 boundary_conditions:
     
 
-    # Tag X = 0.1 plane
     - boundary_condition:
         solver: SGTM3D
         geometry: x_plane
         direction: x_dir
         value: 0.0
-        temperature: 0
-        type:  temperature
+        temperature: 1000
+        type:  convection
 
-
-    # Tag X = 0 plane
     - boundary_condition:
         solver: SGTM3D
         geometry: x_plane
         direction: x_dir
-        value: 0.06
-        temperature: 0
-        type:  temperature
+        value: 1.0
+        temperature: 1000
+        type:  convection
 
     - boundary_condition:
         solver: SGTM3D
         geometry: y_plane
         direction: y_dir
-        value: 0.02
-        temperature: 0
-        type:  temperature
-
+        value: 0.0
+        temperature: 1000
+        type:  convection
 
     - boundary_condition:
         solver: SGTM3D
         geometry: y_plane
         direction: y_dir
-        value: 0.08
-        temperature: 0
-        type:  temperature
+        value: 1.0
+        temperature: 1000
+        type:  convection
 
     - boundary_condition:
         solver: SGTM3D
         geometry: z_plane
         direction: z_dir
-        value: 0.05
-        temperature: 0
-        type:  temperature
+        value: 0.0
+        temperature: 1000
+        type:  convection
 
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: z_plane
+        direction: z_dir
+        value: 1.0
+        temperature: 1000
+        type:  convection
+
+  
 
 materials:
     - material:
@@ -108,9 +113,28 @@ regions:
         u: 0.0
         v: 0.0
         w: 0.0
-        thermal_conductivity: 237
+        thermal_conductivity: 2037
         specific_heat: 903
+        temperature_distribution: cartesian
+        temperature : 1000.0
 
+
+    # - fill_volume:
+    #     type: box
+    #     origin: [0.0, 0.0, 0.0]
+    #     x1 : 0.051
+    #     x2 : 0.15
+    #     y1 : -0.01
+    #     y2 : 1.01
+    #     z1 : -0.01
+    #     z2 : 1.01
+    #     material_id: 0
+    #     den: 2710
+    #     sie: 1.e-10
+    #     temperature_distribution: cartesian
+    #     temperature : 0.0
+    #     # thermal_conductivity: 1.0
+    #     # specific_heat: 1.0
     
     # Hot wall
     # - fill_volume:

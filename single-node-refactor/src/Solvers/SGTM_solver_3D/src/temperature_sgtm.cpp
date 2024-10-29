@@ -54,27 +54,34 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::update_temperature(
     const Mesh_t& mesh,
-    const DCArrayKokkos<double>& corner_div,
+    const DCArrayKokkos<double>& corner_flux,
     const DCArrayKokkos<double>& node_temp,
     const DCArrayKokkos<double>& node_mass,
+    const DCArrayKokkos<double>& node_flux,
     const double rk_alpha,
     const double dt) const
 {
     // loop over all the nodes in the mesh
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        double node_div = 0.0;
+        
+        double flux = 0.0;
+
+        // node_flux(1, node_gid) = 0.0;
+
         // loop over all corners around the node and calculate the nodal gradient
         for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
             
             // Get corner gid
             size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
 
-            node_div += corner_div(1, corner_gid);
+            node_flux(1, node_gid) += corner_flux(1, corner_gid);
+
+            flux += corner_flux(1, corner_gid);
 
         } // end for corner_lid
 
         // update the temperature
-        node_temp(1, node_gid) = node_temp(0, node_gid) + rk_alpha * dt * node_div / (node_mass(node_gid)*903.0);
+        node_temp(1, node_gid) = node_temp(0, node_gid) + rk_alpha * dt * node_flux(1, node_gid) / (node_mass(node_gid)*903.0);
 
     }); // end for parallel for over nodes
 
