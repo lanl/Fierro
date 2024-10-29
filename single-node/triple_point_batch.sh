@@ -14,4 +14,4 @@ module list
 
 export OMP_PROC_BIND=spread OMP_PLACES=threads OMP_NUM_THREADS=1
 
-srun ./build-RDH-openmp/bin/FierroRDH ./meshes/TriplePt_Q5Q4_24x12x1.vtk > ./Triple_Point_batch_output/Triple_Point_${SLURM_JOB_ID}.out 2> ./Triple_Point_batch_output/Triple_Point_${SLURM_JOB_ID}.err
+srun ./build-RDH-openmp/bin/FierroRDH ./meshes/TriplePt_Q3Q2_24x24x1.vtk > ./Triple_Point_batch_output/Triple_Point_${SLURM_JOB_ID}.out 2> ./Triple_Point_batch_output/Triple_Point_${SLURM_JOB_ID}.err
