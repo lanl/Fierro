@@ -38,6 +38,81 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.h"
 #include "geometry_new.h"
 
+// A data structure to get the neighboring corners lids inside an elem relative to a corner lid
+size_t hex8_corner_lids_in_corner_lid_1D[24] = {
+    // corner 0
+    1,
+    2,
+    4,
+    // corner 1
+    0,
+    3,
+    5,
+    // corner 2
+    0,
+    3,
+    6,
+    // corner 3
+    2,
+    1,
+    7,
+    // corner 4
+    6,
+    5,
+    0,
+    // corner 5
+    4,
+    7,
+    1,
+    // corner 6
+    4,
+    7,
+    2,
+    // corner 7
+    6,
+    5,
+    3
+};
+// --- corner_lid = 0 ---
+// corner_lids_in_corner_lid(0,0) = 1;
+// corner_lids_in_corner_lid(0,1) = 2;
+// corner_lids_in_corner_lid(0,2) = 4;
+//
+// --- corner_lid = 1 ---
+// corner_lids_in_corner_lid(1,0) = 0;
+// corner_lids_in_corner_lid(1,1) = 3;
+// corner_lids_in_corner_lid(1,2) = 5;
+//
+// --- corner_lid = 2 ---
+// corner_lids_in_corner_lid(2,0) = 0;
+// corner_lids_in_corner_lid(2,1) = 3;
+// corner_lids_in_corner_lid(2,2) = 6;
+//
+// --- corner_lid = 3 ---
+// corner_lids_in_corner_lid(3,0) = 2;
+// corner_lids_in_corner_lid(3,1) = 1;
+// corner_lids_in_corner_lid(3,2) = 7;
+//
+// --- corner_lid = 4 ---
+// corner_lids_in_corner_lid(4,0) = 6;
+// corner_lids_in_corner_lid(4,1) = 5;
+// corner_lids_in_corner_lid(4,2) = 0;
+//
+// --- corner_lid = 5 ---
+// corner_lids_in_corner_lid(5,0) = 4;
+// corner_lids_in_corner_lid(5,1) = 7;
+// corner_lids_in_corner_lid(5,2) = 1;
+//
+// --- corner_lid = 6 ---
+// corner_lids_in_corner_lid(6,0) = 4;
+// corner_lids_in_corner_lid(6,1) = 7;
+// corner_lids_in_corner_lid(6,2) = 2;
+//
+// --- corner_lid = 7 ---
+// corner_lids_in_corner_lid(7,0) = 6;
+// corner_lids_in_corner_lid(7,1) = 5;
+// corner_lids_in_corner_lid(7,2) = 3;
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn get_force
@@ -101,7 +176,7 @@ void SGH3D::get_force(const Material_t& Materials,
         double q2   = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::q2);
         double q2ex = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::q2ex);
         double phi_floor = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::phiFloor); 
-
+        size_t useShockDirection = (size_t)Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::useShockDirection);
 
         // get elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
@@ -178,6 +253,32 @@ void SGH3D::get_force(const Material_t& Materials,
         curl[2] = GaussPoints_vel_grad(elem_gid, 1, 0) - GaussPoints_vel_grad(elem_gid, 0, 1);  // dv/dx - du/dy
 
         double mag_curl = sqrt(curl[0] * curl[0] + curl[1] * curl[1] + curl[2] * curl[2]);
+
+
+        // --- Calculate edge normals of a corner ---
+        double dual_surf_normals_1D[72];
+        ViewCArrayKokkos <double> dual_surf_normals(&dual_surf_normals_1D[0], 8, 3, num_dims);  // [corner_lid, surf_lid, dim]
+        ViewCArrayKokkos <size_t> corner_lids_in_corner_lid(&hex8_corner_lids_in_corner_lid_1D[0], 8, 3); // [corner_lid, surrounding_nodes]
+
+        if (useShockDirection == 1){
+            // loop over the corners in this element
+            for (size_t corner_lid = 0; corner_lid < num_nodes_in_elem; corner_lid++) {
+        
+                // loop the edges in this corner
+                for (size_t edge_lid=0; edge_lid<num_dims; edge_lid++){
+                    size_t corner_lid_plus = corner_lids_in_corner_lid(corner_lid, edge_lid);
+
+                    for (size_t dim=0; dim<num_dims; dim++){
+                        // outward of dual grid edge normal 
+                        dual_surf_normals(corner_lid, edge_lid, dim) = 0.5*(area_normal(corner_lid_plus, dim) - area_normal(corner_lid, dim));
+                    } // end for dim
+
+                } // end loop over the edges
+            
+            } // end for loop over nodes
+        }
+
+
 
         // --- Calculate the Cauchy stress ---
         for (size_t i = 0; i < 3; i++) {
@@ -270,18 +371,32 @@ void SGH3D::get_force(const Material_t& Materials,
                                  q2ex * mag_vel);
             } // end if on divergence sign
 
-            size_t use_shock_dir = 0;
             double mu_term;
 
             // Coding to use shock direction
-            if (use_shock_dir == 1) {
+            if (useShockDirection == 1) {
                 // this is denominator of the Riemann solver and the multiplier
                 // on velocity in the numerator.  It filters on the shock
                 // direction
-                mu_term = muc(node_lid) *
-                          fabs(shock_dir(0) * area_normal(node_lid, 0)
-                             + shock_dir(1) * area_normal(node_lid, 1)
-                             + shock_dir(2) * area_normal(node_lid, 2) );
+
+                mu_term = muc(node_lid) * (
+                          fabs(
+                             + shock_dir(0) * dual_surf_normals(node_lid, 0, 0)
+                             + shock_dir(1) * dual_surf_normals(node_lid, 0, 1)
+                             + shock_dir(2) * dual_surf_normals(node_lid, 0, 2)) +
+                          fabs(
+                             + shock_dir(0) * dual_surf_normals(node_lid, 1, 0)
+                             + shock_dir(1) * dual_surf_normals(node_lid, 1, 1)
+                             + shock_dir(2) * dual_surf_normals(node_lid, 1, 2)) +
+                           fabs(
+                             + shock_dir(0) * dual_surf_normals(node_lid, 2, 0)
+                             + shock_dir(1) * dual_surf_normals(node_lid, 2, 1)
+                             + shock_dir(2) * dual_surf_normals(node_lid, 2, 2)));
+
+                //mu_term = muc(node_lid) *
+                //          fabs(shock_dir(0) * area_normal(node_lid, 0)
+                //             + shock_dir(1) * area_normal(node_lid, 1)
+                //             + shock_dir(2) * area_normal(node_lid, 2) );
             }
             else{
                 // Using a full tensoral Riemann jump relation

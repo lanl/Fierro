@@ -39,7 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.h"
 
 // A data structure to get the neighboring corners lids inside an elem relative to a corner lid
-size_t corner_lids_in_corner_lid_1D[8] = {
+size_t quad4_corner_lids_in_corner_lid_1D[8] = {
     1,
     3,
     0,
@@ -214,25 +214,25 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         // --- Calculate edge normals of a corner ---
         double dual_surf_normals_1D[16];
         ViewCArrayKokkos <double> dual_surf_normals(&dual_surf_normals_1D[0], 4, 2, num_dims);  // [corner_lid, surf_lid, dim]
-        ViewCArrayKokkos <size_t> corner_lids_in_corner_lid(&corner_lids_in_corner_lid_1D[0], 4, 2); // [corner_lid, surrounding_nodes]
+        ViewCArrayKokkos <size_t> corner_lids_in_corner_lid(&quad4_corner_lids_in_corner_lid_1D[0], 4, 2); // [corner_lid, surrounding_nodes]
 
-
-        // loop over the corners in this element
-        for (size_t corner_lid = 0; corner_lid < num_nodes_in_elem; corner_lid++) {
-    
-            // loop the edges in this corner
-            for (size_t edge_lid=0; edge_lid<num_dims; edge_lid++){
-                size_t corner_lid_plus = corner_lids_in_corner_lid(corner_lid, edge_lid);
-
-                for (size_t dim=0; dim<num_dims; dim++){
-                    // outward of dual grid edge normal 
-                    dual_surf_normals(corner_lid, edge_lid, dim) = 0.5*(area_normal(corner_lid_plus, dim) - area_normal(corner_lid, dim));
-                } // end for dim
-
-            } // end loop over the edges
+        if (useShockDirection == 1) {
+            // loop over the corners in this element
+            for (size_t corner_lid = 0; corner_lid < num_nodes_in_elem; corner_lid++) {
         
-        } // end for loop over nodes
+                // loop the edges in this corner
+                for (size_t edge_lid=0; edge_lid<num_dims; edge_lid++){
+                    size_t corner_lid_plus = corner_lids_in_corner_lid(corner_lid, edge_lid);
 
+                    for (size_t dim=0; dim<num_dims; dim++){
+                        // outward of dual grid edge normal 
+                        dual_surf_normals(corner_lid, edge_lid, dim) = 0.5*(area_normal(corner_lid_plus, dim) - area_normal(corner_lid, dim));
+                    } // end for dim
+
+                } // end loop over the edges
+            
+            } // end for loop over nodes
+        }// end if shock direction
 
 
         // --- Calculate the Cauchy stress ---
