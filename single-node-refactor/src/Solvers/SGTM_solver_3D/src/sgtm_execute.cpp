@@ -165,6 +165,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             break;
         }
 
+        cached_pregraphics_dt = dt; // save the dt value for resetting after writing graphics dump
+
         double min_dt_calc = dt_max; // the smallest time step across all materials
 
         // ---- Calculating the maximum allowable time step ---- //
@@ -198,9 +200,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             min_dt_calc = fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
         dt = min_dt_calc;
-
-
-        cached_pregraphics_dt = dt; // save the dt value for resetting after writing graphics dump
 
         // ---- Print the initial time step and time value ---- //
         if (cycle == 0) {

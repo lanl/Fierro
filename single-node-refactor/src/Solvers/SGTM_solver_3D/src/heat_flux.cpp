@@ -44,7 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// \fn get_heat_flux
 ///
-/// \brief This function calculates the corner forces and the evolves stress
+/// \brief This function calculates the corner heat flux
 ///
 /// \param Materials in the simulation
 /// \param The simulation mesh
@@ -52,7 +52,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Nodal position array
 /// \param Nodal temperature array
 /// \param Material point heat flux array
+/// \param Material point thermal conductivity
+/// \param Material Point temperature gradient
 /// \param Material Point state variables
+/// \param Corner heat flux
 /// \param Material corner heat flux array
 /// \param Map from material to corners
 /// \param Maps from the material to the mesh
@@ -60,8 +63,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Material ID
 /// \param fuzz
 /// \param small
-/// \param Element state variable array
-/// \param Time step size
+/// \param The timestep
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -90,7 +92,7 @@ void SGTM3D::get_heat_flux(
     const size_t num_dims = 3;
     const size_t num_nodes_in_elem = 8;
 
-    // --- calculate the forces acting on the nodes from the element ---
+    // ---- calculate the forces acting on the nodes from the element ---- //
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
@@ -98,8 +100,6 @@ void SGTM3D::get_heat_flux(
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_lid = mat_elem_lid;
-
-
 
         // corner area normals
         double b_matrix_array[24];
@@ -116,36 +116,26 @@ void SGTM3D::get_heat_flux(
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
-        // get the B matrix which are the OUTWARD corner area normals
+        // ---- get the B matrix which are the OUTWARD corner area normals ---- //
         geometry::get_bmatrix(b_matrix, elem_gid, node_coords, elem_node_gids);
 
-        // --- Calculate the temperature gradient ---
-        double temp_array[num_nodes_in_elem];
-        ViewCArrayKokkos<double> temp(temp_array, num_nodes_in_elem); // x-direction velocity component
 
-
-        // get the vertex temperatures for the cell
-
+        // ---- Calculate the element average temperature ---- //
         double avg_temp = 0.0;
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
-
-            temp(node_lid) = node_temp(0, node_gid);   
-
-            avg_temp += temp(node_lid) / (double)num_nodes_in_elem;
-
-            // std::cout<<"Node  "<< node_gid <<" temp  = "<< temp(node_lid)<<std::endl;     
+            avg_temp += node_temp(0, node_gid) / (double)num_nodes_in_elem;
         } // end for
 
 
+        // ---- Change element state if above some melting temperature ---- //
         if(avg_temp >= 900){
             // printf("Melted!");
             MaterialPoints_eroded(mat_elem_lid) = true;
         } 
 
-
-        // --- calculate the velocity gradient terms ---
+        // ---- Calculate the temperature gradient ---- //
         double inverse_vol = 1.0 / vol;
 
         temp_grad(0) = 0.0;
@@ -154,28 +144,30 @@ void SGTM3D::get_heat_flux(
 
         for(int dim = 0; dim < mesh.num_dims; dim++){
             for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-                temp_grad(dim) += temp(node_lid) * b_matrix(node_lid, dim); // Note: B matrix is outward normals from cell center
+                // Get node gid
+                size_t node_gid = elem_node_gids(node_lid);
+
+                temp_grad(dim) += node_temp(0, node_gid) * b_matrix(node_lid, dim); // Note: B matrix is outward normals from cell center
             }
         }
-       
         for(int dim = 0; dim < mesh.num_dims; dim++){
             temp_grad(dim) *= inverse_vol;
         }
 
+        // ---- Save the temperature gradient to the material point for writing out ---- //
         MaterialPoints_temp_grad(elem_gid, 0) = temp_grad(0);
         MaterialPoints_temp_grad(elem_gid, 1) = temp_grad(1);
         MaterialPoints_temp_grad(elem_gid, 2) = temp_grad(2);
 
 
-        // std::cout<<"Element "<< elem_gid<<" temp gradient = "<< temp_grad(0)<<", "<<temp_grad(1)<<", "<<temp_grad(2)<<std::endl;
-
+        // ---- Calculate the heat flux at the material point ---- //
         double conductivity = MaterialPoints_conductivity(mat_point_lid);
 
         for(int dim = 0; dim < mesh.num_dims; dim++){
             MaterialPoints_q_flux(0, mat_point_lid, dim) = -1.0 * conductivity * temp_grad(dim);
         }
 
-        // --- Calculate flux through each corner the corners \lambda_{c} = q_z \cdot \hat B_c 
+        // --- Calculate flux through each corner the corners \lambda_{c} = q_z \cdot \hat B_c   ---- //
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // the local corner id is the local node id
             size_t corner_lid = node_lid;
@@ -190,67 +182,14 @@ void SGTM3D::get_heat_flux(
             MaterialCorners_q_flux(1, mat_corner_lid) = 0.0;
             corner_q_flux(1, corner_gid) = 0.0;
 
-        }
-
-        // --- Calculate flux through each corner the corners \lambda_{c} = q_z \cdot \hat B_c 
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-            // the local corner id is the local node id
-            size_t corner_lid = node_lid;
-
-            // Get corner gid
-            size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-
-            // Get the material corner lid
-            size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
-
-            // Zero out flux at material corners
-            // MaterialCorners_q_flux(1, mat_corner_lid) = 0.0;
-            // corner_q_flux(1, corner_gid) = 0.0;
-
-
-            // decompose B matrix vector into i,j,k components
-            // double temp_array[9];
-            // ViewCArrayKokkos<double> b_dcmp(&temp_array[0], 3, 3);
-
-            // b_dcmp(0,0) = b_matrix(node_lid, 0);
-            // b_dcmp(0,1) = 0.0;
-            // b_dcmp(0,2) = 0.0;
-
-            // b_dcmp(1,0) = 0.0;
-            // b_dcmp(1,1) = b_matrix(node_lid, 1);
-            // b_dcmp(1,2) = 0.0;
-
-            // b_dcmp(2,0) = 0.0;
-            // b_dcmp(2,1) = 0.0;
-            // b_dcmp(2,2) = b_matrix(node_lid, 2);
-
-            // double val = 0.0; // Holder variable
-            
-            // // Loop over each of the components of the corner normal vector
-            // for(int i = 0; i < 3; i++){
-
-            //     // dot the flux into the decompose corner normal for each decomposition
-            //     double in_val = 0.0;
-            //     for(int dim = 0; dim < mesh.num_dims; dim++){
-            //         in_val += MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_dcmp(i, dim));
-            //     }
-            //     if(in_val < 0.0) in_val = 0.0;
-
-            //     val += in_val;
-
-            // }
-            // corner_q_flux(1, corner_gid) = val;
-
-
-            // Dot the flux into the fill corner normal
+            // Dot the flux into the corner normal
             for(int dim = 0; dim < mesh.num_dims; dim++){
-
-                // MaterialCorners_q_flux(1, mat_corner_lid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (-1.0*b_matrix(node_lid, dim));
+                MaterialCorners_q_flux(1, mat_corner_lid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
                 corner_q_flux(1, corner_gid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
             }
 
         }
-    }); // end parallel for loop over elements
+    }); // end parallel for loop over elements associated with the given material
 
     return;
 } // end of routine
