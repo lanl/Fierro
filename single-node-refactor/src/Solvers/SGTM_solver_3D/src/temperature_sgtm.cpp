@@ -40,16 +40,15 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// \fn update_temperature
 ///
-/// \brief Evolves the specific internal energy
+/// \brief Evolves the nodal temperature based on nodal heat fluxes
 ///
-/// \param The current Runge Kutta alpha value
-/// \param Time step size
 /// \param The simulation mesh
-/// \param A view into the nodal velocity data
-/// \param A view into the nodal position data
-/// \param A view into the element specific internal energy
-/// \param A view into the element mass
-/// \param A view into the corner force data
+/// \param The corner heat flux. NOTE: This is a scalar flux
+/// \param The temperature at the nodes
+/// \param The mass at the nodes
+/// \param The heat flux at the nodes
+/// \param The RK integration alpha value
+/// \param Time step size
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::update_temperature(
@@ -61,27 +60,22 @@ void SGTM3D::update_temperature(
     const double rk_alpha,
     const double dt) const
 {
-    // loop over all the nodes in the mesh
+    // ---- loop over all the nodes in the mesh ---- //
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         
-        double flux = 0.0;
-
-        // node_flux(1, node_gid) = 0.0;
-
-        // loop over all corners around the node and calculate the nodal gradient
+        // ---- loop over all corners around the node and calculate total flux through that node (divergence) ---- //
         for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
             
             // Get corner gid
             size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
-
             node_flux(1, node_gid) += corner_flux(1, corner_gid);
-
-            flux += corner_flux(1, corner_gid);
-
         } // end for corner_lid
 
-        // update the temperature
-        node_temp(1, node_gid) = node_temp(0, node_gid) + rk_alpha * dt * node_flux(1, node_gid) / (node_mass(node_gid)*903.0);
+        // ---- Calculate the average specific heat for all materials surrounding a node ---- //
+        double Cp = 903.0;
+
+        // ---- Update the nodal temperature ---- //
+        node_temp(1, node_gid) = node_temp(0, node_gid) + rk_alpha * dt * node_flux(1, node_gid) / (node_mass(node_gid)*Cp);
 
     }); // end for parallel for over nodes
 
