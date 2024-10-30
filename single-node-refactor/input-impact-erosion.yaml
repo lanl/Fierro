@@ -63,9 +63,11 @@ materials:
         # strength_model: none
         dissipation_global_vars:
             - 1.0   # q1
-            - 1.333 # q1ex
-            - 1.0   # q2
+            - 1.0   # q1ex
+            - 1.333 # q2
             - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 0     # use edge normals
         eos_global_vars:
             - 3.0
             - 1.0E-4

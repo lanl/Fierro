@@ -2050,7 +2050,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                 });
 
                 if(num_global_vars<6){
-                    throw std::runtime_error("**** Per material, the code 6 dissipation global vars in the input file ****");
+                    throw std::runtime_error("**** Per material, must specify 6 dissipation global vars in the input file ****");
                 } // end check on num_global_vars
 
                 if(num_global_vars>10){
@@ -2064,7 +2064,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double dissipation_var = root["materials"][mat_id]["material"]["dissipation_global_vars"][global_var_id].As<double>();
-                    printf("dissipation var val = %f \n", dissipation_var);
+                    
                     RUN({
                         tempGlobalDissipationVars(mat_id, global_var_id) = dissipation_var;
                     });
