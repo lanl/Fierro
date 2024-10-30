@@ -99,7 +99,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-
+    // ----  Tweak node positions to test irregular meshes ---- //
     // for(int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
 
     //     int a=rand()%2;
@@ -115,7 +115,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // State.node.coords.update_device();
 
 
-    // Write initial state at t=0
+    // ---- Write initial state at t=0 ---- 
     printf("Writing outputs to file at %f \n", graphics_time);
     mesh_writer.write_mesh(
         mesh, 
@@ -130,15 +130,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     graphics_time = time_value + graphics_dt_ival;
 
 
-    DCArrayKokkos<double> sphere_velocity(3, "sphere_velocity");
-
-    sphere_velocity.host(0) = 0.1; // 0.1 meters in 30 seconds
-    sphere_velocity.host(1) = 0.1; // 0.1 meters in 30 seconds
-    sphere_velocity.host(2) = 0.0 ; // 0.0 meters in 30 seconds
-
-    sphere_velocity.update_device();
-
-
+    // ---- Set up sphere to act as a moving heat source ---- //
     DCArrayKokkos<double> sphere_position(3, "sphere_position");
 
     sphere_position.host(0) = 0.0;
@@ -146,6 +138,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     sphere_position.host(2) = 0.0;
 
 
+    // ---- parameterized sines and cosines to make pretty pictures ---- //
     double sx = 0.05;
     double sy = 0.05;
 
@@ -154,43 +147,33 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     sphere_position.host(0) = 0.03*cos(fx*time_value) + sx;
     sphere_position.host(1) = 0.03*sin(fy*time_value) + sy;
-
-
     // sphere_position.host(0) = fmod(time_value, 0.02) + 0.01;
     // sphere_position.host(1) = 0.05;
-
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         State.node.q_flux(0, node_gid) = 0.0;
         State.node.q_flux(1, node_gid) = 0.0;
     }); // end for parallel for over nodes
-    
-
     sphere_position.update_device();
 
-    // loop over the max number of time integration cycles
+
+    // ---- loop over the max number of time integration cycles ---- //
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
 
-        // std::cout<<std::endl;
-        // std::cout<<"CYCLE =   "<< cycle <<std::endl;
-        
-        // stop calculation if flag
+        // ---- stop calculation if flag ---- //
         if (stop_calc == 1) {
             break;
         }
 
-        cached_pregraphics_dt = dt;
+        double min_dt_calc = dt_max; // the smallest time step across all materials
 
-        // the smallest time step across all materials
-        double min_dt_calc = dt_max;
-
-        // calculating time step per material
+        // ---- Calculating the maximum allowable time step ---- //
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
             // initialize the material dt
             double dt_mat = dt;
 
-            // get the stable time step
+            // ---- get the stable time step, both from CFL and Von Neumann stability ---- //
             get_timestep(mesh,
                          State.node.coords,
                          State.node.vel,
@@ -211,31 +194,30 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                          dt_mat,
                          fuzz);
 
-            // save the smallest dt of all materials
+            // ---- save the smallest dt of all materials ---- //
             min_dt_calc = fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
+        dt = min_dt_calc;
 
-        dt = min_dt_calc;  // save this dt time step
 
-        // dt = dt_start;
+        cached_pregraphics_dt = dt; // save the dt value for resetting after writing graphics dump
 
+        // ---- Print the initial time step and time value ---- //
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
-        // print time step every 10 cycles
+        
+        // ---- Print time step every 10 cycles ---- // 
         else if (cycle % 20 == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
 
-        // ---------------------------------------------------------------------
-        //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
-        // ---------------------------------------------------------------------
-        
 
 
+        // ---- Initialize the state for the RK integration scheme ---- //
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
             
-            // save the values at t_n
+            // save the values at t = n
             rk_init(State.node.coords,
                     State.node.vel,
                     State.node.temp,
@@ -248,21 +230,18 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.MaterialPoints(mat_id).num_material_points);
         } // end for mat_id
 
-        // integrate solution forward in time
-
-
-
+        // ---- Integrate the solution forward to t(n+1) via Runge Kutta (RK) method ---- //
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
 
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
-            // This works 
+            // ---- Initialize the nodal flux to zero for this RK stage ---- //
             FOR_ALL(node_gid, 0, mesh.num_nodes, {
                 State.node.q_flux(0, node_gid) = 0.0;
                 State.node.q_flux(1, node_gid) = 0.0;
             }); // end for parallel for over nodes
 
-            // ---- calculate the temperature gradient  ----
+            // ---- Calculate the corner heat flux from conduction per material ---- //
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
                 size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
@@ -289,6 +268,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     dt, 
                     rk_alpha);
 
+                // ---- Calculate the corner heat flux from moving volumetric heat source ----
                 // moving_flux(
                 //     Materials,
                 //     mesh,
@@ -310,9 +290,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             } // end for mat_id
 
             // ---- apply flux boundary conditions (convection/radiation)  ---- //
-
-            //boundary_radiation(mesh, BoundaryConditions, State.corner.q_flux, time_value);
-
             boundary_convection(mesh, BoundaryConditions, State.corner.q_flux, State.node.temp, State.node.q_flux, State.node.coords, time_value);
             boundary_radiation(mesh, BoundaryConditions, State.corner.q_flux, State.node.temp, State.node.q_flux, State.node.coords, time_value);
 
@@ -330,103 +307,32 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- apply temperature boundary conditions to the boundary patches----
             boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
 
+            // ---- Find the element average temperature ---- //
+
+
+            // ---- Calculate MaterialPoints state (stress) for next time step ---- //
             
 
-            // Find the element average temperature
-
-            
-
-            // ---- apply temperature boundary conditions to the boundary patches---- //
-
-            // ---- Calculate cell volume for next time step ----
+            // ---- Calculate cell volume for next time step ---- //
             // geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
-            // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
-
-            // Zero out the nodal flux
             
-
         } // end of RK loop
 
-        // FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        //     State.node.q_flux(node_gid) = 0.0;
-        // }); // end for parallel for over nodes
+        // ---- Activate new elements, if needed ---- //
 
-        // Update the spheres position
+
+        // ---- Move heat source ---- //
         RUN({
 
             sphere_position(0) = 0.03*cos(fx*time_value) + sx;
             sphere_position(1) = 0.03*sin(fy*time_value) + sy;
 
-
             // sphere_position(0) = 2 * fmod(time_value, 0.02) + 0.01;
             // sphere_position(1) = 0.05;
-
             sphere_position(2) = 0.05*time_value/10.0;
         });
         
-
-        // printf("Loop over Materials  %e \n");
-        // for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-        //     size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
-        //     // --- calculate the forces acting on the nodes from the element ---
-        //     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
-
-
-        //         //printf("Loop over elements in Materials  %e \n");
-        //         // get elem gid
-        //         size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem(mat_elem_lid); 
-
-        //         // the material point index = the material elem index for a 1-point element
-        //         size_t mat_point_lid = mat_elem_lid;
-
-        //         double elem_avg_temp = 0.0;
-        //         for (size_t node_lid = 0; node_lid < 8; node_lid++) {
-                    
-        //             // Get node gid
-        //             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-
-        //             elem_avg_temp += State.node.temp(1, node_gid);   
-
-        //             // std::cout<<"Node  "<< node_gid <<" temp  = "<< temp(node_lid)<<std::endl;     
-        //         } // end for
-
-        //         elem_avg_temp /= 8.0;
-
-        //         // elem_avg_temp *= 2.
-
-        //         // NOTE: Using DIV as storage for element temperature
-        //         // State.MaterialPoints(mat_id).sie(0, mat_point_lid) = elem_avg_temp;
-        //         State.GaussPoints.div(elem_gid) = elem_avg_temp;
-
-        //         // printf("Elem AVG Temp =  %e \n", elem_avg_temp);
-
-        //     }); // end parallel for loop over elements
-        // } // End loop over materials
-
-        // Average the element temperature back to the nodes
-        // walk over the nodes to update the velocity
-        // FOR_ALL(node_gid, 0, mesh.num_nodes, {
-
-        //     double avg_temp = 0.0;
-        //     // loop over all elements around the node to calculate the average temperature
-        //     for (size_t elem_lid = 0; elem_lid < mesh.num_corners_in_node(node_gid); elem_lid++) {
-        //         size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
-
-        //         avg_temp += State.GaussPoints.div(elem_gid);
-
-        //     }
-
-        //     avg_temp /= (double)mesh.num_corners_in_node(node_gid);
-
-        //     // printf("Node AVG Temp =  %e \n", avg_temp);
-
-        //     State.node.temp(1, node_gid) = avg_temp;
-
-        // }); // end for parallel for over nodes
-
-
 
         // increment the time
         time_value += dt;
@@ -445,9 +351,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             write = 1;
         }
 
-        // write outputs
+        // ---- Write outputs ---- //
         if (write == 1) {
-
             dt = cached_pregraphics_dt;
             printf("Writing outputs to file at %f \n", graphics_time);
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
@@ -459,10 +364,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                                    SGTM3D_State::required_node_state,
                                    SGTM3D_State::required_gauss_pt_state,
                                    SGTM3D_State::required_material_pt_state);
-
             graphics_time = time_value + graphics_dt_ival;
-
-            
         } // end if
 
         // end of calculation
@@ -473,7 +375,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     auto time_2    = std::chrono::high_resolution_clock::now();
     auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();
-
     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
 } // end of SGH execute
