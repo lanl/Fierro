@@ -1,6 +1,9 @@
 import sys
 import os
 import time
+from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QPalette, QColor
+from PySide6.QtCore import Qt
 
 def main():
     t1 = time.perf_counter()
@@ -32,6 +35,7 @@ def main():
 #            self.dialog.exec()
 
     app = QApplication(sys.argv)
+    force_light_mode(app)
     app.setStyle('Fusion')
     app.setWindowIcon(QIcon(':/Logos/Logos/FierroAppIcon.png'))
     app.setApplicationDisplayName("Fierro")
@@ -53,7 +57,40 @@ def main():
     
     
     sys.exit(app.exec())
+    
+def force_light_mode(app):
+    palette = QPalette()
+    
+    # Set colors for active (enabled) state
+    palette.setColor(QPalette.Active, QPalette.Window, QColor(240, 240, 240))
+    palette.setColor(QPalette.Active, QPalette.WindowText, Qt.black)
+    palette.setColor(QPalette.Active, QPalette.Base, Qt.white)
+    palette.setColor(QPalette.Active, QPalette.AlternateBase, QColor(233, 231, 227))
+    palette.setColor(QPalette.Active, QPalette.ToolTipBase, Qt.white)
+    palette.setColor(QPalette.Active, QPalette.ToolTipText, Qt.black)
+    palette.setColor(QPalette.Active, QPalette.Text, Qt.black)
+    palette.setColor(QPalette.Active, QPalette.Button, QColor(240, 240, 240))
+    palette.setColor(QPalette.Active, QPalette.ButtonText, Qt.black)
+    palette.setColor(QPalette.Active, QPalette.BrightText, Qt.red)
+    palette.setColor(QPalette.Active, QPalette.Link, QColor(42, 130, 218))
+    palette.setColor(QPalette.Active, QPalette.Highlight, QColor(42, 130, 218))
+    palette.setColor(QPalette.Active, QPalette.HighlightedText, Qt.black)
 
+    # Set colors for disabled state
+    grey_color = QColor(128, 128, 128)  # Medium grey
+    palette.setColor(QPalette.Disabled, QPalette.WindowText, grey_color)
+    palette.setColor(QPalette.Disabled, QPalette.Text, grey_color)
+    palette.setColor(QPalette.Disabled, QPalette.ButtonText, grey_color)
+    palette.setColor(QPalette.Disabled, QPalette.Highlight, Qt.transparent)
+    palette.setColor(QPalette.Disabled, QPalette.HighlightedText, grey_color)
+
+    # You can adjust the grey color or use a slightly different color for disabled items
+    disabled_background = QColor(240, 240, 240)  # Light grey background for disabled items
+    palette.setColor(QPalette.Disabled, QPalette.Button, disabled_background)
+    palette.setColor(QPalette.Disabled, QPalette.Base, disabled_background)
+    palette.setColor(QPalette.Disabled, QPalette.Window, disabled_background)
+
+    app.setPalette(palette)
 
 if __name__ == "__main__":
     main()

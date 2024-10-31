@@ -51,6 +51,7 @@ from importlib import reload
 
 from SGH import *
 from Homogenization import *
+from Bulk_Forming import *
 from Mesh_Builder_WInput import *
 from FIERRO_Setup import *
 from ImageToVTK import *
@@ -143,21 +144,33 @@ class FIERRO_GUI(Ui_MainWindow):
             if (selection == 0): # Explicit SGH Solver
                 # Define geometry imports
                 self.INSelectGeometryImport.clear()
-                self.INSelectGeometryImport.addItem("Import Geometry (.stl)")
+                self.INSelectGeometryImport.addItem("Import Geometry (.stl, .vtk)")
                 self.INSelectGeometryImport.addItem("Import Image Stack (.png)")
-                self.INSelectGeometryImport.addItem("Import Data Set (.vtk, .txt)")
+#                self.INSelectGeometryImport.addItem("Import Polycrstalline Data Set (.txt)")
                 self.INSelectGeometryImport.addItem("Create Basic Part")
             elif (selection == 1): # Homogenization Solver
                 # Define geometry imports
                 self.INSelectGeometryImport.clear()
-                self.INSelectGeometryImport.addItem("Import Geometry (.stl)")
+                self.INSelectGeometryImport.addItem("Import Geometry (.stl, .vtk)")
                 self.INSelectGeometryImport.addItem("Import Image Stack (.png, .jpg, .tif)")
-                self.INSelectGeometryImport.addItem("Import Data Set (.vtk, .txt)")
+                self.INSelectGeometryImport.addItem("Import Polycrystalline Data Set (.txt)")
                 
                 # Turn off tabs
                 self.NavigationMenu.setTabEnabled(3, False)
                 self.NavigationMenu.setTabEnabled(5, False)
+                self.MaterialMenu.setTabEnabled(1, False)
+            elif (selection == 2): # Bulk Forming
+                # Define geometry imports
+                self.INSelectGeometryImport.clear()
+                self.INSelectGeometryImport.addItem("Import Polycrystalline Data Set (.txt)")
+                # Turn off tabs
+                self.NavigationMenu.setTabEnabled(3, False)
+                self.MaterialMenu.setTabEnabled(1, True)
         self.INPipelineSelection.currentIndexChanged.connect(lambda: SetupPipeline(self.INPipelineSelection.currentIndex()))
+        
+        # Disable SGH Solver Pipeline **just for now**
+        self.INPipelineSelection.model().item(0).setEnabled(False)
+        self.INPipelineSelection.model().item(1).setEnabled(False)
 
         # Paraview imports
         self.render_view = pvsimple.CreateRenderView()
@@ -242,6 +255,7 @@ class FIERRO_GUI(Ui_MainWindow):
                         for i in range(1,7):
                             val = float(self.TParts.item(j,i).text())*1000
                             self.TParts.setItem(j,i,QTableWidgetItem(f'{val}'))
+                            
                 # Convert from mm->m
                 if 'mm' in self.old_units and 'm' in self.new_units:
                     j = 1
@@ -260,6 +274,7 @@ class FIERRO_GUI(Ui_MainWindow):
                         for i in range(1,7):
                             val = float(self.TParts.item(j,i).text())/1000
                             self.TParts.setItem(j,i,QTableWidgetItem(f'{val}'))
+                            
                 # Convert from Pa->MPa
                 if 'Pa' in self.old_units and 'MPa' in self.new_units:
                     j = 1
@@ -278,6 +293,8 @@ class FIERRO_GUI(Ui_MainWindow):
                         for i in range(2,23):
                             val = float(self.TMaterials.item(j,i).text())/1000000
                             self.TMaterials.setItem(j,i,QTableWidgetItem(f'{val}'))
+                            val = float(self.TMaterials_2.item(j,i).text())/1000000
+                            self.TMaterials_2.setItem(j,i,QTableWidgetItem(f'{val}'))
                     # Change table - homogenized constants values
                     if self.THomogenization.item(3,0) is not None:
                         for i in [0,1,2,6,7,8]:
@@ -292,6 +309,7 @@ class FIERRO_GUI(Ui_MainWindow):
                     self.THomogenization.setItem(7,3,QTableWidgetItem("[MPa]"))
                     # Adjust homogenization solver settings
                     self.INErrorTolerance.setText('0.00001')
+                    
                 # Convert from MPa->Pa
                 if 'MPa' in self.old_units and 'Pa' in self.new_units:
                     j = 1
@@ -310,6 +328,8 @@ class FIERRO_GUI(Ui_MainWindow):
                         for i in range(2,23):
                             val = float(self.TMaterials.item(j,i).text())*1000000
                             self.TMaterials.setItem(j,i,QTableWidgetItem(f'{val}'))
+                            val = float(self.TMaterials_2.item(j,i).text())*1000000
+                            self.TMaterials_2.setItem(j,i,QTableWidgetItem(f'{val}'))
                     # Change table - homogenized constants values
                     if self.THomogenization.item(3,0) is not None:
                         for i in [0,1,2,6,7,8]:
@@ -336,39 +356,111 @@ class FIERRO_GUI(Ui_MainWindow):
             if not self.INPartName.text():
                 self.warning_message("Please name the part")
             
-            # Import Geometry [.stl]
-            elif ".stl" in self.INSelectGeometryImport.currentText():
+            # Import Geometry [.stl, .vtk]
+            elif ".stl" in self.INSelectGeometryImport.currentText() or ".vtk" in self.INSelectGeometryImport.currentText():
                 # Get filename
                 global Geometry_filename
                 Geometry_filename, _ = QFileDialog.getOpenFileName(
-                    filter="Geometry File (*.stl)",
+                    filter="Geometry File (*.stl *.vtk)",
                 )
                 file_type = os.path.splitext(Geometry_filename)[1].lower()
                 
-                # Show the stl part
-                self.stl = pvsimple.STLReader(FileNames = Geometry_filename)
-                self.display = pvsimple.Show(self.stl, self.render_view)
-                pvsimple.ResetCamera()
+                # STL IMPORT
+                if ".stl" in file_type:
+                    # Show the stl part
+                    self.stl = pvsimple.STLReader(FileNames = Geometry_filename)
+                    self.display = pvsimple.Show(self.stl, self.render_view)
+                    pvsimple.ResetCamera()
+                    
+                    # Get the bounds of the stl
+                    self.stl.UpdatePipeline()
+                    self.bounds = self.stl.GetDataInformation().GetBounds()
+                    self.stlLx = round(self.bounds[1] - self.bounds[0],4)
+                    self.stlLy = round(self.bounds[3] - self.bounds[2],4)
+                    self.stlLz = round(self.bounds[5] - self.bounds[4],4)
+                    self.stlOx = self.bounds[0]
+                    self.stlOy = self.bounds[2]
+                    self.stlOz = self.bounds[4]
+                    
+                    # Open voxelization tab and fill out data
+                    self.SAGeometryScrollArea.verticalScrollBar().setValue(0)
+                    self.GeometryOptions.setCurrentIndex(1)
+                    self.INOriginX.setText(str(self.stlOx))
+                    self.INOriginY.setText(str(self.stlOy))
+                    self.INOriginZ.setText(str(self.stlOz))
+                    self.INLengthX.setText(str(self.stlLx))
+                    self.INLengthY.setText(str(self.stlLy))
+                    self.INLengthZ.setText(str(self.stlLz))
                 
-                # Get the bounds of the stl
-                self.stl.UpdatePipeline()
-                self.bounds = self.stl.GetDataInformation().GetBounds()
-                self.stlLx = round(self.bounds[1] - self.bounds[0],4)
-                self.stlLy = round(self.bounds[3] - self.bounds[2],4)
-                self.stlLz = round(self.bounds[5] - self.bounds[4],4)
-                self.stlOx = self.bounds[0]
-                self.stlOy = self.bounds[2]
-                self.stlOz = self.bounds[4]
-                
-                # Open voxelization tab and fill out data
-                self.SAGeometryScrollArea.verticalScrollBar().setValue(0)
-                self.GeometryOptions.setCurrentIndex(1)
-                self.INOriginX.setText(str(self.stlOx))
-                self.INOriginY.setText(str(self.stlOy))
-                self.INOriginZ.setText(str(self.stlOz))
-                self.INLengthX.setText(str(self.stlLx))
-                self.INLengthY.setText(str(self.stlLy))
-                self.INLengthZ.setText(str(self.stlLz))
+                # VTK IMPORT
+                elif file_type == ".vtk":
+                    # Set initial structured_points flag to 0
+                    self.structured_flag = 0
+                    
+                    # Paraview window
+                    self.vtk_reader = pvsimple.LegacyVTKReader(FileNames = Geometry_filename)
+                    pvsimple.SetDisplayProperties(Representation = "Surface")
+                    text = self.INPartName.text()
+                    self.variable_name = f"part_{text}"
+                    setattr(self, self.variable_name, pvsimple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0))
+                    self.display = pvsimple.Show(getattr(self, self.variable_name), self.render_view)
+                    pvsimple.Hide(self.vtk_reader)
+                    self.render_view.ResetCamera()
+                    self.render_view.StillRender()
+                    
+                    # Rename the file and save it to directory location
+                    self.new_file_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
+                    if Geometry_filename != self.new_file_path:
+                        shutil.copy(Geometry_filename, self.new_file_path)
+                    
+                    # Read what type of vtk file this is
+                    with open(self.new_file_path, 'r') as file:
+                        for index, line in enumerate(file):
+                            if index == 3:
+                                vtk_type = line.strip()
+                                break
+                                
+                    # Get the length of the vtk
+                    self.vtk_reader.UpdatePipeline()
+                    self.bounds = self.vtk_reader.GetDataInformation().GetBounds()
+                    self.vtkLx = round(self.bounds[1] - self.bounds[0],4)
+                    self.vtkLy = round(self.bounds[3] - self.bounds[2],4)
+                    self.vtkLz = round(self.bounds[5] - self.bounds[4],4)
+                    
+                    # Get the origin of the vtk
+                    self.vtkOx = self.bounds[0]
+                    self.vtkOy = self.bounds[2]
+                    self.vtkOz = self.bounds[4]
+                    
+                    # Get the voxels in the vtk
+                    self.extents = self.vtk_reader.GetDataInformation().GetExtent()
+                    self.vtkNx = int(self.extents[1] - self.extents[0])
+                    self.vtkNy = int(self.extents[3] - self.extents[2])
+                    self.vtkNz = int(self.extents[5] - self.extents[4])
+                                
+                    # STRUCTURED_POINTS vtk file
+                    if "STRUCTURED_POINTS" in vtk_type:
+                        # adjust number of voxels
+                        self.vtkNx += 1
+                        self.vtkNy += 1
+                        self.vtkNz += 1
+                        
+                        # structured_points flag
+                        self.structured_flag = 1
+                    
+                    # Open up window to alter dimensions
+                    self.GeometryOptions.setCurrentIndex(5)
+                    
+                    # Set file properties
+                    self.INvtkvx.setText(str(self.vtkNx))
+                    self.INvtkvy.setText(str(self.vtkNy))
+                    self.INvtkvz.setText(str(self.vtkNz))
+                    self.INvox.setText(str(self.vtkOx))
+                    self.INvoy.setText(str(self.vtkOy))
+                    self.INvoz.setText(str(self.vtkOz))
+                    self.INvlx.setText(str(self.vtkLx))
+                    self.INvly.setText(str(self.vtkLy))
+                    self.INvlz.setText(str(self.vtkLz))
                         
             # Import Image Stack [.png, jpg, .tiff]
             elif ".png" in self.INSelectGeometryImport.currentText() or ".jpg" in self.INSelectGeometryImport.currentText() or ".tif" in self.INSelectGeometryImport.currentText():
@@ -454,86 +546,16 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.INvlz.setText(str(self.vtkLz))
                 
             # Import Data Set [.vtk, .xdmf]
-            elif ".vtk" in self.INSelectGeometryImport.currentText() or ".txt" in self.INSelectGeometryImport.currentText():
+            elif ".txt" in self.INSelectGeometryImport.currentText():
                 # Get filename
                 global Data_filename
                 Data_filename, _ = QFileDialog.getOpenFileName(
-                    filter="Data Set File (*.vtk *.txt)",
+                    filter="Data Set File (*.txt)",
                 )
                 file_type = os.path.splitext(Data_filename)[1].lower()
-                
-                # VTK IMPORT
-                if file_type == ".vtk":
-                    # Set initial structured_points flag to 0
-                    self.structured_flag = 0
-                    
-                    # Paraview window
-                    self.vtk_reader = pvsimple.LegacyVTKReader(FileNames = Data_filename)
-                    pvsimple.SetDisplayProperties(Representation = "Surface")
-                    text = self.INPartName.text()
-                    self.variable_name = f"part_{text}"
-                    setattr(self, self.variable_name, pvsimple.Threshold(Input = self.vtk_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0))
-                    self.display = pvsimple.Show(getattr(self, self.variable_name), self.render_view)
-                    pvsimple.Hide(self.vtk_reader)
-                    self.render_view.ResetCamera()
-                    self.render_view.StillRender()
-                    
-                    # Rename the file and save it to directory location
-                    self.new_file_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
-                    if Data_filename != self.new_file_path:
-                        shutil.copy(Data_filename, self.new_file_path)
-                    
-                    # Read what type of vtk file this is
-                    with open(self.new_file_path, 'r') as file:
-                        for index, line in enumerate(file):
-                            if index == 3:
-                                vtk_type = line.strip()
-                                break
-                                
-                    # Get the length of the vtk
-                    self.vtk_reader.UpdatePipeline()
-                    self.bounds = self.vtk_reader.GetDataInformation().GetBounds()
-                    self.vtkLx = round(self.bounds[1] - self.bounds[0],4)
-                    self.vtkLy = round(self.bounds[3] - self.bounds[2],4)
-                    self.vtkLz = round(self.bounds[5] - self.bounds[4],4)
-                    
-                    # Get the origin of the vtk
-                    self.vtkOx = self.bounds[0]
-                    self.vtkOy = self.bounds[2]
-                    self.vtkOz = self.bounds[4]
-                    
-                    # Get the voxels in the vtk
-                    self.extents = self.vtk_reader.GetDataInformation().GetExtent()
-                    self.vtkNx = int(self.extents[1] - self.extents[0])
-                    self.vtkNy = int(self.extents[3] - self.extents[2])
-                    self.vtkNz = int(self.extents[5] - self.extents[4])
-                                
-                    # STRUCTURED_POINTS vtk file
-                    if "STRUCTURED_POINTS" in vtk_type:
-                        # adjust number of voxels
-                        self.vtkNx += 1
-                        self.vtkNy += 1
-                        self.vtkNz += 1
-                        
-                        # structured_points flag
-                        self.structured_flag = 1
-                    
-                    # Open up window to alter dimensions
-                    self.GeometryOptions.setCurrentIndex(5)
-                    
-                    # Set file properties
-                    self.INvtkvx.setText(str(self.vtkNx))
-                    self.INvtkvy.setText(str(self.vtkNy))
-                    self.INvtkvz.setText(str(self.vtkNz))
-                    self.INvox.setText(str(self.vtkOx))
-                    self.INvoy.setText(str(self.vtkOy))
-                    self.INvoz.setText(str(self.vtkOz))
-                    self.INvlx.setText(str(self.vtkLx))
-                    self.INvly.setText(str(self.vtkLy))
-                    self.INvlz.setText(str(self.vtkLz))
                         
                 # XDMF IMPORT
-                elif file_type == ".xdmf":
+                if file_type == ".xdmf":
                     # Paraview window
                     self.xdmf_reader = pvsimple.XDMFReader(FileNames = Data_filename)
                     pvsimple.SetDisplayProperties(Representation = "Surface")
@@ -589,11 +611,17 @@ class FIERRO_GUI(Ui_MainWindow):
                     
                     # Add part as an option for material assignment
                     self.INRegion.clear()
+                    self.INRegion_2.clear()
+                    self.INRegion_3.clear()
                     for i in range(self.TParts.rowCount()):
                         self.INRegion.addItem(self.TParts.item(i,0).text())
+                        self.INRegion_2.addItem(self.TParts.item(i,0).text())
+                        self.INRegion_3.addItem(self.TParts.item(i,0).text())
                     for i in range(self.TBasicGeometries.rowCount()):
                         self.INRegion.addItem(self.TBasicGeometries.item(i,0).text())
                     self.INRegion.addItem("global")
+                    self.INRegion_2.addItem("global")
+                    self.INRegion_3.addItem("global")
                     
                 # Text file
                 elif file_type == ".txt":
@@ -659,11 +687,14 @@ class FIERRO_GUI(Ui_MainWindow):
                     
                     # Add part as an option for material assignment
                     self.INRegion.clear()
+                    self.INRegion_2.clear()
+                    self.INRegion_3.clear()
                     for i in range(self.TParts.rowCount()):
                         self.INRegion.addItem(self.TParts.item(i,0).text())
+                        self.INRegion_2.addItem(self.TParts.item(i,0).text())
+                        self.INRegion_3.addItem(self.TParts.item(i,0).text())
                     for i in range(self.TBasicGeometries.rowCount()):
                         self.INRegion.addItem(self.TBasicGeometries.item(i,0).text())
-                    self.INRegion.addItem("global")
                     
         self.BUploadGeometryFile.clicked.connect(geometry_upload_click)
         
@@ -769,11 +800,17 @@ class FIERRO_GUI(Ui_MainWindow):
                 
                 # Add part as an option for material assignment
                 self.INRegion.clear()
+                self.INRegion_2.clear()
+                self.INRegion_3.clear()
                 for i in range(self.TParts.rowCount()):
                     self.INRegion.addItem(self.TParts.item(i,0).text())
+                    self.INRegion_2.addItem(self.TParts.item(i,0).text())
+                    self.INRegion_3.addItem(self.TParts.item(i,0).text())
                 for i in range(self.TBasicGeometries.rowCount()):
                     self.INRegion.addItem(self.TBasicGeometries.item(i,0).text())
                 self.INRegion.addItem("global")
+                self.INRegion_2.addItem("global")
+                self.INRegion_3.addItem("global")
                     
                 # Leave input page
                 self.GeometryOptions.setCurrentIndex(0)
@@ -922,9 +959,15 @@ class FIERRO_GUI(Ui_MainWindow):
             
             # Add part as an option for material assignment
             self.INRegion.clear()
+            self.INRegion_2.clear()
+            self.INRegion_3.clear()
             for i in range(self.TParts.rowCount()):
                 self.INRegion.addItem(self.TParts.item(i,0).text())
+                self.INRegion_2.addItem(self.TParts.item(i,0).text())
+                self.INRegion_3.addItem(self.TParts.item(i,0).text())
             self.INRegion.addItem("global")
+            self.INRegion_2.addItem("global")
+            self.INRegion_3.addItem("global")
 
             # Open up window to change color map
             self.SAGeometryScrollArea.verticalScrollBar().setValue(0)
@@ -1029,6 +1072,9 @@ class FIERRO_GUI(Ui_MainWindow):
             
         # ======= HOMOGENIZATION PIPELINE =======
         Homogenization(self)
+        
+        # ======== BULK FORMING PIPELINE ========
+        Bulk_Forming(self)
             
         # ======= EXPLICIT SOLVER SGH PIPELINE =======
         SGH(self)
@@ -1076,6 +1122,10 @@ class FIERRO_GUI(Ui_MainWindow):
             sgh_dir = os.path.join(self.directory, 'sgh')
             os.makedirs(sgh_dir, exist_ok=True)
             self.EXPLICIT_SGH_INPUT = os.path.join(sgh_dir, 'explicit_sgh_input.yaml')
+            
+            # Create temp files for bulk forming
+            self.bulk_forming_dir = os.path.join(self.directory, 'bulk_forming')
+            os.makedirs(self.bulk_forming_dir, exist_ok=True)
         
         else:
             self.warning_message("ERROR: Working directory was not defined")
@@ -1095,7 +1145,7 @@ class FIERRO_GUI(Ui_MainWindow):
             self.in_file_path = self.TParts.item(0,10).text()
             self.file_type = os.path.splitext(self.in_file_path)[1].lower()
             Reload_Geometry(self)
-        # Load variables
+        # Load variables [Homogenization Solver]
         if self.INPipelineSelection.currentText() == "Homogenization":
             # Load working directory where job files are saved
             if self.INHomogenizationJobDir.text() != "":
@@ -1104,15 +1154,30 @@ class FIERRO_GUI(Ui_MainWindow):
             # Update material selections
             rows = self.TParts.rowCount()
             if rows > 0:
-                self.INRegion.clear()
+                self.INRegion_2.clear()
                 for i in range(rows):
-                    self.INRegion.addItem(self.TParts.item(i,0).text())
-                self.INRegion.addItem("global")
+                    self.INRegion_2.addItem(self.TParts.item(i,0).text())
+                self.INRegion_2.addItem("global")
             rows = self.TMaterials.rowCount()
             if rows > 0:
                 self.INMaterial.clear()
                 for i in range(rows):
                     self.INMaterial.addItem(self.TMaterials.item(i,0).text())
+        elif self.INPipelineSelection.currentText() == "Bulk Forming":
+            # Load working directory where job files are saved
+            if self.INBFJobDir.text() != "":
+                self.working_directory = self.INBFJobDir.text()
+            # Update material selections
+            rows = self.TParts.rowCount()
+            if rows > 0:
+                self.INRegion_3.clear()
+                for i in range(rows):
+                    self.INRegion_3.addItem(self.TParts.item(i,0).text())
+            rows = self.TMaterials_2.rowCount()
+            if rows > 0:
+                self.INMaterial_2.clear()
+                for i in range(rows):
+                    self.INMaterial_2.addItem(self.TMaterials_2.item(i,0).text())
             
         # Reconnect unit function
         self.INUnits.currentIndexChanged.connect(self.units)

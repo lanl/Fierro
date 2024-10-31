@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>1326</width>
-    <height>1082</height>
+    <height>1103</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -352,7 +352,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>4</number>
+          <number>8</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -669,6 +669,11 @@
                   <string>Homogenization</string>
                  </property>
                 </item>
+                <item>
+                 <property name="text">
+                  <string>Bulk Forming</string>
+                 </property>
+                </item>
                </widget>
               </item>
              </layout>
@@ -798,6 +803,11 @@
                <string>Homogenization</string>
               </property>
              </item>
+             <item>
+              <property name="text">
+               <string>Bulk Forming</string>
+              </property>
+             </item>
             </widget>
            </item>
            <item>
@@ -861,7 +871,7 @@
                 </property>
                 <item>
                  <property name="text">
-                  <string>Import Geometry (.stl)</string>
+                  <string>Import Geometry (.stl, .vtk)</string>
                  </property>
                 </item>
                 <item>
@@ -871,7 +881,7 @@
                 </item>
                 <item>
                  <property name="text">
-                  <string>Import Data Set (.vtk, .txt)</string>
+                  <string>Import Data Set (.txt)</string>
                  </property>
                 </item>
                 <item>
@@ -3663,6 +3673,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <string>Homogenization</string>
                   </property>
                  </item>
+                 <item>
+                  <property name="text">
+                   <string>Bulk Forming</string>
+                  </property>
+                 </item>
                 </widget>
                </item>
                <item>
@@ -3680,7 +3695,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   </size>
                  </property>
                  <property name="currentIndex">
-                  <number>1</number>
+                  <number>2</number>
                  </property>
                  <widget class="QWidget" name="DefineMaterialsSGH">
                   <layout class="QVBoxLayout" name="verticalLayout_50">
@@ -4190,8 +4205,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </layout>
                     </widget>
                    </item>
-                   <item>
-                    <widget class="QTabWidget" name="tabWidget">
+                   <item alignment="Qt::AlignTop">
+                    <widget class="QTabWidget" name="MaterialMenu">
                      <property name="enabled">
                       <bool>true</bool>
                      </property>
@@ -5082,95 +5097,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        </item>
                       </layout>
                      </widget>
-                     <widget class="QWidget" name="Plastic">
-                      <property name="enabled">
-                       <bool>false</bool>
-                      </property>
-                      <attribute name="icon">
-                       <iconset resource="Icons/IconResourceFile.qrc">
-                        <normaloff>:/Blue Icons/Blue Icons/Plastic.svg</normaloff>:/Blue Icons/Blue Icons/Plastic.svg</iconset>
-                      </attribute>
-                      <attribute name="title">
-                       <string>Plastic</string>
-                      </attribute>
-                      <layout class="QVBoxLayout" name="verticalLayout_24">
-                       <property name="leftMargin">
-                        <number>6</number>
-                       </property>
-                       <property name="topMargin">
-                        <number>12</number>
-                       </property>
-                       <property name="rightMargin">
-                        <number>6</number>
-                       </property>
-                       <property name="bottomMargin">
-                        <number>0</number>
-                       </property>
-                       <item>
-                        <widget class="QCheckBox" name="BPlasticity">
-                         <property name="text">
-                          <string>Enable Plasticity</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item alignment="Qt::AlignHCenter|Qt::AlignTop">
-                        <widget class="QStackedWidget" name="PlasticDefinition">
-                         <property name="currentIndex">
-                          <number>1</number>
-                         </property>
-                         <widget class="QWidget" name="page_10"/>
-                         <widget class="QWidget" name="page_12">
-                          <layout class="QGridLayout" name="gridLayout_20">
-                           <property name="leftMargin">
-                            <number>0</number>
-                           </property>
-                           <property name="topMargin">
-                            <number>0</number>
-                           </property>
-                           <property name="rightMargin">
-                            <number>0</number>
-                           </property>
-                           <property name="bottomMargin">
-                            <number>0</number>
-                           </property>
-                           <item row="0" column="1">
-                            <widget class="QLabel" name="LSlipSystem">
-                             <property name="text">
-                              <string>Slip System Definition:</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="2">
-                            <widget class="QComboBox" name="INSlipSystem">
-                             <item>
-                              <property name="text">
-                               <string>FCC &lt;110&gt;(111)</string>
-                              </property>
-                             </item>
-                            </widget>
-                           </item>
-                           <item row="1" column="1">
-                            <widget class="QLabel" name="LNSlipSystem">
-                             <property name="text">
-                              <string>Number of Slip Systems:</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="1" column="2">
-                            <widget class="QComboBox" name="INNSlipSystem">
-                             <item>
-                              <property name="text">
-                               <string>12</string>
-                              </property>
-                             </item>
-                            </widget>
-                           </item>
-                          </layout>
-                         </widget>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
                     </widget>
                    </item>
                    <item>
@@ -5327,6 +5253,1197 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    </item>
                   </layout>
                  </widget>
+                 <widget class="QWidget" name="page_10">
+                  <layout class="QVBoxLayout" name="verticalLayout_30">
+                   <item>
+                    <widget class="QFrame" name="MaterialInputs_2">
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
+                     </property>
+                     <layout class="QGridLayout" name="gridLayout_25">
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>0</number>
+                      </property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="LMaterialName_3">
+                        <property name="text">
+                         <string>Name:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QLineEdit" name="INMaterialName_2">
+                        <property name="minimumSize">
+                         <size>
+                          <width>93</width>
+                          <height>0</height>
+                         </size>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QFrame" name="frame_46">
+                        <property name="frameShape">
+                         <enum>QFrame::NoFrame</enum>
+                        </property>
+                        <layout class="QHBoxLayout" name="horizontalLayout_22">
+                         <property name="leftMargin">
+                          <number>0</number>
+                         </property>
+                         <property name="topMargin">
+                          <number>0</number>
+                         </property>
+                         <property name="rightMargin">
+                          <number>0</number>
+                         </property>
+                         <property name="bottomMargin">
+                          <number>0</number>
+                         </property>
+                        </layout>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
+                       <widget class="QFrame" name="frame_47">
+                        <property name="frameShape">
+                         <enum>QFrame::NoFrame</enum>
+                        </property>
+                        <layout class="QHBoxLayout" name="horizontalLayout_23">
+                         <property name="leftMargin">
+                          <number>0</number>
+                         </property>
+                         <property name="topMargin">
+                          <number>0</number>
+                         </property>
+                         <property name="rightMargin">
+                          <number>0</number>
+                         </property>
+                         <property name="bottomMargin">
+                          <number>0</number>
+                         </property>
+                        </layout>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QTabWidget" name="MaterialMenu_2">
+                     <property name="enabled">
+                      <bool>true</bool>
+                     </property>
+                     <property name="currentIndex">
+                      <number>1</number>
+                     </property>
+                     <widget class="QWidget" name="Elastic_2">
+                      <attribute name="icon">
+                       <iconset resource="Icons/IconResourceFile.qrc">
+                        <normaloff>:/Blue Icons/Blue Icons/Elastic.svg</normaloff>:/Blue Icons/Blue Icons/Elastic.svg</iconset>
+                      </attribute>
+                      <attribute name="title">
+                       <string>Elastic</string>
+                      </attribute>
+                      <layout class="QVBoxLayout" name="verticalLayout_25">
+                       <property name="leftMargin">
+                        <number>6</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>12</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>6</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>0</number>
+                       </property>
+                       <item>
+                        <widget class="QFrame" name="frame_25">
+                         <property name="frameShape">
+                          <enum>QFrame::NoFrame</enum>
+                         </property>
+                         <property name="frameShadow">
+                          <enum>QFrame::Raised</enum>
+                         </property>
+                         <layout class="QGridLayout" name="gridLayout_20">
+                          <property name="leftMargin">
+                           <number>0</number>
+                          </property>
+                          <property name="topMargin">
+                           <number>0</number>
+                          </property>
+                          <property name="rightMargin">
+                           <number>0</number>
+                          </property>
+                          <property name="bottomMargin">
+                           <number>0</number>
+                          </property>
+                          <item row="0" column="0">
+                           <widget class="QLabel" name="LType_2">
+                            <property name="text">
+                             <string>Elasticity:</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item row="0" column="1">
+                           <widget class="QFrame" name="frame_44">
+                            <property name="frameShape">
+                             <enum>QFrame::NoFrame</enum>
+                            </property>
+                            <layout class="QHBoxLayout" name="horizontalLayout_20">
+                             <property name="leftMargin">
+                              <number>0</number>
+                             </property>
+                             <property name="topMargin">
+                              <number>0</number>
+                             </property>
+                             <property name="rightMargin">
+                              <number>0</number>
+                             </property>
+                             <property name="bottomMargin">
+                              <number>0</number>
+                             </property>
+                             <item>
+                              <widget class="QComboBox" name="INSolidGas_2">
+                               <property name="minimumSize">
+                                <size>
+                                 <width>82</width>
+                                 <height>0</height>
+                                </size>
+                               </property>
+                               <item>
+                                <property name="text">
+                                 <string>Solid</string>
+                                </property>
+                               </item>
+                               <item>
+                                <property name="text">
+                                 <string>Gas</string>
+                                </property>
+                               </item>
+                              </widget>
+                             </item>
+                             <item>
+                              <widget class="QComboBox" name="INMaterialType_2">
+                               <item>
+                                <property name="text">
+                                 <string>Isotropic</string>
+                                </property>
+                               </item>
+                               <item>
+                                <property name="text">
+                                 <string>Transversely Isotropic</string>
+                                </property>
+                               </item>
+                               <item>
+                                <property name="text">
+                                 <string>Orthotropic</string>
+                                </property>
+                               </item>
+                               <item>
+                                <property name="text">
+                                 <string>Anisotropic</string>
+                                </property>
+                               </item>
+                              </widget>
+                             </item>
+                            </layout>
+                           </widget>
+                          </item>
+                         </layout>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QStackedWidget" name="MaterialTypeTool_2">
+                         <property name="currentIndex">
+                          <number>2</number>
+                         </property>
+                         <widget class="QWidget" name="Isotropic_2">
+                          <property name="enabled">
+                           <bool>true</bool>
+                          </property>
+                          <layout class="QGridLayout" name="gridLayout_21">
+                           <property name="bottomMargin">
+                            <number>12</number>
+                           </property>
+                           <item row="1" column="0">
+                            <widget class="QLabel" name="LPoissonsRatio_2">
+                             <property name="text">
+                              <string>nu: </string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="1" column="1">
+                            <widget class="QLineEdit" name="INPoissonsRatio_2"/>
+                           </item>
+                           <item row="0" column="1">
+                            <widget class="QLineEdit" name="INYoungsModulus_2"/>
+                           </item>
+                           <item row="2" column="1">
+                            <spacer name="verticalSpacer_25">
+                             <property name="orientation">
+                              <enum>Qt::Vertical</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                              <size>
+                               <width>20</width>
+                               <height>40</height>
+                              </size>
+                             </property>
+                            </spacer>
+                           </item>
+                           <item row="0" column="2">
+                            <widget class="QLabel" name="UPressure1_2">
+                             <property name="text">
+                              <string>[Pa]</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="0">
+                            <widget class="QLabel" name="LYoungsModulus_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                          </layout>
+                         </widget>
+                         <widget class="QWidget" name="TransverselyIsotropic_2">
+                          <layout class="QVBoxLayout" name="verticalLayout_60">
+                           <property name="spacing">
+                            <number>0</number>
+                           </property>
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
+                           <item alignment="Qt::AlignTop">
+                            <widget class="QFrame" name="frame_45">
+                             <property name="frameShape">
+                              <enum>QFrame::NoFrame</enum>
+                             </property>
+                             <property name="frameShadow">
+                              <enum>QFrame::Raised</enum>
+                             </property>
+                             <layout class="QFormLayout" name="formLayout_28">
+                              <property name="leftMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="topMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="bottomMargin">
+                               <number>0</number>
+                              </property>
+                              <item row="0" column="0">
+                               <widget class="QLabel" name="LIsotropicPlane_2">
+                                <property name="text">
+                                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Isotropic Plane: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item row="0" column="1">
+                               <widget class="QComboBox" name="INIsotropicPlane_2">
+                                <item>
+                                 <property name="text">
+                                  <string>x-y plane</string>
+                                 </property>
+                                </item>
+                                <item>
+                                 <property name="text">
+                                  <string>x-z plane</string>
+                                 </property>
+                                </item>
+                                <item>
+                                 <property name="text">
+                                  <string>y-z plane</string>
+                                 </property>
+                                </item>
+                               </widget>
+                              </item>
+                             </layout>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QFrame" name="TransverslyIsotropicMat_2">
+                             <property name="frameShape">
+                              <enum>QFrame::NoFrame</enum>
+                             </property>
+                             <layout class="QHBoxLayout" name="horizontalLayout_21">
+                              <property name="spacing">
+                               <number>0</number>
+                              </property>
+                              <property name="leftMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="topMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="rightMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="bottomMargin">
+                               <number>0</number>
+                              </property>
+                              <item>
+                               <widget class="QFrame" name="TransverseInPlane_2">
+                                <property name="frameShape">
+                                 <enum>QFrame::NoFrame</enum>
+                                </property>
+                                <layout class="QVBoxLayout" name="verticalLayout_61">
+                                 <property name="spacing">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="leftMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="topMargin">
+                                  <number>12</number>
+                                 </property>
+                                 <property name="rightMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="bottomMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <item>
+                                  <widget class="QLabel" name="LInPlane_2">
+                                   <property name="text">
+                                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;In-Plane&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                   </property>
+                                  </widget>
+                                 </item>
+                                 <item>
+                                  <widget class="QFrame" name="TransverseInPlaneMat_2">
+                                   <property name="frameShape">
+                                    <enum>QFrame::NoFrame</enum>
+                                   </property>
+                                   <layout class="QGridLayout" name="gridLayout_22">
+                                    <item row="1" column="1">
+                                     <widget class="QLineEdit" name="INNUip_2"/>
+                                    </item>
+                                    <item row="1" column="0">
+                                     <widget class="QLabel" name="LNUip_2">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                      <property name="text">
+                                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;IP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="0" column="0">
+                                     <widget class="QLabel" name="LEip_2">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                      <property name="text">
+                                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;IP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="0" column="1">
+                                     <widget class="QLineEdit" name="INEip_2"/>
+                                    </item>
+                                    <item row="0" column="2">
+                                     <widget class="QLabel" name="UPressure2_2">
+                                      <property name="text">
+                                       <string>[Pa]</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                   </layout>
+                                  </widget>
+                                 </item>
+                                </layout>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QFrame" name="TransverseOutOfPlane_2">
+                                <property name="frameShape">
+                                 <enum>QFrame::NoFrame</enum>
+                                </property>
+                                <layout class="QVBoxLayout" name="verticalLayout_62">
+                                 <property name="spacing">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="leftMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="topMargin">
+                                  <number>12</number>
+                                 </property>
+                                 <property name="rightMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <property name="bottomMargin">
+                                  <number>0</number>
+                                 </property>
+                                 <item>
+                                  <widget class="QLabel" name="LOutOfPlane_2">
+                                   <property name="text">
+                                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;Out-Of-Plane&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                   </property>
+                                  </widget>
+                                 </item>
+                                 <item>
+                                  <widget class="QFrame" name="TransverseOutOfPlaneMat_2">
+                                   <property name="frameShape">
+                                    <enum>QFrame::NoFrame</enum>
+                                   </property>
+                                   <layout class="QGridLayout" name="gridLayout_23">
+                                    <item row="1" column="1">
+                                     <widget class="QLineEdit" name="INNUop_2"/>
+                                    </item>
+                                    <item row="2" column="1">
+                                     <widget class="QLineEdit" name="INGop_2"/>
+                                    </item>
+                                    <item row="0" column="0">
+                                     <widget class="QLabel" name="LEop_2">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                      <property name="maximumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>16777215</height>
+                                       </size>
+                                      </property>
+                                      <property name="text">
+                                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;OP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="1" column="0">
+                                     <widget class="QLabel" name="LNUop_2">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                      <property name="maximumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>16777215</height>
+                                       </size>
+                                      </property>
+                                      <property name="text">
+                                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;OP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="2" column="0">
+                                     <widget class="QLabel" name="LGop_2">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                      <property name="maximumSize">
+                                       <size>
+                                        <width>31</width>
+                                        <height>16777215</height>
+                                       </size>
+                                      </property>
+                                      <property name="text">
+                                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;OP&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="0" column="1">
+                                     <widget class="QLineEdit" name="INEop_2">
+                                      <property name="minimumSize">
+                                       <size>
+                                        <width>0</width>
+                                        <height>0</height>
+                                       </size>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="0" column="2">
+                                     <widget class="QLabel" name="UPressure3_2">
+                                      <property name="text">
+                                       <string>[Pa]</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                    <item row="2" column="2">
+                                     <widget class="QLabel" name="UPressure4_2">
+                                      <property name="text">
+                                       <string>[Pa]</string>
+                                      </property>
+                                     </widget>
+                                    </item>
+                                   </layout>
+                                  </widget>
+                                 </item>
+                                </layout>
+                               </widget>
+                              </item>
+                             </layout>
+                            </widget>
+                           </item>
+                           <item>
+                            <spacer name="verticalSpacer_26">
+                             <property name="orientation">
+                              <enum>Qt::Vertical</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                              <size>
+                               <width>20</width>
+                               <height>40</height>
+                              </size>
+                             </property>
+                            </spacer>
+                           </item>
+                          </layout>
+                         </widget>
+                         <widget class="QWidget" name="Anisotropic_2">
+                          <layout class="QVBoxLayout" name="verticalLayout_63">
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
+                           <item>
+                            <widget class="QLabel" name="label_9">
+                             <property name="text">
+                              <string>Define The Stiffness Matrix [C]:</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QTableWidget" name="TAnisotropic_2">
+                             <property name="rowCount">
+                              <number>6</number>
+                             </property>
+                             <property name="columnCount">
+                              <number>6</number>
+                             </property>
+                             <attribute name="horizontalHeaderMinimumSectionSize">
+                              <number>21</number>
+                             </attribute>
+                             <attribute name="horizontalHeaderDefaultSectionSize">
+                              <number>50</number>
+                             </attribute>
+                             <row/>
+                             <row/>
+                             <row/>
+                             <row/>
+                             <row/>
+                             <row/>
+                             <column/>
+                             <column/>
+                             <column/>
+                             <column/>
+                             <column/>
+                             <column/>
+                             <item row="0" column="0">
+                              <property name="text">
+                               <string/>
+                              </property>
+                             </item>
+                             <item row="1" column="0">
+                              <property name="text">
+                               <string/>
+                              </property>
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="2" column="0">
+                              <property name="text">
+                               <string/>
+                              </property>
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="2" column="1">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="3" column="0">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="3" column="1">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="3" column="2">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="4" column="0">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="4" column="1">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="4" column="2">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="4" column="3">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="5" column="0">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="5" column="1">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="5" column="2">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="5" column="3">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                             <item row="5" column="4">
+                              <property name="background">
+                               <brush brushstyle="SolidPattern">
+                                <color alpha="255">
+                                 <red>235</red>
+                                 <green>235</green>
+                                 <blue>235</blue>
+                                </color>
+                               </brush>
+                              </property>
+                              <property name="flags">
+                               <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                              </property>
+                             </item>
+                            </widget>
+                           </item>
+                          </layout>
+                         </widget>
+                         <widget class="QWidget" name="Orthotropic_2">
+                          <layout class="QGridLayout" name="gridLayout_24">
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="horizontalSpacing">
+                            <number>6</number>
+                           </property>
+                           <property name="verticalSpacing">
+                            <number>0</number>
+                           </property>
+                           <item row="3" column="2">
+                            <widget class="QLineEdit" name="INGxy_2"/>
+                           </item>
+                           <item row="3" column="1">
+                            <widget class="QLabel" name="LGxy_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;xy&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="7">
+                            <widget class="QLabel" name="UPressure5_2">
+                             <property name="text">
+                              <string>[Pa]</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="1">
+                            <widget class="QLabel" name="LEx_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;x&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="2" column="4">
+                            <widget class="QLineEdit" name="INNUxz_2"/>
+                           </item>
+                           <item row="2" column="1">
+                            <widget class="QLabel" name="LNUxy_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;xy&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="3">
+                            <widget class="QLabel" name="LEy_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;y&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="3" column="6">
+                            <widget class="QLineEdit" name="INGyz_2"/>
+                           </item>
+                           <item row="2" column="3">
+                            <widget class="QLabel" name="LNUxz_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;xz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="4">
+                            <widget class="QLineEdit" name="INEy_2"/>
+                           </item>
+                           <item row="3" column="5">
+                            <widget class="QLabel" name="LGyz_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;yz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="6">
+                            <widget class="QLineEdit" name="INEz_2"/>
+                           </item>
+                           <item row="2" column="6">
+                            <widget class="QLineEdit" name="INNUyz_2"/>
+                           </item>
+                           <item row="3" column="4">
+                            <widget class="QLineEdit" name="INGxz_2"/>
+                           </item>
+                           <item row="2" column="5">
+                            <widget class="QLabel" name="LNUyz_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;yz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="5">
+                            <widget class="QLabel" name="LEz_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;z&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="2" column="2">
+                            <widget class="QLineEdit" name="INNUxy_2"/>
+                           </item>
+                           <item row="0" column="2">
+                            <widget class="QLineEdit" name="INEx_2"/>
+                           </item>
+                           <item row="3" column="3">
+                            <widget class="QLabel" name="LGxz_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;xz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="3" column="7">
+                            <widget class="QLabel" name="UPressure6_2">
+                             <property name="text">
+                              <string>[Pa]</string>
+                             </property>
+                            </widget>
+                           </item>
+                          </layout>
+                         </widget>
+                         <widget class="QWidget" name="page_12"/>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                     <widget class="QWidget" name="tab_2">
+                      <attribute name="icon">
+                       <iconset resource="Icons/IconResourceFile.qrc">
+                        <normaloff>:/Blue Icons/Blue Icons/Plastic.svg</normaloff>:/Blue Icons/Blue Icons/Plastic.svg</iconset>
+                      </attribute>
+                      <attribute name="title">
+                       <string>Plastic</string>
+                      </attribute>
+                      <layout class="QVBoxLayout" name="verticalLayout_26">
+                       <item alignment="Qt::AlignHCenter|Qt::AlignTop">
+                        <widget class="QFrame" name="frame_50">
+                         <property name="frameShape">
+                          <enum>QFrame::NoFrame</enum>
+                         </property>
+                         <property name="frameShadow">
+                          <enum>QFrame::Raised</enum>
+                         </property>
+                         <layout class="QHBoxLayout" name="horizontalLayout_6">
+                          <property name="leftMargin">
+                           <number>0</number>
+                          </property>
+                          <property name="topMargin">
+                           <number>0</number>
+                          </property>
+                          <property name="rightMargin">
+                           <number>0</number>
+                          </property>
+                          <property name="bottomMargin">
+                           <number>0</number>
+                          </property>
+                          <item>
+                           <widget class="QLabel" name="LPlasticity">
+                            <property name="text">
+                             <string>Plasticity:</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QComboBox" name="INPlasticity">
+                            <item>
+                             <property name="text">
+                              <string>None</string>
+                             </property>
+                            </item>
+                            <item>
+                             <property name="text">
+                              <string>FCC</string>
+                             </property>
+                            </item>
+                           </widget>
+                          </item>
+                         </layout>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="BAddMaterial_2">
+                     <property name="text">
+                      <string>Add</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QTableWidget" name="TMaterials_2">
+                     <property name="enabled">
+                      <bool>true</bool>
+                     </property>
+                     <property name="sizeAdjustPolicy">
+                      <enum>QAbstractScrollArea::AdjustToContents</enum>
+                     </property>
+                     <property name="editTriggers">
+                      <set>QAbstractItemView::NoEditTriggers</set>
+                     </property>
+                     <property name="rowCount">
+                      <number>0</number>
+                     </property>
+                     <column>
+                      <property name="text">
+                       <string>Name</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>Elasticity</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C11</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C12</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C13</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C14</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C15</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C16</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C22</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C23</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C24</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C25</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C26</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C33</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C34</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C35</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C36</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C44</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C45</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C46</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C55</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C56</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>C66</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>Plasticity</string>
+                      </property>
+                     </column>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="BDeleteMaterial_2">
+                     <property name="text">
+                      <string>Delete</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="BRegenElasticConstants_2">
+                     <property name="text">
+                      <string>Regenerate Elastic Constants</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
                 </widget>
                </item>
                <item>
@@ -5377,59 +6494,64 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <string>Homogenization</string>
                   </property>
                  </item>
-                </widget>
-               </item>
-               <item>
-                <widget class="QFrame" name="frame_38">
-                 <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
-                 </property>
-                 <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
-                 </property>
-                 <layout class="QFormLayout" name="formLayout_30">
-                  <property name="leftMargin">
-                   <number>0</number>
+                 <item>
+                  <property name="text">
+                   <string>Bulk Forming</string>
                   </property>
-                  <property name="topMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>0</number>
-                  </property>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="LMaterialName">
-                    <property name="text">
-                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Region:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QComboBox" name="INRegion"/>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QLabel" name="LRegion_5">
-                    <property name="text">
-                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Material:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QComboBox" name="INMaterial"/>
-                  </item>
-                 </layout>
+                 </item>
                 </widget>
                </item>
                <item>
                 <widget class="QStackedWidget" name="AssignMaterialsOptions">
                  <property name="currentIndex">
-                  <number>1</number>
+                  <number>0</number>
                  </property>
                  <widget class="QWidget" name="page_16">
                   <layout class="QVBoxLayout" name="verticalLayout_57">
+                   <item>
+                    <widget class="QFrame" name="frame_38">
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
+                     </property>
+                     <property name="frameShadow">
+                      <enum>QFrame::Raised</enum>
+                     </property>
+                     <layout class="QFormLayout" name="formLayout_30">
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>0</number>
+                      </property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="LMaterialName">
+                        <property name="text">
+                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Region:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QComboBox" name="INRegion"/>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="LRegion_5">
+                        <property name="text">
+                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Material:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QComboBox" name="INMaterial"/>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
                    <item>
                     <widget class="QFrame" name="frame_39">
                      <property name="frameShape">
@@ -5757,6 +6879,50 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <widget class="QWidget" name="page_17">
                   <layout class="QVBoxLayout" name="verticalLayout_4">
                    <item>
+                    <widget class="QFrame" name="frame_48">
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
+                     </property>
+                     <property name="frameShadow">
+                      <enum>QFrame::Raised</enum>
+                     </property>
+                     <layout class="QFormLayout" name="formLayout_33">
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>0</number>
+                      </property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="LMaterialName_4">
+                        <property name="text">
+                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Region:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QComboBox" name="INRegion_2"/>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="LRegion_6">
+                        <property name="text">
+                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Material:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QComboBox" name="INMaterial_2"/>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
                     <widget class="QPushButton" name="BAddMaterialAssignment">
                      <property name="text">
                       <string>Add Material Assignment</string>
@@ -5820,6 +6986,116 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    </item>
                   </layout>
                  </widget>
+                 <widget class="QWidget" name="page_15">
+                  <layout class="QVBoxLayout" name="verticalLayout_24">
+                   <item>
+                    <widget class="QFrame" name="frame_49">
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
+                     </property>
+                     <property name="frameShadow">
+                      <enum>QFrame::Raised</enum>
+                     </property>
+                     <layout class="QFormLayout" name="formLayout_34">
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>0</number>
+                      </property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="LMaterialName_5">
+                        <property name="text">
+                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Region:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QComboBox" name="INRegion_3"/>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="LRegion_7">
+                        <property name="text">
+                         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Material:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QComboBox" name="INMaterial_3"/>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="BAddMaterialAssignment_2">
+                     <property name="text">
+                      <string>Add Material Assignment</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QTableWidget" name="TMaterialAssignment_2">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="sizeAdjustPolicy">
+                      <enum>QAbstractScrollArea::AdjustIgnored</enum>
+                     </property>
+                     <property name="editTriggers">
+                      <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::EditKeyPressed</set>
+                     </property>
+                     <attribute name="horizontalHeaderCascadingSectionResizes">
+                      <bool>false</bool>
+                     </attribute>
+                     <attribute name="horizontalHeaderDefaultSectionSize">
+                      <number>168</number>
+                     </attribute>
+                     <attribute name="verticalHeaderCascadingSectionResizes">
+                      <bool>false</bool>
+                     </attribute>
+                     <column>
+                      <property name="text">
+                       <string>Region</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>Material</string>
+                      </property>
+                     </column>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="BDeleteMaterialAssignment_2">
+                     <property name="text">
+                      <string>Delete Material Assignment</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="verticalSpacer_27">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>20</width>
+                       <height>379</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                  </layout>
+                 </widget>
                 </widget>
                </item>
               </layout>
@@ -5855,12 +7131,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <string>Homogenization</string>
               </property>
              </item>
+             <item>
+              <property name="text">
+               <string>Bulk Forming</string>
+              </property>
+             </item>
             </widget>
            </item>
            <item>
             <widget class="QStackedWidget" name="BoundaryConditionsOptions">
              <property name="currentIndex">
-              <number>1</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="page_18">
               <layout class="QVBoxLayout" name="verticalLayout_31">
@@ -6087,73 +7368,47 @@ li.checked::marker { content: &quot;\2612&quot;; }
                </item>
               </layout>
              </widget>
+             <widget class="QWidget" name="page_22"/>
              <widget class="QWidget" name="page_19">
               <layout class="QVBoxLayout" name="verticalLayout_6">
-               <item>
-                <widget class="QFrame" name="BoundaryConditionsInputs">
+               <item alignment="Qt::AlignHCenter">
+                <widget class="QFrame" name="frame_52">
                  <property name="frameShape">
                   <enum>QFrame::NoFrame</enum>
                  </property>
-                 <layout class="QFormLayout" name="formLayout_6">
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_28">
                   <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
                    <number>0</number>
                   </property>
                   <property name="rightMargin">
                    <number>0</number>
                   </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
                   <item row="0" column="0">
-                   <widget class="QLabel" name="LBoundaryCondition">
+                   <widget class="QLabel" name="LbulkBC">
                     <property name="text">
-                     <string>Boundary Condition: </string>
+                     <string>Type:</string>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QComboBox" name="INBoundaryCondition">
+                   <widget class="QComboBox" name="INbulkBC">
                     <item>
                      <property name="text">
-                      <string>Tension</string>
+                      <string>Custom</string>
                      </property>
                     </item>
                     <item>
                      <property name="text">
-                      <string>Compression</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>Shear</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>Homogenization</string>
-                     </property>
-                    </item>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QLabel" name="LBCDirection">
-                    <property name="text">
-                     <string>Direction: </string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QComboBox" name="INBCDirection">
-                    <item>
-                     <property name="text">
-                      <string>x-direction</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>y-direction</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>z-direction</string>
+                      <string>Test</string>
                      </property>
                     </item>
                    </widget>
@@ -6162,46 +7417,194 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="BAddBC">
+                <widget class="Line" name="line">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item alignment="Qt::AlignHCenter">
+                <widget class="QLabel" name="LVgrad">
+                 <property name="font">
+                  <font>
+                   <bold>true</bold>
+                   <underline>true</underline>
+                  </font>
+                 </property>
                  <property name="text">
-                  <string>Add</string>
+                  <string>VELOCITY GRADIENT</string>
+                 </property>
+                </widget>
+               </item>
+               <item alignment="Qt::AlignHCenter">
+                <widget class="QLabel" name="label_12">
+                 <property name="text">
+                  <string>--initial condition--</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QTableWidget" name="TBCs">
+                <widget class="QTableWidget" name="TVgrad">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
-                 <property name="editTriggers">
-                  <set>QAbstractItemView::NoEditTriggers</set>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>115</height>
+                  </size>
+                 </property>
+                 <property name="focusPolicy">
+                  <enum>Qt::StrongFocus</enum>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustToContents</enum>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::NoSelection</enum>
+                 </property>
+                 <property name="rowCount">
+                  <number>3</number>
+                 </property>
+                 <property name="columnCount">
+                  <number>3</number>
                  </property>
                  <attribute name="horizontalHeaderDefaultSectionSize">
-                  <number>175</number>
+                  <number>115</number>
                  </attribute>
-                 <attribute name="horizontalHeaderStretchLastSection">
-                  <bool>true</bool>
-                 </attribute>
-                 <column>
-                  <property name="text">
-                   <string>Boundary Condition</string>
-                  </property>
-                 </column>
-                 <column>
-                  <property name="text">
-                   <string>Direction</string>
-                  </property>
-                 </column>
+                 <row/>
+                 <row/>
+                 <row/>
+                 <column/>
+                 <column/>
+                 <column/>
+                </widget>
+               </item>
+               <item alignment="Qt::AlignHCenter">
+                <widget class="QLabel" name="LVgradi">
+                 <property name="font">
+                  <font>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>--solver starting estimate--</string>
+                 </property>
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="BDeleteBC">
-                 <property name="text">
-                  <string>Delete</string>
+                <widget class="QTableWidget" name="TVgradi">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
                  </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>115</height>
+                  </size>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustToContents</enum>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::NoSelection</enum>
+                 </property>
+                 <property name="rowCount">
+                  <number>3</number>
+                 </property>
+                 <property name="columnCount">
+                  <number>3</number>
+                 </property>
+                 <attribute name="horizontalHeaderDefaultSectionSize">
+                  <number>115</number>
+                 </attribute>
+                 <row/>
+                 <row/>
+                 <row/>
+                 <column/>
+                 <column/>
+                 <column/>
+                </widget>
+               </item>
+               <item alignment="Qt::AlignHCenter">
+                <widget class="QLabel" name="LCstress">
+                 <property name="font">
+                  <font>
+                   <bold>true</bold>
+                   <underline>true</underline>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>CAUCHY STRESS</string>
+                 </property>
+                </widget>
+               </item>
+               <item alignment="Qt::AlignHCenter">
+                <widget class="QLabel" name="label_29">
+                 <property name="text">
+                  <string>--initial condition--</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QTableWidget" name="TCstress">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>115</height>
+                  </size>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustToContents</enum>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::NoSelection</enum>
+                 </property>
+                 <property name="rowCount">
+                  <number>3</number>
+                 </property>
+                 <property name="columnCount">
+                  <number>3</number>
+                 </property>
+                 <attribute name="horizontalHeaderDefaultSectionSize">
+                  <number>115</number>
+                 </attribute>
+                 <row/>
+                 <row/>
+                 <row/>
+                 <column/>
+                 <column/>
+                 <column/>
                 </widget>
                </item>
                <item>
@@ -6256,12 +7659,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <string>Homogenization</string>
               </property>
              </item>
+             <item>
+              <property name="text">
+               <string>Bulk Forming</string>
+              </property>
+             </item>
             </widget>
            </item>
            <item>
             <widget class="QStackedWidget" name="SolverSettingsOptions">
              <property name="currentIndex">
-              <number>1</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="page_2">
               <widget class="QFrame" name="solversettings">
@@ -6512,6 +7920,141 @@ li.checked::marker { content: &quot;\2612&quot;; }
                </item>
               </layout>
              </widget>
+             <widget class="QWidget" name="page_23">
+              <layout class="QVBoxLayout" name="verticalLayout_34">
+               <item alignment="Qt::AlignTop">
+                <widget class="QFrame" name="frame_54">
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QFormLayout" name="formLayout_8">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="LNumberOfSteps_3">
+                    <property name="text">
+                     <string>Load steps:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QLineEdit" name="INBFloadsteps">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="inputMask">
+                     <string/>
+                    </property>
+                    <property name="text">
+                     <string>30</string>
+                    </property>
+                    <property name="readOnly">
+                     <bool>false</bool>
+                    </property>
+                    <property name="placeholderText">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="LErrorTolerance_3">
+                    <property name="text">
+                     <string>Error Tolerance:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QLineEdit" name="INBFerrortol">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="text">
+                     <string>0.0000001</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="LMaxIterations_3">
+                    <property name="text">
+                     <string>Maximum Iterations:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QLineEdit" name="INBFmaxiter">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="text">
+                     <string>500</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="LBFdt">
+                    <property name="text">
+                     <string>dt:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLineEdit" name="INBFdt">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="text">
+                     <string>0.00005</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="LBFoutputsteps">
+                    <property name="text">
+                     <string>Output every X steps:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QLineEdit" name="INBFoutputsteps">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="text">
+                     <string>30</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_28">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
           </layout>
@@ -6565,6 +8108,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <string>Homogenization</string>
                  </property>
                 </item>
+                <item>
+                 <property name="text">
+                  <string>Bulk Forming</string>
+                 </property>
+                </item>
                </widget>
               </item>
              </layout>
@@ -6573,7 +8121,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <item>
             <widget class="QStackedWidget" name="RunOptions">
              <property name="currentIndex">
-              <number>1</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="page_20">
               <layout class="QVBoxLayout" name="verticalLayout_12">
@@ -6838,6 +8386,30 @@ li.checked::marker { content: &quot;\2612&quot;; }
                </item>
               </layout>
              </widget>
+             <widget class="QWidget" name="page_24">
+              <layout class="QVBoxLayout" name="verticalLayout_39">
+               <item>
+                <widget class="QPushButton" name="BRunBulkForming">
+                 <property name="text">
+                  <string>Run Bulk Forming Simulation</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_29">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
           </layout>
@@ -6891,6 +8463,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <item>
                   <property name="text">
                    <string>Homogenization</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Bulk Forming</string>
                   </property>
                  </item>
                 </widget>
@@ -7402,6 +8979,85 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    </item>
                   </layout>
                  </widget>
+                 <widget class="QWidget" name="page_25">
+                  <layout class="QVBoxLayout" name="verticalLayout_41">
+                   <item>
+                    <widget class="QComboBox" name="INBFResults">
+                     <item>
+                      <property name="text">
+                       <string>vm-stress</string>
+                      </property>
+                     </item>
+                     <item>
+                      <property name="text">
+                       <string>vm-strain</string>
+                      </property>
+                     </item>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="BBFParaview">
+                     <property name="text">
+                      <string>Open Paraview</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QFrame" name="frame_53">
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
+                     </property>
+                     <property name="frameShadow">
+                      <enum>QFrame::Raised</enum>
+                     </property>
+                     <layout class="QGridLayout" name="gridLayout_26">
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>0</number>
+                      </property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="LBFJobDir">
+                        <property name="enabled">
+                         <bool>false</bool>
+                        </property>
+                        <property name="text">
+                         <string>Job Directory:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QLineEdit" name="INBFJobDir">
+                        <property name="enabled">
+                         <bool>false</bool>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="verticalSpacer_30">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>20</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                  </layout>
+                 </widget>
                 </widget>
                </item>
               </layout>
@@ -7692,31 +9348,62 @@ li.checked::marker { content: &quot;\2612&quot;; }
      </widget>
     </item>
     <item alignment="Qt::AlignRight">
-     <widget class="QComboBox" name="INUnits">
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>20</height>
-       </size>
+     <widget class="QFrame" name="frame_51">
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
       </property>
-      <property name="frame">
-       <bool>true</bool>
-      </property>
-      <item>
-       <property name="text">
-        <string>SI (m, Pa, kg)</string>
+      <layout class="QGridLayout" name="gridLayout_27">
+       <property name="leftMargin">
+        <number>0</number>
        </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>SI (mm, MPa, kg)</string>
+       <property name="topMargin">
+        <number>0</number>
        </property>
-      </item>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="INUnits">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>20</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+          </font>
+         </property>
+         <property name="frame">
+          <bool>true</bool>
+         </property>
+         <item>
+          <property name="text">
+           <string>SI (m, Pa, kg)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>SI (mm, MPa, kg)</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_39">
+         <property name="text">
+          <string>Unit System:</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </item>
    </layout>
@@ -7943,11 +9630,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <tabstop>BaddBC</tabstop>
   <tabstop>TBoundaryConditions</tabstop>
   <tabstop>BdeleteBC</tabstop>
-  <tabstop>INBoundaryCondition</tabstop>
-  <tabstop>INBCDirection</tabstop>
-  <tabstop>BAddBC</tabstop>
-  <tabstop>TBCs</tabstop>
-  <tabstop>BDeleteBC</tabstop>
   <tabstop>TMaterialAssignment</tabstop>
   <tabstop>BAddMaterialAssignment</tabstop>
   <tabstop>BDeleteMaterialAssignment</tabstop>

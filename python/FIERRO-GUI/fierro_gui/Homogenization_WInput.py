@@ -23,7 +23,7 @@ def Homogenization_WInput(self, BC_index):
         for i in range(self.TMaterials.rowCount()):
             if self.TMaterialAssignment.item(j,1).text() == self.TMaterials.item(i,0).text():
                 materials_used.append(i)
-                if self.TMaterials.item(i,1).text() == 'Isotropic' or 'Transversely Isotropic' in self.TMaterials.item(i,1).text() or self.TMaterials.item(i,1).text() == 'Orthotropic':
+                if 'Isotropic' in self.TMaterials.item(i,1).text() or 'Transversely Isotropic' in self.TMaterials.item(i,1).text() or 'Orthotropic' in self.TMaterials.item(i,1).text():
                     if j == 0:
                         elastic_parameters = open(self.ELASTIC_PARAMETERS_0,"w")
                     else:

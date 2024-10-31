@@ -32,9 +32,6 @@ def Homogenization(self):
     #self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(7))
     #self.BGlobalMesh.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(1))
     
-    # Connect plastic button
-    self.BPlasticity.stateChanged.connect(lambda: self.PlasticDefinition.setCurrentIndex(1 if self.BPlasticity.isChecked() else 0))
-    
     # Apply Material
     def material_type():
         if str(self.INSolidGas.currentText()) == 'Solid':
@@ -53,7 +50,7 @@ def Homogenization(self):
     def material_region():
         try:
             self.vtk_reader
-            if str(self.INRegion.currentText()) == 'global':
+            if str(self.INRegion_2.currentText()) == 'global':
                 # Remove all objects from window view
                 SetActiveView(self.render_view)
                 renderer = self.render_view.GetRenderer()
@@ -81,7 +78,7 @@ def Homogenization(self):
                 self.render_view.StillRender()
         except:
             print("Polycrystalline model was imported")
-    self.INRegion.currentIndexChanged.connect(material_region)
+    self.INRegion_2.currentIndexChanged.connect(material_region)
     
     def material_class():
         if str(self.INMaterialType.currentText()) == 'Isotropic':
@@ -98,17 +95,6 @@ def Homogenization(self):
     
     def add_material():
         warning_flag = 0
-        in_file_path = self.TParts.item(0,10).text()
-        file_type = os.path.splitext(in_file_path)[1].lower()
-        if ".txt" in file_type:
-            warning_message('ERROR: Crystal properties cannot be isotropic')
-            warning_flag = 1
-        
-        for i in range(self.TMaterials.rowCount()):
-            if str(self.INRegion.currentText()) == self.TMaterials.item(i,1).text():
-                warning_message('ERROR: There is already a material assigned to this region')
-                warning_flag = 1
-        
         if str(self.INSolidGas.currentText()) == 'Gas':
             if not self.INMaterialName.text():
                 warning_message('ERROR: Material definition incomplete')
@@ -125,14 +111,21 @@ def Homogenization(self):
                 )
                 
                 # Add material as an option for material assignment
-                self.INMaterial.clear()
+                self.INMaterial_2.clear()
                 for i in range(self.TMaterials.rowCount()):
-                    self.INMaterial.addItem(self.TMaterials.item(i,0).text())
+                    self.INMaterial_2.addItem(self.TMaterials.item(i,0).text())
                 
                 # Clear fields
                 self.INMaterialName.clear()
         else:
-            if str(self.INMaterialType.currentText()) == 'Isotropic':
+            if self.INMaterialType.currentText() == 'Isotropic':
+                row = self.TParts.rowCount()
+                if row > 0:
+                    in_file_path = self.TParts.item(0,10).text()
+                    file_type = os.path.splitext(in_file_path)[1].lower()
+                    if ".txt" in file_type:
+                        warning_message('ERROR: Crystal properties cannot be isotropic')
+                        warning_flag = 1
                 if not self.INYoungsModulus.text() or not self.INPoissonsRatio.text() or not self.INMaterialName.text():
                     warning_message('ERROR: Material definition incomplete')
                     warning_flag = 1
@@ -326,9 +319,9 @@ def Homogenization(self):
                     self.INMaterialName.clear()
                     warning_flag = 1
                     # Add material as an option for material assignment
-                    self.INMaterial.clear()
+                    self.INMaterial_2.clear()
                     for i in range(self.TMaterials.rowCount()):
-                        self.INMaterial.addItem(self.TMaterials.item(i,0).text())
+                        self.INMaterial_2.addItem(self.TMaterials.item(i,0).text())
             if warning_flag == 0:
                 # Fill out material definition table
                 row = self.TMaterials.rowCount()
@@ -375,9 +368,9 @@ def Homogenization(self):
                    self.TMaterials.setItem(row, i, QTableWidgetItem('0'))
                 
                 # Add material as an option for material assignment
-                self.INMaterial.clear()
+                self.INMaterial_2.clear()
                 for i in range(self.TMaterials.rowCount()):
-                    self.INMaterial.addItem(self.TMaterials.item(i,0).text())
+                    self.INMaterial_2.addItem(self.TMaterials.item(i,0).text())
                 
                 # Clear fields
                 self.INMaterialName.clear()
@@ -400,9 +393,9 @@ def Homogenization(self):
         if button == QMessageBox.StandardButton.Yes:
             self.TMaterials.removeRow(current_row)
             # delete from material assignment options
-            self.INMaterial.clear()
+            self.INMaterial_2.clear()
             for i in range(self.TMaterials.rowCount()):
-                self.INMaterial.addItem(self.TMaterials.item(i,0).text())
+                self.INMaterial_2.addItem(self.TMaterials.item(i,0).text())
     self.BDeleteMaterial.clicked.connect(delete_material)
             
     def regenerate_elastic_constants():
@@ -412,8 +405,8 @@ def Homogenization(self):
             
         # Define Stiffness Matrix
         Mstiffness = [[float(self.TMaterials.item(current_row,2).text()), float(self.TMaterials.item(current_row,3).text()), float(self.TMaterials.item(current_row,4).text()),  float(self.TMaterials.item(current_row,5).text()), float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,7).text())], [float(self.TMaterials.item(current_row,3).text()), float(self.TMaterials.item(current_row,8).text()), float(self.TMaterials.item(current_row,9).text()),  float(self.TMaterials.item(current_row,10).text()), float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,12).text())], [float(self.TMaterials.item(current_row,4).text()), float(self.TMaterials.item(current_row,9).text()), float(self.TMaterials.item(current_row,13).text()), float(self.TMaterials.item(current_row,14).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,16).text())], [float(self.TMaterials.item(current_row,5).text()), float(self.TMaterials.item(current_row,10).text()), float(self.TMaterials.item(current_row,14).text()), float(self.TMaterials.item(current_row,17).text()), float(self.TMaterials.item(current_row,18).text()), float(self.TMaterials.item(current_row,19).text())], [float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,18).text()), float(self.TMaterials.item(current_row,20).text()), float(self.TMaterials.item(current_row,21).text())], [float(self.TMaterials.item(current_row,7).text()), float(self.TMaterials.item(current_row,12).text()), float(self.TMaterials.item(current_row,16).text()), float(self.TMaterials.item(current_row,19).text()), float(self.TMaterials.item(current_row,21).text()), float(self.TMaterials.item(current_row,22).text())]]
-        Mcompliance = np.linalg.inv(Mstiffness)
         if self.TMaterials.item(current_row,1).text() == 'Isotropic':
+            Mcompliance = np.linalg.inv(Mstiffness)
             self.MaterialTypeTool.setCurrentIndex(0)
             self.INMaterialType.setCurrentIndex(0)
             self.INMaterialName.clear()
@@ -425,6 +418,7 @@ def Homogenization(self):
             self.INYoungsModulus.insert(str(E))
             self.INPoissonsRatio.insert(str(nu))
         elif 'Transversely Isotropic' in self.TMaterials.item(current_row,1).text():
+            Mcompliance = np.linalg.inv(Mstiffness)
             self.MaterialTypeTool.setCurrentIndex(1)
             self.INMaterialType.setCurrentIndex(1)
             self.INMaterialName.clear()
@@ -473,6 +467,7 @@ def Homogenization(self):
                 self.INGop.insert(str(Gop))
                 self.INIsotropicPlane.setCurrentIndex(2)
         elif self.TMaterials.item(current_row,1).text() == 'Orthotropic':
+            Mcompliance = np.linalg.inv(Mstiffness)
             self.MaterialTypeTool.setCurrentIndex(3)
             self.INMaterialType.setCurrentIndex(2)
             self.INMaterialName.clear()
@@ -523,14 +518,14 @@ def Homogenization(self):
     def add_material_assignment():
         warning_flag = 0
         for i in range(self.TMaterialAssignment.rowCount()):
-            if str(self.INRegion.currentText()) == self.TMaterialAssignment.item(i,0).text():
+            if str(self.INRegion_2.currentText()) == self.TMaterialAssignment.item(i,0).text():
                 warning_message('ERROR: There is already a material assigned to this region')
                 warning_flag = 1
         if warning_flag == 0:
             row = self.TMaterialAssignment.rowCount()
             self.TMaterialAssignment.insertRow(row)
-            self.TMaterialAssignment.setItem(row, 0, QTableWidgetItem(self.INRegion.currentText()))
-            self.TMaterialAssignment.setItem(row, 1, QTableWidgetItem(self.INMaterial.currentText()))
+            self.TMaterialAssignment.setItem(row, 0, QTableWidgetItem(self.INRegion_2.currentText()))
+            self.TMaterialAssignment.setItem(row, 1, QTableWidgetItem(self.INMaterial_2.currentText()))
         else:
             warning_flag = 0
     self.BAddMaterialAssignment.clicked.connect(add_material_assignment)
@@ -555,7 +550,7 @@ def Homogenization(self):
     # Warn user if no material assignment was made
     def warning_no_material():
         index = self.NavigationMenu.currentIndex()
-        if index > 4 and self.TMaterialAssignment.rowCount() == 0:
+        if index > 4 and self.TMaterialAssignment.rowCount() == 0 and self.TMaterials.rowCount() > 0:
             warning_message('WARNING: No materials were assigned')
     self.NavigationMenu.currentChanged.connect(warning_no_material)
     
@@ -566,22 +561,22 @@ def Homogenization(self):
 #            preview_results_click()
 #    self.NavigationMenu.currentChanged.connect(show_results)
     
-    # Boundary Conditions
-    def BC_direction():
-        if self.INBoundaryCondition.currentText() == "Tension" or self.INBoundaryCondition.currentText() == "Compression":
-            self.INBCDirection.clear()
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"x", None))
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"y", None))
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"z", None))
-        elif self.INBoundaryCondition.currentText() == "Shear":
-            self.INBCDirection.clear()
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"xy", None))
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"xz", None))
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"yz", None))
-        elif self.INBoundaryCondition.currentText() == "Homogenization":
-            self.INBCDirection.clear()
-            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"6 RVE BCs", None))
-    self.INBoundaryCondition.currentTextChanged.connect(BC_direction)
+#    # Boundary Conditions
+#    def BC_direction():
+#        if self.INBoundaryCondition.currentText() == "Tension" or self.INBoundaryCondition.currentText() == "Compression":
+#            self.INBCDirection.clear()
+#            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"x", None))
+#            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"y", None))
+#            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"z", None))
+#        elif self.INBoundaryCondition.currentText() == "Shear":
+#            self.INBCDirection.clear()
+#            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"xy", None))
+#            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"xz", None))
+#            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"yz", None))
+#        elif self.INBoundaryCondition.currentText() == "Homogenization":
+#            self.INBCDirection.clear()
+#            self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"6 RVE BCs", None))
+#    self.INBoundaryCondition.currentTextChanged.connect(BC_direction)
     
     # Solver Settings
     def settings():
@@ -941,7 +936,7 @@ def Homogenization(self):
     # Show results immediately when postprocessing tab is pressed
     def show_results():
         index = self.NavigationMenu.currentIndex()
-        if index == 8 and self.run == 1:
+        if index == 8 and self.run == 1 and "Homogenization" in self.INSelectPostprocessing.currentText():
             preview_results_click()
     self.NavigationMenu.currentChanged.connect(show_results)
     
