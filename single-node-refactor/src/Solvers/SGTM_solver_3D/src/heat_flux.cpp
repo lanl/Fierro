@@ -78,7 +78,6 @@ void SGTM3D::get_heat_flux(
     const DCArrayKokkos<double>& MaterialPoints_temp_grad,
     const DCArrayKokkos<double>& MaterialPoints_statev,
     const DCArrayKokkos<double>& corner_q_flux,
-    const DCArrayKokkos<double>& MaterialCorners_q_flux,
     const corners_in_mat_t corners_in_mat_elem,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -159,10 +158,8 @@ void SGTM3D::get_heat_flux(
         MaterialPoints_temp_grad(elem_gid, 1) = temp_grad(1);
         MaterialPoints_temp_grad(elem_gid, 2) = temp_grad(2);
 
-
         // ---- Calculate the heat flux at the material point ---- //
-        double conductivity = MaterialPoints_conductivity(mat_point_lid);
-
+        double conductivity = MaterialPoints_conductivity(mat_point_lid); // NOTE: Consider moving this to properties and evaluate instead of save
         for(int dim = 0; dim < mesh.num_dims; dim++){
             MaterialPoints_q_flux(0, mat_point_lid, dim) = -1.0 * conductivity * temp_grad(dim);
         }
@@ -179,15 +176,12 @@ void SGTM3D::get_heat_flux(
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
             // Zero out flux at material corners
-            MaterialCorners_q_flux(1, mat_corner_lid) = 0.0;
             corner_q_flux(1, corner_gid) = 0.0;
 
             // Dot the flux into the corner normal
             for(int dim = 0; dim < mesh.num_dims; dim++){
-                MaterialCorners_q_flux(1, mat_corner_lid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
                 corner_q_flux(1, corner_gid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
             }
-
         }
     }); // end parallel for loop over elements associated with the given material
 
@@ -199,9 +193,9 @@ void SGTM3D::get_heat_flux(
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn get_heat_flux
+/// \fn moving flux
 ///
-/// \brief This function calculates the corner forces and the evolves stress
+/// \brief 
 ///
 /// \param Materials in the simulation
 /// \param The simulation mesh
@@ -228,7 +222,6 @@ void SGTM3D::moving_flux(
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& corner_q_flux,
-    const DCArrayKokkos<double>& MaterialCorners_q_flux,
     const DCArrayKokkos<double>& sphere_position,
     const corners_in_mat_t corners_in_mat_elem,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -241,7 +234,7 @@ void SGTM3D::moving_flux(
 {
 
 
-    // ---- apply heat flux boundary conditions ----
+    // ---- Apply heat flux from a moving heat source ---- //
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
         
         // get elem gid

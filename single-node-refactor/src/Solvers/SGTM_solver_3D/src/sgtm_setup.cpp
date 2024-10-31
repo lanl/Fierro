@@ -241,7 +241,7 @@ void SGTM3D::tag_regions(
 ///
 /// \fn setup the SGH method
 ///
-/// \brief Allocate state, setup models, and fill mesh regions per the YAML input
+/// \brief Calls setup_sgtm to unpack SimulationParameters for GPU access
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::setup(SimulationParameters_t& SimulationParamaters, 
@@ -249,6 +249,32 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                 Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
                 State_t& State)
+{
+    
+    setup_sgtm(SimulationParamaters,
+        SimulationParamaters.region_fills,
+        Materials,
+        mesh, 
+        Boundary,
+        State);
+    
+} // end SGH setup
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn setup the SGH method
+///
+/// \brief Allocate state, setup models, and fill mesh regions per the YAML input
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGTM3D::setup_sgtm(
+        SimulationParameters_t& SimulationParamaters,
+        CArrayKokkos<RegionFill_t>& region_fills,
+        Material_t& Materials,
+        Mesh_t& mesh, 
+        BoundaryCondition_t& Boundary,
+        State_t& State) const
 {
     size_t num_fills = SimulationParamaters.region_fills.size();
     printf("Num Fills's = %zu\n", num_fills);
@@ -283,6 +309,7 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
         SimulationParamaters.region_fills,
         SimulationParamaters.region_fills_host);
     // note: the device and host side are updated in the above function
+
     // ---------------------------------------------
     std::cout << "After Tagging Regions" << std::endl;
     // ----------------------------------------------------------------
@@ -341,7 +368,9 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
         State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3, SGTM3D_State::required_material_pt_state); // aways 3D, even for 2D-RZ calcs
         State.MaterialCorners(mat_id).initialize(num_corners_for_mat, mesh.num_dims, SGTM3D_State::required_material_corner_state);
         // zones are not used
-    } // end for mat_id
+    } // end for mat_id   
+
+
 
     // data structures to access indices in other material index spaces
     State.corners_in_mat_elem = corners_in_mat_t(mesh.num_nodes_in_elem);
@@ -360,12 +389,11 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
     Kokkos::fence();
     std::cout << "Before region fills" << std::endl;
 
+    // Storage for device side variables needed on host
     DCArrayKokkos<double> init_den(1);
     DCArrayKokkos<double> init_sie(1);
     DCArrayKokkos<double> init_sh(1);
     DCArrayKokkos<double> init_tc(1);
-
-
 
     // the following loop is not thread safe
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
@@ -377,16 +405,16 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
         size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
 
         // --- mapping from material elem lid to elem ---
-        State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
+        State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid; 
 
-
-        // Get initial conditions from region_fills
         RUN({
-            init_den(0) = SimulationParamaters.region_fills(elem_region_id(elem_gid)).den;
-            init_sie(0) = SimulationParamaters.region_fills(elem_region_id(elem_gid)).sie;
-            init_sh(0) = SimulationParamaters.region_fills(elem_region_id(elem_gid)).specific_heat;
-            init_tc(0) = SimulationParamaters.region_fills(elem_region_id(elem_gid)).thermal_conductivity;
+            init_den(0) = region_fills(elem_region_id(elem_gid)).den;
+            init_sie(0) = region_fills(elem_region_id(elem_gid)).sie;
+            init_sh(0) = region_fills(elem_region_id(elem_gid)).specific_heat;
+            init_tc(0) = region_fills(elem_region_id(elem_gid)).thermal_conductivity;
         });
+        Kokkos::fence();
+        
         init_den.update_host();
         init_sie.update_host();
         init_sh.update_host();
@@ -434,10 +462,11 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
     } // end serial for loop over all elements
 
     std::cout << "after region fills" << std::endl;
+
     // Paint nodal state
     // parallel loop over nodes in mesh
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        paint_node_vel(SimulationParamaters.region_fills,
+        paint_node_vel(region_fills,
                        State.node.vel,
                        State.node.coords,
                        node_gid,
@@ -446,9 +475,9 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                        rk_num_bins);
 
         // Paint on initial temperature
-        double temperature = SimulationParamaters.region_fills(node_region_id(node_gid)).temperature;
+        double temperature = region_fills(node_region_id(node_gid)).temperature;
         paint_node_scalar(temperature,
-                          SimulationParamaters.region_fills,
+                          region_fills,
                           State.node.temp,
                           State.node.coords, 
                           node_gid, 
@@ -513,6 +542,4 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                    State.node.coords,
                    State.node.mass,
                    State.corner.mass);
-
-
-} // end SGH setup
+}

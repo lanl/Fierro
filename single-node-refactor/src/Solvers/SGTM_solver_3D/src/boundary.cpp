@@ -43,8 +43,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \brief Evolves the boundary according to a give temperature
 ///
 /// \param The simulation mesh
-/// \param Boundary contain arrays of information about BCs
-/// \param A view into the nodal temperature array
+/// \param BoundaryConditions contain arrays of information about BCs
+/// \param Nodal temperature array
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -53,15 +53,14 @@ void SGTM3D::boundary_temperature(const Mesh_t& mesh,
                                   DCArrayKokkos<double>& node_temp,
                                   const double time_value) const
 {
-    // Loop over boundary sets
-
-    // std::cout<<"Setting temp BC" <<std::endl;
+    // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
+        // ---- Skip non temperature BCs ---- //
         if (BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCHydroType != boundary_conditions::BCHydro::temperature) continue;
 
         
-        // Loop over boundary nodes in a boundary set
+        // ---- Loop over boundary nodes in a boundary set ---- //
         FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
             
             // get the global index for this node on the boundary
@@ -92,8 +91,11 @@ void SGTM3D::boundary_temperature(const Mesh_t& mesh,
 /// \brief Applies convection boundary conditions according to 
 ///
 /// \param The simulation mesh
-/// \param Boundary contain arrays of information about BCs
+/// \param BoundaryConditions contain arrays of information about BCs
 /// \param The corner flux
+/// \param The node temperature
+/// \param The node flux
+/// \param The node positions
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -105,25 +107,24 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
                                  const DCArrayKokkos<double>& node_coords,
                                  const double time_value) const
 {
-    // Loop over boundary sets
-
-    // std::cout<<"Setting temp BC" <<std::endl;
+    // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
+        // ---- Skip non convection BCs ---- //
         if(BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCHydroType != boundary_conditions::BCHydro::convection) continue;
 
 
+        // ---- Get number of boundary patches associated with this boundary set ---- // NOTE: Messy, find better solution
         DCArrayKokkos<int> num_bdy_patches(1);
-
         RUN({
             num_bdy_patches(0) = mesh.bdy_patches_in_set.stride(bdy_set);
         });
         num_bdy_patches.update_host();
 
-        // Loop over the boundary patches in the set
+        // ---- Loop over the boundary patches in the set ---- //
         FOR_ALL(bdy_patch_gid, 0, num_bdy_patches.host(0),{
 
-            // For each boundary patch, calculate the flux contribution to each node from convection
+            // ---- For each boundary patch, calculate the flux contribution to each node from convection ---- //
 
 
             // First: Calculate the surface area
@@ -131,8 +132,8 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
             size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
 
 
-            // // calculate the total area of this patch (decompose into 2 triangles)
-            // // using Cayley-Menger Determinant
+            // calculate the total area of this patch (decompose into 2 triangles)
+            // using Cayley-Menger Determinant
             double a_[3];
             ViewCArrayKokkos<double> a(&a_[0], 3);
 
@@ -193,24 +194,22 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
 
             double surface_area = area1+area2;
 
+            // Partition the total surface area to the corner patches
             double patch_area = surface_area/4.0;
 
+            // NOTE: Add parsing to the following variables
             double ref_temp = 0.0;
             double h_film = 100.0;
 
-            // Loop over all the nodes in this boundary surface
+            // ---- Calculate the flux through each patch ---- //
             for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
                 
                 int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
 
-                //mesh.num_corners_in_node(node_gid)
-
                 double patch_flux = -1.0*h_film * (node_temp(0, node_gid) - ref_temp) * patch_area;
 
-                // Add patch flux to nodal flux
-
+                // Add patch flux to nodal flux, atomic for thread safety
                 Kokkos::atomic_add(&node_flux(1, node_gid), patch_flux);
-
             }
         });
 
@@ -228,8 +227,10 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
 /// \brief Applies convection boundary conditions according to 
 ///
 /// \param The simulation mesh
-/// \param Boundary contain arrays of information about BCs
-/// \param The corner flux
+/// \param BoundaryConditions contain arrays of information about BCs
+/// \param The node temperature
+/// \param The node heat flux
+/// \param The node coordinates
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -241,25 +242,23 @@ void SGTM3D::boundary_radiation(const Mesh_t& mesh,
                                  const DCArrayKokkos<double>& node_coords,
                                  const double time_value) const
 {
-    // Loop over boundary sets
-
-    // std::cout<<"Setting temp BC" <<std::endl;
+    // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
+        // ---- Skip non radiation BCs ---- // 
         if(BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCHydroType != boundary_conditions::BCHydro::convection) continue;
 
-
+        // ---- Get number of boundary patches associated with this boundary set ---- // NOTE: Messy, find better solution
         DCArrayKokkos<int> num_bdy_patches(1);
-
         RUN({
             num_bdy_patches(0) = mesh.bdy_patches_in_set.stride(bdy_set);
         });
         num_bdy_patches.update_host();
 
-        // Loop over the boundary patches in the set
+        // ---- Loop over the boundary patches in the set ---- //
         FOR_ALL(bdy_patch_gid, 0, num_bdy_patches.host(0),{
 
-            // For each boundary patch, calculate the flux contribution to each node from convection
+            // For each boundary patch, calculate the flux contribution to each node from radiation
 
 
             // First: Calculate the surface area
@@ -267,8 +266,8 @@ void SGTM3D::boundary_radiation(const Mesh_t& mesh,
             size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
 
 
-            // // calculate the total area of this patch (decompose into 2 triangles)
-            // // using Cayley-Menger Determinant
+            // calculate the total area of this patch (decompose into 2 triangles)
+            // using Cayley-Menger Determinant
             double a_[3];
             ViewCArrayKokkos<double> a(&a_[0], 3);
 
@@ -331,6 +330,7 @@ void SGTM3D::boundary_radiation(const Mesh_t& mesh,
 
             double patch_area = surface_area/4.0;
 
+            // NOTE: Parse these in
             double emmisivity = 0.2; // rough oxidized aluminum
             double boltzmann = 5.67037442e-8;
 

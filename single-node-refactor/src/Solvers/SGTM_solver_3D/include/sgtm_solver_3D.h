@@ -90,7 +90,7 @@ namespace SGTM3D_State
     static const std::vector<material_corner_state> required_material_corner_state = 
     { 
         material_corner_state::force,
-        material_corner_state::heat_flux
+        // material_corner_state::heat_flux
     };
 
     // Corner state to be initialized for the SGH solver
@@ -180,6 +180,15 @@ public:
         // Any finalize goes here, remove allocated memory, etc
     }
 
+    // Helper setup routine that unpacks SimulationParameters to fix GPU compile warnings
+    void setup_sgtm(
+        SimulationParameters_t& SimulationParamaters,
+        CArrayKokkos<RegionFill_t>& region_fills,
+        Material_t& Materials,
+        Mesh_t& mesh, 
+        BoundaryCondition_t& Boundary,
+        State_t& State) const;
+
     // **** Functions defined in sgtm_setup.cpp **** //
     void tag_regions(
         const Mesh_t& mesh,
@@ -250,7 +259,6 @@ public:
         const DCArrayKokkos<double>& corner_q_flux,
         const DCArrayKokkos<double>& MaterialPoints_conductivity,
         const DCArrayKokkos<double>& MaterialPoints_temp_grad,
-        const DCArrayKokkos<double>& MaterialCorners_q_flux,
         const corners_in_mat_t corners_in_mat_elem,
         const DCArrayKokkos<bool>&   MaterialPoints_eroded,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -267,7 +275,6 @@ public:
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& corner_q_flux,
-        const DCArrayKokkos<double>& MaterialCorners_q_flux,
         const DCArrayKokkos<double>& sphere_position,
         const corners_in_mat_t corners_in_mat_elem,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
