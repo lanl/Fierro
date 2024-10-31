@@ -84,7 +84,7 @@ struct node_t
                     if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_rk, num_nodes, "node_temp");
                     break;
                 case node_state::q_flux:
-                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_rk, num_nodes, "node_q_flux");
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_nodes, "node_q_flux");
                     break;
 
                 default:
@@ -235,7 +235,7 @@ struct MaterialPoint_t
                     if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_rk, num_pts_max, "material_point_sie");
                     break;
                 case material_pt_state::heat_flux:
-                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, "material_point_heat_flux");
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_pts_max, num_dims, "material_point_heat_flux");
                     break;
                 case material_pt_state::thermal_conductivity:
                     if (conductivity.size() == 0) this->conductivity = DCArrayKokkos<double>(num_pts_max, "material_point_thermal_conductivity");
@@ -323,7 +323,7 @@ struct MaterialCorner_t
                     if (force.size() == 0) this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
                     break;
                 case material_corner_state::heat_flux:
-                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(2, num_corners_max, "material_corner_heat_flux"); // WARNING: hard coding rk2
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_corners_max, "material_corner_heat_flux"); // WARNING: hard coding rk2
                     break;
                 default:
                     std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;
@@ -367,7 +367,7 @@ struct corner_t
                     if (mass.size() == 0) this->mass  = DCArrayKokkos<double>(num_corners, "corner_mass");
                     break;
                 case corner_state::heat_flux:
-                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(2, num_corners, "corner_heat_flux"); // WARNING: hard coding rk2
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_corners, "corner_heat_flux"); // WARNING: hard coding rk2
                     break;
                 default:
                     std::cout<<"Desired corner state not understood in corner_t initialize"<<std::endl;

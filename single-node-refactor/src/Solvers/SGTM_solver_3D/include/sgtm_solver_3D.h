@@ -90,7 +90,6 @@ namespace SGTM3D_State
     static const std::vector<material_corner_state> required_material_corner_state = 
     { 
         material_corner_state::force,
-        // material_corner_state::heat_flux
     };
 
     // Corner state to be initialized for the SGH solver
@@ -215,7 +214,6 @@ public:
     void boundary_convection(
         const Mesh_t& mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        DCArrayKokkos<double>& corner_flux,
         const DCArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& node_flux,
         const DCArrayKokkos<double>& node_coords,
@@ -225,7 +223,6 @@ public:
     void boundary_radiation(
         const Mesh_t& mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        DCArrayKokkos<double>& corner_flux,
         const DCArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& node_flux,
         const DCArrayKokkos<double>& node_coords,
@@ -331,7 +328,6 @@ public:
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& node_temp,
-        DCArrayKokkos<double>& node_flux,
         DCArrayKokkos<double>& MaterialPoints_q_flux,
         DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,

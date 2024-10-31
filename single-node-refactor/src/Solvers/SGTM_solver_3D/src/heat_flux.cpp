@@ -161,7 +161,7 @@ void SGTM3D::get_heat_flux(
         // ---- Calculate the heat flux at the material point ---- //
         double conductivity = MaterialPoints_conductivity(mat_point_lid); // NOTE: Consider moving this to properties and evaluate instead of save
         for(int dim = 0; dim < mesh.num_dims; dim++){
-            MaterialPoints_q_flux(0, mat_point_lid, dim) = -1.0 * conductivity * temp_grad(dim);
+            MaterialPoints_q_flux(mat_point_lid, dim) = -1.0 * conductivity * temp_grad(dim);
         }
 
         // --- Calculate flux through each corner the corners \lambda_{c} = q_z \cdot \hat B_c   ---- //
@@ -176,17 +176,19 @@ void SGTM3D::get_heat_flux(
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
             // Zero out flux at material corners
-            corner_q_flux(1, corner_gid) = 0.0;
+            corner_q_flux(corner_gid) = 0.0;
 
             // Dot the flux into the corner normal
             for(int dim = 0; dim < mesh.num_dims; dim++){
-                corner_q_flux(1, corner_gid) += MaterialPoints_q_flux(0, mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
+                corner_q_flux(corner_gid) += MaterialPoints_q_flux(mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
             }
         }
     }); // end parallel for loop over elements associated with the given material
 
     return;
 } // end of routine
+
+
 
 
 
@@ -233,7 +235,6 @@ void SGTM3D::moving_flux(
     const double rk_alpha) const
 {
 
-
     // ---- Apply heat flux from a moving heat source ---- //
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
         
@@ -241,7 +242,7 @@ void SGTM3D::moving_flux(
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
         // the material point index = the material elem index for a 1-point element
-        size_t mat_point_lid = mat_elem_lid;
+        // size_t mat_point_lid = mat_elem_lid;
 
 
         // check if element center is within the sphere
@@ -263,7 +264,7 @@ void SGTM3D::moving_flux(
         elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
         elem_coords(2) = (elem_coords(2) / mesh.num_nodes_in_elem);
 
-        double radius = 0.005;
+        double radius = 0.004;
         double radius_squared = radius * radius;
 
         double dist_squared = 0.0;
@@ -272,6 +273,11 @@ void SGTM3D::moving_flux(
         }
 
         // double dist = sqrt(dist_squared);
+
+
+        // Bump function data
+        double scale = 1.0/radius;
+
 
         if(dist_squared <= radius_squared){
 
@@ -286,12 +292,36 @@ void SGTM3D::moving_flux(
                 // Get corner gid
                 size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
 
+
+                // Get the value of the normalized bump function at this point in space
+                double x = node_coords(1, node_gid, 0);
+                double y = node_coords(1, node_gid, 1);
+
+                double denomx = (scale*x - scale*sphere_position(0))*(scale*x - scale*sphere_position(0));
+                double denomy = (scale*y - scale*sphere_position(1))*(scale*y - scale*sphere_position(1));
+
+                double denom = denomx+denomy;
+                denom = 1.0 - denom;
+
+                denom = fmax(denom, 1E-8);
+
+                
+
+                double val = 2.71828 * exp(-1.0/denom);
+
+                // printf("Denom = %f\n", denom);
+                // printf("val = %f\n", val);
+
+
+
                 // Get the material corner lid
                 // size_t mat_corner_lid = State.corners_in_mat_elem(mat_elem_lid, corner_lid);
+                double dt = 0.001162;
 
-                // Note: this will be 1/8th the volumetric flux
-                corner_q_flux(1, corner_gid) += 20.0;
+                // Note: this will be 1/8th the volumetric flux times the volume
+                corner_q_flux(corner_gid) += 120.0 * val * 0.125 * GaussPoints_vol(elem_gid) * 1E9;
 
+                // printf("corner flux = %e\n", corner_q_flux(corner_gid));
             }
         }
 

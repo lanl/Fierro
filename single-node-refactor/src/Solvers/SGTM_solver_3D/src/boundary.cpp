@@ -92,7 +92,6 @@ void SGTM3D::boundary_temperature(const Mesh_t& mesh,
 ///
 /// \param The simulation mesh
 /// \param BoundaryConditions contain arrays of information about BCs
-/// \param The corner flux
 /// \param The node temperature
 /// \param The node flux
 /// \param The node positions
@@ -101,7 +100,6 @@ void SGTM3D::boundary_temperature(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_convection(const Mesh_t& mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
-                                 DCArrayKokkos<double>& corner_flux,
                                  const DCArrayKokkos<double>& node_temp,
                                  const DCArrayKokkos<double>& node_flux,
                                  const DCArrayKokkos<double>& node_coords,
@@ -198,7 +196,7 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
             double patch_area = surface_area/4.0;
 
             // NOTE: Add parsing to the following variables
-            double ref_temp = 0.0;
+            double ref_temp = 293.15; // room temp in Kelvin
             double h_film = 100.0;
 
             // ---- Calculate the flux through each patch ---- //
@@ -209,7 +207,7 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
                 double patch_flux = -1.0*h_film * (node_temp(0, node_gid) - ref_temp) * patch_area;
 
                 // Add patch flux to nodal flux, atomic for thread safety
-                Kokkos::atomic_add(&node_flux(1, node_gid), patch_flux);
+                Kokkos::atomic_add(&node_flux(node_gid), patch_flux);
             }
         });
 
@@ -224,7 +222,7 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
 ///
 /// \fn boundary_radiation
 ///
-/// \brief Applies convection boundary conditions according to 
+/// \brief Applies radiation boundary conditions according
 ///
 /// \param The simulation mesh
 /// \param BoundaryConditions contain arrays of information about BCs
@@ -235,12 +233,11 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_radiation(const Mesh_t& mesh,
-                                 const BoundaryCondition_t& BoundaryConditions,
-                                 DCArrayKokkos<double>& corner_flux,
-                                 const DCArrayKokkos<double>& node_temp,
-                                 const DCArrayKokkos<double>& node_flux,
-                                 const DCArrayKokkos<double>& node_coords,
-                                 const double time_value) const
+                                const BoundaryCondition_t& BoundaryConditions,
+                                const DCArrayKokkos<double>& node_temp,
+                                const DCArrayKokkos<double>& node_flux,
+                                const DCArrayKokkos<double>& node_coords,
+                                const double time_value) const
 {
     // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
@@ -356,7 +353,7 @@ void SGTM3D::boundary_radiation(const Mesh_t& mesh,
                 double patch_flux = -1.0 * emmisivity * boltzmann * (tmp1 - tmp2) * patch_area;
 
                 // Add patch flux to nodal flux
-                Kokkos::atomic_add(&node_flux(1, node_gid), patch_flux);
+                Kokkos::atomic_add(&node_flux(node_gid), patch_flux);
 
             }
         });

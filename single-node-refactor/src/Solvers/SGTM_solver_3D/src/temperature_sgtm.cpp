@@ -68,14 +68,14 @@ void SGTM3D::update_temperature(
             
             // Get corner gid
             size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
-            node_flux(1, node_gid) += corner_flux(1, corner_gid);
+            node_flux(node_gid) += corner_flux(corner_gid);
         } // end for corner_lid
 
         // ---- Calculate the average specific heat for all materials surrounding a node ---- //
         double Cp = 903.0;
 
         // ---- Update the nodal temperature ---- //
-        node_temp(1, node_gid) = node_temp(0, node_gid) + rk_alpha * dt * node_flux(1, node_gid) / (node_mass(node_gid)*Cp);
+        node_temp(1, node_gid) = node_temp(0, node_gid) + rk_alpha * dt * node_flux(node_gid) / (node_mass(node_gid)*Cp);
 
     }); // end for parallel for over nodes
 

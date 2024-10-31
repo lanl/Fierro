@@ -1,11 +1,11 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 10
+    time_final: 0.24
     dt_min: 1.e-8
-    dt_max: 1.e-2
+    dt_max: 1.e-1
     dt_start: 1.e-5
-    cycle_stop: 100000
+    cycle_stop: 10000
 
 
 # mesh_options:
@@ -17,14 +17,14 @@ mesh_options:
     num_dims: 3
     type: box
     origin: [0.0, 0.0, 0.0]
-    length: [1.0, 1.0, 1.0]
-    num_elems: [5, 5, 5]
+    length: [0.1, 0.1, 0.001]
+    num_elems: [200, 200, 1]
 
 
 output_options:
     timer_output_level: thorough
     output_file_format: vtk
-    graphics_time_step: 1.0
+    graphics_time_step: 0.02
     # graphics_iteration_step: 1
 
 solver_options:
@@ -37,21 +37,28 @@ solver_options:
 
 boundary_conditions:
     
+    # - boundary_condition:
+    #     solver: SGTM3D
+    #     geometry: x_plane
+    #     direction: x_dir
+    #     value: 0.0
+    #     temperature: 293
+    #     type:  temperature
 
     - boundary_condition:
         solver: SGTM3D
         geometry: x_plane
         direction: x_dir
         value: 0.0
-        temperature: 1000
+        temperature: 293
         type:  convection
 
     - boundary_condition:
         solver: SGTM3D
         geometry: x_plane
         direction: x_dir
-        value: 1.0
-        temperature: 1000
+        value: 0.1
+        temperature: 293
         type:  convection
 
     - boundary_condition:
@@ -59,15 +66,15 @@ boundary_conditions:
         geometry: y_plane
         direction: y_dir
         value: 0.0
-        temperature: 1000
+        temperature: 293
         type:  convection
 
     - boundary_condition:
         solver: SGTM3D
         geometry: y_plane
         direction: y_dir
-        value: 1.0
-        temperature: 1000
+        value: 0.01
+        temperature: 293
         type:  convection
 
     - boundary_condition:
@@ -75,15 +82,15 @@ boundary_conditions:
         geometry: z_plane
         direction: z_dir
         value: 0.0
-        temperature: 1000
+        temperature: 293
         type:  convection
 
     - boundary_condition:
         solver: SGTM3D
         geometry: z_plane
         direction: z_dir
-        value: 1.0
-        temperature: 1000
+        value: 0.001
+        temperature: 293
         type:  convection
 
   
@@ -113,10 +120,10 @@ regions:
         u: 0.0
         v: 0.0
         w: 0.0
-        thermal_conductivity: 2037
+        thermal_conductivity: 237
         specific_heat: 903
         temperature_distribution: cartesian
-        temperature : 1000.0
+        temperature : 293.0
 
 
     # - fill_volume:

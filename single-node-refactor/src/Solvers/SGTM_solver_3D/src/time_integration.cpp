@@ -53,7 +53,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::rk_init(DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<double>& node_vel,
     DCArrayKokkos<double>& node_temp,
-    DCArrayKokkos<double>& node_flux,
     DCArrayKokkos<double>& MaterialPoints_q_flux,
     DCArrayKokkos<double>& MaterialPoints_stress,
     const size_t num_dims,
@@ -62,25 +61,14 @@ void SGTM3D::rk_init(DCArrayKokkos<double>& node_coords,
     const size_t num_mat_points) const
 {
     // save elem quantities
-    FOR_ALL(matpt_lid, 0, num_mat_points, {
-        // stress is always 3D even with RZ
-        for (size_t i = 0; i < 3; i++) {
-            // for (size_t j = 0; j < 3; j++) {
-            //     MaterialPoints_stress(0, matpt_lid, i, j) = MaterialPoints_stress(1, matpt_lid, i, j);
-            // }
-            MaterialPoints_q_flux(0, matpt_lid, i) = 0.0; // MaterialPoints_q_flux(1, matpt_lid, i);
-        }  // end for
-
-    }); // end parallel for
 
     // save nodal quantities
     FOR_ALL(node_gid, 0, num_nodes, {
         for (size_t i = 0; i < num_dims; i++) {
             node_coords(0, node_gid, i) = node_coords(1, node_gid, i);
-            // node_vel(0, node_gid, i)    = node_vel(1, node_gid, i);
+            // node_vel(0, node_gid, i) = node_vel(1, node_gid, i);
         }
         node_temp(0, node_gid) = node_temp(1, node_gid);
-        // node_flux(0, node_gid) = node_flux(1, node_gid);
     }); // end parallel for
 
     Kokkos::fence();
@@ -193,7 +181,7 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
 
         // Local dt calc based on thermal conductivity (VN Stability)
         double h = (dist_min); // maybe half?
-        double dt_vn = (h * h)/(6.0*alpha); // maybe 6
+        double dt_vn = (h * h)/(2.0*alpha); // maybe 6
 
         dt_vn *= 0.9; // stability factor
  

@@ -143,16 +143,19 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     double sy = 0.05;
 
     double fy = 0.0;
-    double fx = 6.283;
+    double fx = 3.14;
 
-    sphere_position.host(0) = 0.03*cos(fx*time_value) + sx;
-    sphere_position.host(1) = 0.03*sin(fy*time_value) + sy;
+    // sphere_position.host(0) = 0.03*cos(fx*time_value) + sx;
+    // sphere_position.host(1) = 0.03*sin(fy*time_value) + sy;
+
+    sphere_position.host(0) = 0.02 + (time_value/time_final)*0.06;
+    sphere_position.host(1) = 0.05;
+
     // sphere_position.host(0) = fmod(time_value, 0.02) + 0.01;
     // sphere_position.host(1) = 0.05;
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        State.node.q_flux(0, node_gid) = 0.0;
-        State.node.q_flux(1, node_gid) = 0.0;
+        State.node.q_flux(node_gid) = 0.0;
     }); // end for parallel for over nodes
     sphere_position.update_device();
 
@@ -221,7 +224,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.node.vel,
                     State.node.temp,
                     State.node.q_flux,
-                    State.MaterialPoints(mat_id).q_flux,
                     State.MaterialPoints(mat_id).stress,
                     mesh.num_dims,
                     mesh.num_elems,
@@ -236,8 +238,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- Initialize the nodal flux to zero for this RK stage ---- //
             FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                State.node.q_flux(0, node_gid) = 0.0;
-                State.node.q_flux(1, node_gid) = 0.0;
+                State.node.q_flux(node_gid) = 0.0;
             }); // end for parallel for over nodes
 
             // ---- Calculate the corner heat flux from conduction per material ---- //
@@ -267,28 +268,28 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     rk_alpha);
 
                 // ---- Calculate the corner heat flux from moving volumetric heat source ----
-                // moving_flux(
-                //     Materials,
-                //     mesh,
-                //     State.GaussPoints.vol,
-                //     State.node.coords,
-                //     State.corner.q_flux,
-                //     sphere_position,
-                //     State.corners_in_mat_elem,
-                //     State.MaterialToMeshMaps(mat_id).elem,
-                //     num_mat_elems,
-                //     mat_id,
-                //     fuzz,
-                //     small,
-                //     dt, 
-                //     rk_alpha
-                //     );
+                moving_flux(
+                    Materials,
+                    mesh,
+                    State.GaussPoints.vol,
+                    State.node.coords,
+                    State.corner.q_flux,
+                    sphere_position,
+                    State.corners_in_mat_elem,
+                    State.MaterialToMeshMaps(mat_id).elem,
+                    num_mat_elems,
+                    mat_id,
+                    fuzz,
+                    small,
+                    dt, 
+                    rk_alpha
+                    );
 
             } // end for mat_id
 
             // ---- apply flux boundary conditions (convection/radiation)  ---- //
-            boundary_convection(mesh, BoundaryConditions, State.corner.q_flux, State.node.temp, State.node.q_flux, State.node.coords, time_value);
-            boundary_radiation(mesh, BoundaryConditions, State.corner.q_flux, State.node.temp, State.node.q_flux, State.node.coords, time_value);
+            boundary_convection(mesh, BoundaryConditions, State.node.temp, State.node.q_flux, State.node.coords, time_value);
+            boundary_radiation(mesh, BoundaryConditions, State.node.temp, State.node.q_flux, State.node.coords, time_value);
 
             // ---- Update nodal temperature ---- //
             update_temperature(
@@ -311,7 +312,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             
 
             // ---- Calculate cell volume for next time step ---- //
-            // geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
+            geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
             
         } // end of RK loop
@@ -322,12 +323,17 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---- Move heat source ---- //
         RUN({
 
-            sphere_position(0) = 0.03*cos(fx*time_value) + sx;
-            sphere_position(1) = 0.03*sin(fy*time_value) + sy;
+            // sphere_position(0) = 0.03*cos(fx*time_value) + sx;
+            // sphere_position(1) = 0.03*sin(fy*time_value) + sy;
+
+
+            sphere_position(0) = 0.02 + (time_value/time_final)*0.06;
+            sphere_position(1) = 0.05;
+
 
             // sphere_position(0) = 2 * fmod(time_value, 0.02) + 0.01;
             // sphere_position(1) = 0.05;
-            sphere_position(2) = 0.05*time_value/10.0;
+            // sphere_position(2) = 0.05*time_value/10.0;
         });
         
 
