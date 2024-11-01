@@ -46,8 +46,8 @@ void get_sie_source(CArrayKokkos <double> source,
             for (int dim = 0; dim < mesh.num_dims; dim++){
                 for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
                     
-                    // zone_coords(elem_gid, zone_lid, dim) += node_coords(stage, mesh.nodes_in_zone(zone_gid, node_lid), dim);
-                    Kokkos::atomic_add(&zone_coords(elem_gid, zone_lid, dim), node_coords(stage, mesh.nodes_in_zone(zone_gid, node_lid), dim));
+                    zone_coords(elem_gid, zone_lid, dim) += node_coords(stage, mesh.nodes_in_zone(zone_gid, node_lid), dim);
+                    // Kokkos::atomic_add(&zone_coords(elem_gid, zone_lid, dim), node_coords(stage, mesh.nodes_in_zone(zone_gid, node_lid), dim));
                     
                 } // end loop over nodes in element
 
@@ -69,15 +69,15 @@ void get_sie_source(CArrayKokkos <double> source,
                 for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){
                     int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
 
-                    // temp(elem_gid, z_lid, zone_lid) += ( (3.0*PI)/8.0 )*mat_pt.gauss_legendre_det_j(gauss_gid)
-                    //                         *ref_elem.gauss_leg_weights(gauss_lid)
-                    //                         *ref_elem.gauss_leg_elem_basis(gauss_lid, z_lid)
-                    //                         *ref_elem.gauss_leg_elem_basis(gauss_lid, zone_lid);
-                    
-                    Kokkos::atomic_add(&temp(elem_gid, z_lid, zone_lid),( (3.0*PI)/8.0 )*mat_pt.gauss_legendre_det_j(gauss_gid)
+                    temp(elem_gid, z_lid, zone_lid) += ( (3.0*PI)/8.0 )*mat_pt.gauss_legendre_det_j(gauss_gid)
                                             *ref_elem.gauss_leg_weights(gauss_lid)
                                             *ref_elem.gauss_leg_elem_basis(gauss_lid, z_lid)
-                                            *ref_elem.gauss_leg_elem_basis(gauss_lid, zone_lid));
+                                            *ref_elem.gauss_leg_elem_basis(gauss_lid, zone_lid);
+                    
+                    // Kokkos::atomic_add(&temp(elem_gid, z_lid, zone_lid),( (3.0*PI)/8.0 )*mat_pt.gauss_legendre_det_j(gauss_gid)
+                    //                         *ref_elem.gauss_leg_weights(gauss_lid)
+                    //                         *ref_elem.gauss_leg_elem_basis(gauss_lid, z_lid)
+                    //                         *ref_elem.gauss_leg_elem_basis(gauss_lid, zone_lid));
                 }// gauss_lid 
             }//zone_lid
             
@@ -94,12 +94,12 @@ void get_sie_source(CArrayKokkos <double> source,
             for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
                 
 
-                // source(stage, zone_gid) += temp(elem_gid, z_lid, zone_lid)*
-                //                 ( cos( 3.0*PI*zone_coords(elem_gid, zone_lid, 0) )*cos( PI*zone_coords(elem_gid, zone_lid, 1) ) 
-                //                 - cos( PI*zone_coords(elem_gid, zone_lid, 0) )*cos( 3.0*PI*zone_coords(elem_gid, zone_lid, 1) ) );
-                Kokkos::atomic_add(&source(stage, zone_gid), temp(elem_gid, z_lid, zone_lid)*
+                source(stage, zone_gid) += temp(elem_gid, z_lid, zone_lid)*
                                 ( cos( 3.0*PI*zone_coords(elem_gid, zone_lid, 0) )*cos( PI*zone_coords(elem_gid, zone_lid, 1) ) 
-                                - cos( PI*zone_coords(elem_gid, zone_lid, 0) )*cos( 3.0*PI*zone_coords(elem_gid, zone_lid, 1) ) ));
+                                - cos( PI*zone_coords(elem_gid, zone_lid, 0) )*cos( 3.0*PI*zone_coords(elem_gid, zone_lid, 1) ) );
+                // Kokkos::atomic_add(&source(stage, zone_gid), temp(elem_gid, z_lid, zone_lid)*
+                //                 ( cos( 3.0*PI*zone_coords(elem_gid, zone_lid, 0) )*cos( PI*zone_coords(elem_gid, zone_lid, 1) ) 
+                //                 - cos( PI*zone_coords(elem_gid, zone_lid, 0) )*cos( 3.0*PI*zone_coords(elem_gid, zone_lid, 1) ) ));
             }// zone_lid
         }// z_lid
 

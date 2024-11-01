@@ -263,22 +263,22 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             
             get_stress_tensor( mat_pt_stress, rk_stage, mesh, mat_pt_pres );
                         
-            get_artificial_viscosity(sigma_a,
-                                    node_vel,
-                                    mat_pt_vel,
-                                    mat_pt_den,
-                                    mat_pt_sspd,
-                                    elem_vol,
-                                    mat_pt_h,
-                                    mat_pt.gauss_legendre_jacobian_inverse,
-                                    mat_pt.gauss_legendre_jacobian,
-                                    J_inverse_t0,
-                                    char_length_t0,
-                                    mesh,
-                                    ref_elem,
-                                    rk_stage);
+            // get_artificial_viscosity(sigma_a,
+            //                         node_vel,
+            //                         mat_pt_vel,
+            //                         mat_pt_den,
+            //                         mat_pt_sspd,
+            //                         elem_vol,
+            //                         mat_pt_h,
+            //                         mat_pt.gauss_legendre_jacobian_inverse,
+            //                         mat_pt.gauss_legendre_jacobian,
+            //                         J_inverse_t0,
+            //                         char_length_t0,
+            //                         mesh,
+            //                         ref_elem,
+            //                         rk_stage);
 
-            append_artificial_viscosity(mat_pt_stress, sigma_a, mesh, rk_stage);
+            // append_artificial_viscosity(mat_pt_stress, sigma_a, mesh, rk_stage);
             
 
             // build the force tensor at the current stage
@@ -309,28 +309,28 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             // // update the momentum DOFs. u^k+1 = u^k - dt*L2
             update_momentum(node_vel, rk_stage, mesh, dt, L2, lumped_mass);
 
-            FOR_ALL(elem_gid, 0, mesh.num_elems,{
-                for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-                    int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-                    int lobatto_lid = ref_elem.dof_lobatto_map(node_lid);
+            // FOR_ALL(elem_gid, 0, mesh.num_elems,{
+            //     for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+            //         int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+            //         int lobatto_lid = ref_elem.dof_lobatto_map(node_lid);
 
-                    // node_vel(1, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
-                    // node_vel(1, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
-                    // node_vel(1, node_gid, 2) = 0.0;
+            //         // node_vel(1, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
+            //         // node_vel(1, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
+            //         // node_vel(1, node_gid, 2) = 0.0;
                     
-                    for (int dim = 0; dim < mesh.num_dims; dim++){
-                        double interp = 0.0;
-                        for (int dof_id = 0; dof_id < mesh.num_nodes_in_elem; dof_id++){
-                            int dof_gid = mesh.nodes_in_elem(elem_gid, dof_id);
-                            // interp += ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
-                            //                                  *node_vel(1, dof_gid, dim);
-                            Kokkos::atomic_add(&interp, ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
-                                                             *node_vel(1, dof_gid, dim));
-                        }// dim
-                        node_vel(1, node_gid, dim) = interp;
-                    }// node_lid
-                }// gauss_lid
-            });// for_all
+            //         for (int dim = 0; dim < mesh.num_dims; dim++){
+            //             double interp = 0.0;
+            //             for (int dof_id = 0; dof_id < mesh.num_nodes_in_elem; dof_id++){
+            //                 int dof_gid = mesh.nodes_in_elem(elem_gid, dof_id);
+            //                 // interp += ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
+            //                 //                                  *node_vel(1, dof_gid, dim);
+            //                 Kokkos::atomic_add(&interp, ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
+            //                                                  *node_vel(1, dof_gid, dim));
+            //             }// dim
+            //             node_vel(1, node_gid, dim) = interp;
+            //         }// node_lid
+            //     }// gauss_lid
+            // });// for_all
 
             // v\cdot n = 0 on the boundary
             //printf("Applying boundary conditions at stage %lu in cycle %lu \n", rk_stage, cycle);
@@ -384,7 +384,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             
             
             // internal energy update //
-            // get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
+            get_sie_source(source, node_coords, mat_pt, mesh, zone, ref_elem, rk_stage);
 
             update_internal_energy(zone_sie, rk_stage, mesh, zone.M_e_inv, force_tensor, F_dot_u, Fc, Fc_dot_u, source, node_vel, zone.zonal_mass, dt);//T_L2, zone.zonal_mass);
             // FOR_ALL(elem_gid,  0, mesh.num_elems, {
@@ -420,49 +420,49 @@ void rdh_solve(CArrayKokkos <material_t> &material,
             //     }// end loop over zones
             // });// end loop over elems
             
-            FOR_ALL(elem_gid, 0, mesh.num_elems,{
-                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
-                    int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
-                    int lobatto_lid = ref_elem.dual_dof_lobatto_map(zone_lid);
+            // FOR_ALL(elem_gid, 0, mesh.num_elems,{
+            //     for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+            //         int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+            //         int lobatto_lid = ref_elem.dual_dof_lobatto_map(zone_lid);
                     
-                    double interp = 0.0;
-                    for (int dof_id = 0; dof_id < mesh.num_zones_in_elem; dof_id++){
-                        int dof_gid = mesh.zones_in_elem(elem_gid, dof_id);
-                        // interp += ref_elem.zone_interp_basis(lobatto_lid, dof_id)*zone_sie(1, dof_gid);
-                        Kokkos::atomic_add(&interp, ref_elem.zone_interp_basis(lobatto_lid, dof_id)*zone_sie(1, dof_gid));
-                    }// node_lid
-                    zone_sie(1, zone_gid) = interp;
+            //         double interp = 0.0;
+            //         for (int dof_id = 0; dof_id < mesh.num_zones_in_elem; dof_id++){
+            //             int dof_gid = mesh.zones_in_elem(elem_gid, dof_id);
+            //             // interp += ref_elem.zone_interp_basis(lobatto_lid, dof_id)*zone_sie(1, dof_gid);
+            //             Kokkos::atomic_add(&interp, ref_elem.zone_interp_basis(lobatto_lid, dof_id)*zone_sie(1, dof_gid));
+            //         }// node_lid
+            //         zone_sie(1, zone_gid) = interp;
 
-                    // if (zone_sie( 1, zone_gid ) <= 0.0){
-                    //     printf("NEGATIVE INTERNAL ENERGY AFTER INTERPOLATION %f \n", zone_sie( 1, zone_gid ));
-                    // }
+            //         // if (zone_sie( 1, zone_gid ) <= 0.0){
+            //         //     printf("NEGATIVE INTERNAL ENERGY AFTER INTERPOLATION %f \n", zone_sie( 1, zone_gid ));
+            //         // }
                    
-                }// gauss_lid
-            });// for_all
+            //     }// gauss_lid
+            // });// for_all
 
             // update the position
             //printf("Updating position at stage %lu in cycle %lu \n", rk_stage, cycle);
             update_position_rdh(rk_stage, dt, mesh, node_coords, node_vel);   
             //printf("Position updated \n");
 
-            FOR_ALL(elem_gid, 0, mesh.num_elems,{
-                for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-                    int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-                    int lobatto_lid = ref_elem.dof_lobatto_map(node_lid);
+            // FOR_ALL(elem_gid, 0, mesh.num_elems,{
+            //     for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+            //         int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+            //         int lobatto_lid = ref_elem.dof_lobatto_map(node_lid);
                     
-                    for (int dim = 0; dim < mesh.num_dims; dim++){
-                        double interp = 0.0;
-                        for (int dof_id = 0; dof_id < mesh.num_nodes_in_elem; dof_id++){
-                            int dof_gid = mesh.nodes_in_elem(elem_gid, dof_id);
-                            // interp += ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
-                            //                                  *node_coords(1, dof_gid, dim);
-                            Kokkos::atomic_add(&interp, ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
-                                                             *node_coords(1, dof_gid, dim));
-                        }// dim
-                        node_coords(1, node_gid, dim) = interp;
-                    }// node_lid
-                }// gauss_lid
-            });// for_all
+            //         for (int dim = 0; dim < mesh.num_dims; dim++){
+            //             double interp = 0.0;
+            //             for (int dof_id = 0; dof_id < mesh.num_nodes_in_elem; dof_id++){
+            //                 int dof_gid = mesh.nodes_in_elem(elem_gid, dof_id);
+            //                 // interp += ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
+            //                 //                                  *node_coords(1, dof_gid, dim);
+            //                 Kokkos::atomic_add(&interp, ref_elem.gauss_lob_basis(lobatto_lid, dof_id)
+            //                                                  *node_coords(1, dof_gid, dim));
+            //             }// dim
+            //             node_coords(1, node_gid, dim) = interp;
+            //         }// node_lid
+            //     }// gauss_lid
+            // });// for_all
 
             FOR_ALL(elem_gid, 0, mesh.num_elems,{
                 for (int gauss_lid = 0; gauss_lid < mesh.num_leg_gauss_in_elem; gauss_lid++){

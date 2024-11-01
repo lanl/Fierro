@@ -55,7 +55,9 @@ struct fe_ref_elem_t{
     CArrayKokkos <double> gauss_lob_grad_basis;
     CArrayKokkos <double> gauss_leg_grad_basis;
    
-    // Gauss and DOF positions 
+    // Gauss and DOF positions
+    CArrayKokkos <double> equi_nodes_1D;
+    CArrayKokkos <double> dual_equi_nodes_1D; 
     CArrayKokkos <double> lob_nodes_1D;
     CArrayKokkos <double> dual_lob_nodes_1D;
     CArrayKokkos <double> leg_nodes_1D;
@@ -179,10 +181,21 @@ struct fe_ref_elem_t{
 
 
         // --- build gauss nodal positions and weights ---
-            
+        equi_nodes_1D = CArrayKokkos <double> (num_dofs_1d, "equi-spaced nodes");
+
+        dual_equi_nodes_1D = CArrayKokkos <double> (num_dofs_1d-1, "dual equi-spaced nodes");
+
         lob_nodes_1D = CArrayKokkos <double> (num_gauss_lob_1d,"lob_nodes_1d");
 
         dual_lob_nodes_1D = CArrayKokkos <double> (num_dual_gauss_lob_1d,"dual_lob_nodes_1d");
+
+        RUN_CLASS({
+            equispaced_nodes_1D( equi_nodes_1D, num_dofs_1d);
+        });
+
+        RUN_CLASS({
+            equispaced_nodes_1D( dual_equi_nodes_1D, num_dofs_1d-1);
+        });
         
         RUN_CLASS({
             lobatto_nodes_1D( lob_nodes_1D, num_gauss_lob_1d);
@@ -304,38 +317,64 @@ struct fe_ref_elem_t{
 
 
             // Saving vertex positions in 1D
-            if( p_order == 0){
-                // dofs same as lobatto quadrature points 
-                FOR_ALL_CLASS(i,  0, num_gauss_lob_1d,{
-                    dof_positions_1d(i) = lob_nodes_1D(i);
-                    elem_dof_positions_1d(i) = dual_lob_nodes_1D(i);
-                });
-            }
+            // if( p_order == 0){
+            //     // dofs same as lobatto quadrature points 
+            //     FOR_ALL_CLASS(i,  0, num_gauss_lob_1d,{
+            //         dof_positions_1d(i) = lob_nodes_1D(i);
+            //         elem_dof_positions_1d(i) = dual_lob_nodes_1D(i);
+            //     });
+            // }
 
-            else{   
+            // else{   
 
-                RUN_CLASS({
-                    int dof_id = 0;
+            //     RUN_CLASS({
+            //         int dof_id = 0;
                     
-                    for(int i = 0; i < num_gauss_lob_1d; i=i+2){
+            //         for(int i = 0; i < num_gauss_lob_1d; i=i+2){
 
-                        dof_positions_1d(dof_id) = lob_nodes_1D(i);
+            //             dof_positions_1d(dof_id) = lob_nodes_1D(i);
 
-                        dof_id++;
-                    }
-                });  
+            //             dof_id++;
+            //         }
+            //     });  
 
-                RUN_CLASS({
-                    int dof_id = 0;
+            //     RUN_CLASS({
+            //         int dof_id = 0;
                     
-                    for(int i = 0; i < num_dual_gauss_lob_1d; i=i+2){
+            //         for(int i = 0; i < num_dual_gauss_lob_1d; i=i+2){
 
-                        elem_dof_positions_1d(dof_id) = dual_lob_nodes_1D(i);
+            //             elem_dof_positions_1d(dof_id) = dual_lob_nodes_1D(i);
 
-                        dof_id++;
-                    }
-                });  
-            }
+            //             dof_id++;
+            //         }
+            //     });  
+            // }
+            // Kokkos::fence();
+
+
+
+            RUN_CLASS({
+                int dof_id = 0;
+                
+                for(int i = 0; i < num_dofs_1d; i++){
+
+                    dof_positions_1d(dof_id) = equi_nodes_1D(i);
+
+                    dof_id++;
+                }
+            });  
+
+            RUN_CLASS({
+                int dof_id = 0;
+                
+                for(int i = 0; i < num_dofs_1d-1; i++){
+
+                    elem_dof_positions_1d(dof_id) = dual_equi_nodes_1D(i);
+
+                    dof_id++;
+                }
+            });  
+        
             Kokkos::fence();
 
             FOR_ALL_CLASS( num_k, 0, num_dofs_1d, 
@@ -579,6 +618,54 @@ struct fe_ref_elem_t{
         }// end 3d scope    
 
     } // end of member function
+
+KOKKOS_FUNCTION
+void equispaced_nodes_1D (const CArrayKokkos <double> &equi_nodes_1D,
+                      const int &num) const{
+    if (num == 1){
+        equi_nodes_1D(0) = 0.0;
+    }
+    if (num == 2){
+        equi_nodes_1D(0) = -1.0;
+        equi_nodes_1D(1) =  1.0;
+    }
+    if (num == 3){
+        equi_nodes_1D(0) = -1.0;
+        equi_nodes_1D(1) =  0.0;
+        equi_nodes_1D(2) =  1.0;
+    }
+    if (num == 4){
+        equi_nodes_1D(0) = -1.0;
+        equi_nodes_1D(1) = -0.33333333333333;
+        equi_nodes_1D(2) =  0.33333333333333;
+        equi_nodes_1D(3) =  1.0;
+    }
+    if (num == 5){
+        equi_nodes_1D(0) = -1.0;
+        equi_nodes_1D(1) = -0.25;
+        equi_nodes_1D(2) =  0.0;
+        equi_nodes_1D(3) =  0.25;
+        equi_nodes_1D(4) =  1.0;
+    }
+    if (num == 6){
+        equi_nodes_1D(0) = -1.0;
+        equi_nodes_1D(1) = -0.6;
+        equi_nodes_1D(2) = -0.2;
+        equi_nodes_1D(3) =  0.2;
+        equi_nodes_1D(4) =  0.6;
+        equi_nodes_1D(5) =  1.0;
+        
+    }
+    if (num == 7){
+        equi_nodes_1D(0) = -1.0;
+        equi_nodes_1D(1) = -2.0/3.0;
+        equi_nodes_1D(2) = -1.0/3.0;
+        equi_nodes_1D(3) =  0.0;
+        equi_nodes_1D(4) =  1.0/3.0;
+        equi_nodes_1D(5) =  2.0/3.0;
+        equi_nodes_1D(6) =  1.0;
+    }
+} // end equispaced_nodes_1D
 
 KOKKOS_FUNCTION
 void lobatto_nodes_1D ( const CArrayKokkos <double> &lob_nodes_1D,
@@ -2078,9 +2165,11 @@ void lagrange_basis_1D(
                 
                 }//end if
                 
-                interpolant = numerator/denominator; // storing a single value for interpolation for node vert_i
+                // interpolant = numerator/denominator; // storing a single value for interpolation for node vert_i
                 
             } // end looping over nodes != vert_i
+
+            interpolant = numerator/denominator;
 
             // writing value to vectors for later use
             interp(vert_i)   = interpolant;           // Interpolant value at given point
@@ -2113,10 +2202,11 @@ void lagrange_elem_basis_1D(
                 
                 }//end if
                 
-                interpolant = numerator/denominator; // storing a single value for interpolation for node vert_i
+                // interpolant = numerator/denominator; // storing a single value for interpolation for node vert_i
                 
             } // end looping over nodes != vert_i
 
+            interpolant = numerator/denominator;
             // writing value to vectors for later use
             interp(vert_i)   = interpolant;           // Interpolant value at given point
 
@@ -2159,9 +2249,11 @@ void lagrange_derivative_1D(
                 
                 }//end if
                 
-                gradient = (num_gradient/denominator); // storing the derivative of the interpolating function
+                // gradient = (num_gradient/denominator); // storing the derivative of the interpolating function
             
             } // end looping over nodes != vert_i
+
+            gradient = (num_gradient/denominator);
 
             // writing value to vectors for later use
             derivative(vert_i)  = gradient;    // derivative of each function
