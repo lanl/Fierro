@@ -266,14 +266,13 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
                     // Sum over the basis functions and vertices where they are defined
                     for(int node_lid = 0; node_lid < ref_elem.num_basis; node_lid++){
                         
-                        size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                        int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
                         //printf(" legendre grad basis =  : %f \n", ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j));
                         //printf(" node_coords at node %d and dim %d is %f \n", node_gid, dim_i, node_coords(1, node_gid , dim_i));
 
-                        // gauss_legendre_jacobian(gauss_gid, dim_i, dim_j) += ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j) 
-                        //                                                     * node_coords(1, node_gid , dim_i);
-                        Kokkos::atomic_add(&gauss_legendre_jacobian(gauss_gid, dim_i, dim_j), ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j) 
-                                                                            * node_coords(1, node_gid , dim_i) );
+                        gauss_legendre_jacobian(gauss_gid, dim_i, dim_j) += ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j) 
+                                                                            * node_coords(1, node_gid , dim_i);
+                        
 
                     }// end loop node_id
                 } // end dim_j
