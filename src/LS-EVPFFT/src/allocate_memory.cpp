@@ -45,6 +45,7 @@ void EVPFFT::allocate_memory()
   idsim = MatrixTypeIntHost (6);
   iscau = MatrixTypeIntHost (6);
   defgradinvavgc_inv = MatrixTypeRealHost (3,3);
+  defgradavg = MatrixTypeRealHost (3,3);
 
   dnca = MatrixTypeRealDual (3,NSYSMX,NPHMX);
   dbca = MatrixTypeRealDual (3,NSYSMX,NPHMX);

@@ -410,6 +410,13 @@ void EVPFFT::init_defgrad() {
     detF(i,j,k) = 1.0;
 
     wgtc(i,j,k) = wgt;
+
+    for (int jj = 1; jj <= 3; jj++) {
+      for (int ii = 1; ii <= 3; ii++) {
+        defgradavg(jj,ii) = 0.0;
+      }
+      defgradavg(jj,jj) = delt(jj);
+    } 
   }); // end FOR_ALL_CLASS
 
   FOR_ALL_CLASS(k, 1, npts3+2,
@@ -549,13 +556,14 @@ void EVPFFT::evolve()
         harden(imicro);
       }
 
-      // calc_c0();
+      //calc_c0();
       deinit_c0_s0();
 
 #ifndef ABSOLUTE_NO_OUTPUT
       write_macro_state();
       if (iwfields == 1 and imicro % iwstep == 0) {
-        write_micro_state();
+        //write_micro_state_xdmf();
+        write_micro_state_pvtu();
       }
       if (iwtex == 1 and imicro == nsteps) {
         write_texture();

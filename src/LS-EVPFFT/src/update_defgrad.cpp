@@ -12,7 +12,7 @@ void EVPFFT::update_defgrad()
 {
   Profiler profiler(__FUNCTION__);
 
-  const size_t n = 1 + 9 + 9; // for detFavg (1), defgradinvavgc (9), and velgradavg (9)
+  const size_t n = 1 + 9 + 9 + 9; // for detFavg (1), defgradinvavgc (9), velgradavg (9), and defgradavg (9)
   ArrayType <real_t, n> all_reduce;
 
   real_t detFavg;
@@ -79,7 +79,8 @@ void EVPFFT::update_defgrad()
     determinant33(defgradnew.pointer(), detFtmp);
 
     if (detFtmp < 0.0) {
-      printf(" -> WARNING: detF = %E24.14E in voxel %d %d %d", detFtmp, i, j, k);
+      printf(" -> WARNING: detF = %E24.14E in voxel %d %d %d\n", detFtmp, i, j, k);
+      printf("elem = %d\n",elem_id);
     }
 
     detF(i,j,k) = detFtmp;
@@ -147,6 +148,12 @@ void EVPFFT::update_defgrad()
       }
     }
 
+    for (int ii = 1; ii <= 3; ii++) {
+      for (int jj = 1; jj <= 3; jj++) {
+        ic = ic + 1;
+        loc_reduce.array[ic] += defgrad(ii,jj,i,j,k) * wgt;
+      }
+    }
   }, all_reduce);
   Kokkos::fence(); // needed to prevent race condition
 
@@ -173,10 +180,16 @@ void EVPFFT::update_defgrad()
     }
   }
 
-  invert_matrix <3> (defgradinvavgc.pointer());
   for (int ii = 1; ii <= 3; ii++) {
     for (int jj = 1; jj <= 3; jj++) {
       ic = ic + 1;
+      defgradavg(ii,jj) = all_reduce.array[ic];
+    }
+  }
+
+  invert_matrix <3> (defgradinvavgc.pointer());
+  for (int ii = 1; ii <= 3; ii++) {
+    for (int jj = 1; jj <= 3; jj++) {
       defgradinvavgc_inv(ii,jj) = defgradinvavgc(ii,jj);
     }
   }
