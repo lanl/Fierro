@@ -149,6 +149,15 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
 
 void EVPFFT::init_after_reading_input_data()
 {
+
+#ifndef ABSOLUTE_NO_OUTPUT
+    if (iwfields == 1) {
+      int imicro = 0;
+      //write_micro_state_xdmf();
+      write_micro_state_pvtu();
+    }
+#endif
+
     init_xk_gb();
     init_disgradmacro_velgradmacro();
     init_ept();
