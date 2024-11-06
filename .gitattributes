@@ -20,3 +20,4 @@ src/Mesh-Builder/examples/** linguist-documentation
 src/Parallel-Solvers/Implicit-Lagrange/Mesh_Examples/** linguist-documentation
 src/Parallel-Solvers/Implicit-Lagrange/MueLu_XML_Examples/** linguist-documentation
 src/Parallel-Solvers/Parallel-Explicit/Example_Yaml_Scripts/** linguist-documentation
+src/LS-EVPFFT-J2/example_lattice_run/** linguist-documentation
