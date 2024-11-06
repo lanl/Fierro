@@ -415,7 +415,8 @@ void EVPFFT::evolve()
 #ifndef ABSOLUTE_NO_OUTPUT
       write_macro_state();
       if (iwfields == 1 and imicro % iwstep == 0) {
-        write_micro_state();
+        //write_micro_state_xdmf();
+        write_micro_state_pvtu();
       }
       if (iwtex == 1 and imicro == nsteps) {
         write_texture();
