@@ -11,6 +11,7 @@ def Bulk_Forming_WInput(self):
                            '   1.   1.   1.   crystal axis (cdim(i))\n' \
                            '   0              nmodesx (total # of modes listed in the file)\n' \
                            '   0              nmodes (# of modes to be used in the calculation)'
+        modes = ''
     elif "FCC" in self.TMaterials_2.item(0,23).text():
         plasticity_input = 'SLIP SYSTEMS FOR CUBIC CRYSTAL\n' \
                            'CUBIC             icryst\n' \

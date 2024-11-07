@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>1326</width>
-    <height>1103</height>
+    <height>1144</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -352,7 +352,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>8</number>
+          <number>4</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -3633,12 +3633,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
             </widget>
            </item>
            <item>
-            <widget class="QTabWidget" name="tabWidget_3">
+            <widget class="QTabWidget" name="DefineAssignMats">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
+             </property>
+             <property name="autoFillBackground">
+              <bool>false</bool>
              </property>
              <property name="currentIndex">
               <number>0</number>
@@ -3661,6 +3664,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <string>Define Materials</string>
               </attribute>
               <layout class="QVBoxLayout" name="verticalLayout_49">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
                <item>
                 <widget class="QComboBox" name="INSelectDefineMaterials">
                  <item>
@@ -4125,6 +4137,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </widget>
                  <widget class="QWidget" name="DefineMaterialsEVPFFT">
                   <layout class="QVBoxLayout" name="verticalLayout_51">
+                   <property name="leftMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>0</number>
+                   </property>
                    <item>
                     <widget class="QFrame" name="MaterialInputs">
                      <property name="frameShape">
@@ -5253,8 +5271,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    </item>
                   </layout>
                  </widget>
-                 <widget class="QWidget" name="page_10">
+                 <widget class="QWidget" name="DefineMaterialsBulkForm">
                   <layout class="QVBoxLayout" name="verticalLayout_30">
+                   <property name="leftMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>0</number>
+                   </property>
                    <item>
                     <widget class="QFrame" name="MaterialInputs_2">
                      <property name="frameShape">
@@ -5273,23 +5300,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <property name="bottomMargin">
                        <number>0</number>
                       </property>
-                      <item row="0" column="0">
-                       <widget class="QLabel" name="LMaterialName_3">
-                        <property name="text">
-                         <string>Name:</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item row="0" column="1">
-                       <widget class="QLineEdit" name="INMaterialName_2">
-                        <property name="minimumSize">
-                         <size>
-                          <width>93</width>
-                          <height>0</height>
-                         </size>
-                        </property>
-                       </widget>
-                      </item>
                       <item row="0" column="2">
                        <widget class="QFrame" name="frame_46">
                         <property name="frameShape">
@@ -5309,6 +5319,44 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           <number>0</number>
                          </property>
                         </layout>
+                       </widget>
+                      </item>
+                      <item row="0" column="0" alignment="Qt::AlignRight">
+                       <widget class="QLabel" name="LMaterialName_3">
+                        <property name="text">
+                         <string>Name:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QLineEdit" name="INMaterialName_2">
+                        <property name="minimumSize">
+                         <size>
+                          <width>93</width>
+                          <height>0</height>
+                         </size>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="LMaterialDefinition">
+                        <property name="text">
+                         <string>Material Definition:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QComboBox" name="INMaterialDefinition">
+                        <item>
+                         <property name="text">
+                          <string>Custom</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Single Crystal Copper</string>
+                         </property>
+                        </item>
                        </widget>
                       </item>
                       <item row="0" column="3">
@@ -5341,7 +5389,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <bool>true</bool>
                      </property>
                      <property name="currentIndex">
-                      <number>1</number>
+                      <number>0</number>
                      </property>
                      <widget class="QWidget" name="Elastic_2">
                       <attribute name="icon">
@@ -5362,9 +5410,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                         <number>6</number>
                        </property>
                        <property name="bottomMargin">
-                        <number>0</number>
+                        <number>20</number>
                        </property>
-                       <item>
+                       <item alignment="Qt::AlignHCenter">
                         <widget class="QFrame" name="frame_25">
                          <property name="frameShape">
                           <enum>QFrame::NoFrame</enum>
@@ -5439,7 +5487,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                </item>
                                <item>
                                 <property name="text">
-                                 <string>Transversely Isotropic</string>
+                                 <string>Transversley Isotropic</string>
                                 </property>
                                </item>
                                <item>
@@ -5463,7 +5511,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item>
                         <widget class="QStackedWidget" name="MaterialTypeTool_2">
                          <property name="currentIndex">
-                          <number>2</number>
+                          <number>0</number>
                          </property>
                          <widget class="QWidget" name="Isotropic_2">
                           <property name="enabled">
@@ -5473,6 +5521,23 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <property name="bottomMargin">
                             <number>12</number>
                            </property>
+                           <item row="0" column="0">
+                            <widget class="QLabel" name="LYoungsModulus_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="1">
+                            <widget class="QLineEdit" name="INYoungsModulus_2"/>
+                           </item>
+                           <item row="0" column="2">
+                            <widget class="QLabel" name="UPressure1_2">
+                             <property name="text">
+                              <string>[Pa]</string>
+                             </property>
+                            </widget>
+                           </item>
                            <item row="1" column="0">
                             <widget class="QLabel" name="LPoissonsRatio_2">
                              <property name="text">
@@ -5482,9 +5547,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            </item>
                            <item row="1" column="1">
                             <widget class="QLineEdit" name="INPoissonsRatio_2"/>
-                           </item>
-                           <item row="0" column="1">
-                            <widget class="QLineEdit" name="INYoungsModulus_2"/>
                            </item>
                            <item row="2" column="1">
                             <spacer name="verticalSpacer_25">
@@ -5498,20 +5560,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               </size>
                              </property>
                             </spacer>
-                           </item>
-                           <item row="0" column="2">
-                            <widget class="QLabel" name="UPressure1_2">
-                             <property name="text">
-                              <string>[Pa]</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="0">
-                            <widget class="QLabel" name="LYoungsModulus_2">
-                             <property name="text">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                            </widget>
                            </item>
                           </layout>
                          </widget>
@@ -6094,6 +6142,19 @@ li.checked::marker { content: &quot;\2612&quot;; }
                              </item>
                             </widget>
                            </item>
+                           <item>
+                            <spacer name="verticalSpacer_32">
+                             <property name="orientation">
+                              <enum>Qt::Vertical</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                              <size>
+                               <width>20</width>
+                               <height>40</height>
+                              </size>
+                             </property>
+                            </spacer>
+                           </item>
                           </layout>
                          </widget>
                          <widget class="QWidget" name="Orthotropic_2">
@@ -6116,49 +6177,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <property name="verticalSpacing">
                             <number>0</number>
                            </property>
-                           <item row="3" column="2">
-                            <widget class="QLineEdit" name="INGxy_2"/>
-                           </item>
-                           <item row="3" column="1">
-                            <widget class="QLabel" name="LGxy_2">
-                             <property name="text">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;xy&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="7">
-                            <widget class="QLabel" name="UPressure5_2">
-                             <property name="text">
-                              <string>[Pa]</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="1">
-                            <widget class="QLabel" name="LEx_2">
-                             <property name="text">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;x&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="2" column="4">
-                            <widget class="QLineEdit" name="INNUxz_2"/>
-                           </item>
-                           <item row="2" column="1">
-                            <widget class="QLabel" name="LNUxy_2">
-                             <property name="text">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;xy&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="3">
-                            <widget class="QLabel" name="LEy_2">
-                             <property name="text">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;y&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="3" column="6">
-                            <widget class="QLineEdit" name="INGyz_2"/>
+                           <item row="2" column="6">
+                            <widget class="QLineEdit" name="INNUyz_2"/>
                            </item>
                            <item row="2" column="3">
                             <widget class="QLabel" name="LNUxz_2">
@@ -6167,41 +6187,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                              </property>
                             </widget>
                            </item>
-                           <item row="0" column="4">
-                            <widget class="QLineEdit" name="INEy_2"/>
-                           </item>
                            <item row="3" column="5">
                             <widget class="QLabel" name="LGyz_2">
                              <property name="text">
                               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;yz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                              </property>
                             </widget>
-                           </item>
-                           <item row="0" column="6">
-                            <widget class="QLineEdit" name="INEz_2"/>
-                           </item>
-                           <item row="2" column="6">
-                            <widget class="QLineEdit" name="INNUyz_2"/>
-                           </item>
-                           <item row="3" column="4">
-                            <widget class="QLineEdit" name="INGxz_2"/>
-                           </item>
-                           <item row="2" column="5">
-                            <widget class="QLabel" name="LNUyz_2">
-                             <property name="text">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;yz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="5">
-                            <widget class="QLabel" name="LEz_2">
-                             <property name="text">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;z&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="2" column="2">
-                            <widget class="QLineEdit" name="INNUxy_2"/>
                            </item>
                            <item row="0" column="2">
                             <widget class="QLineEdit" name="INEx_2"/>
@@ -6213,12 +6204,95 @@ li.checked::marker { content: &quot;\2612&quot;; }
                              </property>
                             </widget>
                            </item>
+                           <item row="3" column="1">
+                            <widget class="QLabel" name="LGxy_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;G&lt;span style=&quot; vertical-align:sub;&quot;&gt;xy&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="3" column="6">
+                            <widget class="QLineEdit" name="INGyz_2"/>
+                           </item>
+                           <item row="2" column="5">
+                            <widget class="QLabel" name="LNUyz_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;yz&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="2" column="2">
+                            <widget class="QLineEdit" name="INNUxy_2"/>
+                           </item>
+                           <item row="2" column="4">
+                            <widget class="QLineEdit" name="INNUxz_2"/>
+                           </item>
+                           <item row="0" column="6">
+                            <widget class="QLineEdit" name="INEz_2"/>
+                           </item>
+                           <item row="0" column="4">
+                            <widget class="QLineEdit" name="INEy_2"/>
+                           </item>
+                           <item row="0" column="1">
+                            <widget class="QLabel" name="LEx_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;x&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="3" column="2">
+                            <widget class="QLineEdit" name="INGxy_2"/>
+                           </item>
+                           <item row="0" column="7">
+                            <widget class="QLabel" name="UPressure5_2">
+                             <property name="text">
+                              <string>[Pa]</string>
+                             </property>
+                            </widget>
+                           </item>
                            <item row="3" column="7">
                             <widget class="QLabel" name="UPressure6_2">
                              <property name="text">
                               <string>[Pa]</string>
                              </property>
                             </widget>
+                           </item>
+                           <item row="3" column="4">
+                            <widget class="QLineEdit" name="INGxz_2"/>
+                           </item>
+                           <item row="0" column="3">
+                            <widget class="QLabel" name="LEy_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;y&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="2" column="1">
+                            <widget class="QLabel" name="LNUxy_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;nu&lt;span style=&quot; vertical-align:sub;&quot;&gt;xy&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="0" column="5">
+                            <widget class="QLabel" name="LEz_2">
+                             <property name="text">
+                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;E&lt;span style=&quot; vertical-align:sub;&quot;&gt;z&lt;/span&gt;: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item row="4" column="4">
+                            <spacer name="verticalSpacer_33">
+                             <property name="orientation">
+                              <enum>Qt::Vertical</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                              <size>
+                               <width>20</width>
+                               <height>40</height>
+                              </size>
+                             </property>
+                            </spacer>
                            </item>
                           </layout>
                          </widget>
@@ -6227,7 +6301,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        </item>
                       </layout>
                      </widget>
-                     <widget class="QWidget" name="tab_2">
+                     <widget class="QWidget" name="Plastic">
+                      <property name="styleSheet">
+                       <string notr="true"/>
+                      </property>
                       <attribute name="icon">
                        <iconset resource="Icons/IconResourceFile.qrc">
                         <normaloff>:/Blue Icons/Blue Icons/Plastic.svg</normaloff>:/Blue Icons/Blue Icons/Plastic.svg</iconset>
@@ -6236,49 +6313,997 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <string>Plastic</string>
                       </attribute>
                       <layout class="QVBoxLayout" name="verticalLayout_26">
-                       <item alignment="Qt::AlignHCenter|Qt::AlignTop">
-                        <widget class="QFrame" name="frame_50">
+                       <property name="spacing">
+                        <number>5</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>6</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>0</number>
+                       </property>
+                       <item>
+                        <widget class="QStackedWidget" name="PlasticParameters">
+                         <property name="styleSheet">
+                          <string notr="true"/>
+                         </property>
                          <property name="frameShape">
                           <enum>QFrame::NoFrame</enum>
                          </property>
-                         <property name="frameShadow">
-                          <enum>QFrame::Raised</enum>
+                         <property name="lineWidth">
+                          <number>0</number>
                          </property>
-                         <layout class="QHBoxLayout" name="horizontalLayout_6">
-                          <property name="leftMargin">
-                           <number>0</number>
+                         <property name="currentIndex">
+                          <number>0</number>
+                         </property>
+                         <widget class="QWidget" name="CrystalStructure">
+                          <property name="styleSheet">
+                           <string notr="true"/>
                           </property>
-                          <property name="topMargin">
-                           <number>0</number>
-                          </property>
-                          <property name="rightMargin">
-                           <number>0</number>
-                          </property>
-                          <property name="bottomMargin">
-                           <number>0</number>
-                          </property>
-                          <item>
-                           <widget class="QLabel" name="LPlasticity">
-                            <property name="text">
-                             <string>Plasticity:</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QComboBox" name="INPlasticity">
-                            <item>
-                             <property name="text">
-                              <string>None</string>
+                          <layout class="QVBoxLayout" name="verticalLayout_42">
+                           <property name="spacing">
+                            <number>5</number>
+                           </property>
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
+                           <item>
+                            <widget class="QTabWidget" name="PlasticProperties">
+                             <property name="currentIndex">
+                              <number>2</number>
                              </property>
-                            </item>
-                            <item>
-                             <property name="text">
-                              <string>FCC</string>
+                             <property name="movable">
+                              <bool>false</bool>
                              </property>
-                            </item>
-                           </widget>
-                          </item>
-                         </layout>
+                             <property name="tabBarAutoHide">
+                              <bool>false</bool>
+                             </property>
+                             <widget class="QWidget" name="CrystalAxis">
+                              <property name="styleSheet">
+                               <string notr="true"/>
+                              </property>
+                              <attribute name="title">
+                               <string>Crystal Axis</string>
+                              </attribute>
+                              <layout class="QVBoxLayout" name="verticalLayout_65">
+                               <item alignment="Qt::AlignTop">
+                                <widget class="QFrame" name="frame_58">
+                                 <property name="frameShape">
+                                  <enum>QFrame::NoFrame</enum>
+                                 </property>
+                                 <property name="frameShadow">
+                                  <enum>QFrame::Raised</enum>
+                                 </property>
+                                 <layout class="QGridLayout" name="gridLayout_33">
+                                  <property name="leftMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="topMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="rightMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="bottomMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <item row="0" column="5">
+                                   <widget class="QLabel" name="Lc">
+                                    <property name="text">
+                                     <string>c</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="0" column="0">
+                                   <widget class="QLabel" name="La">
+                                    <property name="text">
+                                     <string>a</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="0" column="2">
+                                   <widget class="QLabel" name="Lb">
+                                    <property name="text">
+                                     <string>b</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="0" column="6">
+                                   <widget class="QLineEdit" name="INc"/>
+                                  </item>
+                                  <item row="0" column="3">
+                                   <widget class="QLineEdit" name="INb"/>
+                                  </item>
+                                  <item row="0" column="1">
+                                   <widget class="QLineEdit" name="INa"/>
+                                  </item>
+                                  <item row="0" column="7">
+                                   <widget class="QPushButton" name="pushButton_13">
+                                    <property name="enabled">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="sizePolicy">
+                                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                      <horstretch>0</horstretch>
+                                      <verstretch>0</verstretch>
+                                     </sizepolicy>
+                                    </property>
+                                    <property name="maximumSize">
+                                     <size>
+                                      <width>17</width>
+                                      <height>17</height>
+                                     </size>
+                                    </property>
+                                    <property name="font">
+                                     <font>
+                                      <pointsize>18</pointsize>
+                                     </font>
+                                    </property>
+                                    <property name="toolTip">
+                                     <string>Lattice parameters or unit cell dimensions of a crystal structure</string>
+                                    </property>
+                                    <property name="text">
+                                     <string/>
+                                    </property>
+                                    <property name="icon">
+                                     <iconset resource="Icons/IconResourceFile.qrc">
+                                      <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                                    </property>
+                                    <property name="iconSize">
+                                     <size>
+                                      <width>20</width>
+                                      <height>20</height>
+                                     </size>
+                                    </property>
+                                    <property name="autoDefault">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="default">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="flat">
+                                     <bool>true</bool>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                 </layout>
+                                </widget>
+                               </item>
+                              </layout>
+                             </widget>
+                             <widget class="QWidget" name="SlipSystems">
+                              <attribute name="title">
+                               <string>Slip Systems</string>
+                              </attribute>
+                              <layout class="QVBoxLayout" name="verticalLayout_66">
+                               <property name="spacing">
+                                <number>0</number>
+                               </property>
+                               <property name="leftMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="rightMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="bottomMargin">
+                                <number>0</number>
+                               </property>
+                               <item>
+                                <widget class="QTreeWidget" name="TSlipSystems">
+                                 <column>
+                                  <property name="text">
+                                   <string/>
+                                  </property>
+                                 </column>
+                                 <item>
+                                  <property name="text">
+                                   <string>FCC</string>
+                                  </property>
+                                  <item>
+                                   <property name="text">
+                                    <string>{111}&lt;110&gt;</string>
+                                   </property>
+                                  </item>
+                                 </item>
+                                 <item>
+                                  <property name="text">
+                                   <string>BCC</string>
+                                  </property>
+                                  <item>
+                                   <property name="text">
+                                    <string>Test1</string>
+                                   </property>
+                                  </item>
+                                  <item>
+                                   <property name="text">
+                                    <string>Test2</string>
+                                   </property>
+                                  </item>
+                                 </item>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QFrame" name="frame_56">
+                                 <property name="frameShape">
+                                  <enum>QFrame::NoFrame</enum>
+                                 </property>
+                                 <property name="frameShadow">
+                                  <enum>QFrame::Raised</enum>
+                                 </property>
+                                 <layout class="QHBoxLayout" name="horizontalLayout_7">
+                                  <property name="leftMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="topMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="rightMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="bottomMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <item>
+                                   <widget class="QPushButton" name="BAddSlipSystem">
+                                    <property name="text">
+                                     <string>Add</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                 </layout>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QListWidget" name="INSlipSystems">
+                                 <property name="sizePolicy">
+                                  <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                                   <horstretch>0</horstretch>
+                                   <verstretch>0</verstretch>
+                                  </sizepolicy>
+                                 </property>
+                                 <property name="autoFillBackground">
+                                  <bool>false</bool>
+                                 </property>
+                                 <property name="styleSheet">
+                                  <string notr="true">background-color: rgb(194, 194, 194)</string>
+                                 </property>
+                                 <property name="sizeAdjustPolicy">
+                                  <enum>QAbstractScrollArea::AdjustToContentsOnFirstShow</enum>
+                                 </property>
+                                 <property name="selectionMode">
+                                  <enum>QAbstractItemView::MultiSelection</enum>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QPushButton" name="BRemoveSlipSystem">
+                                 <property name="text">
+                                  <string>Remove</string>
+                                 </property>
+                                </widget>
+                               </item>
+                              </layout>
+                             </widget>
+                             <widget class="QWidget" name="VoceParameters">
+                              <attribute name="title">
+                               <string>Voce Parameters</string>
+                              </attribute>
+                              <layout class="QVBoxLayout" name="verticalLayout_67">
+                               <property name="spacing">
+                                <number>-1</number>
+                               </property>
+                               <property name="leftMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="rightMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="bottomMargin">
+                                <number>0</number>
+                               </property>
+                               <item>
+                                <widget class="QTableWidget" name="TSlipSystemParameters">
+                                 <property name="sizePolicy">
+                                  <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                                   <horstretch>0</horstretch>
+                                   <verstretch>0</verstretch>
+                                  </sizepolicy>
+                                 </property>
+                                 <property name="sizeAdjustPolicy">
+                                  <enum>QAbstractScrollArea::AdjustToContentsOnFirstShow</enum>
+                                 </property>
+                                 <column>
+                                  <property name="text">
+                                   <string>Slip System</string>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>nrsx</string>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>gamd0x</string>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>tau0xf</string>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>tau0xb</string>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>tau1x</string>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>thet0</string>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>thet1</string>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>hselfx</string>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>hlatex</string>
+                                  </property>
+                                 </column>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QFrame" name="frame_57">
+                                 <property name="frameShape">
+                                  <enum>QFrame::NoFrame</enum>
+                                 </property>
+                                 <property name="frameShadow">
+                                  <enum>QFrame::Raised</enum>
+                                 </property>
+                                 <layout class="QVBoxLayout" name="verticalLayout_64">
+                                  <property name="spacing">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="leftMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="topMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="rightMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="bottomMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <item alignment="Qt::AlignHCenter">
+                                   <widget class="QFrame" name="frame_62">
+                                    <property name="frameShape">
+                                     <enum>QFrame::NoFrame</enum>
+                                    </property>
+                                    <property name="frameShadow">
+                                     <enum>QFrame::Raised</enum>
+                                    </property>
+                                    <layout class="QGridLayout" name="gridLayout_32">
+                                     <property name="leftMargin">
+                                      <number>0</number>
+                                     </property>
+                                     <property name="topMargin">
+                                      <number>0</number>
+                                     </property>
+                                     <property name="rightMargin">
+                                      <number>0</number>
+                                     </property>
+                                     <property name="bottomMargin">
+                                      <number>0</number>
+                                     </property>
+                                     <item row="0" column="0">
+                                      <widget class="QLabel" name="LSelectSlipSystem">
+                                       <property name="text">
+                                        <string>Slip System:</string>
+                                       </property>
+                                      </widget>
+                                     </item>
+                                     <item row="0" column="1">
+                                      <widget class="QComboBox" name="INSelectSlipSystem"/>
+                                     </item>
+                                    </layout>
+                                   </widget>
+                                  </item>
+                                 </layout>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QFrame" name="frame_55">
+                                 <property name="frameShape">
+                                  <enum>QFrame::NoFrame</enum>
+                                 </property>
+                                 <property name="frameShadow">
+                                  <enum>QFrame::Raised</enum>
+                                 </property>
+                                 <layout class="QGridLayout" name="gridLayout_29">
+                                  <property name="leftMargin">
+                                   <number>12</number>
+                                  </property>
+                                  <property name="topMargin">
+                                   <number>0</number>
+                                  </property>
+                                  <property name="rightMargin">
+                                   <number>12</number>
+                                  </property>
+                                  <property name="bottomMargin">
+                                   <number>10</number>
+                                  </property>
+                                  <item row="0" column="2">
+                                   <widget class="QPushButton" name="pushButton_9">
+                                    <property name="enabled">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="sizePolicy">
+                                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                      <horstretch>0</horstretch>
+                                      <verstretch>0</verstretch>
+                                     </sizepolicy>
+                                    </property>
+                                    <property name="maximumSize">
+                                     <size>
+                                      <width>17</width>
+                                      <height>17</height>
+                                     </size>
+                                    </property>
+                                    <property name="font">
+                                     <font>
+                                      <pointsize>18</pointsize>
+                                     </font>
+                                    </property>
+                                    <property name="toolTip">
+                                     <string>Rate sensitivity exponent. Relates shear rate on a slip system to the resolved shear stress.</string>
+                                    </property>
+                                    <property name="text">
+                                     <string/>
+                                    </property>
+                                    <property name="icon">
+                                     <iconset resource="Icons/IconResourceFile.qrc">
+                                      <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                                    </property>
+                                    <property name="iconSize">
+                                     <size>
+                                      <width>20</width>
+                                      <height>20</height>
+                                     </size>
+                                    </property>
+                                    <property name="autoDefault">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="default">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="flat">
+                                     <bool>true</bool>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="0" column="3">
+                                   <widget class="QLabel" name="Lgamd0x">
+                                    <property name="text">
+                                     <string>gamd0x:</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="10" column="3">
+                                   <widget class="QLabel" name="Lhlatex">
+                                    <property name="text">
+                                     <string>hlatex:</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="3" column="4">
+                                   <widget class="QLineEdit" name="INtau0xb"/>
+                                  </item>
+                                  <item row="0" column="4">
+                                   <widget class="QLineEdit" name="INgamd0x"/>
+                                  </item>
+                                  <item row="10" column="2">
+                                   <widget class="QPushButton" name="pushButton_6">
+                                    <property name="enabled">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="sizePolicy">
+                                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                      <horstretch>0</horstretch>
+                                      <verstretch>0</verstretch>
+                                     </sizepolicy>
+                                    </property>
+                                    <property name="maximumSize">
+                                     <size>
+                                      <width>17</width>
+                                      <height>17</height>
+                                     </size>
+                                    </property>
+                                    <property name="toolTip">
+                                     <string>Self-hardening coefficient. How the current slip system affects the hardening of the same system.</string>
+                                    </property>
+                                    <property name="text">
+                                     <string/>
+                                    </property>
+                                    <property name="icon">
+                                     <iconset resource="Icons/IconResourceFile.qrc">
+                                      <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                                    </property>
+                                    <property name="iconSize">
+                                     <size>
+                                      <width>20</width>
+                                      <height>20</height>
+                                     </size>
+                                    </property>
+                                    <property name="autoDefault">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="default">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="flat">
+                                     <bool>true</bool>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="3" column="3">
+                                   <widget class="QLabel" name="Ltau0xb">
+                                    <property name="text">
+                                     <string>tau0xb:</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="5" column="4">
+                                   <widget class="QLineEdit" name="INthet1"/>
+                                  </item>
+                                  <item row="3" column="0" alignment="Qt::AlignRight">
+                                   <widget class="QLabel" name="Ltau0xf">
+                                    <property name="text">
+                                     <string>tau0xf:</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="5" column="0">
+                                   <widget class="QLabel" name="Lthet0">
+                                    <property name="text">
+                                     <string>thet0:</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="10" column="0">
+                                   <widget class="QLabel" name="Lhselfx">
+                                    <property name="text">
+                                     <string>hselfx:</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="4" column="0">
+                                   <widget class="QLabel" name="Ltau1x">
+                                    <property name="text">
+                                     <string>tau1x:</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="5" column="5">
+                                   <widget class="QPushButton" name="pushButton_5">
+                                    <property name="enabled">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="sizePolicy">
+                                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                      <horstretch>0</horstretch>
+                                      <verstretch>0</verstretch>
+                                     </sizepolicy>
+                                    </property>
+                                    <property name="maximumSize">
+                                     <size>
+                                      <width>17</width>
+                                      <height>17</height>
+                                     </size>
+                                    </property>
+                                    <property name="toolTip">
+                                     <string>Asymptotic hardening rate. The rate of hardening with increasing strain.</string>
+                                    </property>
+                                    <property name="text">
+                                     <string/>
+                                    </property>
+                                    <property name="icon">
+                                     <iconset resource="Icons/IconResourceFile.qrc">
+                                      <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                                    </property>
+                                    <property name="iconSize">
+                                     <size>
+                                      <width>20</width>
+                                      <height>20</height>
+                                     </size>
+                                    </property>
+                                    <property name="autoDefault">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="default">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="flat">
+                                     <bool>true</bool>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="4" column="1">
+                                   <widget class="QLineEdit" name="INtau1x"/>
+                                  </item>
+                                  <item row="10" column="5">
+                                   <widget class="QPushButton" name="pushButton_7">
+                                    <property name="enabled">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="sizePolicy">
+                                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                      <horstretch>0</horstretch>
+                                      <verstretch>0</verstretch>
+                                     </sizepolicy>
+                                    </property>
+                                    <property name="maximumSize">
+                                     <size>
+                                      <width>17</width>
+                                      <height>17</height>
+                                     </size>
+                                    </property>
+                                    <property name="toolTip">
+                                     <string>Latent hardening coefficient. How the current slip system affects the hardening of other systems.</string>
+                                    </property>
+                                    <property name="text">
+                                     <string/>
+                                    </property>
+                                    <property name="icon">
+                                     <iconset resource="Icons/IconResourceFile.qrc">
+                                      <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                                    </property>
+                                    <property name="iconSize">
+                                     <size>
+                                      <width>20</width>
+                                      <height>20</height>
+                                     </size>
+                                    </property>
+                                    <property name="autoDefault">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="default">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="flat">
+                                     <bool>true</bool>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="0" column="5">
+                                   <widget class="QPushButton" name="pushButton_8">
+                                    <property name="enabled">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="sizePolicy">
+                                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                      <horstretch>0</horstretch>
+                                      <verstretch>0</verstretch>
+                                     </sizepolicy>
+                                    </property>
+                                    <property name="maximumSize">
+                                     <size>
+                                      <width>17</width>
+                                      <height>17</height>
+                                     </size>
+                                    </property>
+                                    <property name="font">
+                                     <font>
+                                      <pointsize>18</pointsize>
+                                     </font>
+                                    </property>
+                                    <property name="toolTip">
+                                     <string>Reference shar rate. Sets the scale for the plastic strain rates in the model.</string>
+                                    </property>
+                                    <property name="text">
+                                     <string/>
+                                    </property>
+                                    <property name="icon">
+                                     <iconset resource="Icons/IconResourceFile.qrc">
+                                      <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                                    </property>
+                                    <property name="iconSize">
+                                     <size>
+                                      <width>20</width>
+                                      <height>20</height>
+                                     </size>
+                                    </property>
+                                    <property name="autoDefault">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="default">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="flat">
+                                     <bool>true</bool>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="10" column="1">
+                                   <widget class="QLineEdit" name="INhselfx"/>
+                                  </item>
+                                  <item row="0" column="1">
+                                   <widget class="QLineEdit" name="INnrsx"/>
+                                  </item>
+                                  <item row="3" column="5">
+                                   <widget class="QPushButton" name="pushButton_2">
+                                    <property name="enabled">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="sizePolicy">
+                                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                      <horstretch>0</horstretch>
+                                      <verstretch>0</verstretch>
+                                     </sizepolicy>
+                                    </property>
+                                    <property name="maximumSize">
+                                     <size>
+                                      <width>17</width>
+                                      <height>17</height>
+                                     </size>
+                                    </property>
+                                    <property name="toolTip">
+                                     <string>Initial critical resolved shear stress for backward slip. The stress required to initiate slip on a given slip system.</string>
+                                    </property>
+                                    <property name="text">
+                                     <string/>
+                                    </property>
+                                    <property name="icon">
+                                     <iconset resource="Icons/IconResourceFile.qrc">
+                                      <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                                    </property>
+                                    <property name="iconSize">
+                                     <size>
+                                      <width>20</width>
+                                      <height>20</height>
+                                     </size>
+                                    </property>
+                                    <property name="autoDefault">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="default">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="flat">
+                                     <bool>true</bool>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="5" column="3">
+                                   <widget class="QLabel" name="Lthet1">
+                                    <property name="text">
+                                     <string>thet1:</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="5" column="1">
+                                   <widget class="QLineEdit" name="INthet0"/>
+                                  </item>
+                                  <item row="10" column="4">
+                                   <widget class="QLineEdit" name="INhlatex"/>
+                                  </item>
+                                  <item row="3" column="2">
+                                   <widget class="QPushButton" name="pushButton">
+                                    <property name="enabled">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="sizePolicy">
+                                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                      <horstretch>0</horstretch>
+                                      <verstretch>0</verstretch>
+                                     </sizepolicy>
+                                    </property>
+                                    <property name="maximumSize">
+                                     <size>
+                                      <width>17</width>
+                                      <height>17</height>
+                                     </size>
+                                    </property>
+                                    <property name="font">
+                                     <font>
+                                      <pointsize>18</pointsize>
+                                     </font>
+                                    </property>
+                                    <property name="toolTip">
+                                     <string>Initial critical resolved shear stress for forward slip. The stress required to initiate slip on a given slip system.</string>
+                                    </property>
+                                    <property name="text">
+                                     <string/>
+                                    </property>
+                                    <property name="icon">
+                                     <iconset resource="Icons/IconResourceFile.qrc">
+                                      <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                                    </property>
+                                    <property name="iconSize">
+                                     <size>
+                                      <width>20</width>
+                                      <height>20</height>
+                                     </size>
+                                    </property>
+                                    <property name="autoDefault">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="default">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="flat">
+                                     <bool>true</bool>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="4" column="2">
+                                   <widget class="QPushButton" name="pushButton_3">
+                                    <property name="enabled">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="sizePolicy">
+                                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                      <horstretch>0</horstretch>
+                                      <verstretch>0</verstretch>
+                                     </sizepolicy>
+                                    </property>
+                                    <property name="maximumSize">
+                                     <size>
+                                      <width>17</width>
+                                      <height>17</height>
+                                     </size>
+                                    </property>
+                                    <property name="toolTip">
+                                     <string>Saturation stress. The maximum value that the critical resolved shear stress can reach during hardening.</string>
+                                    </property>
+                                    <property name="text">
+                                     <string/>
+                                    </property>
+                                    <property name="icon">
+                                     <iconset resource="Icons/IconResourceFile.qrc">
+                                      <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                                    </property>
+                                    <property name="iconSize">
+                                     <size>
+                                      <width>20</width>
+                                      <height>20</height>
+                                     </size>
+                                    </property>
+                                    <property name="autoDefault">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="default">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="flat">
+                                     <bool>true</bool>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="3" column="1">
+                                   <widget class="QLineEdit" name="INtau0xf"/>
+                                  </item>
+                                  <item row="5" column="2">
+                                   <widget class="QPushButton" name="pushButton_4">
+                                    <property name="enabled">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="sizePolicy">
+                                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                      <horstretch>0</horstretch>
+                                      <verstretch>0</verstretch>
+                                     </sizepolicy>
+                                    </property>
+                                    <property name="maximumSize">
+                                     <size>
+                                      <width>17</width>
+                                      <height>17</height>
+                                     </size>
+                                    </property>
+                                    <property name="toolTip">
+                                     <string>Initial hardening rate. The hardening rate at the beginning of plastic deformation.</string>
+                                    </property>
+                                    <property name="text">
+                                     <string/>
+                                    </property>
+                                    <property name="icon">
+                                     <iconset resource="Icons/IconResourceFile.qrc">
+                                      <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                                    </property>
+                                    <property name="iconSize">
+                                     <size>
+                                      <width>20</width>
+                                      <height>20</height>
+                                     </size>
+                                    </property>
+                                    <property name="autoDefault">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="default">
+                                     <bool>false</bool>
+                                    </property>
+                                    <property name="flat">
+                                     <bool>true</bool>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                  <item row="0" column="0">
+                                   <widget class="QLabel" name="Lnrsx">
+                                    <property name="text">
+                                     <string>nrsx:</string>
+                                    </property>
+                                   </widget>
+                                  </item>
+                                 </layout>
+                                </widget>
+                               </item>
+                              </layout>
+                             </widget>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QFrame" name="frame_59">
+                             <property name="frameShape">
+                              <enum>QFrame::NoFrame</enum>
+                             </property>
+                             <property name="frameShadow">
+                              <enum>QFrame::Raised</enum>
+                             </property>
+                             <layout class="QVBoxLayout" name="verticalLayout_44">
+                              <property name="spacing">
+                               <number>0</number>
+                              </property>
+                              <property name="leftMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="topMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="rightMargin">
+                               <number>0</number>
+                              </property>
+                              <property name="bottomMargin">
+                               <number>0</number>
+                              </property>
+                             </layout>
+                            </widget>
+                           </item>
+                          </layout>
+                         </widget>
                         </widget>
                        </item>
                       </layout>
@@ -6286,10 +7311,41 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </widget>
                    </item>
                    <item>
-                    <widget class="QPushButton" name="BAddMaterial_2">
-                     <property name="text">
-                      <string>Add</string>
+                    <widget class="QFrame" name="frame_61">
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
                      </property>
+                     <property name="frameShadow">
+                      <enum>QFrame::Raised</enum>
+                     </property>
+                     <layout class="QHBoxLayout" name="horizontalLayout_9">
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>0</number>
+                      </property>
+                      <item>
+                       <widget class="QPushButton" name="BAddMaterial_2">
+                        <property name="text">
+                         <string>Add Material</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QPushButton" name="BDeleteMaterial_2">
+                        <property name="text">
+                         <string>Delete Material</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
                     </widget>
                    </item>
                    <item>
@@ -6423,41 +7479,98 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </column>
                      <column>
                       <property name="text">
-                       <string>Plasticity</string>
+                       <string>a</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>b</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>c</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>Slip Systems</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>nrsx</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>gamd0x</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>tau0xf</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>tau0xb</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>tau1x</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>thet0</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>thet1</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>hselfx</string>
+                      </property>
+                     </column>
+                     <column>
+                      <property name="text">
+                       <string>hlatex</string>
                       </property>
                      </column>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QPushButton" name="BDeleteMaterial_2">
-                     <property name="text">
-                      <string>Delete</string>
+                    <widget class="QFrame" name="frame_60">
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
                      </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QPushButton" name="BRegenElasticConstants_2">
-                     <property name="text">
-                      <string>Regenerate Elastic Constants</string>
+                     <property name="frameShadow">
+                      <enum>QFrame::Raised</enum>
                      </property>
+                     <layout class="QHBoxLayout" name="horizontalLayout_6">
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>0</number>
+                      </property>
+                     </layout>
                     </widget>
                    </item>
                   </layout>
                  </widget>
                 </widget>
-               </item>
-               <item>
-                <spacer name="verticalSpacer_23">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                </spacer>
                </item>
               </layout>
              </widget>
@@ -6504,7 +7617,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QStackedWidget" name="AssignMaterialsOptions">
                  <property name="currentIndex">
-                  <number>0</number>
+                  <number>1</number>
                  </property>
                  <widget class="QWidget" name="page_16">
                   <layout class="QVBoxLayout" name="verticalLayout_57">
@@ -7102,6 +8215,19 @@ li.checked::marker { content: &quot;\2612&quot;; }
              </widget>
             </widget>
            </item>
+           <item>
+            <spacer name="verticalSpacer_23">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
           </layout>
          </widget>
          <widget class="QWidget" name="BoundaryConditionsTab">
@@ -7439,7 +8565,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item alignment="Qt::AlignHCenter">
                 <widget class="QLabel" name="label_12">
                  <property name="text">
-                  <string>--initial condition--</string>
+                  <string>--enforced condition--</string>
                  </property>
                 </widget>
                </item>
@@ -7560,7 +8686,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item alignment="Qt::AlignHCenter">
                 <widget class="QLabel" name="label_29">
                  <property name="text">
-                  <string>--initial condition--</string>
+                  <string>--enforced condition--</string>
                  </property>
                 </widget>
                </item>
@@ -8475,7 +9601,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QStackedWidget" name="PostprocessingOptions">
                  <property name="currentIndex">
-                  <number>1</number>
+                  <number>0</number>
                  </property>
                  <widget class="QWidget" name="page_11">
                   <layout class="QVBoxLayout" name="verticalLayout_45">
@@ -9182,6 +10308,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 <property name="frameShape">
                  <enum>QFrame::NoFrame</enum>
                 </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Plain</enum>
+                </property>
                 <property name="lineWidth">
                  <number>0</number>
                 </property>
@@ -9565,7 +10694,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <tabstop>BGenerateGlobalMesh</tabstop>
   <tabstop>INRunSelection</tabstop>
   <tabstop>INBCFile</tabstop>
-  <tabstop>tabWidget_3</tabstop>
+  <tabstop>DefineAssignMats</tabstop>
   <tabstop>INSelectDefineMaterials</tabstop>
   <tabstop>INMaterialNameSGH</tabstop>
   <tabstop>INEOS</tabstop>
@@ -9636,6 +10765,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
  </tabstops>
  <resources>
   <include location="Icons/IconResourceFile.qrc"/>
+  <include location="../../../../../../../.designer/backup/Icons/IconResourceFile.qrc"/>
  </resources>
  <connections/>
 </ui>

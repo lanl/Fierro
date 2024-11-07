@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QForm
     QMenuBar, QPlainTextEdit, QProgressBar, QPushButton,
     QSizePolicy, QSpacerItem, QSplitter, QStackedWidget,
     QStatusBar, QTabWidget, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget)
+    QVBoxLayout, QWidget, QToolTip)
 
 
 from PySide6.QtWidgets import ( QTableWidgetItem, QSplashScreen)
@@ -40,7 +40,7 @@ import paraview.simple as pvsimple
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PySide6.QtCore import *
 import PySide6.QtConcurrent
-from PySide6.QtGui import QDesktopServices, QMovie, QPixmap, QColor, QBrush
+from PySide6.QtGui import QDesktopServices, QMovie, QPixmap, QColor, QBrush, QFont
 from PySide6.QtCore import QRunnable, Slot, QThreadPool
 #import fierro_voxelizer
 #import fierro_mesh_builder
@@ -171,6 +171,11 @@ class FIERRO_GUI(Ui_MainWindow):
         # Disable SGH Solver Pipeline **just for now**
         self.INPipelineSelection.model().item(0).setEnabled(False)
         self.INPipelineSelection.model().item(1).setEnabled(False)
+        
+        # Make information text bigger
+        font = QToolTip.font()
+        font.setPointSize(16)
+        QToolTip.setFont(font)
 
         # Paraview imports
         self.render_view = pvsimple.CreateRenderView()
