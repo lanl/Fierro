@@ -47,6 +47,81 @@ def Bulk_Forming(self):
             self.MaterialTypeTool_2.setCurrentIndex(4)
     self.INMaterialType_2.currentIndexChanged.connect(material_class_2)
     
+    # Define material properties using predefined values
+    def predefined_materials():
+        if "Custom" in self.INMaterialDefinition.currentText():
+            # Clear elastic parameters
+            self.INYoungsModulus_2.clear()
+            self.INPoissonsRatio_2.clear()
+            self.INEip_2.clear()
+            self.INNUip_2.clear()
+            self.INEop_2.clear()
+            self.INNUop_2.clear()
+            self.INGop_2.clear()
+            self.INEx_2.clear()
+            self.INEy_2.clear()
+            self.INEz_2.clear()
+            self.INNUxy_2.clear()
+            self.INNUxz_2.clear()
+            self.INNUyz_2.clear()
+            self.INGxy_2.clear()
+            self.INGxz_2.clear()
+            self.INGyz_2.clear()
+            for i in [0,1,2,3,4,5,6]:
+                for j in range(i,6):
+                    if self.TAnisotropic_2.item(i,j):
+                        self.TAnisotropic_2.item(i,j).setText('')
+            # Clear plastic parameters
+            self.INa.clear()
+            self.INb.clear()
+            self.INc.clear()
+            self.INSlipSystems.clear()
+            self.TSlipSystemParameters.setRowCount(0)
+            self.INnrsx.clear()
+            self.INgamd0x.clear()
+            self.INtau0xb.clear()
+            self.INtau0xf.clear()
+            self.INtau1x.clear()
+            self.INthet0.clear()
+            self.INthet1.clear()
+            self.INhselfx.clear()
+            self.INhlatex.clear()
+        elif "Single Crystal Copper" in self.INMaterialDefinition.currentText():
+            # Define elastic properties
+            for i in [0,1,2,3,4,5,6]:
+                for j in range(i,6):
+                    self.TAnisotropic_2.setItem(i,j,QTableWidgetItem('0.'))
+            self.INSolidGas_2.setCurrentIndex(0)
+            self.INMaterialType_2.setCurrentIndex(3)
+            self.TAnisotropic_2.setItem(0,0,QTableWidgetItem('168400.'))
+            self.TAnisotropic_2.setItem(1,1,QTableWidgetItem('168400.'))
+            self.TAnisotropic_2.setItem(2,2,QTableWidgetItem('168400.'))
+            self.TAnisotropic_2.setItem(0,1,QTableWidgetItem('121400.'))
+            self.TAnisotropic_2.setItem(0,2,QTableWidgetItem('121400.'))
+            self.TAnisotropic_2.setItem(1,2,QTableWidgetItem('121400.'))
+            self.TAnisotropic_2.setItem(3,3,QTableWidgetItem('75400.'))
+            self.TAnisotropic_2.setItem(4,4,QTableWidgetItem('75400.'))
+            self.TAnisotropic_2.setItem(5,5,QTableWidgetItem('75400.'))
+            # Define plastic properties
+            self.INa.setText('1.')
+            self.INb.setText('1.')
+            self.INc.setText('1.')
+            items = self.TSlipSystems.findItems('FCC', Qt.MatchExactly | Qt.MatchRecursive)
+            if items:
+                self.TSlipSystems.setCurrentItem(items[0])
+                self.BAddSlipSystem.click()
+                self.TSlipSystems.expandItem(items[0])
+            self.INnrsx.setText('10')
+            self.INgamd0x.setText('1.0')
+            self.INtau0xf.setText('9.0')
+            self.INtau0xb.setText('9.0')
+            self.INtau1x.setText('5.')
+            self.INthet0.setText('400.')
+            self.INthet1.setText('250.')
+            self.INhselfx.setText('1.0')
+            self.INhlatex.setText('1.0')
+    self.INMaterialDefinition.currentIndexChanged.connect(predefined_materials)
+    
     # Add material to the table
     def add_material_2():
         # Elastic properties checks
@@ -264,19 +339,20 @@ def Bulk_Forming(self):
                 self.INGxy_2.clear()
                 self.INGxz_2.clear()
                 self.INGyz_2.clear()
-
+                        
+            # Fill out material definition table
+            row = self.TMaterials_2.rowCount()
+            self.TMaterials_2.insertRow(row)
+            self.TMaterials_2.setItem(row, 0, QTableWidgetItem(
+                self.INMaterialName_2.text())
+            )
             if str(self.INMaterialType_2.currentText()) == 'Anisotropic':
                 # Fill out material definition table
-                row = self.TMaterials_2.rowCount()
-                self.TMaterials_2.insertRow(row)
-                self.TMaterials_2.setItem(row, 0, QTableWidgetItem(
-                    self.INMaterialName_2.text().strip())
-                )
                 self.TMaterials_2.setItem(row, 1, QTableWidgetItem(
                     str(self.INMaterialType_2.currentText()))
                 )
                 k = 2
-                for i in [0,1,2,3,4,5,6]:
+                for i in range(7):
                     for j in range(i,6):
                         self.TMaterials_2.setItem(
                             row, k, QTableWidgetItem(self.TAnisotropic_2.item(i,j).text())
@@ -284,50 +360,44 @@ def Bulk_Forming(self):
                         self.TAnisotropic_2.item(i,j).setText('')
                         k += 1
                 self.INMaterialName_2.clear()
-                        
-            # Fill out material definition table
-            row = self.TMaterials_2.rowCount()
-            self.TMaterials_2.insertRow(row)
-            self.TMaterials_2.setItem(row, 0, QTableWidgetItem(
-                self.INMaterialName_2.text().strip())
-            )
-            if str(self.INMaterialType_2.currentText()) == 'Transversely Isotropic':
-                self.TMaterials_2.setItem(row, 1, QTableWidgetItem(
-                    str(self.INMaterialType_2.currentText() + ' ' + self.INIsotropicPlane_2.currentText()))
-                )
             else:
-                self.TMaterials_2.setItem(row, 1, QTableWidgetItem(
-                    str(self.INMaterialType_2.currentText()))
+                if str(self.INMaterialType_2.currentText()) == 'Transversely Isotropic':
+                    self.TMaterials_2.setItem(row, 1, QTableWidgetItem(
+                        str(self.INMaterialType_2.currentText() + ' ' + self.INIsotropicPlane_2.currentText()))
+                    )
+                else:
+                    self.TMaterials_2.setItem(row, 1, QTableWidgetItem(
+                        str(self.INMaterialType_2.currentText()))
+                    )
+                self.TMaterials_2.setItem(
+                    row, 2, QTableWidgetItem(str(C11))
                 )
-            self.TMaterials_2.setItem(
-                row, 2, QTableWidgetItem(str(C11))
-            )
-            self.TMaterials_2.setItem(
-                row, 3, QTableWidgetItem(str(C12))
-            )
-            self.TMaterials_2.setItem(
-                row, 4, QTableWidgetItem(str(C13))
-            )
-            self.TMaterials_2.setItem(
-                row, 8, QTableWidgetItem(str(C22))
-            )
-            self.TMaterials_2.setItem(
-                row, 9, QTableWidgetItem(str(C23))
-            )
-            self.TMaterials_2.setItem(
-                row, 13, QTableWidgetItem(str(C33))
-            )
-            self.TMaterials_2.setItem(
-                row, 17, QTableWidgetItem(str(C44))
-            )
-            self.TMaterials_2.setItem(
-                row, 20, QTableWidgetItem(str(C55))
-            )
-            self.TMaterials_2.setItem(
-                row, 22, QTableWidgetItem(str(C66))
-            )
-            for i in [5,6,7,10,11,12,14,15,16,18,19,21]:
-               self.TMaterials_2.setItem(row, i, QTableWidgetItem('0'))
+                self.TMaterials_2.setItem(
+                    row, 3, QTableWidgetItem(str(C12))
+                )
+                self.TMaterials_2.setItem(
+                    row, 4, QTableWidgetItem(str(C13))
+                )
+                self.TMaterials_2.setItem(
+                    row, 8, QTableWidgetItem(str(C22))
+                )
+                self.TMaterials_2.setItem(
+                    row, 9, QTableWidgetItem(str(C23))
+                )
+                self.TMaterials_2.setItem(
+                    row, 13, QTableWidgetItem(str(C33))
+                )
+                self.TMaterials_2.setItem(
+                    row, 17, QTableWidgetItem(str(C44))
+                )
+                self.TMaterials_2.setItem(
+                    row, 20, QTableWidgetItem(str(C55))
+                )
+                self.TMaterials_2.setItem(
+                    row, 22, QTableWidgetItem(str(C66))
+                )
+                for i in [5,6,7,10,11,12,14,15,16,18,19,21]:
+                   self.TMaterials_2.setItem(row, i, QTableWidgetItem('0'))
                    
         # Add plastic parameters
         self.TMaterials_2.setItem(row,23,QTableWidgetItem(self.INa.text()))
@@ -501,6 +571,16 @@ def Bulk_Forming(self):
 #                    )
 #                    k += 1
 #    self.BRegenElasticConstants_2.clicked.connect(regenerate_elastic_constants_2)
+
+    # View details about a slip system
+    def slip_system_details():
+        selected_items = self.TSlipSystems.selectedItems()
+        selected_item = selected_items[0]
+        if selected_item.parent() is not None:
+            if '{111}<110>' in selected_item.text(0):
+                self.SlipSystemInfo.setCurrentIndex(1)
+            self.PlasticProperties.setCurrentIndex(2)
+    self.BSlipSystemDetails.clicked.connect(slip_system_details)
     
     # Add slip system(s) to list
     def add_slip_system():

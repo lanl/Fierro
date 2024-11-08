@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIlEHIrn.ui'
+## Form generated from reading UI file 'FIERRO_GUIarTner.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -3374,23 +3374,14 @@ class Ui_MainWindow(object):
         self.Plastic.setObjectName(u"Plastic")
         self.Plastic.setStyleSheet(u"")
         self.verticalLayout_26 = QVBoxLayout(self.Plastic)
-        self.verticalLayout_26.setSpacing(5)
         self.verticalLayout_26.setObjectName(u"verticalLayout_26")
-        self.verticalLayout_26.setContentsMargins(0, 6, 0, 0)
-        self.PlasticParameters = QStackedWidget(self.Plastic)
-        self.PlasticParameters.setObjectName(u"PlasticParameters")
-        self.PlasticParameters.setStyleSheet(u"")
-        self.PlasticParameters.setFrameShape(QFrame.NoFrame)
-        self.PlasticParameters.setLineWidth(0)
-        self.CrystalStructure = QWidget()
-        self.CrystalStructure.setObjectName(u"CrystalStructure")
-        self.CrystalStructure.setStyleSheet(u"")
-        self.verticalLayout_42 = QVBoxLayout(self.CrystalStructure)
-        self.verticalLayout_42.setSpacing(5)
-        self.verticalLayout_42.setObjectName(u"verticalLayout_42")
-        self.verticalLayout_42.setContentsMargins(0, 0, 0, 0)
-        self.PlasticProperties = QTabWidget(self.CrystalStructure)
+        self.verticalLayout_26.setContentsMargins(0, 0, 0, 0)
+        self.PlasticProperties = QTabWidget(self.Plastic)
         self.PlasticProperties.setObjectName(u"PlasticProperties")
+        font12 = QFont()
+        font12.setItalic(False)
+        self.PlasticProperties.setFont(font12)
+        self.PlasticProperties.setIconSize(QSize(16, 16))
         self.PlasticProperties.setMovable(False)
         self.PlasticProperties.setTabBarAutoHide(False)
         self.CrystalAxis = QWidget()
@@ -3441,9 +3432,9 @@ class Ui_MainWindow(object):
         sizePolicy13.setHeightForWidth(self.pushButton_13.sizePolicy().hasHeightForWidth())
         self.pushButton_13.setSizePolicy(sizePolicy13)
         self.pushButton_13.setMaximumSize(QSize(17, 17))
-        font12 = QFont()
-        font12.setPointSize(18)
-        self.pushButton_13.setFont(font12)
+        font13 = QFont()
+        font13.setPointSize(18)
+        self.pushButton_13.setFont(font13)
         icon11 = QIcon()
         icon11.addFile(u":/Blue Icons/Blue Icons/information.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.pushButton_13.setIcon(icon11)
@@ -3481,10 +3472,10 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7 = QHBoxLayout(self.frame_56)
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
         self.horizontalLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.BAddSlipSystem = QPushButton(self.frame_56)
-        self.BAddSlipSystem.setObjectName(u"BAddSlipSystem")
+        self.BSlipSystemDetails = QPushButton(self.frame_56)
+        self.BSlipSystemDetails.setObjectName(u"BSlipSystemDetails")
 
-        self.horizontalLayout_7.addWidget(self.BAddSlipSystem)
+        self.horizontalLayout_7.addWidget(self.BSlipSystemDetails)
 
 
         self.verticalLayout_66.addWidget(self.frame_56)
@@ -3503,12 +3494,130 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_66.addWidget(self.INSlipSystems)
 
-        self.BRemoveSlipSystem = QPushButton(self.SlipSystems)
+        self.frame_50 = QFrame(self.SlipSystems)
+        self.frame_50.setObjectName(u"frame_50")
+        self.frame_50.setFrameShape(QFrame.NoFrame)
+        self.frame_50.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_8 = QHBoxLayout(self.frame_50)
+#ifndef Q_OS_MAC
+        self.horizontalLayout_8.setSpacing(-1)
+#endif
+        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
+        self.horizontalLayout_8.setContentsMargins(0, 0, 0, 0)
+        self.BAddSlipSystem = QPushButton(self.frame_50)
+        self.BAddSlipSystem.setObjectName(u"BAddSlipSystem")
+
+        self.horizontalLayout_8.addWidget(self.BAddSlipSystem)
+
+        self.BRemoveSlipSystem = QPushButton(self.frame_50)
         self.BRemoveSlipSystem.setObjectName(u"BRemoveSlipSystem")
 
-        self.verticalLayout_66.addWidget(self.BRemoveSlipSystem)
+        self.horizontalLayout_8.addWidget(self.BRemoveSlipSystem)
+
+
+        self.verticalLayout_66.addWidget(self.frame_50)
 
         self.PlasticProperties.addTab(self.SlipSystems, "")
+        self.Details = QWidget()
+        self.Details.setObjectName(u"Details")
+        self.verticalLayout_42 = QVBoxLayout(self.Details)
+        self.verticalLayout_42.setObjectName(u"verticalLayout_42")
+        self.verticalLayout_42.setContentsMargins(0, 0, 0, 0)
+        self.SlipSystemInfo = QStackedWidget(self.Details)
+        self.SlipSystemInfo.setObjectName(u"SlipSystemInfo")
+        self.SlipSystemInfo.setStyleSheet(u"")
+        self.SlipSystemInfo.setFrameShape(QFrame.NoFrame)
+        self.SlipSystemInfo.setLineWidth(0)
+        self.BlankPage = QWidget()
+        self.BlankPage.setObjectName(u"BlankPage")
+        self.SlipSystemInfo.addWidget(self.BlankPage)
+        self.FCC_111_110 = QWidget()
+        self.FCC_111_110.setObjectName(u"FCC_111_110")
+        self.verticalLayout_43 = QVBoxLayout(self.FCC_111_110)
+        self.verticalLayout_43.setSpacing(5)
+        self.verticalLayout_43.setObjectName(u"verticalLayout_43")
+        self.verticalLayout_43.setContentsMargins(0, 0, 0, 0)
+        self.label_42 = QLabel(self.FCC_111_110)
+        self.label_42.setObjectName(u"label_42")
+        font14 = QFont()
+        font14.setBold(True)
+        font14.setUnderline(True)
+        self.label_42.setFont(font14)
+
+        self.verticalLayout_43.addWidget(self.label_42, 0, Qt.AlignHCenter)
+
+        self.T1 = QTableWidget(self.FCC_111_110)
+        if (self.T1.columnCount() < 2):
+            self.T1.setColumnCount(2)
+        font15 = QFont()
+        font15.setPointSize(13)
+        __qtablewidgetitem88 = QTableWidgetItem()
+        __qtablewidgetitem88.setFont(font15);
+        self.T1.setHorizontalHeaderItem(0, __qtablewidgetitem88)
+        __qtablewidgetitem89 = QTableWidgetItem()
+        __qtablewidgetitem89.setFont(font15);
+        self.T1.setHorizontalHeaderItem(1, __qtablewidgetitem89)
+        if (self.T1.rowCount() < 12):
+            self.T1.setRowCount(12)
+        __qtablewidgetitem90 = QTableWidgetItem()
+        self.T1.setItem(0, 0, __qtablewidgetitem90)
+        __qtablewidgetitem91 = QTableWidgetItem()
+        self.T1.setItem(0, 1, __qtablewidgetitem91)
+        __qtablewidgetitem92 = QTableWidgetItem()
+        self.T1.setItem(1, 0, __qtablewidgetitem92)
+        __qtablewidgetitem93 = QTableWidgetItem()
+        self.T1.setItem(1, 1, __qtablewidgetitem93)
+        __qtablewidgetitem94 = QTableWidgetItem()
+        self.T1.setItem(2, 0, __qtablewidgetitem94)
+        __qtablewidgetitem95 = QTableWidgetItem()
+        self.T1.setItem(2, 1, __qtablewidgetitem95)
+        __qtablewidgetitem96 = QTableWidgetItem()
+        self.T1.setItem(3, 0, __qtablewidgetitem96)
+        __qtablewidgetitem97 = QTableWidgetItem()
+        self.T1.setItem(3, 1, __qtablewidgetitem97)
+        __qtablewidgetitem98 = QTableWidgetItem()
+        self.T1.setItem(4, 0, __qtablewidgetitem98)
+        __qtablewidgetitem99 = QTableWidgetItem()
+        self.T1.setItem(4, 1, __qtablewidgetitem99)
+        __qtablewidgetitem100 = QTableWidgetItem()
+        self.T1.setItem(5, 0, __qtablewidgetitem100)
+        __qtablewidgetitem101 = QTableWidgetItem()
+        self.T1.setItem(5, 1, __qtablewidgetitem101)
+        __qtablewidgetitem102 = QTableWidgetItem()
+        self.T1.setItem(6, 0, __qtablewidgetitem102)
+        __qtablewidgetitem103 = QTableWidgetItem()
+        self.T1.setItem(6, 1, __qtablewidgetitem103)
+        __qtablewidgetitem104 = QTableWidgetItem()
+        self.T1.setItem(7, 0, __qtablewidgetitem104)
+        __qtablewidgetitem105 = QTableWidgetItem()
+        self.T1.setItem(7, 1, __qtablewidgetitem105)
+        __qtablewidgetitem106 = QTableWidgetItem()
+        self.T1.setItem(8, 0, __qtablewidgetitem106)
+        __qtablewidgetitem107 = QTableWidgetItem()
+        self.T1.setItem(8, 1, __qtablewidgetitem107)
+        __qtablewidgetitem108 = QTableWidgetItem()
+        self.T1.setItem(9, 0, __qtablewidgetitem108)
+        __qtablewidgetitem109 = QTableWidgetItem()
+        self.T1.setItem(9, 1, __qtablewidgetitem109)
+        __qtablewidgetitem110 = QTableWidgetItem()
+        self.T1.setItem(10, 0, __qtablewidgetitem110)
+        __qtablewidgetitem111 = QTableWidgetItem()
+        self.T1.setItem(10, 1, __qtablewidgetitem111)
+        __qtablewidgetitem112 = QTableWidgetItem()
+        self.T1.setItem(11, 0, __qtablewidgetitem112)
+        __qtablewidgetitem113 = QTableWidgetItem()
+        self.T1.setItem(11, 1, __qtablewidgetitem113)
+        self.T1.setObjectName(u"T1")
+        self.T1.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.T1.horizontalHeader().setDefaultSectionSize(167)
+
+        self.verticalLayout_43.addWidget(self.T1)
+
+        self.SlipSystemInfo.addWidget(self.FCC_111_110)
+
+        self.verticalLayout_42.addWidget(self.SlipSystemInfo)
+
+        self.PlasticProperties.addTab(self.Details, "")
         self.VoceParameters = QWidget()
         self.VoceParameters.setObjectName(u"VoceParameters")
         self.verticalLayout_67 = QVBoxLayout(self.VoceParameters)
@@ -3520,26 +3629,26 @@ class Ui_MainWindow(object):
         self.TSlipSystemParameters = QTableWidget(self.VoceParameters)
         if (self.TSlipSystemParameters.columnCount() < 10):
             self.TSlipSystemParameters.setColumnCount(10)
-        __qtablewidgetitem88 = QTableWidgetItem()
-        self.TSlipSystemParameters.setHorizontalHeaderItem(0, __qtablewidgetitem88)
-        __qtablewidgetitem89 = QTableWidgetItem()
-        self.TSlipSystemParameters.setHorizontalHeaderItem(1, __qtablewidgetitem89)
-        __qtablewidgetitem90 = QTableWidgetItem()
-        self.TSlipSystemParameters.setHorizontalHeaderItem(2, __qtablewidgetitem90)
-        __qtablewidgetitem91 = QTableWidgetItem()
-        self.TSlipSystemParameters.setHorizontalHeaderItem(3, __qtablewidgetitem91)
-        __qtablewidgetitem92 = QTableWidgetItem()
-        self.TSlipSystemParameters.setHorizontalHeaderItem(4, __qtablewidgetitem92)
-        __qtablewidgetitem93 = QTableWidgetItem()
-        self.TSlipSystemParameters.setHorizontalHeaderItem(5, __qtablewidgetitem93)
-        __qtablewidgetitem94 = QTableWidgetItem()
-        self.TSlipSystemParameters.setHorizontalHeaderItem(6, __qtablewidgetitem94)
-        __qtablewidgetitem95 = QTableWidgetItem()
-        self.TSlipSystemParameters.setHorizontalHeaderItem(7, __qtablewidgetitem95)
-        __qtablewidgetitem96 = QTableWidgetItem()
-        self.TSlipSystemParameters.setHorizontalHeaderItem(8, __qtablewidgetitem96)
-        __qtablewidgetitem97 = QTableWidgetItem()
-        self.TSlipSystemParameters.setHorizontalHeaderItem(9, __qtablewidgetitem97)
+        __qtablewidgetitem114 = QTableWidgetItem()
+        self.TSlipSystemParameters.setHorizontalHeaderItem(0, __qtablewidgetitem114)
+        __qtablewidgetitem115 = QTableWidgetItem()
+        self.TSlipSystemParameters.setHorizontalHeaderItem(1, __qtablewidgetitem115)
+        __qtablewidgetitem116 = QTableWidgetItem()
+        self.TSlipSystemParameters.setHorizontalHeaderItem(2, __qtablewidgetitem116)
+        __qtablewidgetitem117 = QTableWidgetItem()
+        self.TSlipSystemParameters.setHorizontalHeaderItem(3, __qtablewidgetitem117)
+        __qtablewidgetitem118 = QTableWidgetItem()
+        self.TSlipSystemParameters.setHorizontalHeaderItem(4, __qtablewidgetitem118)
+        __qtablewidgetitem119 = QTableWidgetItem()
+        self.TSlipSystemParameters.setHorizontalHeaderItem(5, __qtablewidgetitem119)
+        __qtablewidgetitem120 = QTableWidgetItem()
+        self.TSlipSystemParameters.setHorizontalHeaderItem(6, __qtablewidgetitem120)
+        __qtablewidgetitem121 = QTableWidgetItem()
+        self.TSlipSystemParameters.setHorizontalHeaderItem(7, __qtablewidgetitem121)
+        __qtablewidgetitem122 = QTableWidgetItem()
+        self.TSlipSystemParameters.setHorizontalHeaderItem(8, __qtablewidgetitem122)
+        __qtablewidgetitem123 = QTableWidgetItem()
+        self.TSlipSystemParameters.setHorizontalHeaderItem(9, __qtablewidgetitem123)
         self.TSlipSystemParameters.setObjectName(u"TSlipSystemParameters")
         sizePolicy14.setHeightForWidth(self.TSlipSystemParameters.sizePolicy().hasHeightForWidth())
         self.TSlipSystemParameters.setSizePolicy(sizePolicy14)
@@ -3591,7 +3700,7 @@ class Ui_MainWindow(object):
         sizePolicy13.setHeightForWidth(self.pushButton_9.sizePolicy().hasHeightForWidth())
         self.pushButton_9.setSizePolicy(sizePolicy13)
         self.pushButton_9.setMaximumSize(QSize(17, 17))
-        self.pushButton_9.setFont(font12)
+        self.pushButton_9.setFont(font13)
         self.pushButton_9.setIcon(icon11)
         self.pushButton_9.setIconSize(QSize(20, 20))
         self.pushButton_9.setAutoDefault(False)
@@ -3699,7 +3808,7 @@ class Ui_MainWindow(object):
         sizePolicy13.setHeightForWidth(self.pushButton_8.sizePolicy().hasHeightForWidth())
         self.pushButton_8.setSizePolicy(sizePolicy13)
         self.pushButton_8.setMaximumSize(QSize(17, 17))
-        self.pushButton_8.setFont(font12)
+        self.pushButton_8.setFont(font13)
         self.pushButton_8.setIcon(icon11)
         self.pushButton_8.setIconSize(QSize(20, 20))
         self.pushButton_8.setAutoDefault(False)
@@ -3751,7 +3860,7 @@ class Ui_MainWindow(object):
         sizePolicy13.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
         self.pushButton.setSizePolicy(sizePolicy13)
         self.pushButton.setMaximumSize(QSize(17, 17))
-        self.pushButton.setFont(font12)
+        self.pushButton.setFont(font13)
         self.pushButton.setIcon(icon11)
         self.pushButton.setIconSize(QSize(20, 20))
         self.pushButton.setAutoDefault(False)
@@ -3800,22 +3909,7 @@ class Ui_MainWindow(object):
 
         self.PlasticProperties.addTab(self.VoceParameters, "")
 
-        self.verticalLayout_42.addWidget(self.PlasticProperties)
-
-        self.frame_59 = QFrame(self.CrystalStructure)
-        self.frame_59.setObjectName(u"frame_59")
-        self.frame_59.setFrameShape(QFrame.NoFrame)
-        self.frame_59.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_44 = QVBoxLayout(self.frame_59)
-        self.verticalLayout_44.setSpacing(0)
-        self.verticalLayout_44.setObjectName(u"verticalLayout_44")
-        self.verticalLayout_44.setContentsMargins(0, 0, 0, 0)
-
-        self.verticalLayout_42.addWidget(self.frame_59)
-
-        self.PlasticParameters.addWidget(self.CrystalStructure)
-
-        self.verticalLayout_26.addWidget(self.PlasticParameters)
+        self.verticalLayout_26.addWidget(self.PlasticProperties)
 
         icon12 = QIcon()
         icon12.addFile(u":/Blue Icons/Blue Icons/Plastic.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -3846,78 +3940,78 @@ class Ui_MainWindow(object):
         self.TMaterials_2 = QTableWidget(self.DefineMaterialsBulkForm)
         if (self.TMaterials_2.columnCount() < 36):
             self.TMaterials_2.setColumnCount(36)
-        __qtablewidgetitem98 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(0, __qtablewidgetitem98)
-        __qtablewidgetitem99 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(1, __qtablewidgetitem99)
-        __qtablewidgetitem100 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(2, __qtablewidgetitem100)
-        __qtablewidgetitem101 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(3, __qtablewidgetitem101)
-        __qtablewidgetitem102 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(4, __qtablewidgetitem102)
-        __qtablewidgetitem103 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(5, __qtablewidgetitem103)
-        __qtablewidgetitem104 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(6, __qtablewidgetitem104)
-        __qtablewidgetitem105 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(7, __qtablewidgetitem105)
-        __qtablewidgetitem106 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(8, __qtablewidgetitem106)
-        __qtablewidgetitem107 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(9, __qtablewidgetitem107)
-        __qtablewidgetitem108 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(10, __qtablewidgetitem108)
-        __qtablewidgetitem109 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(11, __qtablewidgetitem109)
-        __qtablewidgetitem110 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(12, __qtablewidgetitem110)
-        __qtablewidgetitem111 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(13, __qtablewidgetitem111)
-        __qtablewidgetitem112 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(14, __qtablewidgetitem112)
-        __qtablewidgetitem113 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(15, __qtablewidgetitem113)
-        __qtablewidgetitem114 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(16, __qtablewidgetitem114)
-        __qtablewidgetitem115 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(17, __qtablewidgetitem115)
-        __qtablewidgetitem116 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(18, __qtablewidgetitem116)
-        __qtablewidgetitem117 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(19, __qtablewidgetitem117)
-        __qtablewidgetitem118 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(20, __qtablewidgetitem118)
-        __qtablewidgetitem119 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(21, __qtablewidgetitem119)
-        __qtablewidgetitem120 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(22, __qtablewidgetitem120)
-        __qtablewidgetitem121 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(23, __qtablewidgetitem121)
-        __qtablewidgetitem122 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(24, __qtablewidgetitem122)
-        __qtablewidgetitem123 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(25, __qtablewidgetitem123)
         __qtablewidgetitem124 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(26, __qtablewidgetitem124)
+        self.TMaterials_2.setHorizontalHeaderItem(0, __qtablewidgetitem124)
         __qtablewidgetitem125 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(27, __qtablewidgetitem125)
+        self.TMaterials_2.setHorizontalHeaderItem(1, __qtablewidgetitem125)
         __qtablewidgetitem126 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(28, __qtablewidgetitem126)
+        self.TMaterials_2.setHorizontalHeaderItem(2, __qtablewidgetitem126)
         __qtablewidgetitem127 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(29, __qtablewidgetitem127)
+        self.TMaterials_2.setHorizontalHeaderItem(3, __qtablewidgetitem127)
         __qtablewidgetitem128 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(30, __qtablewidgetitem128)
+        self.TMaterials_2.setHorizontalHeaderItem(4, __qtablewidgetitem128)
         __qtablewidgetitem129 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(31, __qtablewidgetitem129)
+        self.TMaterials_2.setHorizontalHeaderItem(5, __qtablewidgetitem129)
         __qtablewidgetitem130 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(32, __qtablewidgetitem130)
+        self.TMaterials_2.setHorizontalHeaderItem(6, __qtablewidgetitem130)
         __qtablewidgetitem131 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(33, __qtablewidgetitem131)
+        self.TMaterials_2.setHorizontalHeaderItem(7, __qtablewidgetitem131)
         __qtablewidgetitem132 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(34, __qtablewidgetitem132)
+        self.TMaterials_2.setHorizontalHeaderItem(8, __qtablewidgetitem132)
         __qtablewidgetitem133 = QTableWidgetItem()
-        self.TMaterials_2.setHorizontalHeaderItem(35, __qtablewidgetitem133)
+        self.TMaterials_2.setHorizontalHeaderItem(9, __qtablewidgetitem133)
+        __qtablewidgetitem134 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(10, __qtablewidgetitem134)
+        __qtablewidgetitem135 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(11, __qtablewidgetitem135)
+        __qtablewidgetitem136 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(12, __qtablewidgetitem136)
+        __qtablewidgetitem137 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(13, __qtablewidgetitem137)
+        __qtablewidgetitem138 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(14, __qtablewidgetitem138)
+        __qtablewidgetitem139 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(15, __qtablewidgetitem139)
+        __qtablewidgetitem140 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(16, __qtablewidgetitem140)
+        __qtablewidgetitem141 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(17, __qtablewidgetitem141)
+        __qtablewidgetitem142 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(18, __qtablewidgetitem142)
+        __qtablewidgetitem143 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(19, __qtablewidgetitem143)
+        __qtablewidgetitem144 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(20, __qtablewidgetitem144)
+        __qtablewidgetitem145 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(21, __qtablewidgetitem145)
+        __qtablewidgetitem146 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(22, __qtablewidgetitem146)
+        __qtablewidgetitem147 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(23, __qtablewidgetitem147)
+        __qtablewidgetitem148 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(24, __qtablewidgetitem148)
+        __qtablewidgetitem149 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(25, __qtablewidgetitem149)
+        __qtablewidgetitem150 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(26, __qtablewidgetitem150)
+        __qtablewidgetitem151 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(27, __qtablewidgetitem151)
+        __qtablewidgetitem152 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(28, __qtablewidgetitem152)
+        __qtablewidgetitem153 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(29, __qtablewidgetitem153)
+        __qtablewidgetitem154 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(30, __qtablewidgetitem154)
+        __qtablewidgetitem155 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(31, __qtablewidgetitem155)
+        __qtablewidgetitem156 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(32, __qtablewidgetitem156)
+        __qtablewidgetitem157 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(33, __qtablewidgetitem157)
+        __qtablewidgetitem158 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(34, __qtablewidgetitem158)
+        __qtablewidgetitem159 = QTableWidgetItem()
+        self.TMaterials_2.setHorizontalHeaderItem(35, __qtablewidgetitem159)
         self.TMaterials_2.setObjectName(u"TMaterials_2")
         self.TMaterials_2.setEnabled(True)
         self.TMaterials_2.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
@@ -4100,20 +4194,20 @@ class Ui_MainWindow(object):
         self.Tassignmat = QTableWidget(self.page_16)
         if (self.Tassignmat.columnCount() < 7):
             self.Tassignmat.setColumnCount(7)
-        __qtablewidgetitem134 = QTableWidgetItem()
-        self.Tassignmat.setHorizontalHeaderItem(0, __qtablewidgetitem134)
-        __qtablewidgetitem135 = QTableWidgetItem()
-        self.Tassignmat.setHorizontalHeaderItem(1, __qtablewidgetitem135)
-        __qtablewidgetitem136 = QTableWidgetItem()
-        self.Tassignmat.setHorizontalHeaderItem(2, __qtablewidgetitem136)
-        __qtablewidgetitem137 = QTableWidgetItem()
-        self.Tassignmat.setHorizontalHeaderItem(3, __qtablewidgetitem137)
-        __qtablewidgetitem138 = QTableWidgetItem()
-        self.Tassignmat.setHorizontalHeaderItem(4, __qtablewidgetitem138)
-        __qtablewidgetitem139 = QTableWidgetItem()
-        self.Tassignmat.setHorizontalHeaderItem(5, __qtablewidgetitem139)
-        __qtablewidgetitem140 = QTableWidgetItem()
-        self.Tassignmat.setHorizontalHeaderItem(6, __qtablewidgetitem140)
+        __qtablewidgetitem160 = QTableWidgetItem()
+        self.Tassignmat.setHorizontalHeaderItem(0, __qtablewidgetitem160)
+        __qtablewidgetitem161 = QTableWidgetItem()
+        self.Tassignmat.setHorizontalHeaderItem(1, __qtablewidgetitem161)
+        __qtablewidgetitem162 = QTableWidgetItem()
+        self.Tassignmat.setHorizontalHeaderItem(2, __qtablewidgetitem162)
+        __qtablewidgetitem163 = QTableWidgetItem()
+        self.Tassignmat.setHorizontalHeaderItem(3, __qtablewidgetitem163)
+        __qtablewidgetitem164 = QTableWidgetItem()
+        self.Tassignmat.setHorizontalHeaderItem(4, __qtablewidgetitem164)
+        __qtablewidgetitem165 = QTableWidgetItem()
+        self.Tassignmat.setHorizontalHeaderItem(5, __qtablewidgetitem165)
+        __qtablewidgetitem166 = QTableWidgetItem()
+        self.Tassignmat.setHorizontalHeaderItem(6, __qtablewidgetitem166)
         self.Tassignmat.setObjectName(u"Tassignmat")
         sizePolicy6.setHeightForWidth(self.Tassignmat.sizePolicy().hasHeightForWidth())
         self.Tassignmat.setSizePolicy(sizePolicy6)
@@ -4196,10 +4290,10 @@ class Ui_MainWindow(object):
         self.TMaterialAssignment = QTableWidget(self.page_17)
         if (self.TMaterialAssignment.columnCount() < 2):
             self.TMaterialAssignment.setColumnCount(2)
-        __qtablewidgetitem141 = QTableWidgetItem()
-        self.TMaterialAssignment.setHorizontalHeaderItem(0, __qtablewidgetitem141)
-        __qtablewidgetitem142 = QTableWidgetItem()
-        self.TMaterialAssignment.setHorizontalHeaderItem(1, __qtablewidgetitem142)
+        __qtablewidgetitem167 = QTableWidgetItem()
+        self.TMaterialAssignment.setHorizontalHeaderItem(0, __qtablewidgetitem167)
+        __qtablewidgetitem168 = QTableWidgetItem()
+        self.TMaterialAssignment.setHorizontalHeaderItem(1, __qtablewidgetitem168)
         self.TMaterialAssignment.setObjectName(u"TMaterialAssignment")
         sizePolicy14.setHeightForWidth(self.TMaterialAssignment.sizePolicy().hasHeightForWidth())
         self.TMaterialAssignment.setSizePolicy(sizePolicy14)
@@ -4263,10 +4357,10 @@ class Ui_MainWindow(object):
         self.TMaterialAssignment_2 = QTableWidget(self.page_15)
         if (self.TMaterialAssignment_2.columnCount() < 2):
             self.TMaterialAssignment_2.setColumnCount(2)
-        __qtablewidgetitem143 = QTableWidgetItem()
-        self.TMaterialAssignment_2.setHorizontalHeaderItem(0, __qtablewidgetitem143)
-        __qtablewidgetitem144 = QTableWidgetItem()
-        self.TMaterialAssignment_2.setHorizontalHeaderItem(1, __qtablewidgetitem144)
+        __qtablewidgetitem169 = QTableWidgetItem()
+        self.TMaterialAssignment_2.setHorizontalHeaderItem(0, __qtablewidgetitem169)
+        __qtablewidgetitem170 = QTableWidgetItem()
+        self.TMaterialAssignment_2.setHorizontalHeaderItem(1, __qtablewidgetitem170)
         self.TMaterialAssignment_2.setObjectName(u"TMaterialAssignment_2")
         sizePolicy14.setHeightForWidth(self.TMaterialAssignment_2.sizePolicy().hasHeightForWidth())
         self.TMaterialAssignment_2.setSizePolicy(sizePolicy14)
@@ -4428,20 +4522,20 @@ class Ui_MainWindow(object):
         self.TBoundaryConditions = QTableWidget(self.page_18)
         if (self.TBoundaryConditions.columnCount() < 7):
             self.TBoundaryConditions.setColumnCount(7)
-        __qtablewidgetitem145 = QTableWidgetItem()
-        self.TBoundaryConditions.setHorizontalHeaderItem(0, __qtablewidgetitem145)
-        __qtablewidgetitem146 = QTableWidgetItem()
-        self.TBoundaryConditions.setHorizontalHeaderItem(1, __qtablewidgetitem146)
-        __qtablewidgetitem147 = QTableWidgetItem()
-        self.TBoundaryConditions.setHorizontalHeaderItem(2, __qtablewidgetitem147)
-        __qtablewidgetitem148 = QTableWidgetItem()
-        self.TBoundaryConditions.setHorizontalHeaderItem(3, __qtablewidgetitem148)
-        __qtablewidgetitem149 = QTableWidgetItem()
-        self.TBoundaryConditions.setHorizontalHeaderItem(4, __qtablewidgetitem149)
-        __qtablewidgetitem150 = QTableWidgetItem()
-        self.TBoundaryConditions.setHorizontalHeaderItem(5, __qtablewidgetitem150)
-        __qtablewidgetitem151 = QTableWidgetItem()
-        self.TBoundaryConditions.setHorizontalHeaderItem(6, __qtablewidgetitem151)
+        __qtablewidgetitem171 = QTableWidgetItem()
+        self.TBoundaryConditions.setHorizontalHeaderItem(0, __qtablewidgetitem171)
+        __qtablewidgetitem172 = QTableWidgetItem()
+        self.TBoundaryConditions.setHorizontalHeaderItem(1, __qtablewidgetitem172)
+        __qtablewidgetitem173 = QTableWidgetItem()
+        self.TBoundaryConditions.setHorizontalHeaderItem(2, __qtablewidgetitem173)
+        __qtablewidgetitem174 = QTableWidgetItem()
+        self.TBoundaryConditions.setHorizontalHeaderItem(3, __qtablewidgetitem174)
+        __qtablewidgetitem175 = QTableWidgetItem()
+        self.TBoundaryConditions.setHorizontalHeaderItem(4, __qtablewidgetitem175)
+        __qtablewidgetitem176 = QTableWidgetItem()
+        self.TBoundaryConditions.setHorizontalHeaderItem(5, __qtablewidgetitem176)
+        __qtablewidgetitem177 = QTableWidgetItem()
+        self.TBoundaryConditions.setHorizontalHeaderItem(6, __qtablewidgetitem177)
         self.TBoundaryConditions.setObjectName(u"TBoundaryConditions")
 
         self.verticalLayout_31.addWidget(self.TBoundaryConditions)
@@ -4494,10 +4588,7 @@ class Ui_MainWindow(object):
 
         self.LVgrad = QLabel(self.page_19)
         self.LVgrad.setObjectName(u"LVgrad")
-        font13 = QFont()
-        font13.setBold(True)
-        font13.setUnderline(True)
-        self.LVgrad.setFont(font13)
+        self.LVgrad.setFont(font14)
 
         self.verticalLayout_6.addWidget(self.LVgrad, 0, Qt.AlignHCenter)
 
@@ -4530,9 +4621,9 @@ class Ui_MainWindow(object):
 
         self.LVgradi = QLabel(self.page_19)
         self.LVgradi.setObjectName(u"LVgradi")
-        font14 = QFont()
-        font14.setBold(False)
-        self.LVgradi.setFont(font14)
+        font16 = QFont()
+        font16.setBold(False)
+        self.LVgradi.setFont(font16)
 
         self.verticalLayout_6.addWidget(self.LVgradi, 0, Qt.AlignHCenter)
 
@@ -4556,7 +4647,7 @@ class Ui_MainWindow(object):
 
         self.LCstress = QLabel(self.page_19)
         self.LCstress.setObjectName(u"LCstress")
-        self.LCstress.setFont(font13)
+        self.LCstress.setFont(font14)
 
         self.verticalLayout_6.addWidget(self.LCstress, 0, Qt.AlignHCenter)
 
@@ -4980,9 +5071,9 @@ class Ui_MainWindow(object):
         self.LHomogenizingFile = QLabel(self.frame_21)
         self.LHomogenizingFile.setObjectName(u"LHomogenizingFile")
         self.LHomogenizingFile.setEnabled(False)
-        font15 = QFont()
-        font15.setItalic(True)
-        self.LHomogenizingFile.setFont(font15)
+        font17 = QFont()
+        font17.setItalic(True)
+        self.LHomogenizingFile.setFont(font17)
 
         self.horizontalLayout.addWidget(self.LHomogenizingFile)
 
@@ -5228,42 +5319,42 @@ class Ui_MainWindow(object):
         self.THomogenization = QTableWidget(self.page_9)
         if (self.THomogenization.columnCount() < 2):
             self.THomogenization.setColumnCount(2)
-        __qtablewidgetitem152 = QTableWidgetItem()
-        self.THomogenization.setHorizontalHeaderItem(0, __qtablewidgetitem152)
-        __qtablewidgetitem153 = QTableWidgetItem()
-        self.THomogenization.setHorizontalHeaderItem(1, __qtablewidgetitem153)
+        __qtablewidgetitem178 = QTableWidgetItem()
+        self.THomogenization.setHorizontalHeaderItem(0, __qtablewidgetitem178)
+        __qtablewidgetitem179 = QTableWidgetItem()
+        self.THomogenization.setHorizontalHeaderItem(1, __qtablewidgetitem179)
         if (self.THomogenization.rowCount() < 9):
             self.THomogenization.setRowCount(9)
-        __qtablewidgetitem154 = QTableWidgetItem()
-        self.THomogenization.setVerticalHeaderItem(0, __qtablewidgetitem154)
-        __qtablewidgetitem155 = QTableWidgetItem()
-        self.THomogenization.setVerticalHeaderItem(1, __qtablewidgetitem155)
-        __qtablewidgetitem156 = QTableWidgetItem()
-        self.THomogenization.setVerticalHeaderItem(2, __qtablewidgetitem156)
-        __qtablewidgetitem157 = QTableWidgetItem()
-        self.THomogenization.setVerticalHeaderItem(3, __qtablewidgetitem157)
-        __qtablewidgetitem158 = QTableWidgetItem()
-        self.THomogenization.setVerticalHeaderItem(4, __qtablewidgetitem158)
-        __qtablewidgetitem159 = QTableWidgetItem()
-        self.THomogenization.setVerticalHeaderItem(5, __qtablewidgetitem159)
-        __qtablewidgetitem160 = QTableWidgetItem()
-        self.THomogenization.setVerticalHeaderItem(6, __qtablewidgetitem160)
-        __qtablewidgetitem161 = QTableWidgetItem()
-        self.THomogenization.setVerticalHeaderItem(7, __qtablewidgetitem161)
-        __qtablewidgetitem162 = QTableWidgetItem()
-        self.THomogenization.setVerticalHeaderItem(8, __qtablewidgetitem162)
-        __qtablewidgetitem163 = QTableWidgetItem()
-        self.THomogenization.setItem(0, 1, __qtablewidgetitem163)
-        __qtablewidgetitem164 = QTableWidgetItem()
-        self.THomogenization.setItem(1, 1, __qtablewidgetitem164)
-        __qtablewidgetitem165 = QTableWidgetItem()
-        self.THomogenization.setItem(2, 1, __qtablewidgetitem165)
-        __qtablewidgetitem166 = QTableWidgetItem()
-        self.THomogenization.setItem(6, 1, __qtablewidgetitem166)
-        __qtablewidgetitem167 = QTableWidgetItem()
-        self.THomogenization.setItem(7, 1, __qtablewidgetitem167)
-        __qtablewidgetitem168 = QTableWidgetItem()
-        self.THomogenization.setItem(8, 1, __qtablewidgetitem168)
+        __qtablewidgetitem180 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(0, __qtablewidgetitem180)
+        __qtablewidgetitem181 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(1, __qtablewidgetitem181)
+        __qtablewidgetitem182 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(2, __qtablewidgetitem182)
+        __qtablewidgetitem183 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(3, __qtablewidgetitem183)
+        __qtablewidgetitem184 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(4, __qtablewidgetitem184)
+        __qtablewidgetitem185 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(5, __qtablewidgetitem185)
+        __qtablewidgetitem186 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(6, __qtablewidgetitem186)
+        __qtablewidgetitem187 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(7, __qtablewidgetitem187)
+        __qtablewidgetitem188 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(8, __qtablewidgetitem188)
+        __qtablewidgetitem189 = QTableWidgetItem()
+        self.THomogenization.setItem(0, 1, __qtablewidgetitem189)
+        __qtablewidgetitem190 = QTableWidgetItem()
+        self.THomogenization.setItem(1, 1, __qtablewidgetitem190)
+        __qtablewidgetitem191 = QTableWidgetItem()
+        self.THomogenization.setItem(2, 1, __qtablewidgetitem191)
+        __qtablewidgetitem192 = QTableWidgetItem()
+        self.THomogenization.setItem(6, 1, __qtablewidgetitem192)
+        __qtablewidgetitem193 = QTableWidgetItem()
+        self.THomogenization.setItem(7, 1, __qtablewidgetitem193)
+        __qtablewidgetitem194 = QTableWidgetItem()
+        self.THomogenization.setItem(8, 1, __qtablewidgetitem194)
         self.THomogenization.setObjectName(u"THomogenization")
         self.THomogenization.setEnabled(False)
         sizePolicy6.setHeightForWidth(self.THomogenization.sizePolicy().hasHeightForWidth())
@@ -5704,9 +5795,9 @@ class Ui_MainWindow(object):
         self.MaterialTypeTool.setCurrentIndex(0)
         self.MaterialMenu_2.setCurrentIndex(0)
         self.MaterialTypeTool_2.setCurrentIndex(0)
-        self.PlasticParameters.setCurrentIndex(0)
         self.PlasticProperties.setCurrentIndex(0)
         self.pushButton_13.setDefault(False)
+        self.SlipSystemInfo.setCurrentIndex(0)
         self.pushButton_9.setDefault(False)
         self.pushButton_6.setDefault(False)
         self.pushButton_5.setDefault(False)
@@ -6195,7 +6286,7 @@ class Ui_MainWindow(object):
         self.INSolidGas_2.setItemText(1, QCoreApplication.translate("MainWindow", u"Gas", None))
 
         self.INMaterialType_2.setItemText(0, QCoreApplication.translate("MainWindow", u"Isotropic", None))
-        self.INMaterialType_2.setItemText(1, QCoreApplication.translate("MainWindow", u"Transversley Isotropic", None))
+        self.INMaterialType_2.setItemText(1, QCoreApplication.translate("MainWindow", u"Transversely Isotropic", None))
         self.INMaterialType_2.setItemText(2, QCoreApplication.translate("MainWindow", u"Orthotropic", None))
         self.INMaterialType_2.setItemText(3, QCoreApplication.translate("MainWindow", u"Anisotropic", None))
 
@@ -6249,7 +6340,7 @@ class Ui_MainWindow(object):
         ___qtreewidgetitem = self.TSlipSystems.topLevelItem(0)
         ___qtreewidgetitem.setText(0, QCoreApplication.translate("MainWindow", u"FCC", None));
         ___qtreewidgetitem1 = ___qtreewidgetitem.child(0)
-        ___qtreewidgetitem1.setText(0, QCoreApplication.translate("MainWindow", u"{111}<110>", None));
+        ___qtreewidgetitem1.setText(0, QCoreApplication.translate("MainWindow", u"1. (111)<110>", None));
         ___qtreewidgetitem2 = self.TSlipSystems.topLevelItem(1)
         ___qtreewidgetitem2.setText(0, QCoreApplication.translate("MainWindow", u"BCC", None));
         ___qtreewidgetitem3 = ___qtreewidgetitem2.child(0)
@@ -6258,29 +6349,89 @@ class Ui_MainWindow(object):
         ___qtreewidgetitem4.setText(0, QCoreApplication.translate("MainWindow", u"Test2", None));
         self.TSlipSystems.setSortingEnabled(__sortingEnabled2)
 
+        self.BSlipSystemDetails.setText(QCoreApplication.translate("MainWindow", u"Details", None))
         self.BAddSlipSystem.setText(QCoreApplication.translate("MainWindow", u"Add", None))
         self.BRemoveSlipSystem.setText(QCoreApplication.translate("MainWindow", u"Remove", None))
         self.PlasticProperties.setTabText(self.PlasticProperties.indexOf(self.SlipSystems), QCoreApplication.translate("MainWindow", u"Slip Systems", None))
-        ___qtablewidgetitem56 = self.TSlipSystemParameters.horizontalHeaderItem(0)
-        ___qtablewidgetitem56.setText(QCoreApplication.translate("MainWindow", u"Slip System", None));
-        ___qtablewidgetitem57 = self.TSlipSystemParameters.horizontalHeaderItem(1)
-        ___qtablewidgetitem57.setText(QCoreApplication.translate("MainWindow", u"nrsx", None));
-        ___qtablewidgetitem58 = self.TSlipSystemParameters.horizontalHeaderItem(2)
-        ___qtablewidgetitem58.setText(QCoreApplication.translate("MainWindow", u"gamd0x", None));
-        ___qtablewidgetitem59 = self.TSlipSystemParameters.horizontalHeaderItem(3)
-        ___qtablewidgetitem59.setText(QCoreApplication.translate("MainWindow", u"tau0xf", None));
-        ___qtablewidgetitem60 = self.TSlipSystemParameters.horizontalHeaderItem(4)
-        ___qtablewidgetitem60.setText(QCoreApplication.translate("MainWindow", u"tau0xb", None));
-        ___qtablewidgetitem61 = self.TSlipSystemParameters.horizontalHeaderItem(5)
-        ___qtablewidgetitem61.setText(QCoreApplication.translate("MainWindow", u"tau1x", None));
-        ___qtablewidgetitem62 = self.TSlipSystemParameters.horizontalHeaderItem(6)
-        ___qtablewidgetitem62.setText(QCoreApplication.translate("MainWindow", u"thet0", None));
-        ___qtablewidgetitem63 = self.TSlipSystemParameters.horizontalHeaderItem(7)
-        ___qtablewidgetitem63.setText(QCoreApplication.translate("MainWindow", u"thet1", None));
-        ___qtablewidgetitem64 = self.TSlipSystemParameters.horizontalHeaderItem(8)
-        ___qtablewidgetitem64.setText(QCoreApplication.translate("MainWindow", u"hselfx", None));
-        ___qtablewidgetitem65 = self.TSlipSystemParameters.horizontalHeaderItem(9)
-        ___qtablewidgetitem65.setText(QCoreApplication.translate("MainWindow", u"hlatex", None));
+        self.label_42.setText(QCoreApplication.translate("MainWindow", u"FCC (111)<110>", None))
+        ___qtablewidgetitem56 = self.T1.horizontalHeaderItem(0)
+        ___qtablewidgetitem56.setText(QCoreApplication.translate("MainWindow", u"{Slip Plane}", None));
+        ___qtablewidgetitem57 = self.T1.horizontalHeaderItem(1)
+        ___qtablewidgetitem57.setText(QCoreApplication.translate("MainWindow", u"<Slip Direction>", None));
+
+        __sortingEnabled3 = self.T1.isSortingEnabled()
+        self.T1.setSortingEnabled(False)
+        ___qtablewidgetitem58 = self.T1.item(0, 0)
+        ___qtablewidgetitem58.setText(QCoreApplication.translate("MainWindow", u"1, 1, -1", None));
+        ___qtablewidgetitem59 = self.T1.item(0, 1)
+        ___qtablewidgetitem59.setText(QCoreApplication.translate("MainWindow", u"0, 1, 1", None));
+        ___qtablewidgetitem60 = self.T1.item(1, 0)
+        ___qtablewidgetitem60.setText(QCoreApplication.translate("MainWindow", u"1, 1, -1", None));
+        ___qtablewidgetitem61 = self.T1.item(1, 1)
+        ___qtablewidgetitem61.setText(QCoreApplication.translate("MainWindow", u"1, 0, 1", None));
+        ___qtablewidgetitem62 = self.T1.item(2, 0)
+        ___qtablewidgetitem62.setText(QCoreApplication.translate("MainWindow", u"1, 1, -1", None));
+        ___qtablewidgetitem63 = self.T1.item(2, 1)
+        ___qtablewidgetitem63.setText(QCoreApplication.translate("MainWindow", u"1, -1, 0", None));
+        ___qtablewidgetitem64 = self.T1.item(3, 0)
+        ___qtablewidgetitem64.setText(QCoreApplication.translate("MainWindow", u"1, -1, -1", None));
+        ___qtablewidgetitem65 = self.T1.item(3, 1)
+        ___qtablewidgetitem65.setText(QCoreApplication.translate("MainWindow", u"0, 1, -1", None));
+        ___qtablewidgetitem66 = self.T1.item(4, 0)
+        ___qtablewidgetitem66.setText(QCoreApplication.translate("MainWindow", u"1, -1, -1", None));
+        ___qtablewidgetitem67 = self.T1.item(4, 1)
+        ___qtablewidgetitem67.setText(QCoreApplication.translate("MainWindow", u"1, 0, 1", None));
+        ___qtablewidgetitem68 = self.T1.item(5, 0)
+        ___qtablewidgetitem68.setText(QCoreApplication.translate("MainWindow", u"1, -1, -1", None));
+        ___qtablewidgetitem69 = self.T1.item(5, 1)
+        ___qtablewidgetitem69.setText(QCoreApplication.translate("MainWindow", u"1, 1, 0", None));
+        ___qtablewidgetitem70 = self.T1.item(6, 0)
+        ___qtablewidgetitem70.setText(QCoreApplication.translate("MainWindow", u"1, -1, 1", None));
+        ___qtablewidgetitem71 = self.T1.item(6, 1)
+        ___qtablewidgetitem71.setText(QCoreApplication.translate("MainWindow", u"0, 1, 1", None));
+        ___qtablewidgetitem72 = self.T1.item(7, 0)
+        ___qtablewidgetitem72.setText(QCoreApplication.translate("MainWindow", u"1, -1, 1", None));
+        ___qtablewidgetitem73 = self.T1.item(7, 1)
+        ___qtablewidgetitem73.setText(QCoreApplication.translate("MainWindow", u"1, 0, -1", None));
+        ___qtablewidgetitem74 = self.T1.item(8, 0)
+        ___qtablewidgetitem74.setText(QCoreApplication.translate("MainWindow", u"1, -1, 1", None));
+        ___qtablewidgetitem75 = self.T1.item(8, 1)
+        ___qtablewidgetitem75.setText(QCoreApplication.translate("MainWindow", u"1, 1, 0", None));
+        ___qtablewidgetitem76 = self.T1.item(9, 0)
+        ___qtablewidgetitem76.setText(QCoreApplication.translate("MainWindow", u"1, 1, 1", None));
+        ___qtablewidgetitem77 = self.T1.item(9, 1)
+        ___qtablewidgetitem77.setText(QCoreApplication.translate("MainWindow", u"0, 1, -1", None));
+        ___qtablewidgetitem78 = self.T1.item(10, 0)
+        ___qtablewidgetitem78.setText(QCoreApplication.translate("MainWindow", u"1, 1, 1", None));
+        ___qtablewidgetitem79 = self.T1.item(10, 1)
+        ___qtablewidgetitem79.setText(QCoreApplication.translate("MainWindow", u"1, 0, -1", None));
+        ___qtablewidgetitem80 = self.T1.item(11, 0)
+        ___qtablewidgetitem80.setText(QCoreApplication.translate("MainWindow", u"1, 1, 1", None));
+        ___qtablewidgetitem81 = self.T1.item(11, 1)
+        ___qtablewidgetitem81.setText(QCoreApplication.translate("MainWindow", u"1, -1, 0", None));
+        self.T1.setSortingEnabled(__sortingEnabled3)
+
+        self.PlasticProperties.setTabText(self.PlasticProperties.indexOf(self.Details), QCoreApplication.translate("MainWindow", u"i", None))
+        ___qtablewidgetitem82 = self.TSlipSystemParameters.horizontalHeaderItem(0)
+        ___qtablewidgetitem82.setText(QCoreApplication.translate("MainWindow", u"Slip System", None));
+        ___qtablewidgetitem83 = self.TSlipSystemParameters.horizontalHeaderItem(1)
+        ___qtablewidgetitem83.setText(QCoreApplication.translate("MainWindow", u"nrsx", None));
+        ___qtablewidgetitem84 = self.TSlipSystemParameters.horizontalHeaderItem(2)
+        ___qtablewidgetitem84.setText(QCoreApplication.translate("MainWindow", u"gamd0x", None));
+        ___qtablewidgetitem85 = self.TSlipSystemParameters.horizontalHeaderItem(3)
+        ___qtablewidgetitem85.setText(QCoreApplication.translate("MainWindow", u"tau0xf", None));
+        ___qtablewidgetitem86 = self.TSlipSystemParameters.horizontalHeaderItem(4)
+        ___qtablewidgetitem86.setText(QCoreApplication.translate("MainWindow", u"tau0xb", None));
+        ___qtablewidgetitem87 = self.TSlipSystemParameters.horizontalHeaderItem(5)
+        ___qtablewidgetitem87.setText(QCoreApplication.translate("MainWindow", u"tau1x", None));
+        ___qtablewidgetitem88 = self.TSlipSystemParameters.horizontalHeaderItem(6)
+        ___qtablewidgetitem88.setText(QCoreApplication.translate("MainWindow", u"thet0", None));
+        ___qtablewidgetitem89 = self.TSlipSystemParameters.horizontalHeaderItem(7)
+        ___qtablewidgetitem89.setText(QCoreApplication.translate("MainWindow", u"thet1", None));
+        ___qtablewidgetitem90 = self.TSlipSystemParameters.horizontalHeaderItem(8)
+        ___qtablewidgetitem90.setText(QCoreApplication.translate("MainWindow", u"hselfx", None));
+        ___qtablewidgetitem91 = self.TSlipSystemParameters.horizontalHeaderItem(9)
+        ___qtablewidgetitem91.setText(QCoreApplication.translate("MainWindow", u"hlatex", None));
         self.LSelectSlipSystem.setText(QCoreApplication.translate("MainWindow", u"Slip System:", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_9.setToolTip(QCoreApplication.translate("MainWindow", u"Rate sensitivity exponent. Relates shear rate on a slip system to the resolved shear stress.", None))
@@ -6331,78 +6482,78 @@ class Ui_MainWindow(object):
         self.MaterialMenu_2.setTabText(self.MaterialMenu_2.indexOf(self.Plastic), QCoreApplication.translate("MainWindow", u"Plastic", None))
         self.BAddMaterial_2.setText(QCoreApplication.translate("MainWindow", u"Add Material", None))
         self.BDeleteMaterial_2.setText(QCoreApplication.translate("MainWindow", u"Delete Material", None))
-        ___qtablewidgetitem66 = self.TMaterials_2.horizontalHeaderItem(0)
-        ___qtablewidgetitem66.setText(QCoreApplication.translate("MainWindow", u"Name", None));
-        ___qtablewidgetitem67 = self.TMaterials_2.horizontalHeaderItem(1)
-        ___qtablewidgetitem67.setText(QCoreApplication.translate("MainWindow", u"Elasticity", None));
-        ___qtablewidgetitem68 = self.TMaterials_2.horizontalHeaderItem(2)
-        ___qtablewidgetitem68.setText(QCoreApplication.translate("MainWindow", u"C11", None));
-        ___qtablewidgetitem69 = self.TMaterials_2.horizontalHeaderItem(3)
-        ___qtablewidgetitem69.setText(QCoreApplication.translate("MainWindow", u"C12", None));
-        ___qtablewidgetitem70 = self.TMaterials_2.horizontalHeaderItem(4)
-        ___qtablewidgetitem70.setText(QCoreApplication.translate("MainWindow", u"C13", None));
-        ___qtablewidgetitem71 = self.TMaterials_2.horizontalHeaderItem(5)
-        ___qtablewidgetitem71.setText(QCoreApplication.translate("MainWindow", u"C14", None));
-        ___qtablewidgetitem72 = self.TMaterials_2.horizontalHeaderItem(6)
-        ___qtablewidgetitem72.setText(QCoreApplication.translate("MainWindow", u"C15", None));
-        ___qtablewidgetitem73 = self.TMaterials_2.horizontalHeaderItem(7)
-        ___qtablewidgetitem73.setText(QCoreApplication.translate("MainWindow", u"C16", None));
-        ___qtablewidgetitem74 = self.TMaterials_2.horizontalHeaderItem(8)
-        ___qtablewidgetitem74.setText(QCoreApplication.translate("MainWindow", u"C22", None));
-        ___qtablewidgetitem75 = self.TMaterials_2.horizontalHeaderItem(9)
-        ___qtablewidgetitem75.setText(QCoreApplication.translate("MainWindow", u"C23", None));
-        ___qtablewidgetitem76 = self.TMaterials_2.horizontalHeaderItem(10)
-        ___qtablewidgetitem76.setText(QCoreApplication.translate("MainWindow", u"C24", None));
-        ___qtablewidgetitem77 = self.TMaterials_2.horizontalHeaderItem(11)
-        ___qtablewidgetitem77.setText(QCoreApplication.translate("MainWindow", u"C25", None));
-        ___qtablewidgetitem78 = self.TMaterials_2.horizontalHeaderItem(12)
-        ___qtablewidgetitem78.setText(QCoreApplication.translate("MainWindow", u"C26", None));
-        ___qtablewidgetitem79 = self.TMaterials_2.horizontalHeaderItem(13)
-        ___qtablewidgetitem79.setText(QCoreApplication.translate("MainWindow", u"C33", None));
-        ___qtablewidgetitem80 = self.TMaterials_2.horizontalHeaderItem(14)
-        ___qtablewidgetitem80.setText(QCoreApplication.translate("MainWindow", u"C34", None));
-        ___qtablewidgetitem81 = self.TMaterials_2.horizontalHeaderItem(15)
-        ___qtablewidgetitem81.setText(QCoreApplication.translate("MainWindow", u"C35", None));
-        ___qtablewidgetitem82 = self.TMaterials_2.horizontalHeaderItem(16)
-        ___qtablewidgetitem82.setText(QCoreApplication.translate("MainWindow", u"C36", None));
-        ___qtablewidgetitem83 = self.TMaterials_2.horizontalHeaderItem(17)
-        ___qtablewidgetitem83.setText(QCoreApplication.translate("MainWindow", u"C44", None));
-        ___qtablewidgetitem84 = self.TMaterials_2.horizontalHeaderItem(18)
-        ___qtablewidgetitem84.setText(QCoreApplication.translate("MainWindow", u"C45", None));
-        ___qtablewidgetitem85 = self.TMaterials_2.horizontalHeaderItem(19)
-        ___qtablewidgetitem85.setText(QCoreApplication.translate("MainWindow", u"C46", None));
-        ___qtablewidgetitem86 = self.TMaterials_2.horizontalHeaderItem(20)
-        ___qtablewidgetitem86.setText(QCoreApplication.translate("MainWindow", u"C55", None));
-        ___qtablewidgetitem87 = self.TMaterials_2.horizontalHeaderItem(21)
-        ___qtablewidgetitem87.setText(QCoreApplication.translate("MainWindow", u"C56", None));
-        ___qtablewidgetitem88 = self.TMaterials_2.horizontalHeaderItem(22)
-        ___qtablewidgetitem88.setText(QCoreApplication.translate("MainWindow", u"C66", None));
-        ___qtablewidgetitem89 = self.TMaterials_2.horizontalHeaderItem(23)
-        ___qtablewidgetitem89.setText(QCoreApplication.translate("MainWindow", u"a", None));
-        ___qtablewidgetitem90 = self.TMaterials_2.horizontalHeaderItem(24)
-        ___qtablewidgetitem90.setText(QCoreApplication.translate("MainWindow", u"b", None));
-        ___qtablewidgetitem91 = self.TMaterials_2.horizontalHeaderItem(25)
-        ___qtablewidgetitem91.setText(QCoreApplication.translate("MainWindow", u"c", None));
-        ___qtablewidgetitem92 = self.TMaterials_2.horizontalHeaderItem(26)
-        ___qtablewidgetitem92.setText(QCoreApplication.translate("MainWindow", u"Slip Systems", None));
-        ___qtablewidgetitem93 = self.TMaterials_2.horizontalHeaderItem(27)
-        ___qtablewidgetitem93.setText(QCoreApplication.translate("MainWindow", u"nrsx", None));
-        ___qtablewidgetitem94 = self.TMaterials_2.horizontalHeaderItem(28)
-        ___qtablewidgetitem94.setText(QCoreApplication.translate("MainWindow", u"gamd0x", None));
-        ___qtablewidgetitem95 = self.TMaterials_2.horizontalHeaderItem(29)
-        ___qtablewidgetitem95.setText(QCoreApplication.translate("MainWindow", u"tau0xf", None));
-        ___qtablewidgetitem96 = self.TMaterials_2.horizontalHeaderItem(30)
-        ___qtablewidgetitem96.setText(QCoreApplication.translate("MainWindow", u"tau0xb", None));
-        ___qtablewidgetitem97 = self.TMaterials_2.horizontalHeaderItem(31)
-        ___qtablewidgetitem97.setText(QCoreApplication.translate("MainWindow", u"tau1x", None));
-        ___qtablewidgetitem98 = self.TMaterials_2.horizontalHeaderItem(32)
-        ___qtablewidgetitem98.setText(QCoreApplication.translate("MainWindow", u"thet0", None));
-        ___qtablewidgetitem99 = self.TMaterials_2.horizontalHeaderItem(33)
-        ___qtablewidgetitem99.setText(QCoreApplication.translate("MainWindow", u"thet1", None));
-        ___qtablewidgetitem100 = self.TMaterials_2.horizontalHeaderItem(34)
-        ___qtablewidgetitem100.setText(QCoreApplication.translate("MainWindow", u"hselfx", None));
-        ___qtablewidgetitem101 = self.TMaterials_2.horizontalHeaderItem(35)
-        ___qtablewidgetitem101.setText(QCoreApplication.translate("MainWindow", u"hlatex", None));
+        ___qtablewidgetitem92 = self.TMaterials_2.horizontalHeaderItem(0)
+        ___qtablewidgetitem92.setText(QCoreApplication.translate("MainWindow", u"Name", None));
+        ___qtablewidgetitem93 = self.TMaterials_2.horizontalHeaderItem(1)
+        ___qtablewidgetitem93.setText(QCoreApplication.translate("MainWindow", u"Elasticity", None));
+        ___qtablewidgetitem94 = self.TMaterials_2.horizontalHeaderItem(2)
+        ___qtablewidgetitem94.setText(QCoreApplication.translate("MainWindow", u"C11", None));
+        ___qtablewidgetitem95 = self.TMaterials_2.horizontalHeaderItem(3)
+        ___qtablewidgetitem95.setText(QCoreApplication.translate("MainWindow", u"C12", None));
+        ___qtablewidgetitem96 = self.TMaterials_2.horizontalHeaderItem(4)
+        ___qtablewidgetitem96.setText(QCoreApplication.translate("MainWindow", u"C13", None));
+        ___qtablewidgetitem97 = self.TMaterials_2.horizontalHeaderItem(5)
+        ___qtablewidgetitem97.setText(QCoreApplication.translate("MainWindow", u"C14", None));
+        ___qtablewidgetitem98 = self.TMaterials_2.horizontalHeaderItem(6)
+        ___qtablewidgetitem98.setText(QCoreApplication.translate("MainWindow", u"C15", None));
+        ___qtablewidgetitem99 = self.TMaterials_2.horizontalHeaderItem(7)
+        ___qtablewidgetitem99.setText(QCoreApplication.translate("MainWindow", u"C16", None));
+        ___qtablewidgetitem100 = self.TMaterials_2.horizontalHeaderItem(8)
+        ___qtablewidgetitem100.setText(QCoreApplication.translate("MainWindow", u"C22", None));
+        ___qtablewidgetitem101 = self.TMaterials_2.horizontalHeaderItem(9)
+        ___qtablewidgetitem101.setText(QCoreApplication.translate("MainWindow", u"C23", None));
+        ___qtablewidgetitem102 = self.TMaterials_2.horizontalHeaderItem(10)
+        ___qtablewidgetitem102.setText(QCoreApplication.translate("MainWindow", u"C24", None));
+        ___qtablewidgetitem103 = self.TMaterials_2.horizontalHeaderItem(11)
+        ___qtablewidgetitem103.setText(QCoreApplication.translate("MainWindow", u"C25", None));
+        ___qtablewidgetitem104 = self.TMaterials_2.horizontalHeaderItem(12)
+        ___qtablewidgetitem104.setText(QCoreApplication.translate("MainWindow", u"C26", None));
+        ___qtablewidgetitem105 = self.TMaterials_2.horizontalHeaderItem(13)
+        ___qtablewidgetitem105.setText(QCoreApplication.translate("MainWindow", u"C33", None));
+        ___qtablewidgetitem106 = self.TMaterials_2.horizontalHeaderItem(14)
+        ___qtablewidgetitem106.setText(QCoreApplication.translate("MainWindow", u"C34", None));
+        ___qtablewidgetitem107 = self.TMaterials_2.horizontalHeaderItem(15)
+        ___qtablewidgetitem107.setText(QCoreApplication.translate("MainWindow", u"C35", None));
+        ___qtablewidgetitem108 = self.TMaterials_2.horizontalHeaderItem(16)
+        ___qtablewidgetitem108.setText(QCoreApplication.translate("MainWindow", u"C36", None));
+        ___qtablewidgetitem109 = self.TMaterials_2.horizontalHeaderItem(17)
+        ___qtablewidgetitem109.setText(QCoreApplication.translate("MainWindow", u"C44", None));
+        ___qtablewidgetitem110 = self.TMaterials_2.horizontalHeaderItem(18)
+        ___qtablewidgetitem110.setText(QCoreApplication.translate("MainWindow", u"C45", None));
+        ___qtablewidgetitem111 = self.TMaterials_2.horizontalHeaderItem(19)
+        ___qtablewidgetitem111.setText(QCoreApplication.translate("MainWindow", u"C46", None));
+        ___qtablewidgetitem112 = self.TMaterials_2.horizontalHeaderItem(20)
+        ___qtablewidgetitem112.setText(QCoreApplication.translate("MainWindow", u"C55", None));
+        ___qtablewidgetitem113 = self.TMaterials_2.horizontalHeaderItem(21)
+        ___qtablewidgetitem113.setText(QCoreApplication.translate("MainWindow", u"C56", None));
+        ___qtablewidgetitem114 = self.TMaterials_2.horizontalHeaderItem(22)
+        ___qtablewidgetitem114.setText(QCoreApplication.translate("MainWindow", u"C66", None));
+        ___qtablewidgetitem115 = self.TMaterials_2.horizontalHeaderItem(23)
+        ___qtablewidgetitem115.setText(QCoreApplication.translate("MainWindow", u"a", None));
+        ___qtablewidgetitem116 = self.TMaterials_2.horizontalHeaderItem(24)
+        ___qtablewidgetitem116.setText(QCoreApplication.translate("MainWindow", u"b", None));
+        ___qtablewidgetitem117 = self.TMaterials_2.horizontalHeaderItem(25)
+        ___qtablewidgetitem117.setText(QCoreApplication.translate("MainWindow", u"c", None));
+        ___qtablewidgetitem118 = self.TMaterials_2.horizontalHeaderItem(26)
+        ___qtablewidgetitem118.setText(QCoreApplication.translate("MainWindow", u"Slip Systems", None));
+        ___qtablewidgetitem119 = self.TMaterials_2.horizontalHeaderItem(27)
+        ___qtablewidgetitem119.setText(QCoreApplication.translate("MainWindow", u"nrsx", None));
+        ___qtablewidgetitem120 = self.TMaterials_2.horizontalHeaderItem(28)
+        ___qtablewidgetitem120.setText(QCoreApplication.translate("MainWindow", u"gamd0x", None));
+        ___qtablewidgetitem121 = self.TMaterials_2.horizontalHeaderItem(29)
+        ___qtablewidgetitem121.setText(QCoreApplication.translate("MainWindow", u"tau0xf", None));
+        ___qtablewidgetitem122 = self.TMaterials_2.horizontalHeaderItem(30)
+        ___qtablewidgetitem122.setText(QCoreApplication.translate("MainWindow", u"tau0xb", None));
+        ___qtablewidgetitem123 = self.TMaterials_2.horizontalHeaderItem(31)
+        ___qtablewidgetitem123.setText(QCoreApplication.translate("MainWindow", u"tau1x", None));
+        ___qtablewidgetitem124 = self.TMaterials_2.horizontalHeaderItem(32)
+        ___qtablewidgetitem124.setText(QCoreApplication.translate("MainWindow", u"thet0", None));
+        ___qtablewidgetitem125 = self.TMaterials_2.horizontalHeaderItem(33)
+        ___qtablewidgetitem125.setText(QCoreApplication.translate("MainWindow", u"thet1", None));
+        ___qtablewidgetitem126 = self.TMaterials_2.horizontalHeaderItem(34)
+        ___qtablewidgetitem126.setText(QCoreApplication.translate("MainWindow", u"hselfx", None));
+        ___qtablewidgetitem127 = self.TMaterials_2.horizontalHeaderItem(35)
+        ___qtablewidgetitem127.setText(QCoreApplication.translate("MainWindow", u"hlatex", None));
         self.DefineAssignMats.setTabText(self.DefineAssignMats.indexOf(self.DefineMaterials), QCoreApplication.translate("MainWindow", u"Define Materials", None))
         self.INSelectAssignMaterials.setItemText(0, QCoreApplication.translate("MainWindow", u"SGH", None))
         self.INSelectAssignMaterials.setItemText(1, QCoreApplication.translate("MainWindow", u"Homogenization", None))
@@ -6422,38 +6573,38 @@ class Ui_MainWindow(object):
         self.LVelz.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Z</p></body></html>", None))
         self.INVelocityZ.setText("")
         self.Baddmaterialassignment.setText(QCoreApplication.translate("MainWindow", u"Add Material Assignment", None))
-        ___qtablewidgetitem102 = self.Tassignmat.horizontalHeaderItem(0)
-        ___qtablewidgetitem102.setText(QCoreApplication.translate("MainWindow", u"Region", None));
-        ___qtablewidgetitem103 = self.Tassignmat.horizontalHeaderItem(1)
-        ___qtablewidgetitem103.setText(QCoreApplication.translate("MainWindow", u"Material", None));
-        ___qtablewidgetitem104 = self.Tassignmat.horizontalHeaderItem(2)
-        ___qtablewidgetitem104.setText(QCoreApplication.translate("MainWindow", u"Density", None));
-        ___qtablewidgetitem105 = self.Tassignmat.horizontalHeaderItem(3)
-        ___qtablewidgetitem105.setText(QCoreApplication.translate("MainWindow", u"Specific Internal Energy", None));
-        ___qtablewidgetitem106 = self.Tassignmat.horizontalHeaderItem(4)
-        ___qtablewidgetitem106.setText(QCoreApplication.translate("MainWindow", u"Velocity X", None));
-        ___qtablewidgetitem107 = self.Tassignmat.horizontalHeaderItem(5)
-        ___qtablewidgetitem107.setText(QCoreApplication.translate("MainWindow", u"Velocity Y", None));
-        ___qtablewidgetitem108 = self.Tassignmat.horizontalHeaderItem(6)
-        ___qtablewidgetitem108.setText(QCoreApplication.translate("MainWindow", u"Velocity Z", None));
+        ___qtablewidgetitem128 = self.Tassignmat.horizontalHeaderItem(0)
+        ___qtablewidgetitem128.setText(QCoreApplication.translate("MainWindow", u"Region", None));
+        ___qtablewidgetitem129 = self.Tassignmat.horizontalHeaderItem(1)
+        ___qtablewidgetitem129.setText(QCoreApplication.translate("MainWindow", u"Material", None));
+        ___qtablewidgetitem130 = self.Tassignmat.horizontalHeaderItem(2)
+        ___qtablewidgetitem130.setText(QCoreApplication.translate("MainWindow", u"Density", None));
+        ___qtablewidgetitem131 = self.Tassignmat.horizontalHeaderItem(3)
+        ___qtablewidgetitem131.setText(QCoreApplication.translate("MainWindow", u"Specific Internal Energy", None));
+        ___qtablewidgetitem132 = self.Tassignmat.horizontalHeaderItem(4)
+        ___qtablewidgetitem132.setText(QCoreApplication.translate("MainWindow", u"Velocity X", None));
+        ___qtablewidgetitem133 = self.Tassignmat.horizontalHeaderItem(5)
+        ___qtablewidgetitem133.setText(QCoreApplication.translate("MainWindow", u"Velocity Y", None));
+        ___qtablewidgetitem134 = self.Tassignmat.horizontalHeaderItem(6)
+        ___qtablewidgetitem134.setText(QCoreApplication.translate("MainWindow", u"Velocity Z", None));
         self.BUpMaterial.setText("")
         self.BDownMaterial.setText(QCoreApplication.translate("MainWindow", u"...", None))
         self.Bdeletematerialassignment.setText(QCoreApplication.translate("MainWindow", u"Delete Material Assignment", None))
         self.LMaterialName_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Region:</p></body></html>", None))
         self.LRegion_6.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Material:</p></body></html>", None))
         self.BAddMaterialAssignment.setText(QCoreApplication.translate("MainWindow", u"Add Material Assignment", None))
-        ___qtablewidgetitem109 = self.TMaterialAssignment.horizontalHeaderItem(0)
-        ___qtablewidgetitem109.setText(QCoreApplication.translate("MainWindow", u"Region", None));
-        ___qtablewidgetitem110 = self.TMaterialAssignment.horizontalHeaderItem(1)
-        ___qtablewidgetitem110.setText(QCoreApplication.translate("MainWindow", u"Material", None));
+        ___qtablewidgetitem135 = self.TMaterialAssignment.horizontalHeaderItem(0)
+        ___qtablewidgetitem135.setText(QCoreApplication.translate("MainWindow", u"Region", None));
+        ___qtablewidgetitem136 = self.TMaterialAssignment.horizontalHeaderItem(1)
+        ___qtablewidgetitem136.setText(QCoreApplication.translate("MainWindow", u"Material", None));
         self.BDeleteMaterialAssignment.setText(QCoreApplication.translate("MainWindow", u"Delete Material Assignment", None))
         self.LMaterialName_5.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Region:</p></body></html>", None))
         self.LRegion_7.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"right\">Material:</p></body></html>", None))
         self.BAddMaterialAssignment_2.setText(QCoreApplication.translate("MainWindow", u"Add Material Assignment", None))
-        ___qtablewidgetitem111 = self.TMaterialAssignment_2.horizontalHeaderItem(0)
-        ___qtablewidgetitem111.setText(QCoreApplication.translate("MainWindow", u"Region", None));
-        ___qtablewidgetitem112 = self.TMaterialAssignment_2.horizontalHeaderItem(1)
-        ___qtablewidgetitem112.setText(QCoreApplication.translate("MainWindow", u"Material", None));
+        ___qtablewidgetitem137 = self.TMaterialAssignment_2.horizontalHeaderItem(0)
+        ___qtablewidgetitem137.setText(QCoreApplication.translate("MainWindow", u"Region", None));
+        ___qtablewidgetitem138 = self.TMaterialAssignment_2.horizontalHeaderItem(1)
+        ___qtablewidgetitem138.setText(QCoreApplication.translate("MainWindow", u"Material", None));
         self.BDeleteMaterialAssignment_2.setText(QCoreApplication.translate("MainWindow", u"Delete Material Assignment", None))
         self.DefineAssignMats.setTabText(self.DefineAssignMats.indexOf(self.AssignMaterials), QCoreApplication.translate("MainWindow", u"Assign Materials", None))
         self.LBoundaryConditions.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><img src=\":/Blue Icons/Blue Icons/brick.svg\" width=\"40\" height=\"40\"/></p><p align=\"center\"><span style=\" font-size:16pt; font-weight:700;\">Boundary Conditions</span></p></body></html>", None))
@@ -6478,20 +6629,20 @@ class Ui_MainWindow(object):
         self.LVelstart.setText(QCoreApplication.translate("MainWindow", u"vel_t_start: ", None))
         self.LVelend.setText(QCoreApplication.translate("MainWindow", u"vel_t_end: ", None))
         self.BaddBC.setText(QCoreApplication.translate("MainWindow", u"Add Boundary Condition", None))
-        ___qtablewidgetitem113 = self.TBoundaryConditions.horizontalHeaderItem(0)
-        ___qtablewidgetitem113.setText(QCoreApplication.translate("MainWindow", u"Boundary", None));
-        ___qtablewidgetitem114 = self.TBoundaryConditions.horizontalHeaderItem(1)
-        ___qtablewidgetitem114.setText(QCoreApplication.translate("MainWindow", u"Plane Position", None));
-        ___qtablewidgetitem115 = self.TBoundaryConditions.horizontalHeaderItem(2)
-        ___qtablewidgetitem115.setText(QCoreApplication.translate("MainWindow", u"Type", None));
-        ___qtablewidgetitem116 = self.TBoundaryConditions.horizontalHeaderItem(3)
-        ___qtablewidgetitem116.setText(QCoreApplication.translate("MainWindow", u"vel_0", None));
-        ___qtablewidgetitem117 = self.TBoundaryConditions.horizontalHeaderItem(4)
-        ___qtablewidgetitem117.setText(QCoreApplication.translate("MainWindow", u"vel_1", None));
-        ___qtablewidgetitem118 = self.TBoundaryConditions.horizontalHeaderItem(5)
-        ___qtablewidgetitem118.setText(QCoreApplication.translate("MainWindow", u"vel_t_start", None));
-        ___qtablewidgetitem119 = self.TBoundaryConditions.horizontalHeaderItem(6)
-        ___qtablewidgetitem119.setText(QCoreApplication.translate("MainWindow", u"vel_t_end", None));
+        ___qtablewidgetitem139 = self.TBoundaryConditions.horizontalHeaderItem(0)
+        ___qtablewidgetitem139.setText(QCoreApplication.translate("MainWindow", u"Boundary", None));
+        ___qtablewidgetitem140 = self.TBoundaryConditions.horizontalHeaderItem(1)
+        ___qtablewidgetitem140.setText(QCoreApplication.translate("MainWindow", u"Plane Position", None));
+        ___qtablewidgetitem141 = self.TBoundaryConditions.horizontalHeaderItem(2)
+        ___qtablewidgetitem141.setText(QCoreApplication.translate("MainWindow", u"Type", None));
+        ___qtablewidgetitem142 = self.TBoundaryConditions.horizontalHeaderItem(3)
+        ___qtablewidgetitem142.setText(QCoreApplication.translate("MainWindow", u"vel_0", None));
+        ___qtablewidgetitem143 = self.TBoundaryConditions.horizontalHeaderItem(4)
+        ___qtablewidgetitem143.setText(QCoreApplication.translate("MainWindow", u"vel_1", None));
+        ___qtablewidgetitem144 = self.TBoundaryConditions.horizontalHeaderItem(5)
+        ___qtablewidgetitem144.setText(QCoreApplication.translate("MainWindow", u"vel_t_start", None));
+        ___qtablewidgetitem145 = self.TBoundaryConditions.horizontalHeaderItem(6)
+        ___qtablewidgetitem145.setText(QCoreApplication.translate("MainWindow", u"vel_t_end", None));
         self.BdeleteBC.setText(QCoreApplication.translate("MainWindow", u"Delete Boundary Condition", None))
         self.LbulkBC.setText(QCoreApplication.translate("MainWindow", u"Type:", None))
         self.INbulkBC.setItemText(0, QCoreApplication.translate("MainWindow", u"Custom", None))
@@ -6592,42 +6743,42 @@ class Ui_MainWindow(object):
         self.INResultRegion.setItemText(2, QCoreApplication.translate("MainWindow", u"Part + Void", None))
 
         self.BOpenParaview.setText(QCoreApplication.translate("MainWindow", u"Open Paraview", None))
-        ___qtablewidgetitem120 = self.THomogenization.horizontalHeaderItem(0)
-        ___qtablewidgetitem120.setText(QCoreApplication.translate("MainWindow", u"Homogenized Elastic Constants", None));
-        ___qtablewidgetitem121 = self.THomogenization.verticalHeaderItem(0)
-        ___qtablewidgetitem121.setText(QCoreApplication.translate("MainWindow", u"Exx", None));
-        ___qtablewidgetitem122 = self.THomogenization.verticalHeaderItem(1)
-        ___qtablewidgetitem122.setText(QCoreApplication.translate("MainWindow", u"Eyy", None));
-        ___qtablewidgetitem123 = self.THomogenization.verticalHeaderItem(2)
-        ___qtablewidgetitem123.setText(QCoreApplication.translate("MainWindow", u"Ezz", None));
-        ___qtablewidgetitem124 = self.THomogenization.verticalHeaderItem(3)
-        ___qtablewidgetitem124.setText(QCoreApplication.translate("MainWindow", u"NUxy", None));
-        ___qtablewidgetitem125 = self.THomogenization.verticalHeaderItem(4)
-        ___qtablewidgetitem125.setText(QCoreApplication.translate("MainWindow", u"NUzx", None));
-        ___qtablewidgetitem126 = self.THomogenization.verticalHeaderItem(5)
-        ___qtablewidgetitem126.setText(QCoreApplication.translate("MainWindow", u"NUyz", None));
-        ___qtablewidgetitem127 = self.THomogenization.verticalHeaderItem(6)
-        ___qtablewidgetitem127.setText(QCoreApplication.translate("MainWindow", u"Gxy", None));
-        ___qtablewidgetitem128 = self.THomogenization.verticalHeaderItem(7)
-        ___qtablewidgetitem128.setText(QCoreApplication.translate("MainWindow", u"Gxz", None));
-        ___qtablewidgetitem129 = self.THomogenization.verticalHeaderItem(8)
-        ___qtablewidgetitem129.setText(QCoreApplication.translate("MainWindow", u"Gyz", None));
+        ___qtablewidgetitem146 = self.THomogenization.horizontalHeaderItem(0)
+        ___qtablewidgetitem146.setText(QCoreApplication.translate("MainWindow", u"Homogenized Elastic Constants", None));
+        ___qtablewidgetitem147 = self.THomogenization.verticalHeaderItem(0)
+        ___qtablewidgetitem147.setText(QCoreApplication.translate("MainWindow", u"Exx", None));
+        ___qtablewidgetitem148 = self.THomogenization.verticalHeaderItem(1)
+        ___qtablewidgetitem148.setText(QCoreApplication.translate("MainWindow", u"Eyy", None));
+        ___qtablewidgetitem149 = self.THomogenization.verticalHeaderItem(2)
+        ___qtablewidgetitem149.setText(QCoreApplication.translate("MainWindow", u"Ezz", None));
+        ___qtablewidgetitem150 = self.THomogenization.verticalHeaderItem(3)
+        ___qtablewidgetitem150.setText(QCoreApplication.translate("MainWindow", u"NUxy", None));
+        ___qtablewidgetitem151 = self.THomogenization.verticalHeaderItem(4)
+        ___qtablewidgetitem151.setText(QCoreApplication.translate("MainWindow", u"NUzx", None));
+        ___qtablewidgetitem152 = self.THomogenization.verticalHeaderItem(5)
+        ___qtablewidgetitem152.setText(QCoreApplication.translate("MainWindow", u"NUyz", None));
+        ___qtablewidgetitem153 = self.THomogenization.verticalHeaderItem(6)
+        ___qtablewidgetitem153.setText(QCoreApplication.translate("MainWindow", u"Gxy", None));
+        ___qtablewidgetitem154 = self.THomogenization.verticalHeaderItem(7)
+        ___qtablewidgetitem154.setText(QCoreApplication.translate("MainWindow", u"Gxz", None));
+        ___qtablewidgetitem155 = self.THomogenization.verticalHeaderItem(8)
+        ___qtablewidgetitem155.setText(QCoreApplication.translate("MainWindow", u"Gyz", None));
 
-        __sortingEnabled3 = self.THomogenization.isSortingEnabled()
+        __sortingEnabled4 = self.THomogenization.isSortingEnabled()
         self.THomogenization.setSortingEnabled(False)
-        ___qtablewidgetitem130 = self.THomogenization.item(0, 1)
-        ___qtablewidgetitem130.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
-        ___qtablewidgetitem131 = self.THomogenization.item(1, 1)
-        ___qtablewidgetitem131.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
-        ___qtablewidgetitem132 = self.THomogenization.item(2, 1)
-        ___qtablewidgetitem132.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
-        ___qtablewidgetitem133 = self.THomogenization.item(6, 1)
-        ___qtablewidgetitem133.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
-        ___qtablewidgetitem134 = self.THomogenization.item(7, 1)
-        ___qtablewidgetitem134.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
-        ___qtablewidgetitem135 = self.THomogenization.item(8, 1)
-        ___qtablewidgetitem135.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
-        self.THomogenization.setSortingEnabled(__sortingEnabled3)
+        ___qtablewidgetitem156 = self.THomogenization.item(0, 1)
+        ___qtablewidgetitem156.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
+        ___qtablewidgetitem157 = self.THomogenization.item(1, 1)
+        ___qtablewidgetitem157.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
+        ___qtablewidgetitem158 = self.THomogenization.item(2, 1)
+        ___qtablewidgetitem158.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
+        ___qtablewidgetitem159 = self.THomogenization.item(6, 1)
+        ___qtablewidgetitem159.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
+        ___qtablewidgetitem160 = self.THomogenization.item(7, 1)
+        ___qtablewidgetitem160.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
+        ___qtablewidgetitem161 = self.THomogenization.item(8, 1)
+        ___qtablewidgetitem161.setText(QCoreApplication.translate("MainWindow", u"[Pa]", None));
+        self.THomogenization.setSortingEnabled(__sortingEnabled4)
 
         self.LHomogenizationJobDir.setText(QCoreApplication.translate("MainWindow", u"Job Directory:", None))
         self.INBFResults.setItemText(0, QCoreApplication.translate("MainWindow", u"vm-stress", None))
