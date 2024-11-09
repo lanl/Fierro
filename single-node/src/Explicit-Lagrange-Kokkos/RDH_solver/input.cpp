@@ -5,6 +5,8 @@
 #include "matar.h"
 #include "state.h"
 #include "mesh.h"
+#include "rdh.h"
+
 
 
 // Problem choice:
@@ -71,16 +73,18 @@ void input(CArrayKokkos <material_t> &material,
            double &graphics_dt_ival,
            size_t &graphics_cyc_ival,
            size_t &cycle_stop,
-           size_t &rk_num_stages){
+           size_t &rk_num_stages,
+           bool &viscosity_cond,
+           bool &source_cond){
     
     // Dimensions
     num_dims = 3;
     
     // ---- time variables and cycle info ----
     time_final = 1.0;  // 1.0 for Sedov
-    dt_min = 1.e-8;
-    dt_max = 1.e-3;
-    dt_start = 1.e-5;
+    dt_min = 1.e-6;
+    dt_max = 1.e-2;
+    dt_start = 1.e-4;
     cycle_stop = 100000;
 
 
@@ -118,7 +122,7 @@ void input(CArrayKokkos <material_t> &material,
     // Sedov blast wave test case
     if (test_problem == test::Sedov3D){
         time_final = 1.0;
-        
+        viscosity_cond = true;
         RUN({
             // gamma law model
             // statev(0) = gamma
@@ -210,7 +214,7 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::Sod3DX){
 
         time_final = 0.25;
-
+        viscosity_cond = true;
         material(0).eos_model = ideal_gas; // EOS model is required
             
         material(0).strength_type = model::none;
@@ -295,7 +299,7 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::Sod3DY){
 
         time_final = 0.25;
-
+        viscosity_cond = true;
         material(0).eos_model = ideal_gas; // EOS model is required
             
         material(0).strength_type = model::none;
@@ -380,7 +384,7 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::Sod3DZ){
 
         time_final = 0.25;
-
+        viscosity_cond = true;
         material(0).eos_model = ideal_gas; // EOS model is required
             
         material(0).strength_type = model::none;
@@ -466,6 +470,7 @@ void input(CArrayKokkos <material_t> &material,
     // 2D RZ Sedov blast wave test case
     if (test_problem == test::SedovRZ){
         time_final = 1.0;  // 1.0 for Sedov
+        viscosity_cond = true;
         RUN({
             // gamma law model
             // statev(0) = gamma
@@ -557,7 +562,7 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::Noh3D){
 
         time_final = 0.6;
-        
+        viscosity_cond = true;
         RUN({
             
             material(0).eos_model = ideal_gas; // EOS model
@@ -606,7 +611,7 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::NohRZ){
 
         time_final = 0.6;
-        
+        viscosity_cond = true;
         RUN({
             
             material(0).eos_model = ideal_gas; // EOS model
@@ -656,7 +661,7 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::SodZ){
         
         time_final = 0.2;  // 1.0 for Sedov
-        
+        viscosity_cond = true;
         RUN({
             // gamma law model
             // statev(0) = gamma
@@ -744,7 +749,7 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::TriplePoint){
         
         time_final = 3.3;
-        
+        viscosity_cond = true;
         RUN({
             // gamma law model
             // statev(0) = gamma
@@ -867,7 +872,7 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::TaylorAnvil){
 
         time_final = 25.0;
-        
+        viscosity_cond = true;
         RUN({
             
             material(0).eos_model = ideal_gas; // EOS model
@@ -921,7 +926,7 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::TaylorGreen){
 
         time_final = 0.5;
-        
+        source_cond = true;
         RUN({
             
             material(0).eos_model = ideal_gas; // EOS model
@@ -989,7 +994,8 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::TaylorGreenYZ){
 
         time_final = 0.3;
-        
+        source_cond = true;
+
         RUN({
             
             material(0).eos_model = ideal_gas; // EOS model
@@ -1056,7 +1062,8 @@ void input(CArrayKokkos <material_t> &material,
     if (test_problem == test::TaylorGreenXZ){
 
         time_final = 0.3;
-        
+        source_cond = true;
+
         RUN({
             
             material(0).eos_model = ideal_gas; // EOS model

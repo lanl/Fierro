@@ -1,5 +1,5 @@
-#ifndef REFELEM_H
-#define REFELEM_H
+#ifndef REFSURFELEM_H
+#define REFSURFELEM_H
 
 #include <cmath>
 #include "matar.h"
@@ -11,8 +11,10 @@ using namespace mtr;
 // Kinematic basis will be referenced as basis
 // Thermodynamic basis is referenced as elem_basis, since the thermodynamic quantities are internal to the elements
 
+
 struct fe_ref_surf_t{
-    
+
+#if 0    
     size_t num_dim;
     
     // Kinematic Dofs
@@ -75,10 +77,6 @@ struct fe_ref_surf_t{
     CArrayKokkos <double> gauss_leg_surf_weights;
 
    
-
-
-
-
     void init(int p_order, int num_dim_inp){ 
                 
         num_dim = num_dim_inp-1;
@@ -179,10 +177,7 @@ struct fe_ref_surf_t{
         leg_weights_1D = CArrayKokkos <double> (num_gauss_leg_1d,"leg_weights_1d");
         RUN_CLASS({
             legendre_weights_1D(leg_weights_1D, num_gauss_leg_1d);
-        });
-
-        // //WARNING WARNING WARNING may need to add gauss_lob_elem_positions etc for BV matrix to get control coefficients //
-        
+        });        
             
         FOR_ALL_CLASS( j, 0, num_gauss_lob_1d,
                        i, 0, num_gauss_lob_1d, { 
@@ -2118,7 +2113,7 @@ double eval_bernstein (
       if ( n < v ) return 0.0;
       return 0.5*((1.0-X)*eval_bernstein(n-1, v, X) + (1.0+X)*eval_bernstein(n-1, v-1, X)); 
 }
-
+#endif
 
 };
 

@@ -354,6 +354,7 @@
 
 #include "state.h"
 #include "mesh.h"
+#include "rdh.h"
 #define TINY 1.e-16
 #include <Kokkos_Core.hpp>
 

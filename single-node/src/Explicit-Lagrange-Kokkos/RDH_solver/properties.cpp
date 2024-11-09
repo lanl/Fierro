@@ -4,6 +4,8 @@
 //------------------------------------------------------------------------------
 #include "state.h"
 #include "mesh.h"
+#include "rdh.h"
+
 
 
 void update_state(const CArrayKokkos <material_t> &material,
@@ -20,8 +22,7 @@ void update_state(const CArrayKokkos <material_t> &material,
                   const DViewCArrayKokkos <size_t> &elem_mat_id,
                   const DViewCArrayKokkos <double> &elem_statev,
                   const double dt,
-                  const double rk_alpha
-                  ){
+                  const double rk_alpha){
 
 
     
@@ -40,7 +41,7 @@ void update_state(const CArrayKokkos <material_t> &material,
         
         size_t mat_id = elem_mat_id(elem_gid);
         
-        
+        #if 0
         // --- Stress ---
         // hyper elastic plastic model
         if(material(mat_id).strength_type == model::hyper){
@@ -104,7 +105,8 @@ void update_state(const CArrayKokkos <material_t> &material,
                                    elem_sspd,
                                    elem_den(elem_gid),
                                    elem_sie(1,elem_gid));
-        
+
+        #endif
         
     }); // end parallel for
     Kokkos::fence();
@@ -114,4 +116,23 @@ void update_state(const CArrayKokkos <material_t> &material,
 } // end method to update state
 
 
+void get_den0DetJac0( DViewCArrayKokkos <double> &den0DetJac0,
+                    const DViewCArrayKokkos <double> &den,
+                    const DViewCArrayKokkos <double> &DetJac,
+                    const mat_pt_t &mat_pt){
 
+    FOR_ALL(gauss_gid, 0, mat_pt.num_leg_pts, {
+        den0DetJac0(gauss_gid) = den(gauss_gid) * DetJac(gauss_gid);
+    });// FOR_ALL            
+
+}
+
+void pointwise_mass_conservation(DViewCArrayKokkos <double> &den,
+                                 const DViewCArrayKokkos <double> &DetJac,
+                                 const DViewCArrayKokkos <double> &den0DetJac0,
+                                 const mat_pt_t &mat_pt){
+
+    FOR_ALL(gauss_gid, 0, mat_pt.num_leg_pts, {
+        den(gauss_gid) = den0DetJac0(gauss_gid)/DetJac(gauss_gid);
+    });// FOR_ALL
+}

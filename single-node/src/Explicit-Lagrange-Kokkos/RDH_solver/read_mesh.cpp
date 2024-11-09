@@ -3,6 +3,8 @@
 //------------------------------------------------------------------------------
 #include "mesh.h"
 #include "state.h"
+#include "rdh.h"
+
 
 #include <fstream>
 
@@ -13,6 +15,7 @@ int PointIndexFromIJK(int i, int j, int k, const int* order);
 // -----------------------------------------------------------------------------
 // Reads an ensight .geo mesh file
 //------------------------------------------------------------------------------
+#if 0
 void read_mesh_ensight(char* MESH,
                        mesh_t &mesh,
                        node_t &node,
@@ -168,7 +171,7 @@ void read_mesh_ensight(char* MESH,
     
 }
 
-
+#endif
 
 // This function reads a VTKPn file
 //--------------------------------------------------------
@@ -234,10 +237,10 @@ void readVTKPn(char* MESH,
     
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
-    printf("here-node initialize\n");
+    // printf("here-node initialize\n");
     node.initialize(rk_num_bins, num_nodes, num_dims);
-    printf("here-node finish initialize\n");
-
+    // printf("here-node finish initialize\n");
+    
     
     // read the point coordinates
     for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
@@ -300,6 +303,7 @@ void readVTKPn(char* MESH,
         in.seekg(oldpos);
         
     }
+    
     size_t p = int(std::cbrt(num_nodes_in_elem)-1);
     //num_zones_in_elem = int(std::pow(p, 3)); // one order lower than nodal index space
     num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
@@ -317,9 +321,9 @@ void readVTKPn(char* MESH,
     size_t num_nodes_in_zone = 8;
     // intialize elem mesh
     mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem, num_gauss_leg_in_elem, num_zones_in_elem, num_nodes_in_zone, num_surfs_in_elem, num_dims);
-    elem.initialize_Pn(num_elems); 
-    zone.initialize_Pn( rk_num_bins, num_elems, num_zones_in_elem);
-    mat_pt.initialize_Pn( rk_num_bins, num_elems, num_nodes_in_elem, num_zones_in_elem, num_dims, p);
+    elem.initialize_Pn(rk_num_bins, num_elems, num_nodes_in_elem, num_zones_in_elem, num_dims); 
+    zone.initialize_Pn(rk_num_bins, num_elems, num_zones_in_elem);
+    mat_pt.initialize_Pn(rk_num_bins, num_elems, num_nodes_in_elem, num_zones_in_elem, num_dims, p);
     
     // intialize corner variables
     size_t num_corners = num_elems*num_nodes_in_elem;

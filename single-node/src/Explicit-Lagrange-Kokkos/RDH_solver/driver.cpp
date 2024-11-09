@@ -8,7 +8,9 @@
 #include <ctime>
 
 #include "ref_elem.h"
+#include "ref_surf_elem.h"
 #include "mesh.h"
+#include "rdh.h"
 #include "state.h"
 #include "matar.h"
 #include "linear_algebra.h"
@@ -63,7 +65,8 @@ double fuzz = 1.0e-16;  // machine precision
 double tiny = 1.0e-12;  // very very small (between real_t and single)
 double small= 1.0e-8;   // single precision
 
-
+bool viscosity_cond = false;
+bool source_cond = false;
 
 
 //==============================================================================
@@ -99,6 +102,7 @@ int main(int argc, char *argv[]){
         mat_pt_t mat_pt;
 	    corner_t corner;
         fe_ref_elem_t ref_elem;
+        fe_ref_surf_t ref_surf;
         CArrayKokkos <material_t> material;
         CArrayKokkos <double> state_vars; // array to hold init model variables
         
@@ -131,8 +135,9 @@ int main(int argc, char *argv[]){
               graphics_dt_ival,
               graphics_cyc_ival,
               cycle_stop,
-              rk_num_stages
-              );
+              rk_num_stages,
+              viscosity_cond,
+              source_cond);
         
 
         printf("After input \n");
@@ -146,7 +151,7 @@ int main(int argc, char *argv[]){
         std::vector<std::string> split_file_str = split (arg1, delimiter);
         size_t len = split_file_str.size();
         if(split_file_str[len-1]=="geo"){
-            read_mesh_ensight(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
+            //read_mesh_ensight(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
         }
         else
         {   
@@ -190,7 +195,7 @@ int main(int argc, char *argv[]){
         
         // allocate elem_statev
         elem.statev = CArray <double> (num_elems, num_state_vars);
-        mat_pt.statev = CArrayKokkos <double> (num_leg_pts, num_state_vars);
+        // mat_pt.statev = CArrayKokkos <double> (num_leg_pts, num_state_vars);
         
         
         // create Dual Views of the individual node struct variables
@@ -199,18 +204,49 @@ int main(int argc, char *argv[]){
                                                num_nodes,
                                                num_dims);
 
-        DViewCArrayKokkos <double> mat_pt_coords(&mat_pt.coords(0,0),
-                                                num_leg_pts,
-                                                num_dims);
+        // DViewCArrayKokkos <double> mat_pt_coords(&mat_pt.coords(0,0),
+        //                                         num_leg_pts,
+        //                                         num_dims);
 
         DViewCArrayKokkos <double> node_vel(&node.vel(0,0,0),
                                             rk_num_bins,
                                             num_nodes,
                                             num_dims);
 
-        DViewCArrayKokkos <double> mat_pt_vel(&mat_pt.vel(0,0),
-                                            num_leg_pts,
-                                            num_dims);
+        DViewCArrayKokkos <double> M_u(&elem.M(0,0,0),
+                                            num_elems,
+                                            mesh.num_nodes_in_elem,
+                                            mesh.num_nodes_in_elem);
+        
+        DViewCArrayKokkos <double> F_u(&elem.F_u(0,0,0,0),
+                                            rk_num_stages,
+                                            num_elems,
+                                            mesh.num_nodes_in_elem,
+                                            mesh.num_dims);
+        DViewCArrayKokkos <double> PHI(&elem.PHI(0,0,0,0),
+                                            rk_num_stages,
+                                            num_elems,
+                                            mesh.num_nodes_in_elem,
+                                            mesh.num_dims);
+
+        DViewCArrayKokkos <double> F_e(&elem.F_e(0,0,0),
+                                            rk_num_stages,
+                                            num_elems,
+                                            mesh.num_zones_in_elem);
+
+        DViewCArrayKokkos <double> S(&zone.S(0,0,0),
+                                            rk_num_stages,
+                                            num_elems,
+                                            mesh.num_zones_in_elem);
+
+        DViewCArrayKokkos <double> PSI(&elem.PSI(0,0,0),
+                                            rk_num_stages,
+                                            num_elems,
+                                            mesh.num_zones_in_elem);
+
+        // DViewCArrayKokkos <double> mat_pt_vel(&mat_pt.vel(0,0),
+        //                                     num_leg_pts,
+        //                                     num_dims);
 
         DViewCArrayKokkos <double> node_mass(&node.mass(0),
                                              num_nodes);
@@ -238,21 +274,29 @@ int main(int argc, char *argv[]){
         DViewCArrayKokkos <double> zone_sie(&zone.sie(0,0),
                                             rk_num_bins,
                                             num_zones);
+        
+        DViewCArrayKokkos <double> M_e(&zone.M(0,0,0),
+                                            num_elems,
+                                            mesh.num_zones_in_elem,
+                                            mesh.num_zones_in_elem);
+
+        DViewCArrayKokkos <double> zone_mass(&zone.zonal_mass(0),
+                                             num_zones);
 
         DViewCArrayKokkos <double> mat_pt_sie(&mat_pt.sie(0),
-                                            num_leg_pts);
+                                             num_leg_pts);
 
-        DViewCArrayKokkos <double> mat_pt_div(&mat_pt.div(0),
-                                            num_leg_pts);
+        // DViewCArrayKokkos <double> mat_pt_div(&mat_pt.div(0),
+        //                                     num_leg_pts);
 
         DViewCArrayKokkos <double> elem_vol(&elem.vol(0),
                                             num_elems);
         
 
-        DViewCArrayKokkos <double> mat_pt_mass(&mat_pt.mass(0),
-                                             num_leg_pts);
+        // DViewCArrayKokkos <double> mat_pt_mass(&mat_pt.mass(0),
+        //                                      num_leg_pts);
 
-        DViewCArrayKokkos <size_t> elem_mat_id(&elem.mat_id(0),
+        DViewCArrayKokkos <int> elem_mat_id(&elem.mat_id(0),
                                                num_elems);
 
         DViewCArrayKokkos <double> elem_statev(&elem.statev(0,0),
@@ -261,14 +305,29 @@ int main(int argc, char *argv[]){
         
 
         // create Dual Views of the corner struct variables
-        DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
-                                                num_corners, 
-                                                num_dims);
+        // DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
+        //                                         num_corners, 
+        //                                         num_dims);
 
-        DViewCArrayKokkos <double> corner_mass(&corner.mass(0),
-                                               num_corners);
+        // DViewCArrayKokkos <double> corner_mass(&corner.mass(0),
+        //                                        num_corners);
 
         DViewCArrayKokkos <double> mat_pt_h(&mat_pt.h(0),
+                                                num_leg_pts);
+
+        DViewCArrayKokkos <double> gauss_legendre_jacobian(&mat_pt.gauss_legendre_jacobian(0,0,0),
+                                                            num_leg_pts, 3, 3);
+
+        DViewCArrayKokkos <double> gauss_legendre_jacobian_inverse(&mat_pt.gauss_legendre_jacobian_inverse(0,0,0),
+                                                            num_leg_pts, 3, 3);
+
+        DViewCArrayKokkos <double> SigmaJacInv(&mat_pt.SigmaJacInv(0,0,0,0),
+                                                rk_num_bins, num_leg_pts, 3, 3);
+
+        DViewCArrayKokkos <double> gauss_legendre_det_j(&mat_pt.gauss_legendre_det_j(0),
+                                                        num_leg_pts);
+        
+        DViewCArrayKokkos <double> den0DetJac0(&mat_pt.den0DetJac0(0),
                                                 num_leg_pts);
         
         
@@ -282,14 +341,20 @@ int main(int argc, char *argv[]){
                                   elem,
                                   ref_elem,
                                   node_coords,
-                                  mat_pt.gauss_legendre_jacobian,
-                                  mat_pt.gauss_legendre_det_j,
-                                  mat_pt.gauss_legendre_jacobian_inverse);
+                                  gauss_legendre_jacobian,
+                                  gauss_legendre_det_j,
+                                  gauss_legendre_jacobian_inverse,
+                                  0);
         Kokkos::fence();
+
+        gauss_legendre_jacobian.update_host();
+        gauss_legendre_jacobian_inverse.update_host();
+        gauss_legendre_det_j.update_host();
         
-        get_vol(elem_vol, node_coords, ref_elem.gauss_leg_weights, mat_pt.gauss_legendre_det_j, mesh, elem, ref_elem);
+        get_vol(elem_vol, node_coords, gauss_legendre_det_j, mesh, elem, ref_elem);
         Kokkos::fence();
-        // // double vol_check = 0.0;
+
+        // double vol_check = 0.0;
         // for (int i = 0; i < mesh.num_elems; i++){
         //    vol_check += elem_vol(i);
         // }
@@ -347,7 +412,6 @@ int main(int argc, char *argv[]){
               ref_elem,
               node_coords,
               node_vel,
-              mat_pt_vel,
               node_mass,
               mat_pt_den,
               mat_pt_pressure,
@@ -356,12 +420,9 @@ int main(int argc, char *argv[]){
               zone_sie,
               mat_pt_sie,
               elem_vol,
-              mat_pt_mass,
               elem_mat_id,
               elem_statev,
-              mat_pt.statev,
               state_vars,
-              corner_mass,
               num_fills,
               rk_num_bins,
               num_bcs,
@@ -369,6 +430,8 @@ int main(int argc, char *argv[]){
               num_state_vars);
         Kokkos::fence();
         printf("after setup \n");
+
+
         // intialize time, time_step, and cycles
         time_value = 0.0;
         dt = dt_start;
@@ -376,165 +439,49 @@ int main(int argc, char *argv[]){
         graphics_times(0) = 0.0;
         graphics_time = graphics_dt_ival;  // the times for writing graphics dump
         
-
-        assemble_kinematic_mass_matrix(node.M_V, 
-                                       node.lumped_mass, 
-                                       mesh, 
-                                       ref_elem.gauss_leg_basis,
-                                       ref_elem.gauss_leg_weights,
-                                       mat_pt.gauss_legendre_det_j, 
-                                       mat_pt_den);
-        Kokkos::fence();
-        printf("Global Kinematic Mass Matrix Assembled\n");
-
-        Kokkos::View<double**> temp("temp", mesh.num_zones_in_elem, mesh.num_zones_in_elem);
-        Kokkos::View<double**> temp_inv("temp_inv", mesh.num_zones_in_elem, mesh.num_zones_in_elem);
-        assemble_thermodynamic_mass_matrix(zone.M_e,
-                                          zone.zonal_mass,
-                                          zone.M_e_inv,
-                                          mesh,
-                                          ref_elem.gauss_leg_elem_basis,
-                                          ref_elem.gauss_leg_weights,
-                                          mat_pt.gauss_legendre_det_j, 
-                                          mat_pt_den,
-                                          temp,
-                                          temp_inv);
-        Kokkos::fence();
-        // printf( " ############### \n");
-        // printf(" thermo mass matrix \n");
-        // printf( " ############### \n");
-        printf("Thermodynamic Mass Matrices Assembled Per Element\n");
-        
-        // RUN({
-        //     for (int i =  0; i <  mesh.num_zones; i++){ 
-        //         for( int j = 0; j < mesh.num_zones; j++) {
-                
-        //             printf("%f", zone.M_e(i, j));
-        //         }
-        //         printf("\n");
-        //     }
-        // });
-
-        // RUN({
-        //     for (int i =  0; i <  mesh.num_zones; i++){ 
-                
-        //         printf("%f", zone.zonal_mass(i));
-                
-        //     }
-        //     printf("\n");
-        // });
-
-        // CArrayKokkos <double> left(mesh.num_zones, mesh.num_zones);
-        // CArrayKokkos <double> right(mesh.num_zones, mesh.num_zones);
-
-        // FOR_ALL(i, 0, mesh.num_zones,
-        //         j, 0, mesh.num_zones,
-        //         k, 0, mesh.num_zones,{
-                
-        //         left(i,j) += zone.M_e_inv(i,k)*zone.M_e(k,j);
-        //         right(i,j) += zone.M_e(i,k)*zone.M_e_inv(k,j);
-        // });
-
-        // printf("Left inverse \n");
-        // RUN({
-        //     for (int i =  0; i <  mesh.num_zones; i++){ 
-        //         for( int j = 0; j < mesh.num_zones; j++) {
-                
-        //             printf(" %f ", left(i,j));
-        //         }
-        //         printf("\n");
-        //     }
-        // });
-
-        // printf("Right inverse \n");
-        // RUN({
-        //     for (int i =  0; i <  mesh.num_zones; i++){ 
-        //         for( int j = 0; j < mesh.num_zones; j++) {
-                
-        //             printf(" %f ", right(i,j));
-        //         }
-        //         printf("\n");
-        //     }
-        // });
-        
-
-        // ---------------------------------------------------------------------
-        //   Calculate the RDH solution
-        // ---------------------------------------------------------------------
-        printf("before solve \n");
-        rdh_solve(material,
-                  boundary,
-                  mesh,
-                  elem,
-                  node,
-                  ref_elem,
-                  mat_pt,
-                  zone,
-                  node_coords,
-                  mat_pt_coords,
-                  node_vel,
-                  mat_pt_vel,
-                  node.M_V,
-                  node.lumped_mass,
-                  node_mass,
-                  mat_pt_den,
-                  mat_pt_pressure,
-                  mat_pt_stress,
-                  mat_pt_sspd,
-                  zone_sie,
-                  mat_pt_sie,
-                  zone.M_e,
-                  zone.zonal_mass,
-                  elem_vol,
-		          mat_pt_div,
-                  mat_pt_mass,
-                  mat_pt_h,
-                  elem_mat_id,
-                  elem_statev,
-                  mat_pt.statev,
-                  mat_pt.grad_vel,
-                  mat_pt.sym_grad_vel,
-                  mat_pt.anti_sym_grad_vel,
-                  mat_pt.div_vel,
-                  time_value,
-                  time_final,
-                  dt_max,
-                  dt_min,
-                  dt_cfl,
-                  graphics_time,
-                  graphics_cyc_ival,
-                  graphics_dt_ival,
-                  cycle_stop,
-                  rk_num_stages,
-                  dt,
-                  fuzz,
-                  tiny,
-                  small,
-                  graphics_times,
-                  graphics_id);
-        Kokkos::fence();
-        printf("after solve \n");
-
-
-        // calculate total energy at time=t_end
         mat_pt_den.update_host();
+
+        printf("before den0 deet(J_0) \n");
+        get_den0DetJac0(den0DetJac0, mat_pt_den, gauss_legendre_det_j, mat_pt);
+        Kokkos::fence();
+
+        den0DetJac0.update_host();
         mat_pt_pressure.update_host();
+        
+        printf("before stress \n");
+        // initalize stress
+        for (int stage = 0; stage < rk_num_bins; stage++){
+            get_stress(mesh, mat_pt, mat_pt_pressure, mat_pt_stress, stage);
+        }
+        Kokkos::fence();
+
         mat_pt_stress.update_host();
+        // initialize sigma J^{-1}
+        printf("before sigma J^{-1} \n");
+        for (int stage = 0; stage < rk_num_bins; stage++){
+            get_SigmaJacInv(mesh, mat_pt, mat_pt_stress, gauss_legendre_jacobian_inverse, SigmaJacInv, stage);
+        }
+        Kokkos::fence();
+
+        SigmaJacInv.update_host();
+
         mat_pt_sspd.update_host();
-        mat_pt_vel.update_host();
-        mat_pt_coords.update_host();
+        // mat_pt_vel.update_host();
+        // mat_pt_coords.update_host();
         mat_pt_sie.update_host();
         mat_pt_h.update_host();
         zone_sie.update_host();
         elem_vol.update_host();
-        mat_pt_mass.update_host();
+        // mat_pt_mass.update_host();
         elem_mat_id.update_host();
         
         node_coords.update_host();
         node_vel.update_host();
-        node_mass.update_host();
+        node_div.update_host();
+
         Kokkos::fence();
-        
+
+        // printf("before vtk \n");
         VTKHexN(mesh,
                 node_coords,
                 node_vel,
@@ -545,15 +492,114 @@ int main(int argc, char *argv[]){
                 mat_pt_sspd,
                 zone_sie,
                 elem_vol,
-                mat_pt_mass,
                 elem_mat_id,
                 graphics_times,
                 graphics_id,
                 time_value);
 
-        state_file( mesh, node_coords, node_vel, mat_pt_vel, mat_pt_coords,
+        // compute lumped masses //
+        printf("before lumped mass \n");
+        get_lumped_mass(mesh, ref_elem, gauss_legendre_det_j, mat_pt_den, node_mass, zone_mass);
+        node_mass.update_host();
+        zone_mass.update_host();
+
+        // assemble consistent mass matrices (per element) //
+        printf("before mass matrices \n");
+        assemble_mass_matrices(mesh, ref_elem, mat_pt_den, gauss_legendre_det_j,
+                               M_u, M_e);
+
+        M_u.update_host();
+        M_e.update_host();
+
+
+        //////////////////////////////////////////////////
+        ////////////////// Run Solver ////////////////////
+        //////////////////////////////////////////////////
+        //////////////////////////////////////////////////
+        printf("running solver\n");
+        run(mesh,
+            ref_elem,
+            ref_surf,
+            elem,
+            mat_pt,
+            boundary,
+            node_vel,
+            node_mass,
+            M_u,
+            zone_sie,
+            zone_mass,
+            M_e,
+            PHI,
+            PSI,
+            F_u,
+            F_e,
+            S,
+            node_coords,
+            gauss_legendre_jacobian,
+            gauss_legendre_jacobian_inverse,
+            gauss_legendre_det_j,
+            mat_pt_stress,
+            SigmaJacInv,
+            mat_pt_den,
+            den0DetJac0,
+            mat_pt_pressure,
+            mat_pt_sspd,
+            elem_vol,
+            elem_mat_id,
+            elem_statev,
+            time_value,
+            time_final,
+            dt_max,
+            dt_min,
+            dt_cfl,
+            graphics_time,
+            graphics_cyc_ival,
+            graphics_dt_ival,
+            cycle_stop,
+            rk_num_stages,
+            dt,
+            fuzz,
+            tiny,
+            small,
+            graphics_times,
+            graphics_id,
+            viscosity_cond,
+            source_cond);
+
+
+        //////////////////////////////////////////////////
+        ////////////////// End Solver ////////////////////
+        //////////////////////////////////////////////////
+
+
+        mat_pt_den.update_host();
+        mat_pt_pressure.update_host();
+        mat_pt_stress.update_host();
+        mat_pt_sspd.update_host();
+        // mat_pt_vel.update_host();
+        // mat_pt_coords.update_host();
+        mat_pt_sie.update_host();
+        mat_pt_h.update_host();
+        zone_sie.update_host();
+        zone_mass.update_host();
+        elem_vol.update_host();
+        // mat_pt_mass.update_host();
+        elem_mat_id.update_host();
+        
+        node_coords.update_host();
+        node_vel.update_host();
+        node_mass.update_host();
+        node_div.update_host();
+
+        gauss_legendre_jacobian.update_host();
+        gauss_legendre_jacobian_inverse.update_host();
+        gauss_legendre_det_j.update_host();
+
+        Kokkos::fence();
+
+        state_file( mesh, node_coords, node_vel,
                     mat_pt_h, node_mass, mat_pt_den, mat_pt_pressure, mat_pt_stress,
-                    mat_pt_sspd, mat_pt_sie, elem_vol, mat_pt_mass,
+                    mat_pt_sspd, mat_pt_sie, elem_vol,
                     elem_mat_id, time_value );
             
     } // end of kokkos scope

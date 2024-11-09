@@ -20,22 +20,14 @@ struct node_t {
     
     // mass at nodes
     CArray <double> mass;
-
-    CArrayKokkos <double> M_V;
-    CArrayKokkos <double> lumped_mass;
-
-    CArrayKokkos <double> vel_tilde;
     
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
-    void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
+    void initialize(int num_rk, int num_nodes, int num_dims)
     {
         this->coords = CArray <double> (num_rk, num_nodes, num_dims);
         this->vel    = CArray <double> (num_rk, num_nodes, num_dims);
 	    this->div    = CArray <double> (num_rk, num_nodes);
         this->mass   = CArray <double> (num_nodes);
-        this->M_V    = CArrayKokkos <double> (num_nodes, num_nodes, "M_V");
-        this->lumped_mass = CArrayKokkos <double> (num_nodes, "lumped_mass");
-        this->vel_tilde = CArrayKokkos <double> (num_nodes, "tilde u");
     }; // end method
 
 }; // end node_t
@@ -51,7 +43,7 @@ struct corner_t {
 
     
     // initialization method (num_corners, num_dims)
-    void initialize(size_t num_corners, size_t num_dims)
+    void initialize(int num_corners, int num_dims)
     {
         this->force = CArray <double> (num_corners, num_dims);
         this->mass  = CArray <double> (num_corners);
@@ -64,28 +56,28 @@ struct zone_t {
     // specific internal energy dofs //
     CArray <double> sie;
 
-    // mass matrix //
-    CArrayKokkos <double> M_e;
-
-    // inverse mass matrix //
-    CArrayKokkos <double> M_e_inv;
-
     // lumped mass //
-    CArrayKokkos <double> zonal_mass;
-    
-    size_t num_zones;
+    CArray <double> zonal_mass;
 
-    void initialize_Pn(size_t num_rk, 
-		       size_t num_elems, 
-		       size_t num_zones_in_elem)
+    // mass matrix //
+    CArray <double> M;
+
+    CArray <double> S;
+    
+    int num_zones;
+
+    void initialize_Pn(int num_rk, 
+		       int num_elems, 
+		       int num_zones_in_elem)
                {
 
         
-        num_zones = num_elems*num_zones_in_elem; 
-        this->sie = CArray <double> (num_rk, num_zones);
-        this->M_e = CArrayKokkos <double> (num_zones, num_zones, "M_e");
-        this->M_e_inv = CArrayKokkos <double> (num_zones, num_zones, "M_e_inv");
-        this->zonal_mass = CArrayKokkos <double> (num_zones, "zonal_mass");    
+        num_zones = num_elems*num_zones_in_elem; // zones are not shared across elements
+        
+        this->sie        = CArray <double> (num_rk, num_zones);
+        this->zonal_mass = CArray <double> (num_zones); 
+        this->M          = CArray <double> (num_elems, num_zones_in_elem, num_zones_in_elem);
+        this->S          = CArray <double> (num_rk, num_elems, num_zones_in_elem);
     }
 };
 
@@ -122,34 +114,33 @@ struct mat_pt_t {
     CArray <double> sie;
 
     // jacobians
-    CArrayKokkos <double> gauss_lobatto_jacobian;
-    CArrayKokkos <double> gauss_legendre_jacobian;
+    CArray <double> gauss_lobatto_jacobian;
+    CArray <double> gauss_legendre_jacobian;
    
     // jacobian inverses
-    CArrayKokkos <double> gauss_lobatto_jacobian_inverse;
-    CArrayKokkos <double> gauss_legendre_jacobian_inverse;
+    CArray <double> gauss_lobatto_jacobian_inverse;
+    CArray <double> gauss_legendre_jacobian_inverse;
     
     // det of jacobian
-    CArrayKokkos <double> gauss_lobatto_det_j;
-    CArrayKokkos <double> gauss_legendre_det_j;
+    CArray <double> gauss_lobatto_det_j;
+    CArray <double> gauss_legendre_det_j;
 
-    // materials and artificial viscosity stuff
-    CArrayKokkos <double> grad_vel;
-    CArrayKokkos <double> sym_grad_vel;
-    CArrayKokkos <double> anti_sym_grad_vel;
-    CArrayKokkos <double> div_vel;
-    CArrayKokkos <double> statev;
-    
+    // den(0)det(J_0) //
+    CArray <double> den0DetJac0;
+
+    // \sigma \cdot J^{-T}
+    CArray <double> SigmaJacInv;
+
     // global number of quadrature points
-    size_t num_leg_pts;
-    size_t num_lob_pts;
+    int num_leg_pts;
+    int num_lob_pts;
 
-    void initialize_Pn(size_t num_rk, 
-		       size_t num_elems, 
-		       size_t num_nodes_in_elem, 
-		       size_t num_zones_in_elem, 
-		       size_t num_dims, 
-		       size_t p_order)
+    void initialize_Pn(int num_rk, 
+		       int num_elems, 
+		       int num_nodes_in_elem, 
+		       int num_zones_in_elem, 
+		       int num_dims, 
+		       int p_order)
     {
         num_leg_pts = num_elems*std::pow( (2*p_order), 3 ); // continuous index across mesh
         //num_lob_pts = num_elems*std::pow( (2*p_order+1), 3 ); // discontinuous index across mesh
@@ -162,26 +153,22 @@ struct mat_pt_t {
         this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);
         this->sspd   = CArray <double> (num_leg_pts);
 	
-        this->gauss_lobatto_jacobian  = CArrayKokkos <double> (num_lob_pts, num_dims, num_dims);
-        this->gauss_legendre_jacobian = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
+        this->gauss_lobatto_jacobian  = CArray <double> (num_lob_pts, num_dims, num_dims);
+        this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);
         
         //this->gauss_lobatto_jacobian_inverse  = CArrayKokkos <double> (num_lob_pts, num_dims, num_dims);
-        this->gauss_legendre_jacobian_inverse = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
+        this->gauss_legendre_jacobian_inverse = CArray <double> (num_leg_pts, num_dims, num_dims);
+        this->SigmaJacInv                     = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);
         
         //this->gauss_lobatto_det_j  = CArrayKokkos <double> (num_lob_pts);
-        this->gauss_legendre_det_j = CArrayKokkos <double> (num_leg_pts);
+        this->gauss_legendre_det_j = CArray <double> (num_leg_pts);
+        this->den0DetJac0 = CArray <double> (num_leg_pts);
 
         // visualization
         this->vel = CArray <double> (num_leg_pts, num_dims);
         this->coords = CArray <double> (num_leg_pts, num_dims);
         this->sie = CArray <double> (num_leg_pts);
         this->h = CArray <double> (num_leg_pts);
-
-        // material and artificial viscosity
-        this->grad_vel = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
-        this->sym_grad_vel = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
-        this->anti_sym_grad_vel = CArrayKokkos <double> (num_leg_pts, num_dims, num_dims);
-        this->div_vel = CArrayKokkos <double> (num_leg_pts);
 
 
     }
@@ -216,13 +203,24 @@ struct elem_t {
     CArray <double> mass;
     
     // mat ids
-    CArray <size_t> mat_id;
+    CArray <int> mat_id;
     
     // state variables
     CArray <double> statev;
 
+    CArray <double> M;
+
+    CArray <double> PHI;
+
+    CArray <double> PSI;
+
+    CArray <double> F_u;
+
+    CArray <double> F_e;
+
+
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
-    void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
+    void initialize(int num_rk, int num_elems, int num_dims)
     {
         
         this->den    = CArray <double> (num_elems);
@@ -233,15 +231,20 @@ struct elem_t {
         this->vol    = CArray <double> (num_elems);
         this->div    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
-        this->mat_id = CArray <size_t> (num_elems);
+        this->mat_id = CArray <int> (num_elems);
 
     }; // end method
 
-    void initialize_Pn( size_t num_elems )
+    void initialize_Pn( int num_stages, int num_elems, int num_nodes_in_elem, int num_zones_in_elem, int num_dims )
     {
         
         this->vol    = CArray <double> (num_elems);
-        this->mat_id = CArray <size_t> (num_elems);
+        this->mat_id = CArray <int> (num_elems);
+        this->M      = CArray <double> (num_elems, num_nodes_in_elem, num_nodes_in_elem);
+        this->PHI      = CArray <double> (num_stages, num_elems, num_nodes_in_elem, num_dims);
+        this->PSI      = CArray <double> (num_stages, num_elems, num_zones_in_elem);
+        this->F_u      = CArray <double> (num_stages, num_elems, num_nodes_in_elem, num_dims);
+        this->F_e      = CArray <double> (num_stages, num_elems, num_zones_in_elem);
 
     }; // end method
 
@@ -289,7 +292,6 @@ struct material_t {
                        const DViewCArrayKokkos <double> &elem_stress,
                        const size_t elem_gid,
                        const size_t legendre_gid,
-                       const size_t mat_id,
                        const DViewCArrayKokkos <double> &elem_state_vars,
                        const DViewCArrayKokkos <double> &elem_sspd,
                        const double den,
@@ -298,10 +300,10 @@ struct material_t {
     // strength fcn pointer
     void (*strength_model) (CArrayKokkos <double> &deviatoric_stress_rhs,
                          const DViewCArrayKokkos <double> &stress,
-                         const CArrayKokkos <double> &mat_pt_state_vars,
-                         const CArrayKokkos <double> &sym_grad_vel,
-                         const CArrayKokkos <double> &anti_sym_grad_vel,
-                         const CArrayKokkos <double> &div_vel,
+                         const DViewCArrayKokkos <double> &mat_pt_state_vars,
+                         const DViewCArrayKokkos <double> &sym_grad_vel,
+                         const DViewCArrayKokkos <double> &anti_sym_grad_vel,
+                         const DViewCArrayKokkos <double> &div_vel,
                          const size_t num_gauss,
                          const size_t stage) = NULL;
     

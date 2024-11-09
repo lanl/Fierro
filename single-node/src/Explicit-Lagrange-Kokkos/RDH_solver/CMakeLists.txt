@@ -16,9 +16,8 @@ LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
 add_executable(FierroRDH driver.cpp read_mesh.cpp eos.cpp outputs.cpp time_integration.cpp 
                 user_mat.cpp user_mat_init.cpp input.cpp setup.cpp geometry.cpp boundary.cpp
-                momentum.cpp internal_energy.cpp rdh_solve.cpp stress_tensor.cpp force_tensor.cpp L2_operator.cpp
-                kinematic_mass_matrix.cpp thermodynamic_mass_matrix.cpp artificial_viscosity.cpp
-                invert_matrix.cpp correct_force_tensor.cpp sie_source.cpp)
+                run_solver.cpp lumped_mass.cpp energy_residual.cpp momentum_residual.cpp stress.cpp
+                mass_matrices.cpp properties.cpp update_momentum.cpp update_energy.cpp interp.cpp)
 
 if (CUDA)
   add_definitions(-DHAVE_CUDA=1)

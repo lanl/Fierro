@@ -1,6 +1,8 @@
 
 #include "mesh.h"
 #include "state.h"
+#include "rdh.h"
+
 
 
 // -----------------------------------------------------------------------------
@@ -247,7 +249,7 @@ void get_timestep2D(mesh_t &mesh,
 
 
 // same as get_timestep but uses nodes in a zone (8)
-void get_timestep_HexN(mesh_t &mesh,
+void get_timestep_HexN(const mesh_t &mesh,
                   DViewCArrayKokkos <double> &node_coords,
                   DViewCArrayKokkos <double> &node_vel,
                   DViewCArrayKokkos <double> &mat_pt_sspd,
@@ -354,14 +356,14 @@ void get_timestep_HexN(mesh_t &mesh,
     if(min_dt_calc < dt) dt = min_dt_calc;
 
     // don't let dt increase by more than 2% or decrease by more than 20%
-    if ( 1.25*dt_old <= dt ){
-        dt = 1.02*dt_old;
-    } 
-    else if ( dt < dt_old){
-        time_value -= dt_old;
-        dt = 0.85*dt_old;
-        printf(" time step repeated \n");
-    }
+    // if ( 1.25*dt_old <= dt ){
+    //     dt = 1.02*dt_old;
+    // } 
+    // else if ( dt < dt_old){
+    //     time_value -= dt_old;
+    //     dt = 0.85*dt_old;
+    //     printf(" time step repeated \n");
+    // }
     
     // ensure time step hits the graphics time intervals
     dt = fmin(dt, (graphics_time - time_value)+fuzz);
@@ -378,7 +380,8 @@ void init_tn(const mesh_t &mesh,
              DViewCArrayKokkos <double> &node_coords,
              DViewCArrayKokkos <double> &node_vel,
              DViewCArrayKokkos <double> &zone_sie,
-             DViewCArrayKokkos <double> &stress){
+             DViewCArrayKokkos <double> &stress,
+             const int num_stages){
 
     // save elem quantities
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
