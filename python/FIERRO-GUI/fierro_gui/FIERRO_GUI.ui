@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1326</width>
-    <height>1144</height>
+    <width>1355</width>
+    <height>1154</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -299,7 +299,7 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item>
+       <item alignment="Qt::AlignTop">
         <widget class="QStackedWidget" name="ToolWindow">
          <property name="enabled">
           <bool>true</bool>
@@ -352,7 +352,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>4</number>
+          <number>2</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -810,7 +810,7 @@
              </item>
             </widget>
            </item>
-           <item>
+           <item alignment="Qt::AlignTop">
             <widget class="QFrame" name="frame_31">
              <property name="frameShape">
               <enum>QFrame::NoFrame</enum>
@@ -942,7 +942,7 @@
               <bool>true</bool>
              </property>
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -981,27 +981,27 @@
               <enum>QAbstractScrollArea::AdjustToContents</enum>
              </property>
              <property name="widgetResizable">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <widget class="QWidget" name="scrollAreaWidgetContents">
               <property name="geometry">
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>368</width>
-                <height>700</height>
+                <width>376</width>
+                <height>541</height>
                </rect>
               </property>
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                 <horstretch>0</horstretch>
-                <verstretch>200</verstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>700</height>
+                <height>0</height>
                </size>
               </property>
               <property name="acceptDrops">
@@ -1029,7 +1029,7 @@
                <item>
                 <widget class="QStackedWidget" name="GeometryOptions">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -2226,6 +2226,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   </layout>
                  </widget>
                  <widget class="QWidget" name="page_8">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
                   <layout class="QVBoxLayout" name="verticalLayout_14">
                    <item>
                     <widget class="QLabel" name="label">
@@ -2586,19 +2592,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </layout>
              </widget>
             </widget>
-           </item>
-           <item>
-            <spacer name="verticalSpacer_21">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>40</height>
-              </size>
-             </property>
-            </spacer>
            </item>
            <item>
             <widget class="QTableWidget" name="TParts">
@@ -11494,8 +11487,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1326</width>
-     <height>37</height>
+     <width>1355</width>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">
@@ -11609,12 +11602,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <tabstop>INResultRegion</tabstop>
   <tabstop>BOpenParaview</tabstop>
   <tabstop>THomogenization</tabstop>
-  <tabstop>SAGeometryScrollArea</tabstop>
   <tabstop>INPipelineSelection</tabstop>
   <tabstop>INSelectGeometry</tabstop>
   <tabstop>INSelectGeometryImport</tabstop>
   <tabstop>INPartName</tabstop>
-  <tabstop>BUploadGeometryFile</tabstop>
   <tabstop>INNumberOfVoxelsX</tabstop>
   <tabstop>INNumberOfVoxelsY</tabstop>
   <tabstop>INNumberOfVoxelsZ</tabstop>
@@ -11637,7 +11628,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <tabstop>INBoxy2</tabstop>
   <tabstop>INBoxz1</tabstop>
   <tabstop>INBoxz2</tabstop>
-  <tabstop>TParts</tabstop>
   <tabstop>BDeleteGeometry</tabstop>
   <tabstop>INElementType</tabstop>
   <tabstop>INCoordinateSystem</tabstop>

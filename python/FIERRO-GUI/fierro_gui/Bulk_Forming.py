@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QTableWidget, QPushButton)
+from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QTableWidget, QPushButton, QTreeWidgetItem, QAbstractItemView)
 from PySide6.QtCore import (QCoreApplication, QProcess, Qt)
 from PySide6.QtGui import (QColor, QBrush, QFont)
 import numpy as np
@@ -614,13 +614,16 @@ def Bulk_Forming(self):
     # View details about a slip system
     def slip_system_details():
         selected_items = self.TSlipSystems.selectedItems()
-        selected_item = selected_items[0]
-        if selected_item.parent() is not None:
-            page = selected_item.text(0).split('.', 1)[0]
-            self.SlipSystemInfo.setCurrentIndex(int(page))
-            self.PlasticProperties.setCurrentIndex(2)
-        else:
+        if not selected_items:
             warning_message("ERROR: Please select a specific slip system to view it's details.")
+        else:
+            selected_item = selected_items[0]
+            if selected_item.parent() is not None:
+                page = selected_item.text(0).split('.', 1)[0]
+                self.SlipSystemInfo.setCurrentIndex(int(page))
+                self.PlasticProperties.setCurrentIndex(2)
+            else:
+                warning_message("ERROR: Please select a specific slip system to view it's details.")
     self.BSlipSystemDetails.clicked.connect(slip_system_details)
     
     # Add slip system(s) to list
@@ -728,9 +731,10 @@ def Bulk_Forming(self):
         # Function to add the slip system to table
         def add_custom_system():
             # Check that everything is completely filled out
+            warning_flag = 0
             if not self.line_edit.text().strip():
                 warning_message("ERROR: Please assign a name to custom slip system.")
-            warning_flag = 0
+                return
             for row in range(self.table.rowCount()):
                 for col in range(self.table.columnCount()):
                     item = self.table.item(row,col)
@@ -738,6 +742,7 @@ def Bulk_Forming(self):
                         warning_flag = 1
             if warning_flag == 1:
                 warning_message("ERROR: Ensure custom slip system is completely filled out, and delete any unused rows.")
+                return
             # If there are no errors, add custom slip system to the table
             else:
                 # count the number of slip systems already defined in the table
@@ -747,12 +752,23 @@ def Bulk_Forming(self):
                     num_children += top_level_item.childCount()
                 # Find the custom heading and add the new system to it
                 custom_label = self.TSlipSystems.findItems("CUSTOM", Qt.MatchExactly, 0)
-#                custom_item = next((item for item in matching_items if item.parent() is None), None)
-#                    if custom_item:
-#                        # Add a subitem to the found "custom" item
-#                        new_subitem = QTreeWidgetItem(custom_item, [subitem_name])
-#                        custom_item.addChild(new_subitem)
-#                        self.BSubmit.clicked.connect(add_custom_system)
+                custom_item = next((item for item in custom_label if item.parent() is None), None)
+                if custom_item:
+                    # Add a subitem to the found "custom" item
+                    custom_name = str(num_children+1) + '. ' + self.line_edit.text().strip()
+                    new_subitem = QTreeWidgetItem(custom_item, [custom_name])
+                    custom_item.addChild(new_subitem)
+                    # Disable things so people can't change them after it has been added
+                    self.BSubmit.setEnabled(False)
+                    self.line_edit.setEnabled(False)
+                    self.BAddRow.setEnabled(False)
+                    self.BRemoverow.setEnabled(False)
+                    self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+                    # Go back to main slip system screen
+                    self.PlasticProperties.setCurrentIndex(1)
+                    # Expand custom definition
+                    self.TSlipSystems.expandItem(custom_label[0])
+        self.BSubmit.clicked.connect(add_custom_system)
         
         # Setup New Page
         new_page.setLayout(page_layout)
