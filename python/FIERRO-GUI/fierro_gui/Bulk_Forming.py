@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog)
+from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QTableWidget, QPushButton)
 from PySide6.QtCore import (QCoreApplication, QProcess, Qt)
-from PySide6.QtGui import (QColor, QBrush)
+from PySide6.QtGui import (QColor, QBrush, QFont)
 import numpy as np
 import re
 import os
@@ -49,44 +49,47 @@ def Bulk_Forming(self):
     
     # Define material properties using predefined values
     def predefined_materials():
-        if "Custom" in self.INMaterialDefinition.currentText():
-            # Clear elastic parameters
-            self.INYoungsModulus_2.clear()
-            self.INPoissonsRatio_2.clear()
-            self.INEip_2.clear()
-            self.INNUip_2.clear()
-            self.INEop_2.clear()
-            self.INNUop_2.clear()
-            self.INGop_2.clear()
-            self.INEx_2.clear()
-            self.INEy_2.clear()
-            self.INEz_2.clear()
-            self.INNUxy_2.clear()
-            self.INNUxz_2.clear()
-            self.INNUyz_2.clear()
-            self.INGxy_2.clear()
-            self.INGxz_2.clear()
-            self.INGyz_2.clear()
-            for i in [0,1,2,3,4,5,6]:
-                for j in range(i,6):
-                    if self.TAnisotropic_2.item(i,j):
-                        self.TAnisotropic_2.item(i,j).setText('')
-            # Clear plastic parameters
-            self.INa.clear()
-            self.INb.clear()
-            self.INc.clear()
-            self.INSlipSystems.clear()
-            self.TSlipSystemParameters.setRowCount(0)
-            self.INnrsx.clear()
-            self.INgamd0x.clear()
-            self.INtau0xb.clear()
-            self.INtau0xf.clear()
-            self.INtau1x.clear()
-            self.INthet0.clear()
-            self.INthet1.clear()
-            self.INhselfx.clear()
-            self.INhlatex.clear()
-        elif "Single Crystal Copper" in self.INMaterialDefinition.currentText():
+        # Clear elastic parameters
+        self.INYoungsModulus_2.clear()
+        self.INPoissonsRatio_2.clear()
+        self.INEip_2.clear()
+        self.INNUip_2.clear()
+        self.INEop_2.clear()
+        self.INNUop_2.clear()
+        self.INGop_2.clear()
+        self.INEx_2.clear()
+        self.INEy_2.clear()
+        self.INEz_2.clear()
+        self.INNUxy_2.clear()
+        self.INNUxz_2.clear()
+        self.INNUyz_2.clear()
+        self.INGxy_2.clear()
+        self.INGxz_2.clear()
+        self.INGyz_2.clear()
+        for i in [0,1,2,3,4,5,6]:
+            for j in range(i,6):
+                if self.TAnisotropic_2.item(i,j):
+                    self.TAnisotropic_2.item(i,j).setText('')
+        # Clear plastic parameters
+        self.INa.clear()
+        self.INb.clear()
+        self.INc.clear()
+        self.INSlipSystems.clear()
+        self.TSlipSystemParameters.setRowCount(0)
+        self.INnrsx.clear()
+        self.INgamd0x.clear()
+        self.INtau0xb.clear()
+        self.INtau0xf.clear()
+        self.INtau1x.clear()
+        self.INthet0.clear()
+        self.INthet1.clear()
+        self.INhselfx.clear()
+        self.INhlatex.clear()
+        if "Single Crystal Copper" in self.INMaterialDefinition.currentText():
+            if 'MPa' in self.INUnits.currentText():
+                m = 1
+            elif 'Pa' in self.INUnits.currentText():
+                m = 1000000
             # Define elastic properties
             for i in [0,1,2,3,4,5,6]:
                 for j in range(i,6):
@@ -120,6 +123,42 @@ def Bulk_Forming(self):
             self.INthet1.setText('250.')
             self.INhselfx.setText('1.0')
             self.INhlatex.setText('1.0')
+        elif "Tantalum" in self.INMaterialDefinition.currentText():
+            # Define elastic properties
+            for i in [0,1,2,3,4,5,6]:
+                for j in range(i,6):
+                    self.TAnisotropic_2.setItem(i,j,QTableWidgetItem('0.'))
+            self.INSolidGas_2.setCurrentIndex(0)
+            self.INMaterialType_2.setCurrentIndex(3)
+            self.TAnisotropic_2.setItem(0,0,QTableWidgetItem('266700.'))
+            self.TAnisotropic_2.setItem(1,1,QTableWidgetItem('266700.'))
+            self.TAnisotropic_2.setItem(2,2,QTableWidgetItem('266700.'))
+            self.TAnisotropic_2.setItem(0,1,QTableWidgetItem('160800.'))
+            self.TAnisotropic_2.setItem(0,2,QTableWidgetItem('160800.'))
+            self.TAnisotropic_2.setItem(1,2,QTableWidgetItem('160800.'))
+            self.TAnisotropic_2.setItem(3,3,QTableWidgetItem('82500.'))
+            self.TAnisotropic_2.setItem(4,4,QTableWidgetItem('82500.'))
+            self.TAnisotropic_2.setItem(5,5,QTableWidgetItem('82500.'))
+            # Define plastic properties
+            self.INa.setText('1.')
+            self.INb.setText('1.')
+            self.INc.setText('1.')
+            items = self.TSlipSystems.findItems('BCC', Qt.MatchExactly | Qt.MatchRecursive)
+            if items:
+                self.TSlipSystems.setCurrentItem(items[0])
+                self.BAddSlipSystem.click()
+                self.TSlipSystems.expandItem(items[0])
+                self.INSlipSystems.setCurrentRow(2)
+                self.BRemoveSlipSystem.click()
+                self.INnrsx.setText('14')
+                self.INgamd0x.setText('1.0')
+                self.INtau0xf.setText('115.')
+                self.INtau0xb.setText('115.')
+                self.INtau1x.setText('30.')
+                self.INthet0.setText('110.')
+                self.INthet1.setText('5.')
+                self.INhselfx.setText('1.0')
+                self.INhlatex.setText('1.2')
     self.INMaterialDefinition.currentIndexChanged.connect(predefined_materials)
     
     # Add material to the table
@@ -577,9 +616,11 @@ def Bulk_Forming(self):
         selected_items = self.TSlipSystems.selectedItems()
         selected_item = selected_items[0]
         if selected_item.parent() is not None:
-            if '{111}<110>' in selected_item.text(0):
-                self.SlipSystemInfo.setCurrentIndex(1)
+            page = selected_item.text(0).split('.', 1)[0]
+            self.SlipSystemInfo.setCurrentIndex(int(page))
             self.PlasticProperties.setCurrentIndex(2)
+        else:
+            warning_message("ERROR: Please select a specific slip system to view it's details.")
     self.BSlipSystemDetails.clicked.connect(slip_system_details)
     
     # Add slip system(s) to list
@@ -605,15 +646,13 @@ def Bulk_Forming(self):
             # Add slip systems as a selection to the Voce parameters combobox and table
             self.INSelectSlipSystem.clear()
             self.INSelectSlipSystem.addItem('ALL')
-            self.TSlipSystemParameters.clearContents()
-            self.TSlipSystemParameters.setRowCount(0)
             for i in range(self.INSlipSystems.count()):
                 item = self.INSlipSystems.item(i)
                 # Add the item's text to the QComboBox
                 self.INSelectSlipSystem.addItem(item.text())
-                # Add the item's text to the Table
-                self.TSlipSystemParameters.insertRow(i)
-                self.TSlipSystemParameters.setItem(i,0,QTableWidgetItem(item.text()))
+            row = self.TSlipSystemParameters.rowCount()
+            self.TSlipSystemParameters.insertRow(row)
+            self.TSlipSystemParameters.setItem(row,0,QTableWidgetItem(item.text()))
             
     self.BAddSlipSystem.clicked.connect(add_slip_system)
     
@@ -637,6 +676,91 @@ def Bulk_Forming(self):
             self.TSlipSystemParameters.insertRow(i)
             self.TSlipSystemParameters.setItem(i,0,QTableWidgetItem(item.text()))
     self.BRemoveSlipSystem.clicked.connect(remove_slip_system)
+    
+    # Define custom slip system
+    def custom_slip_system():
+        # Index of new page
+        index = self.SlipSystemInfo.count()
+        # Layout
+        new_page = QWidget()
+        page_layout = QVBoxLayout()
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        page_layout.setSpacing(5)
+        # Functionality
+        # Slip System Name
+        input_layout = QHBoxLayout()
+        label = QLabel("Slip System Name:")
+        input_layout.addWidget(label)
+        self.line_edit = QLineEdit()
+        input_layout.addWidget(self.line_edit)
+        page_layout.addLayout(input_layout)
+        # Add or remove colums from table
+        arbuttons = QHBoxLayout()
+        self.BAddRow = QPushButton("Add Row")
+        arbuttons.addWidget(self.BAddRow)
+        self.BRemoverow = QPushButton("Remove Row")
+        arbuttons.addWidget(self.BRemoverow)
+        page_layout.addLayout(arbuttons)
+        # Functions to add or remove rows from table
+        def add_row():
+            current_row_count = self.table.rowCount()
+            self.table.insertRow(current_row_count)
+        self.BAddRow.clicked.connect(add_row)
+        def remove_row():
+            current_row = self.table.currentRow()  # Get the index of the selected row
+            if current_row >= 0:  # Check if a row is selected
+                self.table.removeRow(current_row)  # Remove the selected row
+        self.BRemoverow.clicked.connect(remove_row)
+        # Table
+        setattr(self, f"T{index}", QTableWidget())
+        self.table = getattr(self, f"T{index}")
+        self.table.setRowCount(12)
+        self.table.setColumnCount(2)
+        self.table.setHorizontalHeaderLabels(["(Slip Plane)", "<Slip Direction>"])
+        self.table.horizontalHeader().setDefaultSectionSize(167)
+        font = QFont()
+        font.setPointSize(13)
+        self.table.horizontalHeader().setFont(font)
+        page_layout.addWidget(self.table)
+        # Add custom slip system
+        self.BSubmit = QPushButton("Add Custom Slip System")
+        page_layout.addWidget(self.BSubmit)
+        # Function to add the slip system to table
+        def add_custom_system():
+            # Check that everything is completely filled out
+            if not self.line_edit.text().strip():
+                warning_message("ERROR: Please assign a name to custom slip system.")
+            warning_flag = 0
+            for row in range(self.table.rowCount()):
+                for col in range(self.table.columnCount()):
+                    item = self.table.item(row,col)
+                    if item is None or not item.text().strip():
+                        warning_flag = 1
+            if warning_flag == 1:
+                warning_message("ERROR: Ensure custom slip system is completely filled out, and delete any unused rows.")
+            # If there are no errors, add custom slip system to the table
+            else:
+                # count the number of slip systems already defined in the table
+                num_children = 0
+                for i in range(self.TSlipSystems.topLevelItemCount()):
+                    top_level_item = self.TSlipSystems.topLevelItem(i)
+                    num_children += top_level_item.childCount()
+                # Find the custom heading and add the new system to it
+                custom_label = self.TSlipSystems.findItems("CUSTOM", Qt.MatchExactly, 0)
+#                custom_item = next((item for item in matching_items if item.parent() is None), None)
+#                    if custom_item:
+#                        # Add a subitem to the found "custom" item
+#                        new_subitem = QTreeWidgetItem(custom_item, [subitem_name])
+#                        custom_item.addChild(new_subitem)
+#                        self.BSubmit.clicked.connect(add_custom_system)
+        
+        # Setup New Page
+        new_page.setLayout(page_layout)
+        self.SlipSystemInfo.addWidget(new_page)
+        # Display
+        self.PlasticProperties.setCurrentIndex(2)
+        self.SlipSystemInfo.setCurrentIndex(index)
+    self.BCustomSlipSystem.clicked.connect(custom_slip_system)
     
     # Add Voce parameters to table based on assigned slip systems
     self.updating = False
@@ -686,17 +810,17 @@ def Bulk_Forming(self):
         slip_system = self.INSelectSlipSystem.currentText()
         rows = self.TSlipSystemParameters.rowCount()
         for i in range(rows):
-            if "ALL" in slip_system:
-                self.INnrsx.clear()
-                self.INgamd0x.clear()
-                self.INtau0xf.clear()
-                self.INtau0xb.clear()
-                self.INtau1x.clear()
-                self.INthet0.clear()
-                self.INthet1.clear()
-                self.INhselfx.clear()
-                self.INhlatex.clear()
-            elif slip_system in self.TSlipSystemParameters.item(i, 0).text():
+#            if "ALL" in slip_system:
+#                self.INnrsx.clear()
+#                self.INgamd0x.clear()
+#                self.INtau0xf.clear()
+#                self.INtau0xb.clear()
+#                self.INtau1x.clear()
+#                self.INthet0.clear()
+#                self.INthet1.clear()
+#                self.INhselfx.clear()
+#                self.INhlatex.clear()
+            if slip_system in self.TSlipSystemParameters.item(i, 0).text():
                 self.INnrsx.setText(self.TSlipSystemParameters.item(i, 1).text() if self.TSlipSystemParameters.item(i, 1) is not None else "")
                 self.INgamd0x.setText(self.TSlipSystemParameters.item(i, 2).text() if self.TSlipSystemParameters.item(i, 2) is not None else "")
                 self.INtau0xf.setText(self.TSlipSystemParameters.item(i, 3).text() if self.TSlipSystemParameters.item(i, 3) is not None else "")
@@ -780,7 +904,7 @@ def Bulk_Forming(self):
             self.TVgrad.clearContents()
             self.TVgradi.clearContents()
             self.TCstress.clearContents()
-        elif "Test" in self.INbulkBC.currentText():
+        elif "Example" in self.INbulkBC.currentText():
             # Clear tables
             self.TVgrad.clearContents()
             self.TVgradi.clearContents()
@@ -798,6 +922,22 @@ def Bulk_Forming(self):
             self.TVgradi.setItem(1,1,QTableWidgetItem("-0.35"))
             self.TCstress.setItem(0,0,QTableWidgetItem("0."))
             self.TCstress.setItem(1,1,QTableWidgetItem("0."))
+        elif "ECAP" in self.INbulkBC.currentText():
+            # Clear tables
+            self.TVgrad.clearContents()
+            self.TVgradi.clearContents()
+            self.TCstress.clearContents()
+            
+            # Assign values
+            self.TVgrad.setItem(0,0,QTableWidgetItem("0."))
+            self.TVgrad.setItem(0,1,QTableWidgetItem("-1.0"))
+            self.TVgrad.setItem(0,2,QTableWidgetItem("0."))
+            self.TVgrad.setItem(1,0,QTableWidgetItem("0."))
+            self.TVgrad.setItem(1,1,QTableWidgetItem("0."))
+            self.TVgrad.setItem(1,2,QTableWidgetItem("0."))
+            self.TVgrad.setItem(2,0,QTableWidgetItem("0."))
+            self.TVgrad.setItem(2,1,QTableWidgetItem("0."))
+            self.TVgrad.setItem(2,2,QTableWidgetItem("0."))
     self.INbulkBC.currentIndexChanged.connect(boundary_conditions)
     
     # Run Bulk Formation

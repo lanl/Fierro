@@ -62,19 +62,20 @@ def force_light_mode(app):
     palette = QPalette()
     
     # Set colors for active (enabled) state
-    palette.setColor(QPalette.Active, QPalette.Window, QColor(240, 240, 240))
-    palette.setColor(QPalette.Active, QPalette.WindowText, Qt.black)
-    palette.setColor(QPalette.Active, QPalette.Base, Qt.white)
-    palette.setColor(QPalette.Active, QPalette.AlternateBase, QColor(233, 231, 227))
-    palette.setColor(QPalette.Active, QPalette.ToolTipBase, Qt.white)
-    palette.setColor(QPalette.Active, QPalette.ToolTipText, Qt.black)
-    palette.setColor(QPalette.Active, QPalette.Text, Qt.black)
-    palette.setColor(QPalette.Active, QPalette.Button, QColor(240, 240, 240))
-    palette.setColor(QPalette.Active, QPalette.ButtonText, Qt.black)
-    palette.setColor(QPalette.Active, QPalette.BrightText, Qt.red)
-    palette.setColor(QPalette.Active, QPalette.Link, QColor(42, 130, 218))
-    palette.setColor(QPalette.Active, QPalette.Highlight, QColor(42, 130, 218))
-    palette.setColor(QPalette.Active, QPalette.HighlightedText, Qt.black)
+    for state in [QPalette.Active, QPalette.Inactive, QPalette.Disabled]:
+        palette.setColor(state, QPalette.Window, QColor(240, 240, 240))
+        palette.setColor(state, QPalette.WindowText, Qt.black)
+        palette.setColor(state, QPalette.Base, Qt.white)
+        palette.setColor(state, QPalette.AlternateBase, QColor(233, 231, 227))
+        palette.setColor(state, QPalette.ToolTipBase, Qt.white)
+        palette.setColor(state, QPalette.ToolTipText, Qt.black)
+        palette.setColor(state, QPalette.Text, Qt.black)
+        palette.setColor(state, QPalette.Button, QColor(240, 240, 240))
+        palette.setColor(state, QPalette.ButtonText, Qt.black)
+        palette.setColor(state, QPalette.BrightText, Qt.red)
+        palette.setColor(state, QPalette.Link, QColor(42, 130, 218))
+        palette.setColor(state, QPalette.Highlight, QColor(42, 130, 218))
+        palette.setColor(state, QPalette.HighlightedText, Qt.black)
 
     # Set colors for disabled state
     grey_color = QColor(128, 128, 128)  # Medium grey

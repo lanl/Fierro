@@ -5357,6 +5357,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           <string>Single Crystal Copper</string>
                          </property>
                         </item>
+                        <item>
+                         <property name="text">
+                          <string>Tantalum</string>
+                         </property>
+                        </item>
                        </widget>
                       </item>
                       <item row="0" column="3">
@@ -5511,7 +5516,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item>
                         <widget class="QStackedWidget" name="MaterialTypeTool_2">
                          <property name="currentIndex">
-                          <number>4</number>
+                          <number>1</number>
                          </property>
                          <widget class="QWidget" name="Isotropic_2">
                           <property name="enabled">
@@ -5532,7 +5537,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                             <widget class="QLineEdit" name="INYoungsModulus_2"/>
                            </item>
                            <item row="0" column="2">
-                            <widget class="QLabel" name="UPressure1_2">
+                            <widget class="QLabel" name="UPressure7">
                              <property name="text">
                               <string>[Pa]</string>
                              </property>
@@ -5715,7 +5720,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                      <widget class="QLineEdit" name="INEip_2"/>
                                     </item>
                                     <item row="0" column="2">
-                                     <widget class="QLabel" name="UPressure2_2">
+                                     <widget class="QLabel" name="UPressure10">
                                       <property name="text">
                                        <string>[Pa]</string>
                                       </property>
@@ -5835,14 +5840,14 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                      </widget>
                                     </item>
                                     <item row="0" column="2">
-                                     <widget class="QLabel" name="UPressure3_2">
+                                     <widget class="QLabel" name="UPressure11">
                                       <property name="text">
                                        <string>[Pa]</string>
                                       </property>
                                      </widget>
                                     </item>
                                     <item row="2" column="2">
-                                     <widget class="QLabel" name="UPressure4_2">
+                                     <widget class="QLabel" name="UPressure12">
                                       <property name="text">
                                        <string>[Pa]</string>
                                       </property>
@@ -6244,14 +6249,14 @@ li.checked::marker { content: &quot;\2612&quot;; }
                             <widget class="QLineEdit" name="INGxy_2"/>
                            </item>
                            <item row="0" column="7">
-                            <widget class="QLabel" name="UPressure5_2">
+                            <widget class="QLabel" name="UPressure8">
                              <property name="text">
                               <string>[Pa]</string>
                              </property>
                             </widget>
                            </item>
                            <item row="3" column="7">
-                            <widget class="QLabel" name="UPressure6_2">
+                            <widget class="QLabel" name="UPressure9">
                              <property name="text">
                               <string>[Pa]</string>
                              </property>
@@ -6503,14 +6508,24 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               </property>
                               <item>
                                <property name="text">
-                                <string>Test1</string>
+                                <string>2. (110)&lt;111&gt;</string>
                                </property>
                               </item>
                               <item>
                                <property name="text">
-                                <string>Test2</string>
+                                <string>3. (112)&lt;111&gt;</string>
                                </property>
                               </item>
+                              <item>
+                               <property name="text">
+                                <string>4. (123)&lt;111&gt;</string>
+                               </property>
+                              </item>
+                             </item>
+                             <item>
+                              <property name="text">
+                               <string>CUSTOM</string>
+                              </property>
                              </item>
                             </widget>
                            </item>
@@ -6539,6 +6554,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                <widget class="QPushButton" name="BSlipSystemDetails">
                                 <property name="text">
                                  <string>Details</string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QPushButton" name="BCustomSlipSystem">
+                                <property name="text">
+                                 <string>Custom</string>
                                 </property>
                                </widget>
                               </item>
@@ -6639,7 +6661,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               <number>0</number>
                              </property>
                              <property name="currentIndex">
-                              <number>1</number>
+                              <number>4</number>
                              </property>
                              <widget class="QWidget" name="BlankPage"/>
                              <widget class="QWidget" name="FCC_111_110">
@@ -6694,7 +6716,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                  <row/>
                                  <column>
                                   <property name="text">
-                                   <string>{Slip Plane}</string>
+                                   <string>(Slip Plane)</string>
                                   </property>
                                   <property name="font">
                                    <font>
@@ -6830,6 +6852,723 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                  <item row="11" column="1">
                                   <property name="text">
                                    <string>1, -1, 0</string>
+                                  </property>
+                                 </item>
+                                </widget>
+                               </item>
+                              </layout>
+                             </widget>
+                             <widget class="QWidget" name="BCC_110_111">
+                              <layout class="QVBoxLayout" name="verticalLayout_44">
+                               <property name="spacing">
+                                <number>5</number>
+                               </property>
+                               <property name="leftMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="rightMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="bottomMargin">
+                                <number>0</number>
+                               </property>
+                               <item alignment="Qt::AlignHCenter">
+                                <widget class="QLabel" name="label_44">
+                                 <property name="font">
+                                  <font>
+                                   <bold>true</bold>
+                                   <underline>true</underline>
+                                  </font>
+                                 </property>
+                                 <property name="text">
+                                  <string>BCC (110)&lt;111&gt;</string>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QTableWidget" name="T2">
+                                 <property name="editTriggers">
+                                  <set>QAbstractItemView::NoEditTriggers</set>
+                                 </property>
+                                 <attribute name="horizontalHeaderDefaultSectionSize">
+                                  <number>167</number>
+                                 </attribute>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <column>
+                                  <property name="text">
+                                   <string>(Slip Plane)</string>
+                                  </property>
+                                  <property name="font">
+                                   <font>
+                                    <pointsize>13</pointsize>
+                                   </font>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>&lt;Slip Direction&gt;</string>
+                                  </property>
+                                  <property name="font">
+                                   <font>
+                                    <pointsize>13</pointsize>
+                                   </font>
+                                  </property>
+                                 </column>
+                                 <item row="0" column="0">
+                                  <property name="text">
+                                   <string>0, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="0" column="1">
+                                  <property name="text">
+                                   <string>1, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="1" column="0">
+                                  <property name="text">
+                                   <string>1, 0, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="1" column="1">
+                                  <property name="text">
+                                   <string>1, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="2" column="0">
+                                  <property name="text">
+                                   <string>1, -1, 0</string>
+                                  </property>
+                                 </item>
+                                 <item row="2" column="1">
+                                  <property name="text">
+                                   <string>1, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="3" column="0">
+                                  <property name="text">
+                                   <string>0, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="3" column="1">
+                                  <property name="text">
+                                   <string>1, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="4" column="0">
+                                  <property name="text">
+                                   <string>1, 0, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="4" column="1">
+                                  <property name="text">
+                                   <string>1, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="5" column="0">
+                                  <property name="text">
+                                   <string>1, 1, 0</string>
+                                  </property>
+                                 </item>
+                                 <item row="5" column="1">
+                                  <property name="text">
+                                   <string>1, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="6" column="0">
+                                  <property name="text">
+                                   <string>0, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="6" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="7" column="0">
+                                  <property name="text">
+                                   <string>1, 0, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="7" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="8" column="0">
+                                  <property name="text">
+                                   <string>1, 1, 0</string>
+                                  </property>
+                                 </item>
+                                 <item row="8" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="9" column="0">
+                                  <property name="text">
+                                   <string>0, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="9" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="10" column="0">
+                                  <property name="text">
+                                   <string>1, 0, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="10" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="11" column="0">
+                                  <property name="text">
+                                   <string>1, -1, 0</string>
+                                  </property>
+                                 </item>
+                                 <item row="11" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                </widget>
+                               </item>
+                              </layout>
+                             </widget>
+                             <widget class="QWidget" name="BCC_112_111">
+                              <layout class="QVBoxLayout" name="verticalLayout_68">
+                               <property name="spacing">
+                                <number>5</number>
+                               </property>
+                               <property name="leftMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="rightMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="bottomMargin">
+                                <number>0</number>
+                               </property>
+                               <item alignment="Qt::AlignHCenter">
+                                <widget class="QLabel" name="label_45">
+                                 <property name="font">
+                                  <font>
+                                   <bold>true</bold>
+                                   <underline>true</underline>
+                                  </font>
+                                 </property>
+                                 <property name="text">
+                                  <string>BCC (112)&lt;111&gt;</string>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QTableWidget" name="T3">
+                                 <property name="editTriggers">
+                                  <set>QAbstractItemView::NoEditTriggers</set>
+                                 </property>
+                                 <attribute name="horizontalHeaderDefaultSectionSize">
+                                  <number>167</number>
+                                 </attribute>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <column>
+                                  <property name="text">
+                                   <string>(Slip Plane)</string>
+                                  </property>
+                                  <property name="font">
+                                   <font>
+                                    <pointsize>13</pointsize>
+                                   </font>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>&lt;Slip Direction&gt;</string>
+                                  </property>
+                                  <property name="font">
+                                   <font>
+                                    <pointsize>13</pointsize>
+                                   </font>
+                                  </property>
+                                 </column>
+                                 <item row="0" column="0">
+                                  <property name="text">
+                                   <string>-2, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="0" column="1">
+                                  <property name="text">
+                                   <string>-1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="1" column="0">
+                                  <property name="text">
+                                   <string>1, -2, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="1" column="1">
+                                  <property name="text">
+                                   <string>-1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="2" column="0">
+                                  <property name="text">
+                                   <string>1, 1, 2</string>
+                                  </property>
+                                 </item>
+                                 <item row="2" column="1">
+                                  <property name="text">
+                                   <string>-1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="3" column="0">
+                                  <property name="text">
+                                   <string>-2, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="3" column="1">
+                                  <property name="text">
+                                   <string>-1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="4" column="0">
+                                  <property name="text">
+                                   <string>1, 2, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="4" column="1">
+                                  <property name="text">
+                                   <string>-1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="5" column="0">
+                                  <property name="text">
+                                   <string>1, -1, 2</string>
+                                  </property>
+                                 </item>
+                                 <item row="5" column="1">
+                                  <property name="text">
+                                   <string>-1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="6" column="0">
+                                  <property name="text">
+                                   <string>2, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="6" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="7" column="0">
+                                  <property name="text">
+                                   <string>-1, -2, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="7" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="8" column="0">
+                                  <property name="text">
+                                   <string>-1, 1, 2</string>
+                                  </property>
+                                 </item>
+                                 <item row="8" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="9" column="0">
+                                  <property name="text">
+                                   <string>2, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="9" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="10" column="0">
+                                  <property name="text">
+                                   <string>-1, 2, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="10" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="11" column="0">
+                                  <property name="text">
+                                   <string>-1, -1, 2</string>
+                                  </property>
+                                 </item>
+                                 <item row="11" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                </widget>
+                               </item>
+                              </layout>
+                             </widget>
+                             <widget class="QWidget" name="BCC_123_111">
+                              <layout class="QVBoxLayout" name="verticalLayout_69">
+                               <property name="spacing">
+                                <number>5</number>
+                               </property>
+                               <property name="leftMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="topMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="rightMargin">
+                                <number>0</number>
+                               </property>
+                               <property name="bottomMargin">
+                                <number>0</number>
+                               </property>
+                               <item alignment="Qt::AlignHCenter">
+                                <widget class="QLabel" name="label_47">
+                                 <property name="font">
+                                  <font>
+                                   <bold>true</bold>
+                                   <underline>true</underline>
+                                  </font>
+                                 </property>
+                                 <property name="text">
+                                  <string>BCC (123)&lt;111&gt;</string>
+                                 </property>
+                                </widget>
+                               </item>
+                               <item>
+                                <widget class="QTableWidget" name="T4">
+                                 <property name="editTriggers">
+                                  <set>QAbstractItemView::NoEditTriggers</set>
+                                 </property>
+                                 <property name="rowCount">
+                                  <number>24</number>
+                                 </property>
+                                 <attribute name="horizontalHeaderDefaultSectionSize">
+                                  <number>167</number>
+                                 </attribute>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <row/>
+                                 <column>
+                                  <property name="text">
+                                   <string>(Slip Plane)</string>
+                                  </property>
+                                  <property name="font">
+                                   <font>
+                                    <pointsize>13</pointsize>
+                                   </font>
+                                  </property>
+                                 </column>
+                                 <column>
+                                  <property name="text">
+                                   <string>&lt;Slip Direction&gt;</string>
+                                  </property>
+                                  <property name="font">
+                                   <font>
+                                    <pointsize>13</pointsize>
+                                   </font>
+                                  </property>
+                                 </column>
+                                 <item row="0" column="0">
+                                  <property name="text">
+                                   <string>1, 2, 3</string>
+                                  </property>
+                                 </item>
+                                 <item row="0" column="1">
+                                  <property name="text">
+                                   <string>1, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="1" column="0">
+                                  <property name="text">
+                                   <string>-1, 3, 2</string>
+                                  </property>
+                                 </item>
+                                 <item row="1" column="1">
+                                  <property name="text">
+                                   <string>1, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="2" column="0">
+                                  <property name="text">
+                                   <string>2, 1, 3</string>
+                                  </property>
+                                 </item>
+                                 <item row="2" column="1">
+                                  <property name="text">
+                                   <string>1, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="3" column="0">
+                                  <property name="text">
+                                   <string>-2, 3, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="3" column="1">
+                                  <property name="text">
+                                   <string>1, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="4" column="0">
+                                  <property name="text">
+                                   <string>3, -1, 2</string>
+                                  </property>
+                                 </item>
+                                 <item row="4" column="1">
+                                  <property name="text">
+                                   <string>1, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="5" column="0">
+                                  <property name="text">
+                                   <string>3, -2, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="5" column="1">
+                                  <property name="text">
+                                   <string>1, 1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="6" column="0">
+                                  <property name="text">
+                                   <string>-1, 2, -3</string>
+                                  </property>
+                                 </item>
+                                 <item row="6" column="1">
+                                  <property name="text">
+                                   <string>1, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="7" column="0">
+                                  <property name="text">
+                                   <string>1, 3, -2</string>
+                                  </property>
+                                 </item>
+                                 <item row="7" column="1">
+                                  <property name="text">
+                                   <string>1, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="8" column="0">
+                                  <property name="text">
+                                   <string>2, -1, 3</string>
+                                  </property>
+                                 </item>
+                                 <item row="8" column="1">
+                                  <property name="text">
+                                   <string>1, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="9" column="0">
+                                  <property name="text">
+                                   <string>2, 3, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="9" column="1">
+                                  <property name="text">
+                                   <string>1, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="10" column="0">
+                                  <property name="text">
+                                   <string>3, 1, 2</string>
+                                  </property>
+                                 </item>
+                                 <item row="10" column="1">
+                                  <property name="text">
+                                   <string>1, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="11" column="0">
+                                  <property name="text">
+                                   <string>3, 2, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="11" column="1">
+                                  <property name="text">
+                                   <string>1, -1, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="12" column="0">
+                                  <property name="text">
+                                   <string>1, -2, -3</string>
+                                  </property>
+                                 </item>
+                                 <item row="12" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="13" column="0">
+                                  <property name="text">
+                                   <string>1, 3, 2</string>
+                                  </property>
+                                 </item>
+                                 <item row="13" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="14" column="0">
+                                  <property name="text">
+                                   <string>2, -1, -3</string>
+                                  </property>
+                                 </item>
+                                 <item row="14" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="15" column="0">
+                                  <property name="text">
+                                   <string>2, 3, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="15" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="16" column="0">
+                                  <property name="text">
+                                   <string>3, 1, -2</string>
+                                  </property>
+                                 </item>
+                                 <item row="16" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="17" column="0">
+                                  <property name="text">
+                                   <string>3, 2, -1</string>
+                                  </property>
+                                 </item>
+                                 <item row="17" column="1">
+                                  <property name="text">
+                                   <string>1, -1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="18" column="0">
+                                  <property name="text">
+                                   <string>1, 2, -3</string>
+                                  </property>
+                                 </item>
+                                 <item row="18" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="19" column="0">
+                                  <property name="text">
+                                   <string>1, -3, 2</string>
+                                  </property>
+                                 </item>
+                                 <item row="19" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="20" column="0">
+                                  <property name="text">
+                                   <string>2, 1, -3</string>
+                                  </property>
+                                 </item>
+                                 <item row="20" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="21" column="0">
+                                  <property name="text">
+                                   <string>2, -3, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="21" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="22" column="0">
+                                  <property name="text">
+                                   <string>-3, 1, 2</string>
+                                  </property>
+                                 </item>
+                                 <item row="22" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="23" column="0">
+                                  <property name="text">
+                                   <string>-3, 2, 1</string>
+                                  </property>
+                                 </item>
+                                 <item row="23" column="1">
+                                  <property name="text">
+                                   <string>1, 1, 1</string>
                                   </property>
                                  </item>
                                 </widget>
@@ -8741,7 +9480,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </item>
                     <item>
                      <property name="text">
-                      <string>Test</string>
+                      <string>Example</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>ECAP</string>
                      </property>
                     </item>
                    </widget>
