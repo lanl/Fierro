@@ -323,10 +323,13 @@ void Explicit_Solver::run() {
   //set initial saved velocities
   initial_node_velocities_distributed->assign(*node_velocities_distributed);
     
-  if(simparam.topology_optimization_on || simparam.shape_optimization_on){
+  if(simparam.topology_optimization_on){
       //design_node_densities_distributed->randomize(1,1);
-      setup_optimization_problem();
+      setup_topology_optimization_problem();
       //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+  }
+  else if(simparam.shape_optimization_on){
+    setup_shape_optimization_problem();
   }
   else{
     // ---------------------------------------------------------------------
@@ -1115,7 +1118,7 @@ void Explicit_Solver::FEA_module_setup(){
    Setup Optimization Problem Object, Relevant Objective, and Constraints
 ------------------------------------------------------------------------- */
 
-void Explicit_Solver::setup_optimization_problem(){
+void Explicit_Solver::setup_topology_optimization_problem(){
   int num_dim = simparam.num_dims;
   bool nodal_density_flag = simparam.nodal_density_flag;
   int nTO_modules = simparam.TO_Module_List.size();
@@ -1197,15 +1200,13 @@ void Explicit_Solver::setup_optimization_problem(){
     }
 
     if(simparam.optimization_options.method_of_moving_asymptotes){
-      Teuchos::RCP<MV> mma_upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
-      Teuchos::RCP<MV> mma_lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
-      //mma_lower_bound_node_densities_distributed->assign(*lower_bound_node_densities_distributed);
-      //mma_upper_bound_node_densities_distributed->assign(*upper_bound_node_densities_distributed);
+      Teuchos::RCP<MV> mma_upper_bound_distributed = Teuchos::rcp(new MV(map, 1));
+      Teuchos::RCP<MV> mma_lower_bound_distributed = Teuchos::rcp(new MV(map, 1));
       
-      mma_lower_bound_node_densities_distributed->putScalar(-0.1);
-      mma_upper_bound_node_densities_distributed->putScalar(0.1);
-      mma_lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_lower_bound_node_densities_distributed);
-      mma_upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_upper_bound_node_densities_distributed);
+      mma_lower_bound_distributed->putScalar(-0.1);
+      mma_upper_bound_distributed->putScalar(0.1);
+      mma_lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_lower_bound_distributed);
+      mma_upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_upper_bound_distributed);
       
       mma_bnd = ROL::makePtr<ROL::Bounds<real_t>>(mma_lower_bounds, mma_upper_bounds);
     }
@@ -1567,6 +1568,255 @@ void Explicit_Solver::setup_optimization_problem(){
     //std::cout << "Final Mass Constraint is " << final_mass/initial_mass << std::endl;
 }
 
+/* ----------------------------------------------------------------------
+   Setup Optimization Problem Object, Relevant Objective, and Constraints
+------------------------------------------------------------------------- */
+
+void Explicit_Solver::setup_shape_optimization_problem(){
+  int num_dim = simparam.num_dims;
+  int nTO_modules = simparam.TO_Module_List.size();
+  //int nmulti_objective_modules = simparam->nmulti_objective_modules;
+  std::vector<TO_MODULE_TYPE> TO_Module_List = simparam.TO_Module_List;
+  std::vector<int> TO_Module_My_FEA_Module = simparam.TO_Module_My_FEA_Module;
+  //std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
+  //std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
+  std::vector<std::vector<real_t>> Function_Arguments = simparam.Function_Arguments;
+  std::vector<FUNCTION_TYPE> TO_Function_Type = simparam.TO_Function_Type;
+  std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
+
+  std::string constraint_base, constraint_name;
+  std::stringstream number_union;
+  CArray<GO> Surface_Nodes;
+  GO current_node_index, current_element_index;
+  LO local_node_index, local_element_id;
+  int num_bdy_patches_in_set;
+  size_t node_id, patch_id, module_id;
+  int num_boundary_sets;
+  int local_surface_id;
+  const_host_vec_array design_coordinates;
+  typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  bool nodal_density_flag = true;
+  
+  // fill parameter list with desired algorithmic options or leave as default
+  // Read optimization input parameter list.
+
+  Teuchos::RCP<Teuchos::ParameterList> parlist;
+  if(simparam.optimization_options.optimization_parameters_xml_file){
+    std::string xmlFileName = simparam.optimization_options.xml_parameters_file_name;
+    
+    //check if parameter file exists
+    std::ifstream param_file_check(xmlFileName);
+    if (!param_file_check.is_open()) {
+        *fos << "Unable to find xml parameter file required for optimization with the ROL library"  << std::endl;
+        exit_solver(0);
+    }
+    param_file_check.close();
+
+    parlist = ROL::getParametersFromXmlFile(xmlFileName);
+  }
+  else{
+    parlist = Teuchos::rcp(new Teuchos::ParameterList("Inputs"));
+    set_rol_params(parlist);
+  }
+  //ROL::ParameterList parlist;
+
+  ROL::Ptr<ROL::BoundConstraint<real_t> > bnd, mma_bnd;
+  // Bound constraint defining the possible range of design coordinates variables
+  ROL::Ptr<ROL::Vector<real_t> > lower_bounds, mma_lower_bounds;
+  ROL::Ptr<ROL::Vector<real_t> > upper_bounds, mma_upper_bounds;
+
+  //set bounds on design variables
+  //allocate global vector information
+  upper_bound_node_coordinates_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //all_lower_bound_node_coordinates_distributed = Teuchos::rcp(new MV(all_node_map, 1));
+  //lower_bound_node_coordinates_distributed = Teuchos::rcp(new MV(*all_lower_bound_node_coordinates_distributed, map));
+  lower_bound_node_coordinates_distributed = Teuchos::rcp(new MV(map, num_dim));
+  host_vec_array node_coordinates_upper_bound = upper_bound_node_coordinates_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  host_vec_array node_coordinates_lower_bound = lower_bound_node_coordinates_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+  //begin by assigning values of coordinate vectors to bound vectors
+  lower_bound_node_coordinates_distributed->assign(*all_node_coords_distributed);
+  upper_bound_node_coordinates_distributed->assign(*all_node_coords_distributed);
+
+  //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
+  for(int inode = 0; inode < nlocal_nodes; inode++){
+    for(int idim = 0; idim < num_dim; idim++){
+      node_coordinates_upper_bound(inode,idim) += simparam.optimization_options.max_coord_move_length;
+      node_coordinates_lower_bound(inode,idim) -= simparam.optimization_options.max_coord_move_length;
+    }
+  }
+
+  if(simparam.optimization_options.method_of_moving_asymptotes){
+    Teuchos::RCP<MV> mma_upper_bound_distributed = Teuchos::rcp(new MV(map, num_dim));
+    Teuchos::RCP<MV> mma_lower_bound_distributed = Teuchos::rcp(new MV(map, num_dim));
+    
+    mma_lower_bound_distributed->putScalar(-0.1);
+    mma_upper_bound_distributed->putScalar(0.1);
+    mma_lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_lower_bound_distributed);
+    mma_upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_upper_bound_distributed);
+    
+    mma_bnd = ROL::makePtr<ROL::Bounds<real_t>>(mma_lower_bounds, mma_upper_bounds);
+  }
+  
+
+  //Design variables to optimize
+  ROL::Ptr<ROL::Vector<real_t>> x;
+  x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(design_node_coords_distributed);
+  
+  //Instantiate (the one) objective function for the problem
+  ROL::Ptr<ROL::Objective<real_t>> obj, sub_obj;
+  bool objective_declared = false;
+  for(int imodule = 0; imodule < nTO_modules; imodule++){
+    if(TO_Function_Type[imodule] == FUNCTION_TYPE::OBJECTIVE){
+      //check if previous module already defined an objective, there must be one objective module
+      if(objective_declared){
+        // TODO: Put this validation earlier.
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; ANOTHER OBJECTIVE FUNCTION WITH NAME \"" 
+              << TO_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
+          exit_solver(0);
+      }
+      if(TO_Module_List[imodule] == TO_MODULE_TYPE::Kinetic_Energy_Minimize){
+        //debug print
+        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        if(simparam.optimization_options.method_of_moving_asymptotes){
+          sub_obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
+        }
+        else{
+          obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+        }
+      }
+      else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Internal_Energy_Minimize){
+        //debug print
+        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        if(simparam.optimization_options.method_of_moving_asymptotes){
+          sub_obj = ROL::makePtr<InternalEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
+        }
+        else{
+          obj = ROL::makePtr<InternalEnergyMinimize_TopOpt>(this, nodal_density_flag);
+        }
+      }
+      else{
+        // TODO: Put validation earlier
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" 
+              << TO_Module_List[imodule] << "\"" << std::endl;
+        exit_solver(0);
+      }
+      objective_declared = true;
+    }
+  }
+  
+  //optimization problem interface that can have constraints added to it before passing to solver object
+  problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+  
+  for(int imodule = 0; imodule < nTO_modules; imodule++){
+    number_union.str(constraint_base);
+    number_union << imodule + 1;
+    constraint_name = number_union.str();
+    ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
+    ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
+    if(TO_Function_Type[imodule] == FUNCTION_TYPE::EQUALITY_CONSTRAINT){
+      //pointers are reference counting
+      ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
+      if(TO_Module_List[imodule]==TO_MODULE_TYPE::Mass_Constraint){
+        
+        *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false, true);
+      }
+      else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
+        *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false, true);
+      }
+      else{
+        // TODO: Put validation earlier
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED EQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" 
+              << TO_Module_List[imodule] <<"\"" << std::endl;
+        exit_solver(0);
+      }
+      *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
+      problem->addConstraint(constraint_name, eq_constraint, constraint_mul);
+    }
+
+    if(TO_Function_Type[imodule] == FUNCTION_TYPE::INEQUALITY_CONSTRAINT){
+      //pointers are reference counting
+      ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint;
+      ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,Function_Arguments[imodule][0]);
+      ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,Function_Arguments[imodule][1]);    
+      ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
+      ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
+      ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
+      if(TO_Module_List[imodule]==TO_MODULE_TYPE::Mass_Constraint){
+        *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, true, true);
+      }
+      else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
+        *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], true, true);
+      }
+      else{
+        // TODO: Put this validation earlier
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED INEQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" 
+              << TO_Module_List[imodule] << "\"" << std::endl;
+        exit_solver(0);
+      }
+      *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
+      problem->addConstraint(constraint_name, ineq_constraint, constraint_mul, constraint_bnd);
+    }
+    number_union.clear();
+  }
+
+  lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(lower_bound_node_coordinates_distributed);
+  upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(upper_bound_node_coordinates_distributed);
+  
+  bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
+  problem->addBoundConstraint(bnd);
+  
+  //real_t initial_mass = ROL_Element_Masses->reduce(sumreduc);
+
+  problem->setProjectionAlgorithm(*parlist);
+  //finalize problem
+  problem->finalize(false,true,*fos);
+  //problem->check(true,std::cout);
+
+  //debug checks
+  ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_x =
+   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_coords_distributed);
+  //construct direction vector for check
+  Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, num_dim));
+  directions_distributed->putScalar(-0.1);
+  directions_distributed->randomize(-0.8,1);
+  Kokkos::View <real_t*, array_layout, HostSpace, memory_traits> direction_norm("gradient norm",1);
+  directions_distributed->norm2(direction_norm);
+  directions_distributed->scale(1/direction_norm(0));
+  //set all but first component to 0 for debug
+  host_vec_array directions = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //for(int init = 1; init < nlocal_nodes; init++)
+  //directions(4,0) = -0.3;
+  ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
+  ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
+  //obj->checkGradient(*rol_x, *rol_d);
+  //obj->checkHessVec(*rol_x, *rol_d);
+  //directions_distributed->putScalar(-0.000001);
+  //obj->checkGradient(*rol_x, *rol_d);
+  //directions_distributed->putScalar(-0.0000001);
+  //obj->checkGradient(*rol_x, *rol_d);
+  
+
+  // Instantiate Solver.
+  ROL::Solver<real_t> solver(problem,*parlist);
+    
+  // Solve optimization problem.
+  //std::ostream outStream;
+  solver.solve(*fos);
+
+  //print final constraint satisfaction
+  //fea_elasticity->compute_element_masses(design_densities,false);
+  //real_t final_mass = ROL_Element_Masses->reduce(sumreduc);
+  //if(myrank==0)
+    //std::cout << "Final Mass Constraint is " << final_mass/initial_mass << std::endl;
+}
 
 /* ----------------------------------------------------------------------------
    Initialize sets of element boundary surfaces and arrays for input conditions

@@ -164,6 +164,7 @@ struct Optimization_Options: Yaml::DerivedFields {
   bool use_gradient_tally = false;                            //tallies gradient in tandem with the time sequence solving for the adjoint vectors
   bool optimization_parameters_xml_file = false;
   std::string xml_parameters_file_name = "optimization_parameters.xml";
+  real_t max_coord_move_length = 1;
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
   std::vector<MultiObjectiveModule> multi_objective_modules;
@@ -191,7 +192,7 @@ IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options,
   optimization_process, optimization_objective, 
   constraints, method_of_moving_asymptotes, volume_bound_constraints, objective_regions,
   simp_penalty_power, density_epsilon, thick_condition_boundary,
-  optimization_output_freq, density_filter, minimum_density, maximum_density,
+  optimization_output_freq, density_filter, minimum_density, maximum_density, max_coord_move_length,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
   variable_outer_shell, shell_density, objective_normalization_constant,
   num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally, disable_forward_solve_output,
