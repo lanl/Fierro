@@ -135,7 +135,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         // get mesh elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
-        //size_t guass_gid = elem_gid; // 1 gauss point per element
+        size_t gauss_gid = elem_gid; // 1 gauss point per element
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_lid = mat_elem_lid;
@@ -479,23 +479,26 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
                 // Wilkins used elem_area*0.25 for the corner area, we will use the corner
                 // areas calculated using Barlow's symmetry and energy preserving area partitioning
-                if (node_radius > tiny) {
+
+                double radius_elem = GaussPoints_vol(gauss_gid)/elem_area;
+
+                //if (node_radius > tiny) {
                     
                     // sigma_RZ / R_p
-                    double force_term_1 = tau(1, 0) * corner_areas(corner_lid) / node_radius; 
+                    double force_term_1 = tau(1, 0) * corner_areas(corner_lid) / radius_elem; 
                     //force_term_1 = tau(1, 0) * 0.25*elem_area / node_radius; // Wilkins
                     
                     corner_force(corner_gid, 0) += force_term_1*MaterialPoints_volfrac(mat_point_lid);
                     MaterialCorners_force(mat_corner_lid, 0) += force_term_1;
 
                     // (sigma_RR - sigma_theta) / R_p
-                    double force_term_2 = (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) / node_radius;
+                    double force_term_2 = (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) /radius_elem;
                     //force_term_2 = (tau(1, 1) - tau(2, 2)) * 0.25*elem_area / node_radius; // Wilkins
 
                     corner_force(corner_gid, 1) += force_term_2*MaterialPoints_volfrac(mat_point_lid);
                     MaterialCorners_force(mat_corner_lid, 1) += force_term_2;
 
-                } // end if radius >0
+                //} // end if radius >0
 
             } // end if eroded
         } // end for loop over nodes in elem

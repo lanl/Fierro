@@ -1801,7 +1801,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
             else if (a_word.compare("strength_model") == 0) {
                 std::string strength_model = root["materials"][mat_id]["material"]["strength_model"].As<std::string>();
 
-                // set the EOS
+                // set the strength
                 if (strength_models_map.find(strength_model) != strength_models_map.end()) {
 
                     std::cout << "strength model = \n" << strength_models_map[strength_model] << std::endl;
