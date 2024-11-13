@@ -40,12 +40,13 @@ show_help() {
     echo "          cuda                        Cuda Kokkos backend"
     echo "          hip                         HIP Kokkos backend"
     echo " "
-    echo "      --machine                       The machine you are building for. The default is 'linux'"
+    echo "      --env_source                    The source for the software being used you are building for. The default is 'linux'"
     echo " "
     echo "          darwin                      The darwin cluster at LANL. Uses module loads for software"
-    echo "          linux                       A general linux machine (that does not use modules)"
+    echo "          linux                       A general linux system (that does not use modules)"
     echo "          mac                         A Mac computer. This option does not allow for cuda and hip builds, and build_cores will be set to 1"
     echo "          msu                         A linux computer managed by the HPCC group at Mississippi State University"
+    echo "          anaconda                    built using conda-installed software. No external installations will be done"
     echo " "
     echo "      --heffte_build_type             The build type for the heffte installation. The default is 'fftw'"
     echo " "
@@ -60,7 +61,7 @@ show_help() {
 # Initialize variables with default values
 build_action="full-app"
 solver="explicit"
-machine="linux"
+env="linux"
 kokkos_build_type="serial"
 heffte_build_type="fftw"
 build_cores="1"
@@ -71,7 +72,7 @@ valid_build_action=("full-app" "set-env" "install-trilinos" "install-hdf5" "inst
 valid_solver=("all" "explicit" "explicit-evpfft" "explicit-ls-evpfft" "implicit")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
-valid_machines=("darwin" "chicoma" "linux" "mac" "msu")
+valid_env=("darwin" "chicoma" "linux" "mac" "msu" "anaconda")
 valid_intel_mkl=("disabled" "enabled")
 
 # Parse command line arguments
@@ -97,12 +98,12 @@ for arg in "$@"; do
                 return 1
             fi
             ;;
-        --machine=*)
+        --env_source=*)
             option="${arg#*=}"
-            if [[ " ${valid_machines[*]} " == *" $option "* ]]; then
-                machine="$option"
+            if [[ " ${valid_env[*]} " == *" $option "* ]]; then
+                env="$option"
             else
-                echo "Error: Invalid --machine specified."
+                echo "Error: Invalid --env_source specified."
                 show_help
                 return 1
             fi
@@ -160,31 +161,30 @@ for arg in "$@"; do
 done
 
 # Check for correct combos with mac
-if [ "$machine" = "mac" ] && [ "$kokkos_build_type" = "cuda" ]; then
+if [ "$env" = "mac" ] && [ "$kokkos_build_type" = "cuda" ]; then
     echo "Error: Mac cannot build with Kokkos Cuda backend"
     show_help
     return 1
 fi
 
-if [ "$machine" = "mac" ] && [ "$kokkos_build_type" = "hip" ]; then
+if [ "$env" = "mac" ] && [ "$kokkos_build_type" = "hip" ]; then
     echo "Error: Mac cannot build with Kokkos HIP backend"
     show_help
     return 1
 fi
 
-if [ "$machine" = "mac" ] && [ $build_cores -ne 1 ]; then
-    echo "Error: Mac cannot be built in parallel. Setting build cores to default 1"
+if [ "$env" = "mac" ] && [ $build_cores -ne 1 ]; then
+    echo "Warning: Mac cannot be built in parallel. Setting build cores to default 1"
     # Nothing to do, default is already 1
 fi
 
 
-#echo "Your options of $build_action $solver $machine $kokkos_build_type are valid! Let's start building"
 echo "Building based on these argument options:"
 echo "Build action - ${build_action}"
 echo "Solver - ${solver}"
 echo "Kokkos backend - ${kokkos_build_type}"
 echo "Intel MKL library - ${intel_mkl}"
-echo "Machine - ${machine}"
+echo "Environment Source - ${env}"
 if [ "${solver}" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
     echo "HEFFTE - ${heffte_build_type}"
 fi
@@ -193,17 +193,19 @@ echo "make -j ${build_cores}"
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 # Always setup the environment
-source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
+source setup-env.sh ${env} ${kokkos_build_type} ${build_cores}
 
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
-    source uncrustify-install.sh
-    source trilinos-install.sh ${kokkos_build_type} ${machine} ${intel_mkl}
-    if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
-        source hdf5-install.sh
-        source heffte-install.sh ${heffte_build_type} ${machine}
+    if [ ! "$env" = "anaconda" ]; then
+        source uncrustify-install.sh
+        source trilinos-install.sh ${kokkos_build_type} ${machine} ${intel_mkl}
+        if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
+            source hdf5-install.sh
+            source heffte-install.sh ${heffte_build_type} ${machine}
+        fi
     fi
-    source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type}
+    source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type} ${env}
 elif [ "$build_action" = "install-trilinos" ]; then
     source trilinos-install.sh ${kokkos_build_type} ${machine} ${intel_mkl}
 elif [ "$build_action" = "install-hdf5" ]; then
@@ -213,7 +215,7 @@ elif [ "$build_action" = "install-heffte" ]; then
 elif [ "$build_action" = "install-uncrustify" ]; then
     source uncrustify-install.sh
 elif [ "$build_action" = "fierro" ]; then
-    source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type}
+    source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type} ${env}
 else
     echo "No build action, only setup the environment."
 fi

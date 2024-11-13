@@ -57,7 +57,9 @@ export FIERRO_BUILD_CORES=$build_cores
 cd $scriptdir
 
 # Call the appropriate script to load modules based on the machine
-source machines/$machine-env.sh ${kokkos_build_type}
+if [ ! "$machine" = "anaconda" ]; then
+    source machines/$machine-env.sh ${kokkos_build_type}
+fi
 
 
 
