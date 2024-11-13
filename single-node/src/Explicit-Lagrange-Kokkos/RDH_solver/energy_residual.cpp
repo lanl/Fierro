@@ -70,7 +70,7 @@ void get_energy_rhs(const mesh_t &mesh,
     });// FOR_ALL
     Kokkos::fence();
 
-    if (source_cond == false){
+    if (source_cond == true){
 
         // initialize source term
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -83,7 +83,8 @@ void get_energy_rhs(const mesh_t &mesh,
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
             for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
-
+                
+                int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
                 for (int i = 0; i < mesh.num_zones_in_elem; i++){
 
                     double zone_coords[3];
@@ -93,7 +94,7 @@ void get_energy_rhs(const mesh_t &mesh,
 
                     for (int nodes_in_zone = 0; nodes_in_zone < mesh.num_nodes_in_zone; nodes_in_zone++){
 
-                        int node_gid = mesh.nodes_in_elem(elem_gid, nodes_in_zone);
+                        int node_gid = mesh.nodes_in_zone(zone_gid, nodes_in_zone);
 
                         zone_coords[0] += node_coords(stage, node_gid, 0);
                         zone_coords[1] += node_coords(stage, node_gid, 1);

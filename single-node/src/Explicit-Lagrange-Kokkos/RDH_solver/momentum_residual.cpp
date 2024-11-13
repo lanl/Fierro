@@ -57,6 +57,12 @@ void get_momentum_rhs(const mesh_t &mesh,
         });// FOR_ALL
 
         // Do surface integral //
+        // needed if u.n != 0 on \partial \Omega, or if using distribution coefficients
+        
+        // Compute artificial viscosity and append to RHS
+        // if (viscosity_cond == true){
+            
+        // }
 
 }// end get_momentum_rhs
 

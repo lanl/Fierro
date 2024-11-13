@@ -65,10 +65,8 @@ void run(const mesh_t &mesh,
     
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-    CArrayKokkos <double> time_int_weights(2,2);
-
-
     // HARD CODED FOR NOW //
+    CArrayKokkos <double> time_int_weights(2,2);
     RUN({
         time_int_weights(0,0) = 1.0;
         time_int_weights(1,0) = 0.5;

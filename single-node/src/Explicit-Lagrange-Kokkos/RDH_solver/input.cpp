@@ -925,8 +925,9 @@ void input(CArrayKokkos <material_t> &material,
     // Taylor-Green Vortex
     if (test_problem == test::TaylorGreen){
 
-        time_final = 0.5;
+        time_final =0.5;
         source_cond = true;
+        viscosity_cond = false;
         RUN({
             
             material(0).eos_model = ideal_gas; // EOS model
