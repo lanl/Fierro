@@ -94,6 +94,7 @@ enum class gauss_pt_state
 {
     volume,
     divergence_velocity,
+    gradient_velocity,
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -108,6 +109,7 @@ struct GaussPoint_t
 
     DCArrayKokkos<double> vol;  ///< GaussPoint volume
     DCArrayKokkos<double> div;  ///< GaussPoint divergence of velocity
+    DCArrayKokkos<double> vel_grad;  ///< GaussPoint velocity gradient tensor
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
@@ -120,6 +122,9 @@ struct GaussPoint_t
                     break;
                 case gauss_pt_state::divergence_velocity:
                     if (div.size() == 0) this->div = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_div");
+                    break;
+                case gauss_pt_state::gradient_velocity:
+                    if (div.size() == 0) this->vel_grad = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_vel_grad");
                     break;
                 default:
                     std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;
@@ -162,6 +167,9 @@ enum class material_pt_state
     specific_internal_energy,
     heat_flux,
     eroded_flag,
+    elastic_modulii,
+    shear_modulii,
+    poisson_ratios,
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -181,6 +189,11 @@ struct MaterialPoint_t
     DCArrayKokkos<double> mass;   ///< MaterialPoint mass
     DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
     DCArrayKokkos<double> q_flux; ///< Heat flux
+
+    DCArrayKokkos<double> elastic_modulii;  ///<  MaterialPoint elastic modulii Exx, Eyy, Ezz
+    DCArrayKokkos<double> shear_modulii;    ///<  MaterialPoint shear modulii Gxy, Gxz, Gyz
+    DCArrayKokkos<double> poisson_ratios;   ///<  MaterialPoint poisson ratios nu_xy, nu_xz, nu_yz
+    
 
     // Material Models are stored on Material points
     DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
@@ -203,6 +216,15 @@ struct MaterialPoint_t
                     break;
                 case material_pt_state::stress:
                     if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, num_dims, "material_point_stress");
+                    break;
+                case material_pt_state::elastic_modulii:
+                    if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<double>(num_pts_max, 3, "material_elastic_modulii");
+                    break;
+                case material_pt_state::shear_modulii:
+                    if (shear_modulii.size() == 0) this->shear_modulii = DCArrayKokkos<double>(num_pts_max, 3, "material_shear_modulii");
+                    break;
+                case material_pt_state::poisson_ratios:
+                    if (poisson_ratios.size() == 0) this->poisson_ratios = DCArrayKokkos<double>(num_pts_max, 3, "material_poisson_ratios");
                     break;
                 case material_pt_state::sound_speed:
                     if (sspd.size() == 0) this->sspd = DCArrayKokkos<double>(num_pts_max, "material_point_sspd");
