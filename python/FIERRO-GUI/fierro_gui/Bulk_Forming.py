@@ -94,6 +94,7 @@ def Bulk_Forming(self):
         self.INhselfx.clear()
         self.INhlatex.clear()
         if "Import Elastic Parameters File" in self.INMaterialDefinition.currentText():
+            self.MaterialMenu_2.setCurrentIndex(0)
             elastic_filename, _ = QFileDialog.getOpenFileName(filter="Elastic Parameters File (*.txt)",)
             matrix = []
             with open(elastic_filename, 'r') as file:
@@ -131,26 +132,87 @@ def Bulk_Forming(self):
                     warning_message("ERROR: The first character of the first line is not a '0' (anisotropic) or '1' (isotropic)")
                     return None
         elif "Import Plastic Parameters File" in self.INMaterialDefinition.currentText():
+            self.MaterialMenu_2.setCurrentIndex(1)
+            self.BEnablePlasticity.setChecked(True)
             plastic_filename, _ = QFileDialog.getOpenFileName(filter="Plastic Parameters File (*.txt)",)
+            nsmx = 0
             with open(plastic_filename, 'r') as file:
                 iline = 1;
                 for line in file:
                     # Find crystal axes
                     if iline == 3:
                         crystal_axes_line = line.strip().split()[:3]
-                        crystal_axes_line = [float(val) for val in crystal_axes_line if val.replace('.', '').isdigit()]
                         if len(crystal_axes_line) < 3:
-                            warning_message("ERROR: crystal axes was not found on line 3")
+                            warning_message("ERROR: crystal axes was not found on line 3.")
                             return
                         else:
                             self.INa.setText(str(crystal_axes_line[0]))
                             self.INb.setText(str(crystal_axes_line[1]))
                             self.INc.setText(str(crystal_axes_line[2]))
                     # Find slip systems
-                    
+                    if iline == 2:
+                        slip_type = line.strip().split()[:1]
+                    if iline == 4:
+                        nmodesx = line.strip().split()[:1]
+                        nmodesx = int(nmodesx[0])
+                    if iline == 5:
+                        nmodes = line.strip().split()[:1]
+                        nmodes = int(nmodes[0])
+                    if iline == 6:
+                        modei = line.strip().split()[:nmodes]
+                        modei = [float(val) for val in modei if val.replace('.', '').isdigit()]
+                    if iline > 6:
+                        if iline == 7:
+                            start = 7
+                        if iline == start:
+                            self.BCustomSlipSystem.click()
+                            name = line.strip().split()
+                            self.line_edit.setText(' '.join(name))
+                        if iline == start+1:
+                            param1 = line.strip().split()[:6]
+                            modex = float(param1[0])
+                            nsmx = float(param1[1])
+                            self.table.setRowCount(nsmx)
+                        if iline == start+2:
+                            param2 = line.strip().split()[:5]
+                        if iline == start+3:
+                            param3 = line.strip().split()[:2]
+                        if iline > start+3:
+                            if "CUB" or "cub" or "ORT" or "ort" in slip_type:
+                                notation = 3
+                            elif "HEX" or "hex" or "TRI" or "tri" in slip_type:
+                                notation = 4
+                            else:
+                                warning_message("ERROR: you must specify icryst (CUBIC, HEX, etc.)")
+                                return
+                            plane = line.strip().split()[:notation]
+                            direction = line.strip().split()[notation:]
+                            self.table.setItem(iline-start-4,0,QTableWidgetItem(','.join(str(x) for x in plane)))
+                            self.table.setItem(iline-start-4,1,QTableWidgetItem(','.join(str(x) for x in direction)))
+                            if iline == start+3+nsmx:
+                                self.BSubmit.click()
+                                nmodesx = nmodesx-1
+                                custom_label = self.TSlipSystems.findItems("CUSTOM", Qt.MatchExactly, 0)
+                                custom_item = next((item for item in custom_label if item.parent() is None), None)
+                                self.TSlipSystems.setCurrentItem(custom_item.child(modex-1))
+                                if modex in modei:
+                                    self.BAddSlipSystem.click()
+                                    row = self.TSlipSystemParameters.rowCount()
+                                    self.TSlipSystemParameters.setItem(row-1,1,QTableWidgetItem(param1[2]))
+                                    self.TSlipSystemParameters.setItem(row-1,2,QTableWidgetItem(param1[3]))
+                                    self.TSlipSystemParameters.setItem(row-1,3,QTableWidgetItem(param2[0]))
+                                    self.TSlipSystemParameters.setItem(row-1,4,QTableWidgetItem(param2[1]))
+                                    self.TSlipSystemParameters.setItem(row-1,5,QTableWidgetItem(param2[2]))
+                                    self.TSlipSystemParameters.setItem(row-1,6,QTableWidgetItem(param2[3]))
+                                    self.TSlipSystemParameters.setItem(row-1,7,QTableWidgetItem(param2[4]))
+                                    self.TSlipSystemParameters.setItem(row-1,8,QTableWidgetItem(param3[0]))
+                                    self.TSlipSystemParameters.setItem(row-1,9,QTableWidgetItem(param3[1]))
+                                if nmodesx == 0:
+                                    return
+                                else:
+                                    start = iline+1
                     # Update line number
                     iline += 1
-                    
             # Turn page to plastic
             self.BEnablePlasticity.setChecked(True)
             self.MaterialMenu_2.setCurrentIndex(1)
