@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIJXXlhf.ui'
+## Form generated from reading UI file 'FIERRO_GUIBosuJw.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -16,15 +16,15 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplication, QComboBox,
-    QFormLayout, QFrame, QGridLayout, QHBoxLayout,
-    QHeaderView, QLabel, QLayout, QLineEdit,
-    QListWidget, QListWidgetItem, QMainWindow, QMenu,
-    QMenuBar, QPlainTextEdit, QProgressBar, QPushButton,
-    QRadioButton, QScrollArea, QSizePolicy, QSpacerItem,
-    QSplitter, QStackedWidget, QStatusBar, QTabWidget,
-    QTableWidget, QTableWidgetItem, QToolButton, QTreeWidget,
-    QTreeWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplication, QCheckBox,
+    QComboBox, QFormLayout, QFrame, QGridLayout,
+    QHBoxLayout, QHeaderView, QLabel, QLayout,
+    QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
+    QMenu, QMenuBar, QPlainTextEdit, QProgressBar,
+    QPushButton, QRadioButton, QScrollArea, QSizePolicy,
+    QSpacerItem, QSplitter, QStackedWidget, QStatusBar,
+    QTabWidget, QTableWidget, QTableWidgetItem, QToolButton,
+    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 import IconResourceFile_rc
 import IconResourceFile_rc
 
@@ -2890,6 +2890,8 @@ class Ui_MainWindow(object):
         self.INMaterialDefinition.addItem("")
         self.INMaterialDefinition.addItem("")
         self.INMaterialDefinition.addItem("")
+        self.INMaterialDefinition.addItem("")
+        self.INMaterialDefinition.addItem("")
         self.INMaterialDefinition.setObjectName(u"INMaterialDefinition")
 
         self.gridLayout_25.addWidget(self.INMaterialDefinition, 1, 1, 1, 1)
@@ -3370,10 +3372,33 @@ class Ui_MainWindow(object):
         self.Plastic.setObjectName(u"Plastic")
         self.Plastic.setStyleSheet(u"")
         self.verticalLayout_26 = QVBoxLayout(self.Plastic)
+#ifndef Q_OS_MAC
+        self.verticalLayout_26.setSpacing(-1)
+#endif
         self.verticalLayout_26.setObjectName(u"verticalLayout_26")
         self.verticalLayout_26.setContentsMargins(0, 0, 0, 0)
-        self.PlasticProperties = QTabWidget(self.Plastic)
+        self.BEnablePlasticity = QCheckBox(self.Plastic)
+        self.BEnablePlasticity.setObjectName(u"BEnablePlasticity")
+
+        self.verticalLayout_26.addWidget(self.BEnablePlasticity, 0, Qt.AlignHCenter)
+
+        self.EnablePlasticity = QStackedWidget(self.Plastic)
+        self.EnablePlasticity.setObjectName(u"EnablePlasticity")
+        sizePolicy11.setHeightForWidth(self.EnablePlasticity.sizePolicy().hasHeightForWidth())
+        self.EnablePlasticity.setSizePolicy(sizePolicy11)
+        self.page_10 = QWidget()
+        self.page_10.setObjectName(u"page_10")
+        self.verticalLayout_71 = QVBoxLayout(self.page_10)
+        self.verticalLayout_71.setObjectName(u"verticalLayout_71")
+        self.EnablePlasticity.addWidget(self.page_10)
+        self.page_26 = QWidget()
+        self.page_26.setObjectName(u"page_26")
+        self.verticalLayout_70 = QVBoxLayout(self.page_26)
+        self.verticalLayout_70.setObjectName(u"verticalLayout_70")
+        self.verticalLayout_70.setContentsMargins(0, 0, 0, 0)
+        self.PlasticProperties = QTabWidget(self.page_26)
         self.PlasticProperties.setObjectName(u"PlasticProperties")
+        self.PlasticProperties.setMinimumSize(QSize(0, 0))
         font12 = QFont()
         font12.setItalic(False)
         self.PlasticProperties.setFont(font12)
@@ -4195,7 +4220,11 @@ class Ui_MainWindow(object):
 
         self.PlasticProperties.addTab(self.VoceParameters, "")
 
-        self.verticalLayout_26.addWidget(self.PlasticProperties)
+        self.verticalLayout_70.addWidget(self.PlasticProperties)
+
+        self.EnablePlasticity.addWidget(self.page_26)
+
+        self.verticalLayout_26.addWidget(self.EnablePlasticity)
 
         icon12 = QIcon()
         icon12.addFile(u":/Blue Icons/Blue Icons/Plastic.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -4856,6 +4885,7 @@ class Ui_MainWindow(object):
         self.gridLayout_28.addWidget(self.LbulkBC, 0, 0, 1, 1)
 
         self.INbulkBC = QComboBox(self.frame_52)
+        self.INbulkBC.addItem("")
         self.INbulkBC.addItem("")
         self.INbulkBC.addItem("")
         self.INbulkBC.addItem("")
@@ -6079,6 +6109,7 @@ class Ui_MainWindow(object):
         self.MaterialTypeTool.setCurrentIndex(0)
         self.MaterialMenu_2.setCurrentIndex(0)
         self.MaterialTypeTool_2.setCurrentIndex(0)
+        self.EnablePlasticity.setCurrentIndex(0)
         self.PlasticProperties.setCurrentIndex(0)
         self.pushButton_13.setDefault(False)
         self.SlipSystemInfo.setCurrentIndex(0)
@@ -6563,8 +6594,10 @@ class Ui_MainWindow(object):
         self.LMaterialName_3.setText(QCoreApplication.translate("MainWindow", u"Name:", None))
         self.LMaterialDefinition.setText(QCoreApplication.translate("MainWindow", u"Material Definition:", None))
         self.INMaterialDefinition.setItemText(0, QCoreApplication.translate("MainWindow", u"Custom", None))
-        self.INMaterialDefinition.setItemText(1, QCoreApplication.translate("MainWindow", u"Single Crystal Copper", None))
-        self.INMaterialDefinition.setItemText(2, QCoreApplication.translate("MainWindow", u"Tantalum", None))
+        self.INMaterialDefinition.setItemText(1, QCoreApplication.translate("MainWindow", u"Import Elastic Parameters File", None))
+        self.INMaterialDefinition.setItemText(2, QCoreApplication.translate("MainWindow", u"Import Plastic Parameters File", None))
+        self.INMaterialDefinition.setItemText(3, QCoreApplication.translate("MainWindow", u"Single Crystal Copper", None))
+        self.INMaterialDefinition.setItemText(4, QCoreApplication.translate("MainWindow", u"Tantalum", None))
 
         self.LType_2.setText(QCoreApplication.translate("MainWindow", u"Elasticity:", None))
         self.INSolidGas_2.setItemText(0, QCoreApplication.translate("MainWindow", u"Solid", None))
@@ -6611,6 +6644,7 @@ class Ui_MainWindow(object):
         self.LNUxy_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>nu<span style=\" vertical-align:sub;\">xy</span>: </p></body></html>", None))
         self.LEz_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>E<span style=\" vertical-align:sub;\">z</span>: </p></body></html>", None))
         self.MaterialMenu_2.setTabText(self.MaterialMenu_2.indexOf(self.Elastic_2), QCoreApplication.translate("MainWindow", u"Elastic", None))
+        self.BEnablePlasticity.setText(QCoreApplication.translate("MainWindow", u"Enable Plasticity", None))
         self.Lc.setText(QCoreApplication.translate("MainWindow", u"c", None))
         self.La.setText(QCoreApplication.translate("MainWindow", u"a", None))
         self.Lb.setText(QCoreApplication.translate("MainWindow", u"b", None))
@@ -7160,6 +7194,7 @@ class Ui_MainWindow(object):
         self.INbulkBC.setItemText(0, QCoreApplication.translate("MainWindow", u"Custom", None))
         self.INbulkBC.setItemText(1, QCoreApplication.translate("MainWindow", u"Example", None))
         self.INbulkBC.setItemText(2, QCoreApplication.translate("MainWindow", u"ECAP", None))
+        self.INbulkBC.setItemText(3, QCoreApplication.translate("MainWindow", u"Compression Z", None))
 
         self.LVgrad.setText(QCoreApplication.translate("MainWindow", u"VELOCITY GRADIENT", None))
         self.label_12.setText(QCoreApplication.translate("MainWindow", u"--enforced condition--", None))

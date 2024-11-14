@@ -2,55 +2,64 @@ import os
 import tempfile
 
 def Bulk_Forming_WInput(self):
-
     # Plastic Input File
     plastic_parameters = open(self.BULK_FORMING_PLASTIC_PARAMETERS,"w")
-    header = 'SLIP SYSTEMS FOR CUBIC CRYSTAL\n' \
-             'CUBIC             icryst\n'
-    plastic_parameters.write(header)
-    crystal_axis = f'   {self.TMaterials_2.item(0,23).text()}   {self.TMaterials_2.item(0,24).text()}   {self.TMaterials_2.item(0,25).text()}   crystal axis (cdim(i))\n'
-    plastic_parameters.write(crystal_axis)
-    system_names = self.TMaterials_2.item(0,26).text()
-    num_systems = system_names.count(',') + 1
-    nmodes = f'   {num_systems}              nmodesx (total # of modes listed in the file)\n' \
-             f'   {num_systems}              nmodes (# of modes to be used in the calculation)\n'
-    plastic_parameters.write(nmodes)
-    modei = '   1'
-    for i in range(num_systems-1):
-        modei = modei + f'  {i+2}'
-    modei = modei + '              mode(i) (label of the modes to be used)\n'
-    plastic_parameters.write(modei)
-    slip_system_names = system_names.split(',')
-    nsmx_max = 0
-    for i in range(num_systems):
-        slip_system_name = slip_system_names[i].split('.', 1)[1].strip()
-        dict = slip_system_names[i].split('.', 1)[0].strip()
-        dvar = f'T{dict}'
-        slip_table = getattr(self, dvar)
-        nsmx = slip_table.rowCount()
-        if nsmx > nsmx_max:
-            nsmx_max = nsmx
-        slip_parameters = f'   {slip_system_name} SLIP\n' \
-                          f'  {i+1}   {nsmx}   {self.TMaterials_2.item(0,27).text().split(",")[i]}   {self.TMaterials_2.item(0,28).text().split(",")[i]}   0.0   0           modex,nsmx,nrsx,gamd0x,twshx,isectwx\n' \
-                          f'  {self.TMaterials_2.item(0,29).text().split(",")[i]}   {self.TMaterials_2.item(0,30).text().split(",")[i]}   {self.TMaterials_2.item(0,31).text().split(",")[i]}   {self.TMaterials_2.item(0,32).text().split(",")[i]}   {self.TMaterials_2.item(0,33).text().split(",")[i]}         tau0xf,tau0xb,tau1x,thet0,thet1\n' \
-                          f'  {self.TMaterials_2.item(0,34).text().split(",")[i]}'
-        for ii in range(num_systems):
-            slip_parameters = slip_parameters + f'   {self.TMaterials_2.item(0,35).text().split(",")[i]}'
-        slip_parameters = slip_parameters + '                            hselfx,hlatex\n'
-        plastic_parameters.write(slip_parameters)
-        for j in range(nsmx):
-            slip_plane = slip_table.item(j,0).text().split(',')
-            slip_system = '   '
-            for k in range(len(slip_plane)):
-                slip_system = slip_system + f'{slip_plane[k]}   '
-            slip_direction = slip_table.item(j,1).text().split(',')
-            for k in range(len(slip_direction)):
-                slip_system = slip_system + f'   {slip_direction[k]}'
-            if j == 0:
-                slip_system = slip_system + '        SLIP (n-b)\n'
-            else:
-                slip_system = slip_system + '\n'
-            plastic_parameters.write(slip_system)
+    if self.TMaterials_2.item(0,23) is None or not self.TMaterials_2.item(0,23).text().strip():
+        no_plasticity_input = 'SLIP SYSTEMS FOR CUBIC CRYSTAL\n' \
+                      'CUBIC             icryst\n' \
+                      '   1.   1.   1.   crystal axis (cdim(i))\n' \
+                      '   0              nmodesx (total # of modes listed in the file)\n' \
+                      '   0              nmodes (# of modes to be used in the calculation)'
+        plastic_parameters.write(no_plasticity_input)
+        modes = '2 0 0 0               NPHMX, NMODMX, NTWMMX, NSYSMX\n'
+    else:
+        header = 'SLIP SYSTEMS FOR CUBIC CRYSTAL\n' \
+                 'CUBIC             icryst\n'
+        plastic_parameters.write(header)
+        crystal_axis = f'   {self.TMaterials_2.item(0,23).text()}   {self.TMaterials_2.item(0,24).text()}   {self.TMaterials_2.item(0,25).text()}   crystal axis (cdim(i))\n'
+        plastic_parameters.write(crystal_axis)
+        system_names = self.TMaterials_2.item(0,26).text()
+        num_systems = system_names.count(',') + 1
+        nmodes = f'   {num_systems}              nmodesx (total # of modes listed in the file)\n' \
+                 f'   {num_systems}              nmodes (# of modes to be used in the calculation)\n'
+        plastic_parameters.write(nmodes)
+        modei = '   1'
+        for i in range(num_systems-1):
+            modei = modei + f'  {i+2}'
+        modei = modei + '              mode(i) (label of the modes to be used)\n'
+        plastic_parameters.write(modei)
+        slip_system_names = system_names.split(',')
+        nsmx_max = 0
+        for i in range(num_systems):
+            slip_system_name = slip_system_names[i].split('.', 1)[1].strip()
+            dict = slip_system_names[i].split('.', 1)[0].strip()
+            dvar = f'T{dict}'
+            slip_table = getattr(self, dvar)
+            nsmx = slip_table.rowCount()
+            if nsmx > nsmx_max:
+                nsmx_max = nsmx
+            slip_parameters = f'   {slip_system_name} SLIP\n' \
+                              f'  {i+1}   {nsmx}   {self.TMaterials_2.item(0,27).text().split(",")[i]}   {self.TMaterials_2.item(0,28).text().split(",")[i]}   0.0   0           modex,nsmx,nrsx,gamd0x,twshx,isectwx\n' \
+                              f'  {self.TMaterials_2.item(0,29).text().split(",")[i]}   {self.TMaterials_2.item(0,30).text().split(",")[i]}   {self.TMaterials_2.item(0,31).text().split(",")[i]}   {self.TMaterials_2.item(0,32).text().split(",")[i]}   {self.TMaterials_2.item(0,33).text().split(",")[i]}         tau0xf,tau0xb,tau1x,thet0,thet1\n' \
+                              f'  {self.TMaterials_2.item(0,34).text().split(",")[i]}'
+            for ii in range(num_systems):
+                slip_parameters = slip_parameters + f'   {self.TMaterials_2.item(0,35).text().split(",")[i]}'
+            slip_parameters = slip_parameters + '                            hselfx,hlatex\n'
+            plastic_parameters.write(slip_parameters)
+            for j in range(nsmx):
+                slip_plane = slip_table.item(j,0).text().split(',')
+                slip_system = '   '
+                for k in range(len(slip_plane)):
+                    slip_system = slip_system + f'{slip_plane[k]}   '
+                slip_direction = slip_table.item(j,1).text().split(',')
+                for k in range(len(slip_direction)):
+                    slip_system = slip_system + f'   {slip_direction[k]}'
+                if j == 0:
+                    slip_system = slip_system + '        SLIP (n-b)\n'
+                else:
+                    slip_system = slip_system + '\n'
+                plastic_parameters.write(slip_system)
+        modes = f'1 1 1 {nsmx_max}               NPHMX, NMODMX, NTWMMX, NSYSMX\n'
     plastic_parameters.close()
 
     # Elastic Input File
@@ -81,7 +90,6 @@ def Bulk_Forming_WInput(self):
 
     # Bulk Forming input parameters file
     bulk_forming_input = open(self.BULK_FORMING_INPUT,"w")
-    modes = f'1 1 1 {nsmx_max}               NPHMX, NMODMX, NTWMMX, NSYSMX\n'
     bulk_forming_input.write(modes)
     Nx = int(self.TParts.item(0,7).text())
     Ny = int(self.TParts.item(0,8).text())

@@ -163,6 +163,7 @@ class FIERRO_GUI(Ui_MainWindow):
                 # Define geometry imports
                 self.INSelectGeometryImport.clear()
                 self.INSelectGeometryImport.addItem("Import Polycrystalline Data Set (.txt)")
+                self.INSelectGeometryImport.addItem("Import Geometry (.stl, .vtk)")
                 # Turn off tabs
                 self.NavigationMenu.setTabEnabled(3, False)
                 self.MaterialMenu.setTabEnabled(1, True)

@@ -47,6 +47,14 @@ def Bulk_Forming(self):
             self.MaterialTypeTool_2.setCurrentIndex(4)
     self.INMaterialType_2.currentIndexChanged.connect(material_class_2)
     
+    # Control addition of plasticity
+    def plasticity():
+        if self.BEnablePlasticity.isChecked():
+            self.EnablePlasticity.setCurrentIndex(1)
+        else:
+            self.EnablePlasticity.setCurrentIndex(0)
+    self.BEnablePlasticity.stateChanged.connect(plasticity)
+    
     # Define material properties using predefined values
     def predefined_materials():
         # Clear elastic parameters
@@ -85,7 +93,68 @@ def Bulk_Forming(self):
         self.INthet1.clear()
         self.INhselfx.clear()
         self.INhlatex.clear()
-        if "Single Crystal Copper" in self.INMaterialDefinition.currentText():
+        if "Import Elastic Parameters File" in self.INMaterialDefinition.currentText():
+            elastic_filename, _ = QFileDialog.getOpenFileName(filter="Elastic Parameters File (*.txt)",)
+            matrix = []
+            with open(elastic_filename, 'r') as file:
+                # Read the first line
+                first_line = file.readline().strip()
+                
+                # Check if the first character of the first line is '0' - anisotropic
+                if first_line[0] == '0':
+                    # Read next six lines for the matrix
+                    for _ in range(6):
+                        line = file.readline().strip()
+                        if line:  # Ensure line is not empty
+                            row = line.split()[:6]  # Convert to float
+                            row = [float(val) for val in row if val.replace('.', '').isdigit()]
+                            matrix.append(row)
+                    # Add to anisotropic table
+                    for i in range(6):
+                        for j in range(6):
+                            item = QTableWidgetItem(str(matrix[i][j]))
+                            self.TAnisotropic_2.setItem(i, j, item)
+                    # Turn page to anisotropic
+                    self.MaterialTypeTool_2.setCurrentIndex(2)
+                # Check if the first character of the first line is '1' - isotropic
+                elif first_line[0] == '1':
+                    line = file.readline().strip()
+                    row = line.split()[:2]
+                    row = [float(val) for val in row if val.replace('.', '').isdigit()]
+                    matrix.append(row)
+                    # Add to isotropic line edit definitions
+                    self.INYoungsModulus_2.setText(str(matrix[0][0]))
+                    self.INPoissonsRatio_2.setText(str(matrix[0][1]))
+                    # Turn page to isotropic
+                    self.MaterialTypeTool_2.setCurrentIndex(0)
+                else:
+                    warning_message("ERROR: The first character of the first line is not a '0' (anisotropic) or '1' (isotropic)")
+                    return None
+        elif "Import Plastic Parameters File" in self.INMaterialDefinition.currentText():
+            plastic_filename, _ = QFileDialog.getOpenFileName(filter="Plastic Parameters File (*.txt)",)
+            with open(plastic_filename, 'r') as file:
+                iline = 1;
+                for line in file:
+                    # Find crystal axes
+                    if iline == 3:
+                        crystal_axes_line = line.strip().split()[:3]
+                        crystal_axes_line = [float(val) for val in crystal_axes_line if val.replace('.', '').isdigit()]
+                        if len(crystal_axes_line) < 3:
+                            warning_message("ERROR: crystal axes was not found on line 3")
+                            return
+                        else:
+                            self.INa.setText(str(crystal_axes_line[0]))
+                            self.INb.setText(str(crystal_axes_line[1]))
+                            self.INc.setText(str(crystal_axes_line[2]))
+                    # Find slip systems
+                    
+                    # Update line number
+                    iline += 1
+                    
+            # Turn page to plastic
+            self.BEnablePlasticity.setChecked(True)
+            self.MaterialMenu_2.setCurrentIndex(1)
+        elif "Single Crystal Copper" in self.INMaterialDefinition.currentText():
             if 'MPa' in self.INUnits.currentText():
                 m = 1
             elif 'Pa' in self.INUnits.currentText():
@@ -106,6 +175,7 @@ def Bulk_Forming(self):
             self.TAnisotropic_2.setItem(4,4,QTableWidgetItem('75400.'))
             self.TAnisotropic_2.setItem(5,5,QTableWidgetItem('75400.'))
             # Define plastic properties
+            self.BEnablePlasticity.setChecked(True)
             self.INa.setText('1.')
             self.INb.setText('1.')
             self.INc.setText('1.')
@@ -140,6 +210,7 @@ def Bulk_Forming(self):
             self.TAnisotropic_2.setItem(4,4,QTableWidgetItem('82500.'))
             self.TAnisotropic_2.setItem(5,5,QTableWidgetItem('82500.'))
             # Define plastic properties
+            self.BEnablePlasticity.setChecked(True)
             self.INa.setText('1.')
             self.INb.setText('1.')
             self.INc.setText('1.')
@@ -186,18 +257,19 @@ def Bulk_Forming(self):
                     warning_message('ERROR: Elastic material definition incomplete')
                     return
         # Plastic parameters checks
-        if not self.INa.text().strip() or not self.INb.text().strip() or not self.INc.text().strip():
-            warning_message('ERROR: crystal axis definition incomplete')
-            return
-        if self.TSlipSystemParameters.rowCount() == 0:
-            warning_message('ERROR: Voce parameters are incomplete')
-            return
-        for rowc in range(self.TSlipSystemParameters.rowCount()):
-            for colc in range(self.TSlipSystemParameters.columnCount()):
-                item = self.TSlipSystemParameters.item(rowc, colc)
-                if item is None or not item.text().strip():
-                    warning_message('ERROR: Voce parameters are incomplete')
-                    return
+        if self.BEnablePlasticity.isChecked():
+            if not self.INa.text().strip() or not self.INb.text().strip() or not self.INc.text().strip():
+                warning_message('ERROR: crystal axis definition incomplete')
+                return
+            if self.TSlipSystemParameters.rowCount() == 0:
+                warning_message('ERROR: Voce parameters are incomplete')
+                return
+            for rowc in range(self.TSlipSystemParameters.rowCount()):
+                for colc in range(self.TSlipSystemParameters.columnCount()):
+                    item = self.TSlipSystemParameters.item(rowc, colc)
+                    if item is None or not item.text().strip():
+                        warning_message('ERROR: Voce parameters are incomplete')
+                        return
         
         # Assign elastic parameters if all checks pass
         if 'Gas' in self.INSolidGas_2.currentText():
@@ -439,17 +511,18 @@ def Bulk_Forming(self):
                    self.TMaterials_2.setItem(row, i, QTableWidgetItem('0'))
                    
         # Add plastic parameters
-        self.TMaterials_2.setItem(row,23,QTableWidgetItem(self.INa.text()))
-        self.TMaterials_2.setItem(row,24,QTableWidgetItem(self.INb.text()))
-        self.TMaterials_2.setItem(row,25,QTableWidgetItem(self.INc.text()))
-        for colc in range(self.TSlipSystemParameters.columnCount()):
-            for rowc in range(self.TSlipSystemParameters.rowCount()):
-                item = self.TSlipSystemParameters.item(rowc, colc)
-                if rowc == 0:
-                    new_text = item.text()
-                else:
-                    new_text = new_text + ', ' + item.text()
-            self.TMaterials_2.setItem(row,colc+26,QTableWidgetItem(new_text))
+        if self.BEnablePlasticity.isChecked():
+            self.TMaterials_2.setItem(row,23,QTableWidgetItem(self.INa.text()))
+            self.TMaterials_2.setItem(row,24,QTableWidgetItem(self.INb.text()))
+            self.TMaterials_2.setItem(row,25,QTableWidgetItem(self.INc.text()))
+            for colc in range(self.TSlipSystemParameters.columnCount()):
+                for rowc in range(self.TSlipSystemParameters.rowCount()):
+                    item = self.TSlipSystemParameters.item(rowc, colc)
+                    if rowc == 0:
+                        new_text = item.text()
+                    else:
+                        new_text = new_text + ', ' + item.text()
+                self.TMaterials_2.setItem(row,colc+26,QTableWidgetItem(new_text))
             
         # Clear plastic parameters
         self.INa.clear()
@@ -769,7 +842,6 @@ def Bulk_Forming(self):
                     # Expand custom definition
                     self.TSlipSystems.expandItem(custom_label[0])
         self.BSubmit.clicked.connect(add_custom_system)
-        
         # Setup New Page
         new_page.setLayout(page_layout)
         self.SlipSystemInfo.addWidget(new_page)
@@ -954,6 +1026,22 @@ def Bulk_Forming(self):
             self.TVgrad.setItem(2,0,QTableWidgetItem("0."))
             self.TVgrad.setItem(2,1,QTableWidgetItem("0."))
             self.TVgrad.setItem(2,2,QTableWidgetItem("0."))
+        elif "Compression Z" in self.INbulkBC.currentText():
+            # Clear tables
+            self.TVgrad.clearContents()
+            self.TVgradi.clearContents()
+            self.TCstress.clearContents()
+            
+            # Assign values
+            self.TVgrad.setItem(0,1,QTableWidgetItem("0."))
+            self.TVgrad.setItem(0,2,QTableWidgetItem("0."))
+            self.TVgrad.setItem(1,0,QTableWidgetItem("0."))
+            self.TVgrad.setItem(1,2,QTableWidgetItem("0."))
+            self.TVgrad.setItem(2,0,QTableWidgetItem("0."))
+            self.TVgrad.setItem(2,1,QTableWidgetItem("0."))
+            self.TVgrad.setItem(2,2,QTableWidgetItem("-1.0"))
+            self.TCstress.setItem(0,0,QTableWidgetItem("0."))
+            self.TCstress.setItem(1,1,QTableWidgetItem("0."))
     self.INbulkBC.currentIndexChanged.connect(boundary_conditions)
     
     # Run Bulk Formation
@@ -981,7 +1069,12 @@ def Bulk_Forming(self):
             executable_path = DeveloperInputs.fierro_evpfft_exe
         elif self.UserConfig == "User":
             executable_path = "evpfft"
-        arguments = ["-f", self.BULK_FORMING_INPUT]
+        if ".txt" in file_type:
+            arguments = ["-f", self.BULK_FORMING_INPUT]
+        elif ".vtk" in file_type:
+            arguments = ["-f", self.BULK_FORMING_INPUT, "-m", "2"]
+        else:
+            warning_message("ERROR: Trying to run an incorrect file type.")
         
         self.p = QProcess()
         self.p.setWorkingDirectory(self.working_directory)
