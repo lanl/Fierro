@@ -39,15 +39,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.h"
 
 // A data structure to get the neighboring corners lids inside an elem relative to a corner lid
-size_t quad4_corner_lids_in_corner_lid_1D[8] = {
-    1,
-    3,
-    0,
-    2,
-    1,
-    3,
-    2,
-    0
+const size_t quad4_corner_lids_in_corner_lid[4][2] = 
+{
+    {1, 3},
+    {0, 2},
+    {1, 3},
+    {2, 0}
 };
 // --- corner_lid = 0 ---
 // corner_lids_in_corner_lid(0,0) = 1;
@@ -214,7 +211,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         // --- Calculate edge normals of a corner ---
         double dual_surf_normals_1D[16];
         ViewCArrayKokkos <double> dual_surf_normals(&dual_surf_normals_1D[0], 4, 2, num_dims);  // [corner_lid, surf_lid, dim]
-        ViewCArrayKokkos <size_t> corner_lids_in_corner_lid(&quad4_corner_lids_in_corner_lid_1D[0], 4, 2); // [corner_lid, surrounding_nodes]
 
         if (useShockDirection == 1) {
             // loop over the corners in this element
@@ -222,7 +218,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         
                 // loop the edges in this corner
                 for (size_t edge_lid=0; edge_lid<num_dims; edge_lid++){
-                    size_t corner_lid_plus = corner_lids_in_corner_lid(corner_lid, edge_lid);
+                    size_t corner_lid_plus = quad4_corner_lids_in_corner_lid[corner_lid][edge_lid];
 
                     for (size_t dim=0; dim<num_dims; dim++){
                         // outward of dual grid edge normal 
