@@ -324,9 +324,7 @@ void Explicit_Solver::run() {
   initial_node_velocities_distributed->assign(*node_velocities_distributed);
     
   if(simparam.topology_optimization_on){
-      //design_node_densities_distributed->randomize(1,1);
-      setup_topology_optimization_problem();
-      //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+    setup_topology_optimization_problem();
   }
   else if(simparam.shape_optimization_on){
     setup_shape_optimization_problem();
@@ -3613,15 +3611,27 @@ void Explicit_Solver::ensight_writer(){
 
 void Explicit_Solver::init_design(){
   int num_dim = simparam.num_dims;
-  bool nodal_density_flag = simparam.nodal_density_flag;
+  bool topology_optimization_on = simparam.topology_optimization_on;
+  bool shape_optimization_on = simparam.shape_optimization_on;
   Input_Options input_options;
   if(simparam.input_options.has_value()){
     input_options = simparam.input_options.value();
   }
-  //set densities
-  if(nodal_density_flag){
-    if(simparam.input_options.has_value()){
-      if (!input_options.topology_optimization_restart) {
+  if(topology_optimization_on){
+    bool nodal_density_flag = simparam.nodal_density_flag;
+    //set densities
+    if(nodal_density_flag){
+      if(simparam.input_options.has_value()){
+        if (!input_options.topology_optimization_restart) {
+          design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+          host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+        
+          for(int inode = 0; inode < nlocal_nodes; inode++){
+            node_densities(inode,0) = 1;
+          }
+        }
+      }
+      else{
         design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
         host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       
@@ -3629,40 +3639,56 @@ void Explicit_Solver::init_design(){
           node_densities(inode,0) = 1;
         }
       }
+        //allocate global vector information
+      all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
+
+      //communicate ghost information to the all vector
+      //create import object using local node indices map and all indices map
+      //Tpetra::Import<LO, GO> importer(map, all_node_map);
+      
+      //design_node_densities_distributed->randomize(0.1,1);
+      //comms to get ghosts
+      all_node_densities_distributed->doImport(*design_node_densities_distributed, *importer, Tpetra::INSERT);
+      
     }
     else{
-      design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
-      host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    
-      for(int inode = 0; inode < nlocal_nodes; inode++){
-        node_densities(inode,0) = 1;
-      }
+      //initialize memory for volume storage
+      vec_array Element_Densities("Element Densities", rnum_elem, 1);
+      for(int ielem = 0; ielem < rnum_elem; ielem++)
+        Element_Densities(ielem,0) = 1;
+
+      //create global vector
+      Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, Element_Densities));
+
+      //if(myrank==0)
+      //*fos << "Global Element Densities:" << std::endl;
+      //Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
     }
-      //allocate global vector information
-    all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
-
-    //communicate ghost information to the all vector
-    //create import object using local node indices map and all indices map
-    Tpetra::Import<LO, GO> importer(map, all_node_map);
-    
-    //design_node_densities_distributed->randomize(0.1,1);
-    //comms to get ghosts
-    all_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
-    
   }
-  else{
-    //initialize memory for volume storage
-    vec_array Element_Densities("Element Densities", rnum_elem, 1);
-    for(int ielem = 0; ielem < rnum_elem; ielem++)
-      Element_Densities(ielem,0) = 1;
+  else if(shape_optimization_on){
+    //set initial design coordinates (not equal to initial coordinates before optimization when restarting)
+      if(simparam.input_options.has_value()){
+        if (!input_options.shape_optimization_restart) {
+          design_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+          design_node_coords_distributed->assign(*node_coords_distributed);
+        }
+      }
+      else{
+        design_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+        design_node_coords_distributed->assign(*node_coords_distributed);
+      }
+        //allocate global vector information
+      all_design_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
 
-    //create global vector
-    Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, Element_Densities));
-
-    //if(myrank==0)
-    //*fos << "Global Element Densities:" << std::endl;
-    //Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
+      //communicate ghost information to the all vector
+      //create import object using local node indices map and all indices map
+      //Tpetra::Import<LO, GO> importer(map, all_node_map);
+      
+      //design_node_densities_distributed->randomize(0.1,1);
+      //comms to get ghosts
+      all_design_node_coords_distributed->doImport(*design_node_coords_distributed, *importer, Tpetra::INSERT);   
+    
   }
 
 }
