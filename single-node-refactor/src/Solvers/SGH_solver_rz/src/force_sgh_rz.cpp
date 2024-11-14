@@ -38,14 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.h"
 #include "geometry_new.h"
 
-// A data structure to get the neighboring corners lids inside an elem relative to a corner lid
-const size_t quad4_corner_lids_in_corner_lid[4][2] = 
-{
-    {1, 3},
-    {0, 2},
-    {1, 3},
-    {2, 0}
-};
+
 // --- corner_lid = 0 ---
 // corner_lids_in_corner_lid(0,0) = 1;
 // corner_lids_in_corner_lid(0,1) = 3;
@@ -116,6 +109,18 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 {
     const size_t num_dims = 2;
     const size_t num_nodes_in_elem = 4;
+
+    // -------
+    // A data structure to get the neighboring corners lids 
+    // inside an elem relative to a corner lid
+    //
+    const size_t quad4_corner_lids_in_corner_lid[4][2] = 
+    {
+        {1, 3},
+        {0, 2},
+        {1, 3},
+        {2, 0}
+    };
 
 
     // --- calculate the forces acting on the nodes from the element ---

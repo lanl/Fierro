@@ -38,28 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.h"
 #include "geometry_new.h"
 
-// -------
-// A data structure to get the neighboring corners lids inside an elem relative to a corner lid
-//
-const size_t hex8_corner_lids_in_corner_lid[8][3] = 
-{
-    // corner 0
-    {1, 2, 4},
-    // corner 1
-    {0, 3, 5},
-    // corner 2
-    {0, 3, 6},
-    // corner 3
-    {2, 1, 7},
-    // corner 4
-    {6, 5, 0},
-    // corner 5
-    {4, 7, 1},
-    // corner 6
-    {4, 7, 2},
-    // corner 7
-    {6, 5, 3}
-};
+
 // --- corner_lid = 0 ---
 // corner_lids_in_corner_lid(0,0) = 1;
 // corner_lids_in_corner_lid(0,1) = 2;
@@ -152,6 +131,29 @@ void SGH3D::get_force(const Material_t& Materials,
     const size_t num_dims = 3;
     const size_t num_nodes_in_elem = 8;
 
+    // -------
+    // A data structure to get the neighboring corners lids 
+    // inside an elem relative to a corner lid
+    //
+    const size_t hex8_corner_lids_in_corner_lid[8][3] = 
+    {
+        // corner 0
+        {1, 2, 4},
+        // corner 1
+        {0, 3, 5},
+        // corner 2
+        {0, 3, 6},
+        // corner 3
+        {2, 1, 7},
+        // corner 4
+        {6, 5, 0},
+        // corner 5
+        {4, 7, 1},
+        // corner 6
+        {4, 7, 2},
+        // corner 7
+        {6, 5, 3}
+    };
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
