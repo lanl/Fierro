@@ -1031,6 +1031,7 @@ void Solver::read_mesh_vtk(const char* MESH)
     real_t unit_scaling                  = input_options.unit_scaling;
     bool   zero_index_base               = input_options.zero_index_base;
     bool   topology_optimization_restart = input_options.topology_optimization_restart;
+    bool   shape_optimization_restart    = input_options.shape_optimization_restart;
 
     CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
 
@@ -1128,7 +1129,7 @@ void Solver::read_mesh_vtk(const char* MESH)
             buffer_iterations++;
         }
 
-        // read coords, also density if restarting
+        // read coords
         read_index_start = 0;
         for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
         {
@@ -1205,7 +1206,6 @@ void Solver::read_mesh_vtk(const char* MESH)
                         dof_value = atof(&read_buffer(scan_loop, 2, 0));
                         node_coords(node_rid, 2) = dof_value * unit_scaling;
                     }
-                    // extract density if restarting
                 }
             }
             read_index_start += BUFFER_LINES;
@@ -1759,6 +1759,161 @@ void Solver::read_mesh_vtk(const char* MESH)
             } // end if
         } // end if(myrank==0)
     }
+
+    //If restarting a topology optimization run, obtain nodal design density data here
+    if(shape_optimization_restart){
+        design_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+        host_vec_array design_node_coords = design_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+        if (myrank == 0)
+        {
+            bool found = false;
+            while (found == false&&in->good()) {
+                std::getline(*in, read_line);
+                //std::cout << read_line << std::endl;
+                line_parse.clear();
+                line_parse.str(read_line);
+
+                //stop when the design_density string is reached
+                while (!line_parse.eof()){
+                    line_parse >> substring;
+                    //std::cout << substring << std::endl;
+                    if(!substring.compare("design_coordinates")){
+                        found = true;
+                    }
+                } //while
+
+            } // end while
+
+            if (!found){
+                throw std::runtime_error("ERROR: Failed to find design_coordinates");
+            } // end if
+
+            //skip "LOOKUP_TABLE default" line
+            std::getline(*in, read_line);
+        } // end if(myrank==0)
+        
+        //read in density of each node
+        // allocate read buffer
+        words_per_line = num_dim;
+        read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES, words_per_line, MAX_WORD);
+
+        dof_limit = num_nodes;
+        buffer_iterations = dof_limit / BUFFER_LINES;
+        if (dof_limit % BUFFER_LINES != 0)
+        {
+            buffer_iterations++;
+        }
+
+        // read densities
+        read_index_start = 0;
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+        {
+            // pack buffer on rank 0
+            if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+            {
+                for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                {
+                    getline(*in, read_line);
+                    line_parse.clear();
+                    line_parse.str(read_line);
+
+                    for (int iword = 0; iword < words_per_line; iword++)
+                    {
+                        // read portions of the line into the substring variable
+                        line_parse >> substring;
+                        // debug print
+                        // std::cout<<" "<< substring <<std::endl;
+                        // assign the substring variable as a word of the read buffer
+                        strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                    }
+                }
+            }
+            else if (myrank == 0)
+            {
+                buffer_loop = 0;
+                while (buffer_iteration * BUFFER_LINES + buffer_loop < num_nodes) {
+                    getline(*in, read_line);
+                    line_parse.clear();
+                    line_parse.str(read_line);
+                    for (int iword = 0; iword < words_per_line; iword++)
+                    {
+                        // read portions of the line into the substring variable
+                        line_parse >> substring;
+                        // debug print
+                        // std::cout<<" "<< substring <<std::endl;
+                        // assign the substring variable as a word of the read buffer
+                        strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                    }
+                    buffer_loop++;
+                }
+            }
+
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * words_per_line * MAX_WORD, MPI_CHAR, 0, world);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, world);
+
+            // debug_print
+            // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+            // for(int iprint=0; iprint < buffer_loop; iprint++)
+            // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+            // return;
+
+            // determine which data to store in the swage mesh members (the local node data)
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                node_gid = read_index_start + scan_loop;
+                // let map decide if this node id belongs locally; if yes store data
+                if (map->isNodeGlobalElement(node_gid))
+                {
+                    // set local node index in this mpi rank
+                    node_rid = map->getLocalElement(node_gid);
+                    // extract nodal position from the read buffer
+                    // for tecplot format this is the three coords in the same line
+                    dof_value = atof(&read_buffer(scan_loop, 0, 0));
+                    design_node_coords(node_rid, 0) = dof_value * unit_scaling;
+                    dof_value = atof(&read_buffer(scan_loop, 1, 0));
+                    design_node_coords(node_rid, 1) = dof_value * unit_scaling;
+                    if(num_dim==3){
+                        dof_value = atof(&read_buffer(scan_loop, 2, 0));
+                        design_node_coords(node_rid, 2) = dof_value * unit_scaling; 
+                    }
+                }
+            }
+            read_index_start += BUFFER_LINES;
+        }
+
+        //Find initial objective value to normalize by
+        if (myrank == 0 && simparam.optimization_options.normalized_objective)
+        {
+            bool found = false;
+            while (found == false&&in->good()) {
+                std::getline(*in, read_line);
+                //std::cout << read_line << std::endl;
+                line_parse.clear();
+                line_parse.str(read_line);
+
+                //stop when the design_density string is reached
+                while (!line_parse.eof()){
+                    line_parse >> substring;
+                    //std::cout << substring << std::endl;
+                    if(!substring.compare("Objective_Normalization_Constant")){
+                        found = true;
+                        line_parse >> substring;
+                        simparam.optimization_options.objective_normalization_constant = stod(substring);
+                    }
+                } //while
+
+            } // end while
+
+            if (!found){
+                throw std::runtime_error("ERROR: Failed to find initial objective value for restart");
+            } // end if
+        } // end if(myrank==0)
+    }
+
     // Close mesh input file
     if (myrank == 0)
     {
