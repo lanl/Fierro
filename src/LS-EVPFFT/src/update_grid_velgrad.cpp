@@ -140,6 +140,8 @@ void EVPFFT::update_grid_velgrad()
 
   }); // end FOR_ALL_CLASS
 
+  MatrixTypeRealDual workG(3,3,npts1_g,npts2_g,npts3_g);
+
   int jj;
   jj = 1;
   for (int ii = 1; ii <= 3; ii++) {
@@ -168,12 +170,14 @@ void EVPFFT::update_grid_velgrad()
     FOR_ALL_CLASS(k, 1, npts3+1,
                   j, 1, npts2+1,
                   i, 1, npts1+1, {
-      work(ii,jj,i,j,k) = data(i,j,k);
+      workG(ii,jj,i+local_start1,j+local_start2,k+local_start3) = data(i,j,k);
     }); // end FOR_ALL_CLASS
     Kokkos::fence();
 
   } // end for ii
+  workG.update_host();
 
+  MPI_Allreduce(MPI_IN_PLACE, workG.host_pointer(), 3*3*npts1_g*npts2_g*npts3_g, MPI_REAL_T, MPI_SUM, mpi_comm);
 
   FOR_ALL_CLASS(k, 1, npts3+2,
                 j, 1, npts2+2,
@@ -194,37 +198,37 @@ void EVPFFT::update_grid_velgrad()
     ViewMatrixTypeReal dvnode(dvnode_,3);
     ViewMatrixTypeReal Xnode_ref(Xnode_ref_,3);
 
-    if (i == 1) {
-      iv1 = npts1;
+    if ((i+local_start1) == 1) {
+      iv1 = npts1_g;
       iv2 = 1;
-    } else if (i == npts1 + 1) {
-      iv1 = npts1;
+    } else if ((i+local_start1) == npts1_g + 1) {
+      iv1 = npts1_g;
       iv2 = 1;
     } else {
-      iv1 = i - 1;
-      iv2 = i;
+      iv1 = i+local_start1 - 1;
+      iv2 = i+local_start1;
     }
 
-    if (j == 1) {
-      jv1 = npts2;
+    if ((j+local_start2) == 1) {
+      jv1 = npts2_g;
       jv2 = 1;
-    } else if (j == npts2 + 1) {
-      jv1 = npts2;
+    } else if ((j+local_start2) == npts2_g + 1) {
+      jv1 = npts2_g;
       jv2 = 1;
     } else {
-      jv1 = j - 1;
-      jv2 = j;
+      jv1 = j+local_start2 - 1;
+      jv2 = j+local_start2;
     }
 
-    if (k == 1) {
-      kv1 = npts3;
+    if ((k+local_start3) == 1) {
+      kv1 = npts3_g;
       kv2 = 1;
-    } else if (k == npts3 + 1) {
-      kv1 = npts3;
+    } else if ((k+local_start3) == npts3_g + 1) {
+      kv1 = npts3_g;
       kv2 = 1;
     } else {
-      kv1 = k - 1;
-      kv2 = k;
+      kv1 = k+local_start3 - 1;
+      kv2 = k+local_start3;
     }
 
     Xnode_ref(1) = float(i) - 0.5;
@@ -232,10 +236,10 @@ void EVPFFT::update_grid_velgrad()
     Xnode_ref(3) = float(k) - 0.5;
 
     for (int ii = 1; ii <= 3; ii++) {
-      dvnode(ii) = 0.125*(work(ii,jj,iv1,jv1,kv1) + work(ii,jj,iv2,jv1,kv1) + 
-       work(ii,jj,iv1,jv2,kv1) + work(ii,jj,iv2,jv2,kv1) +
-       work(ii,jj,iv1,jv1,kv2) + work(ii,jj,iv2,jv1,kv2) + 
-       work(ii,jj,iv1,jv2,kv2) + work(ii,jj,iv2,jv2,kv2));
+      dvnode(ii) = 0.125*(workG(ii,jj,iv1,jv1,kv1) + workG(ii,jj,iv2,jv1,kv1) + 
+       workG(ii,jj,iv1,jv2,kv1) + workG(ii,jj,iv2,jv2,kv1) +
+       workG(ii,jj,iv1,jv1,kv2) + workG(ii,jj,iv2,jv1,kv2) + 
+       workG(ii,jj,iv1,jv2,kv2) + workG(ii,jj,iv2,jv2,kv2));
     }
 
     for (int ii = 1; ii <= 3; ii++) {
