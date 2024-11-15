@@ -113,6 +113,7 @@ class FIERRO_GUI(Ui_MainWindow):
         self.INRunSelection.currentIndexChanged.connect(lambda: self.RunOptions.setCurrentIndex(self.INRunSelection.currentIndex()))
         self.INSelectPostprocessing.currentIndexChanged.connect(lambda: self.PostprocessingOptions.setCurrentIndex(self.INSelectPostprocessing.currentIndex()))
         self.INSelectAssignMaterials.currentIndexChanged.connect(lambda: self.AssignMaterialsOptions.setCurrentIndex(self.INSelectAssignMaterials.currentIndex()))
+        self.INPipelineSelection.currentIndexChanged.connect(lambda: self.PipelineExtras.setCurrentIndex(self.INPipelineSelection.currentIndex()))
 
         # Set up pipeline selection
         selectionComboBoxes = [self.INSelectGeometry, self.INSelectSolverSettings, self.INSelectBoundaryConditions, self.INSelectDefineMaterials, self.INRunSelection,self.INSelectPostprocessing, self.INSelectAssignMaterials]

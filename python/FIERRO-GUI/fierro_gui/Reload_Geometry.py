@@ -220,7 +220,6 @@ def Reload_Geometry(self):
     elif self.file_type == ".txt":
         # output file location
         vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + self.TParts.item(0,0).text() + '.vtk'
-        print(vtk_location)
         
         # Paraview window
         self.txt_reader = paraview.simple.LegacyVTKReader(FileNames = vtk_location)

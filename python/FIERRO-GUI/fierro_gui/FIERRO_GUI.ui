@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>1355</width>
-    <height>1154</height>
+    <height>1171</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -352,7 +352,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>6</number>
+          <number>5</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -677,6 +677,76 @@
                </widget>
               </item>
              </layout>
+            </widget>
+           </item>
+           <item alignment="Qt::AlignTop">
+            <widget class="QStackedWidget" name="PipelineExtras">
+             <property name="currentIndex">
+              <number>3</number>
+             </property>
+             <widget class="QWidget" name="page_27"/>
+             <widget class="QWidget" name="page_29"/>
+             <widget class="QWidget" name="page_30"/>
+             <widget class="QWidget" name="page_28">
+              <layout class="QHBoxLayout" name="horizontalLayout_24">
+               <item>
+                <widget class="QPushButton" name="BLegacyEVPFFT">
+                 <property name="text">
+                  <string>Upload Legacy Input File (.txt)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_11">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>17</width>
+                   <height>17</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <pointsize>18</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string>Legacy EVPFFT input file. Currently limited to a single phase.</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="Icons/IconResourceFile.qrc">
+                   <normaloff>:/Blue Icons/Blue Icons/information.svg</normaloff>:/Blue Icons/Blue Icons/information.svg</iconset>
+                 </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>20</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                 <property name="autoDefault">
+                  <bool>false</bool>
+                 </property>
+                 <property name="default">
+                  <bool>false</bool>
+                 </property>
+                 <property name="flat">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
            <item>
@@ -5357,12 +5427,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                         </item>
                         <item>
                          <property name="text">
-                          <string>Single Crystal Copper</string>
+                          <string>Single Crystal FCC</string>
                          </property>
                         </item>
                         <item>
                          <property name="text">
-                          <string>Tantalum</string>
+                          <string>Single Crystal BCC</string>
                          </property>
                         </item>
                        </widget>
@@ -6385,7 +6455,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               </font>
                              </property>
                              <property name="currentIndex">
-                              <number>0</number>
+                              <number>1</number>
                              </property>
                              <property name="iconSize">
                               <size>
@@ -9531,17 +9601,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </item>
                     <item>
                      <property name="text">
-                      <string>Example</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>ECAP</string>
+                      <string>Tension Z</string>
                      </property>
                     </item>
                     <item>
                      <property name="text">
                       <string>Compression Z</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>ECAP</string>
                      </property>
                     </item>
                    </widget>
@@ -11542,6 +11612,19 @@ li.checked::marker { content: &quot;\2612&quot;; }
       </layout>
      </widget>
     </item>
+    <item>
+     <spacer name="verticalSpacer_21">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -11551,7 +11634,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <x>0</x>
      <y>0</y>
      <width>1355</width>
-     <height>37</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">

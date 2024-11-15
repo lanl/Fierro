@@ -9,6 +9,8 @@ from paraview.simple import *
 from importlib import reload
 from Bulk_Forming_WInput import *
 import DeveloperInputs
+from Reload_Geometry import *
+from LAFFT2VTK import *
 
 # Warning Message Popup
 def warning_message(msg):
@@ -56,53 +58,61 @@ def Bulk_Forming(self):
     self.BEnablePlasticity.stateChanged.connect(plasticity)
     
     # Define material properties using predefined values
+    self.clear_flag = 0
     def predefined_materials():
-        # Clear elastic parameters
-        self.INYoungsModulus_2.clear()
-        self.INPoissonsRatio_2.clear()
-        self.INEip_2.clear()
-        self.INNUip_2.clear()
-        self.INEop_2.clear()
-        self.INNUop_2.clear()
-        self.INGop_2.clear()
-        self.INEx_2.clear()
-        self.INEy_2.clear()
-        self.INEz_2.clear()
-        self.INNUxy_2.clear()
-        self.INNUxz_2.clear()
-        self.INNUyz_2.clear()
-        self.INGxy_2.clear()
-        self.INGxz_2.clear()
-        self.INGyz_2.clear()
-        for i in [0,1,2,3,4,5,6]:
-            for j in range(i,6):
-                if self.TAnisotropic_2.item(i,j):
-                    self.TAnisotropic_2.item(i,j).setText('')
-        # Clear plastic parameters
-        self.INa.clear()
-        self.INb.clear()
-        self.INc.clear()
-        self.INSlipSystems.clear()
-        self.TSlipSystemParameters.setRowCount(0)
-        self.INnrsx.clear()
-        self.INgamd0x.clear()
-        self.INtau0xb.clear()
-        self.INtau0xf.clear()
-        self.INtau1x.clear()
-        self.INthet0.clear()
-        self.INthet1.clear()
-        self.INhselfx.clear()
-        self.INhlatex.clear()
+        if self.clear_flag == 1:
+            # Clear elastic parameters
+            self.INYoungsModulus_2.clear()
+            self.INPoissonsRatio_2.clear()
+            self.INEip_2.clear()
+            self.INNUip_2.clear()
+            self.INEop_2.clear()
+            self.INNUop_2.clear()
+            self.INGop_2.clear()
+            self.INEx_2.clear()
+            self.INEy_2.clear()
+            self.INEz_2.clear()
+            self.INNUxy_2.clear()
+            self.INNUxz_2.clear()
+            self.INNUyz_2.clear()
+            self.INGxy_2.clear()
+            self.INGxz_2.clear()
+            self.INGyz_2.clear()
+            for i in [0,1,2,3,4,5,6]:
+                for j in range(i,6):
+                    if self.TAnisotropic_2.item(i,j):
+                        self.TAnisotropic_2.item(i,j).setText('')
+            # Clear plastic parameters
+            self.INa.clear()
+            self.INb.clear()
+            self.INc.clear()
+            self.INSlipSystems.clear()
+            self.TSlipSystemParameters.setRowCount(0)
+            self.INnrsx.clear()
+            self.INgamd0x.clear()
+            self.INtau0xb.clear()
+            self.INtau0xf.clear()
+            self.INtau1x.clear()
+            self.INthet0.clear()
+            self.INthet1.clear()
+            self.INhselfx.clear()
+            self.INhlatex.clear()
+            self.clear_flag = 0
         if "Import Elastic Parameters File" in self.INMaterialDefinition.currentText():
             self.MaterialMenu_2.setCurrentIndex(0)
-            elastic_filename, _ = QFileDialog.getOpenFileName(filter="Elastic Parameters File (*.txt)",)
+            try:
+                self.elastic_filename
+            except:
+                self.elastic_filename, _ = QFileDialog.getOpenFileName(filter="Elastic Parameters File (*.txt)",)
             matrix = []
-            with open(elastic_filename, 'r') as file:
+            with open(self.elastic_filename, 'r') as file:
                 # Read the first line
                 first_line = file.readline().strip()
                 
                 # Check if the first character of the first line is '0' - anisotropic
                 if first_line[0] == '0':
+                    # Set definition to anisotropic
+                    self.INMaterialType_2.setCurrentIndex(3)
                     # Read next six lines for the matrix
                     for _ in range(6):
                         line = file.readline().strip()
@@ -112,13 +122,15 @@ def Bulk_Forming(self):
                             matrix.append(row)
                     # Add to anisotropic table
                     for i in range(6):
-                        for j in range(6):
+                        for j in range(i,6):
                             item = QTableWidgetItem(str(matrix[i][j]))
                             self.TAnisotropic_2.setItem(i, j, item)
                     # Turn page to anisotropic
                     self.MaterialTypeTool_2.setCurrentIndex(2)
                 # Check if the first character of the first line is '1' - isotropic
                 elif first_line[0] == '1':
+                    # Set definition to isotropic
+                    self.INMaterialType_2.setCurrentIndex(0)
                     line = file.readline().strip()
                     row = line.split()[:2]
                     row = [float(val) for val in row if val.replace('.', '').isdigit()]
@@ -131,12 +143,16 @@ def Bulk_Forming(self):
                 else:
                     warning_message("ERROR: The first character of the first line is not a '0' (anisotropic) or '1' (isotropic)")
                     return None
+            del self.elastic_filename
         elif "Import Plastic Parameters File" in self.INMaterialDefinition.currentText():
             self.MaterialMenu_2.setCurrentIndex(1)
             self.BEnablePlasticity.setChecked(True)
-            plastic_filename, _ = QFileDialog.getOpenFileName(filter="Plastic Parameters File (*.txt)",)
+            try:
+                self.plastic_filename
+            except:
+                self.plastic_filename, _ = QFileDialog.getOpenFileName(filter="Plastic Parameters File (*.txt)",)
             nsmx = 0
-            with open(plastic_filename, 'r') as file:
+            with open(self.plastic_filename, 'r') as file:
                 iline = 1;
                 for line in file:
                     # Find crystal axes
@@ -151,7 +167,7 @@ def Bulk_Forming(self):
                             self.INc.setText(str(crystal_axes_line[2]))
                     # Find slip systems
                     if iline == 2:
-                        slip_type = line.strip().split()[:1]
+                        slip_type = line.strip().split()[0]
                     if iline == 4:
                         nmodesx = line.strip().split()[:1]
                         nmodesx = int(nmodesx[0])
@@ -178,15 +194,15 @@ def Bulk_Forming(self):
                         if iline == start+3:
                             param3 = line.strip().split()[:2]
                         if iline > start+3:
-                            if "CUB" or "cub" or "ORT" or "ort" in slip_type:
+                            if "CUB" in slip_type or "cub" in slip_type or "ORT" in slip_type or "ort" in slip_type:
                                 notation = 3
-                            elif "HEX" or "hex" or "TRI" or "tri" in slip_type:
+                            elif "HEX" in slip_type or "hex" in slip_type or "TRI" in slip_type or "tri" in slip_type:
                                 notation = 4
                             else:
                                 warning_message("ERROR: you must specify icryst (CUBIC, HEX, etc.)")
                                 return
                             plane = line.strip().split()[:notation]
-                            direction = line.strip().split()[notation:]
+                            direction = line.strip().split()[notation:2*notation]
                             self.table.setItem(iline-start-4,0,QTableWidgetItem(','.join(str(x) for x in plane)))
                             self.table.setItem(iline-start-4,1,QTableWidgetItem(','.join(str(x) for x in direction)))
                             if iline == start+3+nsmx:
@@ -216,7 +232,8 @@ def Bulk_Forming(self):
             # Turn page to plastic
             self.BEnablePlasticity.setChecked(True)
             self.MaterialMenu_2.setCurrentIndex(1)
-        elif "Single Crystal Copper" in self.INMaterialDefinition.currentText():
+        elif "Single Crystal FCC" in self.INMaterialDefinition.currentText():
+            self.clear_flag = 1
             if 'MPa' in self.INUnits.currentText():
                 m = 1
             elif 'Pa' in self.INUnits.currentText():
@@ -255,7 +272,8 @@ def Bulk_Forming(self):
             self.INthet1.setText('250.')
             self.INhselfx.setText('1.0')
             self.INhlatex.setText('1.0')
-        elif "Tantalum" in self.INMaterialDefinition.currentText():
+        elif "Single Crystal BCC" in self.INMaterialDefinition.currentText():
+            self.clear_flag = 1
             # Define elastic properties
             for i in [0,1,2,3,4,5,6]:
                 for j in range(i,6):
@@ -292,6 +310,8 @@ def Bulk_Forming(self):
                 self.INthet1.setText('5.')
                 self.INhselfx.setText('1.0')
                 self.INhlatex.setText('1.2')
+        elif "Custom" in self.INMaterialDefinition.currentText():
+            self.clear_flag = 1
     self.INMaterialDefinition.currentIndexChanged.connect(predefined_materials)
     
     # Add material to the table
@@ -1054,7 +1074,7 @@ def Bulk_Forming(self):
             self.TVgrad.clearContents()
             self.TVgradi.clearContents()
             self.TCstress.clearContents()
-        elif "Example" in self.INbulkBC.currentText():
+        elif "Tension Z" in self.INbulkBC.currentText():
             # Clear tables
             self.TVgrad.clearContents()
             self.TVgradi.clearContents()
@@ -1068,8 +1088,6 @@ def Bulk_Forming(self):
             self.TVgrad.setItem(2,0,QTableWidgetItem("0."))
             self.TVgrad.setItem(2,1,QTableWidgetItem("0."))
             self.TVgrad.setItem(2,2,QTableWidgetItem("1.0"))
-            self.TVgradi.setItem(0,0,QTableWidgetItem("-0.35"))
-            self.TVgradi.setItem(1,1,QTableWidgetItem("-0.35"))
             self.TCstress.setItem(0,0,QTableWidgetItem("0."))
             self.TCstress.setItem(1,1,QTableWidgetItem("0."))
         elif "ECAP" in self.INbulkBC.currentText():
@@ -1229,5 +1247,130 @@ def Bulk_Forming(self):
         command = ["paraview", self.output_directory]
         subprocess.Popen(command)
     self.BBFParaview.clicked.connect(open_paraview_click_2)
+    
+    # Upload Legacy EVPFFT input file
+    def legacyEVPFFT():
+        # Get all necessary information from the input file and do stuff with it right away. The reason it has to be done right away is due to the fact that you might have multiple phases.
+        input_filename, _ = QFileDialog.getOpenFileName(filter="Input File (*.txt)",)
+        bc_flag = 0
+        bc_start = 1000000000
+        iudot = []
+        udot = []
+        iscau = []
+        sauchy = []
+        with open(input_filename, 'r') as file:
+            iline = 1;
+            phase_names = 1;
+            for line in file:
+                if iline == 1:
+                    # Get the number of phases
+                    phases = int(line.strip().split()[0])
+                    phase_start = 10
+                if iline == 2:
+                    # Get the voxel numbers
+                    dims = line.strip().split()[:3]
+                    dimx = float(dims[0])
+                    dimy = float(dims[1])
+                    dimz = float(dims[2])
+                if iline == 4:
+                    # Get the RVE dimensions
+                    delt = line.strip().split()[:3]
+                    deltx = float(delt[0])
+                    delty = float(delt[1])
+                    deltz = float(delt[2])
+                if iline == 6:
+                    if '/' in line or '\\' in line:
+                        # Get name of microstructure file
+                        microstructure_filename = line.strip()
+                        # Fill out geometry table
+                        row = self.TParts.rowCount()
+                        self.TParts.insertRow(row)
+                        self.TParts.setItem(row,0,QTableWidgetItem(f"Phase{phase_names}"))
+                        self.TParts.setItem(row,1,QTableWidgetItem("0"))
+                        self.TParts.setItem(row,2,QTableWidgetItem("0"))
+                        self.TParts.setItem(row,3,QTableWidgetItem("0"))
+                        lengthx = dimx*deltx
+                        lengthy = dimy*delty
+                        lengthz = dimz*deltz
+                        self.TParts.setItem(row,4,QTableWidgetItem(f"{lengthx}"))
+                        self.TParts.setItem(row,5,QTableWidgetItem(f"{lengthy}"))
+                        self.TParts.setItem(row,6,QTableWidgetItem(f"{lengthz}"))                        
+                        self.TParts.setItem(row,7,QTableWidgetItem(f"{dimx}"))
+                        self.TParts.setItem(row,8,QTableWidgetItem(f"{dimy}"))
+                        self.TParts.setItem(row,9,QTableWidgetItem(f"{dimz}"))
+                        self.TParts.setItem(row,10,QTableWidgetItem(f"{microstructure_filename}"))
+                        # convert text file to vtk file for visualization
+                        vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + self.TParts.item(row,0).text() + '.vtk'
+                        los_alamos_to_vtk(microstructure_filename, vtk_location)
+                        self.in_file_path = self.TParts.item(row,10).text()
+                        self.file_type = os.path.splitext(self.in_file_path)[1].lower()
+                        Reload_Geometry(self)
+                        # Add the geometry as an option for material assignment
+                        self.INRegion_3.addItem(self.TParts.item(row,0).text())
+                    else:
+                        warning_message("ERROR: couldn't find the microstructure file path on line 6.")
+                        return
+                if iline == phase_start:
+                    if '/' in line or '\\' in line: # or 'dummy' in line:
+                        # Get plastic parameters file path
+                        self.plastic_filename = line.strip()
+                        # Upload the plastic parameters
+                        self.INMaterialDefinition.setCurrentIndex(2)
+                    else:
+                        warning_message(f"ERROR: couldn't find the plastic file path on line {phase_start}.")
+                        return
+                if iline == phase_start+1:
+                    if '/' in line or '\\' in line: # or 'dummy' in line:
+                        # Get elastic parameters file path
+                        self.elastic_filename = line.strip()
+                        # Upload the elastic parameters
+                        self.INMaterialDefinition.setCurrentIndex(1)
+                        # Add material as an option for assignment
+                        self.INMaterialName_2.setText(f"Phase{phase_names}Material")
+                        self.BAddMaterial_2.click()
+                        # Assign the material
+                        self.INRegion_3.setCurrentIndex(phase_names-1)
+                        self.INMaterial_3.setCurrentIndex(phase_names-1)
+                        self.BAddMaterialAssignment_2.click()
+                        # This update is for if there is more than one phase defined in the file
+                        phase_names += 1
+                        phases -= 1
+                        if phases > 0:
+                            phase_start = phase_start + 5
+                    else:
+                        warning_message(f"ERROR: couldn't find the elastic file path on line {phase_start+1}.")
+                        return
+                if "* boundary conditions" in line:
+                    bc_flag = 1
+                    bc_start = iline
+                if iline > bc_start and iline < bc_start + 4:
+                    iudot_ = line.strip().split()[:3]
+                    iudot_ = [float(iudot_[0]), float(iudot_[1]), float(iudot_[2])]
+                    iudot.append(iudot_)
+                if iline > bc_start + 4 and iline < bc_start + 8:
+                    udot_ = line.strip().split()[:3]
+                    udot_ = [float(udot_[0]), float(udot_[1]), float(udot_[2])]
+                    udot.append(udot_)
+#                if iline > bc_start + 8 and iline < bc_start + 12:
+#                    iscau_ = line.strip().split()[:3]
+#                    iscau_ = [float(iscau_[0]), float(iscau_[1]), float(iscau_[2])]
+#                    iscau.append(iscau_)
+#                if iline > bc_start + 12 and iline < bc_start + 16:
+#                    sauchy_ = line.strip().split()[:3]
+#                    sauchy_ = [float(sauchy_[0]), float(sauchy_[1]), float(sauchy_[2])]
+#                    sauchy.append(sauchy_)
+                iline += 1
+        print(iscau)
+        print(sauchy)
+        if bc_flag == 0:
+            warning_message("ERROR: couldn't locate line \n'* boundary conditions'\n indicating the line before the start of the boundary conditions within the input file.")
+        else:
+            for i in range(3):
+                for j in range(3):
+                    if iudot[i][j] == 1:
+                        self.TVgrad.setItem(i,j,QTableWidgetItem(str(udot[i][j])))
+                    else:
+                        self.TVgradi.setItem(i,j,QTableWidgetItem(str(udot[i][j])))
+    self.BLegacyEVPFFT.clicked.connect(legacyEVPFFT)
         
     
