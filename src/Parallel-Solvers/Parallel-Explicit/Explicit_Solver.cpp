@@ -1121,12 +1121,12 @@ void Explicit_Solver::setup_topology_optimization_problem(){
   bool nodal_density_flag = simparam.nodal_density_flag;
   int nTO_modules = simparam.TO_Module_List.size();
   //int nmulti_objective_modules = simparam->nmulti_objective_modules;
-  std::vector<TO_MODULE_TYPE> TO_Module_List = simparam.TO_Module_List;
+  std::vector<OPTIMIZATION_MODULE_TYPE> TO_Module_List = simparam.TO_Module_List;
   std::vector<int> TO_Module_My_FEA_Module = simparam.TO_Module_My_FEA_Module;
   //std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
   //std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
   std::vector<std::vector<real_t>> Function_Arguments = simparam.Function_Arguments;
-  std::vector<FUNCTION_TYPE> TO_Function_Type = simparam.TO_Function_Type;
+  std::vector<FUNCTION_TYPE> Optimization_Function_Type = simparam.Optimization_Function_Type;
   std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
 
   std::string constraint_base, constraint_name;
@@ -1357,7 +1357,7 @@ void Explicit_Solver::setup_topology_optimization_problem(){
   ROL::Ptr<ROL::Objective<real_t>> obj, sub_obj;
   bool objective_declared = false;
   for(int imodule = 0; imodule < nTO_modules; imodule++){
-    if(TO_Function_Type[imodule] == FUNCTION_TYPE::OBJECTIVE){
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::OBJECTIVE){
       //check if previous module already defined an objective, there must be one objective module
       if(objective_declared){
         // TODO: Put this validation earlier.
@@ -1365,7 +1365,7 @@ void Explicit_Solver::setup_topology_optimization_problem(){
               << TO_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
           exit_solver(0);
       }
-      if(TO_Module_List[imodule] == TO_MODULE_TYPE::Kinetic_Energy_Minimize){
+      if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize){
         //debug print
         *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam.optimization_options.method_of_moving_asymptotes){
@@ -1376,7 +1376,7 @@ void Explicit_Solver::setup_topology_optimization_problem(){
           obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
         }
       }
-      else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Internal_Energy_Minimize){
+      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize){
         //debug print
         *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam.optimization_options.method_of_moving_asymptotes){
@@ -1427,15 +1427,15 @@ void Explicit_Solver::setup_topology_optimization_problem(){
     constraint_name = number_union.str();
     ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
     ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
-    if(TO_Function_Type[imodule] == FUNCTION_TYPE::EQUALITY_CONSTRAINT){
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::EQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
-      if(TO_Module_List[imodule]==TO_MODULE_TYPE::Mass_Constraint){
+      if(TO_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint){
         
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false, true);
       }
-      else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
+      else if(TO_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false, true);
       }
@@ -1449,7 +1449,7 @@ void Explicit_Solver::setup_topology_optimization_problem(){
       problem->addConstraint(constraint_name, eq_constraint, constraint_mul);
     }
 
-    if(TO_Function_Type[imodule] == FUNCTION_TYPE::INEQUALITY_CONSTRAINT){
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::INEQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint;
       ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,Function_Arguments[imodule][0]);
@@ -1457,11 +1457,11 @@ void Explicit_Solver::setup_topology_optimization_problem(){
       ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
       ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
       ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
-      if(TO_Module_List[imodule]==TO_MODULE_TYPE::Mass_Constraint){
+      if(TO_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint){
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, true, true);
       }
-      else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
+      else if(TO_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], true, true);
       }
@@ -1574,12 +1574,12 @@ void Explicit_Solver::setup_shape_optimization_problem(){
   int num_dim = simparam.num_dims;
   int nTO_modules = simparam.TO_Module_List.size();
   //int nmulti_objective_modules = simparam->nmulti_objective_modules;
-  std::vector<TO_MODULE_TYPE> TO_Module_List = simparam.TO_Module_List;
+  std::vector<OPTIMIZATION_MODULE_TYPE> TO_Module_List = simparam.TO_Module_List;
   std::vector<int> TO_Module_My_FEA_Module = simparam.TO_Module_My_FEA_Module;
   //std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
   //std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
   std::vector<std::vector<real_t>> Function_Arguments = simparam.Function_Arguments;
-  std::vector<FUNCTION_TYPE> TO_Function_Type = simparam.TO_Function_Type;
+  std::vector<FUNCTION_TYPE> Optimization_Function_Type = simparam.Optimization_Function_Type;
   std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
 
   std::string constraint_base, constraint_name;
@@ -1666,7 +1666,7 @@ void Explicit_Solver::setup_shape_optimization_problem(){
   ROL::Ptr<ROL::Objective<real_t>> obj, sub_obj;
   bool objective_declared = false;
   for(int imodule = 0; imodule < nTO_modules; imodule++){
-    if(TO_Function_Type[imodule] == FUNCTION_TYPE::OBJECTIVE){
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::OBJECTIVE){
       //check if previous module already defined an objective, there must be one objective module
       if(objective_declared){
         // TODO: Put this validation earlier.
@@ -1674,7 +1674,7 @@ void Explicit_Solver::setup_shape_optimization_problem(){
               << TO_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
           exit_solver(0);
       }
-      if(TO_Module_List[imodule] == TO_MODULE_TYPE::Kinetic_Energy_Minimize){
+      if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize){
         //debug print
         *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam.optimization_options.method_of_moving_asymptotes){
@@ -1685,7 +1685,7 @@ void Explicit_Solver::setup_shape_optimization_problem(){
           obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
         }
       }
-      else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Internal_Energy_Minimize){
+      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize){
         //debug print
         *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam.optimization_options.method_of_moving_asymptotes){
@@ -1715,15 +1715,15 @@ void Explicit_Solver::setup_shape_optimization_problem(){
     constraint_name = number_union.str();
     ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
     ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
-    if(TO_Function_Type[imodule] == FUNCTION_TYPE::EQUALITY_CONSTRAINT){
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::EQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
-      if(TO_Module_List[imodule]==TO_MODULE_TYPE::Mass_Constraint){
+      if(TO_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint){
         
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false, true);
       }
-      else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
+      else if(TO_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false, true);
       }
@@ -1737,7 +1737,7 @@ void Explicit_Solver::setup_shape_optimization_problem(){
       problem->addConstraint(constraint_name, eq_constraint, constraint_mul);
     }
 
-    if(TO_Function_Type[imodule] == FUNCTION_TYPE::INEQUALITY_CONSTRAINT){
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::INEQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint;
       ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,Function_Arguments[imodule][0]);
@@ -1745,11 +1745,11 @@ void Explicit_Solver::setup_shape_optimization_problem(){
       ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
       ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
       ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
-      if(TO_Module_List[imodule]==TO_MODULE_TYPE::Mass_Constraint){
+      if(TO_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint){
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, true, true);
       }
-      else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
+      else if(TO_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], true, true);
       }

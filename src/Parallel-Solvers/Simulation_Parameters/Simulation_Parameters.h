@@ -42,8 +42,8 @@ struct Simulation_Parameters
 
     std::set<FEA_MODULE_TYPE> fea_module_must_read;
     //list of TO functions needed by problem
-    std::vector<TO_MODULE_TYPE> TO_Module_List;
-    std::vector<FUNCTION_TYPE> TO_Function_Type;
+    std::vector<OPTIMIZATION_MODULE_TYPE> TO_Module_List;
+    std::vector<FUNCTION_TYPE> Optimization_Function_Type;
     std::vector<int> TO_Module_My_FEA_Module;
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules;
     std::vector<std::vector<double>> Function_Arguments;
@@ -98,39 +98,39 @@ struct Simulation_Parameters
     void derive_objective_module() {
         switch (optimization_options.optimization_objective) {
         case OPTIMIZATION_OBJECTIVE::minimize_compliance:
-            add_TO_module(TO_MODULE_TYPE::Strain_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
             optimization_options.normalized_objective = true;
             break;
         case OPTIMIZATION_OBJECTIVE::minimize_thermal_resistance:
-            add_TO_module(TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
             optimization_options.normalized_objective = true;
             break;
         case OPTIMIZATION_OBJECTIVE::minimize_kinetic_energy:
-            add_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
             break;
         case OPTIMIZATION_OBJECTIVE::maximize_compliance:
-            add_TO_module(TO_MODULE_TYPE::Strain_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
             optimization_options.normalized_objective = true;
             optimization_options.maximize_flag = true;
             break;
         case OPTIMIZATION_OBJECTIVE::maximize_thermal_resistance:
-            add_TO_module(TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
             optimization_options.normalized_objective = true;
             optimization_options.maximize_flag = true;
             break;
         case OPTIMIZATION_OBJECTIVE::maximize_kinetic_energy:
-            add_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
             optimization_options.maximize_flag = true;
             break;
         case OPTIMIZATION_OBJECTIVE::minimize_internal_energy:
-            add_TO_module(TO_MODULE_TYPE::Internal_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
             break;
         case OPTIMIZATION_OBJECTIVE::maximize_internal_energy:
-            add_TO_module(TO_MODULE_TYPE::Internal_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
             optimization_options.maximize_flag = true;
             break;
         case OPTIMIZATION_OBJECTIVE::multi_objective:
-            add_TO_module(TO_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});
+            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});
             derive_multi_objectives();
             break;
         default:
@@ -142,20 +142,20 @@ struct Simulation_Parameters
             return;
         
         for (auto mod : optimization_options.multi_objective_modules) {
-            TO_MODULE_TYPE to_type;
+            OPTIMIZATION_MODULE_TYPE to_type;
             switch (mod.type) {
             case OPTIMIZATION_OBJECTIVE::minimize_compliance:
-                to_type = TO_MODULE_TYPE::Strain_Energy_Minimize;
+                to_type = OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize;
                 break;
             case OPTIMIZATION_OBJECTIVE::minimize_thermal_resistance:
-                to_type = TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize;
+                to_type = OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize;
                 break;
             default:
                 throw Yaml::ConfigurationException("Unsupported sub-objective " + to_string(mod.type));
             }
             Multi_Objective_Modules.push_back(TO_Module_List.size());
             Multi_Objective_Weights.push_back(mod.weight_coefficient);
-            add_TO_module(to_type, FUNCTION_TYPE::MULTI_OBJECTIVE_TERM, {});
+            add_optimization_module(to_type, FUNCTION_TYPE::MULTI_OBJECTIVE_TERM, {});
         }
     }
     void derive_constraint_modules() {
@@ -171,29 +171,29 @@ struct Simulation_Parameters
 
             switch (constraint.type) {
             case CONSTRAINT_TYPE::mass:
-                add_TO_module(
-                    TO_MODULE_TYPE::Mass_Constraint, 
+                add_optimization_module(
+                    OPTIMIZATION_MODULE_TYPE::Mass_Constraint, 
                     f_type, 
                     {constraint.value}
                 );
                 break;
             case CONSTRAINT_TYPE::moment_of_inertia:
-                add_TO_module(
-                    TO_MODULE_TYPE::Moment_of_Inertia_Constraint, 
+                add_optimization_module(
+                    OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint, 
                     f_type, 
                     {constraint.value, (double)component_to_int(constraint.component.value())}
                 );
                 break;
             case CONSTRAINT_TYPE::center_of_mass:
-                add_TO_module(
-                    TO_MODULE_TYPE::Center_of_Mass_Constraint, 
+                add_optimization_module(
+                    OPTIMIZATION_MODULE_TYPE::Center_of_Mass_Constraint, 
                     f_type, 
                     {constraint.value, (double)component_to_int(constraint.component.value())}
                 );
                 break;
             case CONSTRAINT_TYPE::displacement:
-                add_TO_module(
-                    TO_MODULE_TYPE::Displacement_Constraint, 
+                add_optimization_module(
+                    OPTIMIZATION_MODULE_TYPE::Displacement_Constraint, 
                     f_type, 
                     {constraint.value}
                 );
@@ -313,9 +313,9 @@ struct Simulation_Parameters
             find_TO_module_dependency(to_module);
     }
 
-    void add_TO_module(TO_MODULE_TYPE type, FUNCTION_TYPE function_type, std::vector<double> arguments) {
+    void add_optimization_module(OPTIMIZATION_MODULE_TYPE type, FUNCTION_TYPE function_type, std::vector<double> arguments) {
         TO_Module_List.push_back(type);
-        TO_Function_Type.push_back(function_type);
+        Optimization_Function_Type.push_back(function_type);
         Function_Arguments.push_back(arguments);
     }
 
@@ -326,19 +326,19 @@ struct Simulation_Parameters
      * If dependencies are not satisfied, an exception will be thrown.
      * If there are no dependencies, std::nullopt will be returned.
      */
-    std::optional<size_t> find_TO_module_dependency(TO_MODULE_TYPE type) {
-        const static std::unordered_map<TO_MODULE_TYPE, std::vector<FEA_MODULE_TYPE>> map {
-            {TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize,      {FEA_MODULE_TYPE::Heat_Conduction}},
-            {TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint,    {FEA_MODULE_TYPE::Heat_Conduction}},
-            {TO_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize, {FEA_MODULE_TYPE::Heat_Conduction}},
-            {TO_MODULE_TYPE::Mass_Constraint,                       {FEA_MODULE_TYPE::Inertial       }},
-            {TO_MODULE_TYPE::Center_of_Mass_Constraint,             {FEA_MODULE_TYPE::Inertial       }},
-            {TO_MODULE_TYPE::Moment_of_Inertia_Constraint,          {FEA_MODULE_TYPE::Inertial       }},
-            {TO_MODULE_TYPE::Strain_Energy_Minimize,                {FEA_MODULE_TYPE::Elasticity     }},
-            {TO_MODULE_TYPE::Displacement_Constraint,               {FEA_MODULE_TYPE::Elasticity     }},
-            {TO_MODULE_TYPE::Strain_Energy_Constraint,              {FEA_MODULE_TYPE::Elasticity     }},
-            {TO_MODULE_TYPE::Internal_Energy_Minimize,              {FEA_MODULE_TYPE::SGH            }},
-            {TO_MODULE_TYPE::Kinetic_Energy_Minimize,               {FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity}},
+    std::optional<size_t> find_TO_module_dependency(OPTIMIZATION_MODULE_TYPE type) {
+        const static std::unordered_map<OPTIMIZATION_MODULE_TYPE, std::vector<FEA_MODULE_TYPE>> map {
+            {OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize,      {FEA_MODULE_TYPE::Heat_Conduction}},
+            {OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Constraint,    {FEA_MODULE_TYPE::Heat_Conduction}},
+            {OPTIMIZATION_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize, {FEA_MODULE_TYPE::Heat_Conduction}},
+            {OPTIMIZATION_MODULE_TYPE::Mass_Constraint,                       {FEA_MODULE_TYPE::Inertial       }},
+            {OPTIMIZATION_MODULE_TYPE::Center_of_Mass_Constraint,             {FEA_MODULE_TYPE::Inertial       }},
+            {OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint,          {FEA_MODULE_TYPE::Inertial       }},
+            {OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize,                {FEA_MODULE_TYPE::Elasticity     }},
+            {OPTIMIZATION_MODULE_TYPE::Displacement_Constraint,               {FEA_MODULE_TYPE::Elasticity     }},
+            {OPTIMIZATION_MODULE_TYPE::Strain_Energy_Constraint,              {FEA_MODULE_TYPE::Elasticity     }},
+            {OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize,              {FEA_MODULE_TYPE::SGH            }},
+            {OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize,               {FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity}},
         };
         if (map.count(type) == 0)
             return {};
