@@ -435,8 +435,12 @@ size_t fill_geometric_region(const Mesh_t& mesh,
             }
         case region::cylinder:
             {
-                if (radius_cyl >= region_fills(f_id).radius1
-                    && radius_cyl <= region_fills(f_id).radius2) {
+                double z_lower_bound = region_fills(f_id).z1;
+                double z_upper_bound = region_fills(f_id).z2;
+
+                if (radius_cyl >= region_fills(f_id).radius1 && 
+                    radius_cyl <= region_fills(f_id).radius2 &&
+                    mesh_coords(2) >= z_lower_bound && mesh_coords(2) <= z_upper_bound) {
                     fill_this = 1;
                 }
                 break;

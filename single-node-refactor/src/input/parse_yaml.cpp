@@ -1553,16 +1553,22 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
     // these are temp arrays to store global variables given in the yaml input file for each material, 100 vars is the max allowable
     DCArrayKokkos<double> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
     DCArrayKokkos<double> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
+    DCArrayKokkos<double> tempGlobalDissipationVars(num_materials, 10, "temp_array_dissipation_vars");
 
     Materials.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials, "num_eos_global_vars");
     Materials.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials, "num_strength_global_vars");
-
+    Materials.num_dissipation_global_vars = CArrayKokkos <size_t> (num_materials, "num_dissipations_vars");
 
     // initialize the num of global vars to 0 for all models
     FOR_ALL(mat_id, 0, num_materials, {
+
         Materials.num_eos_global_vars(mat_id) = 0;
         Materials.num_strength_global_vars(mat_id) = 0;
-    });
+        Materials.num_dissipation_global_vars(mat_id) = 0;   // a minimum of 6 inputs  
+        
+    }); // end parallel for
+
+
 
     // loop over the materials specified
     for (int mat_id = 0; mat_id < num_materials; mat_id++) {
@@ -1587,51 +1593,8 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
 
             Yaml::Node& material_inps_yaml = root["materials"][mat_id]["material"][a_word];
 
-            // set the values in the input for this word
 
-            // set the values
-            if (a_word.compare("q1") == 0) {
-                double q1 = root["materials"][mat_id]["material"]["q1"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tq1 = " << q1 << std::endl;
-                }
-                RUN({
-                    Materials.MaterialFunctions(mat_id).q1 = q1;
-                });
-            } // q1
-            else if (a_word.compare("q1ex") == 0) {
-                double q1ex = root["materials"][mat_id]["material"]["q1ex"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tq1ex = " << q1ex << std::endl;
-                }
-                RUN({
-                    Materials.MaterialFunctions(mat_id).q1ex = q1ex;
-                });
-            } // q1ex
-            else if (a_word.compare("q2") == 0) {
-                // outer plane
-
-                double q2 = root["materials"][mat_id]["material"]["q2"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tq2 = " << q2 << std::endl;
-                }
-
-                RUN({
-                    Materials.MaterialFunctions(mat_id).q2 = q2;
-                });
-            } // q2
-            else if (a_word.compare("q2ex") == 0) {
-                // outer plane
-
-                double q2ex = root["materials"][mat_id]["material"]["q2ex"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tq2ex = " << q2ex << std::endl;
-                }
-                RUN({
-                    Materials.MaterialFunctions(mat_id).q2ex = q2ex;
-                });
-            } // q1ex
-            else if (a_word.compare("id") == 0) {
+            if (a_word.compare("id") == 0) {
                 int m_id = root["materials"][mat_id]["material"]["id"].As<int>();
                 if (VERBOSE) {
                     std::cout << "\tid = " << m_id << std::endl;
@@ -1640,6 +1603,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                     Materials.MaterialFunctions(mat_id).id = m_id;
                 });
             } // id
+            //
             //extract eos model
             else if (a_word.compare("eos_model_type") == 0) {
                 std::string type = root["materials"][mat_id]["material"]["eos_model_type"].As<std::string>();
@@ -1690,8 +1654,8 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                     std::cout << "ERROR: invalid eos type input: " << type << std::endl;
                 } // end if
             }
-
-
+            //
+            // set the eos_model
             else if (a_word.compare("eos_model") == 0) {
                 std::string eos = root["materials"][mat_id]["material"]["eos_model"].As<std::string>();
 
@@ -1837,7 +1801,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
             else if (a_word.compare("strength_model") == 0) {
                 std::string strength_model = root["materials"][mat_id]["material"]["strength_model"].As<std::string>();
 
-                // set the EOS
+                // set the strength
                 if (strength_models_map.find(strength_model) != strength_models_map.end()) {
 
                     std::cout << "strength model = \n" << strength_models_map[strength_model] << std::endl;
@@ -2022,7 +1986,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                 });
 
                 if(num_global_vars>100){
-                    throw std::runtime_error("**** Per material, the code only supports up to 100 global vars in the input file ****");
+                    throw std::runtime_error("**** Per material, the code only supports up to 100 eos global vars in the input file ****");
                 } // end check on num_global_vars
                
                 if (VERBOSE) {
@@ -2054,6 +2018,10 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                     Materials.num_strength_global_vars(mat_id) = num_global_vars;
                 });
 
+                if(num_global_vars>100){
+                    throw std::runtime_error("**** Per material, the code only supports up to 100 strength global vars in the input file ****");
+                } // end check on num_global_vars
+
 
                 if (VERBOSE) {
                     std::cout << "num global strength vars = " << num_global_vars << std::endl;
@@ -2072,7 +2040,43 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                     }
                 } // end loop over global vars
             } // "eos_global_vars"
-            
+            else if (a_word.compare("dissipation_global_vars") == 0) {
+                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+
+                size_t num_global_vars = mat_global_vars_yaml.Size();
+
+                RUN({ 
+                    Materials.num_dissipation_global_vars(mat_id) = num_global_vars;
+                });
+
+                if(num_global_vars<6){
+                    throw std::runtime_error("**** Per material, must specify 6 dissipation global vars in the input file ****");
+                } // end check on num_global_vars
+
+                if(num_global_vars>10){
+                    throw std::runtime_error("**** Per material, the code only supports up to 10 dissipation global vars in the input file ****");
+                } // end check on num_global_vars
+               
+                if (VERBOSE) {
+                    std::cout << "num global dissipation vars = " << num_global_vars << std::endl;
+                }
+
+                // store the global eos model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double dissipation_var = root["materials"][mat_id]["material"]["dissipation_global_vars"][global_var_id].As<double>();
+                    
+                    RUN({
+                        tempGlobalDissipationVars(mat_id, global_var_id) = dissipation_var;
+                    });
+
+                    if (VERBOSE) {
+                        std::cout << "\t var = " << dissipation_var << std::endl;
+                    }
+                } // end loop over global vars
+
+            } // end else if
+            //
+            // print and error because text is unknown
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
@@ -2085,10 +2089,10 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
         } // end for words in material
     } // end loop over materials
 
-    // allocate ragged rigght memory to hold the model global variables
+    // allocate ragged right memory to hold the model global variables
     Materials.eos_global_vars = RaggedRightArrayKokkos <double> (Materials.num_eos_global_vars, "Materials.eos_global_vars");
     Materials.strength_global_vars = RaggedRightArrayKokkos <double> (Materials.num_strength_global_vars, "Materials.strength_global_vars");
-
+    Materials.dissipation_global_vars = RaggedRightArrayKokkos <double> (Materials.num_dissipation_global_vars, "Materials.dissipation_global_vars");
 
 
     // save the global variables
@@ -2100,6 +2104,11 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
 
         for (size_t var_lid=0; var_lid<Materials.num_strength_global_vars(mat_id); var_lid++){
             Materials.strength_global_vars(mat_id, var_lid) = tempGlobalStrengthVars(mat_id, var_lid);
+        } // end for strength var_lid
+
+
+        for (size_t var_lid=0; var_lid<Materials.num_dissipation_global_vars(mat_id); var_lid++){
+            Materials.dissipation_global_vars(mat_id, var_lid) = tempGlobalDissipationVars(mat_id, var_lid);
         } // end for strength var_lid
 
     }); // end for loop over materials

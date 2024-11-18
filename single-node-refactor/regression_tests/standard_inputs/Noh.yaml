@@ -64,7 +64,6 @@ regions:
     material_id: 0
     den: 1.0
     sie: 1.e-10
-        
     velocity: spherical
     speed: -1.0
     

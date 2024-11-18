@@ -103,6 +103,19 @@ namespace model
 } // end model namespace
 
 
+namespace artificialViscosity
+{
+    enum MARSVarNames
+    {
+        q1 = 0,
+        q1ex = 1,
+        q2 = 2,
+        q2ex = 3,
+        phiFloor = 4,
+        useShockDirection = 5,
+    };
+} // end artifiical Viscosity name space
+
 
 
 static std::map<std::string, model::StrengthType> strength_type_map
@@ -288,10 +301,6 @@ struct MaterialFunctions_t
         const double erode_density_val,
         const size_t mat_point_lid) = NULL;
 
-    double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression
-    double q1ex = 1.3333;   ///< acoustic coefficient in Riemann solver for expansion
-    double q2   = 1.0;      ///< linear coefficient in Riemann solver for compression
-    double q2ex = 1.3333;   ///< linear coefficient in Riemann solver for expansion
 }; // end material_t
 
 /////////////////////////////////////////////////////////////////////////////
@@ -330,7 +339,8 @@ struct Material_t
 
     RaggedRightArrayKokkos<double> erosion_global_vars;  ///< Array of global variables for the erosion model
 
-    RaggedRightArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
+    RaggedRightArrayKokkos<double> dissipation_global_vars; ///< Array holding q1, q1ex, q2, ... for artificial viscosity
+    CArrayKokkos<size_t> num_dissipation_global_vars;
 
     // ...
 }; // end MaterialModelVars_t
@@ -345,12 +355,9 @@ static std::vector<std::string> str_material_inps
     "eos_model_type",
     "strength_model",
     "strength_model_type",
-    "q1",
-    "q2",
-    "q1ex",
-    "q2ex",
     "eos_global_vars",
     "strength_global_vars",
+    "dissipation_global_vars",
     "erosion_model",
     "erode_tension_val",
     "erode_density_val",

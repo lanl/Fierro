@@ -1234,6 +1234,7 @@ public:
     void write_mesh(Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
+        double dt,
         double time_value,
         CArray<double> graphics_times,
         std::vector<node_state> node_states,
@@ -1254,6 +1255,7 @@ public:
             write_ensight(mesh,
                           State,
                           SimulationParamaters,
+                          dt,
                           time_value,
                           graphics_times,
                           node_states,
@@ -1298,6 +1300,7 @@ public:
     void write_ensight(Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
+        double dt,
         double time_value,
         CArray<double> graphics_times,
         std::vector<node_state> node_states,
@@ -1332,7 +1335,7 @@ public:
         // --------------------------
 
         const int num_scalar_vars = 10;
-        const int num_vec_vars    = 2;
+        const int num_vec_vars    = 3;
 
         std::string name_tmp;
         name_tmp = "Outputs_SGH";
@@ -1345,7 +1348,7 @@ public:
         };
 
         const char vec_var_names[num_vec_vars][15] = {
-            "pos", "vel"
+            "pos", "vel", "accel"
         };
 
         // short hand
@@ -1356,6 +1359,7 @@ public:
         // save the cell state to an array for exporting to graphics files
         auto elem_fields = CArray<double>(num_elems, num_scalar_vars);
         int  elem_switch = 1;
+
 
         DCArrayKokkos<double> speed(num_elems);
         FOR_ALL(elem_gid, 0, num_elems, {
@@ -1436,7 +1440,7 @@ public:
                 vec_fields(node_gid, 0, 2) = State.node.coords.host(1, node_gid, 2);
             }
 
-            // position, var 1
+            // velocity, var 1
             vec_fields(node_gid, 1, 0) = State.node.vel.host(1, node_gid, 0);
             vec_fields(node_gid, 1, 1) = State.node.vel.host(1, node_gid, 1);
             if (num_dims == 2) {
@@ -1445,6 +1449,18 @@ public:
             else{
                 vec_fields(node_gid, 1, 2) = State.node.vel.host(1, node_gid, 2);
             }
+
+            // accelleration, var 2
+            vec_fields(node_gid, 2, 0) = (State.node.vel.host(1, node_gid, 0) - State.node.vel.host(0, node_gid, 0))/dt;
+            vec_fields(node_gid, 2, 1) = (State.node.vel.host(1, node_gid, 1) - State.node.vel.host(0, node_gid, 1))/dt;
+            if (num_dims == 2) {
+                vec_fields(node_gid, 2, 2) = 0.0;
+            }
+            else{
+                vec_fields(node_gid, 2, 2) = (State.node.vel.host(1, node_gid, 2) - State.node.vel.host(0, node_gid, 2))/dt;
+            }
+
+
         } // end for loop over vertices
 
         //  ---------------------------------------------------------------------------

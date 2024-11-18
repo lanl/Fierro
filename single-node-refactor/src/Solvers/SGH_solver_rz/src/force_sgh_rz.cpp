@@ -39,6 +39,24 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.h"
 
 
+// --- corner_lid = 0 ---
+// corner_lids_in_corner_lid(0,0) = 1;
+// corner_lids_in_corner_lid(0,1) = 3;
+//
+// --- corner_lid = 1 ---
+// corner_lids_in_corner_lid(1,0) = 0;
+// corner_lids_in_corner_lid(1,1) = 2;
+//
+// --- corner_lid = 2 ---
+// corner_lids_in_corner_lid(2,0) = 1;
+// corner_lids_in_corner_lid(2,1) = 3;
+//
+// --- corner_lid = 3 ---
+// corner_lids_in_corner_lid(3,0) = 2;
+// corner_lids_in_corner_lid(3,1) = 0;
+
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn get_force_rz
@@ -92,14 +110,34 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
     const size_t num_dims = 2;
     const size_t num_nodes_in_elem = 4;
 
+    // -------
+    // A data structure to get the neighboring corners lids 
+    // inside an elem relative to a corner lid
+    //
+    const size_t quad4_corner_lids_in_corner_lid[4][2] = 
+    {
+        {1, 3},
+        {0, 2},
+        {1, 3},
+        {2, 0}
+    };
+
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
+        // extract the artificial viscosity parameters
+        double q1   = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::q1);
+        double q1ex = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::q1ex);
+        double q2   = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::q2);
+        double q2ex = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::q2ex);
+        double phi_floor = Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::phiFloor);
+        size_t useShockDirection = (size_t)Materials.dissipation_global_vars(mat_id, artificialViscosity::MARSVarNames::useShockDirection);
+
         // get mesh elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
-        //size_t guass_gid = elem_gid; // 1 gauss point per element
+        size_t gauss_gid = elem_gid; // 1 gauss point per element
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_lid = mat_elem_lid;
@@ -173,6 +211,30 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         curl = GaussPoints_vel_grad(elem_gid, 1, 0) - GaussPoints_vel_grad(elem_gid, 0, 1);  // dv/dx - du/dy
 
         double mag_curl = curl;
+
+
+        // --- Calculate edge normals of a corner ---
+        double dual_surf_normals_1D[16];
+        ViewCArrayKokkos <double> dual_surf_normals(&dual_surf_normals_1D[0], 4, 2, num_dims);  // [corner_lid, surf_lid, dim]
+
+        if (useShockDirection == 1) {
+            // loop over the corners in this element
+            for (size_t corner_lid = 0; corner_lid < num_nodes_in_elem; corner_lid++) {
+        
+                // loop the edges in this corner
+                for (size_t edge_lid=0; edge_lid<num_dims; edge_lid++){
+                    size_t corner_lid_plus = quad4_corner_lids_in_corner_lid[corner_lid][edge_lid];
+
+                    for (size_t dim=0; dim<num_dims; dim++){
+                        // outward of dual grid edge normal 
+                        dual_surf_normals(corner_lid, edge_lid, dim) = 0.5*(area_normal(corner_lid_plus, dim) - area_normal(corner_lid, dim));
+                    } // end for dim
+
+                } // end loop over the edges
+            
+            } // end for loop over nodes
+        }// end if shock direction
+
 
         // --- Calculate the Cauchy stress ---
         // loops are always over 3 even for 2D RZ
@@ -255,33 +317,41 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
             // cell divergence indicates compression or expansions
             if (div < 0) { // element in compression
                 muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(mat_point_lid) + 
-                                 Materials.MaterialFunctions(mat_id).q2 * mag_vel);
+                                (q1 * MaterialPoints_sspd(mat_point_lid) + 
+                                 q2 * mag_vel);
             }
             else{  // element in expansion
                 muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(mat_point_lid) + 
-                                 Materials.MaterialFunctions(mat_id).q2ex * mag_vel);
+                                (q1ex * MaterialPoints_sspd(mat_point_lid) + 
+                                 q2ex * mag_vel);
             } // end if on divergence sign
 
-            size_t use_shock_dir = 0;
             double mu_term;
 
             // Coding to use shock direction
-            if (use_shock_dir == 1) {
-                // this is denominator of the Riemann solver and the multiplier
+            if (useShockDirection == 1) {
+                // this is the denominator of the Riemann solver and the multiplier
                 // on velocity in the numerator.  It filters on the shock
                 // direction
-                mu_term = muc(node_lid) *
-                          fabs(shock_dir(0) * area_normal(0)
-                    + shock_dir(1) * area_normal(1) );
+
+                mu_term = muc(node_lid) * (
+                          fabs(shock_dir(0) * dual_surf_normals(node_lid, 0, 0)
+                             + shock_dir(1) * dual_surf_normals(node_lid, 0, 1)) +
+                          fabs(shock_dir(0) * dual_surf_normals(node_lid, 1, 0)
+                             + shock_dir(1) * dual_surf_normals(node_lid, 1, 1)));
+                
+                //    mu_term = muc(node_lid) *
+                //          fabs(shock_dir(0) * area_normal(node_lid,0)
+                //             + shock_dir(1) * area_normal(node_lid,1) );
+                
+
             }
             else{
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1) );
-            }
+                          + area_normal(node_lid, 1) * area_normal(node_lid, 1) );
+            } // end if using shock direction in Riemann solver
 
             sum(0) += mu_term * vel(0);
             sum(1) += mu_term * vel(1);
@@ -359,6 +429,11 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         double phi_curl = fmin(1.0, 4.0 * fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
         // phi = phi_curl*phi;
 
+        
+        // if phi_floor>0, ensure a small amount of dissipation is present
+        phi = fmax(phi_floor, phi);
+        
+
         // ---- Calculate the Riemann force on each node ----
 
         // loop over the each node in the elem
@@ -405,23 +480,26 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
                 // Wilkins used elem_area*0.25 for the corner area, we will use the corner
                 // areas calculated using Barlow's symmetry and energy preserving area partitioning
-                if (node_radius > tiny) {
+
+                double radius_elem = GaussPoints_vol(gauss_gid)/elem_area;
+
+                //if (node_radius > tiny) {
                     
                     // sigma_RZ / R_p
-                    double force_term_1 = tau(1, 0) * corner_areas(corner_lid) / node_radius; 
+                    double force_term_1 = tau(1, 0) * corner_areas(corner_lid) / radius_elem; 
                     //force_term_1 = tau(1, 0) * 0.25*elem_area / node_radius; // Wilkins
                     
-                    corner_force(corner_gid, 0) += force_term_1;
+                    corner_force(corner_gid, 0) += force_term_1*MaterialPoints_volfrac(mat_point_lid);
                     MaterialCorners_force(mat_corner_lid, 0) += force_term_1;
 
                     // (sigma_RR - sigma_theta) / R_p
-                    double force_term_2 = (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) / node_radius;
+                    double force_term_2 = (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) /radius_elem;
                     //force_term_2 = (tau(1, 1) - tau(2, 2)) * 0.25*elem_area / node_radius; // Wilkins
 
-                    corner_force(corner_gid, 1) += force_term_2;
+                    corner_force(corner_gid, 1) += force_term_2*MaterialPoints_volfrac(mat_point_lid);
                     MaterialCorners_force(mat_corner_lid, 1) += force_term_2;
 
-                } // end if radius >0
+                //} // end if radius >0
 
             } // end if eroded
         } // end for loop over nodes in elem
