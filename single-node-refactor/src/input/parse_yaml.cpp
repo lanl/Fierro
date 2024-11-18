@@ -319,7 +319,7 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
         std::cout << "Parsing YAML materials:" << std::endl;
     }
     // parse the material yaml text into a vector of materials
-    parse_materials(root, Materials);
+    parse_materials(root, Materials, SimulationParamaters.mesh_input.num_dims);
 }
 
 // =================================================================================
@@ -1530,7 +1530,7 @@ void parse_regions(Yaml::Node& root,
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node& root, Material_t& Materials)
+void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims)
 {
     Yaml::Node& material_yaml = root["materials"];
 
@@ -1865,7 +1865,10 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
                         // call elastic plastic model
                         case model::hypoElasticPlasticStrength:
 
-
+                            if(num_dims == 2){
+                                std::cout << "ERROR: specified 2D but this is a 3D strength model: " << strength_model << std::endl;
+                                throw std::runtime_error("**** Strength model is not valid in 2D ****");
+                            }
 
                             // set the stress function
                             RUN({
@@ -1884,6 +1887,11 @@ void parse_materials(Yaml::Node& root, Material_t& Materials)
 
                         
                         case model::hypoElasticPlasticStrengthRZ:
+
+                            if(num_dims == 3){
+                                std::cout << "ERROR: specified 3D but this is a 2D-RZ strength model: " << strength_model << std::endl;
+                                throw std::runtime_error("**** Strength model is not valid in 3D ****");
+                            }
 
                             RUN({
                                 Materials.MaterialFunctions(mat_id).calc_stress = &HypoElasticPlasticRZModel::calc_stress;
