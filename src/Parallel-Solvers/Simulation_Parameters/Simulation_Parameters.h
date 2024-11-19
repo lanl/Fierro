@@ -41,11 +41,11 @@ struct Simulation_Parameters
     bool restart_file = false;
 
     std::set<FEA_MODULE_TYPE> fea_module_must_read;
-    //list of TO functions needed by problem
+    //list of Optimization functions needed by problem
     std::vector<OPTIMIZATION_MODULE_TYPE> TO_Module_List;
     std::vector<FUNCTION_TYPE> Optimization_Function_Type;
-    std::vector<int> TO_Module_My_FEA_Module;
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules;
+    std::vector<int> Optimization_Module_My_FEA_Module;
+    std::vector<std::vector<int>> FEA_Module_My_Optimization_Modules;
     std::vector<std::vector<double>> Function_Arguments;
 
     std::vector<int> Multi_Objective_Modules;
@@ -209,10 +209,10 @@ struct Simulation_Parameters
         shape_optimization_on    = optimization_options.optimization_process == OPTIMIZATION_PROCESS::shape_optimization;
     }
 
-    void map_TO_to_FEA() {
+    void map_Opt_to_FEA() {
         // Now we allocate the vectors for each of the currently identified modules.
-        TO_Module_My_FEA_Module.resize(TO_Module_List.size());
-        FEA_Module_My_TO_Modules.resize(fea_module_parameters.size());
+        Optimization_Module_My_FEA_Module.resize(TO_Module_List.size());
+        FEA_Module_My_Optimization_Modules.resize(fea_module_parameters.size());
         
         // Finally we can set up the maps.
         // 
@@ -220,11 +220,11 @@ struct Simulation_Parameters
         // instead of this vector stuff.
         for (size_t to_index = 0; to_index < TO_Module_List.size(); to_index++) {
             auto to_module = TO_Module_List[to_index];
-            auto fea_index = find_TO_module_dependency(to_module);
+            auto fea_index = find_Optimization_module_dependency(to_module);
             if (!fea_index.has_value())
                 continue;
-            TO_Module_My_FEA_Module[to_index] = fea_index.value();
-            FEA_Module_My_TO_Modules[fea_index.value()].push_back(to_index);
+            Optimization_Module_My_FEA_Module[to_index] = fea_index.value();
+            FEA_Module_My_Optimization_Modules[fea_index.value()].push_back(to_index);
         }
     }
 
@@ -250,7 +250,7 @@ struct Simulation_Parameters
             derive_objective_module();
             derive_constraint_modules();
         }
-        map_TO_to_FEA();
+        map_Opt_to_FEA();
 
         mtr::from_vector(mat_fill, regions);
         mtr::from_vector(material, materials);
@@ -310,7 +310,7 @@ struct Simulation_Parameters
         validate_element_type();
         // Check that the FEA module dependencies are satisfied.
         for (auto to_module : TO_Module_List)
-            find_TO_module_dependency(to_module);
+            find_Optimization_module_dependency(to_module);
     }
 
     void add_optimization_module(OPTIMIZATION_MODULE_TYPE type, FUNCTION_TYPE function_type, std::vector<double> arguments) {
@@ -326,7 +326,7 @@ struct Simulation_Parameters
      * If dependencies are not satisfied, an exception will be thrown.
      * If there are no dependencies, std::nullopt will be returned.
      */
-    std::optional<size_t> find_TO_module_dependency(OPTIMIZATION_MODULE_TYPE type) {
+    std::optional<size_t> find_Optimization_module_dependency(OPTIMIZATION_MODULE_TYPE type) {
         const static std::unordered_map<OPTIMIZATION_MODULE_TYPE, std::vector<FEA_MODULE_TYPE>> map {
             {OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize,      {FEA_MODULE_TYPE::Heat_Conduction}},
             {OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Constraint,    {FEA_MODULE_TYPE::Heat_Conduction}},

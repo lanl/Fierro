@@ -1746,21 +1746,10 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
 
     real_t objective_accumulation, global_objective_accumulation;
 
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
     // reset time accumulating objective and constraints
-    /*
-    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
-    current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
-    //test if module needs reset
-    if(){
-
-    }
-    }
-    */
-    // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
     if (simparam->topology_optimization_on) {
         obj_pointer = problem->getObjective();
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);

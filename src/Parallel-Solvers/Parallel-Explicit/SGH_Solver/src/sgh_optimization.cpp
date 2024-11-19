@@ -105,8 +105,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
     CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
-
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
     
@@ -162,16 +160,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_
     node_velocities_distributed->assign(*initial_node_velocities_distributed);
 
     // reset time accumulating objective and constraints
-    /*
-    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
-      current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
-      //test if module needs reset
-      if(){
-
-      }
-    }
-    */
-    // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
     obj_pointer = problem->getObjective();
     objective_function = dynamic_cast<FierroOptimizationObjective*>(obj_pointer.getRawPtr());
     objective_function->objective_accumulation = 0;

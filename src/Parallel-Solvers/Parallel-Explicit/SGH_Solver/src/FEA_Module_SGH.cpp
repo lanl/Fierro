@@ -949,7 +949,6 @@ void FEA_Module_SGH::sgh_solve()
     int nTO_modules;
     int old_max_forward_buffer;
 
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
     
@@ -971,16 +970,6 @@ void FEA_Module_SGH::sgh_solve()
     }
 
     // reset time accumulating objective and constraints
-    /*
-    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
-    current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
-    //test if module needs reset
-    if(){
-
-    }
-    }
-    */
-    // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
     if (topology_optimization_on||shape_optimization_on) {
         obj_pointer = problem->getObjective();
         objective_function = dynamic_cast<FierroOptimizationObjective*>(obj_pointer.getRawPtr());
