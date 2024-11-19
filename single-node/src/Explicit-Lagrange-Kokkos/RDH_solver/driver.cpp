@@ -411,7 +411,230 @@ int main(int argc, char *argv[]){
         //   }
         //   std::cout << " ######################## " << std::endl;
         // }
-        
+       
+		double matrix1[3][3] = {
+    					{3.0, 0.0, 0.0},
+    					{0.0, 5.0, 0.0},
+    					{0.0, 0.0, 7.0}
+						};
+		double mu[3];
+		double s[3][3];
+
+		get_spectrum(matrix1, mu, s);
+		
+		
+		for (int i = 0; i < 3; ++i) {
+		    double lambda = mu[i];
+		    double v[3] = {s[i][0], s[i][1], s[i][2]};
+		    double Av[3] = {0.0, 0.0, 0.0};
+		    // Compute A * v
+		    for (int j = 0; j < 3; ++j) {
+		        Av[j] = matrix1[j][0]*v[0] + matrix1[j][1]*v[1] + matrix1[j][2]*v[2];
+		    }
+		    // Compute lambda * v
+		    double lambda_v[3] = {lambda*v[0], lambda*v[1], lambda*v[2]};
+		    // Compute the difference
+		    double diff = sqrt((Av[0]-lambda_v[0])*(Av[0]-lambda_v[0]) +
+		                       (Av[1]-lambda_v[1])*(Av[1]-lambda_v[1]) +
+		                       (Av[2]-lambda_v[2])*(Av[2]-lambda_v[2]));
+		    if (diff > 1e-6) {
+		        printf("Eigenvector validation failed for eigenvalue %.15f\n", lambda);
+		    } else {
+		        printf("Eigenvector validation passed for eigenvalue %.15f\n", lambda);
+		    }
+		}
+	
+		printf("---------- eigenvalues test 1 ------------\n ");
+		for (int i = 0; i < 3; i++){
+			printf(" %0.15f \n", mu[i] );
+		}// i
+		printf("-------------------------------------------\n ");
+
+		printf("---------- eigenvectors test 1 ------------\n ");
+		for (int i = 0; i < 3; i++){
+			for (int j = 0; j < 3; j++){
+				printf(" %0.15f ", s[i][j] );
+			}// j
+			printf("\n");
+		}// i
+		printf("-------------------------------------------\n ");
+		
+		double matrix2[3][3] = {
+    				{4.0, 1.0, 1.0},
+    				{1.0, 2.0, 1.0},
+    				{1.0, 1.0, 3.0}
+				};
+
+		get_spectrum(matrix2, mu, s);
+		
+		for (int i = 0; i < 3; ++i) {
+		    double lambda = mu[i];
+		    double v[3] = {s[i][0], s[i][1], s[i][2]};
+		    double Av[3] = {0.0, 0.0, 0.0};
+		    // Compute A * v
+		    for (int j = 0; j < 3; ++j) {
+		        Av[j] = matrix2[j][0]*v[0] + matrix2[j][1]*v[1] + matrix2[j][2]*v[2];
+		    }
+		    // Compute lambda * v
+		    double lambda_v[3] = {lambda*v[0], lambda*v[1], lambda*v[2]};
+		    // Compute the difference
+		    double diff = sqrt((Av[0]-lambda_v[0])*(Av[0]-lambda_v[0]) +
+		                       (Av[1]-lambda_v[1])*(Av[1]-lambda_v[1]) +
+		                       (Av[2]-lambda_v[2])*(Av[2]-lambda_v[2]));
+		    if (diff > 1e-6) {
+		        printf("Eigenvector validation failed for eigenvalue %.15f\n", lambda);
+		    } else {
+		        printf("Eigenvector validation passed for eigenvalue %.15f\n", lambda);
+		    }
+		}
+		printf("---------- eigenvalues test 2 ------------\n ");
+		for (int i = 0; i < 3; i++){
+			printf(" %0.15f \n", mu[i] );
+		}// i
+		printf("-------------------------------------------\n ");
+
+		printf("---------- eigenvectors test 2 ------------\n ");
+		for (int i = 0; i < 3; i++){
+			for (int j = 0; j < 3; j++){
+				printf(" %0.15f ", s[i][j] );
+			}// j
+			printf("\n");
+		}// i
+		printf("-------------------------------------------\n ");
+
+
+		double matrix3[3][3] = {
+   					 {2.0, 0.0, 0.0},
+   					 {0.0, 2.0, 1.0},
+   					 {0.0, 1.0, 2.0}
+		};
+
+
+		get_spectrum(matrix3, mu, s);
+		
+		for (int i = 0; i < 3; ++i) {
+		    double lambda = mu[i];
+		    double v[3] = {s[i][0], s[i][1], s[i][2]};
+		    double Av[3] = {0.0, 0.0, 0.0};
+		    // Compute A * v
+		    for (int j = 0; j < 3; ++j) {
+		        Av[j] = matrix3[j][0]*v[0] + matrix3[j][1]*v[1] + matrix3[j][2]*v[2];
+		    }
+		    // Compute lambda * v
+		    double lambda_v[3] = {lambda*v[0], lambda*v[1], lambda*v[2]};
+		    // Compute the difference
+		    double diff = sqrt((Av[0]-lambda_v[0])*(Av[0]-lambda_v[0]) +
+		                       (Av[1]-lambda_v[1])*(Av[1]-lambda_v[1]) +
+		                       (Av[2]-lambda_v[2])*(Av[2]-lambda_v[2]));
+		    if (diff > 1e-6) {
+		        printf("Eigenvector validation failed for eigenvalue %.15f\n", lambda);
+		    } else {
+		        printf("Eigenvector validation passed for eigenvalue %.15f\n", lambda);
+		    }
+		}
+		printf("---------- eigenvalues test 3 ------------\n ");
+		for (int i = 0; i < 3; i++){
+			printf(" %0.15f \n", mu[i] );
+		}// i
+		printf("-------------------------------------------\n ");
+
+		printf("---------- eigenvectors test 3 ------------\n ");
+		for (int i = 0; i < 3; i++){
+			for (int j = 0; j < 3; j++){
+				printf(" %0.15f ", s[i][j] );
+			}// j
+			printf("\n");
+		}// i
+		printf("-------------------------------------------\n ");
+
+		double matrix4[3][3] = {
+				    {1e-10, 0.0,    0.0},
+				    {0.0,   1e-10,  0.0},
+				    {0.0,   0.0,    1e-10}
+				};
+
+		get_spectrum(matrix4, mu, s);
+		
+		for (int i = 0; i < 3; ++i) {
+		    double lambda = mu[i];
+		    double v[3] = {s[i][0], s[i][1], s[i][2]};
+		    double Av[3] = {0.0, 0.0, 0.0};
+		    // Compute A * v
+		    for (int j = 0; j < 3; ++j) {
+		        Av[j] = matrix4[j][0]*v[0] + matrix4[j][1]*v[1] + matrix4[j][2]*v[2];
+		    }
+		    // Compute lambda * v
+		    double lambda_v[3] = {lambda*v[0], lambda*v[1], lambda*v[2]};
+		    // Compute the difference
+		    double diff = sqrt((Av[0]-lambda_v[0])*(Av[0]-lambda_v[0]) +
+		                       (Av[1]-lambda_v[1])*(Av[1]-lambda_v[1]) +
+		                       (Av[2]-lambda_v[2])*(Av[2]-lambda_v[2]));
+		    if (diff > 1e-6) {
+		        printf("Eigenvector validation failed for eigenvalue %.15f\n", lambda);
+		    } else {
+		        printf("Eigenvector validation passed for eigenvalue %.15f\n", lambda);
+		    }
+		}
+		printf("---------- eigenvalues test 4 ------------\n ");
+		for (int i = 0; i < 3; i++){
+			printf(" %0.15f \n", mu[i] );
+		}// i
+		printf("-------------------------------------------\n ");
+
+		printf("---------- eigenvectors test 4 ------------\n ");
+		for (int i = 0; i < 3; i++){
+			for (int j = 0; j < 3; j++){
+				printf(" %0.15f ", s[i][j] );
+			}// j
+			printf("\n");
+		}// i
+		printf("-------------------------------------------\n ");
+
+
+		double matrix5[3][3] = {
+				    {1e10,  2e10,  3e10},
+				    {2e10,  5e10,  6e10},
+				    {3e10,  6e10,  9e10}
+               };
+
+
+		get_spectrum(matrix5, mu, s);
+		
+		for (int i = 0; i < 3; ++i) {
+		    double lambda = mu[i];
+		    double v[3] = {s[i][0], s[i][1], s[i][2]};
+		    double Av[3] = {0.0, 0.0, 0.0};
+		    // Compute A * v
+		    for (int j = 0; j < 3; ++j) {
+		        Av[j] = matrix5[j][0]*v[0] + matrix5[j][1]*v[1] + matrix5[j][2]*v[2];
+		    }
+		    // Compute lambda * v
+		    double lambda_v[3] = {lambda*v[0], lambda*v[1], lambda*v[2]};
+		    // Compute the difference
+		    double diff = sqrt((Av[0]-lambda_v[0])*(Av[0]-lambda_v[0]) +
+		                       (Av[1]-lambda_v[1])*(Av[1]-lambda_v[1]) +
+		                       (Av[2]-lambda_v[2])*(Av[2]-lambda_v[2]));
+		    if (diff > 1e-6) {
+		        printf("Eigenvector validation failed for eigenvalue %.15f\n", lambda);
+		    } else {
+		        printf("Eigenvector validation passed for eigenvalue %.15f\n", lambda);
+		    }
+		}
+		printf("---------- eigenvalues test 5 ------------\n ");
+		for (int i = 0; i < 3; i++){
+			printf(" %0.15f \n", mu[i] );
+		}// i
+		printf("-------------------------------------------\n ");
+
+		printf("---------- eigenvectors test 5 ------------\n ");
+		for (int i = 0; i < 3; i++){
+			for (int j = 0; j < 3; j++){
+				printf(" %0.15f ", s[i][j] );
+			}// j
+			printf("\n");
+		}// i
+		printf("-------------------------------------------\n ");
+
         // ---------------------------------------------------------------------
         //   setup the IC's and BC's
         // ---------------------------------------------------------------------

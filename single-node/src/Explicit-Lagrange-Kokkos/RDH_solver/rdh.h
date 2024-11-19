@@ -8,7 +8,9 @@
 #include "ref_surf_elem.h"
 #include <cmath>
 
-#define PI 3.141592653589793
+#ifndef PI
+#define PI 3.14159265358979323846
+#endif
 
 using namespace mtr;
 
