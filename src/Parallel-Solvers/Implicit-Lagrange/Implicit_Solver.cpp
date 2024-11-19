@@ -146,7 +146,7 @@ void Implicit_Solver::run(){
     MPI_Comm_size(world,&nranks);
     
     if(myrank == 0){
-      std::cout << "Running TO Solver" << std::endl;
+      std::cout << "Running Implicit Solver" << std::endl;
     }
     //initialize Trilinos communicator class
     comm = Tpetra::getDefaultComm();
@@ -219,7 +219,7 @@ void Implicit_Solver::run(){
     //set boundary conditions
     generate_tcs();
 
-    //initialize TO design variable storage
+    //initialize optmization design variable storage
     init_design();
 
     //process process list of requested FEA modules to construct list of objects
@@ -1135,9 +1135,9 @@ void Implicit_Solver::FEA_module_setup(){
 void Implicit_Solver::setup_optimization_problem(){
   int num_dim = simparam.num_dims;
   bool nodal_density_flag = simparam.nodal_density_flag;
-  int nTO_modules = simparam.TO_Module_List.size();
+  int nOpt_modules = simparam.Optimization_Module_List.size();
   int nmulti_objective_modules = simparam.Multi_Objective_Modules.size();
-  std::vector<OPTIMIZATION_MODULE_TYPE> TO_Module_List = simparam.TO_Module_List;
+  std::vector<OPTIMIZATION_MODULE_TYPE> Optimization_Module_List = simparam.Optimization_Module_List;
   std::vector<int> Optimization_Module_My_FEA_Module = simparam.Optimization_Module_My_FEA_Module;
   std::vector<int> Multi_Objective_Modules = simparam.Multi_Objective_Modules;
   std::vector<real_t> Multi_Objective_Weights = simparam.Multi_Objective_Weights;
@@ -1374,15 +1374,15 @@ void Implicit_Solver::setup_optimization_problem(){
   //Instantiate (the one) objective function for the problem
   ROL::Ptr<ROL::Objective<real_t>> obj, sub_obj;
   bool objective_declared = false;
-  for(int imodule = 0; imodule < nTO_modules; imodule++){
+  for(int imodule = 0; imodule < nOpt_modules; imodule++){
     if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::OBJECTIVE){
       //check if previous module already defined an objective, there must be one objective module
       if(objective_declared){
         *fos << "PROGRAM IS ENDING DUE TO ERROR; ANOTHER OBJECTIVE FUNCTION WITH NAME \"" 
-              << to_string(TO_Module_List[imodule]) <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
+              << to_string(Optimization_Module_List[imodule]) <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
           exit_solver(0);
       }
-      if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize){
+      if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize_TopOpt){
         //debug print
         *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam.optimization_options.method_of_moving_asymptotes){
@@ -1393,7 +1393,7 @@ void Implicit_Solver::setup_optimization_problem(){
           obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag);
         }
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize_TopOpt){
         //debug print
         *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam.optimization_options.method_of_moving_asymptotes){
@@ -1405,13 +1405,13 @@ void Implicit_Solver::setup_optimization_problem(){
         }
       }
       //Multi-Objective case
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Multi_Objective){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Multi_Objective){
         //allocate vector of Objective Functions to pass
         Multi_Objective_Terms = std::vector<ROL::Ptr<ROL::Objective<real_t>>>(nmulti_objective_modules);
         for(int imulti = 0; imulti < nmulti_objective_modules; imulti++){
           //get module index for objective term
           module_id = Multi_Objective_Modules[imulti];
-          if(TO_Module_List[module_id] == OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize){
+          if(Optimization_Module_List[module_id] == OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize_TopOpt){
             //debug print
             *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[module_id] << std::endl;
             if(simparam.optimization_options.method_of_moving_asymptotes){
@@ -1422,7 +1422,7 @@ void Implicit_Solver::setup_optimization_problem(){
               Multi_Objective_Terms[imulti] = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[module_id]], nodal_density_flag);
             }
           }
-          else if(TO_Module_List[module_id] == OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize){
+          else if(Optimization_Module_List[module_id] == OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize_TopOpt){
             //debug print
             *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[module_id] << std::endl;
             if(simparam.optimization_options.method_of_moving_asymptotes){
@@ -1432,7 +1432,7 @@ void Implicit_Solver::setup_optimization_problem(){
               Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[module_id]], nodal_density_flag);
             }
           }
-          else if(TO_Module_List[module_id] == OPTIMIZATION_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize){
+          else if(Optimization_Module_List[module_id] == OPTIMIZATION_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize_TopOpt){
             //debug print
             *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[module_id] << std::endl;
             if(simparam.optimization_options.method_of_moving_asymptotes){
@@ -1448,7 +1448,7 @@ void Implicit_Solver::setup_optimization_problem(){
       }
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" 
-              << TO_Module_List[imodule] <<"\"" << std::endl;
+              << Optimization_Module_List[imodule] <<"\"" << std::endl;
         exit_solver(0);
       }
       objective_declared = true;
@@ -1479,7 +1479,7 @@ void Implicit_Solver::setup_optimization_problem(){
   //problem->addConstraint("equality Constraint 3",eq_constraint3,constraint_mul3);
   //problem->addLinearConstraint("Equality Constraint",eq_constraint,constraint_mul);
   
-  for(int imodule = 0; imodule < nTO_modules; imodule++){
+  for(int imodule = 0; imodule < nOpt_modules; imodule++){
     number_union.str(constraint_base);
     number_union << imodule + 1;
     constraint_name = number_union.str();
@@ -1488,12 +1488,12 @@ void Implicit_Solver::setup_optimization_problem(){
     if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::EQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
-      if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Mass_Constraint){
+      if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Mass_Constraint_TopOpt){
         
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false);
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Displacement_Constraint){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Displacement_Constraint_TopOpt){
         //simple test of assignment to the vector for constraint dofs
         Teuchos::RCP<MV> target_displacements = Teuchos::rcp(new MV(local_dof_map, 1));
         Teuchos::RCP<Tpetra::MultiVector<int,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<int,LO,GO>(local_dof_map, 1));
@@ -1543,24 +1543,24 @@ void Implicit_Solver::setup_optimization_problem(){
         //eq_constraint->checkApplyJacobian(*rol_x, *rol_d, *constraint_buf);
         //eq_constraint->checkApplyAdjointHessian(*rol_x, *constraint_buf, *rol_d, *rol_x);
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false);
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Center_of_Mass_Constraint){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Center_of_Mass_Constraint_TopOpt){
         *fos << " CENTER OF MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<CenterOfMassConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false);
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Strain_Energy_Constraint){    
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Strain_Energy_Constraint_TopOpt){    
         *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<StrainEnergyConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false);
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Constraint){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Constraint_TopOpt){
         *fos << " HEAT CAPACITY POTENTIAL CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<HeatCapacityPotentialConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false);
       }
       else{
-        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED EQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED EQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" <<Optimization_Module_List[imodule] <<"\"" << std::endl;
         exit_solver(0);
       }
       *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
@@ -1575,11 +1575,11 @@ void Implicit_Solver::setup_optimization_problem(){
       ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
       ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
       ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
-      if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Mass_Constraint){
+      if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Mass_Constraint_TopOpt){
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Displacement_Constraint){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Displacement_Constraint_TopOpt){
         //simple test of assignment to the vector for constraint dofs
         Teuchos::RCP<MV> target_displacements = Teuchos::rcp(new MV(local_dof_map, 1));
         Teuchos::RCP<Tpetra::MultiVector<int,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<int,LO,GO>(local_dof_map, 1));
@@ -1589,25 +1589,25 @@ void Implicit_Solver::setup_optimization_problem(){
         *fos << " DISPLACEMENT CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<DisplacementConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, target_displacements, active_dofs);
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0]);
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Center_of_Mass_Constraint){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Center_of_Mass_Constraint_TopOpt){
         *fos << " CENTER OF MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<CenterOfMassConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0]);
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Strain_Energy_Constraint){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Strain_Energy_Constraint_TopOpt){
         *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<StrainEnergyConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
       }
-      else if(TO_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Constraint){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Constraint_TopOpt){
         *fos << " HEAT CAPACITY POTENTIAL CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<HeatCapacityPotentialConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
       }
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED INEQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" 
-              << to_string(TO_Module_List[imodule]) <<"\"" << std::endl;
+              << to_string(Optimization_Module_List[imodule]) <<"\"" << std::endl;
         exit_solver(0);
       }
       *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;

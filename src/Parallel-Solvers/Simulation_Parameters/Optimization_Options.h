@@ -13,19 +13,19 @@ SERIALIZABLE_ENUM(FUNCTION_TYPE,
 )
 
 SERIALIZABLE_ENUM(OPTIMIZATION_MODULE_TYPE,
-  Kinetic_Energy_Minimize,
-  Internal_Energy_Minimize,
+  Kinetic_Energy_Minimize_TopOpt,
+  Internal_Energy_Minimize_TopOpt,
   Multi_Objective,
-  Heat_Capacity_Potential_Minimize,
-  Strain_Energy_Minimize,
-  Mass_Constraint,
-  Moment_of_Inertia_Constraint,
-  Center_of_Mass_Constraint,
-  Heat_Capacity_Potential_Constraint,
+  Heat_Capacity_Potential_Minimize_TopOpt,
+  Strain_Energy_Minimize_TopOpt,
+  Mass_Constraint_TopOpt,
+  Moment_of_Inertia_Constraint_TopOpt,
+  Center_of_Mass_Constraint_TopOpt,
+  Heat_Capacity_Potential_Constraint_TopOpt,
   MULTI_OBJECTIVE_TERM,
-  Thermo_Elastic_Strain_Energy_Minimize,
-  Strain_Energy_Constraint,
-  Displacement_Constraint
+  Thermo_Elastic_Strain_Energy_Minimize_TopOpt,
+  Strain_Energy_Constraint_TopOpt,
+  Displacement_Constraint_TopOpt
 )
 
 

@@ -945,8 +945,6 @@ void FEA_Module_SGH::sgh_solve()
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
     size_t cycle;
     real_t objective_accumulation, global_objective_accumulation;
-
-    int nTO_modules;
     int old_max_forward_buffer;
 
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
@@ -995,10 +993,6 @@ void FEA_Module_SGH::sgh_solve()
                 }
             }
         }
-    }
-
-    if (topology_optimization_on) {
-        nTO_modules = simparam->TO_Module_List.size();
     }
 
     int myrank = Explicit_Solver_Pointer_->myrank;

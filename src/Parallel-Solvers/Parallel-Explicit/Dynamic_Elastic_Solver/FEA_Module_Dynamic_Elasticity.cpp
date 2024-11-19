@@ -1738,8 +1738,6 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
 
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
-
-    int nTO_modules;
     int old_max_forward_buffer;
 
     unsigned long cycle;
@@ -1771,10 +1769,6 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                 (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
             }
         }
-    }
-
-    if (simparam->topology_optimization_on) {
-        nTO_modules = simparam->TO_Module_List.size();
     }
 
     int myrank = Explicit_Solver_Pointer_->myrank;
