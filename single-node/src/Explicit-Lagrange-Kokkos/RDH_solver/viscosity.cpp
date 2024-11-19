@@ -14,17 +14,15 @@ using namespace mtr;
 
 KOKKOS_INLINE_FUNCTION
 void get_viscosity_coefficient(const mesh_t &mesh,
-                               const int elem_gid,
-                               const int legendre_lid,
+                               const int gauss_gid,
                                double &alpha,
                                const DViewCArrayKokkos <double> &sspd,
                                const DViewCArrayKokkos <double> &den,
                                const DViewCArrayKokkos <double> &J0Inv,
                                const DViewCArrayKokkos <double> &Jac,
                                const DViewCArrayKokkos <double> &h0,
-                               const double grad_u[3][3]){
+                               const double sym_grad_u[3][3]){
     
-    int gauss_gid = mesh.legendre_in_elem( elem_gid, legendre_lid );
 
     // Compute \| J J0Inv s \|_{\ell^2}
     // compute s (max compression dir)
@@ -47,28 +45,9 @@ void get_viscosity_coefficient(const mesh_t &mesh,
 	mu[1] = 0.0; 
     mu[2] = 0.0;
 
-    double sym_grad_u[3][3];
-	symmetrize_matrix(grad_u, sym_grad_u);
-
-    // for (int i = 0; i < mesh.num_dims; i++){
-    //     for (int j =0; j< mesh.num_dims; j++){
-    //         printf(" sym grad u : %f \n", sym_grad_u[i][j]);
-    //     }
-    // }
-
-    // min_eigenvalue_eigenvector(sym_grad_u, mu, s);
-    // for (int i = 0; i < mesh.num_dims; i++){
-    //     printf(" s : %f \n", s[i]);
-    // }
-    
 	get_spectrum(sym_grad_u, mu, s);
-    //Kokkos::fence();
 
 	double compression_dir[3];
-
-	//printf(" s in dim %d : %f \n ", 0, compression_dir[0]);
-	//printf(" s in dim %d : %f \n ", 1, compression_dir[1]);
-	//printf(" s in dim %d : %f \n ", 2, compression_dir[2]);
 
     compression_dir[0] = 0.0; 
     compression_dir[1] = 0.0; 
@@ -80,7 +59,6 @@ void get_viscosity_coefficient(const mesh_t &mesh,
 
 	double min_eig_val = 0.0;
 	min_eig_val = mu[0];
-	//printf(" eig val : %f \n ", min_eig_val);
 
     double l2_s;
     compute_l2_norm(compression_dir, l2_s);
@@ -99,11 +77,6 @@ void get_viscosity_coefficient(const mesh_t &mesh,
     JJ0Inv[2][2] = 0.0;
 
     compute_JJ0Inv(Jac, J0Inv, JJ0Inv, gauss_gid, mesh);
-    // for (int i = 0; i < mesh.num_dims; i++){
-    //     for (int j =0; j< mesh.num_dims; j++){
-    //         printf(" JJ0Inv : %f \n", JJ0Inv[i][j]);
-    //     }
-    // }
 
     double JJ0Invs[3];
     JJ0Invs[0] = 0; JJ0Invs[1] = 0.0; JJ0Invs[2] = 0.0;
@@ -112,16 +85,10 @@ void get_viscosity_coefficient(const mesh_t &mesh,
     JJ0Invs[1] = JJ0Inv[1][0]*compression_dir[0] + JJ0Inv[1][1]*compression_dir[1] + JJ0Inv[1][2]*compression_dir[2];
     JJ0Invs[2] = JJ0Inv[2][0]*compression_dir[0] + JJ0Inv[2][1]*compression_dir[1] + JJ0Inv[2][2]*compression_dir[2];
 
-    // for (int i = 0; i < mesh.num_dims; i++){
-    //         printf(" JJ0InvS : %f \n", JJ0Invs[i]);
-    // }
-
     double l2_JJ0Inv_dot_s;
     compute_l2_norm(JJ0Invs, l2_JJ0Inv_dot_s);
-    // printf(" val : %f \n", l2_JJ0Inv_dot_s);
 
     double h = h0(gauss_gid)*l2_JJ0Inv_dot_s/(l2_s + 1.0e-8);
-    // printf(" h val : %f \n", h);
 
     double coeff = 0.0;
     double eps = 1.0e-12;
@@ -133,24 +100,23 @@ void get_viscosity_coefficient(const mesh_t &mesh,
     else {
         coeff = (3.0 - 2.0 * y) * y * y;
     }
-    //printf("coeff : %f \n", coeff);
 
-    double div_u = grad_u[0][0] + grad_u[1][1] + grad_u[2][2];
+    double div_u = sym_grad_u[0][0] + sym_grad_u[1][1] + sym_grad_u[2][2];
     
 	double Fro_norm_grad_u;
 	compute_Fro_norm(sym_grad_u, Fro_norm_grad_u);
 
     double phi_curl = 1.0;
 
-    if (l2_s > 0.0){
-        phi_curl = abs(div_u/Fro_norm_grad_u);
+    if (Fro_norm_grad_u > 0.0){
+        phi_curl = fabs(div_u/Fro_norm_grad_u);
     }
 
     alpha = den(gauss_gid)*h*( 0.5*sspd(gauss_gid)*(1.0-coeff)*phi_curl + 2.0*h*fabs( min_eig_val ));
     //if (alpha > 0.0){
-	
+	//
 	// printf("alpha : %f \n", alpha);
-	
+	//
 	//}
 }
 
@@ -177,39 +143,30 @@ void add_viscosity_momentum(const mesh_t &mesh,
                 int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
 
                 double grad_u[3][3];
-                grad_u[0][0] = 0.0; 
-                grad_u[0][1] = 0.0; 
-                grad_u[0][2] = 0.0;
+                double sym_grad_u[3][3];
                 
-                grad_u[1][0] = 0.0; 
-                grad_u[1][1] = 0.0; 
-                grad_u[1][2] = 0.0;
-                
-                grad_u[2][0] = 0.0; 
-                grad_u[2][1] = 0.0; 
-                grad_u[2][2] = 0.0;
+                eval_grad_u(mesh, ref_elem, elem_gid, gauss_lid, gauss_gid, node_vel, JacInv, grad_u, stage);
+				symmetrize_matrix(grad_u, sym_grad_u);
+				
+				double grad_u_dot_Nabla0 = 0.0;
+				double grad_u_dot_Nabla1 = 0.0;
+				double grad_u_dot_Nabla2 = 0.0;
 
-                // printf("before eval_grad_u \n");
-                eval_grad_u(mesh, ref_elem, elem_gid, gauss_lid, node_vel, JacInv, grad_u, stage);
-                //Kokkos::fence();
-                // printf(" after eval_grad_u \n");
+                grad_u_dot_Nabla0 = sym_grad_u[0][0]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
+                                  + sym_grad_u[0][1]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
+                                  + sym_grad_u[0][2]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
 
-                double grad_u_dot_Nabla0 = grad_u[0][0]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
-                                            + 0.5*(grad_u[0][1] + grad_u[1][0])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
-                                            + 0.5*(grad_u[0][2] + grad_u[2][0])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
+                grad_u_dot_Nabla1 = sym_grad_u[1][0]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
+                                  + sym_grad_u[1][1]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
+                                  + sym_grad_u[1][2]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
 
-                double grad_u_dot_Nabla1 = 0.5*(grad_u[1][0] + grad_u[0][1])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
-                                            + grad_u[1][1]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
-                                            + 0.5*(grad_u[1][2] + grad_u[2][1])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
-
-                double grad_u_dot_Nabla2 = 0.5*(grad_u[2][0] + grad_u[0][2])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
-                                            + 0.5*(grad_u[2][1] + grad_u[1][2])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
-                                            + grad_u[2][2]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
+                grad_u_dot_Nabla2 = sym_grad_u[2][0]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
+                                  + sym_grad_u[2][1]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
+                                  + sym_grad_u[2][2]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
 
                 double alpha = 0.0;
                 
-                get_viscosity_coefficient(mesh, elem_gid, gauss_lid, alpha, sspd, den, J0Inv, Jac, h0, grad_u);
-                //Kokkos::fence();
+                get_viscosity_coefficient(mesh, gauss_gid, alpha, sspd, den, J0Inv, Jac, h0, sym_grad_u);
 
                 F(stage, elem_gid, node_lid, 0) += alpha
                                                     *grad_u_dot_Nabla0
@@ -257,37 +214,30 @@ void add_viscosity_energy(const mesh_t &mesh,
                     int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
 
                     double grad_u[3][3];
-                    grad_u[0][0] = 0.0; 
-                    grad_u[0][1] = 0.0; 
-                    grad_u[0][2] = 0.0;
-                    
-                    grad_u[1][0] = 0.0; 
-                    grad_u[1][1] = 0.0; 
-                    grad_u[1][2] = 0.0;
-                    
-                    grad_u[2][0] = 0.0; 
-                    grad_u[2][1] = 0.0; 
-                    grad_u[2][2] = 0.0;
+                    double sym_grad_u[3][3];
 
-                    eval_grad_u(mesh, ref_elem, elem_gid, gauss_lid, node_vel, JacInv, grad_u, stage);
-                    //Kokkos::fence();
+                    eval_grad_u(mesh, ref_elem, elem_gid, gauss_lid, gauss_gid, node_vel, JacInv, grad_u, stage);
+					symmetrize_matrix(grad_u, sym_grad_u);
+					
+					double grad_u_dot_Nabla0 = 0.0;
+					double grad_u_dot_Nabla1 = 0.0;
+					double grad_u_dot_Nabla2 = 0.0;
 
-                    double grad_u_dot_Nabla0 = grad_u[0][0]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
-                                                + 0.5*(grad_u[0][1] + grad_u[1][0])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
-                                                + 0.5*(grad_u[0][2] + grad_u[2][0])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
+                    grad_u_dot_Nabla0 = sym_grad_u[0][0]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
+                                      + sym_grad_u[0][1]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
+                                      + sym_grad_u[0][2]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
 
-                    double grad_u_dot_Nabla1 = 0.5*(grad_u[1][0] + grad_u[0][1])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
-                                                + grad_u[1][1]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
-                                                + 0.5*(grad_u[1][2] + grad_u[2][1])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
+                    grad_u_dot_Nabla1 = sym_grad_u[1][0]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
+                                      + sym_grad_u[1][1]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
+                                      + sym_grad_u[1][2]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
 
-                    double grad_u_dot_Nabla2 = 0.5*(grad_u[2][0] + grad_u[0][2])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
-                                                + 0.5*(grad_u[2][1] + grad_u[1][2])*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
-                                                + grad_u[2][2]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
+                    grad_u_dot_Nabla2 = sym_grad_u[2][0]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 0)
+                                      + sym_grad_u[2][1]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 1)
+                                      + sym_grad_u[2][2]*ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, 2);
 
                     double alpha = 0.0;
 
-                    get_viscosity_coefficient(mesh, elem_gid, gauss_lid, alpha, sspd, den, J0Inv, Jac, h0, grad_u);
-                    //Kokkos::fence();
+                    get_viscosity_coefficient(mesh, gauss_gid, alpha, sspd, den, J0Inv, Jac, h0, sym_grad_u);
 
                     double grad_u_dot_Nabla_dot_u = grad_u_dot_Nabla0*node_vel(stage, node_gid, 0)
                                                     + grad_u_dot_Nabla1*node_vel(stage, node_gid, 1)

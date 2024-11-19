@@ -47,14 +47,19 @@ void eval_vel(const DViewCArrayKokkos <double> vel,
 KOKKOS_FUNCTION 
 void eval_grad_u(const mesh_t &mesh,
                  const fe_ref_elem_t &ref_elem,
-                 const int elem_gid,
-                 const int legendre_lid,
+				 const int elem_gid,
+                 const int leg_lid,
+				 const int leg_gid,
                  const DViewCArrayKokkos <double> &node_vel,
                  const DViewCArrayKokkos <double> &JacInv,
                  double grad_u[3][3],
                  const int stage){
-        
-        int leg_gid = mesh.legendre_in_elem(elem_gid, legendre_lid);
+		
+		for (int i = 0; i < 3; i++){
+			for (int j = 0; j < 3; j++){
+				grad_u[i][j] = 0.0;
+			}// j
+		}// i
 
         // FOR_ALL(node_lid, 0, mesh.num_nodes_in_elem, {
         
@@ -64,9 +69,9 @@ void eval_grad_u(const mesh_t &mesh,
 
                 for(int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
                 
-                    double JacInvNabla = JacInv( leg_gid, 0, dim)*ref_elem.gauss_leg_grad_basis(legendre_lid, node_lid, 0)
-                                        + JacInv( leg_gid, 1, dim)*ref_elem.gauss_leg_grad_basis(legendre_lid, node_lid, 1)
-                                        + JacInv( leg_gid, 2, dim)*ref_elem.gauss_leg_grad_basis(legendre_lid, node_lid, 2);
+                    double JacInvNabla = JacInv( leg_gid, 0, dim)*ref_elem.gauss_leg_grad_basis(leg_lid, node_lid, 0)
+                                        + JacInv( leg_gid, 1, dim)*ref_elem.gauss_leg_grad_basis(leg_lid, node_lid, 1)
+                                        + JacInv( leg_gid, 2, dim)*ref_elem.gauss_leg_grad_basis(leg_lid, node_lid, 2);
                     // printf("j^{-1}Nabla : %f \n", JacInvNabla);
 
                     int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
