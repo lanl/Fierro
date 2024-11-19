@@ -324,11 +324,14 @@ int main(int argc, char *argv[]){
         DViewCArrayKokkos <double> SigmaJacInv(&mat_pt.SigmaJacInv(0,0,0,0),
                                                 rk_num_bins, num_leg_pts, 3, 3);
 
-        DViewCArrayKokkos <double> gauss_legendre_det_j(&mat_pt.gauss_legendre_det_j(0),
-                                                        num_leg_pts);
+        DViewCArrayKokkos <double> gauss_legendre_det_j(&mat_pt.gauss_legendre_det_j(0), num_leg_pts);
         
-        DViewCArrayKokkos <double> den0DetJac0(&mat_pt.den0DetJac0(0),
-                                                num_leg_pts);
+        DViewCArrayKokkos <double> den0DetJac0(&mat_pt.den0DetJac0(0), num_leg_pts);
+
+        DViewCArrayKokkos <double> h0(&mat_pt.h0(0), num_leg_pts);
+
+        DViewCArrayKokkos <double> Jac0Inv(&mat_pt.Jac0Inv(0),
+                                                num_leg_pts, 3, 3);
         
         
         // ---------------------------------------------------------------------
@@ -350,9 +353,19 @@ int main(int argc, char *argv[]){
         gauss_legendre_jacobian.update_host();
         gauss_legendre_jacobian_inverse.update_host();
         gauss_legendre_det_j.update_host();
+
+        get_J0Inv(gauss_legendre_jacobian, Jac0Inv, mat_pt);
+        Kokkos::fence();
         
+        Jac0Inv.update_host();
+
         get_vol(elem_vol, node_coords, gauss_legendre_det_j, mesh, elem, ref_elem);
         Kokkos::fence();
+
+        get_h0(elem_vol, h0, mesh, ref_elem);
+        Kokkos::fence();
+
+        h0.update_host();
 
         // double vol_check = 0.0;
         // for (int i = 0; i < mesh.num_elems; i++){
@@ -496,13 +509,7 @@ int main(int argc, char *argv[]){
                 graphics_times,
                 graphics_id,
                 time_value);
-
-        // compute lumped masses //
-        printf("before lumped mass \n");
-        get_lumped_mass(mesh, ref_elem, gauss_legendre_det_j, mat_pt_den, node_mass, zone_mass);
-        node_mass.update_host();
-        zone_mass.update_host();
-
+        
         // assemble consistent mass matrices (per element) //
         printf("before mass matrices \n");
         assemble_mass_matrices(mesh, ref_elem, mat_pt_den, gauss_legendre_det_j,
@@ -510,6 +517,13 @@ int main(int argc, char *argv[]){
 
         M_u.update_host();
         M_e.update_host();
+
+        // compute lumped masses //
+        printf("before lumped mass \n");
+        get_lumped_mass(mesh, ref_elem, gauss_legendre_det_j, mat_pt_den, M_u, M_e, node_mass, zone_mass);
+        node_mass.update_host();
+        zone_mass.update_host();
+        
 
 
         //////////////////////////////////////////////////
@@ -538,6 +552,8 @@ int main(int argc, char *argv[]){
             gauss_legendre_jacobian,
             gauss_legendre_jacobian_inverse,
             gauss_legendre_det_j,
+            Jac0Inv,
+            h0,
             mat_pt_stress,
             SigmaJacInv,
             mat_pt_den,

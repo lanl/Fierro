@@ -104,7 +104,7 @@ void input(CArrayKokkos <material_t> &material,
     
     
     // --- number of fill regions ---
-    num_fills = 1;  // =2 for Sedov,Sod; =3 for Triple point; =1 Noh3D,TGV, material (box)
+    num_fills = 2;  // =2 for Sedov,Sod; =3 for Triple point; =1 Noh3D,TGV, material (box)
     mat_fill = CArrayKokkos <mat_fill_t> (num_fills); // create fills
     
     
@@ -113,11 +113,10 @@ void input(CArrayKokkos <material_t> &material,
     boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---
-    test_problem = test::TaylorGreen;//test::TriplePoint;//test::Sedov3D;//test::Noh3D;//test::Sod3DX;//test::TaylorAnvil;//test::box;//
+    test_problem = test::Sedov3D;//test::TaylorGreen;//test::Noh3D;//test::Sod3DX;//test::TriplePoint;//test::TaylorAnvil;//test::box;//
     
-    
+    ///////////////////////////////////////////////////////
     // ---- fill instructions and intial conditions ---- //
-
 
     // Sedov blast wave test case
     if (test_problem == test::Sedov3D){
@@ -927,7 +926,7 @@ void input(CArrayKokkos <material_t> &material,
 
         time_final =0.5;
         source_cond = true;
-        viscosity_cond = false;
+        viscosity_cond = true;
         RUN({
             
             material(0).eos_model = ideal_gas; // EOS model

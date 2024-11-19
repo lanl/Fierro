@@ -131,6 +131,13 @@ struct mat_pt_t {
     // \sigma \cdot J^{-T}
     CArray <double> SigmaJacInv;
 
+    // inverse of jacobian for initial mesh
+    CArray <double> Jac0Inv;
+
+    // initialize mesh characteristic length. 
+    // for hexahedral box meshes, h0 = |K|^{1/d}/(p+1)
+    CArray <double> h0;
+
     // global number of quadrature points
     int num_leg_pts;
     int num_lob_pts;
@@ -163,6 +170,8 @@ struct mat_pt_t {
         //this->gauss_lobatto_det_j  = CArrayKokkos <double> (num_lob_pts);
         this->gauss_legendre_det_j = CArray <double> (num_leg_pts);
         this->den0DetJac0 = CArray <double> (num_leg_pts);
+        this->Jac0Inv = CArray <double> (num_leg_pts, num_dims, num_dims);
+        this-> h0 = CArray <double> (num_leg_pts);
 
         // visualization
         this->vel = CArray <double> (num_leg_pts, num_dims);

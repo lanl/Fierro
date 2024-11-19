@@ -15,6 +15,8 @@ void get_lumped_mass(mesh_t &mesh,
                      fe_ref_elem_t & ref_elem,
                      const DViewCArrayKokkos <double> &DetJac,
                      const DViewCArrayKokkos <double> &den,
+                     const DViewCArrayKokkos <double> &M_u,
+                     const DViewCArrayKokkos <double> &M_e,
                      DViewCArrayKokkos <double> & nodal_mass,
                      DViewCArrayKokkos <double> & zonal_mass){
     
@@ -42,6 +44,19 @@ void get_lumped_mass(mesh_t &mesh,
 
     Kokkos::fence();
 
+    // FOR_ALL(elem_gid, 0, mesh.num_elems,{
+        
+    //     for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+    //         int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+
+    //         for (int i = 0; i < mesh.num_nodes_in_elem; i++){
+    //             nodal_mass(node_gid) += M_u(elem_gid, node_lid, i);
+    //         }
+    //     }
+    // });
+
+    // Kokkos::fence();
+
     // compute \sum_{K \ni i} \int_K \rho \psi_i dx
     // unlike the above, there is only one K per i as the i's are completely internal to the K's
     // i.e. no thermo degree of freedom is shared by two or more elements
@@ -61,11 +76,24 @@ void get_lumped_mass(mesh_t &mesh,
 
     Kokkos::fence();
 
+    // FOR_ALL(elem_gid, 0, mesh.num_elems,{
+        
+    //     for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+    //         int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+
+    //         for (int i = 0; i < mesh.num_zones_in_elem; i++){
+    //             zonal_mass(zone_gid) += M_e(elem_gid, zone_lid, i);
+    //         }
+    //     }
+    // });
+
+    // Kokkos::fence();
+
 
     // Check positivity of lumped masses
     FOR_ALL( node_gid, 0, mesh.num_nodes, {
         if (nodal_mass(node_gid) < 0.0){
-            printf(" negative lumped kinematic mass at node id %d \n", node_gid);
+            printf(" negative lumped kinematic mass at node id %d with val: %f \n", node_gid, nodal_mass(node_gid));
         }
     });
 
@@ -73,7 +101,7 @@ void get_lumped_mass(mesh_t &mesh,
 
     FOR_ALL(zone_gid, 0, mesh.num_zones,{
         if (zonal_mass(zone_gid) < 0.0){
-            printf(" negative lumped thermo mass at zone id %d \n", zone_gid);
+            printf(" negative lumped thermo mass at zone id %d with val: %f \n", zone_gid, zonal_mass(zone_gid));
         }
     });
 

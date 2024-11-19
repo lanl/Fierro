@@ -105,6 +105,8 @@ void get_lumped_mass(mesh_t &mesh,
                      fe_ref_elem_t & ref_elem,
                      const DViewCArrayKokkos <double> &DetJac,
                      const DViewCArrayKokkos <double> &den,
+                     const DViewCArrayKokkos <double> &M_u,
+                     const DViewCArrayKokkos <double> &M_e,
                      DViewCArrayKokkos <double> & nodal_mass,
                      DViewCArrayKokkos <double> & zonal_mass);
 
@@ -211,6 +213,8 @@ void run(const mesh_t &mesh,
          DViewCArrayKokkos <double> &Jacobian,
          DViewCArrayKokkos <double> &JacInv,
          DViewCArrayKokkos <double> &DetJac,
+         const DViewCArrayKokkos <double> &J0Inv,
+         const DViewCArrayKokkos <double> &h0,
          DViewCArrayKokkos <double> &stress,
          DViewCArrayKokkos <double> &SigmaJacInv,
          DViewCArrayKokkos <double> &den,
@@ -325,6 +329,76 @@ void eval_vel(const DViewCArrayKokkos <double> vel,
               CArrayKokkos <double> &val,
               const int stage);
 
+void get_J0Inv(const DViewCArrayKokkos <double> &JInv,
+               DViewCArrayKokkos <double> &J0Inv,
+               const mat_pt_t &mat_pt);
+
+KOKKOS_FUNCTION
+void compute_JJ0Inv(const DViewCArrayKokkos <double> &J,
+                    const DViewCArrayKokkos <double> &J0Inv,
+                    double JJ0Inv[3][3],
+                    const int legendre_gid,
+                    const mesh_t &mesh);
+
+void add_viscosity_momentum(const mesh_t &mesh,
+                            const fe_ref_elem_t &ref_elem,
+                            const int stage,
+                            const DViewCArrayKokkos <double> &node_vel,
+                            const DViewCArrayKokkos <double> &sspd,
+                            const DViewCArrayKokkos <double> &den,
+                            const DViewCArrayKokkos <double> &JacInv,
+                            const DViewCArrayKokkos <double> &Jac,
+                            const DViewCArrayKokkos <double> &DetJac,
+                            const DViewCArrayKokkos <double> &J0Inv,
+                            const DViewCArrayKokkos <double> &h0,
+                            DViewCArrayKokkos <double> &F);
+
+void add_viscosity_energy(const mesh_t &mesh,
+                            const fe_ref_elem_t &ref_elem,
+                            const int stage,
+                            const DViewCArrayKokkos <double> &node_vel,
+                            const DViewCArrayKokkos <double> &sspd,
+                            const DViewCArrayKokkos <double> &den,
+                            const DViewCArrayKokkos <double> &JacInv,
+                            const DViewCArrayKokkos <double> &Jac,
+                            const DViewCArrayKokkos <double> &DetJac,
+                            const DViewCArrayKokkos <double> &J0Inv,
+                            const DViewCArrayKokkos <double> &h0,
+                            DViewCArrayKokkos <double> &F);
+
+KOKKOS_FUNCTION 
+void eval_grad_u(const mesh_t &mesh,
+                 const fe_ref_elem_t &ref_elem,
+                 const int elem_gid,
+                 const int legendre_lid,
+                 const DViewCArrayKokkos <double> &node_vel,
+                 const DViewCArrayKokkos <double> &JacInv,
+                 double grad_u[3][3],
+                 const int stage);
+
+KOKKOS_INLINE_FUNCTION
+void get_viscosity_coefficient(const mesh_t &mesh,
+                               const int elem_gid,
+                               const int legendre_lid,
+                               double &alpha,
+                               const DViewCArrayKokkos <double> &sspd,
+                               const DViewCArrayKokkos <double> &den,
+                               const DViewCArrayKokkos <double> &J0Inv,
+                               const DViewCArrayKokkos <double> &Jac,
+                               const double h0,
+                               const double grad_u[3][3]);
+
+void get_h0(const DViewCArrayKokkos <double> &elem_vol,
+            DViewCArrayKokkos <double> &h0,
+            const mesh_t &mesh,
+            const fe_ref_elem_t &ref_elem);
+
+void get_vol(DViewCArrayKokkos <double> &elem_vol,
+             const DViewCArrayKokkos <double> &node_coords,
+             const DViewCArrayKokkos <double> &legendre_jacobian_det,
+             const mesh_t &mesh,
+             const elem_t &elem,
+             const fe_ref_elem_t &ref_elem);
 
 KOKKOS_FUNCTION
 void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,

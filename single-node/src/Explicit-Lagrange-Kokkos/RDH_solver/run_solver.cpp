@@ -32,6 +32,8 @@ void run(const mesh_t &mesh,
          DViewCArrayKokkos <double> &Jacobian,
          DViewCArrayKokkos <double> &JacInv,
          DViewCArrayKokkos <double> &DetJac,
+         const DViewCArrayKokkos <double> &J0Inv,
+         const DViewCArrayKokkos <double> &h0,
          DViewCArrayKokkos <double> &stress,
          DViewCArrayKokkos <double> &SigmaJacInv,
          DViewCArrayKokkos <double> &den,
@@ -128,6 +130,14 @@ void run(const mesh_t &mesh,
 
             F_u.update_host();
 
+            if (viscosity_cond == true){
+                
+                add_viscosity_momentum(mesh, ref_elem, stage, node_vel, sspd, den,
+                                       JacInv, Jacobian, DetJac, J0Inv, h0, F_u);
+
+                F_u.update_host();
+            }
+
             get_momentum_residual(mesh, M_u, node_vel, F_u, PHI, dt, stage, time_int_weights);
 
             PHI.update_host();
@@ -149,6 +159,16 @@ void run(const mesh_t &mesh,
             get_energy_rhs(mesh, ref_elem, DetJac, SigmaJacInv, node_vel, stress, node_coords, F_e, S, stage, viscosity_cond, source_cond);
 
             F_e.update_host();
+
+            if (viscosity_cond == true){
+
+                add_viscosity_energy(mesh, ref_elem, stage, node_vel, sspd, den,
+                                     JacInv, Jacobian, DetJac, J0Inv, h0, F_e);
+                                     
+                F_e.update_host();
+
+            }
+            
 
             get_energy_residual(mesh, M_e, zone_sie, F_e, PSI, dt,  stage, time_int_weights);
 
@@ -202,11 +222,11 @@ void run(const mesh_t &mesh,
     
         // increment the time
 	    // time_value+=dt;
-        double min_detJ = 0.0;
-        double local_min_detJ = 1.0e+12;
-        REDUCE_MIN(gauss_gid, 0, mat_pt.num_leg_pts, local_min_detJ, {
-            local_min_detJ = local_min_detJ < DetJac(gauss_gid) ? local_min_detJ : DetJac(gauss_gid); 
-        }, min_detJ);
+        // double min_detJ = 0.0;
+        // double local_min_detJ = 1.0e+12;
+        // REDUCE_MIN(gauss_gid, 0, mat_pt.num_leg_pts, local_min_detJ, {
+        //     local_min_detJ = local_min_detJ < DetJac(gauss_gid) ? local_min_detJ : DetJac(gauss_gid); 
+        // }, min_detJ);
 
             
         //     double lcl_dt_vol = 1.0e+12;
@@ -228,22 +248,22 @@ void run(const mesh_t &mesh,
         //     cycle -= 1;
         //         printf("dt_vol decreased too much; restarting step. \n");
         //     }
-        if (min_detJ < 0.0){
-            // repeat step and decrease dt
-            time_value = time_value;	
-            printf("min detJ < 0 ; restarting step. \n");
-            cycle -= 1;
-            dt *= 0.85;
-            // make dt be exact for final time
-            dt = fmin(dt, time_final-time_value);
+        // if (min_detJ < 0.0){
+        //     // repeat step and decrease dt
+        //     time_value = time_value;	
+        //     printf("min detJ < 0 ; restarting step. \n");
+        //     cycle -= 1;
+        //     dt *= 0.85;
+        //     // make dt be exact for final time
+        //     dt = fmin(dt, time_final-time_value);
 
-            if (dt < dt_min){
-                printf("time step crashed : dt = %10.16lf \n", dt);
-            }
-        }
-        else{
+        //     if (dt < dt_min){
+        //         printf("time step crashed : dt = %10.16lf \n", dt);
+        //     }
+        // }
+        // else{
             time_value += dt;
-        }
+        // }
         
         size_t write = 0;
         if ((cycle+1)%graphics_cyc_ival == 0 && cycle>0){

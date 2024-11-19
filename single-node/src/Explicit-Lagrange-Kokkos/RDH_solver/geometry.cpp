@@ -7,6 +7,8 @@
 #include "ref_elem.h"
 #include "rdh.h"
 
+#include <cmath>
+
 
 void update_position_rdh(const int stage,
                          double dt,
@@ -127,3 +129,65 @@ void get_vol(DViewCArrayKokkos <double> &elem_vol,
     return;
     
 } // end subroutine
+
+
+void get_J0Inv(const DViewCArrayKokkos <double> &JInv,
+               DViewCArrayKokkos <double> &J0Inv,
+               const mat_pt_t &mat_pt){
+    
+    FOR_ALL(gauss_gid, 0, mat_pt.num_leg_pts, {
+
+        J0Inv(gauss_gid, 0, 0) = JInv(gauss_gid, 0, 0);
+        J0Inv(gauss_gid, 0, 1) = JInv(gauss_gid, 0, 1);
+        J0Inv(gauss_gid, 0, 2) = JInv(gauss_gid, 0, 2);
+
+        J0Inv(gauss_gid, 1, 0) = JInv(gauss_gid, 1, 0);
+        J0Inv(gauss_gid, 1, 1) = JInv(gauss_gid, 1, 1);
+        J0Inv(gauss_gid, 1, 2) = JInv(gauss_gid, 1, 2);
+
+        J0Inv(gauss_gid, 2, 0) = JInv(gauss_gid, 2, 0);
+        J0Inv(gauss_gid, 2, 1) = JInv(gauss_gid, 2, 1);
+        J0Inv(gauss_gid, 2, 2) = JInv(gauss_gid, 2, 2);
+
+    }); // end FOR_ALL
+
+}// end get_J0Inv
+
+KOKKOS_FUNCTION
+void compute_JJ0Inv(const DViewCArrayKokkos <double> &J,
+                    const DViewCArrayKokkos <double> &J0Inv,
+                    double JJ0Inv[3][3],
+                    const int legendre_gid,
+                    const mesh_t &mesh){
+    
+    for (int i = 0; i < mesh.num_dims; i++){
+        for (int j = 0; j < mesh.num_dims; j++){
+            for (int k = 0; k < mesh.num_dims; k++){
+                JJ0Inv[i][j] += J(legendre_gid, k, i)*J0Inv(legendre_gid, k, j);
+            }// k
+            // printf("JJ0Inv : %f \n", JJ0Inv[i][j]);
+        }// j
+    }// i
+}// end compute_JJ0Inv
+
+void get_h0(const DViewCArrayKokkos <double> &elem_vol,
+            DViewCArrayKokkos <double> &h0,
+            const mesh_t &mesh,
+            const fe_ref_elem_t &ref_elem){
+
+    
+    FOR_ALL(elem_gid, 0, mesh.num_elems, {
+
+        for(int gauss_lid = 0; gauss_lid < ref_elem.num_gauss_leg_in_elem; gauss_lid++){
+
+            int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+
+            h0(gauss_gid) = pow( abs( elem_vol(elem_gid) ), 1.0/double(mesh.num_dims) )/(double(mesh.Pn));
+
+        }// end gauss_lid
+
+    });// end FOR_ALL
+
+
+}// end get_h0
+
