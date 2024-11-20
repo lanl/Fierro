@@ -508,6 +508,16 @@ public:
     void compute_topology_optimization_gradient_IVP(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
                                                       unsigned long cycle, real_t global_dt);
 
+    void compute_shape_optimization_adjoint_full(Teuchos::RCP<const MV> design_coordinates_distributed){} // Force depends on node coords, velocity, and sie
+
+    void compute_shape_optimization_gradient_full(Teuchos::RCP<const MV> design_coordinates_distributed, Teuchos::RCP<MV> design_gradients_distributed){}
+
+    void compute_shape_optimization_gradient_tally(Teuchos::RCP<const MV> design_coordinates_distributed, Teuchos::RCP<MV> design_gradients_distributed,
+                                                      unsigned long cycle, real_t global_dt){}
+
+    void compute_shape_optimization_gradient_IVP(Teuchos::RCP<const MV> design_coordinates_distributed, Teuchos::RCP<MV> design_gradients_distributed,
+                                                      unsigned long cycle, real_t global_dt){}
+
     void boundary_adjoint(const mesh_t& mesh,
                           const DCArrayKokkos<boundary_t>& boundary,
                           vec_array& node_adjoint,

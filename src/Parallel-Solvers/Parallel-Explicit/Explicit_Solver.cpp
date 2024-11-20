@@ -91,6 +91,7 @@
 #include "Moment_of_Inertia_Constraint.h"
 #include "Kinetic_Energy_Minimize.h"
 #include "Internal_Energy_Minimize.h"
+#include "Internal_Energy_Minimize_Shape_Opt.h"
 #include "MMA_Objective.hpp"
 #include "Area_Normals.h"
 
