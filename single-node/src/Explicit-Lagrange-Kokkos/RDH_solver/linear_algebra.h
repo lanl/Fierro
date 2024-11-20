@@ -148,37 +148,47 @@ void Swap(double &a, double &b) {
     b = tmp;
 }
 
-// Normalize a 3D vector
-KOKKOS_INLINE_FUNCTION
-void normalize(double &x, double &y, double &z) {
-    double norm = sqrt(x*x + y*y + z*z);
-    if (norm > 1e-12) {
-        x /= norm;
-        y /= norm;
-        z /= norm;
-    }
-}
 
-// Normalize a 3D vector (array version)
+// Auxiliary normalization function to normalize a 3D vector by avoiding overflow/underflow
 KOKKOS_INLINE_FUNCTION
-void normalize(double v[3]) {
-    normalize(v[0], v[1], v[2]);
-}
+void Vec_normalize3_aux(const double &x1, const double &x2, const double &x3,
+                        double &n1, double &n2, double &n3) {
+    double t, r;
 
-// Normalize a 3D vector and return the result
-KOKKOS_INLINE_FUNCTION
-void Vec_normalize3(double x, double y, double z, double &nx, double &ny, double &nz) {
-    double norm = sqrt(x*x + y*y + z*z);
-    if (norm > 1e-12) {
-        nx = x / norm;
-        ny = y / norm;
-        nz = z / norm;
+    const double m = fabs(x1);
+    if (m > 0.0) {
+        r = x2 / m;
+        t = 1.0 + r * r;
+        r = x3 / m;
+        t = sqrt(1.0 / (t + r * r));
+        n1 = copysign(t, x1);
+        t /= m;
+        n2 = x2 * t;
+        n3 = x3 * t;
     } else {
-        nx = ny = nz = 0.0;
+        n1 = n2 = n3 = 0.0;
     }
 }
 
-// Eigensystem of a 2x2 symmetric matrix
+// Main normalization function for a 3D vector
+KOKKOS_INLINE_FUNCTION
+void Vec_normalize3(const double &x1, const double &x2, const double &x3,
+                    double &n1, double &n2, double &n3) {
+    // Identify the largest component to prevent overflow
+    if (fabs(x1) >= fabs(x2) && fabs(x1) >= fabs(x3)) {
+        if (x1 != 0.0) {
+            Vec_normalize3_aux(x1, x2, x3, n1, n2, n3);
+        } else {
+            n1 = n2 = n3 = 0.0;
+        }
+    } else if (fabs(x2) >= fabs(x3)) {
+        Vec_normalize3_aux(x2, x1, x3, n2, n1, n3);
+    } else {
+        Vec_normalize3_aux(x3, x1, x2, n3, n1, n2);
+    }
+}
+
+// Compute the eigensystem of a 2x2 symmetric matrix
 KOKKOS_INLINE_FUNCTION
 void Eigensystem2S(const double &d12, double &d1, double &d2,
                    double &c, double &s) {
@@ -187,7 +197,6 @@ void Eigensystem2S(const double &d12, double &d1, double &d2,
         c = 1.0;
         s = 0.0;
     } else {
-        // "The Symmetric Eigenvalue Problem", B. N. Parlett, pp.189-190
         double t;
         const double zeta = (d2 - d1) / (2.0 * d12);
         const double azeta = fabs(zeta);
@@ -204,44 +213,35 @@ void Eigensystem2S(const double &d12, double &d1, double &d2,
     }
 }
 
-// Utility function used in KernelVector3G_aux
+
+// Compute a vector in the "near"-kernel of a 2x2 matrix
 KOKKOS_INLINE_FUNCTION
 bool KernelVector2G(const int &mode,
                     double &d1, double &d12, double &d21, double &d2) {
-    // Find a vector (z1,z2) in the "near"-kernel of the matrix
-    // |  d1  d12 |
-    // | d21   d2 |
-    // using QR factorization.
-    // The vector (z1,z2) is returned in (d1,d2). Return 'true' if the matrix
-    // is zero without setting (d1,d2).
-    // Note: in the current implementation |z1| + |z2| = 1.
-
-    // l1-norms of the columns
+    // Find a vector (z1, z2) in the "near"-kernel of the matrix
     double n1 = fabs(d1) + fabs(d21);
-    double n2_col = fabs(d2) + fabs(d12);
+    double n2 = fabs(d2) + fabs(d12);
 
-    bool swap_columns = (n2_col > n1);
+    bool swap_columns = (n2 > n1);
     double mu;
 
     if (!swap_columns) {
         if (n1 == 0.0) {
             return true;
         }
-
-        if (mode == 0) { // eliminate the larger entry in the column
+        if (mode == 0) {
             if (fabs(d1) > fabs(d21)) {
                 Swap(d1, d21);
                 Swap(d12, d2);
             }
-        } else { // eliminate the smaller entry in the column
+        } else {
             if (fabs(d1) < fabs(d21)) {
                 Swap(d1, d21);
                 Swap(d12, d2);
             }
         }
     } else {
-        // n2_col > n1, swap columns 1 and 2
-        if (mode == 0) { // eliminate the larger entry in the column
+        if (mode == 0) {
             if (fabs(d12) > fabs(d2)) {
                 Swap(d1, d2);
                 Swap(d12, d21);
@@ -249,7 +249,7 @@ bool KernelVector2G(const int &mode,
                 Swap(d1, d12);
                 Swap(d21, d2);
             }
-        } else { // eliminate the smaller entry in the column
+        } else {
             if (fabs(d12) < fabs(d2)) {
                 Swap(d1, d2);
                 Swap(d12, d21);
@@ -261,38 +261,26 @@ bool KernelVector2G(const int &mode,
     }
 
     n1 = hypot(d1, d21);
-
     if (d21 != 0.0) {
-        // v = (n1, n2)^t,  |v| = 1
-        // Q = I - 2 v v^t,  Q (d1, d21)^t = (mu, 0)^t
         mu = copysign(n1, d1);
-        double temp_n1 = -d21 * (d21 / (d1 + mu)); // temp_n1 = d1 - mu
+        double temp_n1 = -d21 * (d21 / (d1 + mu));
         d1 = mu;
-        // Normalize (temp_n1, d21) to avoid overflow/underflow
         if (fabs(temp_n1) <= fabs(d21)) {
-            // (temp_n1, d21) <-- (temp_n1 / d21, 1)
             double n1_over_d21 = temp_n1 / d21;
             mu = (2.0 / (1.0 + n1_over_d21 * n1_over_d21)) * (n1_over_d21 * d12 + d2);
-            d2 = d2 - mu;
-            d12 = d12 - mu * n1_over_d21;
+            d2 -= mu;
+            d12 -= mu * n1_over_d21;
         } else {
-            // (temp_n1, d21) <-- (1, d21 / temp_n1)
             double d21_over_n1 = d21 / temp_n1;
             mu = (2.0 / (1.0 + d21_over_n1 * d21_over_n1)) * (d12 + d21_over_n1 * d2);
-            d2 = d2 - mu * d21_over_n1;
-            d12 = d12 - mu;
+            d2 -= mu * d21_over_n1;
+            d12 -= mu;
         }
     }
 
-    // Solve:
-    // | d1 d12 | | z1 | = | 0 |
-    // |  0  d2 | | z2 |   | 0 |
-
-    // Evaluate z2 at t = t1
     mu = -d12 / d1;
-    double n2 = 1.0 / (1.0 + fabs(mu));
+    n2 = 1.0 / (1.0 + fabs(mu));
 
-    // Check if |d1| <= |d2| * z2
     if (fabs(d1) <= n2 * fabs(d2)) {
         d2 = 0.0;
         d1 = 1.0;
@@ -305,10 +293,10 @@ bool KernelVector2G(const int &mode,
         Swap(d1, d2);
     }
 
-    return false; // Indicates the matrix is not zero
+    return false;
 }
 
-// Implementation of KernelVector3G_aux
+// Auxiliary function to compute the kernel vector for a 3x3 matrix
 KOKKOS_INLINE_FUNCTION
 int KernelVector3G_aux(const int &mode,
                        double &d1, double &d2, double &d3,
@@ -320,49 +308,35 @@ int KernelVector3G_aux(const int &mode,
     s1 = hypot(c21, c31);
     n1 = hypot(d1, s1);
 
-    if (s1 != 0.) {
-        // v = (n1, c21, c31)
+    if (s1 != 0.0) {
         mu = copysign(n1, d1);
-        n1 = -s1*(s1/(d1 + mu)); // = d1 - mu
+        n1 = -s1 * (s1 / (d1 + mu));
         d1 = mu;
 
-        // Normalize (n1, c21, c31) to avoid overflow/underflow
-        double max_n = std::max({fabs(n1), fabs(c21), fabs(c31)});
-        s1 = n1 / max_n;
-        s2 = c21 / max_n;
-        s3 = c31 / max_n;
-        mu = 2.0 / (s1*s1 + s2*s2 + s3*s3);
+        double max_n = fmax(fabs(n1), fmax(fabs(c21), fabs(c31)));
+        double s_norm = (max_n != 0.0) ? max_n : 1.0;
+        s2 = c21 / s_norm;
+        s3 = c31 / s_norm;
+        mu = 2.0 / (1.0 + s2 * s2 + s3 * s3);
 
-        // Compute n2 and n3
-        n2  = mu * (c12 + s2*d2  + s3*c32);
-        n3  = mu * (c13 + s2*c23 + s3*d3);
+        n2 = mu * (c12 + s2 * d2 + s3 * c32);
+        n3 = mu * (c13 + s2 * c23 + s3 * d3);
 
-        // Update matrix entries
-        c12 = c12 -    n2;
-        d2  = d2  - s2*n2;
-        c32 = c32 - s3*n2;
-        c13 = c13 -    n3;
-        c23 = c23 - s2*n3;
-        d3  = d3  - s3*n3;
+        c12 -= n2;
+        d2 -= s2 * n2;
+        c32 -= s3 * n2;
+        c13 -= n3;
+        c23 -= s2 * n3;
+        d3 -= s3 * n3;
     }
 
-    // Solve:
-    // |  d2 c23 | | z2 | = | 0 |
-    // | c32  d3 | | z3 |   | 0 |
-    if (KernelVector2G(mode, d2, c23, c32, d3) == 2) {
-        // Have two solutions:
-        // two vectors in the kernel are P (-c12/d1, 1, 0)^t and
-        // P (-c13/d1, 0, 1)^t where P is the permutation matrix swapping
-        // entries 1 and col.
-
-        // A vector orthogonal to both these vectors is P (1, c12/d1, c13/d1)^t
-        d2 = c12/d1;
-        d3 = c13/d1;
-        d1 = 1.;
+    if (KernelVector2G(mode, d2, c23, c32, d3)) {
+        d2 = c12 / d1;
+        d3 = c13 / d1;
+        d1 = 1.0;
         kdim = 2;
     } else {
-        // solve for z1:
-        d1 = -(c12*d2 + c13*d3)/d1;
+        d1 = -(c12 * d2 + c13 * d3) / d1;
         kdim = 1;
     }
 
@@ -371,29 +345,19 @@ int KernelVector3G_aux(const int &mode,
     return kdim;
 }
 
-// Implement KernelVector3S
+// Compute a vector in the "near"-kernel of a symmetric 3x3 matrix
 KOKKOS_INLINE_FUNCTION
 int KernelVector3S(const int &mode, const double &d12,
                    const double &d13, const double &d23,
                    double &d1, double &d2, double &d3) {
-    // Find a unit vector (z1,z2,z3) in the "near"-kernel of the matrix
-    // |  d1  d12  d13 |
-    // | d12   d2  d23 |
-    // | d13  d23   d3 |
-    // using QR factorization.
-    // The vector (z1,z2,z3) is returned in (d1,d2,d3).
-    // Returns the dimension of the kernel, kdim, but never zero.
-
     double c12 = d12, c13 = d13, c23 = d23;
     double c21, c31, c32;
     int col, row;
 
-    // l1-norms of the columns:
     double n1 = fabs(d1) + fabs(c12) + fabs(c13);
     double n2 = fabs(d2) + fabs(c12) + fabs(c23);
     double n3 = fabs(d3) + fabs(c13) + fabs(c23);
 
-    // Column pivoting: choose the column with the largest norm
     if (n1 >= n3) {
         col = (n1 >= n2) ? 1 : 2;
     } else {
@@ -403,26 +367,25 @@ int KernelVector3S(const int &mode, const double &d12,
     switch (col) {
         case 1:
             if (n1 == 0.0) {
-                return 3; // Zero matrix
+                return 3;
             }
             break;
         case 2:
             if (n2 == 0.0) {
-                return 3; // Zero matrix
+                return 3;
             }
             Swap(c13, c23);
             Swap(d1, d2);
             break;
         case 3:
             if (n3 == 0.0) {
-                return 3; // Zero matrix
+                return 3;
             }
             Swap(c12, c23);
             Swap(d1, d3);
             break;
     }
 
-    // Row pivoting depending on 'mode'
     if (mode == 0) {
         if (fabs(d1) <= fabs(c13)) {
             row = (fabs(d1) <= fabs(c12)) ? 1 : 2;
@@ -526,7 +489,7 @@ int Reduce3S(const int &mode,
         v1 = -s * (s / (z1 + g)); // v1 = z1 - g
 
         // Normalize (v1, z2, z3) by max-norm to avoid overflow/underflow
-        double max_v = std::max({fabs(v1), fabs(z2), fabs(z3)});
+        double max_v = fmax(fabs(v1), fmax(fabs(z2), fabs(z3)));
         v1 /= max_v;
         v2 = z2 / max_v;
         v3 = z3 / max_v;
@@ -548,10 +511,6 @@ int Reduce3S(const int &mode,
         d2 -= 2.0 * v2 * w2;
         d23 -= v2 * w3 + v3 * w2;
         d3 -= 2.0 * v3 * w3;
-
-        // Off-diagonal entries should be zero (for debugging)
-        // d12 = d12 - v1 * w2 - v2 * w1; // Should be zero
-        // d13 = d13 - v1 * w3 - v3 * w1; // Should be zero
     }
 
     switch (k) {
@@ -565,175 +524,160 @@ int Reduce3S(const int &mode,
 
     return k;
 }
+// Utility function used to get the scaling factor for normalizing matrix entries
+KOKKOS_INLINE_FUNCTION
+void GetScalingFactor(const double &d_max, double &mult) {
+    int d_exp;
 
-// Main function to compute eigenvalues and eigenvectors
+    if (d_max > 0.0) {
+        mult = frexp(d_max, &d_exp);
+        
+        // Handle edge case where d_max has the maximum possible exponent
+        if (d_exp == std::numeric_limits<double>::max_exponent) {
+            mult *= std::numeric_limits<double>::radix;
+        }
+        mult = d_max / mult;
+    } else {
+        mult = 1.0;
+    }
+
+    // `mult = 2^d_exp` ensures that `d_max / mult` is in the interval [0.5, 1).
+}
+
+
+// Gram-Schmidt Orthogonalization to maintain orthogonality of eigenvectors (columns)
+KOKKOS_INLINE_FUNCTION
+void GramSchmidtOrthogonalize(double vecs[3][3]) {
+    for(int i = 1; i < 3; ++i) {
+        for(int j = 0; j < i; ++j) {
+            double dot = vecs[0][j] * vecs[0][i] +
+                         vecs[1][j] * vecs[1][i] +
+                         vecs[2][j] * vecs[2][i];
+            vecs[0][i] -= dot * vecs[0][j];
+            vecs[1][i] -= dot * vecs[1][j];
+            vecs[2][i] -= dot * vecs[2][j];
+        }
+        // Normalize the column after orthogonalizing
+        double norm = sqrt(vecs[0][i] * vecs[0][i] +
+                           vecs[1][i] * vecs[1][i] +
+                           vecs[2][i] * vecs[2][i]);
+        if(norm > 1e-12){
+            vecs[0][i] /= norm;
+            vecs[1][i] /= norm;
+            vecs[2][i] /= norm;
+        }
+    }
+}
+
+// Jacobi Rotation for eigenvalue computation
+KOKKOS_INLINE_FUNCTION
+void ApplyJacobiRotation(double A[3][3], double V[3][3], int p, int q) {
+    if (A[p][q] != 0.0) {
+        double tau = (A[q][q] - A[p][p]) / (2.0 * A[p][q]);
+        double t = (tau > 0.0 ? 1.0 : -1.0) / (fabs(tau) + sqrt(1.0 + tau * tau));
+        double c = 1.0 / sqrt(1.0 + t * t);
+        double s = t * c;
+
+        double app = A[p][p];
+        double aqq = A[q][q];
+        double apq = A[p][q];
+
+        // Update the matrix A with rotation
+        A[p][p] = c * c * app + s * s * aqq - 2.0 * s * c * apq;
+        A[q][q] = s * s * app + c * c * aqq + 2.0 * s * c * apq;
+        A[p][q] = A[q][p] = 0.0;
+
+        // Update the other elements
+        for (int r = 0; r < 3; ++r) {
+            if (r != p && r != q) {
+                double arp = A[r][p];
+                double arq = A[r][q];
+                A[r][p] = A[p][r] = c * arp - s * arq;
+                A[r][q] = A[q][r] = c * arq + s * arp;
+            }
+        }
+
+        // Update the eigenvector matrix V with rotation
+        for (int r = 0; r < 3; ++r) {
+            double vrp = V[r][p];
+            double vrq = V[r][q];
+            V[r][p] = c * vrp - s * vrq;
+            V[r][q] = c * vrq + s * vrp;
+        }
+    }
+}
+
+// Jacobi Method for Eigenvalue and Eigenvector Computation
 KOKKOS_INLINE_FUNCTION
 void get_spectrum(const double data[3][3], double eigenvalues[3], double eigenvectors[3][3]) {
-    // Initialize eigenvalues and eigenvectors to zero
-    for (int i = 0; i < 3; ++i) {
-        eigenvalues[i] = 0.0;
-        for (int j = 0; j < 3; ++j) {
-            eigenvectors[i][j] = 0.0;
-        }
-    }
+    // Initialize the matrix A as a copy of data
+    double A[3][3] = {
+        {data[0][0], data[0][1], data[0][2]},
+        {data[1][0], data[1][1], data[1][2]},
+        {data[2][0], data[2][1], data[2][2]}
+    };
 
-    // Extract matrix elements
-    double d11 = data[0][0];
-    double d12 = data[0][1];
-    double d13 = data[0][2];
-    double d22 = data[1][1];
-    double d23 = data[1][2];
-    double d33 = data[2][2];
+    // Initialize eigenvectors as the identity matrix
+    eigenvectors[0][0] = 1.0; eigenvectors[0][1] = 0.0; eigenvectors[0][2] = 0.0;
+    eigenvectors[1][0] = 0.0; eigenvectors[1][1] = 1.0; eigenvectors[1][2] = 0.0;
+    eigenvectors[2][0] = 0.0; eigenvectors[2][1] = 0.0; eigenvectors[2][2] = 1.0;
 
-    double mult;
-    {
-        double d_max = fabs(d11);
-        if (d_max < fabs(d22)) { d_max = fabs(d22); }
-        if (d_max < fabs(d33)) { d_max = fabs(d33); }
-        if (d_max < fabs(d12)) { d_max = fabs(d12); }
-        if (d_max < fabs(d13)) { d_max = fabs(d13); }
-        if (d_max < fabs(d23)) { d_max = fabs(d23); }
+    // Jacobi method iteration parameters
+    const int MAX_ITER = 100;
+    const double EPS = 1e-10;
 
-        mult = (d_max > 0.0) ? d_max : 1.0;
-    }
+    for (int iter = 0; iter < MAX_ITER; ++iter) {
+        // Find the largest off-diagonal element in A
+        int p = 0, q = 1;
+        double max_offdiag = fabs(A[0][1]);
 
-    // Scale the matrix entries
-    d11 /= mult;  d22 /= mult;  d33 /= mult;
-    d12 /= mult;  d13 /= mult;  d23 /= mult;
-
-    double aa = (d11 + d22 + d33)/3;  // aa = tr(A)/3
-    double c1 = d11 - aa;
-    double c2 = d22 - aa;
-    double c3 = d33 - aa;
-
-    double Q = (2*(d12*d12 + d13*d13 + d23*d23) + c1*c1 + c2*c2 + c3*c3)/6;
-    double R = (c1*(d23*d23 - c2*c3)+ d12*(d12*c3 - 2*d13*d23) + d13*d13*c2)/2;
-
-    const double epsilon = 1e-12;
-
-    if (Q <= epsilon) {
-        eigenvalues[0] = eigenvalues[1] = eigenvalues[2] = aa * mult;
-        eigenvectors[0][0] = 1.0; eigenvectors[0][1] = 0.0; eigenvectors[0][2] = 0.0;
-        eigenvectors[1][0] = 0.0; eigenvectors[1][1] = 1.0; eigenvectors[1][2] = 0.0;
-        eigenvectors[2][0] = 0.0; eigenvectors[2][1] = 0.0; eigenvectors[2][2] = 1.0;
-    } else {
-        double sqrtQ = sqrt(Q);
-        double sqrtQ3 = Q*sqrtQ;
-        double r;
-        if (fabs(R) >= sqrtQ3) {
-            r = (R < 0.0) ? 2*sqrtQ : -2*sqrtQ;
-        } else {
-            R = R / sqrtQ3;
-            double theta = acos(R);
-            r = -2*sqrtQ*cos(theta/3);
-        }
-
-        aa += r;
-        c1 = d11 - aa;
-        c2 = d22 - aa;
-        c3 = d33 - aa;
-
-        const int mode = 0;
-
-        // Find a unit vector z = (z1,z2,z3) in the "near"-kernel of
-        //  |  c1  d12  d13 |
-        //  | d12   c2  d23 | = A - aa*I
-        //  | d13  d23   c3 |
-        // This vector is also an eigenvector for A corresponding to aa.
-        // The vector z overwrites (c1,c2,c3).
-        int kdim = KernelVector3S(mode, d12, d13, d23, c1, c2, c3);
-
-        if (kdim == 3) {
-            // 'aa' is a triple eigenvalue
-            eigenvalues[0] = eigenvalues[1] = eigenvalues[2] = aa * mult;
-            eigenvectors[0][0] = 1.0; eigenvectors[0][1] = 0.0; eigenvectors[0][2] = 0.0;
-            eigenvectors[1][0] = 0.0; eigenvectors[1][1] = 1.0; eigenvectors[1][2] = 0.0;
-            eigenvectors[2][0] = 0.0; eigenvectors[2][1] = 0.0; eigenvectors[2][2] = 1.0;
-            return;
-        }
-
-        // Using the eigenvector c=(c1,c2,c3) transform A into
-        //                   | d11   0   0 |
-        // A <-- Q P A P Q = |  0  d22 d23 |
-        //                   |  0  d23 d33 |
-        double v1, v2, v3, g;
-        int k = Reduce3S(mode, d11, d22, d33, d12, d13, d23, c1, c2, c3, v1, v2, v3, g);
-
-        // find the eigenvalues and eigenvectors for
-        // | d22 d23 |
-        // | d23 d33 |
-        double c, s;
-        Eigensystem2S(d23, d22, d33, c, s);
-
-        // Assign the eigenvalues
-        eigenvalues[0] = aa * mult;
-        eigenvalues[1] = d22 * mult;
-        eigenvalues[2] = d33 * mult;
-
-        // Assign eigenvectors
-        // First eigenvector is c = (c1, c2, c3)
-        normalize(c1, c2, c3);
-        eigenvectors[0][0] = c1;
-        eigenvectors[0][1] = c2;
-        eigenvectors[0][2] = c3;
-
-        // Second and third eigenvectors
-        double v[3];
-        v[0] = v1;
-        v[1] = v2;
-        v[2] = v3;
-
-        double evec2[3], evec3[3];
-        evec2[0] = -v[0]*(g*(v[1]*c - v[2]*s));
-        evec2[1] = c - v[1]*(g*(v[1]*c - v[2]*s));
-        evec2[2] = -s - v[2]*(g*(v[1]*c - v[2]*s));
-
-        evec3[0] = -v[0]*(g*(v[1]*s + v[2]*c));
-        evec3[1] = s - v[1]*(g*(v[1]*s + v[2]*c));
-        evec3[2] = c - v[2]*(g*(v[1]*s + v[2]*c));
-
-        switch (k) {
-            case 2:
-                Swap(evec2[0], evec2[1]);
-                Swap(evec3[0], evec3[1]);
-                break;
-
-            case 3:
-                Swap(evec2[0], evec2[2]);
-                Swap(evec3[0], evec3[2]);
-        }
-
-        // Normalize eigenvectors
-        normalize(evec2);
-        normalize(evec3);
-
-        // Assign eigenvectors
-        eigenvectors[1][0] = evec2[0];
-        eigenvectors[1][1] = evec2[1];
-        eigenvectors[1][2] = evec2[2];
-
-        eigenvectors[2][0] = evec3[0];
-        eigenvectors[2][1] = evec3[1];
-        eigenvectors[2][2] = evec3[2];
-
-        // Now, sort the eigenvalues and eigenvectors in ascending order
-        for (int i = 0; i < 2; ++i) {
-            int min_idx = i;
+        for (int i = 0; i < 3; ++i) {
             for (int j = i + 1; j < 3; ++j) {
-                if (eigenvalues[j] < eigenvalues[min_idx]) {
-                    min_idx = j;
+                if (fabs(A[i][j]) > max_offdiag) {
+                    max_offdiag = fabs(A[i][j]);
+                    p = i;
+                    q = j;
                 }
             }
-            if (min_idx != i) {
+        }
+
+        // If the off-diagonal elements are small enough, we can stop
+        if (max_offdiag < EPS) {
+            break;
+        }
+
+        // Apply Jacobi rotation to eliminate A[p][q]
+        ApplyJacobiRotation(A, eigenvectors, p, q);
+    }
+
+    // Extract the eigenvalues from the diagonal of A
+    for (int i = 0; i < 3; ++i) {
+        eigenvalues[i] = A[i][i];
+    }
+
+    // Sort eigenvalues and corresponding eigenvectors in ascending order
+    for (int i = 0; i < 2; ++i) {
+        for (int j = i + 1; j < 3; ++j) {
+            if (eigenvalues[i] > eigenvalues[j]) {
                 // Swap eigenvalues
-                Swap(eigenvalues[i], eigenvalues[min_idx]);
+                Swap(eigenvalues[i], eigenvalues[j]);
                 // Swap eigenvectors
                 for (int k = 0; k < 3; ++k) {
-                    Swap(eigenvectors[i][k], eigenvectors[min_idx][k]);
+                    Swap(eigenvectors[k][i], eigenvectors[k][j]);
                 }
             }
         }
     }
+
+    // Orthogonalize the eigenvectors using Gram-Schmidt to maintain accuracy
+    GramSchmidtOrthogonalize(eigenvectors);
+
+    // Normalize all eigenvectors to ensure unit length
+    for (int i = 0; i < 3; ++i) {
+        Vec_normalize3(eigenvectors[0][i], eigenvectors[1][i], eigenvectors[2][i],
+                      eigenvectors[0][i], eigenvectors[1][i], eigenvectors[2][i]);
+    }
+
 }
 
 KOKKOS_INLINE_FUNCTION

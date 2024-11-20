@@ -30,26 +30,26 @@ void get_viscosity_coefficient(const mesh_t &mesh,
 
 	get_spectrum(sym_grad_u, mu, s);
 
-	//for (int i = 0; i < 3; ++i) {
-	//    double lambda = mu[i];
-	//	  double v[3] = {s[i][0], s[i][1], s[i][2]};
-	//    double Av[3] = {0.0, 0.0, 0.0};
-	//    // Compute A * v
-	//    for (int j = 0; j < 3; ++j) {
-	//        Av[j] = sym_grad_u[j][0]*v[0] + sym_grad_u[j][1]*v[1] + sym_grad_u[j][2]*v[2];
-	//    }
-	//    // Compute lambda * v
-	//    double lambda_v[3] = {lambda*v[0], lambda*v[1], lambda*v[2]};
-	//    // Compute the difference
-	//    double diff = sqrt((Av[0]-lambda_v[0])*(Av[0]-lambda_v[0]) +
-	//                       (Av[1]-lambda_v[1])*(Av[1]-lambda_v[1]) +
-	//                       (Av[2]-lambda_v[2])*(Av[2]-lambda_v[2]));
-	//    if (diff > 1e-6) {
-	//        printf("Eigenvector validation failed for eigenvalue %.15f\n", lambda);
-	//    } else {
-	//        printf("Eigenvector validation passed for eigenvalue %.15f\n", lambda);
-	//    }
-	//}
+	for (int i = 0; i < 3; ++i) {
+	    double lambda = mu[i];
+		double v[3] = {s[0][i], s[1][i], s[2][i]};
+	    double Av[3] = {0.0, 0.0, 0.0};
+	    // Compute A * v
+	    for (int j = 0; j < 3; ++j) {
+	        Av[j] = sym_grad_u[j][0]*v[0] + sym_grad_u[j][1]*v[1] + sym_grad_u[j][2]*v[2];
+	    }
+	    // Compute lambda * v
+	    double lambda_v[3] = {lambda*v[0], lambda*v[1], lambda*v[2]};
+	    // Compute the difference
+	    double diff = sqrt((Av[0]-lambda_v[0])*(Av[0]-lambda_v[0]) +
+	                       (Av[1]-lambda_v[1])*(Av[1]-lambda_v[1]) +
+	                       (Av[2]-lambda_v[2])*(Av[2]-lambda_v[2]));
+	    if (diff > 1e-6) {
+	        printf("Eigenvector validation failed for eigenvalue %.15f\n", lambda);
+	    }// else {
+	    //    printf("Eigenvector validation passed for eigenvalue %.15f\n", lambda);
+	    //}
+	}
 
 	double compression_dir[3];
 
@@ -58,8 +58,8 @@ void get_viscosity_coefficient(const mesh_t &mesh,
     compression_dir[2] = 0.0;
 
 	compression_dir[0] = s[0][0];
-	compression_dir[1] = s[0][1];
-	compression_dir[2] = s[0][2];
+	compression_dir[1] = s[1][0];
+	compression_dir[2] = s[2][0];
 
 	double min_eig_val = 0.0;
 	min_eig_val = mu[0];
@@ -116,7 +116,7 @@ void get_viscosity_coefficient(const mesh_t &mesh,
         phi_curl = fabs(div_u/Fro_norm_grad_u);
     }
 
-    alpha = den(gauss_gid)*h*( 0.5*sspd(gauss_gid)*(1.0-coeff)*phi_curl + 2.0*h*fabs( min_eig_val ));
+    alpha = den(gauss_gid)*h*( sspd(gauss_gid));// + 2.0*h*fabs( min_eig_val ));
     //if (alpha > 0.0){
 	//
 	// printf("alpha : %f \n", alpha);
