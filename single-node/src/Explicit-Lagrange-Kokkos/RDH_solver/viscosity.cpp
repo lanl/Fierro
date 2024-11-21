@@ -68,31 +68,21 @@ void get_viscosity_coefficient(const mesh_t &mesh,
     compute_l2_norm(compression_dir, l2_s);
 
     double JJ0Inv[3][3];
-    JJ0Inv[0][0] = 0.0; 
-    JJ0Inv[0][1] = 0.0; 
-    JJ0Inv[0][2] = 0.0;
-
-    JJ0Inv[1][0] = 0.0; 
-    JJ0Inv[1][1] = 0.0; 
-    JJ0Inv[1][2] = 0.0;
-
-    JJ0Inv[2][0] = 0.0; 
-    JJ0Inv[2][1] = 0.0; 
-    JJ0Inv[2][2] = 0.0;
-
     compute_JJ0Inv(Jac, J0Inv, JJ0Inv, gauss_gid, mesh);
 
     double JJ0Invs[3];
     JJ0Invs[0] = 0; JJ0Invs[1] = 0.0; JJ0Invs[2] = 0.0;
     
-    JJ0Invs[0] = JJ0Inv[0][0]*compression_dir[0] + JJ0Inv[0][1]*compression_dir[1] + JJ0Inv[0][2]*compression_dir[2];
-    JJ0Invs[1] = JJ0Inv[1][0]*compression_dir[0] + JJ0Inv[1][1]*compression_dir[1] + JJ0Inv[1][2]*compression_dir[2];
-    JJ0Invs[2] = JJ0Inv[2][0]*compression_dir[0] + JJ0Inv[2][1]*compression_dir[1] + JJ0Inv[2][2]*compression_dir[2];
-
-    double l2_JJ0Inv_dot_s;
+    for (int i = 0; i < mesh.num_dims; i++){
+		for (int j = 0; j < mesh.num_dims; j++){
+			JJ0Invs[i] += JJ0Inv[i][j]*compression_dir[j];
+		}// j
+	}// i	
+    
+	double l2_JJ0Inv_dot_s;
     compute_l2_norm(JJ0Invs, l2_JJ0Inv_dot_s);
 
-    double h = h0(gauss_gid)*l2_JJ0Inv_dot_s/(l2_s + 1.0e-8);
+    double h = h0(gauss_gid)*l2_JJ0Inv_dot_s/(l2_s + 1.0e-06);
 
     double coeff = 0.0;
     double eps = 1.0e-12;
@@ -113,10 +103,11 @@ void get_viscosity_coefficient(const mesh_t &mesh,
     double phi_curl = 1.0;
 
     if (Fro_norm_grad_u > 0.0){
-        phi_curl = fabs(div_u/Fro_norm_grad_u);
+        phi_curl = fabs(div_u/(Fro_norm_grad_u + 1.0e-06));
     }
 
-    alpha = den(gauss_gid)*h*( sspd(gauss_gid));// + 2.0*h*fabs( min_eig_val ));
+    alpha = 0.5*den(gauss_gid)*h*sspd(gauss_gid)*(1.0-coeff)*phi_curl;
+	alpha += 2.0*h*h*den(gauss_gid)*fabs( min_eig_val );
     //if (alpha > 0.0){
 	//
 	// printf("alpha : %f \n", alpha);
@@ -124,6 +115,45 @@ void get_viscosity_coefficient(const mesh_t &mesh,
 	//}
 }
 
+void append_viscosity_to_stress(const mesh_t &mesh,
+								const fe_ref_elem_t &ref_elem,
+								DViewCArrayKokkos <double> &sigma,
+								const DViewCArrayKokkos <double> &node_vel,
+                            	const DViewCArrayKokkos <double> &sspd,
+                            	const DViewCArrayKokkos <double> &den,
+                            	const DViewCArrayKokkos <double> &JacInv,
+                            	const DViewCArrayKokkos <double> &Jac,
+                            	const DViewCArrayKokkos <double> &DetJac,
+                            	const DViewCArrayKokkos <double> &J0Inv,
+                            	const DViewCArrayKokkos <double> &h0,
+								const int stage)
+{
+	FOR_ALL(elem_gid, 0, mesh.num_elems, {
+		
+		for (int gauss_lid = 0; gauss_lid < ref_elem.num_gauss_leg_in_elem; gauss_lid++){
+			int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+ 			
+			double grad_u[3][3];
+			double sym_grad_u[3][3];
+
+            eval_grad_u(mesh, ref_elem, elem_gid, gauss_lid, gauss_gid, node_vel, JacInv, grad_u, stage);
+			symmetrize_matrix(grad_u, sym_grad_u);
+
+            double alpha = 0.0;
+                
+            get_viscosity_coefficient(mesh, gauss_gid, alpha, sspd, den, J0Inv, Jac, h0, sym_grad_u);
+
+			for (int i = 0; i < mesh.num_dims; i++){
+				for (int j = 0; j < mesh.num_dims; j++){
+					sigma(stage, gauss_gid, i, j) += alpha*sym_grad_u[i][j];
+				}
+			}
+
+
+		}// gauss_lid
+	
+	});// FOR_ALL
+}
 
 void add_viscosity_momentum(const mesh_t &mesh,
                             const fe_ref_elem_t &ref_elem,

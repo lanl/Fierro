@@ -121,7 +121,15 @@ void run(const mesh_t &mesh,
             get_stress(mesh, mat_pt, pres, stress, stage);
 
             stress.update_host();
+			
+			if (viscosity_cond == true ){
+			
+				append_viscosity_to_stress(mesh, ref_elem, stress, node_vel,
+					   					   sspd, den, JacInv, Jacobian, DetJac,
+										   J0Inv, h0, stage);
+            	stress.update_host();
 
+			}
             get_SigmaJacInv(mesh, mat_pt, stress, JacInv, SigmaJacInv, stage);
 
             SigmaJacInv.update_host();
@@ -130,13 +138,13 @@ void run(const mesh_t &mesh,
 
             F_u.update_host();
 
-            if (viscosity_cond == true){
-                
-                add_viscosity_momentum(mesh, ref_elem, stage, node_vel, sspd, den,
-                                       JacInv, Jacobian, DetJac, J0Inv, h0, F_u);
+            //if (viscosity_cond == true){
+            //    
+            //    add_viscosity_momentum(mesh, ref_elem, stage, node_vel, sspd, den,
+            //                           JacInv, Jacobian, DetJac, J0Inv, h0, F_u);
 
-                F_u.update_host();
-            }
+            //    F_u.update_host();
+            //}
 
             get_momentum_residual(mesh, M_u, node_vel, F_u, PHI, dt, stage, time_int_weights);
 
@@ -160,14 +168,14 @@ void run(const mesh_t &mesh,
 
             F_e.update_host();
 
-            if (viscosity_cond == true){
+            //if (viscosity_cond == true){
 
-                add_viscosity_energy(mesh, ref_elem, stage, node_vel, sspd, den,
-                                     JacInv, Jacobian, DetJac, J0Inv, h0, F_e);
-                                     
-                F_e.update_host();
+            //    add_viscosity_energy(mesh, ref_elem, stage, node_vel, sspd, den,
+            //                         JacInv, Jacobian, DetJac, J0Inv, h0, F_e);
+            //                         
+            //    F_e.update_host();
 
-            }
+            //}
             
 
             get_energy_residual(mesh, M_e, zone_sie, F_e, PSI, dt,  stage, time_int_weights);
@@ -222,48 +230,57 @@ void run(const mesh_t &mesh,
     
         // increment the time
 	    // time_value+=dt;
-        // double min_detJ = 0.0;
-        // double local_min_detJ = 1.0e+12;
-        // REDUCE_MIN(gauss_gid, 0, mat_pt.num_leg_pts, local_min_detJ, {
-        //     local_min_detJ = local_min_detJ < DetJac(gauss_gid) ? local_min_detJ : DetJac(gauss_gid); 
-        // }, min_detJ);
+        //double min_detJ = 0.0;
+        //double local_min_detJ = 1.0e+12;
+        //REDUCE_MIN(gauss_gid, 0, mat_pt.num_leg_pts, local_min_detJ, {
+        //    local_min_detJ = local_min_detJ < DetJac(gauss_gid) ? local_min_detJ : DetJac(gauss_gid); 
+        //}, min_detJ);
 
-            
-        //     double lcl_dt_vol = 1.0e+12;
-        //     double dt_vol = 0.0;
-        //     REDUCE_MIN(gauss_gid, 0, mat_pt.num_leg_pts, lcl_dt_vol, {
-        //         lcl_dt_vol = lcl_dt_vol > 0.1/(abs(div_vel(gauss_gid)) + fuzz) ? 0.1/(abs(div_vel(gauss_gid)) + fuzz) : lcl_dt_vol ;
-        //     }, dt_vol);
+        	 
+        //double lcl_dt_vol = 1.0e+12;
+        //double dt_vol = 0.0;
+        //REDUCE_MIN(elem_gid, 0, mesh.num_elems, lcl_dt_vol, {
+		//	for (int gauss_lid = 0; gauss_lid < ref_elem.num_gauss_leg_in_elem; gauss_lid++){
+		//		int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+		//		double grad_u[3][3];
 
-        //     double dt_vol_old = dt;
-        //     if (dt_vol < dt){
-        //         dt = dt_vol;
-        //     }
-        
-        //     // make dt be exact for final time
-        //     dt = fmin(dt, time_final-time_value);
-        // // increment the time
-        //     if (dt < 0.80*dt_vol_old){
-        //         time_value = time_value;
-        //     cycle -= 1;
-        //         printf("dt_vol decreased too much; restarting step. \n");
-        //     }
-        // if (min_detJ < 0.0){
-        //     // repeat step and decrease dt
-        //     time_value = time_value;	
-        //     printf("min detJ < 0 ; restarting step. \n");
-        //     cycle -= 1;
-        //     dt *= 0.85;
-        //     // make dt be exact for final time
-        //     dt = fmin(dt, time_final-time_value);
+        //		 eval_grad_u(mesh, ref_elem, elem_gid, gauss_lid, gauss_gid, node_vel, JacInv, grad_u, stage);
+		//		 double div_vel = grad_u[0][0] + grad_u[1][1] + grad_u[2][2];
+        //    	
+		//		 lcl_dt_vol = lcl_dt_vol > 0.1/(abs(div_vel)) + fuzz) ? 0.1/(abs(div_vel) + fuzz) : lcl_dt_vol ;
 
-        //     if (dt < dt_min){
-        //         printf("time step crashed : dt = %10.16lf \n", dt);
-        //     }
-        // }
-        // else{
-            time_value += dt;
-        // }
+		//	}
+        //}, dt_vol);
+
+        //double dt_vol_old = dt;
+        //if (dt_vol < dt){
+        //    dt = dt_vol;
+        //}
+        //
+        //// make dt be exact for final time
+        //dt = fmin(dt, time_final-time_value);
+        //// increment the time
+        //if (dt < 0.80*dt_vol_old){
+        //    time_value = time_value;
+        //cycle -= 1;
+        //    printf("dt_vol decreased too much; restarting step. \n");
+        //}
+        //if (min_detJ < 0.0){
+        //    // repeat step and decrease dt
+        //    time_value = time_value;	
+        //    printf("min detJ < 0 ; restarting step. \n");
+        //    cycle -= 1;
+        //    dt *= 0.85;
+        //    // make dt be exact for final time
+        //    dt = fmin(dt, time_final-time_value);
+
+        //    if (dt < dt_min){
+        //        printf("time step crashed : dt = %10.16lf \n", dt);
+        //    }
+        //}
+        //else{
+          time_value += dt;
+        //}
         
         size_t write = 0;
         if ((cycle+1)%graphics_cyc_ival == 0 && cycle>0){

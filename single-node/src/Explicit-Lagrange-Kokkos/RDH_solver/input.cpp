@@ -113,7 +113,7 @@ void input(CArrayKokkos <material_t> &material,
     boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---
-    test_problem = test::Sedov3D;//test::TaylorGreen;//test::Noh3D;//test::Sod3DX;//test::TriplePoint;//test::TaylorAnvil;//test::box;//
+    test_problem = test::Sedov3D;//test::Noh3D;//test::TaylorGreen;//test::Sod3DX;//test::TriplePoint;//test::TaylorAnvil;//test::box;//
     
     ///////////////////////////////////////////////////////
     // ---- fill instructions and intial conditions ---- //

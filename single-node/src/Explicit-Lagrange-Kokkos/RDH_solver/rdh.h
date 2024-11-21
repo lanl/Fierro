@@ -187,6 +187,19 @@ void get_stress(const mesh_t &mesh,
                 DViewCArrayKokkos <double> &sigma,
                 const int stage);
 
+void append_viscosity_to_stress(const mesh_t &mesh,
+								const fe_ref_elem_t &ref_elem,
+								DViewCArrayKokkos <double> &sigma,
+								const DViewCArrayKokkos <double> &node_vel,
+                            	const DViewCArrayKokkos <double> &sspd,
+                            	const DViewCArrayKokkos <double> &den,
+                            	const DViewCArrayKokkos <double> &JacInv,
+                            	const DViewCArrayKokkos <double> &Jac,
+                            	const DViewCArrayKokkos <double> &DetJac,
+                            	const DViewCArrayKokkos <double> &J0Inv,
+                            	const DViewCArrayKokkos <double> &h0,
+								const int stage);
+
 void get_SigmaJacInv(const mesh_t &mesh,
                      const mat_pt_t &mat_pt,
                      const DViewCArrayKokkos <double> &sigma,
