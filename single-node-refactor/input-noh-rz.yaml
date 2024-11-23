@@ -62,6 +62,7 @@ materials:
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         # strength_model: none
+        dissipation_model: MARS_rz
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex

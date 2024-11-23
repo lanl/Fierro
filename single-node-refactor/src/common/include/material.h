@@ -403,7 +403,6 @@ static std::vector<std::string> str_material_inps
     "erosion_model",
     "erode_tension_val",
     "erode_density_val",
-    "void_mat_id",
 };
 
 // ---------------------------------------------------------------

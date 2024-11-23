@@ -56,6 +56,7 @@ materials:
         id: 0
         eos_model_type: decoupled
         eos_model: gamma_law_gas
+        dissipation_model: MARS
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
