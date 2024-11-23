@@ -98,6 +98,8 @@ namespace model
         noDissipation = 0,  ///<  no dissipation
         MARS = 1,           ///<  MARS dissipation
         MARSRZ = 2,         ///<  MARS in RZ
+        directionalMARS = 3,    ///<  Directional MARS
+        directionalMARSRZ = 4   ///<  Directional MARS in RZ
     };
 
 
@@ -121,7 +123,7 @@ namespace artificialViscosity
         q2 = 2,
         q2ex = 3,
         phiFloor = 4,
-        useShockDirection = 5,
+        phiCurlFloor = 5,
     };
 } // end artifiical Viscosity name space
 
@@ -172,6 +174,8 @@ static std::map<std::string, model::DissipationModels> dissipation_model_map
     { "no_dissipation", model::noDissipation },
     { "MARS", model::MARS },
     { "MARS_rz", model::MARSRZ },
+    { "directional_MARS", model::directionalMARS },
+    { "directional_MARS_rz", model::directionalMARSRZ },
 };
 
 namespace model_init
@@ -399,6 +403,7 @@ static std::vector<std::string> str_material_inps
     "strength_model_type",
     "eos_global_vars",
     "strength_global_vars",
+    "dissipation_model",
     "dissipation_global_vars",
     "erosion_model",
     "erode_tension_val",

@@ -1990,6 +1990,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                                 Materials.MaterialFunctions(mat_id).calc_dissipation = &MARSDissipationModel::calc_dissipation;
                             });
                             break;
+                        //
                         case model::MARSRZ:
                             
                             if(num_dims == 3){
@@ -2003,6 +2004,34 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                                 Materials.MaterialFunctions(mat_id).calc_dissipation = &MARSRZDissipationModel::calc_dissipation;
                             });
                             break;
+                        //
+                        case model::directionalMARS:
+                            
+                            if(num_dims == 2){
+                                std::cout << "ERROR: specified 2D but this is a 3D MARS model: " << dissipation_model << std::endl;
+                                throw std::runtime_error("**** Dissipation model is not valid in 2D ****");
+                            }
+
+                            Materials.MaterialEnums.host(mat_id).DissipationModels = model::directionalMARS;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).DissipationModels = model::directionalMARS;
+                                Materials.MaterialFunctions(mat_id).calc_dissipation = &MARSDissipationModel::calc_dissipation;
+                            });
+                            break;
+                        //
+                        case model::directionalMARSRZ:
+                            
+                            if(num_dims == 3){
+                                std::cout << "ERROR: specified 3D but this is a 2D-RZ MARS model: " << dissipation_model << std::endl;
+                                throw std::runtime_error("**** Dissipation model is not valid in 3D ****");
+                            }
+
+                            Materials.MaterialEnums.host(mat_id).DissipationModels = model::directionalMARSRZ;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).DissipationModels = model::directionalMARSRZ;
+                                Materials.MaterialFunctions(mat_id).calc_dissipation = &MARSRZDissipationModel::calc_dissipation;
+                            });
+                            break;                        
                         default:
                             std::cout << "ERROR: invalid dissipation input: " << dissipation_model << std::endl;
                             throw std::runtime_error("**** Dissipation model Not Understood ****");
