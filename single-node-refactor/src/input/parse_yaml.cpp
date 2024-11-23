@@ -89,6 +89,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "basic_erosion.h"
 #include "no_erosion.h"
 
+// dissipation files
+#include "mars.h"
+#include "no_dissipation.h"
+
 // fracture files
 #include "user_defined_fracture.h"
 
@@ -1964,6 +1968,60 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 } // end if
 
             } // erosion model variables
+            //extract dissipation (artificial viscosity) model
+            else if (a_word.compare("dissipation_model") == 0) {
+                std::string dissipation_model = root["materials"][mat_id]["material"]["dissipation_model"].As<std::string>();
+
+                // set the erosion model
+                if (dissipation_model_map.find(dissipation_model) != dissipation_model_map.end()) {
+
+                    // dissipation_model_map[dissipation_model] returns enum value, e.g., model::dissipation
+                    switch(dissipation_model_map[dissipation_model]){
+                        case model::MARS:
+                            
+                            if(num_dims == 2){
+                                std::cout << "ERROR: specified 2D but this is a 3D MARS model: " << dissipation_model << std::endl;
+                                throw std::runtime_error("**** Dissipation model is not valid in 2D ****");
+                            }
+
+                            Materials.MaterialEnums.host(mat_id).DissipationModels = model::MARS;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).DissipationModels = model::MARS;
+                                Materials.MaterialFunctions(mat_id).calc_dissipation = &MARSDissipationModel::calc_dissipation;
+                            });
+                            break;
+                        case model::MARSRZ:
+                            
+                            if(num_dims == 3){
+                                std::cout << "ERROR: specified 3D but this is a 2D-RZ MARS model: " << dissipation_model << std::endl;
+                                throw std::runtime_error("**** Dissipation model is not valid in 3D ****");
+                            }
+
+                            Materials.MaterialEnums.host(mat_id).DissipationModels = model::MARSRZ;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).DissipationModels = model::MARSRZ;
+                                Materials.MaterialFunctions(mat_id).calc_dissipation = &MARSRZDissipationModel::calc_dissipation;
+                            });
+                            break;
+                        default:
+                            std::cout << "ERROR: invalid dissipation input: " << dissipation_model << std::endl;
+                            throw std::runtime_error("**** Dissipation model Not Understood ****");
+                            break;
+                    } // end switch
+
+                    if (VERBOSE) {
+                        std::cout << "\tdissipation = " << dissipation_model << std::endl;
+                    }
+
+                } 
+                else{
+                    std::cout << "ERROR: invalid disspation type input: " << dissipation_model << std::endl;
+                    throw std::runtime_error("**** Dissipation model Not Understood ****");
+                    break;
+                } // end if
+
+            } // erosion model variables
+            //
             else if (a_word.compare("erode_tension_val") == 0) {
                 double erode_tension_val = root["materials"][mat_id]["material"]["erode_tension_val"].As<double>();
                 if (VERBOSE) {
@@ -2118,6 +2176,20 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
         for (size_t var_lid=0; var_lid<Materials.num_dissipation_global_vars(mat_id); var_lid++){
             Materials.dissipation_global_vars(mat_id, var_lid) = tempGlobalDissipationVars(mat_id, var_lid);
         } // end for strength var_lid
+
+    }); // end for loop over materials
+
+    // set defaults, which is are no models
+    FOR_ALL(mat_id, 0, num_materials, {
+
+        // default dissipation model is no dissipation
+        if (Materials.MaterialEnums.host(mat_id).DissipationModels == model::noDissipation){
+
+            // set the fcn pointer
+            RUN({
+                Materials.MaterialFunctions(mat_id).calc_dissipation = &NoDissipationModel::calc_dissipation;
+            });
+        } // end if
 
     }); // end for loop over materials
 

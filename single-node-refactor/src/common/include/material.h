@@ -85,13 +85,22 @@ namespace model
         ductileFailure = 2, ///< Material grows voids that lead to complete failure
     };
 
-    // erosion model t
+    // erosion model
     enum ErosionModels
     {
         noErosion = 1,      ///<  no element erosion
         basicErosion = 2,   ///<  basic element erosion
     };
-    
+
+    // erosion model
+    enum DissipationModels
+    {
+        noDissipation = 0,  ///<  no dissipation
+        MARS = 1,           ///<  MARS dissipation
+        MARSRZ = 2,         ///<  MARS in RZ
+    };
+
+
     // Model run locations
     enum RunLocation
     {
@@ -158,6 +167,13 @@ static std::map<std::string, model::ErosionModels> erosion_model_map
     { "basic", model::basicErosion },
 };
 
+static std::map<std::string, model::DissipationModels> dissipation_model_map
+{
+    { "no_dissipation", model::noDissipation },
+    { "MARS", model::MARS },
+    { "MARS_rz", model::MARSRZ },
+};
+
 namespace model_init
 {
 // strength model setup
@@ -208,6 +224,10 @@ struct MaterialEnums_t
 
     // Erosion model type: none or basis
     model::ErosionModels ErosionModels = model::noErosion;
+
+    // dissipation model
+    model::DissipationModels DissipationModels = model::noDissipation;
+
 }; // end boundary condition enums
 
 /////////////////////////////////////////////////////////////////////////////
@@ -300,6 +320,28 @@ struct MaterialFunctions_t
         const double erode_tension_val,
         const double erode_density_val,
         const size_t mat_point_lid) = NULL;
+
+
+    // -- Dissipation --
+    void (*calc_dissipation) (
+        const ViewCArrayKokkos<size_t> elem_node_gids,
+        const RaggedRightArrayKokkos <double>& dissipation_global_vars,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
+        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& MaterialPoints_den,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const ViewCArrayKokkos<double>& disp_corner_forces,
+        const ViewCArrayKokkos<double>& area_normal,
+        const RaggedRightArrayKokkos<size_t>& elems_in_elem,
+        const CArrayKokkos<size_t>& num_elems_in_elem,
+        const double vol,
+        const double fuzz,
+        const double small,
+        const double elem_gid,
+        const size_t mat_point_lid,
+        const size_t mat_id) = NULL;
+        // in 2D, in place of vol, the elem facial area is passed
 
 }; // end material_t
 
