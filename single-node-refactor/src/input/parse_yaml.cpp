@@ -2208,16 +2208,15 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
     }); // end for loop over materials
 
-    // set defaults, which is are no models
+    // set defaults, which are no models
     FOR_ALL(mat_id, 0, num_materials, {
 
         // default dissipation model is no dissipation
-        if (Materials.MaterialEnums.host(mat_id).DissipationModels == model::noDissipation){
+        if (Materials.MaterialEnums(mat_id).DissipationModels == model::noDissipation){
 
             // set the fcn pointer
-            RUN({
-                Materials.MaterialFunctions(mat_id).calc_dissipation = &NoDissipationModel::calc_dissipation;
-            });
+            Materials.MaterialFunctions(mat_id).calc_dissipation = &NoDissipationModel::calc_dissipation;
+
         } // end if
 
     }); // end for loop over materials
