@@ -1253,11 +1253,15 @@ def Bulk_Forming(self):
         # Get all necessary information from the input file and do stuff with it right away. The reason it has to be done right away is due to the fact that you might have multiple phases.
         input_filename, _ = QFileDialog.getOpenFileName(filter="Input File (*.txt)",)
         bc_flag = 0
+        other_flag = 0
+        settings_flag = 0
         bc_start = 1000000000
+        other_start = 1000000000
+        settings_start = 1000000000
         iudot = []
         udot = []
         iscau = []
-        sauchy = []
+        scauchy = []
         with open(input_filename, 'r') as file:
             iline = 1;
             phase_names = 1;
@@ -1269,9 +1273,9 @@ def Bulk_Forming(self):
                 if iline == 2:
                     # Get the voxel numbers
                     dims = line.strip().split()[:3]
-                    dimx = float(dims[0])
-                    dimy = float(dims[1])
-                    dimz = float(dims[2])
+                    dimx = int(dims[0])
+                    dimy = int(dims[1])
+                    dimz = int(dims[2])
                 if iline == 4:
                     # Get the RVE dimensions
                     delt = line.strip().split()[:3]
@@ -1340,9 +1344,10 @@ def Bulk_Forming(self):
                     else:
                         warning_message(f"ERROR: couldn't find the elastic file path on line {phase_start+1}.")
                         return
-                if "* boundary conditions" in line:
+                if "boundary conditions" in line:
                     bc_flag = 1
                     bc_start = iline
+                # Velocity gradient BC information
                 if iline > bc_start and iline < bc_start + 4:
                     iudot_ = line.strip().split()[:3]
                     iudot_ = [float(iudot_[0]), float(iudot_[1]), float(iudot_[2])]
@@ -1351,26 +1356,73 @@ def Bulk_Forming(self):
                     udot_ = line.strip().split()[:3]
                     udot_ = [float(udot_[0]), float(udot_[1]), float(udot_[2])]
                     udot.append(udot_)
-#                if iline > bc_start + 8 and iline < bc_start + 12:
-#                    iscau_ = line.strip().split()[:3]
-#                    iscau_ = [float(iscau_[0]), float(iscau_[1]), float(iscau_[2])]
-#                    iscau.append(iscau_)
-#                if iline > bc_start + 12 and iline < bc_start + 16:
-#                    sauchy_ = line.strip().split()[:3]
-#                    sauchy_ = [float(sauchy_[0]), float(sauchy_[1]), float(sauchy_[2])]
-#                    sauchy.append(sauchy_)
+                # Cauchy stress BC information
+                if iline == bc_start + 9:
+                    iscau_ = line.strip().split()[:3]
+                    iscau_ = [float(iscau_[0]), float(iscau_[1]), float(iscau_[2])]
+                    iscau.append(iscau_)
+                if iline == bc_start + 10:
+                    iscau_ = line.strip().split()[:2]
+                    iscau_ = [float(iscau_[0]), float(iscau_[1])]
+                    iscau.append(iscau_)
+                if iline == bc_start + 11:
+                    iscau_ = line.strip().split()[:1]
+                    iscau_ = [float(iscau_[0])]
+                    iscau.append(iscau_)
+                if iline == bc_start + 13:
+                    scauchy_ = line.strip().split()[:3]
+                    scauchy_ = [float(scauchy_[0]), float(scauchy_[1]), float(scauchy_[2])]
+                    scauchy.append(scauchy_)
+                if iline == bc_start + 14:
+                    scauchy_ = line.strip().split()[:2]
+                    scauchy_ = [float(scauchy_[0]), float(scauchy_[1])]
+                    scauchy.append(scauchy_)
+                if iline == bc_start + 15:
+                    scauchy_ = line.strip().split()[:1]
+                    scauchy_ = [float(scauchy_[0])]
+                    scauchy.append(scauchy_)
+                # Get solver information
+                if "other" in line:
+                    other_flag = 1
+                    other_start = iline
+                if iline == other_start + 1:
+                    eqincr = line.strip().split()[:1]
+                    self.INBFdt.setText(eqincr[0])
+                if "INFORMATION ABOUT RUN CONDITIONS" in line:
+                    settings_flag = 1
+                    settings_start = iline
+                if iline == settings_start + 1:
+                    nsteps = line.strip().split()[:1]
+                    self.INBFloadsteps.setText(nsteps[0])
+                if iline == settings_start + 9:
+                    iwstep = line.strip().split()[:2]
+                    self.INBFoutputsteps.setText(iwstep[1])
+                if iline == settings_start + 2:
+                    errevp = line.strip().split()[:1]
+                    self.INBFerrortol.setText(errevp[0])
+                if iline == settings_start + 3:
+                    itmax = line.strip().split()[:1]
+                    self.INBFmaxiter.setText(itmax[0])
                 iline += 1
-        print(iscau)
-        print(sauchy)
         if bc_flag == 0:
             warning_message("ERROR: couldn't locate line \n'* boundary conditions'\n indicating the line before the start of the boundary conditions within the input file.")
+        elif other_flag == 0:
+            warning_message("ERROR: couldn't locate line \n'* other'\n indicating the line before the start of the step information within the input file")
+        elif settings_flag == 0:
+            warning_message("ERROR: couldn't locate line \n'* INFORMATION ABOUT RUN CONDITIONS'\n indicating the line before the starts of the run condition information within the input file.")
         else:
+            # Fill out velocity gradient BCs
             for i in range(3):
                 for j in range(3):
                     if iudot[i][j] == 1:
                         self.TVgrad.setItem(i,j,QTableWidgetItem(str(udot[i][j])))
                     else:
                         self.TVgradi.setItem(i,j,QTableWidgetItem(str(udot[i][j])))
+            # Fill out Cauchy stress BCs
+            for i in range(3):
+                for j in range(3-i):
+                    if iscau[i][j] == 1:
+                        self.TCstress.setItem(i,j+i,QTableWidgetItem(str(scauchy[i][j])))
     self.BLegacyEVPFFT.clicked.connect(legacyEVPFFT)
         
     
