@@ -96,45 +96,64 @@ struct Simulation_Parameters
     }
 
     void derive_objective_module() {
-        switch (optimization_options.optimization_objective) {
-        case OPTIMIZATION_OBJECTIVE::minimize_compliance:
-            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
-            optimization_options.normalized_objective = true;
-            break;
-        case OPTIMIZATION_OBJECTIVE::minimize_thermal_resistance:
-            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
-            optimization_options.normalized_objective = true;
-            break;
-        case OPTIMIZATION_OBJECTIVE::minimize_kinetic_energy:
-            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
-            break;
-        case OPTIMIZATION_OBJECTIVE::maximize_compliance:
-            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
-            optimization_options.normalized_objective = true;
-            optimization_options.maximize_flag = true;
-            break;
-        case OPTIMIZATION_OBJECTIVE::maximize_thermal_resistance:
-            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
-            optimization_options.normalized_objective = true;
-            optimization_options.maximize_flag = true;
-            break;
-        case OPTIMIZATION_OBJECTIVE::maximize_kinetic_energy:
-            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
-            optimization_options.maximize_flag = true;
-            break;
-        case OPTIMIZATION_OBJECTIVE::minimize_internal_energy:
-            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
-            break;
-        case OPTIMIZATION_OBJECTIVE::maximize_internal_energy:
-            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
-            optimization_options.maximize_flag = true;
-            break;
-        case OPTIMIZATION_OBJECTIVE::multi_objective:
-            add_optimization_module(OPTIMIZATION_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});
-            derive_multi_objectives();
-            break;
-        default:
-            throw Yaml::ConfigurationException("Unsupported optimization objective " + to_string(optimization_options.optimization_objective));
+        if(topology_optimization_on){
+            switch (optimization_options.optimization_objective) {
+            case OPTIMIZATION_OBJECTIVE::minimize_compliance:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                optimization_options.normalized_objective = true;
+                break;
+            case OPTIMIZATION_OBJECTIVE::minimize_thermal_resistance:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                optimization_options.normalized_objective = true;
+                break;
+            case OPTIMIZATION_OBJECTIVE::minimize_kinetic_energy:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                break;
+            case OPTIMIZATION_OBJECTIVE::maximize_compliance:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                optimization_options.normalized_objective = true;
+                optimization_options.maximize_flag = true;
+                break;
+            case OPTIMIZATION_OBJECTIVE::maximize_thermal_resistance:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Heat_Capacity_Potential_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                optimization_options.normalized_objective = true;
+                optimization_options.maximize_flag = true;
+                break;
+            case OPTIMIZATION_OBJECTIVE::maximize_kinetic_energy:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                optimization_options.maximize_flag = true;
+                break;
+            case OPTIMIZATION_OBJECTIVE::minimize_internal_energy:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                break;
+            case OPTIMIZATION_OBJECTIVE::maximize_internal_energy:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_TopOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                optimization_options.maximize_flag = true;
+                break;
+            case OPTIMIZATION_OBJECTIVE::multi_objective:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});
+                derive_multi_objectives();
+                break;
+            default:
+                throw Yaml::ConfigurationException("Unsupported optimization objective " + to_string(optimization_options.optimization_objective));
+            }
+        }
+        else if(shape_optimization_on){
+            switch (optimization_options.optimization_objective) {
+            case OPTIMIZATION_OBJECTIVE::minimize_internal_energy:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_ShapeOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                break;
+            case OPTIMIZATION_OBJECTIVE::maximize_internal_energy:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_ShapeOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                optimization_options.maximize_flag = true;
+                break;
+            case OPTIMIZATION_OBJECTIVE::multi_objective:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});
+                derive_multi_objectives();
+                break;
+            default:
+                throw Yaml::ConfigurationException("Unsupported optimization objective " + to_string(optimization_options.optimization_objective));
+            }
         }
     }
     void derive_multi_objectives() {
@@ -168,38 +187,60 @@ struct Simulation_Parameters
             default:
                 throw Yaml::ConfigurationException("Unsupported relation " + to_string(constraint.relation));
             }
-
-            switch (constraint.type) {
-            case CONSTRAINT_TYPE::mass:
-                add_optimization_module(
-                    OPTIMIZATION_MODULE_TYPE::Mass_Constraint_TopOpt, 
-                    f_type, 
-                    {constraint.value}
-                );
-                break;
-            case CONSTRAINT_TYPE::moment_of_inertia:
-                add_optimization_module(
-                    OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt, 
-                    f_type, 
-                    {constraint.value, (double)component_to_int(constraint.component.value())}
-                );
-                break;
-            case CONSTRAINT_TYPE::center_of_mass:
-                add_optimization_module(
-                    OPTIMIZATION_MODULE_TYPE::Center_of_Mass_Constraint_TopOpt, 
-                    f_type, 
-                    {constraint.value, (double)component_to_int(constraint.component.value())}
-                );
-                break;
-            case CONSTRAINT_TYPE::displacement:
-                add_optimization_module(
-                    OPTIMIZATION_MODULE_TYPE::Displacement_Constraint_TopOpt, 
-                    f_type, 
-                    {constraint.value}
-                );
-                break;
-            default:
-                throw Yaml::ConfigurationException("Unsupported constraint type " + to_string(constraint.type));
+            
+            if(topology_optimization_on){
+                switch (constraint.type) {
+                case CONSTRAINT_TYPE::mass:
+                    add_optimization_module(
+                        OPTIMIZATION_MODULE_TYPE::Mass_Constraint_TopOpt, 
+                        f_type, 
+                        {constraint.value}
+                    );
+                    break;
+                case CONSTRAINT_TYPE::moment_of_inertia:
+                    add_optimization_module(
+                        OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt, 
+                        f_type, 
+                        {constraint.value, (double)component_to_int(constraint.component.value())}
+                    );
+                    break;
+                case CONSTRAINT_TYPE::center_of_mass:
+                    add_optimization_module(
+                        OPTIMIZATION_MODULE_TYPE::Center_of_Mass_Constraint_TopOpt, 
+                        f_type, 
+                        {constraint.value, (double)component_to_int(constraint.component.value())}
+                    );
+                    break;
+                case CONSTRAINT_TYPE::displacement:
+                    add_optimization_module(
+                        OPTIMIZATION_MODULE_TYPE::Displacement_Constraint_TopOpt, 
+                        f_type, 
+                        {constraint.value}
+                    );
+                    break;
+                default:
+                    throw Yaml::ConfigurationException("Unsupported constraint type " + to_string(constraint.type));
+                }
+            }
+            else if(shape_optimization_on){
+                switch (constraint.type) {
+                case CONSTRAINT_TYPE::mass:
+                    add_optimization_module(
+                        OPTIMIZATION_MODULE_TYPE::Mass_Constraint_ShapeOpt, 
+                        f_type, 
+                        {constraint.value}
+                    );
+                    break;
+                case CONSTRAINT_TYPE::moment_of_inertia:
+                    add_optimization_module(
+                        OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_ShapeOpt, 
+                        f_type, 
+                        {constraint.value, (double)component_to_int(constraint.component.value())}
+                    );
+                    break;
+                default:
+                    throw Yaml::ConfigurationException("Unsupported constraint type " + to_string(constraint.type));
+                }
             }
         }
     }
@@ -338,6 +379,7 @@ struct Simulation_Parameters
             {OPTIMIZATION_MODULE_TYPE::Displacement_Constraint_TopOpt,               {FEA_MODULE_TYPE::Elasticity     }},
             {OPTIMIZATION_MODULE_TYPE::Strain_Energy_Constraint_TopOpt,              {FEA_MODULE_TYPE::Elasticity     }},
             {OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_TopOpt,              {FEA_MODULE_TYPE::SGH            }},
+            {OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_ShapeOpt,            {FEA_MODULE_TYPE::SGH            }},
             {OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_TopOpt,               {FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity}},
         };
         if (map.count(type) == 0)

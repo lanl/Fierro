@@ -1686,15 +1686,15 @@ void Explicit_Solver::setup_shape_optimization_problem(){
           obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
         }
       }
-      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_TopOpt){
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_ShapeOpt){
         //debug print
         *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam.optimization_options.method_of_moving_asymptotes){
-          sub_obj = ROL::makePtr<InternalEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          sub_obj = ROL::makePtr<InternalEnergyMinimize_ShapeOpt>(this);
           obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
         }
         else{
-          obj = ROL::makePtr<InternalEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          obj = ROL::makePtr<InternalEnergyMinimize_ShapeOpt>(this);
         }
       }
       else{
