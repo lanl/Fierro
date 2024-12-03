@@ -46,10 +46,10 @@ double graphics_time = graphics_dt_ival;  // the times for writing graphics dump
 // --- Time and cycling variables ---
 double time_value = 0.0;
 double time_final = 1.e16;
-double dt = 1.e-5;
+double dt = 1.e-6;
 double dt_max = 1.0e-2;
 double dt_min = 1.0e-8;
-double fe_order = 1.0;
+double fe_order = 6.0;
 double dt_cfl = 1.0/(2.0*fe_order+1.0);
 double dt_start = 1.0e-5;
 

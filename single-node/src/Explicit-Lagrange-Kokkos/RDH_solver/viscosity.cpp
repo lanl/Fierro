@@ -82,7 +82,7 @@ void get_viscosity_coefficient(const mesh_t &mesh,
 	double l2_JJ0Inv_dot_s;
     compute_l2_norm(JJ0Invs, l2_JJ0Inv_dot_s);
 
-    double h = h0(gauss_gid)*l2_JJ0Inv_dot_s/(l2_s + 1.0e-06);
+    double h = h0(gauss_gid);//*l2_JJ0Inv_dot_s/(l2_s + 1.0e-06);
 
     double coeff = 0.0;
     double eps = 1.0e-12;
@@ -105,9 +105,11 @@ void get_viscosity_coefficient(const mesh_t &mesh,
     if (Fro_norm_grad_u > 0.0){
         phi_curl = fabs(div_u/(Fro_norm_grad_u + 1.0e-06));
     }
+	
+	double sigmoid = 1.0/(1.0 + exp(-min_eig_val));
 
-    alpha = 0.5*den(gauss_gid)*h*sspd(gauss_gid)*(1.0-coeff)*phi_curl;
-	alpha += 2.0*h*h*den(gauss_gid)*fabs( min_eig_val );
+    alpha = 0.5*den(gauss_gid)*h*sspd(gauss_gid)*(1.0-coeff)*phi_curl;//*sigmoid;
+	alpha += 2.0*h*h*den(gauss_gid)*fabs( min_eig_val );//*sigmoid;
     //if (alpha > 0.0){
 	//
 	// printf("alpha : %f \n", alpha);

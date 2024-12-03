@@ -355,11 +355,11 @@ void get_timestep_HexN(const mesh_t &mesh,
     // save the min dt
     if(min_dt_calc < dt) dt = min_dt_calc;
 
-    // don't let dt increase by more than 2% or decrease by more than 20%
-    if ( 1.25*dt_old <= dt ){
-        dt = 1.02*dt_old;
+    // don't let dt increase by more than 20% or decrease by more than 15%
+    if ( 1.2*dt_old < dt ){
+        dt = 1.2*dt_old;
     } 
-    else if ( dt < dt_old){
+    else if ( dt < 0.85*dt_old){
         time_value -= dt_old;
         dt = 0.85*dt_old;
         printf(" time step repeated \n");

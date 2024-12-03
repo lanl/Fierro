@@ -136,9 +136,6 @@ void get_energy_rhs(const mesh_t &mesh,
         Kokkos::fence();
     }
 
-    // if (viscosity_cond == true){
-        
-    // }
 
 }// end get_energy_rhs
 

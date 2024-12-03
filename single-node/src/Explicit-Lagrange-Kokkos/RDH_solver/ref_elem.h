@@ -317,65 +317,65 @@ struct fe_ref_elem_t{
 
 
             // Saving vertex positions in 1D
-            // if( p_order == 0){
-            //     // dofs same as lobatto quadrature points 
-            //     FOR_ALL_CLASS(i,  0, num_gauss_lob_1d,{
-            //         dof_positions_1d(i) = lob_nodes_1D(i);
-            //         elem_dof_positions_1d(i) = dual_lob_nodes_1D(i);
-            //     });
-            // }
+            if( p_order == 0){
+                // dofs same as lobatto quadrature points 
+                FOR_ALL_CLASS(i,  0, num_gauss_lob_1d,{
+                    dof_positions_1d(i) = lob_nodes_1D(i);
+                    elem_dof_positions_1d(i) = dual_lob_nodes_1D(i);
+                });
+            }
 
-            // else{   
+            else{   
 
-            //     RUN_CLASS({
-            //         int dof_id = 0;
-                    
-            //         for(int i = 0; i < num_gauss_lob_1d; i=i+2){
+                RUN_CLASS({
+                    int dof_id = 0;
+                 
+                    for(int i = 0; i < num_gauss_lob_1d; i=i+2){
 
-            //             dof_positions_1d(dof_id) = lob_nodes_1D(i);
+                        dof_positions_1d(dof_id) = lob_nodes_1D(i);
 
-            //             dof_id++;
-            //         }
-            //     });  
+                        dof_id++;
+                    }
+                });  
 
-            //     RUN_CLASS({
-            //         int dof_id = 0;
-                    
-            //         for(int i = 0; i < num_dual_gauss_lob_1d; i=i+2){
+                RUN_CLASS({
+                    int dof_id = 0;
+                 
+                    for(int i = 0; i < num_dual_gauss_lob_1d; i=i+2){
 
-            //             elem_dof_positions_1d(dof_id) = dual_lob_nodes_1D(i);
+                        elem_dof_positions_1d(dof_id) = dual_lob_nodes_1D(i);
 
-            //             dof_id++;
-            //         }
-            //     });  
-            // }
-            // Kokkos::fence();
-
-
-
-            RUN_CLASS({
-                int dof_id = 0;
-                
-                for(int i = 0; i < num_dofs_1d; i++){
-
-                    dof_positions_1d(dof_id) = equi_nodes_1D(i);
-
-                    dof_id++;
-                }
-            });  
-
-            RUN_CLASS({
-                int dof_id = 0;
-                
-                for(int i = 0; i < num_dofs_1d-1; i++){
-
-                    elem_dof_positions_1d(dof_id) = dual_equi_nodes_1D(i);
-
-                    dof_id++;
-                }
-            });  
-        
+                        dof_id++;
+                    }
+                });  
+            }
             Kokkos::fence();
+
+
+
+            //RUN_CLASS({
+            //    int dof_id = 0;
+            //    
+            //    for(int i = 0; i < num_dofs_1d; i++){
+
+            //        dof_positions_1d(dof_id) = equi_nodes_1D(i);
+
+            //        dof_id++;
+            //    }
+            //});  
+
+            //RUN_CLASS({
+            //    int dof_id = 0;
+            //    
+            //    for(int i = 0; i < num_dofs_1d-1; i++){
+
+            //        elem_dof_positions_1d(dof_id) = dual_equi_nodes_1D(i);
+
+            //        dof_id++;
+            //    }
+            //});  
+        
+            //Kokkos::fence();
 
             FOR_ALL_CLASS( num_k, 0, num_dofs_1d, 
                      num_j, 0, num_dofs_1d,

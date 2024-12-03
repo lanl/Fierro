@@ -44,16 +44,16 @@ void get_lumped_mass(mesh_t &mesh,
 
     Kokkos::fence();
 
-    // FOR_ALL(elem_gid, 0, mesh.num_elems,{
-        
-    //     for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-    //         int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+    //FOR_ALL(elem_gid, 0, mesh.num_elems,{
+    // 
+    //    for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+    //        int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
-    //         for (int i = 0; i < mesh.num_nodes_in_elem; i++){
-    //             nodal_mass(node_gid) += M_u(elem_gid, node_lid, i);
-    //         }
-    //     }
-    // });
+    //        for (int i = 0; i < mesh.num_nodes_in_elem; i++){
+    //            nodal_mass(node_gid) += M_u(elem_gid, node_lid, i);
+    //        }
+    //    }
+    //});
 
     // Kokkos::fence();
 
@@ -76,18 +76,18 @@ void get_lumped_mass(mesh_t &mesh,
 
     Kokkos::fence();
 
-    // FOR_ALL(elem_gid, 0, mesh.num_elems,{
-        
-    //     for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
-    //         int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+    //FOR_ALL(elem_gid, 0, mesh.num_elems,{
+    // 
+    //    for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+    //        int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
 
-    //         for (int i = 0; i < mesh.num_zones_in_elem; i++){
-    //             zonal_mass(zone_gid) += M_e(elem_gid, zone_lid, i);
-    //         }
-    //     }
-    // });
+    //        for (int i = 0; i < mesh.num_zones_in_elem; i++){
+    //            zonal_mass(zone_gid) += M_e(elem_gid, zone_lid, i);
+    //        }
+    //    }
+    //});
 
-    // Kokkos::fence();
+    //Kokkos::fence();
 
 
     // Check positivity of lumped masses

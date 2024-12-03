@@ -169,7 +169,7 @@ void compute_JJ0Inv(const DViewCArrayKokkos <double> &J,
     for (int i = 0; i < mesh.num_dims; i++){
         for (int j = 0; j < mesh.num_dims; j++){
             for (int k = 0; k < mesh.num_dims; k++){
-                JJ0Inv[i][j] += J0Inv(legendre_gid, k, j)*J(legendre_gid, k, i);
+                JJ0Inv[i][j] += J0Inv(legendre_gid, k, i)*J(legendre_gid, k, j);
             }// k
         }// j
     }// i
