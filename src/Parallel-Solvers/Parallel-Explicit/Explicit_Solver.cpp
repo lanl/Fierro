@@ -86,14 +86,7 @@
 #include <ROL_TpetraMultiVector.hpp>
 
 //Objective Functions and Constraint Functions
-//#include "Topology_Optimization_Function_Headers.h"
-#include "Mass_Constraint.h"
-#include "Moment_of_Inertia_Constraint.h"
-#include "Kinetic_Energy_Minimize.h"
-#include "Internal_Energy_Minimize.h"
-#include "Internal_Energy_Minimize_Shape_Opt.h"
-#include "MMA_Objective.hpp"
-#include "Area_Normals.h"
+#include "Explicit_Optimization_Function_Headers.h"
 
 #define BUFFER_LINES 20000
 #define MAX_WORD 30
@@ -1460,7 +1453,7 @@ void Explicit_Solver::setup_topology_optimization_problem(){
       ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
       if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint_TopOpt){
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, true, true);
+        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, 0, true, true);
       }
       else if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
@@ -1719,10 +1712,10 @@ void Explicit_Solver::setup_shape_optimization_problem(){
     if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::EQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
-      if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint_TopOpt){
+      if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint_ShapeOpt){
         
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false, true);
+        eq_constraint = ROL::makePtr<MassConstraint_ShapeOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], Function_Arguments[imodule][0], false, true);
       }
       else if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
@@ -1746,13 +1739,13 @@ void Explicit_Solver::setup_shape_optimization_problem(){
       ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
       ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
       ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
-      if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint_TopOpt){
+      if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint_ShapeOpt){
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, true, true);
+        ineq_constraint = ROL::makePtr<MassConstraint_ShapeOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], 0, true, true);
       }
       else if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], true, true);
+        ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], Function_Arguments[imodule][1], Function_Arguments[imodule][0], true, true);
       }
       else{
         // TODO: Put this validation earlier

@@ -35,8 +35,8 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
  
-#ifndef MASS_CONSTRAINT_TOPOPT_H
-#define MASS_CONSTRAINT_TOPOPT_H
+#ifndef MASS_CONSTRAINT_SHAPEOPT_H
+#define MASS_CONSTRAINT_SHAPEOPT_H
 
 #include "matar.h"
 #include "elements.h"
@@ -58,7 +58,7 @@
 #include "ROL_Elementwise_Reduce.hpp"
 #include "FEA_Module_Inertial.h"
 
-class MassConstraint_TopOpt : public ROL::Constraint<real_t> {
+class MassConstraint_ShapeOpt : public ROL::Constraint<real_t> {
   
   typedef Tpetra::Map<>::local_ordinal_type LO;
   typedef Tpetra::Map<>::global_ordinal_type GO;
@@ -109,10 +109,9 @@ public:
   int last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Inertial";
 
-  MassConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, real_t constraint_value=0, bool inequality_flag=true, bool use_initial_coords=false) 
+  MassConstraint_ShapeOpt(FEA_Module *FEM, real_t constraint_value=0, bool inequality_flag=true, bool use_initial_coords=false) 
   {
     FEM_ = dynamic_cast<FEA_Module_Inertial*>(FEM);
-    nodal_density_flag_ = nodal_density_flag;
     use_initial_coords_ = use_initial_coords;
     last_comm_step = last_solve_step = -1;
     current_step = 0;
@@ -329,63 +328,7 @@ public:
     ahuvp->putScalar(0);
     
   }
-  /*
-  void hessVec_21( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-                     
-    // Unwrap g
-    ROL::Ptr<MV> hvp = getVector(hv);
 
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
- 
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      std::MV<real_t> U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      std::MV<real_t> V;
-      V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,V);
-      for (size_t i=0; i<hvp->size(); i++) {
-        (*hvp)[i] *= 2.0;
-      }
-    }
-    
-  }
-
-  void hessVec_22( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-                     
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
-    
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      MV U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      MV V;
-      V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,*vp,U);
-    }
-    
-  }
-  */
 };
 
 #endif // end header guard
