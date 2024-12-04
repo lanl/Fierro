@@ -55,7 +55,11 @@ public:
 
     void compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component, bool use_initial_coords = false);
 
-    void compute_nodal_gradients(const_host_vec_array design_densities, host_vec_array gradients, bool use_initial_coords = false);
+    void compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array gradients, bool use_initial_coords = false);
+
+    void compute_TO_gradients(const_host_vec_array design_densities, host_vec_array gradients, bool use_initial_coords = false);
+
+    void compute_shape_gradients(const_host_vec_array design_coords, host_vec_array gradients, bool use_initial_coords = false);
 
     void compute_moment_gradients(const_host_vec_array design_densities, host_vec_array gradients, int moment_component, bool use_initial_coords = false);
 

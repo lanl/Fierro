@@ -385,7 +385,30 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
    Compute the gradients of mass function with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, bool use_initial_coords)
+void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, bool use_initial_coords){
+    if(simparam->topology_optimization_on){
+        compute_TO_gradients(design_variables, design_gradients, use_initial_coords);
+    }
+    else if(simparam->shape_optimization_on){
+        compute_shape_gradients(design_variables, design_gradients, use_initial_coords);
+    }
+
+}
+
+/* --------------------------------------------------------------------------------
+   Compute the gradients of mass function with respect to nodal design coordinates
+----------------------------------------------------------------------------------- */
+
+void FEA_Module_Inertial::compute_shape_gradients(const_host_vec_array design_coords, host_vec_array design_gradients, bool use_initial_coords)
+{
+
+}
+
+/* ----------------------------------------------------------------------
+   Compute the gradients of mass function with respect to nodal densities
+------------------------------------------------------------------------- */
+
+void FEA_Module_Inertial::compute_TO_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, bool use_initial_coords)
 {
     // local number of uniquely assigned elements
     size_t nonoverlap_nelements = element_map->getLocalNumElements();
