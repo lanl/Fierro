@@ -99,9 +99,11 @@ FEA_Module::FEA_Module(Solver* Solver_Pointer)
     initial_node_coords_distributed         = Solver_Pointer->initial_node_coords_distributed;
     all_initial_node_coords_distributed     = Solver_Pointer->all_initial_node_coords_distributed;
     design_node_densities_distributed       = Solver_Pointer->design_node_densities_distributed;
+    design_node_coords_distributed          = Solver_Pointer->design_node_coords_distributed;
     filtered_node_densities_distributed     = Solver_Pointer->filtered_node_densities_distributed;
     test_node_densities_distributed         = Solver_Pointer->test_node_densities_distributed;
     all_node_densities_distributed          = Solver_Pointer->all_node_densities_distributed;
+    all_design_node_coords_distributed      = Solver_Pointer->all_design_node_coords_distributed;
     all_filtered_node_densities_distributed = Solver_Pointer->all_filtered_node_densities_distributed;
     Global_Element_Densities                = Solver_Pointer->Global_Element_Densities;
     Element_Types = Solver_Pointer->Element_Types;

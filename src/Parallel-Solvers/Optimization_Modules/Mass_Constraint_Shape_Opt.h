@@ -118,9 +118,9 @@ public:
     inequality_flag_ = inequality_flag;
     constraint_value_ = constraint_value;
     ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
-    const_host_vec_array design_densities = FEM_->design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array design_coords = FEM_->design_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     
-    FEM_->compute_element_masses(design_densities,true,use_initial_coords_);
+    FEM_->compute_element_masses(design_coords,true,use_initial_coords_);
     FEM_->mass_init = true;
     
     //sum per element results across all MPI ranks
@@ -142,7 +142,7 @@ public:
     current_step++;
 
     ROL::Ptr<const MV> zp = getVector(z);
-    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array design_coords = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     if (type == ROL::UpdateType::Initial)  {
 
@@ -175,7 +175,7 @@ public:
     //std::cout << "Started constraint value on task " <<FEM_->myrank <<std::endl;
     ROL::Ptr<const MV> zp = getVector(z);
     ROL::Ptr<std::vector<real_t>> cp = dynamic_cast<ROL::StdVector<real_t>&>(c).getVector();
-    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array design_coords = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
     /*
@@ -184,7 +184,7 @@ public:
       last_comm_step = current_step;
     }
     */
-    FEM_->compute_element_masses(design_densities,false,use_initial_coords_);
+    FEM_->compute_element_masses(design_coords,false,use_initial_coords_);
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
@@ -215,11 +215,12 @@ public:
     ROL::Ptr<const MV> zp = getVector(z);
     ROL::Ptr<const std::vector<real_t>> vp = dynamic_cast<const ROL::StdVector<real_t>&>(v).getVector();
     ROL::Ptr<MV> ajvp = getVector(ajv);
+    int num_dim = FEM_->num_dim;
     
     //ROL::Ptr<ROL_MV> ROL_Element_Volumes;
 
     //get local view of the data
-    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array design_coords = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     //host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_vec_array constraint_gradients = ajvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     //host_vec_array dual_constraint_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -233,8 +234,7 @@ public:
     */
     int rnum_elem = FEM_->rnum_elem;
 
-    if(nodal_density_flag_){
-      FEM_->compute_nodal_gradients(design_densities, constraint_gradients, use_initial_coords_);
+    FEM_->compute_nodal_gradients(design_coords, constraint_gradients, use_initial_coords_);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -243,19 +243,14 @@ public:
       //ajvp->describe(*fos,Teuchos::VERB_EXTREME);
       //*fos << std::endl;
       //std::fflush(stdout);
-      for(int i = 0; i < FEM_->nlocal_nodes; i++){
-        constraint_gradients(i,0) *= (*vp)[0]/initial_mass;
+    for(int i = 0; i < FEM_->nlocal_nodes; i++){
+      constraint_gradients(i,0) *= (*vp)[0]/initial_mass;
+      constraint_gradients(i,1) *= (*vp)[0]/initial_mass;
+      if(num_dim==3){
+        constraint_gradients(i,2) *= (*vp)[0]/initial_mass;
       }
     }
-    else{
-      //update per element volumes
-      FEM_->compute_element_volumes();
-      //ROL_Element_Volumes = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Volumes);
-      //local view of element volumes
-      const_host_vec_array element_volumes = FEM_->Global_Element_Volumes->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-      for(int ig = 0; ig < rnum_elem; ig++)
-        constraint_gradients(ig,0) = element_volumes(ig,0)*(*vp)[0]/initial_mass;
-    }
+    
     
     //std::cout << "Ended constraint adjoint grad on task " <<FEM_->myrank  << std::endl;
     //debug print
@@ -272,11 +267,12 @@ public:
      //get Tpetra multivector pointer from the ROL vector
     ROL::Ptr<const MV> zp = getVector(x);
     ROL::Ptr<std::vector<real_t>> jvp = dynamic_cast<ROL::StdVector<real_t>&>(jv).getVector();
+    int num_dim = FEM_->num_dim;
     
     //ROL::Ptr<ROL_MV> ROL_Element_Volumes;
 
     //get local view of the data
-    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array design_coords = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
@@ -287,23 +283,16 @@ public:
       last_comm_step = current_step;
     }
     */
-    int rnum_elem = FEM_->rnum_elem;
 
-    if(nodal_density_flag_){
-      FEM_->compute_nodal_gradients(design_densities, constraint_gradients);
-      for(int i = 0; i < FEM_->nlocal_nodes; i++){
-        constraint_gradients(i,0) /= initial_mass;
+    FEM_->compute_nodal_gradients(design_coords, constraint_gradients);
+    for(int i = 0; i < FEM_->nlocal_nodes; i++){
+      constraint_gradients(i,0) /= initial_mass;
+      constraint_gradients(i,1) /= initial_mass;
+      if(num_dim==3){
+        constraint_gradients(i,2) /= initial_mass;
       }
     }
-    else{
-      //update per element volumes
-      FEM_->compute_element_volumes();
-      //ROL_Element_Volumes = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Volumes);
-      //local view of element volumes
-      const_host_vec_array element_volumes = FEM_->Global_Element_Volumes->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-      for(int ig = 0; ig < rnum_elem; ig++)
-        constraint_gradients(ig,0) = element_volumes(ig,0)/initial_mass;
-    }
+    
 
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
     real_t gradient_dot_v = ROL_Gradients->dot(v);
