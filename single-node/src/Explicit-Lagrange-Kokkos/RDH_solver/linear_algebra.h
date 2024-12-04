@@ -723,4 +723,21 @@ void symmetrize_matrix(const double matrix[3][3],
 
 }// end symmetrix_matrix
 
+KOKKOS_INLINE_FUNCTION
+void antisymmetrize_matrix(const double matrix[3][3],
+						double sym_matrix[3][3]){
+	for (int i = 0; i < 3; i++){
+		for (int j = 0; j < 3; j++){
+			sym_matrix[i][j] = 0.0;
+		}// j
+	}// i
+
+	for (int i = 0; i < 3; i++){
+		for (int j = 0; j < 3; j++){
+			sym_matrix[i][j] = 0.5*(matrix[i][j] - matrix[j][i]);
+		}// j
+	}// i
+
+}// end antisymmetrix_matrix
+
 #endif
