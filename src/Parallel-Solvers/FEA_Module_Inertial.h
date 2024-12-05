@@ -49,7 +49,11 @@ public:
 
     void compute_element_volumes();
 
-    void compute_element_masses(const_host_vec_array design_densities, bool max_flag, bool use_initial_coords = false);
+    void compute_element_masses(const_host_vec_array design_variables, bool max_flag, bool use_initial_coords = false);
+    
+    void compute_element_masses_TO(const_host_vec_array design_densities, bool max_flag, bool use_initial_coords = false);
+    
+    void compute_element_masses_SO(const_host_vec_array design_coords, bool max_flag, bool use_initial_coords = false);
 
     void compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component, bool use_initial_coords = false);
 
