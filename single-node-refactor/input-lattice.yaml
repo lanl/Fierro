@@ -5,7 +5,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 100000
+    cycle_stop: 300000
 
 
 # mesh_options:
@@ -14,27 +14,22 @@ dynamic_options:
 
 mesh_options:
     source: generate
-    num_dims: 2
-    type: polar
-    origin: [0.0, 0.0]
-    inner_radius: 0.025
-    outer_radius: 1.2
-    starting_angle: 0
-    ending_angle: 90
-    num_radial_elems: 12
-    num_angular_elems: 10
-
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1, 1, 1]
+    num_elems: [64, 64, 64]
 
 
 output_options:
     timer_output_level: thorough
-    output_file_format: ensight  #ensight  state
+    output_file_format: ensight
     graphics_time_step: 0.25
-    #graphics_iteration_step: 2
+    # graphics_iteration_step: 10
 
 solver_options:
   - solver:
-        method: SGHRZ
+        method: SGH3D
         # solver_vars:
         #  - blah
         #  - blah
@@ -43,7 +38,7 @@ solver_options:
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
-        solver: SGHRZ
+        solver: SGH3D
         geometry: x_plane
         direction: x_dir
         value: 0.0
@@ -52,25 +47,19 @@ boundary_conditions:
             
     # Tag Y plane
     - boundary_condition:
-        solver: SGHRZ
+        solver: SGH3D
         geometry: y_plane
         direction: y_dir
         value: 0.0
         type: reflected_velocity
 
-    # Tag inner circle
+    # Tag z plane
     - boundary_condition:
-        solver: SGHRZ
-        geometry: cylinder
-        value: 0.025
-        type: zero_velocity
-
-    # Tag outer circle
-    - boundary_condition:
-        solver: SGHRZ
-        geometry: cylinder
-        value: 1.2
-        type: zero_velocity
+        solver: SGH3D
+        geometry: z_plane
+        direction: z_dir
+        value: 0.0
+        type: reflected_velocity
   
 materials:
     - material:
@@ -78,13 +67,30 @@ materials:
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         # strength_model: none
-        dissipation_model: MARS_rz
+        dissipation_model: MARS
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.0   # phi_min
+            - 0.1   # phi_min
+            - 1.0   # phi_curl_min
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.1   # phi_min
             - 1.0   # phi_curl_min
         eos_global_vars:
             - 1.666666666666667
@@ -104,19 +110,20 @@ regions:
 
     
 
-    # energy source initial conditions
     - fill_volume:
-        type: sphere
-        origin: [0.0, 0.0, 0.0]
-        radius1: 0.0
-        radius2: 0.1
-        material_id: 0
-        den: 1.0
-        # ie: 0.25833839995946534
-        sie: 119.65 #  (0.5*0.49339/(mat_fill(1).den*vol))
+        type: voxel_file
+        file_path: ../../VTK_Geometry_lattice.vtk 
+        #/Users/nmorgan/Documents/Fierro/REPO/2024_06_21/Fierro/single-node-refactor/VTK_Geometry_lattice.vtk
+        material_id: 1
+        den: 2.0
+        sie: 0.001
         velocity: cartesian
         u: 0.0
         v: 0.0
         w: 0.0
+        scale_x: 0.01
+        scale_y: 0.01
+        scale_z: 0.01
+        origin: [0.3, 0.3, 0.3]
 
 

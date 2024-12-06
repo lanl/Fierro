@@ -1,3 +1,5 @@
+
+
 /**********************************************************************************************
 � 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
@@ -32,82 +34,36 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_PARSE_YAML_H
-#define FIERRO_PARSE_YAML_H
+#ifndef NO_DISSIPATION_H
+#define NO_DISSIPATION_H
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <stdio.h>
-#include <sys/stat.h>
+namespace NoDissipationModel {
 
-#include "matar.h"
+ 
+    KOKKOS_FUNCTION
+    static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
+                                  const RaggedRightArrayKokkos <double>& dissipation_global_vars,
+                                  const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                                  const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                                  const DCArrayKokkos<double>& node_vel,
+                                  const DCArrayKokkos<double>& MaterialPoints_den,
+                                  const DCArrayKokkos<double>& MaterialPoints_sspd,
+                                  const ViewCArrayKokkos<double>& disp_corner_forces,
+                                  const ViewCArrayKokkos<double>& area_normal,
+                                  const RaggedRightArrayKokkos<size_t>& elems_in_elem,
+                                  const CArrayKokkos<size_t>& num_elems_in_elem,
+                                  const double vol,
+                                  const double fuzz,
+                                  const double small,
+                                  const double elem_gid,
+                                  const size_t mat_point_lid,
+                                  const size_t mat_id)
+                                  {
 
-#include "Yaml.hpp"
+                                    return;
+                                  }
+    
+    } // end namespace
 
-struct SimulationParameters_t;
-struct solver_input_t;
-struct mesh_input_t;
-struct RegionFill_t;
-struct RegionFill_host_t;
-struct output_options_t;
-
-struct Material_t;
-struct MaterialSetup_t;
-struct MaterialFunctions_t;
-struct MaterialEnums_t;
-
-struct BoundaryCondition_t;
-struct BoundaryConditionSetup_t;
-struct BoundaryConditionEnums_t;
-struct BoundaryConditionFunctions_t;
-
-struct dynamic_options_t;
-
-using namespace mtr;
-
-// checks to see if a path exists
-static bool DoesPathExist(const std::string& s)
-{
-    struct stat buffer;
-    return (stat(s.c_str(), &buffer) == 0);
-}
-
-// prints the contents of a parsed yaml file
-void print_yaml(Yaml::Node root);
-
-// Read and validate user inputs
-void validate_inputs(
-    Yaml::Node& yaml, 
-    std::vector<std::string>& user_inputs, 
-    std::vector<std::string>& str_valid_inputs,
-    std::vector<std::string>& str_required_inputs);
-
-// utility function for parsing YAML file
-void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary);
-
-// Parse the solver related data
-void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_input);
-
-// Parse dynamic time related options
-void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options);
-
-// Parse the mesh related data
-void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input);
-
-// Parse output options
-void parse_output_options(Yaml::Node& root, output_options_t& output_options);
-
-// parse the region text
-void parse_regions(Yaml::Node& root, 
-                   CArrayKokkos<RegionFill_t>& region_fills,
-                   CArray<RegionFill_host_t>& region_fills_host);
-
-// parse the region text
-void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims);
-
-// parse the boundary condition text
-void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions);
 
 #endif // end Header Guard
