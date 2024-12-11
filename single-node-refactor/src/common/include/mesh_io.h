@@ -159,9 +159,10 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_mesh(Mesh_t& mesh,
-        State_t& State,
-        int      num_dims,
-        int      rk_num_bins)
+                   State_t& State,
+                   mesh_input_t& mesh_inps,
+                   int      num_dims,
+                   int      rk_num_bins)
     {
         if (mesh_file_ == NULL) {
             throw std::runtime_error("**** No mesh path given for read_mesh ****");
@@ -190,14 +191,14 @@ public:
         std::cout << "File extension is: " << extension << std::endl;
 
         if(extension == "geo"){ // Ensight meshfile extension
-            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, num_dims, rk_num_bins);
+            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims, rk_num_bins);
         }
         else if(extension == "inp"){ // Abaqus meshfile extension
             read_Abaqus_mesh(mesh, State, num_dims, rk_num_bins);
         }
         else if(extension == "vtk"){ // vtk file format
 
-            read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, num_dims, rk_num_bins);
+            read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims, rk_num_bins);
 
             //throw std::runtime_error("**** VTK mesh reader not yet implemented ****");
             // read_VTK_mesh(mesh, State, num_dims, rk_num_bins);
@@ -226,6 +227,7 @@ public:
                            GaussPoint_t& GaussPoints,
                            node_t&   node,
                            corner_t& corner,
+                           mesh_input_t& mesh_inps,
                            int num_dims,
                            int rk_num_bins)
     {
@@ -557,6 +559,7 @@ public:
                     GaussPoint_t& GaussPoints,
                     node_t&   node,
                     corner_t& corner,
+                    mesh_input_t& mesh_inps,
                     int num_dims,
                     int rk_num_bins)
     {
@@ -614,20 +617,19 @@ public:
         // read the node coordinates
         for (node_gid=0; node_gid<mesh.num_nodes; node_gid++){
             
-            
             std::string str;
             std::getline(in, str);
             
             std::string delimiter = " ";
             std::vector<std::string> v = split (str, delimiter);
             
-            for (size_t dim=0; dim<num_dims; dim++){
-                node.coords.host(0, node_gid, dim) = std::stod(v[dim]); // double
-                //if num_dims=2 skip the 3rd value
-                
-                //printf(" %f ", pt_coords(node_id,dim)); // printing
+            // save the nodal coordinates
+            node.coords.host(0, node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
+            node.coords.host(0, node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
+            if(num_dims==3){
+                node.coords.host(0, node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
             }
-            printf("\n"); // printing
+
             
         } // end for nodes
 
