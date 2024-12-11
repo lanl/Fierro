@@ -595,6 +595,9 @@ public:
                 size_t num_nodes = std::stoi(v[1]);
                 printf("Num nodes read in %zu\n", num_nodes);
                 mesh.initialize_nodes(num_nodes);
+
+                std::vector<node_state> required_node_state = { node_state::coords };
+                node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
                 
                 found=true;
             } // end if
@@ -690,7 +693,7 @@ public:
                 mesh.nodes_in_elem.host(elem_gid, node_lid) = std::stod(v[node_lid+1]);
                 //printf(" %zu ", elem_point_list(elem_gid,node_lid) ); // printing
             }
-            printf("\n"); // printing
+            //printf("\n"); // printing
             
         } // end for
 
