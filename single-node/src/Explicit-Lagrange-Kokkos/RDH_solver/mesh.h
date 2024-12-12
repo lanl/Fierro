@@ -449,13 +449,13 @@ struct mesh_t {
         elems_in_zone = CArrayKokkos <size_t> (num_zones);
         local_zone_id_in_elem = CArrayKokkos <size_t> (num_zones, num_elems);
 
-        for (int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+        FOR_ALL_CLASS(elem_gid, 0, num_elems, {
             for(int zone_lid = 0; zone_lid < num_zones_in_elem; zone_lid++){
                 int zone_gid = zones_in_elem(elem_gid, zone_lid);
                 elems_in_zone(zone_gid) = elem_gid;
                 local_zone_id_in_elem(zone_gid, elem_gid) = zone_lid;
             }
-        }
+        });
         return;
         
     } // end of build_corner_connectivity

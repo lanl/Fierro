@@ -10,6 +10,7 @@
 using namespace mtr;
 
 
+KOKKOS_FUNCTION 
 void eval_sie(const DViewCArrayKokkos <double> sie,
               const int elem_gid,
               const int legendre_lid,
@@ -27,6 +28,7 @@ void eval_sie(const DViewCArrayKokkos <double> sie,
 
 }// end eval_sie
 
+KOKKOS_FUNCTION 
 void eval_vel(const DViewCArrayKokkos <double> vel,
               const int elem_gid,
               const int legendre_lid,

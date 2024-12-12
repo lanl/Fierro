@@ -328,6 +328,7 @@ void boundary_velocity(const mesh_t &mesh,
                        DViewCArrayKokkos <double> &node_vel,
                        const double time_value);
 
+KOKKOS_FUNCTION 
 void eval_sie(const DViewCArrayKokkos <double> sie,
               const int elem_gid,
               const int legendre_lid,
@@ -336,6 +337,7 @@ void eval_sie(const DViewCArrayKokkos <double> sie,
               double &val,
               const int stage);
 
+KOKKOS_FUNCTION 
 void eval_vel(const DViewCArrayKokkos <double> vel,
               const int elem_gid,
               const int legendre_lid,
