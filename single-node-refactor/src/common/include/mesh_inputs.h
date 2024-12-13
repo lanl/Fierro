@@ -121,7 +121,10 @@ static std::vector<std::string> str_mesh_inps
     "starting_angle",
     "ending_angle",
     "num_radial_elems",
-    "num_angular_elems"
+    "num_angular_elems",
+    "scale_x",
+    "scale_y",
+    "scale_z"
 };
 
 // ----------------------------------
