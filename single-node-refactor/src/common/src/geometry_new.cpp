@@ -626,6 +626,9 @@ KOKKOS_FUNCTION
 size_t check_bdy(const size_t patch_gid,
     const int     this_bc_tag,
     const double  val,
+    const double  orig_x,
+    const double  orig_y,
+    const double  orig_z,
     const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords)
 {
@@ -664,20 +667,20 @@ size_t check_bdy(const size_t patch_gid,
                 is_on_bdy += 1;
             }
         } // end if on type
-        // cylinderical shell where radius = sqrt(x^2 + y^2)
+        // cylinderical shell where radius = sqrt(dx^2 + dy^2)
         else if (this_bc_tag == 3) {
-            real_t R = sqrt(these_patch_coords[0] * these_patch_coords[0] +
-                            these_patch_coords[1] * these_patch_coords[1]);
+            real_t R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
+                            (these_patch_coords[1] - orig_y) * (these_patch_coords[1] - orig_y));
 
             if (fabs(R - val) <= 1.0e-7) {
                 is_on_bdy += 1;
             }
         } // end if on type
-        // spherical shell where radius = sqrt(x^2 + y^2 + z^2)
+        // spherical shell where radius = sqrt(dx^2 + dy^2 + dz^2)
         else if (this_bc_tag == 4) {
-            real_t R = sqrt(these_patch_coords[0] * these_patch_coords[0] +
-                            these_patch_coords[1] * these_patch_coords[1] +
-                            these_patch_coords[2] * these_patch_coords[2]);
+            real_t R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
+                            (these_patch_coords[1] - orig_y) * (these_patch_coords[1] - orig_y) +
+                            (these_patch_coords[2] - orig_z) * (these_patch_coords[2] - orig_z));
 
             if (fabs(R - val) <= 1.0e-7) {
                 is_on_bdy += 1;
@@ -722,6 +725,10 @@ void tag_bdys(const BoundaryCondition_t& boundary,
         // tag boundaries
         int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).geometry;
         double val    = boundary.BoundaryConditionSetup(bdy_set).value;
+        double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
+        double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
+        double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
+
 
         // save the boundary patches to this set that are on the plane, spheres, etc.
         for (size_t bdy_patch_lid = 0; bdy_patch_lid < mesh.num_bdy_patches; bdy_patch_lid++) {
@@ -732,6 +739,9 @@ void tag_bdys(const BoundaryCondition_t& boundary,
             size_t is_on_bdy = check_bdy(bdy_patch_gid,
                                          bc_tag_id,
                                          val,
+                                         orig_x,
+                                         orig_y,
+                                         orig_z,
                                          mesh,
                                          node_coords); // no=0, yes=1
 

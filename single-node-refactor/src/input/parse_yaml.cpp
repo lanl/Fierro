@@ -782,6 +782,36 @@ void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input)
 
             mesh_input.num_angular_elems = num_angular_elems;
         } // Number of angular elements for 2D RZ meshes
+        else if (a_word.compare("scale_x") == 0) {
+
+            double scale_x = root["mesh_options"][a_word].As<double>();
+            if (VERBOSE) {
+                std::cout << "\tscale_x = " << scale_x << std::endl;
+            }
+
+            mesh_input.scale_x = scale_x;
+
+        } // end scale_x
+        else if (a_word.compare("scale_y") == 0) {
+
+            double scale_y = root["mesh_options"][a_word].As<double>();
+            if (VERBOSE) {
+                std::cout << "\tscale_y = " << scale_y << std::endl;
+            }
+
+            mesh_input.scale_y = scale_y;
+
+        } // end scale_y
+        else if (a_word.compare("scale_z") == 0) {
+
+            double scale_z = root["mesh_options"][a_word].As<double>();
+            if (VERBOSE) {
+                std::cout << "\tscale_z = " << scale_z << std::endl;
+            }
+
+            mesh_input.scale_z = scale_z;
+
+        } // end scale_z
         else {
             std::cout << "ERROR: invalid input: " << a_word << std::endl;
             std::cout << "Valid options are: " << std::endl;

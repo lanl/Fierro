@@ -96,6 +96,11 @@ struct mesh_input_t
 
     int num_radial_elems  = 10;     ///< Number of elements in the radial direction for 2DRZ mesh
     int num_angular_elems = 10;     ///< Number of elements in the radial direction for 2DRZ mesh
+
+    double scale_x = 1.0; ///< Scales mesh x coordinate dimensions
+    double scale_y = 1.0; ///< Scales mesh y coordinate dimensions
+    double scale_z = 1.0; ///< Scales mesh z coordinate dimensions
+
 }; // mesh_input_t
 
 // ----------------------------------
@@ -116,7 +121,10 @@ static std::vector<std::string> str_mesh_inps
     "starting_angle",
     "ending_angle",
     "num_radial_elems",
-    "num_angular_elems"
+    "num_angular_elems",
+    "scale_x",
+    "scale_y",
+    "scale_z"
 };
 
 // ----------------------------------
