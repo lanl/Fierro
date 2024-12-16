@@ -862,7 +862,10 @@ class FIERRO_GUI(Ui_MainWindow):
                 # Rename the file and save it to directory location
                 self.new_file_path = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
                 Data_filename = self.INHomogenizationBatchFile.text()
-                if Data_filename != self.new_file_path and os.path.isfile(Data_filename):
+                _, file_type = os.path.splitext(Data_filename)
+                file_type = file_type[1:]
+                print("FIERRO_GUI FILE TYPE IS: ", file_type)
+                if Data_filename != self.new_file_path and os.path.isfile(Data_filename) and 'vtk' in file_type:
                     shutil.copy(Data_filename, self.new_file_path)
                 # Read what type of vtk file this is
                 with open(self.new_file_path, 'r') as file:
@@ -871,7 +874,9 @@ class FIERRO_GUI(Ui_MainWindow):
                             vtk_type = line.strip()
                             break
                 if "STRUCTURED_POINTS" in vtk_type:
-                    self.structured_flag == 1
+                    self.structured_flag = 1
+                else:
+                    self.structured_flag = 0
                     
             # Fully modify vtk file if it is a structured_points format or the user made changes
             if self.BVTKCustomProperties.isChecked() or self.structured_flag == 1:

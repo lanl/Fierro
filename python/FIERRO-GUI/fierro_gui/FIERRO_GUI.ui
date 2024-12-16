@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>1355</width>
-    <height>1171</height>
+    <height>1184</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -352,7 +352,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>5</number>
+          <number>6</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -3707,7 +3707,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               <bool>false</bool>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>1</number>
              </property>
              <property name="iconSize">
               <size>
@@ -5467,7 +5467,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <bool>true</bool>
                      </property>
                      <property name="currentIndex">
-                      <number>1</number>
+                      <number>0</number>
                      </property>
                      <widget class="QWidget" name="Elastic_2">
                       <attribute name="icon">
@@ -8684,7 +8684,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QStackedWidget" name="AssignMaterialsOptions">
                  <property name="currentIndex">
-                  <number>1</number>
+                  <number>2</number>
                  </property>
                  <widget class="QWidget" name="page_16">
                   <layout class="QVBoxLayout" name="verticalLayout_57">

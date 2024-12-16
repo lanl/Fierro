@@ -1,4 +1,6 @@
 from paraview.simple import *
+from LAFFT2VTK import *
+from PySide6.QtWidgets import QTableWidgetItem
 
 def Upload_Batch_Geometry(self):
     # Import Geometry [.stl]
@@ -198,9 +200,63 @@ def Upload_Batch_Geometry(self):
             # Alter vtk file to new specifications
             self.BAddVTKGeometry.click()
                 
-        # XDMF IMPORT
+        # TXT IMPORT
         elif self.file_type == ".txt":
-            warning_message("Batch text files are currently not supported")
+            # output file location
+            vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + str(self.INPartName.text()) + '.vtk'
+            
+            # convert text file to vtk file for visualization
+            los_alamos_to_vtk(self.in_file_path, vtk_location)
+            
+            # Paraview window
+            self.vtk_reader = paraview.simple.LegacyVTKReader(FileNames = vtk_location)
+            paraview.simple.SetDisplayProperties(Representation = "Surface")
+            text = self.INPartName.text()
+            self.variable_name = f"part_{text}"
+            setattr(self, self.variable_name, self.vtk_reader)
+            self.display = paraview.simple.Show(getattr(self, self.variable_name), self.render_view)
+            paraview.simple.Show(self.txt_reader)
+            self.render_view.ResetCamera()
+            self.render_view.StillRender()
+                        
+            # Get the avaliable arrays for coloring
+            self.vtk_reader.UpdatePipeline()
+            data_maps = get_paraview_variables(self.vtk_reader)
+            self.INSelectColorBy.clear()
+            self.INSelectColorBy.addItems(data_maps) # add options to combo box
+            
+            # Get the length of the xdmf
+            self.bounds = self.vtk_reader.GetDataInformation().GetBounds()
+            self.vtkLx = round(self.bounds[1] - self.bounds[0],4)
+            self.vtkLy = round(self.bounds[3] - self.bounds[2],4)
+            self.vtkLz = round(self.bounds[5] - self.bounds[4],4)
+            
+            # Get the origin of the xdmf
+            self.vtkOx = self.bounds[0]
+            self.vtkOy = self.bounds[2]
+            self.vtkOz = self.bounds[4]
+            
+            # Get the voxels in the xdmf
+            self.extents = self.vtk_reader.GetDataInformation().GetExtent()
+            self.vtkNx = int(self.extents[1] - self.extents[0])
+            self.vtkNy = int(self.extents[3] - self.extents[2])
+            self.vtkNz = int(self.extents[5] - self.extents[4])
+            
+            # Add part to the table
+            row = self.TParts.rowCount()
+            self.TParts.insertRow(row)
+            self.TParts.setItem(row, 0, QTableWidgetItem(self.INPartName.text()))
+            self.TParts.setItem(row, 1, QTableWidgetItem(str(self.vtkOx)))
+            self.TParts.setItem(row, 2, QTableWidgetItem(str(self.vtkOy)))
+            self.TParts.setItem(row, 3, QTableWidgetItem(str(self.vtkOz)))
+            self.TParts.setItem(row, 4, QTableWidgetItem(str(self.vtkLx)))
+            self.TParts.setItem(row, 5, QTableWidgetItem(str(self.vtkLy)))
+            self.TParts.setItem(row, 6, QTableWidgetItem(str(self.vtkLz)))
+            self.TParts.setItem(row, 7, QTableWidgetItem(str(self.vtkNx)))
+            self.TParts.setItem(row, 8, QTableWidgetItem(str(self.vtkNy)))
+            self.TParts.setItem(row, 9, QTableWidgetItem(str(self.vtkNz)))
+            self.TParts.setItem(row, 10, QTableWidgetItem(self.in_file_path))
+            
                 
     # Delete previously existing part geometries
     self.TParts.removeRow(0)
