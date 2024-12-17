@@ -475,11 +475,19 @@ void EVPFFT::write_micro_state_pvtu()
 
   // Calculate point positions
   MatrixTypeRealDevice xtmp(3);
-  MatrixTypeRealDevice defgradavg(3,3);
+  MatrixTypeRealDual defgradavg(3,3);
   MatrixTypeRealDual xintp(3,npts1+1,npts2+1,npts3+1);
   MatrixTypeIntHost pid(npts1+1,npts2+1,npts3+1);
 
-  FOR_ALL(
+  for (int ii = 1; ii <= 3; ii++) {
+    for (int jj = 1; jj <= 3; jj++) {
+      defgradavg.host(ii,jj) = disgradmacroactual(ii,jj);
+      if (ii==jj) {defgradavg.host(ii,jj) += 1.0;}
+    }
+  }
+  defgradavg.update_device();
+
+  FOR_ALL_CLASS(
           kz, 1, npts3+2,
           ky, 1, npts2+2,
           kx, 1, npts1+2, {
@@ -491,13 +499,11 @@ void EVPFFT::write_micro_state_pvtu()
         for (int ii = 1; ii <= 3; ii++) {
           real_t dum = 0.0;
           for (int jj = 1; jj <= 3; jj++) {
-            defgradavg(ii,jj) = disgradmacroactual(ii,jj);
-            if (ii==jj) {defgradavg(ii,jj) += 1.0;}
             dum += defgradavg(ii,jj)*xtmp(jj);
           }
           xintp(ii,kx,ky,kz) = dum;
         }
-  }); // end FOR_ALL
+  }); // end FOR_ALL_CLASS
   Kokkos::fence();
   xintp.update_host();
 
@@ -699,7 +705,6 @@ void EVPFFT::write_micro_state_pvtu()
   out.open(filename,std::ofstream::binary);
 
   byte_offset = 0;
-  double crap = 0.0;
   
   //  Write Header
   //tmp_str = "<?xml version=\"1.0\"?>\n";
@@ -938,7 +943,7 @@ void EVPFFT::write_micro_state_pvtu()
       for (int kx = 1; kx <= npts1+1; kx++){
         ic += 1;
         for (int dim = 1; dim <= num_dims; dim++){
-          coord_tmp = xintp(dim,kx,ky,kz);
+          coord_tmp = xintp.host(dim,kx,ky,kz);
           out.write((char *) &coord_tmp,sizeof(coord_tmp));
         }
         pid(kx,ky,kz) = ic;
@@ -1006,7 +1011,6 @@ void EVPFFT::write_micro_state_pvtu()
   // for (int node_gid = 0; node_gid < num_points; node_gid++){
   //   for (int dim = 0; dim < num_dims; dim++){
   //     //out.write((char *) &node_vel.host(1, node_gid, dim),sizeof(double));
-  //     out.write((char *) &crap,sizeof(double));
   //   }
   // }
 
@@ -1169,7 +1173,6 @@ void EVPFFT::write_micro_state_pvtu()
   // for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
   //   for (int ii = 0; ii < 9; ii++){
   //     //out.write((char *) &elem_stress.host(1,elem_gid,ii),sizeof(double));
-  //     out.write((char *) &crap,sizeof(double));
   //   }
   // }
   // //  Density
