@@ -217,6 +217,9 @@ KOKKOS_FUNCTION
 size_t check_bdy(const size_t patch_gid,
     const int     this_bc_tag,
     const double  val,
+    const double  orig_x,
+    const double  orig_y,
+    const double  orig_z,
     const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords);
 

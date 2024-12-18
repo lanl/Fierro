@@ -29,7 +29,7 @@ output_options:
 
 solver_options:
   - solver:
-        method: SGH
+        method: SGH3D
         # solver_vars:
         #  - blah
         #  - blah
@@ -38,7 +38,7 @@ solver_options:
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
-        solver: SGH
+        solver: SGH3D
         geometry: x_plane
         direction: x_dir
         value: 0.0
@@ -50,7 +50,7 @@ boundary_conditions:
 
     # Tag Y plane
     - boundary_condition:
-        solver: SGH
+        solver: SGH3D
         geometry: y_plane
         direction: y_dir
         value: 0.0
@@ -58,7 +58,7 @@ boundary_conditions:
 
     # Tag z plane
     - boundary_condition:
-        solver: SGH
+        solver: SGH3D
         geometry: z_plane
         direction: z_dir
         value: 0.0
@@ -70,10 +70,13 @@ materials:
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         # strength_model: none
-        q1: 1.0
-        q2: 1.333
-        q1ex: 1.0
-        q2ex: 1.333
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 1.0   # phi_curl_min
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14
@@ -88,10 +91,11 @@ materials:
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         # strength_model: none
-        q1: 1.0
-        q2: 1.333
-        q1ex: 1.0
-        q2ex: 1.333
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.333 # q1ex
+            - 1.0   # q2
+            - 1.333 # q2ex
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14

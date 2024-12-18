@@ -105,7 +105,7 @@ void parse_regions(Yaml::Node& root,
                    CArray<RegionFill_host_t>& region_fills_host);
 
 // parse the region text
-void parse_materials(Yaml::Node& root, Material_t& Materials);
+void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims);
 
 // parse the boundary condition text
 void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions);

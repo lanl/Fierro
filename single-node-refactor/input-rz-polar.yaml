@@ -5,7 +5,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 10000
+    cycle_stop: 100000
 
 
 # mesh_options:
@@ -28,7 +28,7 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: state  #ensight  state
+    output_file_format: ensight  #ensight  state
     graphics_time_step: 0.25
     #graphics_iteration_step: 2
 
@@ -78,10 +78,14 @@ materials:
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         # strength_model: none
-        q1: 1.0
-        q2: 1.333
-        q1ex: 1.0
-        q2ex: 1.333
+        dissipation_model: MARS_rz
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 1.0   # phi_curl_min
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14

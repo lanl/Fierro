@@ -85,13 +85,24 @@ namespace model
         ductileFailure = 2, ///< Material grows voids that lead to complete failure
     };
 
-    // erosion model t
+    // erosion model
     enum ErosionModels
     {
         noErosion = 1,      ///<  no element erosion
         basicErosion = 2,   ///<  basic element erosion
     };
-    
+
+    // erosion model
+    enum DissipationModels
+    {
+        noDissipation = 0,  ///<  no dissipation
+        MARS = 1,           ///<  MARS dissipation
+        MARSRZ = 2,         ///<  MARS in RZ
+        directionalMARS = 3,    ///<  Directional MARS
+        directionalMARSRZ = 4   ///<  Directional MARS in RZ
+    };
+
+
     // Model run locations
     enum RunLocation
     {
@@ -102,6 +113,19 @@ namespace model
 
 } // end model namespace
 
+
+namespace artificialViscosity
+{
+    enum MARSVarNames
+    {
+        q1 = 0,
+        q1ex = 1,
+        q2 = 2,
+        q2ex = 3,
+        phiFloor = 4,
+        phiCurlFloor = 5,
+    };
+} // end artifiical Viscosity name space
 
 
 
@@ -143,6 +167,15 @@ static std::map<std::string, model::ErosionModels> erosion_model_map
 {
     { "no_erosion", model::noErosion },
     { "basic", model::basicErosion },
+};
+
+static std::map<std::string, model::DissipationModels> dissipation_model_map
+{
+    { "no_dissipation", model::noDissipation },
+    { "MARS", model::MARS },
+    { "MARS_rz", model::MARSRZ },
+    { "directional_MARS", model::directionalMARS },
+    { "directional_MARS_rz", model::directionalMARSRZ },
 };
 
 namespace model_init
@@ -195,6 +228,10 @@ struct MaterialEnums_t
 
     // Erosion model type: none or basis
     model::ErosionModels ErosionModels = model::noErosion;
+
+    // dissipation model
+    model::DissipationModels DissipationModels = model::noDissipation;
+
 }; // end boundary condition enums
 
 /////////////////////////////////////////////////////////////////////////////
@@ -288,10 +325,28 @@ struct MaterialFunctions_t
         const double erode_density_val,
         const size_t mat_point_lid) = NULL;
 
-    double q1   = 1.0;      ///< acoustic coefficient in Riemann solver for compression
-    double q1ex = 1.3333;   ///< acoustic coefficient in Riemann solver for expansion
-    double q2   = 1.0;      ///< linear coefficient in Riemann solver for compression
-    double q2ex = 1.3333;   ///< linear coefficient in Riemann solver for expansion
+
+    // -- Dissipation --
+    void (*calc_dissipation) (
+        const ViewCArrayKokkos<size_t> elem_node_gids,
+        const RaggedRightArrayKokkos <double>& dissipation_global_vars,
+        const DCArrayKokkos<double>& GaussPoints_vel_grad,
+        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& MaterialPoints_den,
+        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const ViewCArrayKokkos<double>& disp_corner_forces,
+        const ViewCArrayKokkos<double>& area_normal,
+        const RaggedRightArrayKokkos<size_t>& elems_in_elem,
+        const CArrayKokkos<size_t>& num_elems_in_elem,
+        const double vol,
+        const double fuzz,
+        const double small,
+        const double elem_gid,
+        const size_t mat_point_lid,
+        const size_t mat_id) = NULL;
+        // in 2D, in place of vol, the elem facial area is passed
+
 }; // end material_t
 
 /////////////////////////////////////////////////////////////////////////////
@@ -330,7 +385,8 @@ struct Material_t
 
     RaggedRightArrayKokkos<double> erosion_global_vars;  ///< Array of global variables for the erosion model
 
-    RaggedRightArrayKokkos<double> art_viscosity_global_vars; ///< Array holding q1, q1ex, q2, ...
+    RaggedRightArrayKokkos<double> dissipation_global_vars; ///< Array holding q1, q1ex, q2, ... for artificial viscosity
+    CArrayKokkos<size_t> num_dissipation_global_vars;
 
     // ...
 }; // end MaterialModelVars_t
@@ -345,16 +401,13 @@ static std::vector<std::string> str_material_inps
     "eos_model_type",
     "strength_model",
     "strength_model_type",
-    "q1",
-    "q2",
-    "q1ex",
-    "q2ex",
     "eos_global_vars",
     "strength_global_vars",
+    "dissipation_model",
+    "dissipation_global_vars",
     "erosion_model",
     "erode_tension_val",
     "erode_density_val",
-    "void_mat_id",
 };
 
 // ---------------------------------------------------------------

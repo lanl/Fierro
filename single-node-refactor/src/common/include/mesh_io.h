@@ -39,6 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.h"
 #include "simulation_parameters.h"
 #include "region.h"
+#include "string_utils.h"
 
 #include <map>
 #include <memory>
@@ -93,6 +94,7 @@ int get_id_device(int i, int j, int k, int num_i, int num_j)
 {
     return i + j * num_i + k * num_i * num_j;
 }
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -157,9 +159,10 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_mesh(Mesh_t& mesh,
-        State_t& State,
-        int      num_dims,
-        int      rk_num_bins)
+                   State_t& State,
+                   mesh_input_t& mesh_inps,
+                   int      num_dims,
+                   int      rk_num_bins)
     {
         if (mesh_file_ == NULL) {
             throw std::runtime_error("**** No mesh path given for read_mesh ****");
@@ -188,13 +191,16 @@ public:
         std::cout << "File extension is: " << extension << std::endl;
 
         if(extension == "geo"){ // Ensight meshfile extension
-            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, num_dims, rk_num_bins);
+            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims, rk_num_bins);
         }
         else if(extension == "inp"){ // Abaqus meshfile extension
             read_Abaqus_mesh(mesh, State, num_dims, rk_num_bins);
         }
         else if(extension == "vtk"){ // vtk file format
-            throw std::runtime_error("**** VTK mesh reader not yet implemented ****");
+
+            read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims, rk_num_bins);
+
+            //throw std::runtime_error("**** VTK mesh reader not yet implemented ****");
             // read_VTK_mesh(mesh, State, num_dims, rk_num_bins);
         }
         else{
@@ -218,11 +224,12 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_ensight_mesh(Mesh_t& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        int num_dims,
-        int rk_num_bins)
+                           GaussPoint_t& GaussPoints,
+                           node_t&   node,
+                           corner_t& corner,
+                           mesh_input_t& mesh_inps,
+                           int num_dims,
+                           int rk_num_bins)
     {
         FILE* in;
         char  ch;
@@ -363,9 +370,9 @@ public:
 
     /////////////////////////////////////////////////////////////////////////////
     ///
-    /// \fn read_ensight_mesh
+    /// \fn read_Abaqus_mesh
     ///
-    /// \brief Read .geo mesh file
+    /// \brief Read .inp mesh file
     ///
     /// \param Simulation mesh
     /// \param Simulation state
@@ -375,9 +382,9 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_Abaqus_mesh(Mesh_t& mesh,
-        State_t& State,
-        int      num_dims,
-        int      rk_num_bins)
+                          State_t& State,
+                          int      num_dims,
+                          int      rk_num_bins)
     {
 
         std::cout<<"Reading abaqus input file for mesh"<<std::endl;
@@ -533,7 +540,248 @@ public:
         // Build connectivity
         mesh.build_connectivity();
     } // end read abaqus mesh
-};
+
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn read_vtk_mesh
+    ///
+    /// \brief Read ASCII .vtk mesh file
+    ///
+    /// \param Simulation mesh
+    /// \param Simulation state
+    /// \param Node state struct
+    /// \param Number of dimensions
+    /// \param Number of RK bins
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void read_vtk_mesh(Mesh_t& mesh,
+                    GaussPoint_t& GaussPoints,
+                    node_t&   node,
+                    corner_t& corner,
+                    mesh_input_t& mesh_inps,
+                    int num_dims,
+                    int rk_num_bins)
+    {
+
+        std::cout<<"Reading VTK mesh"<<std::endl;
+    
+        int i;           // used for writing information to file
+        int node_gid;    // the global id for the point
+        int elem_gid;     // the global id for the elem
+
+        size_t num_nodes_in_elem = 1;
+        for (int dim = 0; dim < num_dims; dim++) {
+            num_nodes_in_elem *= 2;
+        }
+        
+
+        std::string token;
+        
+        bool found = false;
+        
+        std::ifstream in;  // FILE *in;
+        in.open(mesh_file_);
+        
+
+        // look for POINTS
+        i = 0;
+        while (found==false) {
+            std::string str;
+            std::string delimiter = " ";
+            std::getline(in, str);
+            std::vector<std::string> v = split (str, delimiter);
+            
+            // looking for the following text:
+            //      POINTS %d float
+            if(v[0] == "POINTS"){
+                size_t num_nodes = std::stoi(v[1]);
+                printf("Num nodes read in %zu\n", num_nodes);
+                mesh.initialize_nodes(num_nodes);
+
+                std::vector<node_state> required_node_state = { node_state::coords };
+                node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
+                
+                found=true;
+            } // end if
+            
+            
+            if (i>1000){
+                std::cerr << "ERROR: Failed to find POINTS in file" << std::endl;
+                break;
+            } // end if
+            
+            i++;
+        } // end while
+        
+        // read the node coordinates
+        for (node_gid=0; node_gid<mesh.num_nodes; node_gid++){
+            
+            std::string str;
+            std::getline(in, str);
+            
+            std::string delimiter = " ";
+            std::vector<std::string> v = split (str, delimiter);
+            
+            // save the nodal coordinates
+            node.coords.host(0, node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
+            node.coords.host(0, node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
+            if(num_dims==3){
+                node.coords.host(0, node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
+            }
+
+            
+        } // end for nodes
+
+        // save the node coords to the current RK value
+        for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
+            for (int rk = 1; rk < rk_num_bins; rk++) {
+                for (int dim = 0; dim < num_dims; dim++) {
+                    node.coords.host(rk, node_gid, dim) = node.coords.host(0, node_gid, dim);
+                } // end for dim
+            } // end for rk
+        } // end parallel for
+
+        // Update device nodal positions
+        node.coords.update_device();
+        
+
+        found=false;
+
+        // look for CELLS
+        i = 0;
+        size_t num_elem = 0;
+        while (found==false) {
+            std::string str;
+            std::getline(in, str);
+            
+            std::string delimiter = " ";
+            std::vector<std::string> v = split (str, delimiter);
+            std::cout << v[0] << std::endl; // printing
+            
+            // looking for the following text:
+            //      CELLS num_elem size
+            if(v[0] == "CELLS"){
+                num_elem = std::stoi(v[1]);
+                printf("Num elements read in %zu\n", num_elem);
+
+                // initialize elem variables
+                mesh.initialize_elems(num_elem, num_dims);
+                
+                found=true;
+            } // end if
+            
+            
+            if (i>1000){
+                printf("ERROR: Failed to find CELLS \n");
+                break;
+            } // end if
+            
+            i++;
+        } // end while
+        
+        
+        // read the node ids in the element
+        for (elem_gid=0; elem_gid<num_elem; elem_gid++) {
+            
+            std::string str;
+            std::getline(in, str);
+            
+            std::string delimiter = " ";
+            std::vector<std::string> v = split (str, delimiter);
+            num_nodes_in_elem = std::stoi(v[0]);
+            
+            for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+                mesh.nodes_in_elem.host(elem_gid, node_lid) = std::stod(v[node_lid+1]);
+                //printf(" %zu ", elem_point_list(elem_gid,node_lid) ); // printing
+            }
+            //printf("\n"); // printing
+            
+        } // end for
+
+        // Convert from ensight to IJK mesh
+        size_t convert_ensight_to_ijk[8];
+        convert_ensight_to_ijk[0] = 0;
+        convert_ensight_to_ijk[1] = 1;
+        convert_ensight_to_ijk[2] = 3;
+        convert_ensight_to_ijk[3] = 2;
+        convert_ensight_to_ijk[4] = 4;
+        convert_ensight_to_ijk[5] = 5;
+        convert_ensight_to_ijk[6] = 7;
+        convert_ensight_to_ijk[7] = 6;
+
+        size_t tmp_ijk_indx[8];
+
+        for (size_t elem_gid = 0; elem_gid < num_elem; elem_gid++) {
+            for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                tmp_ijk_indx[node_lid] = mesh.nodes_in_elem.host(elem_gid, convert_ensight_to_ijk[node_lid]);
+            }
+
+            for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+                mesh.nodes_in_elem.host(elem_gid, node_lid) = tmp_ijk_indx[node_lid];
+            }
+        }
+        // update device side
+        mesh.nodes_in_elem.update_device();
+
+
+        // initialize corner variables
+        size_t num_corners = num_elem * num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+
+
+        // Build connectivity
+        mesh.build_connectivity();
+
+
+        found=false;
+
+        printf("\n");
+        
+        
+        // look for CELL_TYPE
+        i = 0;
+        size_t elem_type = 0;
+        while (found==false) {
+            std::string str;
+            std::string delimiter = " ";
+            std::getline(in, str);
+            std::vector<std::string> v = split (str, delimiter);
+            
+            // looking for the following text:
+            //      CELLS num_elem size
+            if(v[0] == "CELL_TYPES"){
+
+                std::getline(in, str);
+                elem_type = std::stoi(str);
+                
+                found=true;
+            } // end if
+            
+            
+            if (i>1000){
+                printf("ERROR: Failed to find elem_TYPE \n");
+                break;
+            } // end if
+            
+            i++;
+        } // end while
+        printf("elem type = %zu \n", elem_type);
+        // elem types:
+        // linear hex = 12, linear quad = 9
+        found=false;
+        
+        
+        if(num_nodes_in_elem==8 & elem_type != 12) {
+            printf("wrong elem type of %zu \n", elem_type);
+            std::cerr << "ERROR: incorrect element type in VTK file" << std::endl;
+        }
+        
+        in.close();
+        
+    } // end of VTKread function
+
+}; // end of Mesh reader class
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -1234,6 +1482,7 @@ public:
     void write_mesh(Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
+        double dt,
         double time_value,
         CArray<double> graphics_times,
         std::vector<node_state> node_states,
@@ -1254,6 +1503,7 @@ public:
             write_ensight(mesh,
                           State,
                           SimulationParamaters,
+                          dt,
                           time_value,
                           graphics_times,
                           node_states,
@@ -1298,6 +1548,7 @@ public:
     void write_ensight(Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
+        double dt,
         double time_value,
         CArray<double> graphics_times,
         std::vector<node_state> node_states,
@@ -1332,7 +1583,7 @@ public:
         // --------------------------
 
         const int num_scalar_vars = 10;
-        const int num_vec_vars    = 2;
+        const int num_vec_vars    = 3;
 
         std::string name_tmp;
         name_tmp = "Outputs_SGH";
@@ -1345,7 +1596,7 @@ public:
         };
 
         const char vec_var_names[num_vec_vars][15] = {
-            "pos", "vel"
+            "pos", "vel", "accel"
         };
 
         // short hand
@@ -1356,6 +1607,7 @@ public:
         // save the cell state to an array for exporting to graphics files
         auto elem_fields = CArray<double>(num_elems, num_scalar_vars);
         int  elem_switch = 1;
+
 
         DCArrayKokkos<double> speed(num_elems);
         FOR_ALL(elem_gid, 0, num_elems, {
@@ -1436,7 +1688,7 @@ public:
                 vec_fields(node_gid, 0, 2) = State.node.coords.host(1, node_gid, 2);
             }
 
-            // position, var 1
+            // velocity, var 1
             vec_fields(node_gid, 1, 0) = State.node.vel.host(1, node_gid, 0);
             vec_fields(node_gid, 1, 1) = State.node.vel.host(1, node_gid, 1);
             if (num_dims == 2) {
@@ -1445,6 +1697,18 @@ public:
             else{
                 vec_fields(node_gid, 1, 2) = State.node.vel.host(1, node_gid, 2);
             }
+
+            // accelleration, var 2
+            vec_fields(node_gid, 2, 0) = (State.node.vel.host(1, node_gid, 0) - State.node.vel.host(0, node_gid, 0))/dt;
+            vec_fields(node_gid, 2, 1) = (State.node.vel.host(1, node_gid, 1) - State.node.vel.host(0, node_gid, 1))/dt;
+            if (num_dims == 2) {
+                vec_fields(node_gid, 2, 2) = 0.0;
+            }
+            else{
+                vec_fields(node_gid, 2, 2) = (State.node.vel.host(1, node_gid, 2) - State.node.vel.host(0, node_gid, 2))/dt;
+            }
+
+
         } // end for loop over vertices
 
         //  ---------------------------------------------------------------------------

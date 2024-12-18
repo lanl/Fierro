@@ -39,6 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.h"
 
 
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn get_force_rz
@@ -96,10 +97,11 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
+       
         // get mesh elem gid
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
 
-        //size_t guass_gid = elem_gid; // 1 gauss point per element
+        size_t gauss_gid = elem_gid; // 1 gauss point per element
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_lid = mat_elem_lid;
@@ -110,26 +112,15 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         // corner area normals
         double area_normal_array[8]; // 4 corners and 2 directions
 
-        // estimate of shock direction
-        double shock_dir_array[2];
+        // anti hourglass and shock disisipation corner force contributions
+        double dissipation_array[8];
 
-        // the sums in the Riemann solver
-        double sum_array[4];
-
-        // corner shock impedance x |corner area normal dot shock_dir|
-        double muc_array[4];
-
-        // Riemann velocity
-        double vel_star_array[2];
 
         // --- Create views of arrays to aid the force calculation ---
-
         ViewCArrayKokkos<double> tau(tau_array, 3, 3);
         ViewCArrayKokkos<double> area_normal(area_normal_array, num_nodes_in_elem, num_dims);
-        ViewCArrayKokkos<double> shock_dir(shock_dir_array, num_dims);
-        ViewCArrayKokkos<double> sum(sum_array, 4);
-        ViewCArrayKokkos<double> muc(muc_array, num_nodes_in_elem);
-        ViewCArrayKokkos<double> vel_star(vel_star_array, num_dims);
+        ViewCArrayKokkos<double> disp_corner_forces(&dissipation_array[0], num_nodes_in_elem, num_dims);
+
 
         // create a view of the stress_matrix
         ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, mat_point_lid, 0, 0), 3, 3);
@@ -154,25 +145,18 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         geometry::get_area_weights2D(corner_areas, elem_gid, node_coords, elem_node_gids);
 
 
-        // the -1 is for the inward surface area normal,
+        
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             for (size_t dim = 0; dim < num_dims; dim++) {
+
+                // the -1 is for the inward surface area normal,
                 area_normal(node_lid, dim) = (-1.0) * area_normal(node_lid, dim);
+
+                // initialize dissipation and anti-hourglass forces to zero
+                disp_corner_forces(node_lid, dim) = 0.0;
             } // end for
         } // end for
 
-        // with RZ-coords, div of velocity is 3 terms
-        double div = GaussPoints_vel_grad(elem_gid, 0, 0) + 
-                     GaussPoints_vel_grad(elem_gid, 1, 1) + 
-                     GaussPoints_vel_grad(elem_gid, 2, 2);
-
-        // vel = [u,v]
-        //            [du/dx,  du/dy]
-        // vel_grad = [dv/dx,  dv/dy]
-        double curl;
-        curl = GaussPoints_vel_grad(elem_gid, 1, 0) - GaussPoints_vel_grad(elem_gid, 0, 1);  // dv/dx - du/dy
-
-        double mag_curl = curl;
 
         // --- Calculate the Cauchy stress ---
         // loops are always over 3 even for 2D RZ
@@ -191,174 +175,27 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
             } // end for
         }
 
-        // ---- Multidirectional Approximate Riemann solver (MARS) ----
-        // find the average velocity of the elem, it is an
-        // estimate of the Riemann velocity
-
-        // initialize to Riemann velocity to zero
-        for (size_t dim = 0; dim < num_dims; dim++) {
-            vel_star(dim) = 0.0;
-        }
-
-        // loop over nodes and calculate an average velocity, which is
-        // an estimate of Riemann velocity
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-            // Get node global index and create view of nodal velocity
-            int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-
-            ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
-
-            vel_star(0) += 0.25 * vel(0);
-            vel_star(1) += 0.25 * vel(1);
-        } // end for loop over nodes
-
-        // find shock direction and shock impedance associated with each node
-
-        // initialize sum term in MARS to zero
-        for (int i = 0; i < 4; i++) {
-            sum(i) = 0.0;
-        }
-
-        double mag;       // magnitude of the area normal
-        double mag_vel;   // magnitude of velocity
-
-        // loop over the nodes of the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-            // Get global node id
-            size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-
-            // Create view of nodal velocity
-            ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
-
-            // Get an estimate of the shock direction.
-            mag_vel = sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
-                + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) ) );
-
-            if (mag_vel > small) {
-                // estimate of the shock direction, a unit normal
-                for (int dim = 0; dim < num_dims; dim++) {
-                    shock_dir(dim) = (vel(dim) - vel_star(dim)) / mag_vel;
-                }
-            }
-            else{
-                // if there is no velocity change, then use the surface area
-                // normal as the shock direction
-                mag = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1) );
-
-                // estimate of the shock direction
-                for (int dim = 0; dim < num_dims; dim++) {
-                    shock_dir(dim) = area_normal(node_lid, dim) / mag;
-                }
-            } // end if mag_vel
-
-            // cell divergence indicates compression or expansions
-            if (div < 0) { // element in compression
-                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                                (Materials.MaterialFunctions(mat_id).q1 * MaterialPoints_sspd(mat_point_lid) + 
-                                 Materials.MaterialFunctions(mat_id).q2 * mag_vel);
-            }
-            else{  // element in expansion
-                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                                (Materials.MaterialFunctions(mat_id).q1ex * MaterialPoints_sspd(mat_point_lid) + 
-                                 Materials.MaterialFunctions(mat_id).q2ex * mag_vel);
-            } // end if on divergence sign
-
-            size_t use_shock_dir = 0;
-            double mu_term;
-
-            // Coding to use shock direction
-            if (use_shock_dir == 1) {
-                // this is denominator of the Riemann solver and the multiplier
-                // on velocity in the numerator.  It filters on the shock
-                // direction
-                mu_term = muc(node_lid) *
-                          fabs(shock_dir(0) * area_normal(0)
-                    + shock_dir(1) * area_normal(1) );
-            }
-            else{
-                // Using a full tensoral Riemann jump relation
-                mu_term = muc(node_lid)
-                          * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                    + area_normal(node_lid, 1) * area_normal(node_lid, 1) );
-            }
-
-            sum(0) += mu_term * vel(0);
-            sum(1) += mu_term * vel(1);
-            sum(3) += mu_term;
-
-            muc(node_lid) = mu_term; // the impedance time surface area is stored here
-        } // end for node_lid loop over nodes of the elem
-
-        // The Riemann velocity, called vel_star
-        if (sum(3) > fuzz) {
-            for (size_t i = 0; i < num_dims; i++) {
-                vel_star(i) = sum(i) / sum(3);
-            }
-        }
-        else{
-            for (int i = 0; i < num_dims; i++) {
-                vel_star(i) = 0.0;
-            }
-        } // end if
-
-        // ---- Calculate the shock detector for the Riemann-solver ----
-        //
-        // The dissipation from the Riemann problem is limited by phi
-        //    phi = (1. - max( 0., min( 1. , r_face ) ))^n
-        //  where
-        //      r_face = (C* div(u_+)/div(u_z))
-        //  The plus denotes the cell center divergence of a neighbor.
-        //  The solution will be first order when phi=1 and have
-        //  zero dissipation when phi=0.
-        //      phi = 0 highest-order solution
-        //      phi = 1 first order solution
-        //
-
-        double phi    = 0.0;  // the shock detector
-        double r_face = 1.0;  // the ratio on the face
-        double r_min  = 1.0;  // the min ratio for the cell
-        double r_coef = 0.9;  // 0.9; the coefficient on the ratio
-                              //   (1=minmod and 2=superbee)
-        double n_coef = 1.0;  // the power on the limiting coefficient
-                              //   (1=nominal, and n_coeff > 1 oscillatory)
-
-        // loop over the neighboring cells
-        for (size_t elem_lid = 0; elem_lid < mesh.num_elems_in_elem(elem_gid); elem_lid++) {
-            // Get global index for neighboring cell
-            size_t neighbor_gid = mesh.elems_in_elem(elem_gid, elem_lid);
-
-            // calculate the velocity divergence in neighbor
-            double div_neighbor = GaussPoints_vel_grad(neighbor_gid, 0, 0) + 
-                                  GaussPoints_vel_grad(neighbor_gid, 1, 1) + 
-                                  GaussPoints_vel_grad(neighbor_gid, 2, 2);
-
-            r_face = r_coef * (div_neighbor + small) / (div + small);
-
-            // store the smallest face ratio
-            r_min = fmin(r_face, r_min);
-        } // end for elem_lid
-
-        // calculate standard shock detector
-        phi = 1.0 - fmax(0.0, r_min);
-        phi = pow(phi, n_coef);
-
-        //  Mach number shock detector
-        double omega    = 20.0; // 20.0;    // weighting factor on Mach number
-        double c_length = sqrt(elem_area); // characteristic length
-        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_point_lid) + fuzz) );
-
-        // use Mach based detector with standard shock detector
-
-        // turn off dissipation in expansion
-        // alpha = fmax(-fabs(div0)/div0 * alpha, 0.0);  // this should be if(div0<0) alpha=alpha else alpha=0
-
-        phi = alpha * phi;
-
-        // curl limiter on Q
-        double phi_curl = fmin(1.0, 4.0 * fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
-        // phi = phi_curl*phi;
-
+        // ---- Call dissipation model, e.g., MARS ----
+        Materials.MaterialFunctions(mat_id).calc_dissipation(
+                                    elem_node_gids,
+                                    Materials.dissipation_global_vars,
+                                    GaussPoints_vel_grad,
+                                    MaterialPoints_eroded,
+                                    node_vel,
+                                    MaterialPoints_den,
+                                    MaterialPoints_sspd,
+                                    disp_corner_forces,
+                                    area_normal,
+                                    mesh.elems_in_elem,
+                                    mesh.num_elems_in_elem,
+                                    elem_area,
+                                    fuzz,
+                                    small,
+                                    elem_gid,
+                                    mat_point_lid,
+                                    mat_id);
+                                    
+       
         // ---- Calculate the Riemann force on each node ----
 
         // loop over the each node in the elem
@@ -389,7 +226,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                     double force_component =
                         area_normal(node_lid, 0) * tau(0, dim)
                         + area_normal(node_lid, 1) * tau(1, dim)
-                        + phi * muc(node_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
+                        + disp_corner_forces(node_lid, dim);
 
                     // save the material corner force
                     MaterialCorners_force(mat_corner_lid, dim) = force_component;
@@ -405,23 +242,26 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
                 // Wilkins used elem_area*0.25 for the corner area, we will use the corner
                 // areas calculated using Barlow's symmetry and energy preserving area partitioning
-                if (node_radius > tiny) {
+
+                double radius_elem = GaussPoints_vol(gauss_gid)/elem_area;
+
+                //if (node_radius > tiny) {
                     
                     // sigma_RZ / R_p
-                    double force_term_1 = tau(1, 0) * corner_areas(corner_lid) / node_radius; 
+                    double force_term_1 = tau(1, 0) * corner_areas(corner_lid) / radius_elem; 
                     //force_term_1 = tau(1, 0) * 0.25*elem_area / node_radius; // Wilkins
                     
-                    corner_force(corner_gid, 0) += force_term_1;
+                    corner_force(corner_gid, 0) += force_term_1*MaterialPoints_volfrac(mat_point_lid);
                     MaterialCorners_force(mat_corner_lid, 0) += force_term_1;
 
                     // (sigma_RR - sigma_theta) / R_p
-                    double force_term_2 = (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) / node_radius;
+                    double force_term_2 = (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) /radius_elem;
                     //force_term_2 = (tau(1, 1) - tau(2, 2)) * 0.25*elem_area / node_radius; // Wilkins
 
-                    corner_force(corner_gid, 1) += force_term_2;
+                    corner_force(corner_gid, 1) += force_term_2*MaterialPoints_volfrac(mat_point_lid);
                     MaterialCorners_force(mat_corner_lid, 1) += force_term_2;
 
-                } // end if radius >0
+                //} // end if radius >0
 
             } // end if eroded
         } // end for loop over nodes in elem
