@@ -46,7 +46,7 @@ message("End of Trilinos details\n")
 
 include_directories(${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
-add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1 -DHAVE_MPI=1)
+add_definitions(-DHAVE_KOKKOS=1 -DHAVE_MPI=1)
 
 set(Parallel_Base_SRC node_combination.cpp dynamic_checkpoint.cpp FEA_Module.cpp FEA_Module_Inertial.cpp Solver.cpp)
 add_library(parallel_base_src OBJECT ${Parallel_Base_SRC})
