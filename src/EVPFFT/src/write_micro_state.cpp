@@ -474,14 +474,17 @@ void EVPFFT::write_micro_state_pvtu()
   edotp.update_host();
 
   // Calculate point positions
-  MatrixTypeRealDevice xtmp(3);
   MatrixTypeRealDual defgradavg(3,3);
   MatrixTypeRealDual xintp(3,npts1+1,npts2+1,npts3+1);
   MatrixTypeIntHost pid(npts1+1,npts2+1,npts3+1);
 
   for (int ii = 1; ii <= 3; ii++) {
     for (int jj = 1; jj <= 3; jj++) {
-      defgradavg.host(ii,jj) = disgradmacroactual(ii,jj);
+      if (imicro==0) {
+        defgradavg.host(ii,jj) = 0.0;
+      } else {
+        defgradavg.host(ii,jj) = disgradmacroactual(ii,jj);
+      }
       if (ii==jj) {defgradavg.host(ii,jj) += 1.0;}
     }
   }
@@ -492,14 +495,15 @@ void EVPFFT::write_micro_state_pvtu()
           ky, 1, npts2+2,
           kx, 1, npts1+2, {
 
-        xtmp(1) = double(kx+local_start1)-0.5;
-        xtmp(2) = double(ky+local_start2)-0.5;
-        xtmp(3) = double(kz+local_start3)-0.5;
+        double xtmp[3];
+        xtmp[0] = (double)kx+(double)local_start1-0.5;
+        xtmp[1] = (double)ky+(double)local_start2-0.5;
+        xtmp[2] = (double)kz+(double)local_start3-0.5;
 
         for (int ii = 1; ii <= 3; ii++) {
           real_t dum = 0.0;
           for (int jj = 1; jj <= 3; jj++) {
-            dum += defgradavg(ii,jj)*xtmp(jj);
+            dum += defgradavg(ii,jj)*xtmp[jj-1];
           }
           xintp(ii,kx,ky,kz) = dum;
         }

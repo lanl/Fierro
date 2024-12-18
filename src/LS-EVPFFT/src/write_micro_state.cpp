@@ -498,7 +498,6 @@ void EVPFFT::write_micro_state_pvtu()
   edotp.update_host();
 
   // Calculate point positions
-  MatrixTypeRealDevice xtmp(3);
   MatrixTypeRealDual defgradavg_dual(3,3);
   MatrixTypeRealDual uf(3,npts1_g,npts2_g,npts3_g);
   MatrixTypeRealDual ufintp(3,npts1+1,npts2+1,npts3+1);
@@ -517,13 +516,14 @@ void EVPFFT::write_micro_state_pvtu()
           ky, 1, npts2+1,
           kx, 1, npts1+1, {
 
-        xtmp(1) = double(kx);
-        xtmp(2) = double(ky);
-        xtmp(3) = double(kz);
+        double xtmp[3];
+        xtmp[0] = double(kx);
+        xtmp[1] = double(ky);
+        xtmp[2] = double(kz);
         for (int ii = 1; ii <= 3; ii++) {
           real_t dum = 0.0;
           for (int jj = 1; jj <= 3; jj++) {
-            dum += defgradavg_dual(ii,jj)*xtmp(jj);
+            dum += defgradavg_dual(ii,jj)*xtmp[jj-1];
           }
           uf(ii,kx+local_start1,ky+local_start2,kz+local_start3) = xnode(ii,kx,ky,kz) - dum;
         }
@@ -589,14 +589,15 @@ void EVPFFT::write_micro_state_pvtu()
           ky, 1, npts2+2,
           kx, 1, npts1+2, {
 
-        xtmp(1) = double(kx+local_start1)-0.5;
-        xtmp(2) = double(ky+local_start2)-0.5;
-        xtmp(3) = double(kz+local_start3)-0.5;
+        double xtmp[3];
+        xtmp[0] = double(kx+local_start1)-0.5;
+        xtmp[1] = double(ky+local_start2)-0.5;
+        xtmp[2] = double(kz+local_start3)-0.5;
 
         for (int ii = 1; ii <= 3; ii++) {
           real_t dum = 0.0;
           for (int jj = 1; jj <= 3; jj++) {
-            dum += defgradavg_dual(ii,jj)*xtmp(jj);
+            dum += defgradavg_dual(ii,jj)*xtmp[jj-1];
           }
           xintp(ii,kx,ky,kz) = dum + ufintp(ii,kx,ky,kz);
         }
