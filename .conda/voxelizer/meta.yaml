@@ -16,16 +16,17 @@ requirements:
     - cmake >=3.17.0
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
-    - python={{ python }}
-    - pybind11
-    - setuptools
-  host:
-    - python={{ python }}
     - elements
-    - llvm-openmp
+    #- python={{ python }}
+    #- pybind11
+    #- setuptools
+  host:
+    #- python={{ python }}
+    - elements
+    - llvm-openmp # [osx]
   run:
-    - python={{ python }}
-    - llvm-openmp
+    #- python={{ python }}
+    #- llvm-openmp # [osx]
 
 test:
   imports:
