@@ -30,7 +30,15 @@ requirements:
 test:
   imports:
     - fierro_gui
-    
+  
+about:
+  home: https://github.com/lanl/Fierro
+  license: BSD-3-Clause
+  license_family: BSD
+  summary:
+    GUI for the Fierro application, including all dependencies
+  dev_url: https://github.com/lanl/Fierro
+
 extra:
   recipe-maintainers:
     - fierromechanics

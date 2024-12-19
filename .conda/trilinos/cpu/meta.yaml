@@ -31,10 +31,10 @@ requirements:
     - boost-cpp
     - libnetcdf
     - libmatio
-    - llvm-openmp # [osx]
+      #    - llvm-openmp # [osx]
   run:
     - libblas
-    - llvm-openmp # [osx]
+      #    - llvm-openmp # [osx]
 
 about:
   home: https://trilinos.org
@@ -48,7 +48,7 @@ about:
     Fast, compiled object-oriented algorithms and enabling
     technologies that support the solution of large-scale,
     complex multi-physics engineering and scientific problems.
-  dev_url: https://github.com/trilinos/Trilinos
+  dev_url: https://github.com/lanl/Fierro
 
 extra:
   recipe-maintainers:

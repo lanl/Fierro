@@ -13,6 +13,7 @@ package:
 source:
   git_url: https://github.com/lanl/Fierro.git
   git_depth: 1
+  git_submodules: false # don't need submodules 
 
 build:
   number: 2
@@ -31,11 +32,11 @@ requirements:
   host:
     - _openmp_mutex # [linux]
     - llvm-openmp   # [osx]
-    - fierro-trilinos-cpu
+    - trilinos-cpu
     - elements
     - openmpi
   run:
-    - fierro-trilinos-cpu
+    - trilinos-cpu
     - openmpi
 
 about:

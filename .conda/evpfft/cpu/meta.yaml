@@ -26,14 +26,14 @@ requirements:
     - openmpi
   host:
     - openmpi
-    - fierro-heffte
+    - heffte-cpu
     - fftw=*=mpi_openmpi_*
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
     - elements
   run:
     - openmpi
-    - fierro-heffte
+    - heffte-cpu
     - fftw=*=mpi_openmpi_*
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*

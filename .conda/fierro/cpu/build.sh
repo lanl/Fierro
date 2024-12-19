@@ -21,4 +21,4 @@ cmake .. \
       -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
       -D VECTOR_ARCH_FLAGS="$VECTOR_ARCH_FLAGS" \
 
-make -j 10 install
+make install

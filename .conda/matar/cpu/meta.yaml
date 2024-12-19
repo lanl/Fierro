@@ -1,0 +1,47 @@
+{% set version = "1.0.0" %}
+{% set linux_compiler_version = "10.4.0" %}
+{% set macos_compiler_version = "16" %}
+
+package:
+  name: matar-cpu
+  version: {{ version }}
+
+source:
+  - git_url: https://github.com/lanl/MATAR.git
+    git_depth: 1
+
+build:
+  number: 1
+  script_env:
+    - PLATFORM={{ target_platform }}
+
+requirements:
+  build:
+    - cmake >=3.17.0
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - openmpi
+  host:
+    - openmpi
+    - kokkos=4.1
+  run:
+    - openmpi
+    - kokkos=4.1
+
+
+about:
+  home: https://github.com/lanl/MATAR
+  license: BSD-3-Clause
+  license_family: BSD
+  license_file: LICENSE
+  summary:
+    LANL's performance portability library
+  description:
+    MATAR is a C++ library that addresses the need for simple, fast, and memory-efficient multi-dimensional data representations 
+    for dense and sparse storage that arise with numerical methods and in software applications. The data representations are 
+    designed to perform well across multiple computer architectures, including CPUs and GPUs. 
+  dev_url: https://github.com/lanl/Fierro
+
+extra:
+  recipe-maintainers:
+    - fierromechanics

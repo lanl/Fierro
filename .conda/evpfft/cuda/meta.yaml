@@ -3,7 +3,7 @@
 {% set macos_compiler_version = "16" %}
 
 package:
-  name: evpfft-cuda
+  name: fierro-evpfft-cuda
   version: {{ version }}
 
 source:
@@ -12,28 +12,35 @@ source:
 
 build:
   number: 1
+  noarch: False
   script_env:
     - PLATFORM={{ target_platform }}
+  skip: True  # [osx]
+  skip: False # [linux]
 
 requirements:
   build:
     - cmake >=3.17.0
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
-    - cuda-compiler
+    - cuda-toolkit
+    - kokkos=4.1
+    - matar-cuda
     - openmpi
   host:
-    - cuda-toolkit
     - openmpi
-    - fierro-heffte-cuda
-    - hdf5=*=mpi_openmpi_h457a7a6_3
-    - fierro-trilinos-cuda # Statically linked against Kokkos CUDA kernels from here.
-    - elements
+    - heffte-cuda
+    - hdf5=*=mpi_openmpi_*
+    - kokkos=4.1
+    - matar-cuda
   run:
     - openmpi
-    - fierro-heffte-cuda
-    - hdf5=*=mpi_openmpi_h457a7a6_3
-    - elements
+    - heffte-cuda
+    - hdf5=*=mpi_openmpi_*
+    - kokkos=4.1
+    - matar-cuda
 
 about:
   home: https://github.com/lanl/Fierro
