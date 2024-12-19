@@ -78,6 +78,6 @@ def ImageToVTK(imageDir, out, outDir, file_type):
         VTK_File.write(TenthLine+'\n')
 
         for i in range(rows*columns*NumFiles):
-            csv.writer(VTK_File,delimiter='\n').writerow([img_arr[i]])
+            csv.writer(VTK_File).writerow([img_arr[i]])
 
     VTK_File.close()

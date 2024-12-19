@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>1355</width>
-    <height>1184</height>
+    <height>1208</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -352,7 +352,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>6</number>
+          <number>2</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -1059,7 +1059,7 @@
                 <x>0</x>
                 <y>0</y>
                 <width>376</width>
-                <height>541</height>
+                <height>548</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1120,7 +1120,7 @@
                   <bool>false</bool>
                  </property>
                  <property name="currentIndex">
-                  <number>5</number>
+                  <number>3</number>
                  </property>
                  <widget class="QWidget" name="page_14"/>
                  <widget class="QWidget" name="ImportPartTool">
@@ -10324,7 +10324,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <item>
             <widget class="QStackedWidget" name="RunOptions">
              <property name="currentIndex">
-              <number>2</number>
+              <number>1</number>
              </property>
              <widget class="QWidget" name="page_20">
               <layout class="QVBoxLayout" name="verticalLayout_12">
@@ -11634,7 +11634,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <x>0</x>
      <y>0</y>
      <width>1355</width>
-     <height>24</height>
+     <height>37</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">

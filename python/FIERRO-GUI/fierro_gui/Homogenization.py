@@ -5,6 +5,7 @@ import csv
 import numpy as np
 import subprocess
 import os
+import vtk
 #import paraview.simple as paraview.simple
 from paraview.simple import *
 from Homogenization_WInput import *
@@ -894,9 +895,12 @@ def Homogenization(self):
         # Display .xdmf data
         output_name = str(self.INBCFile.currentText())
         output_parts = output_name.split()
-        file_name = "micro_state_timestep_" + str(self.INNumberOfSteps.text()) + ".xdmf"
-        self.output_directory = os.path.join(self.working_directory, output_parts[0], output_parts[1], file_name)
-        self.results_reader = paraview.simple.XDMFReader(FileNames=self.output_directory)
+#        file_name = "micro_state_timestep_" + str(self.INNumberOfSteps.text()) + ".xdmf"
+        file_name = f"MicroState_{int(self.INNumberOfSteps.text()):05}.pvtu"
+        self.output_directory = os.path.join(self.working_directory, output_parts[0], output_parts[1], "pvtu", file_name)
+#        self.output_directory = os.path.join(self.working_directory, output_parts[0], output_parts[1], file_name)
+#        self.results_reader = paraview.simple.XDMFReader(FileNames=self.output_directory)
+        self.results_reader = paraview.simple.XMLPartitionedUnstructuredGridReader(FileName=self.output_directory)
         
         # Apply threshold to view certain phase id's
         in_file_path = self.TParts.item(0,10).text()

@@ -1218,9 +1218,11 @@ def Bulk_Forming(self):
             self.display.SetScalarBarVisibility(self.render_view, False)
 
         # Display .xdmf data
-        file_name = "micro_state_timestep_" + str(self.INBFloadsteps.text()) + ".xdmf"
-        self.output_directory = os.path.join(self.working_directory, file_name)
-        self.results_reader = paraview.simple.XDMFReader(FileNames=self.output_directory)
+#        file_name = "micro_state_timestep_" + str(self.INBFloadsteps.text()) + ".xdmf"
+        file_name = f"MicroState_{int(self.INBFloadsteps.text()):05}.pvtu"
+#        self.output_directory = os.path.join(self.working_directory, file_name)
+        self.output_directory = os.path.join(self.working_directory, "pvtu", file_name)
+        self.results_reader = paraview.simple.XMLPartitionedUnstructuredGridReader(FileName=self.output_directory)
         paraview.simple.SetDisplayProperties(Representation="Surface")
         self.display = Show(self.results_reader, self.render_view)
         
