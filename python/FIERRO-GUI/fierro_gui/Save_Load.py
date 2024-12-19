@@ -16,6 +16,9 @@ def Save(self):
              "labels": {},
              "checkboxes": {}}
              
+    # change material definition of bulk forming solver to custom before saving
+    self.INMaterialDefinition.setCurrentIndex(0)
+             
     # Save widget states
     for attr_name, attr_value in self.__dict__.items():
         if isinstance(attr_value, QComboBox):
