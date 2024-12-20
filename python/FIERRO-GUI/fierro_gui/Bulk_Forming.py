@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QTableWidget, QPushButton, QTreeWidgetItem, QAbstractItemView)
-from PySide6.QtCore import (QCoreApplication, QProcess, Qt)
+from PySide6.QtCore import (QCoreApplication, QProcess, Qt, QProcessEnvironment)
 from PySide6.QtGui import (QColor, QBrush, QFont)
 import numpy as np
 import re
@@ -1156,7 +1156,15 @@ def Bulk_Forming(self):
         else:
             warning_message("ERROR: Trying to run an incorrect file type.")
         
+        # Set up the environment
         self.p = QProcess()
+        env = QProcessEnvironment.systemEnvironment()
+        if not env.contains("OMP_PROC_BIND"):
+            env.insert("OMP_PROC_BIND", "spread")
+        if not env.contains("OMP_NUM_THREADS"):
+            env.insert("OMP_NUM_THREADS", "1")
+        self.p.setProcessEnvironment(env)
+        # Set up the states
         self.p.setWorkingDirectory(self.working_directory)
         self.p.readyReadStandardOutput.connect(handle_stdout)
         self.p.readyReadStandardError.connect(handle_stderr)

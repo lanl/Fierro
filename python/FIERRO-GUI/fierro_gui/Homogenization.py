@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox, QApplication, QFileDialog)
-from PySide6.QtCore import (QCoreApplication, QProcess, Qt)
+from PySide6.QtCore import (QCoreApplication, QProcess, Qt, QProcessEnvironment)
 import re
 import csv
 import numpy as np
@@ -646,7 +646,15 @@ def Homogenization(self):
         if not os.path.exists(self.simulation_directory):
             os.makedirs(self.simulation_directory)
         
+        # Set up the environment
         self.p = QProcess()
+        env = QProcessEnvironment.systemEnvironment()
+        if not env.contains("OMP_PROC_BIND"):
+            env.insert("OMP_PROC_BIND", "spread")
+        if not env.contains("OMP_NUM_THREADS"):
+            env.insert("OMP_NUM_THREADS", "1")
+        self.p.setProcessEnvironment(env)
+        # Set up the states
         self.p.setWorkingDirectory(self.simulation_directory)
         self.p.readyReadStandardOutput.connect(handle_stdout)
         self.p.readyReadStandardError.connect(handle_stderr)
