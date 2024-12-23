@@ -615,13 +615,25 @@ def Homogenization(self):
         file_type = os.path.splitext(in_file_path)[1].lower()
         reload(DeveloperInputs)
         if self.UserConfig == "Developer":
-            executable_path = DeveloperInputs.fierro_evpfft_exe
+            if self.INHParallel.isChecked():
+                executable_path = "mpirun"
+            else:
+                executable_path = DeveloperInputs.fierro_evpfft_exe
         elif self.UserConfig == "User":
-            executable_path = "evpfft"
+            if self.INHParallel.isChecked():
+                executable_path = "mpirun"
+            else:
+                executable_path = "evpfft"
         if ".vtk" in file_type:
-            arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
+            if self.INHParallel.isChecked():
+                arguments = ["-np", self.INmpiRanks.value(), "evpfft", "-f", self.EVPFFT_INPUT, "-m", "2"]
+            else:
+                arguments = ["-f", self.EVPFFT_INPUT, "-m", "2"]
         else:
-            arguments = ["-f", self.EVPFFT_INPUT]
+            if self.INHParallel.isChecked():
+                arguments = ["-np", self.INmpiRanks.value(), "evpfft", "-f", self.EVPFFT_INPUT]
+            else:
+                arguments = ["-f", self.EVPFFT_INPUT]
         
         # Make a new directory to store all of the outputs
         if BC_index == 0:
@@ -875,6 +887,14 @@ def Homogenization(self):
     # Select single job or batch job
     self.INSingleJob.toggled.connect(lambda: self.HomogenizationBatch.setCurrentIndex(0))
     self.INBatchJob.toggled.connect(lambda: self.HomogenizationBatch.setCurrentIndex(1))
+    
+    # Select serial or parallel run type
+    self.INHSerial.toggled.connect(lambda: self.HomogenizationRunType.setCurrentIndex(0))
+    self.INHParallel.toggled.connect(lambda: self.HomogenizationRunType.setCurrentIndex(1))
+    
+    # Set number of mpi ranks based on the number of cores that are avaliable on the system
+    num_cores = os.cpu_count()
+    self.INmpiRanks.setMaximum(num_cores)
     
 #    # Upload HDF5
 #    def upload_hdf5_click():

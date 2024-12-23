@@ -274,8 +274,14 @@ def Reload_Geometry(self):
         self.render_view.ResetCamera()
         self.render_view.StillRender()
     elif self.file_type == ".txt":
+        # input file location
+        Data_filename = self.TParts.item(0,10).text()
+    
         # output file location
         vtk_location = self.voxelizer_dir + '/VTK_Geometry_' + self.TParts.item(0,0).text() + '.vtk'
+        
+        # convert text file to vtk file for visualization
+        los_alamos_to_vtk(Data_filename, vtk_location)
         
         # Paraview window
         self.txt_reader = paraview.simple.LegacyVTKReader(FileNames = vtk_location)

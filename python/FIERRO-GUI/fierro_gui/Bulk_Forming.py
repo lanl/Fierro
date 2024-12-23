@@ -1124,6 +1124,14 @@ def Bulk_Forming(self):
             self.TCstress.setItem(1,1,QTableWidgetItem("0."))
     self.INbulkBC.currentIndexChanged.connect(boundary_conditions)
     
+    # Select serial or parallel run type
+    self.INBFSerial.toggled.connect(lambda: self.BFRunType.setCurrentIndex(0))
+    self.INBFParallel.toggled.connect(lambda: self.BFRunType.setCurrentIndex(1))
+    
+    # Set number of mpi ranks based on the number of cores that are avaliable on the system
+    num_cores = os.cpu_count()
+    self.INBFmpiRanks.setMaximum(num_cores)
+    
     # Run Bulk Formation
     self.run = 0
     def run_bulk_forming():
@@ -1146,15 +1154,25 @@ def Bulk_Forming(self):
         file_type = os.path.splitext(in_file_path)[1].lower()
         reload(DeveloperInputs)
         if self.UserConfig == "Developer":
-            executable_path = DeveloperInputs.fierro_evpfft_exe
+            if self.INBFParallel.isChecked():
+                executable_path = "mpirun"
+            else:
+                executable_path = DeveloperInputs.fierro_evpfft_exe
         elif self.UserConfig == "User":
-            executable_path = "evpfft"
-        if ".txt" in file_type:
-            arguments = ["-f", self.BULK_FORMING_INPUT]
-        elif ".vtk" in file_type:
-            arguments = ["-f", self.BULK_FORMING_INPUT, "-m", "2"]
+            if self.INBFParallel.isChecked():
+                executable_path = "mpirun"
+            else:
+                executable_path = "evpfft"
+        if ".vtk" in file_type:
+            if self.INBFParallel.isChecked():
+                arguments = ["-np", self.INBFmpiRanks.value(), "evpfft", "-f", self.BULK_FORMING_INPUT, "-m", "2"]
+            else:
+                arguments = ["-f", self.BULK_FORMING_INPUT, "-m", "2"]
         else:
-            warning_message("ERROR: Trying to run an incorrect file type.")
+            if self.INBFParallel.isChecked():
+                arguments = ["-np", self.INBFmpiRanks.value(), "evpfft", "-f", self.BULK_FORMING_INPUT]
+            else:
+                arguments = ["-f", self.BULK_FORMING_INPUT]
         
         # Set up the environment
         self.p = QProcess()
