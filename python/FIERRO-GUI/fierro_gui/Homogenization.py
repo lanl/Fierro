@@ -597,7 +597,14 @@ def Homogenization(self):
     
     # Single Run of EVPFFT
     self.run_cnt = 0
+    self.IterationError = False
+    self.ConvergenceError = False
+    self.min_iterations_old = 0
     def single_EVPFFT(BC_index):
+        # Restart progress bar
+        if BC_index == 0:
+            self.RunOutputProgress.setValue(0)
+        
         # Create location to save files
         self.working_directory = os.path.join(self.evpfft_dir, f'{self.job_name}')
         if not os.path.exists(self.working_directory):
@@ -668,8 +675,8 @@ def Homogenization(self):
         self.p.setProcessEnvironment(env)
         # Set up the states
         self.p.setWorkingDirectory(self.simulation_directory)
-        self.p.readyReadStandardOutput.connect(handle_stdout)
-        self.p.readyReadStandardError.connect(handle_stderr)
+#        self.p.readyReadStandardOutput.connect(handle_stdout)
+#        self.p.readyReadStandardError.connect(handle_stderr)
         self.p.stateChanged.connect(handle_state)
         self.p.finished.connect(lambda: process_finished(BC_index))
         try:
@@ -679,22 +686,34 @@ def Homogenization(self):
             return
         self.progress_re = re.compile("       Current  Time  STEP = (\\d+)")
         self.run_cnt += 1
+        # Count how many iterations were taken towards the solution
+        self.iterations_re = re.compile(r" ITER = (\d+)")
             
-    def simple_percent_parser(output):
-        m = self.progress_re.search(output)
-        if m:
-            pc_complete = m.group(1)
-            return int(pc_complete)
+    def convergence_check(output):
+        iterations = self.iterations_re.findall(output)
+        if iterations:
+            return int(iterations[-1])
     def process_finished(num):
+        handle_stdout()
+        handle_stderr()
         self.RunOutputProgress.setValue(((num+1)/6)*100)
+        # If the number of iterations didn't exceed 10, write out an error
+        if self.min_iterations_old < 10:
+            self.IterationError = True
+        # If the iterations reached the maximum number, write out an error
+        if self.min_iterations_old >= int(self.INMaxIterations.text()):
+            self.ConvergenceError = True
+        self.min_iterations_old = 0
         self.p.close()
         self.p = None
+        self.RunOutputWindow.appendPlainText("Finished")
     def handle_stdout():
         data = self.p.readAllStandardOutput()
         stdout = bytes(data).decode("utf8")
-#        progress = simple_percent_parser(stdout)
-#        if progress:
-#            self.RunOutputProgress.setValue((progress/int(self.INNumberOfSteps.text()))*100)
+        # check for convergence
+        self.min_iterations = convergence_check(stdout)
+        if self.min_iterations is not None and self.min_iterations > self.min_iterations_old:
+            self.min_iterations_old  = self.min_iterations
         self.RunOutputWindow.appendPlainText(stdout)
     def handle_stderr():
         data = self.p.readAllStandardError()
@@ -716,6 +735,10 @@ def Homogenization(self):
             self.p.waitForStarted()
             while self.p != None:
                 QApplication.processEvents()
+                
+            # Check if tolerance is met
+            if self.INHAutomatic.isChecked() and (self.IterationError == True or self.ConvergenceError == True):
+                break
 
             # Generate Homogenized Elastic Constants
             self.THomogenization.setEnabled(True)
@@ -798,6 +821,32 @@ def Homogenization(self):
                     file.write(f'Gxy, {self.THomogenization.item(6,0).text()}, {self.THomogenization.item(6,1).text()}\n')
                     file.write(f'Gyz, {self.THomogenization.item(8,0).text()}, {self.THomogenization.item(8,1).text()}\n')
                     file.write(f'Gzx, {self.THomogenization.item(7,0).text()}, {self.THomogenization.item(7,1).text()}\n')
+        
+        # update convergence parameters if convergence isn't met
+        if self.IterationError == True:
+            self.IterationError = False
+            self.min_iterations_old = 0
+            if self.INHAutomatic.isChecked():
+                new_tol = float(self.INErrorTolerance.text())/10
+                if new_tol < 1e-15:
+                    warning_message("ERROR: Convergence could not be achieved.")
+                else:
+                    self.INErrorTolerance.setText(str(new_tol))
+                    run_homogenization()
+            elif self.INHManual.isChecked():
+                warning_message("WARNING: It is recomended that you decrease your error tolerance. Solution convergence was NOT achieved.")
+        if self.ConvergenceError == True:
+            self.ConvergenceError = False
+            self.min_iterations_old = 0
+            if self.INHAutomatic.isChecked():
+                new_iterations = int(self.INMaxIterations.text()) + 100
+                if new_iterations > 1000:
+                    warning_message("ERROR: Convergence could not be achieved.")
+                else:
+                    self.INMaxIterations.setText(str(new_iterations))
+                    run_homogenization()
+            elif self.INHManual.isChecked():
+                warning_message("WARNING: It is recomended that you increase your maximum number of iterations. Solution convergence was NOT achieved.")
     
     # Connect homogenization run button
     self.p = None
@@ -835,6 +884,16 @@ def Homogenization(self):
                 # Reload geometry
                 self.in_file_path = self.file_paths[i]
                 Upload_Batch_Geometry(self)
+                
+                # Reset solver settings...
+                if i == 0:
+                    steps = self.INNumberOfSteps.text()
+                    tol = self.INErrorTolerance.text()
+                    iter = self.INMaxIterations.text()
+                if i > 0:
+                    self.INNumberOfSteps.setText(steps)
+                    self.INErrorTolerance.setText(tol)
+                    self.INMaxIterations.setText(iter)
                             
                 # Run homogenization
                 run_homogenization()

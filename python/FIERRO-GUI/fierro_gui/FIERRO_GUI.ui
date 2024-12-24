@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1355</width>
-    <height>1208</height>
+    <width>1326</width>
+    <height>1002</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -274,6 +274,12 @@
     </item>
     <item>
      <widget class="QFrame" name="frame_27">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="minimumSize">
        <size>
         <width>0</width>
@@ -305,7 +311,7 @@
           <bool>true</bool>
          </property>
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -3707,7 +3713,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               <bool>false</bool>
              </property>
              <property name="currentIndex">
-              <number>1</number>
+              <number>0</number>
              </property>
              <property name="iconSize">
               <size>
@@ -5467,7 +5473,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <bool>true</bool>
                      </property>
                      <property name="currentIndex">
-                      <number>0</number>
+                      <number>1</number>
                      </property>
                      <widget class="QWidget" name="Elastic_2">
                       <attribute name="icon">
@@ -6455,7 +6461,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               </font>
                              </property>
                              <property name="currentIndex">
-                              <number>1</number>
+                              <number>0</number>
                              </property>
                              <property name="iconSize">
                               <size>
@@ -10017,7 +10023,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <item row="1" column="0">
                    <widget class="QRadioButton" name="INHomogenizationSettingC">
                     <property name="text">
-                     <string>Custom (WARNING: not reccomended)</string>
+                     <string>Custom </string>
                     </property>
                    </widget>
                   </item>
@@ -10647,7 +10653,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </property>
                  <widget class="QWidget" name="page_31"/>
                  <widget class="QWidget" name="page_32">
-                  <layout class="QFormLayout" name="formLayout_9">
+                  <layout class="QVBoxLayout" name="verticalLayout_72">
                    <property name="leftMargin">
                     <number>0</number>
                    </property>
@@ -10660,31 +10666,125 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <property name="bottomMargin">
                     <number>0</number>
                    </property>
-                   <item row="0" column="1">
-                    <widget class="QSpinBox" name="INmpiRanks">
-                     <property name="readOnly">
-                      <bool>false</bool>
+                   <item>
+                    <widget class="QFrame" name="frame_65">
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
                      </property>
-                     <property name="buttonSymbols">
-                      <enum>QAbstractSpinBox::UpDownArrows</enum>
+                     <property name="frameShadow">
+                      <enum>QFrame::Raised</enum>
                      </property>
-                     <property name="minimum">
-                      <number>1</number>
-                     </property>
-                     <property name="maximum">
-                      <number>1</number>
-                     </property>
+                     <layout class="QFormLayout" name="formLayout_9">
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>0</number>
+                      </property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_58">
+                        <property name="text">
+                         <string>MPI Ranks:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QSpinBox" name="INmpiRanks">
+                        <property name="readOnly">
+                         <bool>false</bool>
+                        </property>
+                        <property name="buttonSymbols">
+                         <enum>QAbstractSpinBox::UpDownArrows</enum>
+                        </property>
+                        <property name="minimum">
+                         <number>1</number>
+                        </property>
+                        <property name="maximum">
+                         <number>1</number>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
                     </widget>
                    </item>
-                   <item row="0" column="0">
-                    <widget class="QLabel" name="label_58">
+                   <item>
+                    <widget class="QLabel" name="label_65">
                      <property name="text">
-                      <string>MPI Ranks:</string>
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#797979;&quot;&gt;Warning: mpi could be slower than serial for small models due to initialization and overhead.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
+                     <property name="wordWrap">
+                      <bool>true</bool>
                      </property>
                     </widget>
                    </item>
                   </layout>
                  </widget>
+                </widget>
+               </item>
+               <item alignment="Qt::AlignHCenter">
+                <widget class="QLabel" name="label_64">
+                 <property name="font">
+                  <font>
+                   <bold>true</bold>
+                   <underline>true</underline>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Convergence Tuning</string>
+                 </property>
+                </widget>
+               </item>
+               <item alignment="Qt::AlignHCenter">
+                <widget class="QFrame" name="frame_64">
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QFormLayout" name="formLayout_19">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>5</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="QRadioButton" name="INHAutomatic">
+                    <property name="toolTip">
+                     <string>Automatically adjust model parameters if solution convergence is not met.</string>
+                    </property>
+                    <property name="text">
+                     <string>Automatic</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QRadioButton" name="INHManual">
+                    <property name="toolTip">
+                     <string>Outputs a convergence warning. Requires manual parameter adjustment and manual re-run.</string>
+                    </property>
+                    <property name="text">
+                     <string>Manual</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </widget>
                </item>
                <item>
@@ -11595,7 +11695,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                </property>
                <widget class="QStackedWidget" name="OutputWindows">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -11839,19 +11939,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
       </layout>
      </widget>
     </item>
-    <item>
-     <spacer name="verticalSpacer_21">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>20</width>
-        <height>40</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -11860,8 +11947,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1355</width>
-     <height>37</height>
+     <width>1326</width>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">

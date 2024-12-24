@@ -1134,8 +1134,13 @@ def Bulk_Forming(self):
     
     # Run Bulk Formation
     self.run = 0
+    self.ConvergenceError = False
+    self.min_iterations_old = 0
     def run_bulk_forming():
         self.run = 1
+        # Restart progress bar
+        self.RunOutputProgress.setValue(0)
+        
         # Create location to save files
         self.job_name = "simulation_files"
         self.working_directory = os.path.join(self.bulk_forming_dir, f'{self.job_name}')
@@ -1194,18 +1199,41 @@ def Bulk_Forming(self):
             self.warning_message("ERROR: evpfft executable")
             return
         self.progress_re = re.compile("       Current  Time  STEP = (\\d+)")
+        # Count how many iterations were taken towards the solution
+        self.iterations_re = re.compile(r" ITER = (\d+)")
         
         # Save job directory
         self.INBFJobDir.setText(f'{self.working_directory}')
+        
+        # Wait for program to finish before checking for errors
+        self.p.waitForStarted()
+        while self.p != None:
+            QApplication.processEvents()
+        
+        # Provide warnings for convergence
+        if self.ConvergenceError == True:
+            self.ConvergenceError = False
+            self.min_iterations_old = 0
+            warning_message("WARNING: It is recomended that you increase your maximum number of iterations. Solution convergence was NOT achieved.")
     self.BRunBulkForming.clicked.connect(run_bulk_forming)
             
+    def convergence_check(output):
+        iterations = self.iterations_re.findall(output)
+        if iterations:
+            return int(iterations[-1])
     def simple_percent_parser(output):
         m = self.progress_re.search(output)
         if m:
             pc_complete = m.group(1)
             return int(pc_complete)
     def process_finished(num):
+        handle_stdout()
+        handle_stderr()
         self.RunOutputProgress.setValue(100)
+        # If the iterations reached the maximum number, write out an error
+        if self.min_iterations_old >= int(self.INBFmaxiter.text()):
+            self.ConvergenceError = True
+        self.min_iterations_old = 0
         self.p.close()
         self.p = None
     def handle_stdout():
@@ -1214,6 +1242,10 @@ def Bulk_Forming(self):
         progress = simple_percent_parser(stdout)
         if progress:
             self.RunOutputProgress.setValue((progress/int(self.INBFloadsteps.text()))*100)
+        # check for convergence
+        self.min_iterations = convergence_check(stdout)
+        if self.min_iterations is not None and self.min_iterations > self.min_iterations_old:
+            self.min_iterations_old  = self.min_iterations
         self.RunOutputWindow.appendPlainText(stdout)
     def handle_stderr():
         data = self.p.readAllStandardError()
