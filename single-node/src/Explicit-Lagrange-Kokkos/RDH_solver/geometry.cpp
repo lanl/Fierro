@@ -21,7 +21,7 @@ void update_position_rdh(const int stage,
 
         for (int dim = 0; dim < mesh.num_dims; dim++){
             
-            double half_vel = 0.5*( node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim) );
+            double half_vel = 0.5*( node_vel(stage, node_gid, dim) + node_vel(0, node_gid, dim) );
             node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + dt*half_vel;
         }
         
@@ -131,6 +131,7 @@ void get_vol(DViewCArrayKokkos <double> &elem_vol,
 } // end subroutine
 
 
+KOKKOS_FUNCTION
 void get_J0Inv(const DViewCArrayKokkos <double> &JInv,
                DViewCArrayKokkos <double> &J0Inv,
                const mat_pt_t &mat_pt){
@@ -169,13 +170,14 @@ void compute_JJ0Inv(const DViewCArrayKokkos <double> &J,
     for (int i = 0; i < mesh.num_dims; i++){
         for (int j = 0; j < mesh.num_dims; j++){
             for (int k = 0; k < mesh.num_dims; k++){
-                JJ0Inv[i][j] += J0Inv(legendre_gid, k, i)*J(legendre_gid, k, j);
+                JJ0Inv[i][j] += J0Inv(legendre_gid, i, k)*J(legendre_gid, k, j);
             }// k
         }// j
     }// i
 
 }// end compute_JJ0Inv
 
+KOKKOS_FUNCTION
 void get_h0(const DViewCArrayKokkos <double> &elem_vol,
             DViewCArrayKokkos <double> &h0,
             const mesh_t &mesh,
@@ -188,7 +190,7 @@ void get_h0(const DViewCArrayKokkos <double> &elem_vol,
 
             int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
 
-            h0(gauss_gid) = pow( abs( elem_vol(elem_gid) ), 1.0/double(mesh.num_dims) )/(double(mesh.Pn));
+            h0(gauss_gid) = pow( abs( elem_vol(elem_gid) ), 1.0/double(mesh.num_dims) )/(2.0*(double(mesh.Pn))-1.0);
 
         }// end gauss_lid
 

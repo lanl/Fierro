@@ -47,11 +47,11 @@ double graphics_time = graphics_dt_ival;  // the times for writing graphics dump
 double time_value = 0.0;
 double time_final = 1.e16;
 double dt = 1.e-6;
-double dt_max = 1.0e-2;
-double dt_min = 1.0e-8;
-double fe_order = 6.0;
+double dt_max = 1.0e-5;
+double dt_min = 1.0e-9;
+double fe_order = 5.0;
 double dt_cfl = 1.0/(2.0*fe_order+1.0);
-double dt_start = 1.0e-5;
+double dt_start = 1.0e-6;
 
 size_t rk_num_stages = 2;
 size_t rk_num_bins = 2;
@@ -204,9 +204,9 @@ int main(int argc, char *argv[]){
                                                num_nodes,
                                                num_dims);
 
-        // DViewCArrayKokkos <double> mat_pt_coords(&mat_pt.coords(0,0),
-        //                                         num_leg_pts,
-        //                                         num_dims);
+        DViewCArrayKokkos <double> mat_pt_coords(&mat_pt.coords(0,0),
+                                                num_leg_pts,
+                                                num_dims);
 
         DViewCArrayKokkos <double> node_vel(&node.vel(0,0,0),
                                             rk_num_bins,
@@ -339,15 +339,24 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         node_coords.update_device();
         Kokkos::fence();
+		FOR_ALL(elem_gid, 0, mesh.num_elems, {
+			for (int gauss_lid = 0; gauss_lid < ref_elem.num_gauss_leg_in_elem; gauss_lid++){
+				int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+				for (int dim = 0; dim < mesh.num_dims; dim++){
+					eval_x(node_coords, elem_gid, gauss_lid, mesh, ref_elem, mat_pt_coords, 1, dim);
+				}
+			}		
+		});
+		Kokkos::fence();
 
-        get_gauss_leg_pt_jacobian(mesh,
+		get_gauss_leg_pt_jacobian(mesh,
                                   elem,
                                   ref_elem,
                                   node_coords,
                                   gauss_legendre_jacobian,
                                   gauss_legendre_det_j,
                                   gauss_legendre_jacobian_inverse,
-                                  0);
+                                  1);
         Kokkos::fence();
 
         gauss_legendre_jacobian.update_host();
@@ -364,8 +373,12 @@ int main(int argc, char *argv[]){
 
         get_h0(elem_vol, h0, mesh, ref_elem);
         Kokkos::fence();
-
         h0.update_host();
+
+		FOR_ALL(gauss_gid, 0, num_leg_pts, {
+			mat_pt_h(gauss_gid) = h0(gauss_gid);		
+		});
+		mat_pt_h.update_host();
 
         // double vol_check = 0.0;
         // for (int i = 0; i < mesh.num_elems; i++){
@@ -704,7 +717,7 @@ int main(int argc, char *argv[]){
 
         mat_pt_sspd.update_host();
         // mat_pt_vel.update_host();
-        // mat_pt_coords.update_host();
+        mat_pt_coords.update_host();
         mat_pt_sie.update_host();
         mat_pt_h.update_host();
         zone_sie.update_host();
@@ -773,6 +786,7 @@ int main(int argc, char *argv[]){
             F_e,
             S,
             node_coords,
+			mat_pt_coords,
             gauss_legendre_jacobian,
             gauss_legendre_jacobian_inverse,
             gauss_legendre_det_j,
@@ -817,9 +831,9 @@ int main(int argc, char *argv[]){
         mat_pt_stress.update_host();
         mat_pt_sspd.update_host();
         // mat_pt_vel.update_host();
-        // mat_pt_coords.update_host();
+        mat_pt_coords.update_host();
         mat_pt_sie.update_host();
-        mat_pt_h.update_host();
+        //mat_pt_h.update_host();
         zone_sie.update_host();
         zone_mass.update_host();
         elem_vol.update_host();
@@ -838,7 +852,7 @@ int main(int argc, char *argv[]){
         Kokkos::fence();
 
         state_file( mesh, node_coords, node_vel,
-                    mat_pt_h, node_mass, mat_pt_den, mat_pt_pressure, mat_pt_stress,
+                    mat_pt_h, node_mass, mat_pt_coords, mat_pt_den, mat_pt_pressure, mat_pt_stress,
                     mat_pt_sspd, mat_pt_sie, elem_vol,
                     elem_mat_id, time_value );
             

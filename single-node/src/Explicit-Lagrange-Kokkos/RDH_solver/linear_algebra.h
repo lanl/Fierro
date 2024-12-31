@@ -623,8 +623,8 @@ void get_spectrum(const double data[3][3], double eigenvalues[3], double eigenve
     eigenvectors[2][0] = 0.0; eigenvectors[2][1] = 0.0; eigenvectors[2][2] = 1.0;
 
     // Jacobi method iteration parameters
-    const int MAX_ITER = 100;
-    const double EPS = 1e-10;
+    const int MAX_ITER = 1000;
+    const double EPS = 1e-15;
 
     for (int iter = 0; iter < MAX_ITER; ++iter) {
         // Find the largest off-diagonal element in A

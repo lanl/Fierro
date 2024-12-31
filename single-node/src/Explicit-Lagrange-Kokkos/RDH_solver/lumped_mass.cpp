@@ -60,34 +60,35 @@ void get_lumped_mass(mesh_t &mesh,
     // compute \sum_{K \ni i} \int_K \rho \psi_i dx
     // unlike the above, there is only one K per i as the i's are completely internal to the K's
     // i.e. no thermo degree of freedom is shared by two or more elements
-    FOR_ALL(zone_gid, 0, mesh.num_zones,{
-        int elem_gid = mesh.elems_in_zone(zone_gid);
-        int zone_lid = mesh.local_zone_id_in_elem(zone_gid, elem_gid);
+    
+	//FOR_ALL(zone_gid, 0, mesh.num_zones,{
+    //    int elem_gid = mesh.elems_in_zone(zone_gid);
+    //    int zone_lid = mesh.local_zone_id_in_elem(zone_gid, elem_gid);
 
-        for (int gauss_lid = 0; gauss_lid < ref_elem.num_gauss_leg_in_elem; gauss_lid++){
-            int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+    //    for (int gauss_lid = 0; gauss_lid < ref_elem.num_gauss_leg_in_elem; gauss_lid++){
+    //        int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
 
-            zonal_mass(zone_gid) += den(gauss_gid)*DetJac(gauss_gid)
-                                            *ref_elem.gauss_leg_elem_basis(gauss_lid, zone_lid)
-                                            *ref_elem.gauss_leg_weights(gauss_lid);
+    //        zonal_mass(zone_gid) += den(gauss_gid)*DetJac(gauss_gid)
+    //                                        *ref_elem.gauss_leg_elem_basis(gauss_lid, zone_lid)
+    //                                        *ref_elem.gauss_leg_weights(gauss_lid);
 
-        }
-    });
-
-    Kokkos::fence();
-
-    //FOR_ALL(elem_gid, 0, mesh.num_elems,{
-    // 
-    //    for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
-    //        int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
-
-    //        for (int i = 0; i < mesh.num_zones_in_elem; i++){
-    //            zonal_mass(zone_gid) += M_e(elem_gid, zone_lid, i);
-    //        }
     //    }
     //});
 
     //Kokkos::fence();
+
+    FOR_ALL(elem_gid, 0, mesh.num_elems,{
+     
+        for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+            int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+
+            for (int i = 0; i < mesh.num_zones_in_elem; i++){
+                zonal_mass(zone_gid) += M_e(elem_gid, zone_lid, i);
+            }
+        }
+    });
+
+    Kokkos::fence();
 
 
     // Check positivity of lumped masses

@@ -225,6 +225,7 @@ void run(const mesh_t &mesh,
          DViewCArrayKokkos <double> &F_e,
          DViewCArrayKokkos <double> &S,
          DViewCArrayKokkos <double> &node_coords,
+         DViewCArrayKokkos <double> &mat_pt_coords,
          DViewCArrayKokkos <double> &Jacobian,
          DViewCArrayKokkos <double> &JacInv,
          DViewCArrayKokkos <double> &DetJac,
@@ -296,6 +297,7 @@ void state_file(const mesh_t &mesh,
                 const DViewCArrayKokkos <double> &node_vel,
                 const DViewCArrayKokkos <double> &mat_pt_h,
                 const DViewCArrayKokkos <double> &node_mass,
+                const DViewCArrayKokkos <double> &mat_pt_coords,
                 const DViewCArrayKokkos <double> &elem_den,
                 const DViewCArrayKokkos <double> &elem_pres,
                 const DViewCArrayKokkos <double> &elem_stress,
@@ -329,7 +331,17 @@ void boundary_velocity(const mesh_t &mesh,
                        const double time_value);
 
 KOKKOS_FUNCTION 
-void eval_sie(const DViewCArrayKokkos <double> sie,
+void eval_x(const DViewCArrayKokkos <double> &node_coords,
+              const int elem_gid,
+              const int legendre_lid,
+              const mesh_t &mesh,
+              const fe_ref_elem_t &ref_elem,
+              DViewCArrayKokkos <double> mat_pt_coords,
+              const int stage,
+			  const int dim);
+
+KOKKOS_FUNCTION 
+void eval_sie(const DViewCArrayKokkos <double> &sie,
               const int elem_gid,
               const int legendre_lid,
               const mesh_t &mesh,
@@ -338,14 +350,16 @@ void eval_sie(const DViewCArrayKokkos <double> sie,
               const int stage);
 
 KOKKOS_FUNCTION 
-void eval_vel(const DViewCArrayKokkos <double> vel,
+void eval_vel(const DViewCArrayKokkos <double> &vel,
               const int elem_gid,
               const int legendre_lid,
               const mesh_t &mesh,
               const fe_ref_elem_t &ref_elem,
-              CArrayKokkos <double> &val,
-              const int stage);
+              DViewCArrayKokkos <double> interp_vel,
+              const int stage,
+			  const int dim);
 
+KOKKOS_FUNCTION
 void get_J0Inv(const DViewCArrayKokkos <double> &JInv,
                DViewCArrayKokkos <double> &J0Inv,
                const mat_pt_t &mat_pt);
@@ -405,6 +419,7 @@ void get_viscosity_coefficient(const mesh_t &mesh,
                                const double h0,
                                const double grad_u[3][3]);
 
+KOKKOS_FUNCTION
 void get_h0(const DViewCArrayKokkos <double> &elem_vol,
             DViewCArrayKokkos <double> &h0,
             const mesh_t &mesh,

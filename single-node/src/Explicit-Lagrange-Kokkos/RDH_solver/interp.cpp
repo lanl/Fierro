@@ -11,7 +11,7 @@ using namespace mtr;
 
 
 KOKKOS_FUNCTION 
-void eval_sie(const DViewCArrayKokkos <double> sie,
+void eval_sie(const DViewCArrayKokkos <double> &sie,
               const int elem_gid,
               const int legendre_lid,
               const mesh_t &mesh,
@@ -29,20 +29,40 @@ void eval_sie(const DViewCArrayKokkos <double> sie,
 }// end eval_sie
 
 KOKKOS_FUNCTION 
-void eval_vel(const DViewCArrayKokkos <double> vel,
+void eval_vel(const DViewCArrayKokkos <double> &vel,
               const int elem_gid,
               const int legendre_lid,
               const mesh_t &mesh,
               const fe_ref_elem_t &ref_elem,
-              CArrayKokkos <double> &val,
-              const int stage){
-
+              DViewCArrayKokkos <double> interp_vel,
+              const int stage,
+			  const int dim){
+	
+    double temp = 0.0;
     for(int i = 0; i < mesh.num_nodes_in_elem; i++){
         int node_gid = mesh.nodes_in_elem(elem_gid, i);
-        for (int dim = 0; dim < mesh.num_dims; dim++){
-            val(dim) += ref_elem.gauss_leg_elem_basis(legendre_lid, i)*vel(stage, node_gid, dim);
-        }
+            temp += ref_elem.gauss_leg_basis(legendre_lid, i)*vel(stage, node_gid, dim);
     }
+	interp_vel(mesh.legendre_in_elem(elem_gid, legendre_lid), dim) = temp;
+}// end eval_vel
+
+KOKKOS_FUNCTION 
+void eval_x(const DViewCArrayKokkos <double> &node_coords,
+              const int elem_gid,
+              const int legendre_lid,
+              const mesh_t &mesh,
+              const fe_ref_elem_t &ref_elem,
+              DViewCArrayKokkos <double> mat_pt_coords,
+              const int stage,
+			  const int dim){
+
+    double temp = 0.0;
+	for(int i = 0; i < mesh.num_nodes_in_elem; i++){
+        int node_gid = mesh.nodes_in_elem(elem_gid, i);
+            temp += ref_elem.gauss_leg_basis(legendre_lid, i)*node_coords(stage, node_gid, dim);
+    }
+	mat_pt_coords(mesh.legendre_in_elem(elem_gid, legendre_lid), dim) = temp;
+
 }// end eval_vel
 
 // compute: \sum_j \nabla \varphi_i(x) \otimes u_j = \grad u (x)

@@ -29,6 +29,7 @@ void run(const mesh_t &mesh,
          DViewCArrayKokkos <double> &F_e,
          DViewCArrayKokkos <double> &S,
          DViewCArrayKokkos <double> &node_coords,
+         DViewCArrayKokkos <double> &mat_pt_coords,
          DViewCArrayKokkos <double> &Jacobian,
          DViewCArrayKokkos <double> &JacInv,
          DViewCArrayKokkos <double> &DetJac,
@@ -104,7 +105,7 @@ void run(const mesh_t &mesh,
                                         Jacobian,
                                         DetJac,
                                         JacInv,
-                                        stage);
+                                        1);
             Jacobian.update_host();
             DetJac.update_host();
             JacInv.update_host();
@@ -152,7 +153,13 @@ void run(const mesh_t &mesh,
             node_vel.update_host();
 
             get_energy_rhs(mesh, ref_elem, DetJac, SigmaJacInv, node_vel, stress, node_coords, F_e, S, stage, viscosity_cond, source_cond);
-
+		//	FOR_ALL(elem_gid, 0, mesh.num_elems, {
+		//		for (int i = 0; i < mesh.num_zones_in_elem; i++){
+		//			if (F_e(stage, elem_gid, i) > 0.0){
+		//				printf("F_e in elem %d and zone %d is %.25f \n", elem_gid, i, F_e(stage, elem_gid, i));
+		//			}
+		//		}
+		//	});
             F_e.update_host();
 
             get_energy_residual(mesh, M_e, zone_sie, F_e, PSI, dt,  stage, time_int_weights);
@@ -169,7 +176,16 @@ void run(const mesh_t &mesh,
 
         }// end stages
 
-    
+   		 
+		FOR_ALL(elem_gid, 0, mesh.num_elems, {
+			for (int gauss_lid = 0; gauss_lid < ref_elem.num_gauss_leg_in_elem; gauss_lid++){
+				int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+				for (int dim = 0; dim < mesh.num_dims; dim++){
+						eval_x(node_coords, elem_gid,gauss_lid, mesh, ref_elem, mat_pt_coords, 1, dim);
+				}
+			}		
+		});
+		Kokkos::fence();
         // increment the time
 	    // time_value+=dt;
         //double min_detJ = 0.0;

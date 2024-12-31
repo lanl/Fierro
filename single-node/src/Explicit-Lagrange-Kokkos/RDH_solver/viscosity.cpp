@@ -44,7 +44,7 @@ void get_viscosity_coefficient(const mesh_t &mesh,
 	    double diff = sqrt((Av[0]-lambda_v[0])*(Av[0]-lambda_v[0]) +
 	                       (Av[1]-lambda_v[1])*(Av[1]-lambda_v[1]) +
 	                       (Av[2]-lambda_v[2])*(Av[2]-lambda_v[2]));
-	    if (diff > 1e-6) {
+	    if (diff > 1e-09) {
 	        printf("Eigenvector validation failed for eigenvalue %.15f\n", lambda);
 	    }// else {
 	    //    printf("Eigenvector validation passed for eigenvalue %.15f\n", lambda);
@@ -71,7 +71,9 @@ void get_viscosity_coefficient(const mesh_t &mesh,
     compute_JJ0Inv(Jac, J0Inv, JJ0Inv, gauss_gid, mesh);
 
     double JJ0Invs[3];
-    JJ0Invs[0] = 0; JJ0Invs[1] = 0.0; JJ0Invs[2] = 0.0;
+    JJ0Invs[0] = 0;
+	JJ0Invs[1] = 0.0;
+	JJ0Invs[2] = 0.0;
     
     for (int i = 0; i < mesh.num_dims; i++){
 		for (int j = 0; j < mesh.num_dims; j++){
@@ -82,9 +84,10 @@ void get_viscosity_coefficient(const mesh_t &mesh,
 	double l2_JJ0Inv_dot_s;
     compute_l2_norm(JJ0Invs, l2_JJ0Inv_dot_s);
 
-    double h = h0(gauss_gid);//*l2_JJ0Inv_dot_s/(l2_s + 1.0e-06);
-
-    double coeff = 0.0;
+    double h = h0(gauss_gid);//*l2_JJ0Inv_dot_s;///(l2_s + 1.0e-12);
+	//printf(" h : %.15f \n", h);
+    
+	double coeff = 0.0;
     double eps = 1.0e-12;
     double y = (min_eig_val - eps) / (2.0 * eps);
     if (y < 0.0) 
@@ -103,14 +106,15 @@ void get_viscosity_coefficient(const mesh_t &mesh,
     double phi_curl = 1.0;
 
     if (Fro_norm_grad_u > 0.0){
-        phi_curl = fabs(div_u/(Fro_norm_grad_u + 1.0e-06));
+        phi_curl = fabs(div_u/(Fro_norm_grad_u + 1.0e-12));
     }
 	
 	double sigmoid = 1.0/(1.0 + exp(-min_eig_val));
 
-    alpha = 0.5*den(gauss_gid)*h*sspd(gauss_gid)*(1.0-coeff)*phi_curl;//*sigmoid;
+    alpha = 0.5*den(gauss_gid)*h*sspd(gauss_gid)*sigmoid*phi_curl;//(1.0-coeff)*phi_curl;//
 	alpha += 2.0*h*h*den(gauss_gid)*fabs( min_eig_val );//*sigmoid;
-    //if (alpha > 0.0){
+    
+	//if (alpha > 0.0){
 	//
 	// printf("alpha : %f \n", alpha);
 	//

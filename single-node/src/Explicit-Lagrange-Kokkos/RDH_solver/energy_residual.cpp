@@ -41,7 +41,7 @@ void get_energy_rhs(const mesh_t &mesh,
             for (int dim = 0; dim < mesh.num_dims; dim++){
 
                 for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-                    int node_gid = mesh.nodes_in_elem(elem_gid, zone_lid );
+                    int node_gid = mesh.nodes_in_elem(elem_gid, node_lid );
 
                     for (int gauss_lid = 0; gauss_lid < ref_elem.num_gauss_leg_in_elem; gauss_lid++){
                         int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
@@ -168,7 +168,7 @@ void get_energy_residual(const mesh_t &mesh,
             for (int i = 0; i < mesh.num_zones_in_elem; i++){
                 int i_gid = mesh.zones_in_elem(elem_gid, i);
 
-                M_dot_e += M(zone_lid, i)*(zone_sie(stage, i_gid) - zone_sie(0, i_gid));
+                M_dot_e += M(elem_gid, zone_lid, i)*(zone_sie(stage, i_gid) - zone_sie(0, i_gid));
 
             }
 
@@ -179,6 +179,8 @@ void get_energy_residual(const mesh_t &mesh,
             }// prev_stage
 
             PSI(stage, elem_gid, zone_lid) = M_dot_e - time_int_F_e;
+			//printf(" M.e : %.25f \n", M_dot_e);
+			//printf(" time int F : %.25f \n", time_int_F_e);
 
         }// zone_lid
     

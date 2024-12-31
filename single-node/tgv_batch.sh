@@ -8,8 +8,8 @@
 #SBATCH --output=./TGV_batch_output/TGV_%j.out
 #SBATCH --error=./TGV_batch_output/TGV_%j.err
 
-## usage: sbatch tgv_batch.sh 2 1 5, will run Q1Q0 and Q2Q1 on 4x4, 8x8, 16x16, 32x32 meshes
-## usage: sbatch tgv_batch.sh 2 2 3, will run Q2Q1 on 4x4 and 8x8 meshes
+## usage: sbatch tgv_batch.sh 2 1 5 2, will run Q1Q0 and Q2Q1 on 4x4, 8x8, 16x16, 32x32 meshes
+## usage: sbatch tgv_batch.sh 2 2 3 2, will run Q2Q1 on 4x4 and 8x8 meshes
 
 source ./scripts/machines/darwin-env.sh
 module list
@@ -41,8 +41,8 @@ for ((i=q; i<=k; i++)); do
     mesh_file="./meshes/TGV_Q${i}Q${j}_${mesh_size}.vtk"
     output_file="./TGV_batch_output/TGV_Q${i}Q${j}_${mesh_size}_${SLURM_JOB_ID}.out"
     error_file="./TGV_batch_output/TGV_${SLURM_JOB_ID}.err"
-    state_file="./state/mat_pt_state_t_1.00000e-01.txt"
-    node_state_file="./state/node_state_t_1.00000e-01.txt"
+    state_file="./state/mat_pt_state_t_5.00000e-01.txt"
+    node_state_file="./state/node_state_t_5.00000e-01.txt"
     matpt_mv_file="./TGV_convergence/TGV_Q${i}Q${j}_${mesh_size}_matpt.txt"
     nodest_mv_file="./TGV_convergence/TGV_Q${i}Q${j}_${mesh_size}_nodes.txt"
     vtk_folder="./vtk"

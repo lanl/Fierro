@@ -66,9 +66,12 @@ void update_thermo(const mesh_t &mesh,
             int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
 
             double sie_val = 0.0;
-            eval_sie(sie, elem_gid, gauss_lid, mesh, ref_elem, sie_val, stage);
-            // printf("sie_val : %f \n", sie_val);
-
+			double val = 0.0;
+            eval_sie(sie, elem_gid, gauss_lid, mesh, ref_elem, val, stage);
+            //if (val < 0.0){
+			//	printf("sie_val : %.25f \n", val);
+			//}
+			sie_val = fmax(0.0, val);
             double den_val = den(gauss_gid);
             
             ideal_gas(pres, stress, elem_gid, gauss_gid,

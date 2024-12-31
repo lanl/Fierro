@@ -21,6 +21,7 @@ void update_energy(DViewCArrayKokkos <double> &zone_sie,
                 int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
 
                 zone_sie(1, zone_gid) = zone_sie(stage, zone_gid) - PSI(stage, elem_gid, zone_lid)/m(zone_gid);
+				//printf("energy res/m : %f \n", PSI(stage, elem_gid, zone_lid)/m(zone_gid));
                 
             }
         });

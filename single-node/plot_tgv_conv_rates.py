@@ -58,8 +58,7 @@ for i in range(q, k + 1):
         
         U_exact_mag = exact_solution(x, y, z)
         
-        h = min(current_mat_pt_data[:, 10])  # Assuming the mesh size is in column 11 (index 10)
-    
+        h = min(current_mat_pt_data[:, 7])  # Assuming the mesh size is in column 11 (index 10)
         # Calculate the L1 error in the magnitude
         L1_error = calculate_L1_magnitude_error(U_num_mag, U_exact_mag, h, h, h)
         errors[idx] = L1_error
