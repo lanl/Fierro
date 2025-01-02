@@ -5,6 +5,7 @@ import numpy as np
 import re
 import os
 import subprocess
+import vtk
 from paraview.simple import *
 from importlib import reload
 from Bulk_Forming_WInput import *
@@ -1281,8 +1282,65 @@ def Bulk_Forming(self):
 #        self.output_directory = os.path.join(self.working_directory, file_name)
         self.output_directory = os.path.join(self.working_directory, "pvtu", file_name)
         self.results_reader = paraview.simple.XMLPartitionedUnstructuredGridReader(FileName=self.output_directory)
-        paraview.simple.SetDisplayProperties(Representation="Surface")
-        self.display = Show(self.results_reader, self.render_view)
+#        paraview.simple.SetDisplayProperties(Representation="Surface")
+#        self.display = Show(self.results_reader, self.render_view)
+        
+        # Apply warp filter as long as result wasn't run using more than 1 mpi rank
+        if self.INBFSerial.isChecked():
+            # Enable deformation scale factor
+            self.INBFDeform.setEnabled(True)
+            # Calculate transform filter stuff
+            self.results_reader.UpdatePipeline()
+            # Access the output from the reader
+            output_data = self.results_reader.GetClientSideObject().GetOutput()
+            # Get point data
+            points = output_data.GetPoints()
+            num_points = points.GetNumberOfPoints()
+            # Extract coordinates
+            coords = []
+            for i in range(num_points):
+                coord = points.GetPoint(i)
+                coords.append(coord)
+            # Extract differences
+            diffX = []
+            diffY = []
+            diffZ = []
+            count = 0
+            for k in range(int(self.TParts.item(0,9).text())+1):
+                for j in range(int(self.TParts.item(0,8).text())+1):
+                    for i in range(int(self.TParts.item(0,7).text())+1):
+                        diffX.append(coords[count][0]-(float(i)+0.5))
+                        diffY.append(coords[count][1]-(float(j)+0.5))
+                        diffZ.append(coords[count][2]-(float(k)+0.5))
+                        count += 1
+            # Create a new array for displacements
+            displacement_array = vtk.vtkFloatArray()
+            displacement_array.SetName("Displacement")
+            displacement_array.SetNumberOfComponents(3)
+            displacement_array.SetNumberOfTuples(num_points)
+            for i in range(num_points):
+                displacement_array.SetTuple3(i, diffX[i], diffY[i], diffZ[i])
+            # Add the displacement array to the output
+            output_data.GetPointData().AddArray(displacement_array)
+            # Create a new source with the updated data
+            temp_source = paraview.simple.TrivialProducer()
+            temp_source.GetClientSideObject().SetOutput(output_data)
+            # Scale the displacements
+            scale_factor = self.INBFDeform.value()  # Adjust this value to change the scaling
+            scale_filter = paraview.simple.Calculator(Input=temp_source)
+            scale_filter.ResultArrayName = 'ScaledDisplacement'
+            scale_filter.Function = f'Displacement * {scale_factor}'
+            paraview.simple.UpdatePipeline()
+            # Warp Filter
+            self.threshold = paraview.simple.WarpByVector(Input=scale_filter)
+            self.threshold.Vectors = ['POINTS', 'ScaledDisplacement']
+            # Display
+            self.display = Show(self.threshold, self.render_view)
+        else:
+            # Disable deformation scale factor
+            self.INBFDeform.setEnabled(False)
+            # Display
+            self.display = Show(self.results_reader, self.render_view)
         
         # Color by the selected variable
         selected_variable = str(self.INBFResults.currentText())
@@ -1294,6 +1352,7 @@ def Bulk_Forming(self):
         self.render_view.ResetCamera()
         self.render_view.StillRender()
     self.INBFResults.currentIndexChanged.connect(preview_results_click_2)
+    self.INBFDeform.valueChanged.connect(preview_results_click_2)
     
     # Show results immediately when postprocessing tab is pressed
     def show_results_2():

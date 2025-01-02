@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIOJdSGm.ui'
+## Form generated from reading UI file 'FIERRO_GUIiupgNU.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -17,15 +17,15 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
 from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QAbstractSpinBox, QApplication,
-    QCheckBox, QComboBox, QFormLayout, QFrame,
-    QGridLayout, QHBoxLayout, QHeaderView, QLabel,
-    QLayout, QLineEdit, QListWidget, QListWidgetItem,
-    QMainWindow, QMenu, QMenuBar, QPlainTextEdit,
-    QProgressBar, QPushButton, QRadioButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QSpinBox, QSplitter,
-    QStackedWidget, QStatusBar, QTabWidget, QTableWidget,
-    QTableWidgetItem, QToolButton, QTreeWidget, QTreeWidgetItem,
-    QVBoxLayout, QWidget)
+    QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout,
+    QFrame, QGridLayout, QHBoxLayout, QHeaderView,
+    QLabel, QLayout, QLineEdit, QListWidget,
+    QListWidgetItem, QMainWindow, QMenu, QMenuBar,
+    QPlainTextEdit, QProgressBar, QPushButton, QRadioButton,
+    QScrollArea, QSizePolicy, QSpacerItem, QSpinBox,
+    QSplitter, QStackedWidget, QStatusBar, QTabWidget,
+    QTableWidget, QTableWidgetItem, QToolButton, QTreeWidget,
+    QTreeWidgetItem, QVBoxLayout, QWidget)
 import IconResourceFile_rc
 import IconResourceFile_rc
 
@@ -34,7 +34,7 @@ class Ui_MainWindow(object):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.setEnabled(True)
-        MainWindow.resize(1326, 1002)
+        MainWindow.resize(1326, 1168)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -506,7 +506,7 @@ class Ui_MainWindow(object):
         self.SAGeometryScrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 376, 541))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 280, 541))
         sizePolicy3.setHeightForWidth(self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth())
         self.scrollAreaWidgetContents.setSizePolicy(sizePolicy3)
         self.scrollAreaWidgetContents.setMinimumSize(QSize(0, 0))
@@ -5835,6 +5835,33 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_47.addWidget(self.PreviewResults, 0, Qt.AlignTop)
 
+        self.frame_66 = QFrame(self.page_9)
+        self.frame_66.setObjectName(u"frame_66")
+        self.frame_66.setFrameShape(QFrame.NoFrame)
+        self.frame_66.setFrameShadow(QFrame.Raised)
+        self.formLayout_20 = QFormLayout(self.frame_66)
+        self.formLayout_20.setObjectName(u"formLayout_20")
+        self.formLayout_20.setContentsMargins(0, 0, 0, 0)
+        self.label_66 = QLabel(self.frame_66)
+        self.label_66.setObjectName(u"label_66")
+
+        self.formLayout_20.setWidget(0, QFormLayout.LabelRole, self.label_66)
+
+        self.INHDeform = QDoubleSpinBox(self.frame_66)
+        self.INHDeform.setObjectName(u"INHDeform")
+        self.INHDeform.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.INHDeform.setCorrectionMode(QAbstractSpinBox.CorrectToNearestValue)
+        self.INHDeform.setDecimals(1)
+        self.INHDeform.setMinimum(0.100000000000000)
+        self.INHDeform.setMaximum(10000.000000000000000)
+        self.INHDeform.setSingleStep(1.000000000000000)
+        self.INHDeform.setValue(1.000000000000000)
+
+        self.formLayout_20.setWidget(0, QFormLayout.FieldRole, self.INHDeform)
+
+
+        self.verticalLayout_47.addWidget(self.frame_66)
+
         self.BOpenParaview = QPushButton(self.page_9)
         self.BOpenParaview.setObjectName(u"BOpenParaview")
 
@@ -5929,6 +5956,33 @@ class Ui_MainWindow(object):
         self.INBFResults.setObjectName(u"INBFResults")
 
         self.verticalLayout_41.addWidget(self.INBFResults)
+
+        self.frame_67 = QFrame(self.page_25)
+        self.frame_67.setObjectName(u"frame_67")
+        self.frame_67.setFrameShape(QFrame.NoFrame)
+        self.frame_67.setFrameShadow(QFrame.Raised)
+        self.formLayout_21 = QFormLayout(self.frame_67)
+        self.formLayout_21.setObjectName(u"formLayout_21")
+        self.formLayout_21.setContentsMargins(0, 0, 0, 0)
+        self.label_67 = QLabel(self.frame_67)
+        self.label_67.setObjectName(u"label_67")
+
+        self.formLayout_21.setWidget(0, QFormLayout.LabelRole, self.label_67)
+
+        self.INBFDeform = QDoubleSpinBox(self.frame_67)
+        self.INBFDeform.setObjectName(u"INBFDeform")
+        self.INBFDeform.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.INBFDeform.setCorrectionMode(QAbstractSpinBox.CorrectToNearestValue)
+        self.INBFDeform.setDecimals(1)
+        self.INBFDeform.setMinimum(0.100000000000000)
+        self.INBFDeform.setMaximum(10000.000000000000000)
+        self.INBFDeform.setSingleStep(1.000000000000000)
+        self.INBFDeform.setValue(1.000000000000000)
+
+        self.formLayout_21.setWidget(0, QFormLayout.FieldRole, self.INBFDeform)
+
+
+        self.verticalLayout_41.addWidget(self.frame_67)
 
         self.BBFParaview = QPushButton(self.page_25)
         self.BBFParaview.setObjectName(u"BBFParaview")
@@ -6120,7 +6174,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1326, 24))
+        self.menubar.setGeometry(QRect(0, 0, 1326, 37))
         self.menuHelp = QMenu(self.menubar)
         self.menuHelp.setObjectName(u"menuHelp")
         self.menuFile = QMenu(self.menubar)
@@ -7525,6 +7579,7 @@ class Ui_MainWindow(object):
         self.INResultRegion.setItemText(1, QCoreApplication.translate("MainWindow", u"Void", None))
         self.INResultRegion.setItemText(2, QCoreApplication.translate("MainWindow", u"Part + Void", None))
 
+        self.label_66.setText(QCoreApplication.translate("MainWindow", u"Deformation Scale Factor:", None))
         self.BOpenParaview.setText(QCoreApplication.translate("MainWindow", u"Open Paraview", None))
         ___qtablewidgetitem248 = self.THomogenization.horizontalHeaderItem(0)
         ___qtablewidgetitem248.setText(QCoreApplication.translate("MainWindow", u"Homogenized Elastic Constants", None));
@@ -7567,6 +7622,7 @@ class Ui_MainWindow(object):
         self.INBFResults.setItemText(0, QCoreApplication.translate("MainWindow", u"vm-stress", None))
         self.INBFResults.setItemText(1, QCoreApplication.translate("MainWindow", u"vm-strain", None))
 
+        self.label_67.setText(QCoreApplication.translate("MainWindow", u"Deformation Scale Factor:", None))
         self.BBFParaview.setText(QCoreApplication.translate("MainWindow", u"Open Paraview", None))
         self.LBFJobDir.setText(QCoreApplication.translate("MainWindow", u"Job Directory:", None))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.Results), QCoreApplication.translate("MainWindow", u"Results", None))
