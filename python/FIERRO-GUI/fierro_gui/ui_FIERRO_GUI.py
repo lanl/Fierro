@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIYaKUPn.ui'
+## Form generated from reading UI file 'FIERRO_GUIGbeDCJ.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -5344,13 +5344,40 @@ class Ui_MainWindow(object):
         self.page_21.setObjectName(u"page_21")
         self.verticalLayout_13 = QVBoxLayout(self.page_21)
         self.verticalLayout_13.setObjectName(u"verticalLayout_13")
-        self.label_53 = QLabel(self.page_21)
+        self.frame_71 = QFrame(self.page_21)
+        self.frame_71.setObjectName(u"frame_71")
+        self.frame_71.setFrameShape(QFrame.NoFrame)
+        self.frame_71.setFrameShadow(QFrame.Raised)
+        self.formLayout_26 = QFormLayout(self.frame_71)
+        self.formLayout_26.setObjectName(u"formLayout_26")
+        self.formLayout_26.setContentsMargins(0, 0, 0, 5)
+        self.INHRunLocally = QRadioButton(self.frame_71)
+        self.INHRunLocally.setObjectName(u"INHRunLocally")
+        self.INHRunLocally.setChecked(True)
+
+        self.formLayout_26.setWidget(0, QFormLayout.LabelRole, self.INHRunLocally)
+
+        self.INHWriteFiles = QRadioButton(self.frame_71)
+        self.INHWriteFiles.setObjectName(u"INHWriteFiles")
+
+        self.formLayout_26.setWidget(0, QFormLayout.FieldRole, self.INHWriteFiles)
+
+
+        self.verticalLayout_13.addWidget(self.frame_71, 0, Qt.AlignHCenter)
+
+        self.HomogenizationRunWrite = QStackedWidget(self.page_21)
+        self.HomogenizationRunWrite.setObjectName(u"HomogenizationRunWrite")
+        self.page_37 = QWidget()
+        self.page_37.setObjectName(u"page_37")
+        self.verticalLayout_73 = QVBoxLayout(self.page_37)
+        self.verticalLayout_73.setObjectName(u"verticalLayout_73")
+        self.label_53 = QLabel(self.page_37)
         self.label_53.setObjectName(u"label_53")
         self.label_53.setFont(font14)
 
-        self.verticalLayout_13.addWidget(self.label_53, 0, Qt.AlignHCenter)
+        self.verticalLayout_73.addWidget(self.label_53, 0, Qt.AlignHCenter)
 
-        self.frame_16 = QFrame(self.page_21)
+        self.frame_16 = QFrame(self.page_37)
         self.frame_16.setObjectName(u"frame_16")
         self.frame_16.setFrameShape(QFrame.NoFrame)
         self.frame_16.setFrameShadow(QFrame.Raised)
@@ -5369,9 +5396,9 @@ class Ui_MainWindow(object):
         self.formLayout.setWidget(0, QFormLayout.FieldRole, self.INBatchJob)
 
 
-        self.verticalLayout_13.addWidget(self.frame_16, 0, Qt.AlignHCenter)
+        self.verticalLayout_73.addWidget(self.frame_16, 0, Qt.AlignHCenter)
 
-        self.HomogenizationBatch = QStackedWidget(self.page_21)
+        self.HomogenizationBatch = QStackedWidget(self.page_37)
         self.HomogenizationBatch.setObjectName(u"HomogenizationBatch")
         self.page_5 = QWidget()
         self.page_5.setObjectName(u"page_5")
@@ -5463,15 +5490,15 @@ class Ui_MainWindow(object):
 
         self.HomogenizationBatch.addWidget(self.page_6)
 
-        self.verticalLayout_13.addWidget(self.HomogenizationBatch, 0, Qt.AlignTop)
+        self.verticalLayout_73.addWidget(self.HomogenizationBatch, 0, Qt.AlignTop)
 
-        self.label_54 = QLabel(self.page_21)
+        self.label_54 = QLabel(self.page_37)
         self.label_54.setObjectName(u"label_54")
         self.label_54.setFont(font14)
 
-        self.verticalLayout_13.addWidget(self.label_54, 0, Qt.AlignHCenter)
+        self.verticalLayout_73.addWidget(self.label_54, 0, Qt.AlignHCenter)
 
-        self.frame_59 = QFrame(self.page_21)
+        self.frame_59 = QFrame(self.page_37)
         self.frame_59.setObjectName(u"frame_59")
         self.frame_59.setFrameShape(QFrame.NoFrame)
         self.frame_59.setFrameShadow(QFrame.Raised)
@@ -5490,12 +5517,14 @@ class Ui_MainWindow(object):
         self.formLayout_6.setWidget(0, QFormLayout.FieldRole, self.INHParallel)
 
 
-        self.verticalLayout_13.addWidget(self.frame_59, 0, Qt.AlignHCenter)
+        self.verticalLayout_73.addWidget(self.frame_59, 0, Qt.AlignHCenter)
 
-        self.HomogenizationRunType = QStackedWidget(self.page_21)
+        self.HomogenizationRunType = QStackedWidget(self.page_37)
         self.HomogenizationRunType.setObjectName(u"HomogenizationRunType")
-        sizePolicy6.setHeightForWidth(self.HomogenizationRunType.sizePolicy().hasHeightForWidth())
-        self.HomogenizationRunType.setSizePolicy(sizePolicy6)
+        sizePolicy8.setHeightForWidth(self.HomogenizationRunType.sizePolicy().hasHeightForWidth())
+        self.HomogenizationRunType.setSizePolicy(sizePolicy8)
+        self.HomogenizationRunType.setMinimumSize(QSize(0, 75))
+        self.HomogenizationRunType.setMaximumSize(QSize(16777215, 75))
         self.page_31 = QWidget()
         self.page_31.setObjectName(u"page_31")
         self.HomogenizationRunType.addWidget(self.page_31)
@@ -5508,15 +5537,24 @@ class Ui_MainWindow(object):
         self.frame_65.setObjectName(u"frame_65")
         self.frame_65.setFrameShape(QFrame.NoFrame)
         self.frame_65.setFrameShadow(QFrame.Raised)
-        self.formLayout_9 = QFormLayout(self.frame_65)
+        self.verticalLayout_74 = QVBoxLayout(self.frame_65)
+        self.verticalLayout_74.setObjectName(u"verticalLayout_74")
+        self.verticalLayout_74.setContentsMargins(0, 0, 0, 0)
+        self.frame_70 = QFrame(self.frame_65)
+        self.frame_70.setObjectName(u"frame_70")
+        sizePolicy8.setHeightForWidth(self.frame_70.sizePolicy().hasHeightForWidth())
+        self.frame_70.setSizePolicy(sizePolicy8)
+        self.frame_70.setFrameShape(QFrame.NoFrame)
+        self.frame_70.setFrameShadow(QFrame.Raised)
+        self.formLayout_9 = QFormLayout(self.frame_70)
         self.formLayout_9.setObjectName(u"formLayout_9")
         self.formLayout_9.setContentsMargins(0, 0, 0, 0)
-        self.label_58 = QLabel(self.frame_65)
+        self.label_58 = QLabel(self.frame_70)
         self.label_58.setObjectName(u"label_58")
 
         self.formLayout_9.setWidget(0, QFormLayout.LabelRole, self.label_58)
 
-        self.INmpiRanks = QSpinBox(self.frame_65)
+        self.INmpiRanks = QSpinBox(self.frame_70)
         self.INmpiRanks.setObjectName(u"INmpiRanks")
         self.INmpiRanks.setReadOnly(False)
         self.INmpiRanks.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
@@ -5526,25 +5564,28 @@ class Ui_MainWindow(object):
         self.formLayout_9.setWidget(0, QFormLayout.FieldRole, self.INmpiRanks)
 
 
-        self.verticalLayout_72.addWidget(self.frame_65)
+        self.verticalLayout_74.addWidget(self.frame_70)
 
-        self.label_65 = QLabel(self.page_32)
+        self.label_65 = QLabel(self.frame_65)
         self.label_65.setObjectName(u"label_65")
         self.label_65.setWordWrap(True)
 
-        self.verticalLayout_72.addWidget(self.label_65)
+        self.verticalLayout_74.addWidget(self.label_65, 0, Qt.AlignTop)
+
+
+        self.verticalLayout_72.addWidget(self.frame_65)
 
         self.HomogenizationRunType.addWidget(self.page_32)
 
-        self.verticalLayout_13.addWidget(self.HomogenizationRunType, 0, Qt.AlignTop)
+        self.verticalLayout_73.addWidget(self.HomogenizationRunType, 0, Qt.AlignTop)
 
-        self.label_64 = QLabel(self.page_21)
+        self.label_64 = QLabel(self.page_37)
         self.label_64.setObjectName(u"label_64")
         self.label_64.setFont(font14)
 
-        self.verticalLayout_13.addWidget(self.label_64, 0, Qt.AlignHCenter)
+        self.verticalLayout_73.addWidget(self.label_64, 0, Qt.AlignHCenter)
 
-        self.frame_64 = QFrame(self.page_21)
+        self.frame_64 = QFrame(self.page_37)
         self.frame_64.setObjectName(u"frame_64")
         self.frame_64.setFrameShape(QFrame.NoFrame)
         self.frame_64.setFrameShadow(QFrame.Raised)
@@ -5563,9 +5604,9 @@ class Ui_MainWindow(object):
         self.formLayout_19.setWidget(0, QFormLayout.FieldRole, self.INHManual)
 
 
-        self.verticalLayout_13.addWidget(self.frame_64, 0, Qt.AlignHCenter)
+        self.verticalLayout_73.addWidget(self.frame_64, 0, Qt.AlignHCenter)
 
-        self.frame_68 = QFrame(self.page_21)
+        self.frame_68 = QFrame(self.page_37)
         self.frame_68.setObjectName(u"frame_68")
         self.frame_68.setFrameShape(QFrame.NoFrame)
         self.frame_68.setFrameShadow(QFrame.Raised)
@@ -5585,24 +5626,69 @@ class Ui_MainWindow(object):
         self.horizontalLayout_25.addWidget(self.BKillEVPFFT2)
 
 
-        self.verticalLayout_13.addWidget(self.frame_68)
+        self.verticalLayout_73.addWidget(self.frame_68)
 
         self.verticalSpacer_9 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-        self.verticalLayout_13.addItem(self.verticalSpacer_9)
+        self.verticalLayout_73.addItem(self.verticalSpacer_9)
+
+        self.HomogenizationRunWrite.addWidget(self.page_37)
+        self.page_38 = QWidget()
+        self.page_38.setObjectName(u"page_38")
+        self.verticalLayout_75 = QVBoxLayout(self.page_38)
+        self.verticalLayout_75.setObjectName(u"verticalLayout_75")
+        self.BHWriteFiles = QPushButton(self.page_38)
+        self.BHWriteFiles.setObjectName(u"BHWriteFiles")
+
+        self.verticalLayout_75.addWidget(self.BHWriteFiles)
+
+        self.verticalSpacer_21 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_75.addItem(self.verticalSpacer_21)
+
+        self.HomogenizationRunWrite.addWidget(self.page_38)
+
+        self.verticalLayout_13.addWidget(self.HomogenizationRunWrite)
 
         self.RunOptions.addWidget(self.page_21)
         self.page_24 = QWidget()
         self.page_24.setObjectName(u"page_24")
         self.verticalLayout_39 = QVBoxLayout(self.page_24)
         self.verticalLayout_39.setObjectName(u"verticalLayout_39")
-        self.label_62 = QLabel(self.page_24)
+        self.frame_72 = QFrame(self.page_24)
+        self.frame_72.setObjectName(u"frame_72")
+        self.frame_72.setFrameShape(QFrame.NoFrame)
+        self.frame_72.setFrameShadow(QFrame.Raised)
+        self.formLayout_29 = QFormLayout(self.frame_72)
+        self.formLayout_29.setObjectName(u"formLayout_29")
+        self.formLayout_29.setContentsMargins(0, 0, 0, 5)
+        self.INBFRunLocally = QRadioButton(self.frame_72)
+        self.INBFRunLocally.setObjectName(u"INBFRunLocally")
+        self.INBFRunLocally.setChecked(True)
+
+        self.formLayout_29.setWidget(0, QFormLayout.LabelRole, self.INBFRunLocally)
+
+        self.INBFWriteFiles = QRadioButton(self.frame_72)
+        self.INBFWriteFiles.setObjectName(u"INBFWriteFiles")
+
+        self.formLayout_29.setWidget(0, QFormLayout.FieldRole, self.INBFWriteFiles)
+
+
+        self.verticalLayout_39.addWidget(self.frame_72, 0, Qt.AlignHCenter)
+
+        self.BFRunWrite = QStackedWidget(self.page_24)
+        self.BFRunWrite.setObjectName(u"BFRunWrite")
+        self.page_39 = QWidget()
+        self.page_39.setObjectName(u"page_39")
+        self.verticalLayout_76 = QVBoxLayout(self.page_39)
+        self.verticalLayout_76.setObjectName(u"verticalLayout_76")
+        self.label_62 = QLabel(self.page_39)
         self.label_62.setObjectName(u"label_62")
         self.label_62.setFont(font14)
 
-        self.verticalLayout_39.addWidget(self.label_62, 0, Qt.AlignHCenter)
+        self.verticalLayout_76.addWidget(self.label_62, 0, Qt.AlignHCenter)
 
-        self.frame_63 = QFrame(self.page_24)
+        self.frame_63 = QFrame(self.page_39)
         self.frame_63.setObjectName(u"frame_63")
         self.frame_63.setFrameShape(QFrame.NoFrame)
         self.frame_63.setFrameShadow(QFrame.Raised)
@@ -5621,9 +5707,9 @@ class Ui_MainWindow(object):
         self.formLayout_11.setWidget(0, QFormLayout.FieldRole, self.INBFParallel)
 
 
-        self.verticalLayout_39.addWidget(self.frame_63, 0, Qt.AlignHCenter)
+        self.verticalLayout_76.addWidget(self.frame_63, 0, Qt.AlignHCenter)
 
-        self.BFRunType = QStackedWidget(self.page_24)
+        self.BFRunType = QStackedWidget(self.page_39)
         self.BFRunType.setObjectName(u"BFRunType")
         sizePolicy6.setHeightForWidth(self.BFRunType.sizePolicy().hasHeightForWidth())
         self.BFRunType.setSizePolicy(sizePolicy6)
@@ -5651,9 +5737,9 @@ class Ui_MainWindow(object):
 
         self.BFRunType.addWidget(self.page_34)
 
-        self.verticalLayout_39.addWidget(self.BFRunType, 0, Qt.AlignTop)
+        self.verticalLayout_76.addWidget(self.BFRunType)
 
-        self.frame_69 = QFrame(self.page_24)
+        self.frame_69 = QFrame(self.page_39)
         self.frame_69.setObjectName(u"frame_69")
         self.frame_69.setFrameShape(QFrame.NoFrame)
         self.frame_69.setFrameShadow(QFrame.Raised)
@@ -5672,7 +5758,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_26.addWidget(self.BKillBulkForming)
 
 
-        self.verticalLayout_39.addWidget(self.frame_69)
+        self.verticalLayout_76.addWidget(self.frame_69)
+
+        self.BFRunWrite.addWidget(self.page_39)
+        self.page_40 = QWidget()
+        self.page_40.setObjectName(u"page_40")
+        self.verticalLayout_77 = QVBoxLayout(self.page_40)
+        self.verticalLayout_77.setObjectName(u"verticalLayout_77")
+        self.BBFWriteFiles = QPushButton(self.page_40)
+        self.BBFWriteFiles.setObjectName(u"BBFWriteFiles")
+
+        self.verticalLayout_77.addWidget(self.BBFWriteFiles, 0, Qt.AlignTop)
+
+        self.verticalSpacer_31 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_77.addItem(self.verticalSpacer_31)
+
+        self.BFRunWrite.addWidget(self.page_40)
+
+        self.verticalLayout_39.addWidget(self.BFRunWrite, 0, Qt.AlignTop)
 
         self.verticalSpacer_29 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -6427,10 +6531,12 @@ class Ui_MainWindow(object):
         self.BoundaryConditionsOptions.setCurrentIndex(0)
         self.SolverSettingsOptions.setCurrentIndex(0)
         self.RunOptions.setCurrentIndex(0)
+        self.HomogenizationRunWrite.setCurrentIndex(0)
         self.HomogenizationBatch.setCurrentIndex(0)
         self.HomogenizationRunType.setCurrentIndex(0)
         self.BRunEVPFFT2.setDefault(True)
         self.BKillEVPFFT2.setDefault(False)
+        self.BFRunWrite.setCurrentIndex(0)
         self.BFRunType.setCurrentIndex(0)
         self.BRunBulkForming.setDefault(True)
         self.tabWidget_2.setCurrentIndex(0)
@@ -7559,6 +7665,8 @@ class Ui_MainWindow(object):
         self.INRunSelection.setItemText(2, QCoreApplication.translate("MainWindow", u"Bulk Forming", None))
 
         self.BRunSGH.setText(QCoreApplication.translate("MainWindow", u"Run SGH Solver", None))
+        self.INHRunLocally.setText(QCoreApplication.translate("MainWindow", u"Run Locally", None))
+        self.INHWriteFiles.setText(QCoreApplication.translate("MainWindow", u"Write Input Files", None))
         self.label_53.setText(QCoreApplication.translate("MainWindow", u"Job Type", None))
         self.INSingleJob.setText(QCoreApplication.translate("MainWindow", u"Single Job", None))
         self.INBatchJob.setText(QCoreApplication.translate("MainWindow", u"Batch Job", None))
@@ -7586,12 +7694,16 @@ class Ui_MainWindow(object):
         self.INHManual.setText(QCoreApplication.translate("MainWindow", u"Manual", None))
         self.BRunEVPFFT2.setText(QCoreApplication.translate("MainWindow", u"Run Homogenization", None))
         self.BKillEVPFFT2.setText(QCoreApplication.translate("MainWindow", u"Terminate", None))
+        self.BHWriteFiles.setText(QCoreApplication.translate("MainWindow", u"Write Input Files", None))
+        self.INBFRunLocally.setText(QCoreApplication.translate("MainWindow", u"Run Locally", None))
+        self.INBFWriteFiles.setText(QCoreApplication.translate("MainWindow", u"Write Input Files", None))
         self.label_62.setText(QCoreApplication.translate("MainWindow", u"Run Type", None))
         self.INBFSerial.setText(QCoreApplication.translate("MainWindow", u"Serial", None))
         self.INBFParallel.setText(QCoreApplication.translate("MainWindow", u"Parallel", None))
         self.label_63.setText(QCoreApplication.translate("MainWindow", u"MPI Ranks:", None))
         self.BRunBulkForming.setText(QCoreApplication.translate("MainWindow", u"Run Bulk Forming Simulation", None))
         self.BKillBulkForming.setText(QCoreApplication.translate("MainWindow", u"Terminate", None))
+        self.BBFWriteFiles.setText(QCoreApplication.translate("MainWindow", u"Write Input Files", None))
         self.LPostprocessing.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><img src=\":/Blue Icons/Blue Icons/lens.svg\" width=\"40\" height=\"40\"/></p><p align=\"center\"><span style=\" font-size:16pt; font-weight:700;\">Postprocessing</span></p></body></html>", None))
         self.INSelectPostprocessing.setItemText(0, QCoreApplication.translate("MainWindow", u"SGH", None))
         self.INSelectPostprocessing.setItemText(1, QCoreApplication.translate("MainWindow", u"Homogenization", None))

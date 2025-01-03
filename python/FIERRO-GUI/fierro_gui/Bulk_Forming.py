@@ -1125,6 +1125,10 @@ def Bulk_Forming(self):
             self.TCstress.setItem(1,1,QTableWidgetItem("0."))
     self.INbulkBC.currentIndexChanged.connect(boundary_conditions)
     
+    # Select to run locally or write the input files
+    self.INBFRunLocally.toggled.connect(lambda: self.BFRunWrite.setCurrentIndex(0))
+    self.INBFWriteFiles.toggled.connect(lambda: self.BFRunWrite.setCurrentIndex(1))
+    
     # Select serial or parallel run type
     self.INBFSerial.toggled.connect(lambda: self.BFRunType.setCurrentIndex(0))
     self.INBFParallel.toggled.connect(lambda: self.BFRunType.setCurrentIndex(1))
@@ -1132,6 +1136,35 @@ def Bulk_Forming(self):
     # Set number of mpi ranks based on the number of cores that are avaliable on the system
     num_cores = os.cpu_count()
     self.INBFmpiRanks.setMaximum(num_cores)
+    
+    # Write input files
+    def Write_Input_Files():
+        # Ask user to select a folder
+        selected_directory = QFileDialog.getExistingDirectory(None, "Select Folder")
+        # Create input files
+        self.BULK_FORMING_ELASTIC_PARAMETERS = os.path.join(selected_directory, 'elastic_parameters.txt')
+        self.BULK_FORMING_PLASTIC_PARAMETERS = os.path.join(selected_directory, 'plastic_parameters.txt')
+        self.BULK_FORMING_INPUT = os.path.join(selected_directory, 'bulk_forming_input.txt')
+        Bulk_Forming_WInput(self)
+        # Write a readme file
+        readme = os.path.join(selected_directory, 'README.txt')
+        wreadme = open(readme,"w")
+        about = 'ABOUT: \n' \
+                 'elastic_parameters.txt -> these files contain the elastic material properties\n' \
+                 'plastic_parameters.txt -> this file contains the plastic material properties\n' \
+                 'bulk_forming_input.txt -> this file is the input file to the evpfft solver\n' \
+                 '            -> ** Ensure you go into this file and properly specify file paths\n'
+        wreadme.write(about)
+        run = 'TO RUN: \n' \
+               'flags -> Please set the flags: export OMP_PROC_BIND=spread and export OMP_NUM_THREADS=1\n' \
+               'parallel run -> (.txt input): mpirun -np # evpfft -f bulk_forming_input.txt\n' \
+               '             -> (.vtk input): mpirun -np # evpfft -f bulk_forming_input.txt -m 2\n' \
+               'serial run -> (.txt input): evpfft -f bulk_forming_input.txt\n' \
+               '           -> (.vtk input): evpfft -f bulk_forming_input.txt -m 2\n' \
+               'help -> evpfft --help'
+        wreadme.write(run)
+        wreadme.close()
+    self.BBFWriteFiles.clicked.connect(Write_Input_Files)
     
     # Run Bulk Formation
     self.run = 0

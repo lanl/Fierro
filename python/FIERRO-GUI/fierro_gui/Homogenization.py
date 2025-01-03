@@ -956,6 +956,42 @@ def Homogenization(self):
         self.INHomogenizationBatchFile.setText(f'{self.file_paths[0]}')
     self.BSelectGeometryFiles.clicked.connect(batch_geometry)
     
+    # Write input files
+    def Write_Input_Files():
+        # Ask user to select a folder
+        selected_directory = QFileDialog.getExistingDirectory(None, "Select Folder")
+        # Create input files
+        self.ELASTIC_PARAMETERS_0 = os.path.join(selected_directory, 'elastic_parameters_0.txt')
+        self.ELASTIC_PARAMETERS_1 = os.path.join(selected_directory, 'elastic_parameters_1.txt')
+        self.PLASTIC_PARAMETERS = os.path.join(selected_directory, 'plastic_parameters.txt')
+        self.EVPFFT_INPUT = os.path.join(selected_directory, 'evpfft_lattice_input.txt')
+        for BC_index in range(6):
+            self.EVPFFT_INPUT = os.path.join(selected_directory, f'evpfft_lattice_input_{BC_index}.txt')
+            Homogenization_WInput(self,BC_index)
+        # Write a readme file
+        readme = os.path.join(selected_directory, 'README.txt')
+        wreadme = open(readme,"w")
+        about = 'ABOUT: \n' \
+                 'elastic_parameters_#.txt -> these files contain the elastic material properties\n' \
+                 'plastic_parameters.txt -> this file contains null plastic material properties\n' \
+                 'input_#.txt -> this file is your input file for each of the 6 homogenization steps\n' \
+                 '            -> ** Ensure you go into these files and properly specify file paths\n'
+        wreadme.write(about)
+        run = 'TO RUN: \n' \
+               'flags -> Please set the flags: export OMP_PROC_BIND=spread and export OMP_NUM_THREADS=1\n' \
+               'parallel run -> (.txt input): mpirun -np # evpfft -f input_#.txt\n' \
+               '             -> (.vtk input): mpirun -np # evpfft -f input_#.txt -m 2\n' \
+               'serial run -> (.txt input): evpfft -f input_#.txt\n' \
+               '           -> (.vtk input): evpfft -f input_#.txt -m 2\n' \
+               'help -> evpfft --help'
+        wreadme.write(run)
+        wreadme.close()
+    self.BHWriteFiles.clicked.connect(Write_Input_Files)
+    
+    # Select to run locally or write the input files
+    self.INHRunLocally.toggled.connect(lambda: self.HomogenizationRunWrite.setCurrentIndex(0))
+    self.INHWriteFiles.toggled.connect(lambda: self.HomogenizationRunWrite.setCurrentIndex(1))
+    
     # Select single job or batch job
     self.INSingleJob.toggled.connect(lambda: self.HomogenizationBatch.setCurrentIndex(0))
     self.INBatchJob.toggled.connect(lambda: self.HomogenizationBatch.setCurrentIndex(1))
