@@ -1,9 +1,9 @@
 import sys
 import os
 import time
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtGui import QPalette, QColor
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QEvent
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def main():
@@ -17,14 +17,36 @@ def main():
     
     # MAIN WINDOW CLASS
     class MainWindow(QMainWindow):
+        # Add restart capabilities
         def restart(self):
-            QApplication.quit()
-            python = sys.executable
-            os.execl(python, python, *sys.argv)
-            
+            custom_close_event = QEvent(QEvent.Close)
+            self.closeEvent(custom_close_event)
+            if self.close_accepted:
+                self.is_restarting = True
+                self.close()
+                new_window = MainWindow()
+                new_window.show()
         def setup_restart(self):
             self.ui.actionNew.triggered.connect(self.restart)
             
+        # Add save changes pop up menu
+        def closeEvent(self, event):
+            if not self.is_restarting:
+                reply = QMessageBox.question(self, 'Save Changes?', 'Do you want to save your changes before closing?', QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel, QMessageBox.Save)
+                if reply == QMessageBox.Save:
+                    self.ui.open_save_dialog()
+                    event.accept()
+                    self.close_accepted = True
+                elif reply == QMessageBox.Discard:
+                    event.accept()
+                    self.close_accepted = True
+                else:
+                    event.ignore()
+                    self.close_accepted = False
+            else:
+                event.accept()
+        
+        # Run main GUI
         def __init__(self):
             super(MainWindow, self).__init__()
             self.setWindowTitle("Fierro")
@@ -34,6 +56,8 @@ def main():
             
             # add restart
             self.setup_restart()
+            self.close_accepted = False
+            self.is_restarting = False
             
             # SHOW MAIN WINDOW
             self.show()
