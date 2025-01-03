@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIfiuqEK.ui'
+## Form generated from reading UI file 'FIERRO_GUIYaKUPn.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -58,6 +58,8 @@ class Ui_MainWindow(object):
         self.actionHelp.setObjectName(u"actionHelp")
         self.actionOpen = QAction(MainWindow)
         self.actionOpen.setObjectName(u"actionOpen")
+        self.actionNew = QAction(MainWindow)
+        self.actionNew.setObjectName(u"actionNew")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setEnabled(True)
@@ -6384,8 +6386,11 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
         self.menuHelp.addAction(self.actionManual)
+        self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
+        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionSaveAs)
+        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionChange_Working_Directory)
 
         self.retranslateUi(MainWindow)
@@ -6440,9 +6445,10 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Fierro", None))
         self.actionManual.setText(QCoreApplication.translate("MainWindow", u"Manual", None))
         self.actionChange_Working_Directory.setText(QCoreApplication.translate("MainWindow", u"Change Working Directory", None))
-        self.actionSaveAs.setText(QCoreApplication.translate("MainWindow", u"Save as..", None))
+        self.actionSaveAs.setText(QCoreApplication.translate("MainWindow", u"Save as...", None))
         self.actionHelp.setText(QCoreApplication.translate("MainWindow", u"Help", None))
         self.actionOpen.setText(QCoreApplication.translate("MainWindow", u"Open", None))
+        self.actionNew.setText(QCoreApplication.translate("MainWindow", u"New...", None))
         self.NavigationMenu.setTabText(self.NavigationMenu.indexOf(self.Title), "")
         self.NavigationMenu.setTabText(self.NavigationMenu.indexOf(self.Pipeline), QCoreApplication.translate("MainWindow", u"Pipeline", None))
         self.NavigationMenu.setTabText(self.NavigationMenu.indexOf(self.Geometry), QCoreApplication.translate("MainWindow", u"Geometry", None))

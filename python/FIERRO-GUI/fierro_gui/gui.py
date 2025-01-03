@@ -3,10 +3,11 @@ import os
 import time
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QPalette, QColor
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def main():
-    t1 = time.perf_counter()
+#    t1 = time.perf_counter()
     sys.path.append(os.path.dirname(__file__))
     from fierro_gui.FIERRO_GUI import FIERRO_GUI
     from PySide6.QtWidgets import QMainWindow, QApplication, QSplashScreen
@@ -16,6 +17,14 @@ def main():
     
     # MAIN WINDOW CLASS
     class MainWindow(QMainWindow):
+        def restart(self):
+            QApplication.quit()
+            python = sys.executable
+            os.execl(python, python, *sys.argv)
+            
+        def setup_restart(self):
+            self.ui.actionNew.triggered.connect(self.restart)
+            
         def __init__(self):
             super(MainWindow, self).__init__()
             self.setWindowTitle("Fierro")
@@ -23,12 +32,15 @@ def main():
             self.ui.setupUi(self)
             self.setEnabled(False)
             
+            # add restart
+            self.setup_restart()
+            
             # SHOW MAIN WINDOW
             self.show()
             
             # SHOW FIERRO SETUP WINDOW
-            t2 = time.perf_counter()
-            print(f"Started up in {t2 - t1:0.4f} seconds")
+#            t2 = time.perf_counter()
+#            print(f"Started up in {t2 - t1:0.4f} seconds")
             self.ui.open_fierro_setup_dialog(self)
             
 #            self.dialog = WorkingDirectoryDialog(self)
@@ -39,7 +51,7 @@ def main():
     app.setStyle('Fusion')
     app.setWindowIcon(QIcon(':/Logos/Logos/FierroAppIcon.png'))
     app.setApplicationDisplayName("Fierro")
-    start = time.perf_counter()
+#    start = time.perf_counter()
 #    print ("Splash Screen")
 #    pixmap = QPixmap(":/Logos/Logos/FIERRO.png")
 #    pixmap = pixmap.scaledToWidth(500)
@@ -54,7 +66,6 @@ def main():
     window = MainWindow()
     window.show()
 #    splash.finish(window)
-    
     
     sys.exit(app.exec())
     
