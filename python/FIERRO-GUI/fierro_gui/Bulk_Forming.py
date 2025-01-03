@@ -1261,6 +1261,12 @@ def Bulk_Forming(self):
         self.state_name = states[state]
         self.RunOutputWindow.appendPlainText(f"{self.state_name}")
         
+    # Terminate the solver
+    def kill_bulk_forming():
+        self.p.terminate()
+        self.RunOutputWindow.appendPlainText("TERMINATED")
+    self.BKillBulkForming.clicked.connect(kill_bulk_forming)
+        
     # Preview Results
     def preview_results_click_2():
         # Remove all objects from window view

@@ -298,10 +298,12 @@ class FIERRO_GUI(Ui_MainWindow):
                     # Change table - material definition values
                     for j in range(self.TMaterials.rowCount()):
                         for i in range(2,23):
-                            val = float(self.TMaterials.item(j,i).text())/1000000
-                            self.TMaterials.setItem(j,i,QTableWidgetItem(f'{val}'))
-                            val = float(self.TMaterials_2.item(j,i).text())/1000000
-                            self.TMaterials_2.setItem(j,i,QTableWidgetItem(f'{val}'))
+                            if self.TMaterials.item(j,i) is not None:
+                                val = float(self.TMaterials.item(j,i).text())/1000000
+                                self.TMaterials.setItem(j,i,QTableWidgetItem(f'{val}'))
+                            if self.TMaterials_2.item(j,i) is not None:
+                                val = float(self.TMaterials_2.item(j,i).text())/1000000
+                                self.TMaterials_2.setItem(j,i,QTableWidgetItem(f'{val}'))
                     # Change table - homogenized constants values
                     if self.THomogenization.item(3,0) is not None:
                         for i in [0,1,2,6,7,8]:

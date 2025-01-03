@@ -727,10 +727,23 @@ def Homogenization(self):
         }
         self.state_name = states[state]
         self.RunOutputWindow.appendPlainText(f"{self.state_name}")
+        
+    # Terminate the solver
+    self.terminate = False
+    def kill_homogenization():
+        self.terminate = True
+        self.p.terminate()
+        self.RunOutputWindow.appendPlainText("TERMINATED")
+    self.BKillEVPFFT2.clicked.connect(kill_homogenization)
     
     # Run homogenization simulations (6 in total for generating orthotropic properties)
     def run_homogenization():
         for BC_index in range(6):
+            if self.terminate:
+                print("TERMINATED")
+                self.terminate = False
+                break
+                
             single_EVPFFT(BC_index)
             self.p.waitForStarted()
             while self.p != None:

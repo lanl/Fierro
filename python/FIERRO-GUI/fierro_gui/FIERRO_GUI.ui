@@ -358,7 +358,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>8</number>
+          <number>7</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -1064,8 +1064,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>280</width>
-                <height>541</height>
+                <width>376</width>
+                <height>548</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -6461,7 +6461,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               </font>
                              </property>
                              <property name="currentIndex">
-                              <number>0</number>
+                              <number>2</number>
                              </property>
                              <property name="iconSize">
                               <size>
@@ -6784,7 +6784,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                   <number>0</number>
                                  </property>
                                  <property name="currentIndex">
-                                  <number>4</number>
+                                  <number>1</number>
                                  </property>
                                  <widget class="QWidget" name="BlankPage"/>
                                  <widget class="QWidget" name="FCC_111_110">
@@ -10788,10 +10788,55 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="BRunEVPFFT2">
-                 <property name="text">
-                  <string>Run Homogenization</string>
+                <widget class="QFrame" name="frame_68">
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
                  </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_25">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QPushButton" name="BRunEVPFFT2">
+                    <property name="font">
+                     <font>
+                      <bold>true</bold>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>Run Homogenization</string>
+                    </property>
+                    <property name="default">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="BKillEVPFFT2">
+                    <property name="text">
+                     <string>Terminate</string>
+                    </property>
+                    <property name="default">
+                     <bool>false</bool>
+                    </property>
+                    <property name="flat">
+                     <bool>false</bool>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </widget>
                </item>
                <item>
@@ -10919,10 +10964,49 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="BRunBulkForming">
-                 <property name="text">
-                  <string>Run Bulk Forming Simulation</string>
+                <widget class="QFrame" name="frame_69">
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
                  </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_26">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QPushButton" name="BRunBulkForming">
+                    <property name="font">
+                     <font>
+                      <bold>true</bold>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>Run Bulk Forming Simulation</string>
+                    </property>
+                    <property name="default">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="BKillBulkForming">
+                    <property name="text">
+                     <string>Terminate</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </widget>
                </item>
                <item>
@@ -12060,7 +12144,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <x>0</x>
      <y>0</y>
      <width>1326</width>
-     <height>37</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">

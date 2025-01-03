@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIiupgNU.ui'
+## Form generated from reading UI file 'FIERRO_GUIfiuqEK.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -506,7 +506,7 @@ class Ui_MainWindow(object):
         self.SAGeometryScrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 280, 541))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 376, 548))
         sizePolicy3.setHeightForWidth(self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth())
         self.scrollAreaWidgetContents.setSizePolicy(sizePolicy3)
         self.scrollAreaWidgetContents.setMinimumSize(QSize(0, 0))
@@ -5563,10 +5563,27 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_13.addWidget(self.frame_64, 0, Qt.AlignHCenter)
 
-        self.BRunEVPFFT2 = QPushButton(self.page_21)
+        self.frame_68 = QFrame(self.page_21)
+        self.frame_68.setObjectName(u"frame_68")
+        self.frame_68.setFrameShape(QFrame.NoFrame)
+        self.frame_68.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_25 = QHBoxLayout(self.frame_68)
+        self.horizontalLayout_25.setObjectName(u"horizontalLayout_25")
+        self.horizontalLayout_25.setContentsMargins(0, 0, 0, 0)
+        self.BRunEVPFFT2 = QPushButton(self.frame_68)
         self.BRunEVPFFT2.setObjectName(u"BRunEVPFFT2")
+        self.BRunEVPFFT2.setFont(font)
 
-        self.verticalLayout_13.addWidget(self.BRunEVPFFT2)
+        self.horizontalLayout_25.addWidget(self.BRunEVPFFT2)
+
+        self.BKillEVPFFT2 = QPushButton(self.frame_68)
+        self.BKillEVPFFT2.setObjectName(u"BKillEVPFFT2")
+        self.BKillEVPFFT2.setFlat(False)
+
+        self.horizontalLayout_25.addWidget(self.BKillEVPFFT2)
+
+
+        self.verticalLayout_13.addWidget(self.frame_68)
 
         self.verticalSpacer_9 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -5634,10 +5651,26 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_39.addWidget(self.BFRunType, 0, Qt.AlignTop)
 
-        self.BRunBulkForming = QPushButton(self.page_24)
+        self.frame_69 = QFrame(self.page_24)
+        self.frame_69.setObjectName(u"frame_69")
+        self.frame_69.setFrameShape(QFrame.NoFrame)
+        self.frame_69.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_26 = QHBoxLayout(self.frame_69)
+        self.horizontalLayout_26.setObjectName(u"horizontalLayout_26")
+        self.horizontalLayout_26.setContentsMargins(0, 0, 0, 0)
+        self.BRunBulkForming = QPushButton(self.frame_69)
         self.BRunBulkForming.setObjectName(u"BRunBulkForming")
+        self.BRunBulkForming.setFont(font)
 
-        self.verticalLayout_39.addWidget(self.BRunBulkForming)
+        self.horizontalLayout_26.addWidget(self.BRunBulkForming)
+
+        self.BKillBulkForming = QPushButton(self.frame_69)
+        self.BKillBulkForming.setObjectName(u"BKillBulkForming")
+
+        self.horizontalLayout_26.addWidget(self.BKillBulkForming)
+
+
+        self.verticalLayout_39.addWidget(self.frame_69)
 
         self.verticalSpacer_29 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -6174,7 +6207,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1326, 37))
+        self.menubar.setGeometry(QRect(0, 0, 1326, 24))
         self.menuHelp = QMenu(self.menubar)
         self.menuHelp.setObjectName(u"menuHelp")
         self.menuFile = QMenu(self.menubar)
@@ -6391,7 +6424,10 @@ class Ui_MainWindow(object):
         self.RunOptions.setCurrentIndex(0)
         self.HomogenizationBatch.setCurrentIndex(0)
         self.HomogenizationRunType.setCurrentIndex(0)
+        self.BRunEVPFFT2.setDefault(True)
+        self.BKillEVPFFT2.setDefault(False)
         self.BFRunType.setCurrentIndex(0)
+        self.BRunBulkForming.setDefault(True)
         self.tabWidget_2.setCurrentIndex(0)
         self.PostprocessingOptions.setCurrentIndex(0)
         self.OutputWindows.setCurrentIndex(0)
@@ -7543,11 +7579,13 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.INHManual.setText(QCoreApplication.translate("MainWindow", u"Manual", None))
         self.BRunEVPFFT2.setText(QCoreApplication.translate("MainWindow", u"Run Homogenization", None))
+        self.BKillEVPFFT2.setText(QCoreApplication.translate("MainWindow", u"Terminate", None))
         self.label_62.setText(QCoreApplication.translate("MainWindow", u"Run Type", None))
         self.INBFSerial.setText(QCoreApplication.translate("MainWindow", u"Serial", None))
         self.INBFParallel.setText(QCoreApplication.translate("MainWindow", u"Parallel", None))
         self.label_63.setText(QCoreApplication.translate("MainWindow", u"MPI Ranks:", None))
         self.BRunBulkForming.setText(QCoreApplication.translate("MainWindow", u"Run Bulk Forming Simulation", None))
+        self.BKillBulkForming.setText(QCoreApplication.translate("MainWindow", u"Terminate", None))
         self.LPostprocessing.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><img src=\":/Blue Icons/Blue Icons/lens.svg\" width=\"40\" height=\"40\"/></p><p align=\"center\"><span style=\" font-size:16pt; font-weight:700;\">Postprocessing</span></p></body></html>", None))
         self.INSelectPostprocessing.setItemText(0, QCoreApplication.translate("MainWindow", u"SGH", None))
         self.INSelectPostprocessing.setItemText(1, QCoreApplication.translate("MainWindow", u"Homogenization", None))
