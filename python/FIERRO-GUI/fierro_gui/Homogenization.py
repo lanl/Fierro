@@ -1078,6 +1078,19 @@ def Homogenization(self):
             # Create a new source with the updated data
             temp_source = paraview.simple.TrivialProducer()
             temp_source.GetClientSideObject().SetOutput(output_data)
+            # Get initial scale factor
+            if self.INHDeform.value() == 0:
+                # get the largest undeformed dimension
+                udims = [float(self.TParts.item(0,7).text()),float(self.TParts.item(0,8).text()),float(self.TParts.item(0,9).text())]
+                udimax = max(udims)
+                # get the max difference in each direction and the
+                dmaxX = max(abs(num) for num in diffX)
+                dmaxY = max(abs(num) for num in diffY)
+                dmaxZ = max(abs(num) for num in diffZ)
+                dmax = max([dmaxX,dmaxY,dmaxZ])
+                # get initial scale factor so that it the deformation is 10% of the largest dimension
+                initial_scale_factor = (0.1*udimax)/dmax
+                self.INHDeform.setValue(initial_scale_factor)
             # Scale the displacements
             scale_factor = self.INHDeform.value()  # Adjust this value to change the scaling
             scale_filter = paraview.simple.Calculator(Input=temp_source)
@@ -1154,6 +1167,11 @@ def Homogenization(self):
     self.INPreviewResults.currentIndexChanged.connect(preview_results_click)
     self.INResultRegion.currentIndexChanged.connect(preview_results_click)
     self.INHDeform.valueChanged.connect(preview_results_click)
+    
+    # Restart deformation scale factor
+    def restart_scale():
+        self.INHDeform.setValue(0)
+    self.INBCFile.currentIndexChanged.connect(restart_scale)
     
     # Show results immediately when postprocessing tab is pressed
     def show_results():

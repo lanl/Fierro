@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIGbeDCJ.ui'
+## Form generated from reading UI file 'FIERRO_GUIgRWstX.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.0
 ##
@@ -5991,10 +5991,10 @@ class Ui_MainWindow(object):
         self.INHDeform.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
         self.INHDeform.setCorrectionMode(QAbstractSpinBox.CorrectToNearestValue)
         self.INHDeform.setDecimals(1)
-        self.INHDeform.setMinimum(0.100000000000000)
+        self.INHDeform.setMinimum(0.000000000000000)
         self.INHDeform.setMaximum(10000.000000000000000)
         self.INHDeform.setSingleStep(1.000000000000000)
-        self.INHDeform.setValue(1.000000000000000)
+        self.INHDeform.setValue(0.000000000000000)
 
         self.formLayout_20.setWidget(0, QFormLayout.FieldRole, self.INHDeform)
 
@@ -6113,10 +6113,10 @@ class Ui_MainWindow(object):
         self.INBFDeform.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
         self.INBFDeform.setCorrectionMode(QAbstractSpinBox.CorrectToNearestValue)
         self.INBFDeform.setDecimals(1)
-        self.INBFDeform.setMinimum(0.100000000000000)
+        self.INBFDeform.setMinimum(0.000000000000000)
         self.INBFDeform.setMaximum(10000.000000000000000)
         self.INBFDeform.setSingleStep(1.000000000000000)
-        self.INBFDeform.setValue(1.000000000000000)
+        self.INBFDeform.setValue(0.000000000000000)
 
         self.formLayout_21.setWidget(0, QFormLayout.FieldRole, self.INBFDeform)
 

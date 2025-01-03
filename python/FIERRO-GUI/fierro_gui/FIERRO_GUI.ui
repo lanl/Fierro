@@ -358,7 +358,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>7</number>
+          <number>8</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -11645,7 +11645,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <number>1</number>
                         </property>
                         <property name="minimum">
-                         <double>0.100000000000000</double>
+                         <double>0.000000000000000</double>
                         </property>
                         <property name="maximum">
                          <double>10000.000000000000000</double>
@@ -11654,7 +11654,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <double>1.000000000000000</double>
                         </property>
                         <property name="value">
-                         <double>1.000000000000000</double>
+                         <double>0.000000000000000</double>
                         </property>
                        </widget>
                       </item>
@@ -11899,7 +11899,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <number>1</number>
                         </property>
                         <property name="minimum">
-                         <double>0.100000000000000</double>
+                         <double>0.000000000000000</double>
                         </property>
                         <property name="maximum">
                          <double>10000.000000000000000</double>
@@ -11908,7 +11908,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <double>1.000000000000000</double>
                         </property>
                         <property name="value">
-                         <double>1.000000000000000</double>
+                         <double>0.000000000000000</double>
                         </property>
                        </widget>
                       </item>

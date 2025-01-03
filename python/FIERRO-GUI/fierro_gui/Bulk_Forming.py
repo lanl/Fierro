@@ -1270,6 +1270,8 @@ def Bulk_Forming(self):
         self.min_iterations_old = 0
         self.p.close()
         self.p = None
+        # Restart deformation scale factor
+        self.INBFDeform.setValue(0)
     def handle_stdout():
         data = self.p.readAllStandardOutput()
         stdout = bytes(data).decode("utf8")
@@ -1364,6 +1366,19 @@ def Bulk_Forming(self):
             # Create a new source with the updated data
             temp_source = paraview.simple.TrivialProducer()
             temp_source.GetClientSideObject().SetOutput(output_data)
+            # Get initial scale factor
+            if self.INBFDeform.value() == 0:
+                # get the largest undeformed dimension
+                udims = [float(self.TParts.item(0,7).text()),float(self.TParts.item(0,8).text()),float(self.TParts.item(0,9).text())]
+                udimax = max(udims)
+                # get the max difference in each direction and the
+                dmaxX = max(abs(num) for num in diffX)
+                dmaxY = max(abs(num) for num in diffY)
+                dmaxZ = max(abs(num) for num in diffZ)
+                dmax = max([dmaxX,dmaxY,dmaxZ])
+                # get initial scale factor so that it the deformation is 10% of the largest dimension
+                initial_scale_factor = (0.1*udimax)/dmax
+                self.INBFDeform.setValue(initial_scale_factor)
             # Scale the displacements
             scale_factor = self.INBFDeform.value()  # Adjust this value to change the scaling
             scale_filter = paraview.simple.Calculator(Input=temp_source)
