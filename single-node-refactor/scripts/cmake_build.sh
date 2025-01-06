@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 solver="${1}"
+debug="${2}"
 
 echo "Removing old Kokkos build and installation directory"
 rm -rf ${SGH_BUILD_DIR}
@@ -12,6 +13,12 @@ cmake_options=(
 #-D CMAKE_CXX_FLAGS="-I${matardir}/src"
 )
 
+if [ "$debug" = "true" ]; then
+    echo "Setting debug to true for CMAKE build type"
+    cmake_options+=(
+        -DCMAKE_BUILD_TYPE=Debug
+    )
+fi
 if [ "$solver" = "SGH" ]; then
     cmake_options+=(
         -D BUILD_KOKKOS_SGH=ON

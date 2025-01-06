@@ -374,7 +374,7 @@ void Solver::read_mesh_ensight(const char* MESH)
         // old swage method
         // mesh->init_nodes(local_nrows); // add 1 for index starting at 1
 
-        std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+        //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
         // read the initial mesh coordinates
         // x-coords
@@ -1107,7 +1107,7 @@ void Solver::read_mesh_vtk(const char* MESH)
         // old swage method
         // mesh->init_nodes(local_nrows); // add 1 for index starting at 1
 
-        std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+        //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
         // read the initial mesh coordinates
         // x-coords
@@ -1212,7 +1212,7 @@ void Solver::read_mesh_vtk(const char* MESH)
         }
     } // end of coordinate readin
     // repartition node distribution
-    repartition_nodes();
+    repartition_nodes(false);
 
     // synchronize device data
     // dual_node_coords.sync_device();
@@ -1732,7 +1732,7 @@ void Solver::read_mesh_vtk(const char* MESH)
         }
 
         //Find initial objective value to normalize by
-        if (myrank == 0)
+        if (myrank == 0 && simparam.optimization_options.normalized_objective)
         {
             bool found = false;
             while (found == false&&in->good()) {
@@ -1900,7 +1900,7 @@ void Solver::read_mesh_tecplot(const char* MESH)
         // old swage method
         // mesh->init_nodes(local_nrows); // add 1 for index starting at 1
 
-        std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+        //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
         // read the initial mesh coordinates
         // x-coords
@@ -2407,7 +2407,7 @@ void Solver::read_mesh_tecplot(const char* MESH)
 } // end read_mesh
 
 /* ----------------------------------------------------------------------
-   Read ANSYS dat format mesh file
+   Read Abaqus .inp format mesh file
 ------------------------------------------------------------------------- */
 void Solver::read_mesh_abaqus_inp(const char *MESH){
   Input_Options input_options = simparam.input_options.value();
@@ -2541,7 +2541,7 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
     
-  std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+  //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
   // read the initial mesh coordinates
   // x-coords
@@ -3067,7 +3067,7 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
    Rebalance the initial node decomposition with Zoltan2
 ------------------------------------------------------------------------- */
 
-void Solver::repartition_nodes()
+void Solver::repartition_nodes(bool repartition_node_densities)
 {
     char ch;
 
@@ -3160,7 +3160,7 @@ void Solver::repartition_nodes()
     partitioned_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(*partitioned_map_one_to_one));
 
     // migrate density vector if this is a restart file read
-    if (simparam.restart_file)
+    if (simparam.restart_file&&repartition_node_densities)
     {
         Teuchos::RCP<MV> partitioned_node_densities_distributed = Teuchos::rcp(new MV(partitioned_map, 1));
 
@@ -3525,6 +3525,9 @@ void Solver::init_maps()
     // create import object using local node indices map and all indices map
     comm_importer_setup();
 
+    // create export objects for reverse comms
+    comm_exporter_setup();
+
     // comms to get ghosts
     all_node_coords_distributed->doImport(*node_coords_distributed, *importer, Tpetra::INSERT);
     // all_node_nconn_distributed->doImport(*node_nconn_distributed, importer, Tpetra::INSERT);
@@ -3534,11 +3537,10 @@ void Solver::init_maps()
     // construct distributed element connectivity multivector
     global_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(all_element_map, dual_nodes_in_elem));
 
-    if (nlocal_elem_non_overlapping >= 1)
+    // construct map of nodes that belong to the non-overlapping element set (contained by ghost + local node set but not all of them)
+    std::set<GO> nonoverlap_elem_node_set;
+    if (nlocal_elem_non_overlapping)
     {
-        // construct map of nodes that belong to the non-overlapping element set (contained by ghost + local node set but not all of them)
-        std::set<GO> nonoverlap_elem_node_set;
-
         // search through local elements for global node indices not owned by this MPI rank
         if (num_dim == 2)
         {
@@ -3569,23 +3571,25 @@ void Solver::init_maps()
                 }
             }
         }
+    }
 
-        // by now the set contains, with no repeats, all the global node indices belonging to the non overlapping element list on this MPI rank
-        // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
-        nnonoverlap_elem_nodes = nonoverlap_elem_node_set.size();
-        nonoverlap_elem_nodes  = Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits>("nonoverlap_elem_nodes", nnonoverlap_elem_nodes);
+    // by now the set contains, with no repeats, all the global node indices belonging to the non overlapping element list on this MPI rank
+    // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
+    nnonoverlap_elem_nodes = nonoverlap_elem_node_set.size();
+    nonoverlap_elem_nodes  = Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits>("nonoverlap_elem_nodes", nnonoverlap_elem_nodes);
+    if(nnonoverlap_elem_nodes){
         int  inonoverlap_elem_node = 0;
         auto it = nonoverlap_elem_node_set.begin();
         while (it != nonoverlap_elem_node_set.end()) {
             nonoverlap_elem_nodes.h_view(inonoverlap_elem_node++) = *it;
             it++;
         }
-
         nonoverlap_elem_nodes.modify_host();
         nonoverlap_elem_nodes.sync_device();
-        // create a Map for ghost node indices
-        nonoverlap_element_node_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), nonoverlap_elem_nodes.d_view, 0, comm));
     }
+
+    // create a Map for node indices belonging to the non-overlapping set of elements
+    nonoverlap_element_node_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), nonoverlap_elem_nodes.d_view, 0, comm));
 
     // std::cout << "number of patches = " << mesh->num_patches() << std::endl;
     if (myrank == 0)
@@ -3857,6 +3861,178 @@ void Solver::Get_Boundary_Patches()
 }
 
 /* ----------------------------------------------------------------------
+  Parameters to feed ROL Trilinos package
+------------------------------------------------------------------------- */
+
+void Solver::set_rol_params(Teuchos::RCP<Teuchos::ParameterList> parlist)
+{
+    //set defaults here
+    parlist->sublist("General").set("Variable Objective Function", false);
+    parlist->sublist("General").set("Scale for Epsilon Active Sets", (double) 1.0);
+    parlist->sublist("General").set("Output Level", (int) 1);
+    parlist->sublist("General").set("Inexact Objective Function", false);
+    parlist->sublist("General").set("Inexact Gradient", false);
+    parlist->sublist("General").set("Inexact Hessian-Times-A-Vector", false);
+    parlist->sublist("General").set("Projected Gradient Criticality Measure", false);
+
+    parlist->sublist("General").sublist("Secant").set("Type", "Limited-Memory BFGS");
+    parlist->sublist("General").sublist("Secant").set("Use as Preconditioner", false);
+    parlist->sublist("General").sublist("Secant").set("Use as Hessian", false);
+    parlist->sublist("General").sublist("Secant").set("Maximum Storage", (int) 5);
+    parlist->sublist("General").sublist("Secant").set("Use Default Scaling", false);
+    parlist->sublist("General").sublist("Secant").set("Initial Hessian Scale", (double) 1e-16);
+    parlist->sublist("General").sublist("Secant").set("Barzilai-Borwein Type", (int) 1);
+
+    parlist->sublist("General").sublist("Krylov").set("Type", "Conjugate Gradients");
+    parlist->sublist("General").sublist("Krylov").set("Absolute Tolerance", (double) 1e-4);
+    parlist->sublist("General").sublist("Krylov").set("Relative Tolerance", (double) 1e-2);
+    parlist->sublist("General").sublist("Krylov").set("Iteration Limit", (int) 50);
+
+    parlist->sublist("General").sublist("Polyhedral Projection").set("Type", "Dai-Fletcher");
+    parlist->sublist("General").sublist("Polyhedral Projection").set("Iteration Limit", (int) 1000);
+    parlist->sublist("General").sublist("Polyhedral Projection").set("Absolute Tolerance", (double) 1e-4);
+    parlist->sublist("General").sublist("Polyhedral Projection").set("Relative Tolerance", (double) 1e-2);
+
+    //Line search settings
+    parlist->sublist("Step").sublist("Line Search").set("Function Evaluation Limit", (int) 20);
+    parlist->sublist("Step").sublist("Line Search").set("Sufficient Decrease Tolerance", (double) 1.e-2);
+    parlist->sublist("Step").sublist("Line Search").set("Initial Step Size", (double) 5e0);
+    parlist->sublist("Step").sublist("Line Search").set("User Defined Initial Step Size", true);
+    parlist->sublist("Step").sublist("Line Search").set("Normalize Initial Step Size", false);
+    parlist->sublist("Step").sublist("Line Search").set("Accept Last Alpha", false);
+    parlist->sublist("Step").sublist("Line Search").set("Use Previous Step Length as Initial Guess", false);
+    parlist->sublist("Step").sublist("Line Search").set("Maximum Step Size", (double) 5e3);
+    parlist->sublist("Step").sublist("Line Search").set("Use Adaptive Step Size Selection", true);
+
+    parlist->sublist("Step").sublist("Line Search").sublist("Descent Method").set("Type", "Quasi-Newton Method");
+    parlist->sublist("Step").sublist("Line Search").sublist("Descent Method").set("Nonlinear CG Type", "Hestenes-Stiefel");
+
+    parlist->sublist("Step").sublist("Line Search").sublist("Curvature Condition").set("Type", "Strong Wolfe Conditions");
+    parlist->sublist("Step").sublist("Line Search").sublist("Curvature Condition").set("General Parameter", (double) 0.9);
+    parlist->sublist("Step").sublist("Line Search").sublist("Curvature Condition").set("Generalized Wolfe Parameter", (double) 0.6);
+
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Type", "Cubic Interpolation");
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Increase Rate", (double) 5e0);
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Backtracking Rate" , (double) 0.5);
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").set("Bracketing Tolerance" , (double) 1e-8);
+
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").sublist("Path-Based Target Level").set("Target Relaxation Parameter" , (double) 1.0);
+    parlist->sublist("Step").sublist("Line Search").sublist("Line-Search Method").sublist("Path-Based Target Level").set("Upper Bound on Path Length" , (double) 1.0);
+
+    //Trust region settings
+    parlist->sublist("Step").sublist("Trust Region").set("Subproblem Solver", "Truncated CG");
+    parlist->sublist("Step").sublist("Trust Region").set("Subproblem Model", "SPG");
+    parlist->sublist("Step").sublist("Trust Region").set("Initial Radius", (double) 2e1);
+    parlist->sublist("Step").sublist("Trust Region").set("Maximum Radius", (double) 5e8);
+    parlist->sublist("Step").sublist("Trust Region").set("Step Acceptance Threshold", (double) 0.05);
+    parlist->sublist("Step").sublist("Trust Region").set("Radius Shrinking Threshold", (double) 0.05);
+    parlist->sublist("Step").sublist("Trust Region").set("Radius Growing Threshold", (double) 0.9);
+    parlist->sublist("Step").sublist("Trust Region").set("Radius Shrinking Rate (Negative rho)", (double) 0.0625);
+    parlist->sublist("Step").sublist("Trust Region").set("Radius Shrinking Rate (Positive rho)", (double) 0.25);
+    parlist->sublist("Step").sublist("Trust Region").set("Radius Growing Rate", (double) 2.5);
+    parlist->sublist("Step").sublist("Trust Region").set("Safeguard Size", (double) 1e1);
+
+    //Trust region Lin-More
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").set("Maximum Number of Minor Iterations", (int) 10);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").set("Sufficient Decrease Parameter", (double) 1e-2);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").set("Relative Tolerance Exponent", (double) 1.1);
+
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").sublist("Cauchy Point").set("Maximum Number of Reduction Steps", (int) 10);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").sublist("Cauchy Point").set("Maximum Number of Expansion Steps", (int) 10);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").sublist("Cauchy Point").set("Initial Step Size", (double) 1.0);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").sublist("Cauchy Point").set("Normalize Initial Step Size", true);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").sublist("Cauchy Point").set("Reduction Rate", (double) 0.1);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").sublist("Cauchy Point").set("Expansion Rate", (double) 5.0);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").sublist("Cauchy Point").set("Decrease Tolerance", (double) 1e-8);
+
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").sublist("Projected Search").set("Backtracking Rate", (double) 0.5);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Lin-More").sublist("Projected Search").set("Maximum Number of Steps", (int) 20);
+
+    //Trust region SPG (Spectral Projected Gradient)
+    parlist->sublist("Step").sublist("Trust Region").sublist("SPG").set("Use Nonmonotone Trust Region", false);
+    parlist->sublist("Step").sublist("Trust Region").sublist("SPG").set("Maximum Storage Size", (int) 10);
+    parlist->sublist("Step").sublist("Trust Region").sublist("SPG").sublist("Solver").set("Iteration Limit", (int) 25);
+    parlist->sublist("Step").sublist("Trust Region").sublist("SPG").sublist("Solver").set("Minimum Spectral Step Size", (double) 1e-12);
+    parlist->sublist("Step").sublist("Trust Region").sublist("SPG").sublist("Solver").set("Maximum Spectral Step Size", (double) 1e12);
+    parlist->sublist("Step").sublist("Trust Region").sublist("SPG").sublist("Solver").set("Use Smallest Model Iterate", false);
+
+    //Controls for Inexactness
+    parlist->sublist("Step").sublist("Trust Region").sublist("Inexact").sublist("Value").set("Tolerance Scaling", (double) 1e-1);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Inexact").sublist("Value").set("Exponent", (double) 0.9);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Inexact").sublist("Value").set("Forcing Sequence Initial Value", (double) 1.0);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Inexact").sublist("Value").set("Forcing Sequence Update Frequency", (int) 10);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Inexact").sublist("Value").set("Forcing Sequence Reduction Factor", (double) 0.1);
+
+    parlist->sublist("Step").sublist("Trust Region").sublist("Inexact").sublist("Gradient").set("Tolerance Scaling", (double) 1e-1);
+    parlist->sublist("Step").sublist("Trust Region").sublist("Inexact").sublist("Gradient").set("Relative Tolerance", (double) 2.0);
+
+    //Spectral gradient options
+    parlist->sublist("Step").sublist("Spectral Gradient").set("Minimum Spectral Step Size", (double) 1e-12);
+    parlist->sublist("Step").sublist("Spectral Gradient").set("Maximum Spectral Step Size", (double) 1e12);
+
+    //Primal dual active set options
+    parlist->sublist("Step").sublist("Primal Dual Active Set").set("Dual Scaling", (double) 1.0);
+    parlist->sublist("Step").sublist("Primal Dual Active Set").set("Iteration Limit", (int) 10);
+    parlist->sublist("Step").sublist("Primal Dual Active Set").set("Relative Step Tolerance", (double) 1e-8);
+    parlist->sublist("Step").sublist("Primal Dual Active Set").set("Relative Gradient Tolerance", (double) 1e-6);
+    
+    parlist->sublist("Step").sublist("Composite Step").set("Output Level", (int) 0);
+    parlist->sublist("Step").sublist("Composite Step").sublist("Optimality System Solver").set("Nominal Relative Tolerance", (double) 1e-10);
+    parlist->sublist("Step").sublist("Composite Step").sublist("Optimality System Solver").set("Fix Tolerance", true);
+
+    parlist->sublist("Step").sublist("Composite Step").sublist("Tangential Subproblem Solver").set("Iteration Limit", (int) 20);
+    parlist->sublist("Step").sublist("Composite Step").sublist("Tangential Subproblem Solver").set("Relative Tolerance", (double) 1e-2);
+
+    //Augmented Lagrangian Options
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Level of Hessian Approximation", (int) 0);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Use Default Problem Scaling", true);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Objective Scaling", (double) 1e0);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Constraint Scaling", (double) 1e0);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Use Default Initial Penalty Parameter", false);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Initial Penalty Parameter", simparam.optimization_options.rol_params.initial_constraint_penalty);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Penalty Parameter Growth Factor", (double) 1e1);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Minimum Penalty Parameter Reciprocal", (double) 0.1);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Initial Optimality Tolerance", (double) 1.0);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Optimality Tolerance Update Exponent", (double) 1.0);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Optimality Tolerance Decrease Exponent", (double) 1.0);
+    
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Initial Feasibility Tolerance", (double) 1000.0);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Feasibility Tolerance Update Exponent", (double) 0.1);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Feasibility Tolerance Decrease Exponent", (double) 0.9);
+    
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Print Intermediate Optimization History", false);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Step Type", simparam.optimization_options.rol_params.subproblem_algorithm_string);
+    parlist->sublist("Step").sublist("Augmented Lagrangian").set("Subproblem Iteration Limit", simparam.optimization_options.rol_params.subproblem_iteration_limit);
+    
+    parlist->sublist("Step").sublist("Moreau-Yosida Penalty").set("Initial Penalty Parameter", (double) 1e-9);
+    parlist->sublist("Step").sublist("Moreau-Yosida Penalty").set("Penalty Parameter Growth Factor", (double) 1.5);
+    parlist->sublist("Step").sublist("Moreau-Yosida Penalty").sublist("Subproblem").set("Optimality Tolerance", (double) 1e-12);
+    parlist->sublist("Step").sublist("Moreau-Yosida Penalty").sublist("Subproblem").set("Feasibility Tolerance", (double) 1e-12);
+    parlist->sublist("Step").sublist("Moreau-Yosida Penalty").sublist("Subproblem").set("Print History", true);
+    parlist->sublist("Step").sublist("Moreau-Yosida Penalty").sublist("Subproblem").set("Iteration Limit", (int) 200);
+    
+    parlist->sublist("Step").sublist("Bundle").set("Initial Trust-Region Parameter", (double) 1e1);
+    parlist->sublist("Step").sublist("Bundle").set("Maximum Trust-Region Parameter", (double) 1e8);
+    parlist->sublist("Step").sublist("Bundle").set("Tolerance for Trust-Region Parameter", (double) 1e-4);
+    parlist->sublist("Step").sublist("Bundle").set("Epsilon Solution Tolerance", (double) 1e-8);
+    parlist->sublist("Step").sublist("Bundle").set("Upper Threshold for Serious Step", (double) 1e-1);
+    parlist->sublist("Step").sublist("Bundle").set("Lower Threshold for Serious Step", (double) 2e-1);
+    parlist->sublist("Step").sublist("Bundle").set("Upper Threshold for Null Step", (double) 9e-1);
+    parlist->sublist("Step").sublist("Bundle").set("Distance Measure Coefficient", (double) 1e-6);
+    parlist->sublist("Step").sublist("Bundle").set("Maximum Bundle Size", (int) 50);
+    parlist->sublist("Step").sublist("Bundle").set("Removal Size for Bundle Update", (int) 2);
+    parlist->sublist("Step").sublist("Bundle").set("Cutting Plane Tolerance", (double) 1e-8);
+    parlist->sublist("Step").sublist("Bundle").set("Cutting Plane Iteration Limit", (int) 1000);
+
+    
+    parlist->sublist("Status Test").set("Gradient Tolerance", simparam.optimization_options.rol_params.gradient_tolerance);
+    parlist->sublist("Status Test").set("Constraint Tolerance", simparam.optimization_options.rol_params.constraint_tolerance);
+    parlist->sublist("Status Test").set("Step Tolerance", simparam.optimization_options.rol_params.step_tolerance);
+    parlist->sublist("Status Test").set("Iteration Limit", simparam.optimization_options.rol_params.iteration_limit);
+    parlist->sublist("Status Test").set("Use Relative Tolerances", true);
+}
+
+/* ----------------------------------------------------------------------
   Setup Tpetra importers for comms
 ------------------------------------------------------------------------- */
 
@@ -3873,6 +4049,16 @@ void Solver::comm_importer_setup()
     // sorted element mapping
     sorted_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_elem, 0, comm));
     element_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(all_element_map, sorted_element_map));;
+}
+
+/* ----------------------------------------------------------------------
+  Setup Tpetra exporters for reverse comms
+------------------------------------------------------------------------- */
+
+void Solver::comm_exporter_setup()
+{
+    // create import object using local node indices map and ghost indices map
+    exporter = Teuchos::rcp(new Tpetra::Export<LO, GO>(all_node_map, map));
 }
 
 /* ----------------------------------------------------------------------

@@ -61,18 +61,46 @@ int main(int argc, char* argv[])
     } // end if
 
     Kokkos::initialize();
+    {
 
-    // Create driver on heap
-    Driver* driver;
-    driver = new Driver(argv[1]);
+        // Create driver
+        Driver* driver = new Driver(argv[1]);
 
-    driver->initialize();
-    driver->setup();
-    driver->run();
-    driver->finalize();
 
-    // Delete driver
-    delete driver;
+        // Timing data for each step
+        auto time_start = std::chrono::high_resolution_clock::now();
+        auto time_init = std::chrono::high_resolution_clock::now();
+        
+        driver->initialize();
+        
+        auto time_now = std::chrono::high_resolution_clock::now();
+        auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_init).count();
+        printf("\n**** Total time to initialize driver in seconds  %f ****\n\n", calc_time * 1e-9);
+
+        auto time_setup = std::chrono::high_resolution_clock::now();
+        driver->setup();
+        time_now = std::chrono::high_resolution_clock::now();
+        calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_setup).count();
+        printf("\n**** Total time to setup driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        
+
+        auto time_run = std::chrono::high_resolution_clock::now();
+        driver->execute();
+        time_now = std::chrono::high_resolution_clock::now();
+        calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_setup).count();
+        printf("\n**** Total time to execute driver in seconds  %f ****\n\n", calc_time * 1e-9);
+
+
+        driver->finalize();
+
+        time_now = std::chrono::high_resolution_clock::now();
+        calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_start).count();
+
+        printf("\n**** Total time to run simulation in seconds  %f ****\n\n", calc_time * 1e-9);
+
+        // Delete driver
+        delete driver;
+    }
 
     Kokkos::finalize();
 

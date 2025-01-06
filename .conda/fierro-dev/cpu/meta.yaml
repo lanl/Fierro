@@ -1,9 +1,9 @@
 {% set version = "1.0.0" %}
 {% set linux_compiler_version = "10.4.0" %}
-{% set macos_compiler_version = "12" %}
+{% set macos_compiler_version = "16" %}
 
 package:
-  name: fierro-dev
+  name: dev-fe-cpu
   version: {{ version }}
 
 build:

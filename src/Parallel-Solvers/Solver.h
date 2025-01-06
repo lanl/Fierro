@@ -140,9 +140,11 @@ public:
 
     virtual void read_mesh_abaqus_inp(const char* MESH); //abaqus inp format reader
 
-    virtual void repartition_nodes();
+    virtual void repartition_nodes(bool repartition_node_densities=true);
 
     virtual void comm_importer_setup();
+
+    virtual void comm_exporter_setup();
 
     virtual void comm_coordinates();
 
@@ -160,6 +162,8 @@ public:
     // finds the boundary element surfaces in this model
     virtual void Get_Boundary_Patches();
 
+    virtual void set_rol_params(Teuchos::RCP<Teuchos::ParameterList> parlist);
+
     int setup_flag, finalize_flag;
 
     // MPI data
@@ -167,6 +171,7 @@ public:
     int      nranks; // number of mpi ranks in the world communicator
     MPI_Comm world; // stores the default communicator object (MPI_COMM_WORLD)
     Teuchos::RCP<Tpetra::Import<LO, GO>> importer; // all node comms
+    Teuchos::RCP<Tpetra::Export<LO, GO>> exporter; // reverse all node comms (typically used with a combine mode like max or sum)
     Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; // ghost node comms
     Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; // sorted node comms
     Teuchos::RCP<Tpetra::Import<LO, GO>> element_sorting_importer; // sorted element comms
@@ -239,7 +244,7 @@ public:
     Teuchos::RCP<const MV> test_node_densities_distributed;
     Teuchos::RCP<MV>       all_node_densities_distributed;
     Teuchos::RCP<MV>       all_filtered_node_densities_distributed;
-    Teuchos::RCP<MV>       lower_bound_node_densities_distributed;
+    Teuchos::RCP<MV>       lower_bound_node_densities_distributed, all_lower_bound_node_densities_distributed;
     Teuchos::RCP<MV>       upper_bound_node_densities_distributed;
     Teuchos::RCP<MV>       Global_Element_Densities_Upper_Bound;
     Teuchos::RCP<MV>       Global_Element_Densities_Lower_Bound;
@@ -264,7 +269,7 @@ public:
 
     // file readin variables
     std::ifstream* in = NULL;
-    std::streampos before_condition_header, first_elem_line_streampos;
+    std::streampos before_condition_header, first_elem_line_streampos, prev_read_elem_zone_end;
     std::string    filename;
     int words_per_line, elem_words_per_line;
     enum node_ordering_convention { IJK, ENSIGHT };

@@ -11,7 +11,10 @@ SERIALIZABLE_ENUM(BOUNDARY_TYPE,
 )
 
 SERIALIZABLE_ENUM(BOUNDARY_CONDITION_TYPE, 
-    displacement, 
+    displacement,
+    displacement_x,
+    displacement_y,
+    displacement_z, 
     temperature, 
     velocity,
     reflected,

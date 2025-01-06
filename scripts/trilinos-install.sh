@@ -2,6 +2,7 @@
 
 kokkos_build_type="${1}"
 machine="${2}"
+intel_mkl="${3}"
 
 # If all arguments are valid, you can use them in your script as needed
 echo "Trilinos Kokkos Build Type: $kokkos_build_type"
@@ -28,10 +29,11 @@ fi
 #check if Trilinos library files were installed, install them otherwise.
 [ -d "${TRILINOS_BUILD_DIR}/lib" ] && echo "Directory ${TRILINOS_BUILD_DIR}/lib exists, assuming successful installation; delete build folder and run build script again if there was an environment error that has been corrected."
 
-#check if Trilinos cmake was already configured.
-[ -e "${TRILINOS_BUILD_DIR}/CMakeCache.txt" ] && echo "CMake build exists, skipping cmake configure"
-if [ ! -e "${TRILINOS_BUILD_DIR}/CMakeCache.txt" ]
+[ -d "${TRILINOS_BUILD_DIR}/lib64" ] && echo "Directory ${TRILINOS_BUILD_DIR}/lib64 exists, assuming successful installation; delete build folder and run build script again if there was an environment error that has been corrected."
+
+if [ ! -d "${TRILINOS_BUILD_DIR}/lib" ] && [ ! -d "${TRILINOS_BUILD_DIR}/lib64" ]
 then
+  echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
 
 CUDA_ADDITIONS=(
 -D TPL_ENABLE_CUDA=ON
@@ -114,6 +116,26 @@ ${ADDITIONS[@]}
 -D CMAKE_INSTALL_PREFIX=${TRILINOS_INSTALL_DIR} 
 )
 
+# Flags for building with Intel MKL library
+INTEL_MKL_ADDITIONS=(
+-D TPL_ENABLE_MKL=ON
+-D BLAS_LIBRARY_NAMES="libmkl_rt.so"
+-D BLAS_LIBRARY_DIRS="$MKLROOT/lib/intel64"
+-D LAPACK_LIBRARY_NAMES="libmkl_rt.so"
+-D LAPACK_LIBRARY_DIRS="$MKLROOT/lib/intel64"
+-D MKL_LIBRARY_DIRS="$MKLROOT/lib/intel64"
+-D MKL_LIBRARY_NAMES="mkl_rt"
+-D MKL_INCLUDE_DIRS="$MKLROOT/include"
+)
+
+echo "**** Intel MKL = ${intel_mkl} ****"
+if [ "$intel_mkl" = "enabled" ]; then
+    echo "**** assuming MKL installation at $MKLROOT ****"
+    cmake_options+=(
+        ${INTEL_MKL_ADDITIONS[@]}
+    )
+fi
+
 if [ "$kokkos_build_type" = "openmp" ]; then
     cmake_options+=(
         ${OPENMP_ADDITIONS[@]}
@@ -131,23 +153,19 @@ elif [ "$kokkos_build_type" = "hip" ]; then
     )
 fi
 
-if [ ! -d "${TRILINOS_BUILD_DIR}/lib" ]
-then
-  echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
-  # Print CMake options for reference
-  echo "CMake Options: ${cmake_options[@]}"
+# Print CMake options for reference
+echo "CMake Options: ${cmake_options[@]}"
 
-  # Configure Trilinos
-  cmake "${cmake_options[@]}" -B "${TRILINOS_BUILD_DIR}" -S "${TRILINOS_SOURCE_DIR}"
+# Configure Trilinos
+cmake "${cmake_options[@]}" -B "${TRILINOS_BUILD_DIR}" -S "${TRILINOS_SOURCE_DIR}"
 
-  # Build Trilinos
-  echo "Building Trilinos..."
-  make -C "${TRILINOS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
+# Build Trilinos
+echo "Building Trilinos..."
+make -C "${TRILINOS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
 
-  # Install Trilinos
-  echo "Installing Trilinos..."
-  make -C "${TRILINOS_BUILD_DIR}" install all
+# Install Trilinos
+echo "Installing Trilinos..."
+make -C "${TRILINOS_BUILD_DIR}" install all
 
-  echo "Trilinos installation complete."
-fi
+echo "Trilinos installation complete."
 fi

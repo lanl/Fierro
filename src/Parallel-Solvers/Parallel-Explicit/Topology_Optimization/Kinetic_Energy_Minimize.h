@@ -53,12 +53,13 @@
 #include "ROL_Types.hpp"
 #include <ROL_TpetraMultiVector.hpp>
 #include "ROL_Objective.hpp"
+#include "Fierro_Optimization_Objective.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
 #include "FEA_Module_SGH.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
 
-class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t>
+class KineticEnergyMinimize_TopOpt : public FierroOptimizationObjective
 {
 typedef Tpetra::Map<>::local_ordinal_type LO;
 typedef Tpetra::Map<>::global_ordinal_type GO;
@@ -94,9 +95,12 @@ private:
     ROL::Ptr<ROL_MV> ROL_Force;
     ROL::Ptr<ROL_MV> ROL_Velocities;
     ROL::Ptr<ROL_MV> ROL_Gradients;
+    Teuchos::RCP<MV> previous_gradients;
     real_t initial_kinetic_energy;
+    real_t previous_objective_accumulation, objective_sign;
 
     bool useLC_; // Use linear form of energy.  Otherwise use quadratic form.
+    bool first_init; //prevents ROL from calling init computation twice at start for the AL algorithm
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -131,33 +135,48 @@ private:
     }
 
 public:
-    bool   nodal_density_flag_, time_accumulation;
+    bool   nodal_density_flag_;
     int    last_comm_step, last_solve_step, current_step;
+    int num_dim;
     size_t nvalid_modules;
+    size_t nlocal_nodes, num_corners, num_nodes_in_elem, rnum_elem;
+    DViewCArrayKokkos<double> node_mass, node_coords;
     std::vector<FEA_MODULE_TYPE> valid_fea_modules; // modules that may interface with this objective function
     FEA_MODULE_TYPE set_module_type;
     // std::string my_fea_module = "SGH";
-    real_t objective_accumulation;
 
     KineticEnergyMinimize_TopOpt(Explicit_Solver* Explicit_Solver_Pointer, bool nodal_density_flag)
         : useLC_(true)
     {
         Explicit_Solver_Pointer_ = Explicit_Solver_Pointer;
-
+        first_init = false;
         valid_fea_modules.push_back(FEA_MODULE_TYPE::SGH);
         valid_fea_modules.push_back(FEA_MODULE_TYPE::Dynamic_Elasticity);
         nvalid_modules = valid_fea_modules.size();
-
+        objective_sign = 1;
+        num_dim = Explicit_Solver_Pointer_->simparam.num_dims;
         const Simulation_Parameters& simparam = Explicit_Solver_Pointer_->simparam;
         for (const auto& fea_module : Explicit_Solver_Pointer_->fea_modules) {
             for (int ivalid = 0; ivalid < nvalid_modules; ivalid++) {
                 if (fea_module->Module_Type == FEA_MODULE_TYPE::SGH) {
                     FEM_SGH_ = dynamic_cast<FEA_Module_SGH*>(fea_module);
                     set_module_type = FEA_MODULE_TYPE::SGH;
+                    node_mass = FEM_SGH_->node_mass;
+                    node_coords = FEM_SGH_->node_coords;
+                    nlocal_nodes = FEM_SGH_->nlocal_nodes;
+                    num_corners = FEM_SGH_->num_corners;
+                    num_nodes_in_elem = FEM_SGH_->num_nodes_in_elem;
+                    rnum_elem = FEM_SGH_->rnum_elem;
                 }
                 if (fea_module->Module_Type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
                     FEM_Dynamic_Elasticity_ = dynamic_cast<FEA_Module_Dynamic_Elasticity*>(fea_module);
                     set_module_type = FEA_MODULE_TYPE::Dynamic_Elasticity;
+                    node_mass = FEM_Dynamic_Elasticity_->node_mass;
+                    node_coords = FEM_Dynamic_Elasticity_->node_coords;
+                    nlocal_nodes = FEM_Dynamic_Elasticity_->nlocal_nodes;
+                    num_corners = FEM_Dynamic_Elasticity_->num_corners;
+                    num_nodes_in_elem = FEM_Dynamic_Elasticity_->num_nodes_in_elem;
+                    rnum_elem = FEM_Dynamic_Elasticity_->rnum_elem;
                 }
             }
         }
@@ -165,8 +184,11 @@ public:
         last_comm_step    = last_solve_step = -1;
         current_step      = 0;
         time_accumulation = true;
-        objective_accumulation = 0;
-
+        
+        previous_gradients = Teuchos::rcp(new MV(Explicit_Solver_Pointer_->map, 1));
+        if(Explicit_Solver_Pointer_->simparam.optimization_options.maximize_flag){
+            objective_sign = -1;
+        }
         // ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
         if (set_module_type == FEA_MODULE_TYPE::SGH) {
             ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_SGH_->node_velocities_distributed);
@@ -205,16 +227,20 @@ public:
         const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
         if (type == ROL::UpdateType::Initial) {
-            // This is the first call to update
-            // first linear solve was done in FEA class run function already
-            FEM_Dynamic_Elasticity_->comm_variables(zp);
-            // update deformation variables
-            FEM_Dynamic_Elasticity_->update_forward_solve(zp);
-            // initial design density data was already communicated for ghost nodes in init_design()
-            // decide to output current optimization state
-            FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
+            if(first_init){
+                // This is the first call to update
+                // first linear solve was done in FEA class run function already
+                FEM_Dynamic_Elasticity_->comm_variables(zp);
+                // update deformation variables
+                FEM_Dynamic_Elasticity_->update_forward_solve(zp);
+                // initial design density data was already communicated for ghost nodes in init_design()
+                // decide to output current optimization state
+                FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
+            }
+            first_init = true;
         }
         else if (type == ROL::UpdateType::Accept) {
+
         }
         else if (type == ROL::UpdateType::Revert) {
             // u_ was set to u=S(x) during a trial update
@@ -262,24 +288,38 @@ public:
         // debug
         std::ostream& out = std::cout;
         Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-
-        current_step++;
-        ROL::Ptr<const MV>   zp = getVector(z);
+        bool print_flag = false;
+        ROL::Ptr<const MV>   zp = getVector(z); //tpetra multivector wrapper on design vector
         const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
         if (type == ROL::UpdateType::Initial) {
-            // This is the first call to update
-            if (Explicit_Solver_Pointer_->myrank == 0) {
-                *fos << "called SGH Initial" << std::endl;
-            }
+            if(first_init){
+                // This is the first call to update
+                if (Explicit_Solver_Pointer_->myrank == 0) {
+                    *fos << "called SGH Initial" << std::endl;
+                }
 
-            FEM_SGH_->comm_variables(zp);
-            FEM_SGH_->update_forward_solve(zp);
-            // initial design density data was already communicated for ghost nodes in init_design()
-            // decide to output current optimization state
-            // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
+                FEM_SGH_->comm_variables(zp);
+                FEM_SGH_->update_forward_solve(zp);
+                if(Explicit_Solver_Pointer_->myrank == 0){
+                    std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
+                }
+                FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
+                previous_objective_accumulation = objective_accumulation;
+                previous_gradients->assign(*(FEM_SGH_->cached_design_gradients_distributed));
+                // initial design density data was already communicated for ghost nodes in init_design()
+                // decide to output current optimization state
+                // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
+            }
+            first_init = true;
         }
         else if (type == ROL::UpdateType::Accept) {
+            if (Explicit_Solver_Pointer_->myrank == 0) {
+                *fos << "called Accept" << std::endl;
+            }
+            
+            previous_objective_accumulation = objective_accumulation;
+            previous_gradients->assign(*(FEM_SGH_->cached_design_gradients_distributed));
         }
         else if (type == ROL::UpdateType::Revert) {
             // u_ was set to u=S(x) during a trial update
@@ -287,25 +327,35 @@ public:
             // Revert to cached value
             // This is a new value of x
             // communicate density variables for ghosts
-            if (Explicit_Solver_Pointer_->myrank == 0) { *fos << "called SGH Revert" << std::endl; }
-
-            FEM_SGH_->comm_variables(zp);
-            // update deformation variables
-            FEM_SGH_->update_forward_solve(zp);
-            if (Explicit_Solver_Pointer_->myrank == 0) {
-                *fos << "called Revert" << std::endl;
+            if (Explicit_Solver_Pointer_->myrank == 0) { *fos << "called Revert" << std::endl; }
+            objective_accumulation = previous_objective_accumulation;
+            FEM_SGH_->cached_design_gradients_distributed->assign(*previous_gradients);
+            if(Explicit_Solver_Pointer_->myrank == 0){
+                std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
             }
+            // FEM_SGH_->comm_variables(zp);
+            // // update deformation variables
+            // FEM_SGH_->update_forward_solve(zp);
+            // FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
         }
         else if (type == ROL::UpdateType::Trial) {
             // This is a new value of x
-            // communicate density variables for ghosts
-            FEM_SGH_->comm_variables(zp);
-            // update deformation variables
-            FEM_SGH_->update_forward_solve(zp);
+            current_step++;
+            if(current_step%FEM_SGH_->simparam->optimization_options.optimization_output_freq==0){
+                print_flag = true;
+            }
             if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called Trial" << std::endl;
             }
-
+            // communicate density variables for ghosts
+            FEM_SGH_->comm_variables(zp);
+            // update deformation variables
+            FEM_SGH_->update_forward_solve(zp, print_flag);
+            
+            if(Explicit_Solver_Pointer_->myrank == 0){
+                std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
+            }
+            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
             // decide to output current optimization state
             // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
         }
@@ -313,11 +363,90 @@ public:
             // This is a new value of x used for,
             // e.g., finite-difference checks
             if (Explicit_Solver_Pointer_->myrank == 0) {
-                *fos << "called SGH Temp" << std::endl;
+                *fos << "called Temp" << std::endl;
             }
             FEM_SGH_->comm_variables(zp);
             FEM_SGH_->update_forward_solve(zp);
+            if(Explicit_Solver_Pointer_->myrank == 0){
+                std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
+            }
+            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
         }
+    }
+
+  /* --------------------------------------------------------------------------------------
+   Compute time integral contribution for this objective function form
+  ----------------------------------------------------------------------------------------- */
+    void step_accumulation(const real_t& dt, const size_t& cycle, const size_t& rk_level) {
+        
+        const_vec_array node_velocities_interface;
+        const_vec_array previous_node_velocities_interface;
+        bool use_solve_checkpoints    = FEM_SGH_->simparam->optimization_options.use_solve_checkpoints;
+        if(use_solve_checkpoints){
+            node_velocities_interface = FEM_SGH_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            previous_node_velocities_interface = FEM_SGH_->previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        }
+        else{
+            auto forward_solve_velocity_data = FEM_SGH_->forward_solve_velocity_data;
+            node_velocities_interface = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            previous_node_velocities_interface = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        }
+
+        double KE_sum = 0.0;
+        double KE_loc_sum = 0.0;
+        // extensive KE
+        if(FEM_SGH_->simparam->optimization_options.optimization_objective_regions.size()){
+            int nobj_volumes = FEM_SGH_->simparam->optimization_options.optimization_objective_regions.size();
+            auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
+            const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+                double ke = 0;
+                double current_node_coords[3];
+                bool contained = false;
+                current_node_coords[0] = all_initial_node_coords(node_gid, 0);
+                current_node_coords[1] = all_initial_node_coords(node_gid, 1);
+                current_node_coords[2] = all_initial_node_coords(node_gid, 2);
+                for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                    if(optimization_objective_regions(ivolume).contains(current_node_coords)){
+                        contained = true;
+                    }
+                }
+                if(contained){
+                    for (size_t dim = 0; dim < num_dim; dim++) {
+                        // midpoint integration approximation
+                        ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
+                                (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
+                    } // end for
+                }
+
+                if (num_dim == 2) {
+                    KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+                }
+                else{
+                    KE_loc_sum += node_mass(node_gid) * ke;
+                }
+            }, KE_sum);
+        }
+        else{
+            REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+                double ke = 0;
+                for (size_t dim = 0; dim < num_dim; dim++) {
+                    // midpoint integration approximation
+                    ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
+                        (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
+                } // end for
+
+                if (num_dim == 2) {
+                    KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
+                }
+                else{
+                    KE_loc_sum += node_mass(node_gid) * ke;
+                }
+            }, KE_sum);
+        }
+        Kokkos::fence();
+        KE_sum = 0.5 * KE_sum;
+        objective_accumulation += KE_sum * dt;
     }
 
   /* --------------------------------------------------------------------------------------
@@ -371,12 +500,9 @@ public:
         }
 
         std::cout.precision(10);
-        if (Explicit_Solver_Pointer_->myrank == 0) {
-            std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
-        }
 
         // std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
-        return objective_accumulation;
+        return objective_sign*objective_accumulation;
     }
 
   /* --------------------------------------------------------------------------------------
@@ -401,6 +527,7 @@ public:
         if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
             FEM_Dynamic_Elasticity_->compute_topology_optimization_gradient_full(zp, gp);
         }
+        gp->scale(objective_sign);
         // debug print of gradient
         // std::ostream &out = std::cout;
         // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -425,6 +552,131 @@ public:
         // std::fflush(stdout);
         // std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
     }
+    
+  //contributes to rate of change of adjoint vector due to term with velocity gradient of objective
+    void velocity_gradient_adjoint_contribution(vec_array& adjoint_rate_vector, const DViewCArrayKokkos<double>& node_mass,
+                                                const DViewCArrayKokkos<double>& elem_mass, const DViewCArrayKokkos<double>& node_vel,
+                                                const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
+                                                const size_t& rk_level){
+        
+
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            for (int idim = 0; idim < num_dim; idim++) {
+                adjoint_rate_vector(node_gid, idim) = node_mass(node_gid)*node_vel(rk_level, node_gid, idim);
+            }
+        }); // end parallel for
+        Kokkos::fence();
+    }
+
+    void density_gradient_term(vec_array& gradient_vector, const DViewCArrayKokkos<double>& node_mass,
+                               const DViewCArrayKokkos<double>& elem_mass, const DViewCArrayKokkos<double>& node_vel,
+                               const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
+                               const size_t& rk_level, const real_t& global_dt = 0){
+        size_t current_data_index, next_data_index;
+        CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+        auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
+        auto nodes_in_elem = FEM_SGH_->nodes_in_elem;
+        auto corner_value_storage = FEM_SGH_->corner_value_storage;
+        auto corners_in_node = FEM_SGH_->corners_in_node;
+        auto num_corners_in_node = FEM_SGH_->num_corners_in_node;
+        auto relative_element_densities = FEM_SGH_->relative_element_densities;
+
+        // view scope
+        {
+            if(optimization_objective_regions.size()){
+                int nobj_volumes = optimization_objective_regions.size();
+                const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                    size_t node_id;
+                    size_t corner_id;
+                    real_t inner_product;
+                    // std::cout << elem_mass(elem_id) <<std::endl;
+
+                    // current_nodal_velocities
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                        node_id = nodes_in_elem(elem_id, inode);
+                        
+                        for (int idim = 0; idim < num_dim; idim++) {
+                        // midpoint rule for integration being used; add velocities and divide by 2
+                        current_element_velocities(inode, idim) = node_vel(rk_level, node_id, idim);
+                        }
+                    }
+
+                    inner_product = 0;
+                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                        double current_node_coords[3];
+                        bool contained = false;
+                        node_id = nodes_in_elem(elem_id, ifill);
+                        current_node_coords[0] = all_initial_node_coords(node_id, 0);
+                        current_node_coords[1] = all_initial_node_coords(node_id, 1);
+                        current_node_coords[2] = all_initial_node_coords(node_id, 2);
+                        for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                            if(optimization_objective_regions(ivolume).contains(current_node_coords)){
+                                contained = true;
+                            }
+                        }
+                        if(contained){
+                            for (int idim = 0; idim < num_dim; idim++) {
+                                inner_product += elem_mass(elem_id) * current_element_velocities(ifill, idim) * current_element_velocities(ifill, idim);
+                            }
+                        }
+                    }
+
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                        // compute gradient of local element contribution to v^t*M*v product
+                        corner_id = elem_id * num_nodes_in_elem + inode;
+                        // division by design ratio recovers nominal element mass used in the gradient operator
+                        corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                    }
+                }); // end parallel for
+                Kokkos::fence();
+            }
+            else{
+                FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                    size_t node_id;
+                    size_t corner_id;
+                    real_t inner_product;
+                    // std::cout << elem_mass(elem_id) <<std::endl;
+
+                    // current_nodal_velocities
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                        node_id = nodes_in_elem(elem_id, inode);
+                        
+                        for (int idim = 0; idim < num_dim; idim++) {
+                        // midpoint rule for integration being used; add velocities and divide by 2
+                        current_element_velocities(inode, idim) = node_vel(rk_level, node_id, idim);
+                        }
+                    }
+
+                    inner_product = 0;
+                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                        for (int idim = 0; idim < num_dim; idim++) {
+                            inner_product += elem_mass(elem_id) * current_element_velocities(ifill, idim) * current_element_velocities(ifill, idim);
+                        }
+                    }
+
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                        // compute gradient of local element contribution to v^t*M*v product
+                        corner_id = elem_id * num_nodes_in_elem + inode;
+                        // division by design ratio recovers nominal element mass used in the gradient operator
+                        corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                    }
+                }); // end parallel for
+                Kokkos::fence();
+            }
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    corner_id = corners_in_node(node_id, icorner);
+                    gradient_vector(node_id, 0) += 0.5 * corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+        }
+    }
+
 };
 
 #endif // end header guard

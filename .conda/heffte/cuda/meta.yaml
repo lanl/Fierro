@@ -1,10 +1,10 @@
 {% set version = "1.0.0" %}
-{% set linux_compiler_version = "10.4.0" %}
-{% set macos_compiler_version = "12" %}
-{% set cuda_version = "12.3" %}
+{% set linux_compiler_version = "12.4.0" %}
+{% set macos_compiler_version = "16" %}
+#{% set cuda_version = "12.5" %}
 
 package:
-  name: fierro-heffte-cuda
+  name: heffte-cuda
   version: {{ version }}
 
 source:
@@ -28,11 +28,16 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}={{ linux_compiler_version }}
     - openmpi
-    - cuda-toolkit={{ cuda_version }}
+      # - cuda-compiler
+      #    - cuda-toolkit={{ cuda_version }}
+    - cuda-toolkit
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
-    - cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
+    #- cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
+    - cuda-compiler
+    - cuda-cudart-static
+    - cuda-toolkit
     - libcusolver-dev
     - libcufft-dev
     - libcublas-dev
@@ -50,7 +55,7 @@ about:
   license_family: BSD
   license_file: LICENSE
   summary:
-    LANL Fierro's dependency for EVPFFT solutions
+    LANL Fierro's dependency for EVPFFT solver
   description:
     Fierro (LANL code number C21030) is a modern C++ code designed to simulate quasi-static 
     solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, 

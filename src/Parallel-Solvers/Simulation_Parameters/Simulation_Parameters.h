@@ -99,12 +99,35 @@ struct Simulation_Parameters
         switch (optimization_options.optimization_objective) {
         case OPTIMIZATION_OBJECTIVE::minimize_compliance:
             add_TO_module(TO_MODULE_TYPE::Strain_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.normalized_objective = true;
             break;
         case OPTIMIZATION_OBJECTIVE::minimize_thermal_resistance:
             add_TO_module(TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.normalized_objective = true;
             break;
         case OPTIMIZATION_OBJECTIVE::minimize_kinetic_energy:
             add_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            break;
+        case OPTIMIZATION_OBJECTIVE::maximize_compliance:
+            add_TO_module(TO_MODULE_TYPE::Strain_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.normalized_objective = true;
+            optimization_options.maximize_flag = true;
+            break;
+        case OPTIMIZATION_OBJECTIVE::maximize_thermal_resistance:
+            add_TO_module(TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.normalized_objective = true;
+            optimization_options.maximize_flag = true;
+            break;
+        case OPTIMIZATION_OBJECTIVE::maximize_kinetic_energy:
+            add_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.maximize_flag = true;
+            break;
+        case OPTIMIZATION_OBJECTIVE::minimize_internal_energy:
+            add_TO_module(TO_MODULE_TYPE::Internal_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            break;
+        case OPTIMIZATION_OBJECTIVE::maximize_internal_energy:
+            add_TO_module(TO_MODULE_TYPE::Internal_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            optimization_options.maximize_flag = true;
             break;
         case OPTIMIZATION_OBJECTIVE::multi_objective:
             add_TO_module(TO_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});
@@ -314,6 +337,7 @@ struct Simulation_Parameters
             {TO_MODULE_TYPE::Strain_Energy_Minimize,                {FEA_MODULE_TYPE::Elasticity     }},
             {TO_MODULE_TYPE::Displacement_Constraint,               {FEA_MODULE_TYPE::Elasticity     }},
             {TO_MODULE_TYPE::Strain_Energy_Constraint,              {FEA_MODULE_TYPE::Elasticity     }},
+            {TO_MODULE_TYPE::Internal_Energy_Minimize,              {FEA_MODULE_TYPE::SGH            }},
             {TO_MODULE_TYPE::Kinetic_Energy_Minimize,               {FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity}},
         };
         if (map.count(type) == 0)
@@ -362,8 +386,11 @@ struct Simulation_Parameters
      */
     size_t ensure_module(std::shared_ptr<FEA_Module_Parameters> module) {
         size_t i = find_module(module->type);
-        if (i == fea_module_parameters.size())
+        size_t current_size = fea_module_parameters.size();
+        if (i == current_size){
             fea_module_parameters.push_back(module);
+            fea_module_parameters[current_size]->requires_conditions = false;
+        }
         return i;
     }
 

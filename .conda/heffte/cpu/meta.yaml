@@ -1,9 +1,9 @@
 {% set version = "1.0.0" %}
 {% set linux_compiler_version = "10.4.0" %}
-{% set macos_compiler_version = "12" %}
+{% set macos_compiler_version = "16" %}
 
 package:
-  name: fierro-heffte
+  name: heffte-cpu
   version: {{ version }}
 
 source:
@@ -35,7 +35,7 @@ about:
   license_family: BSD
   license_file: LICENSE
   summary:
-    LANL Fierro's dependency for EVPFFT solutions
+    LANL Fierro's dependency for EVPFFT solver
   description:
     Fierro (LANL code number C21030) is a modern C++ code designed to simulate quasi-static 
     solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, 

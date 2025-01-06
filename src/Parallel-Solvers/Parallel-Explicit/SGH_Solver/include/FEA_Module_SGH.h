@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -40,8 +40,10 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
+#include "dynamic_checkpoint.h"
 #include "FEA_Module.h"
 #include "material_models.h"
+#include <set>
 
 class Explicit_Solver;
 
@@ -81,6 +83,8 @@ public:
     void cleanup_material_models();
 
     int solve();
+
+    void checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator start_checkpoint, size_t bounding_timestep);
 
     void module_cleanup();
 
@@ -418,7 +422,7 @@ public:
 
     void grow_boundary_sets(int num_boundary_sets);
 
-    virtual void update_forward_solve(Teuchos::RCP<const MV> zp);
+    virtual void update_forward_solve(Teuchos::RCP<const MV> zp, bool print_design=false);
 
     void comm_node_masses();
 
@@ -494,9 +498,15 @@ public:
 
     void node_density_constraints(host_vec_array node_densities_lower_bound);
 
-    void compute_topology_optimization_adjoint_full(); // Force depends on node coords and velocity
+    void compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed); // Force depends on node coords, velocity, and sie
 
     void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
+
+    void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
+                                                      unsigned long cycle, real_t global_dt);
+
+    void compute_topology_optimization_gradient_IVP(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
+                                                      unsigned long cycle, real_t global_dt);
 
     void boundary_adjoint(const mesh_t& mesh,
                           const DCArrayKokkos<boundary_t>& boundary,
@@ -571,15 +581,22 @@ public:
 
     // Global FEA data
     Teuchos::RCP<MV> node_velocities_distributed;
+    Teuchos::RCP<MV> previous_node_velocities_distributed;
+    Teuchos::RCP<MV> previous_node_coords_distributed;
     Teuchos::RCP<MV> initial_node_velocities_distributed;
     Teuchos::RCP<MV> all_node_velocities_distributed;
     Teuchos::RCP<MV> all_cached_node_velocities_distributed;
     Teuchos::RCP<MV> node_masses_distributed;
+    Teuchos::RCP<MV> cached_design_gradients_distributed;
     Teuchos::RCP<MV> ghost_node_masses_distributed;
-    Teuchos::RCP<MV> adjoint_vector_distributed;
-    Teuchos::RCP<MV> phi_adjoint_vector_distributed;
-    Teuchos::RCP<MV> psi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> all_adjoint_vector_distributed, adjoint_vector_distributed;
+    Teuchos::RCP<MV> all_phi_adjoint_vector_distributed, phi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> all_psi_adjoint_vector_distributed, psi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_adjoint_vector_distributed, midpoint_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed, midpoint_phi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_psi_adjoint_vector_distributed, midpoint_psi_adjoint_vector_distributed;
     Teuchos::RCP<MV> element_internal_energy_distributed;
+    Teuchos::RCP<MV> previous_element_internal_energy_distributed;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_coordinate_data;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_internal_energy_data;
@@ -589,6 +606,9 @@ public:
     Teuchos::RCP<MV> force_gradient_design;
     Teuchos::RCP<MV> force_gradient_position;
     Teuchos::RCP<MV> force_gradient_velocity;
+    //TpetraMVArray<real_t, array_layout, device_type, memory_traits> mtr_node_velocities_distributed;
+    // TpetraPartitionMap<long long int, array_layout, device_type, memory_traits> mtr_map;
+    // TpetraPartitionMap<long long int, array_layout, device_type, memory_traits> mtr_local_map;
 
     // Local FEA data
     DCArrayKokkos<size_t, array_layout, device_type, memory_traits>      Global_Gradient_Matrix_Assembly_Map; // Maps element local nodes to columns on ragged right node connectivity graph
@@ -608,6 +628,7 @@ public:
     RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Gradient_Entries;
     RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>     Original_Gradient_Entry_Indices;
     DCArrayKokkos<size_t, array_layout, device_type, memory_traits>          Original_Gradient_Entries_Strides;
+    DCArrayKokkos<real_t>                                                    elem_power_dgradients;
 
     // distributed matrices
     Teuchos::RCP<MAT> distributed_force_gradient_positions;
@@ -663,6 +684,7 @@ public:
 
     // Dual Views of the corner struct variables
     DViewCArrayKokkos<double> corner_force;
+    DCArrayKokkos<double> corner_external_force;
     DViewCArrayKokkos<double> corner_mass;
 
     // Boundary Conditions Data
@@ -684,8 +706,11 @@ public:
     CArray<double> graphics_times;
     int rk_num_bins;
 
-    // optimization flags
-    bool kinetic_energy_objective;
+    // optimization flags and data
+    Teuchos::RCP<std::set<Dynamic_Checkpoint>> dynamic_checkpoint_set;
+    Teuchos::RCP<std::vector<Dynamic_Checkpoint>> cached_dynamic_checkpoints;
+    int num_active_checkpoints;
+    enum vector_name { U_DATA=0, V_DATA=1, SIE_DATA=2 };
 };
 
 #endif // end HEADER_H

@@ -298,7 +298,8 @@ public:
   void read_vtk_lattice_structure(const std::string & filetext);
   void calculate_eel(MatrixTypeRealDual &eel);
   void write_macro_state();
-  void write_micro_state();
+  void write_micro_state_xdmf();
+  void write_micro_state_pvtu();
   void write_texture();
 
   void init_crss_voce();

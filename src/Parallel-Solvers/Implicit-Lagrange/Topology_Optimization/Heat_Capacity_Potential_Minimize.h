@@ -92,7 +92,7 @@ private:
   ROL::Ptr<ROL_MV> ROL_Temperatures;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> all_node_temperatures_distributed_temp;
-  real_t initial_heat_capacity_potential;
+  real_t initial_heat_capacity_potential,objective_sign;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
 
@@ -115,7 +115,7 @@ public:
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
       current_step = 0;
-      
+      objective_sign = 1;
       //deep copy solve data into the cache variable
       FEM_->all_cached_node_temperatures_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_temperatures_distributed), Teuchos::Copy));
       all_node_temperatures_distributed_temp = FEM_->all_node_temperatures_distributed;
@@ -135,6 +135,9 @@ public:
       //save initial normalization value for restart data
       if(FEM_->simparam->output_options.optimization_restart_file){
         FEM_->simparam->optimization_options.objective_normalization_constant = initial_heat_capacity_potential;
+      }
+      if(FEM_->simparam->optimization_options.maximize_flag){
+        objective_sign = -1;
       }
       std::cout.precision(10);
       if(FEM_->myrank==0)
@@ -251,7 +254,7 @@ public:
     std::cout << "CURRENT NORMALIZED HEAT CAPACITY POTENTIAL " << current_heat_capacity_potential/initial_heat_capacity_potential << std::endl;
 
     //std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
-    return current_heat_capacity_potential/initial_heat_capacity_potential;
+    return objective_sign*current_heat_capacity_potential/initial_heat_capacity_potential;
   }
 
   /* --------------------------------------------------------------------------------------
@@ -284,7 +287,7 @@ public:
 
     if(nodal_density_flag_){
       FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
-      gp->scale(-1/initial_heat_capacity_potential);
+      gp->scale(-objective_sign/initial_heat_capacity_potential);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -341,7 +344,7 @@ public:
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
-    hvp->scale(-1/initial_heat_capacity_potential);
+    hvp->scale(-objective_sign/initial_heat_capacity_potential);
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);

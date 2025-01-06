@@ -81,7 +81,7 @@ void FEA_Module_SGH::setup()
     // shorthand names
     const size_t num_nodes   = mesh->num_nodes;
     const size_t num_elems   = mesh->num_elems;
-    const size_t num_corners = mesh->num_corners;
+    num_corners = mesh->num_corners;
 
     // --- make dual views of data on CPU and GPU ---
     //  Notes:
@@ -114,6 +114,11 @@ void FEA_Module_SGH::setup()
     // create Dual Views of the corner struct variables
     corner_force = DViewCArrayKokkos<double>(&corner_interface.force(0, 0), num_corners, num_dim);
     corner_mass  = DViewCArrayKokkos<double>(&corner_interface.mass(0), num_corners);
+
+    //external force storage
+    if(num_lcs){
+        corner_external_force = DCArrayKokkos<double>(num_corners, num_dim);
+    }
 
     // allocate elem_vel_grad
     elem_vel_grad = DCArrayKokkos<double>(num_elems, 3, 3);
@@ -154,7 +159,10 @@ void FEA_Module_SGH::setup()
     mesh->num_patches_in_elem = 2 * num_dim; // 4 (2D) or 6 (3D)
     mesh->init_bdy_sets(num_bcs);
     num_bdy_sets = mesh->num_bdy_sets;
-    printf("Num BC's = %lu\n", num_bcs);
+    
+    if(Explicit_Solver_Pointer_->myrank==0){
+        printf("Num BC's = %lu\n", num_bcs);
+    }
 
     // patch ids in bdy set
     bdy_patches_in_set = mesh->bdy_patches_in_set;
@@ -193,7 +201,8 @@ void FEA_Module_SGH::setup()
         nodes_in_patch  = mesh->nodes_in_patch;
         elems_in_patch  = mesh->elems_in_patch;
     }
-
+    
+#ifdef DEBUG
     // loop over BCs
     for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++) {
         RUN_CLASS({
@@ -203,6 +212,7 @@ void FEA_Module_SGH::setup()
         });
         Kokkos::fence();
     } // end for
+#endif
 
     // elem_mat_id needs to be initialized before initialization of material models
     for (int f_id = 0; f_id < num_fills; f_id++) {

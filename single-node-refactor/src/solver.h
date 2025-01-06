@@ -38,51 +38,43 @@
 #include <map>
 #include <memory>
 
-#include "mesh.h"
-#include "state.h"
-#include "material.h"
-#include "region.h"
-#include "boundary_conditions.h"
-#include "io_utils.h"
+#include "matar.h"
 
-struct simulation_parameters_t;
+struct SimulationParameters_t;
+struct Material_t;
+struct Mesh_t;
+struct State_t;
+struct BoundaryCondition_t;
+
 
 class Solver
 {
 public:
 
-    MeshWriter mesh_writer;
-
-    // ---------------------------------------------------------------------
-    //    state data type declarations
-    // ---------------------------------------------------------------------
-
-    int max_num_state_vars = 6;
-    CArrayKokkos<double> state_vars; // array to hold init model variables
-
-    // ==============================================================================
-    //   Variables, setting default inputs
-    // ==============================================================================
-
-    // --- num vars ----
-    size_t num_dims = 3;
-
-    CArray<double> graphics_times;
-    size_t graphics_id = 0;
-    double graphics_time;
-
-    double fuzz  = 1e-16;       // machine precision
-    double tiny  = 1e-12;       // very very small (between real_t and single)
-    double small = 1e-8;        // single precision
-
-    Solver(); // Simulation_Parameters& _simparam);
-
+    Solver();
     virtual ~Solver();
 
-    virtual void initialize(simulation_parameters_t& sim_param) = 0;
-    virtual void setup(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) = 0;
-    virtual void execute(simulation_parameters_t& sim_param, mesh_t& mesh, node_t& node, elem_t& elem, corner_t& corner) = 0;
-    virtual void finalize(simulation_parameters_t& sim_param) = 0;
+    virtual void initialize(SimulationParameters_t& SimulationParamaters, 
+                            Material_t& Materials, 
+                            Mesh_t& mesh, 
+                            BoundaryCondition_t& Boundary,
+                            State_t& State) const = 0;
+
+    virtual void setup(SimulationParameters_t& SimulationParamaters, 
+                       Material_t& Materials, 
+                       Mesh_t& mesh, 
+                       BoundaryCondition_t& Boundary,
+                       State_t& State) = 0;
+
+    virtual void execute(SimulationParameters_t& SimulationParamaters, 
+                         Material_t& Materials, 
+                         BoundaryCondition_t& BoundaryConditions, 
+                         Mesh_t& mesh, 
+                         State_t& State) = 0;
+
+    virtual void finalize(SimulationParameters_t& SimulationParamaters, 
+                          Material_t& Materials, 
+                          BoundaryCondition_t& Boundary) const = 0;
 
     // debug and system functions/variables
     double CPU_Time();

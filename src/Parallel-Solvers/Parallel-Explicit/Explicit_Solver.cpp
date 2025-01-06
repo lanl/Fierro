@@ -90,6 +90,8 @@
 #include "Mass_Constraint.h"
 #include "Moment_of_Inertia_Constraint.h"
 #include "Kinetic_Energy_Minimize.h"
+#include "Internal_Energy_Minimize.h"
+#include "MMA_Objective.hpp"
 #include "Area_Normals.h"
 
 #define BUFFER_LINES 20000
@@ -192,12 +194,24 @@ void Explicit_Solver::run() {
   //return;
   init_maps();
 
+  //print element imbalance stats
+  long long int rnum_global_sum = 0;
+  long long int temp_rnum_elem = rnum_elem;
+  MPI_Allreduce(&temp_rnum_elem, &rnum_global_sum, 1, MPI_LONG_LONG_INT, MPI_SUM, MPI_COMM_WORLD);
+  double local_imbalance, max_imbalance, avg_elem;
+  max_imbalance = 0;
+  avg_elem = rnum_global_sum/((double) nranks);
+  local_imbalance = rnum_elem/avg_elem;
+  MPI_Allreduce(&local_imbalance, &max_imbalance, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+  *fos << "Element imbalance: " << max_imbalance << std::endl;
+
   init_state_vectors();
         
   //set initial saved coordinates
   //initial_node_coords_distributed->assign(*node_coords_distributed);
   
-  std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
+  //std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
   
   //initialize timing
   init_clock();
@@ -320,7 +334,7 @@ void Explicit_Solver::run() {
     // ---------------------------------------------------------------------  
       //sgh_module->sgh_solve();
       for(int imodule = 0; imodule < nfea_modules; imodule++){
-        if(myrank == 0)
+        if(myrank == 0) //TODO; implement solve bool so modules like the inertial module dont print this
           std::cout << "Starting solve for FEA module " << imodule <<std::endl <<std::flush;
         //allocate and fill sparse structures needed for global solution in each FEA module
         fea_modules[imodule]->solve();
@@ -330,8 +344,6 @@ void Explicit_Solver::run() {
   // clean up all material models
   //sgh_module->cleanup_material_models();
   for(int imodule = 0; imodule < nfea_modules; imodule++){
-    if(myrank == 0)
-      std::cout << "Starting solve for FEA module " << imodule <<std::endl <<std::flush;
     //allocate and fill sparse structures needed for global solution in each FEA module
     fea_modules[imodule]->module_cleanup();
   }
@@ -347,11 +359,11 @@ void Explicit_Solver::run() {
   }
   */
 
-  std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
+  *fos << " Runtime of code is "<< current_cpu-initial_CPU_time << " comms time "
             << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
   
   if(simparam.output_options.timer_output_level == TIMER_VERBOSITY::thorough){
-    std::cout << " OUTPUT TIME OF CODE ON TASK " << myrank << " is "<< output_time << std::endl;
+    *fos << " Output time of code is "<< output_time << std::endl;
   }
 
   //parallel_vtk_writer();
@@ -525,7 +537,7 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
     
-  std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+  //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
   // read the initial mesh coordinates
   // x-coords
@@ -905,7 +917,7 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
       while (!line_parse.eof()){
         line_parse >> substring;
         //std::cout << substring << std::endl;
-        if(!substring.compare("Supports")||!substring.compare("Pressure")){
+        if(!substring.compare("Supports")||!substring.compare("Pressure")||!substring.compare("Displacements")){
           No_Conditions = searching_for_conditions = false;
           break;
         }
@@ -1131,18 +1143,208 @@ void Explicit_Solver::setup_optimization_problem(){
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
-  std::string filename = "optimization_parameters.xml";
 
-  //check if parameter file exists
-  std::ifstream param_file_check("optimization_parameters.xml");
-  if (!param_file_check.is_open()) {
-      *fos << "Unable to find xml parameter file required for optimization with the ROL library"  << std::endl;
-      exit_solver(0);
+  Teuchos::RCP<Teuchos::ParameterList> parlist;
+  if(simparam.optimization_options.optimization_parameters_xml_file){
+    std::string xmlFileName = simparam.optimization_options.xml_parameters_file_name;
+    
+    //check if parameter file exists
+    std::ifstream param_file_check(xmlFileName);
+    if (!param_file_check.is_open()) {
+        *fos << "Unable to find xml parameter file required for optimization with the ROL library"  << std::endl;
+        exit_solver(0);
+    }
+    param_file_check.close();
+
+    parlist = ROL::getParametersFromXmlFile(xmlFileName);
   }
-  param_file_check.close();
-
-  auto parlist = ROL::getParametersFromXmlFile( filename );
+  else{
+    parlist = Teuchos::rcp(new Teuchos::ParameterList("Inputs"));
+    set_rol_params(parlist);
+  }
   //ROL::ParameterList parlist;
+
+  ROL::Ptr<ROL::BoundConstraint<real_t> > bnd, mma_bnd;
+  // Bound constraint defining the possible range of design density variables
+  ROL::Ptr<ROL::Vector<real_t> > lower_bounds, mma_lower_bounds;
+  ROL::Ptr<ROL::Vector<real_t> > upper_bounds, mma_upper_bounds;
+
+  //set bounds on design variables
+  if(nodal_density_flag){
+    //allocate global vector information
+    upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+    all_lower_bound_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
+    lower_bound_node_densities_distributed = Teuchos::rcp(new MV(*all_lower_bound_node_densities_distributed, map));
+    host_vec_array node_densities_upper_bound = upper_bound_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array node_densities_lower_bound = all_lower_bound_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+    //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
+    for(int inode = 0; inode < nlocal_nodes; inode++){
+      if(simparam.optimization_options.maximum_density<1){
+        node_densities_upper_bound(inode,0) = simparam.optimization_options.maximum_density;
+      }
+      else{
+        node_densities_upper_bound(inode,0) = 1;
+      }
+    }
+    for(int inode = 0; inode < nall_nodes; inode++){
+      if(simparam.optimization_options.minimum_density>simparam.optimization_options.density_epsilon){
+        node_densities_lower_bound(inode,0) = simparam.optimization_options.minimum_density;
+      }
+      else{
+        node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
+      }
+    }
+
+    if(simparam.optimization_options.method_of_moving_asymptotes){
+      Teuchos::RCP<MV> mma_upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+      Teuchos::RCP<MV> mma_lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+      //mma_lower_bound_node_densities_distributed->assign(*lower_bound_node_densities_distributed);
+      //mma_upper_bound_node_densities_distributed->assign(*upper_bound_node_densities_distributed);
+      
+      mma_lower_bound_node_densities_distributed->putScalar(-0.1);
+      mma_upper_bound_node_densities_distributed->putScalar(0.1);
+      mma_lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_lower_bound_node_densities_distributed);
+      mma_upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_upper_bound_node_densities_distributed);
+      
+      mma_bnd = ROL::makePtr<ROL::Bounds<real_t>>(mma_lower_bounds, mma_upper_bounds);
+    }
+
+    //set lower bounds for nodes on surfaces with boundary and loading conditions
+    if(!simparam.optimization_options.variable_outer_shell){
+      for(int imodule = 0; imodule < nfea_modules; imodule++){
+        num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
+        for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
+
+          num_bdy_patches_in_set = fea_modules[imodule]->bdy_patches_in_set.stride(iboundary);
+
+          //loop over boundary patches for this boundary set
+          if(simparam.optimization_options.thick_condition_boundary){
+            for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
+                    
+              // get the global id for this boundary patch
+                patch_id = fea_modules[imodule]->bdy_patches_in_set(iboundary, bdy_patch_gid);
+                Surface_Nodes = Boundary_Patches(patch_id).node_set;
+                current_element_index = Boundary_Patches(patch_id).element_id;
+                //debug print of local surface ids
+                //std::cout << " LOCAL SURFACE IDS " << std::endl;
+                //std::cout << local_surface_id << std::endl;
+                //acquire set of nodes for this face
+                for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+                  current_node_index = nodes_in_elem(current_element_index,node_loop);
+                  local_node_index = map->getLocalElement(current_node_index);
+                  node_densities_lower_bound(local_node_index,0) = 1;
+                }// node loop for
+                
+              //if
+              /*
+              else{
+                Surface_Nodes = Boundary_Patches(patch_id).node_set;
+                local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+                //debug print of local surface ids
+                //std::cout << " LOCAL SURFACE IDS " << std::endl;
+                //std::cout << local_surface_id << std::endl;
+                //acquire set of nodes for this face
+                for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+                  current_node_index = Surface_Nodes(node_loop);
+                  if(map->isNodeGlobalElement(current_node_index)){
+                    local_node_index = map->getLocalElement(current_node_index);
+                    node_densities_lower_bound(local_node_index,0) = 1;
+                  }
+                }// node loop for
+              }//if
+              */
+            }//boundary patch for
+          }
+          else{
+            for(int node_loop=0; node_loop < fea_modules[imodule]->num_bdy_nodes_in_set(iboundary); node_loop++){
+              local_node_index = fea_modules[imodule]->bdy_nodes_in_set(iboundary, node_loop);
+              node_densities_lower_bound(local_node_index,0) = 1;
+            }
+          }
+        }//boundary set for
+
+        //set node conditions due to point BCS that might not show up in boundary sets
+        //possible to have overlap in which nodes are set with the previous loop
+        fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
+      }//module for
+
+      //enforce rho=1 on all boundary patches if user setting enabled
+      if(simparam.optimization_options.retain_outer_shell){
+        //loop over boundary patches for this boundary set
+        for (int bdy_patch_gid = 0; bdy_patch_gid < nboundary_patches; bdy_patch_gid++){
+          patch_id = bdy_patch_gid;
+          if(simparam.optimization_options.thick_condition_boundary){
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            current_element_index = Boundary_Patches(patch_id).element_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+              current_node_index = nodes_in_elem(current_element_index,node_loop);
+              local_node_index = all_node_map->getLocalElement(current_node_index);
+              node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
+            }// node loop for
+          }//if
+          else{
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+              current_node_index = Surface_Nodes(node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
+              }
+            }// node loop for
+          }//if
+        }//boundary patch for
+      }
+    }
+
+    //constraints due to specified user regions
+    const size_t num_fills = simparam.optimization_options.volume_bound_constraints.size();
+    const_host_vec_array node_coords_view = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const DCArrayKokkos <Optimization_Bound_Constraint_Region> mat_fill = simparam.optimization_options.optimization_bound_constraint_volumes;
+
+    for(int ifill = 0; ifill < num_fills; ifill++){
+      for(int inode = 0; inode < nlocal_nodes; inode++){
+        real_t node_coords[3];
+        node_coords[0] = node_coords_view(inode,0);
+        node_coords[1] = node_coords_view(inode,1);
+        node_coords[2] = node_coords_view(inode,2);
+        bool fill_this = mat_fill(ifill).volume.contains(node_coords);
+        if(fill_this){
+          node_densities_lower_bound(inode,0) = mat_fill(ifill).set_lower_density_bound;
+          //make sure 0 setting is increased to the epsilon value setting
+          if(node_densities_lower_bound(inode,0) < simparam.optimization_options.density_epsilon){
+            node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
+          }
+          node_densities_upper_bound(inode,0) = mat_fill(ifill).set_upper_density_bound;
+        }
+      }//node for
+    }//fill region for
+
+    //communicate constraints vector
+    lower_bound_node_densities_distributed->doExport(*all_lower_bound_node_densities_distributed, *exporter, Tpetra::ABSMAX, true);
+  }
+  else{
+    //initialize memory for volume storage
+    vec_array Element_Densities_Upper_Bound("Element Densities_Upper_Bound", rnum_elem, 1);
+    vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
+    for(int ielem = 0; ielem < rnum_elem; ielem++){
+      Element_Densities_Upper_Bound(ielem,0) = 1;
+      Element_Densities_Lower_Bound(ielem,0) = simparam.optimization_options.density_epsilon;
+    }
+
+    //create global vector
+    Global_Element_Densities_Upper_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Upper_Bound));
+    Global_Element_Densities_Lower_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Lower_Bound));
+  }
 
   //Design variables to optimize
   ROL::Ptr<ROL::Vector<real_t>> x;
@@ -1153,7 +1355,7 @@ void Explicit_Solver::setup_optimization_problem(){
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities);
   
   //Instantiate (the one) objective function for the problem
-  ROL::Ptr<ROL::Objective<real_t>> obj;
+  ROL::Ptr<ROL::Objective<real_t>> obj, sub_obj;
   bool objective_declared = false;
   for(int imodule = 0; imodule < nTO_modules; imodule++){
     if(TO_Function_Type[imodule] == FUNCTION_TYPE::OBJECTIVE){
@@ -1167,38 +1369,25 @@ void Explicit_Solver::setup_optimization_problem(){
       if(TO_Module_List[imodule] == TO_MODULE_TYPE::Kinetic_Energy_Minimize){
         //debug print
         *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
-      }
-      /*
-      else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
-        //debug print
-        *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
-      }
-      */
-      //Multi-Objective case
-      /*
-      else if(TO_Module_List[imodule] == "Multi_Objective"){
-        //allocate vector of Objective Functions to pass
-        Multi_Objective_Terms = std::vector<ROL::Ptr<ROL::Objective<real_t>>>(nmulti_objective_modules);
-        for(int imulti = 0; imulti < nmulti_objective_modules; imulti++){
-          //get module index for objective term
-          module_id = Multi_Objective_Modules[imulti];
-          if(TO_Module_List[module_id] == "Strain_Energy_Minimize"){
-            //debug print
-            *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
-            Multi_Objective_Terms[imulti] = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
-          }
-          else if(TO_Module_List[module_id] == "Heat_Capacity_Potential_Minimize"){
-            //debug print
-            *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
-            Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
-          }
+        if(simparam.optimization_options.method_of_moving_asymptotes){
+          sub_obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
         }
-        //allocate multi objective function
-        obj = ROL::makePtr<MultiObjective_TopOpt>(Multi_Objective_Terms, Multi_Objective_Weights);
+        else{
+          obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+        }
       }
-      */
+      else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Internal_Energy_Minimize){
+        //debug print
+        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        if(simparam.optimization_options.method_of_moving_asymptotes){
+          sub_obj = ROL::makePtr<InternalEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
+        }
+        else{
+          obj = ROL::makePtr<InternalEnergyMinimize_TopOpt>(this, nodal_density_flag);
+        }
+      }
       else{
         // TODO: Put validation earlier
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" 
@@ -1289,133 +1478,6 @@ void Explicit_Solver::setup_optimization_problem(){
     number_union.clear();
   }
 
-  //set bounds on design variables
-  if(nodal_density_flag){
-    dual_vec_array dual_node_densities_upper_bound = dual_vec_array("dual_node_densities_upper_bound", nlocal_nodes, 1);
-    dual_vec_array dual_node_densities_lower_bound = dual_vec_array("dual_node_densities_lower_bound", nlocal_nodes, 1);
-    host_vec_array node_densities_upper_bound = dual_node_densities_upper_bound.view_host();
-    host_vec_array node_densities_lower_bound = dual_node_densities_lower_bound.view_host();
-    //notify that the host view is going to be modified in the file readin
-    dual_node_densities_upper_bound.modify_host();
-    dual_node_densities_lower_bound.modify_host();
-
-    //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
-    for(int inode = 0; inode < nlocal_nodes; inode++){
-      node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
-
-    }
-    //set lower bounds for nodes on surfaces with boundary and loading conditions
-    if(!simparam.optimization_options.variable_outer_shell){
-      for(int imodule = 0; imodule < nfea_modules; imodule++){
-        num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
-        for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
-
-          num_bdy_patches_in_set = fea_modules[imodule]->bdy_patches_in_set.stride(iboundary);
-
-          //loop over boundary patches for this boundary set
-          if(simparam.optimization_options.thick_condition_boundary){
-            for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
-                    
-              // get the global id for this boundary patch
-                patch_id = fea_modules[imodule]->bdy_patches_in_set(iboundary, bdy_patch_gid);
-                Surface_Nodes = Boundary_Patches(patch_id).node_set;
-                current_element_index = Boundary_Patches(patch_id).element_id;
-                //debug print of local surface ids
-                //std::cout << " LOCAL SURFACE IDS " << std::endl;
-                //std::cout << local_surface_id << std::endl;
-                //acquire set of nodes for this face
-                for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
-                  current_node_index = nodes_in_elem(current_element_index,node_loop);
-                  if(map->isNodeGlobalElement(current_node_index)){
-                    local_node_index = map->getLocalElement(current_node_index);
-                    node_densities_lower_bound(local_node_index,0) = 1;
-                  }
-                }// node loop for
-                
-              //if
-              /*
-              else{
-                Surface_Nodes = Boundary_Patches(patch_id).node_set;
-                local_surface_id = Boundary_Patches(patch_id).local_patch_id;
-                //debug print of local surface ids
-                //std::cout << " LOCAL SURFACE IDS " << std::endl;
-                //std::cout << local_surface_id << std::endl;
-                //acquire set of nodes for this face
-                for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
-                  current_node_index = Surface_Nodes(node_loop);
-                  if(map->isNodeGlobalElement(current_node_index)){
-                    local_node_index = map->getLocalElement(current_node_index);
-                    node_densities_lower_bound(local_node_index,0) = 1;
-                  }
-                }// node loop for
-              }//if
-              */
-            }//boundary patch for
-          }
-          else{
-            for(int node_loop=0; node_loop < fea_modules[imodule]->num_bdy_nodes_in_set(iboundary); node_loop++){
-              local_node_index = fea_modules[imodule]->bdy_nodes_in_set(iboundary, node_loop);
-              node_densities_lower_bound(local_node_index,0) = 1;
-            }
-          }
-        }//boundary set for
-
-        //set node conditions due to point BCS that might not show up in boundary sets
-        //possible to have overlap in which nodes are set with the previous loop
-        fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
-      }//module for
-    }
-
-    //constraints due to specified user regions
-    const size_t num_fills = simparam.optimization_options.volume_bound_constraints.size();
-    const_host_vec_array node_coords_view = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    const DCArrayKokkos <Optimization_Bound_Constraint_Region> mat_fill = simparam.optimization_options.optimization_bound_constraint_volumes;
-
-    for(int ifill = 0; ifill < num_fills; ifill++){
-      for(int inode = 0; inode < nlocal_nodes; inode++){
-        real_t node_coords[3];
-        node_coords[0] = node_coords_view(inode,0);
-        node_coords[1] = node_coords_view(inode,1);
-        node_coords[2] = node_coords_view(inode,2);
-        bool fill_this = mat_fill(ifill).volume.contains(node_coords);
-        if(fill_this){
-          node_densities_lower_bound(inode,0) = mat_fill(ifill).set_lower_density_bound;
-          //make sure 0 setting is increased to the epsilon value setting
-          if(node_densities_lower_bound(inode,0) < simparam.optimization_options.density_epsilon){
-            node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
-          }
-          node_densities_upper_bound(inode,0) = mat_fill(ifill).set_upper_density_bound;
-        }
-      }//node for
-    }//fill region for
-  
-    //sync device view
-    dual_node_densities_upper_bound.sync_device();
-    dual_node_densities_lower_bound.sync_device();
-    
-    //allocate global vector information
-    upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities_upper_bound));
-    lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities_lower_bound));
-  
-  }
-  else{
-    //initialize memory for volume storage
-    vec_array Element_Densities_Upper_Bound("Element Densities_Upper_Bound", rnum_elem, 1);
-    vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
-    for(int ielem = 0; ielem < rnum_elem; ielem++){
-      Element_Densities_Upper_Bound(ielem,0) = 1;
-      Element_Densities_Lower_Bound(ielem,0) = simparam.optimization_options.density_epsilon;
-    }
-
-    //create global vector
-    Global_Element_Densities_Upper_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Upper_Bound));
-    Global_Element_Densities_Lower_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Lower_Bound));
-  }
-    
-  // Bound constraint defining the possible range of design density variables
-  ROL::Ptr<ROL::Vector<real_t> > lower_bounds;
-  ROL::Ptr<ROL::Vector<real_t> > upper_bounds;
   if(nodal_density_flag){
     lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(lower_bound_node_densities_distributed);
     upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(upper_bound_node_densities_distributed);
@@ -1424,7 +1486,7 @@ void Explicit_Solver::setup_optimization_problem(){
     lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities_Lower_Bound);
     upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities_Upper_Bound);
   }
-  ROL::Ptr<ROL::BoundConstraint<real_t> > bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
+  bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
   problem->addBoundConstraint(bnd);
 
   //compute initial constraint satisfaction
@@ -1532,7 +1594,7 @@ void Explicit_Solver::init_boundaries(){
   Local_Index_Boundary_Patches.update_device();
   
   //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
-  std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
+  //std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
   
   //disable for now
   //if(0)

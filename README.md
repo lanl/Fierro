@@ -24,27 +24,35 @@ In this example, the enviroment is called FierroCode, but any name can be used. 
 
 To install the finite element physics solvers in **Fierro**, please type within the activated Anaconda environment:
 ```
-conda install -c conda-forge -c fierromechanics fierro-cpu
+conda install -c conda-forge -c fierromechanics fierro-fe-cpu
 ```
 The EVPFFT physics solver in **Fierro** can be installed by typing:
 ```
-conda install -c conda-forge -c fierromechanics evpfft
+conda install -c conda-forge -c fierromechanics fierro-evpfft-cpu
 ```
 A GUI is offered, it can be installed by typing:
 ```
-conda install -c conda-forge -c fierromechanics evpfft_gui
+conda install -c conda-forge -c fierromechanics fierro-gui
 ```
 
 After installing the finite element solvers, it gives you access to `fierro-mesh-builder`,`fierro-parallel-explicit`,`fierro-parallel-implicit`, and the `fierro-voxelizer` executables. These can be run by calling the appropriate executable with the desired input. For example, to call the parallel explicit hydrodynamics solver, use the following command:
 ```
 fierro-parallel-explicit input.yaml
 ```
-A sample input file for the explicit finite element solver is here:
-`./src/Parallel-Solvers/Parallel-Explicit/example_simple.yaml`
+Sample yaml input files for the explicit finite element solver can be found at:
+`./src/Parallel-Solvers/Parallel-Explicit/Example_Yaml_Scripts`
+
+The implicit solver and topology optimization modules can be called using:
+```
+fierro-parallel-implicit input.yaml
+```
+
+Sample yaml input files for the implicit finite element solver and topology optimization problem setups can be found at:
+`./src/Parallel-Solvers/Implicit-Lagrange/Example_Yaml_Scripts`
 
 The GUI can be run in the anaconda enviroment by typing:
 ```
-evpfft-gui
+fierro-gui
 ```
 The anaconda distributions of Fierro are located [here](https://anaconda.org/FierroMechanics).
 
@@ -139,14 +147,15 @@ If you are new to Fierro development and don't have push access to the repositor
 3. [Push](https://docs.github.com/en/get-started/using-git/pushing-commits-to-a-remote-repository) the branch to your GitHub fork.
 4. Build and test your changes.
 5. Update any necessary documentation.
-6. Create a [Pull Request](https://github.com/lanl/Fierro/pulls).
+6. Synchronize your branch with changes made to the upstream repository since the last merge/fork.
+7. Create a [Pull Request](https://github.com/lanl/Fierro/pulls).
 
 This corresponds to the **Fork & Pull Model** described in the [GitHub collaborative development](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/about-collaborative-development-models) documentation.
 
 ## Integrating a PR
 
 Integrating your contributions to Fierro is relatively straightforward; here is the checklist:
-- All test pass
+- All tests pass
 - The changes build with no new compiler warnings/errors
 - All feedback has been addressed
 - Consensus is reached. This usually means that at least two reviewers approved the changes (or added a `LGTM` comment) and at least one business day passed without anyone objecting. `LGTM` is an acronym for Looks Good to Me.
