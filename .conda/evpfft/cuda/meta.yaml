@@ -14,7 +14,8 @@ build:
   number: 1
   noarch: False
   script_env:
-    - PLATFORM={{ target_platform }}
+    #- PLATFORM={{ target_platform }}
+    - PLATFORM={{ linux-64 }}
   skip: True  # [osx]
   skip: False # [linux]
 
