@@ -14,11 +14,11 @@ build:
   number: 1
   noarch: False
   script_env:
-    - PLATFORM={{ target_platform }} # [linux]
+    - PLATFORM={{ target_platform }}
   skip: True  # [osx]
   skip: False # [linux]
 
-requirements: #[linux]
+requirements:
   build:
     - cmake >=3.17.0
     - {{ compiler('cxx') }}={{ linux_compiler_version }}
