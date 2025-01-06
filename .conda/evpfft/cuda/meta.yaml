@@ -14,8 +14,7 @@ build:
   number: 1
   noarch: False
   script_env:
-    #- PLATFORM={{ target_platform }}
-    - PLATFORM={{ linux-64 }}
+    - PLATFORM={{ target_platform }}
   skip: True  # [osx]
   skip: False # [linux]
 
@@ -26,22 +25,22 @@ requirements:
     - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
-    - cuda-toolkit
+    - cuda-toolkit # [linux]
     - kokkos=4.1
-    - matar-cuda
+    - matar-cuda # [linux]
     - openmpi
   host:
     - openmpi
-    - heffte-cuda
+    - heffte-cuda # [linux]
     - hdf5=*=mpi_openmpi_*
     - kokkos=4.1
-    - matar-cuda
+    - matar-cuda # [linux]
   run:
     - openmpi
-    - heffte-cuda
+    - heffte-cuda # [linux]
     - hdf5=*=mpi_openmpi_*
     - kokkos=4.1
-    - matar-cuda
+    - matar-cuda # [linux]
 
 about:
   home: https://github.com/lanl/Fierro
