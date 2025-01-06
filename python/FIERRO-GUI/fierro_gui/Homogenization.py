@@ -1104,53 +1104,55 @@ def Homogenization(self):
         # Apply threshold and transform filters to view certain phase id's
         in_file_path = self.TParts.item(0,10).text()
         file_type = os.path.splitext(in_file_path)[1].lower()
-        if ".vtk" in file_type:
-            if hasattr(self, 'threshold'):
-                paraview.simple.Hide(self.threshold)
-            if str(self.INResultRegion.currentText()) == "Part + Void":
-#                paraview.simple.SetDisplayProperties(Representation="Surface")
-                # Apply warp filter as long as result wasn't run using more than 1 mpi rank
-                if self.INHSerial.isChecked():
-                    # Warp Filter
-                    self.threshold = paraview.simple.WarpByVector(Input=scale_filter)
-                    self.threshold.Vectors = ['POINTS', 'ScaledDisplacement']
-                    # Display
-                    self.display = Show(self.threshold, self.render_view)
-                else:
-                    self.display = Show(self.results_reader, self.render_view)
-                paraview.simple.UpdatePipeline()
-            elif str(self.INResultRegion.currentText()) == "Part":
-                # Apply warp filter as long as result wasn't run using more than 1 mpi rank
-                if self.INHSerial.isChecked():
-                    # Warp Filter
-                    self.transform = paraview.simple.WarpByVector(Input=scale_filter)
-                    self.transform.Vectors = ['POINTS', 'ScaledDisplacement']
-                    # Threshold Filter
-                    self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.transform, Scalars = "phase_id", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 2, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-                else:
-                    # Threshold Filter
-                    self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 2, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-                # Display
-                self.display = Show(self.threshold, self.render_view)
-                paraview.simple.UpdatePipeline()
-            elif str(self.INResultRegion.currentText()) == "Void":
-                # Apply warp filter as long as result wasn't run using more than 1 mpi rank
-                if self.INHSerial.isChecked():
-                    # Warp Filter
-                    self.transform = paraview.simple.WarpByVector(Input=scale_filter)
-                    self.transform.Vectors = ['POINTS', 'ScaledDisplacement']
-                    # Threshold Filter
-                    self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.transform, Scalars = "phase_id", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 2, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-                else:
-                    # Threshold Filter
-                    self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 2, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-                # Display
-                self.display = Show(self.threshold, self.render_view)
-                paraview.simple.UpdatePipeline()
-        else:
+        if ".txt" in file_type:
+            self.INResultRegion.setCurrentIndex(2)
             self.INResultRegion.setEnabled(False)
-            paraview.simple.SetDisplayProperties(Representation="Surface")
-            self.display = Show(self.results_reader, self.render_view)
+        if hasattr(self, 'threshold'):
+            paraview.simple.Hide(self.threshold)
+        if str(self.INResultRegion.currentText()) == "Part + Void":
+#                paraview.simple.SetDisplayProperties(Representation="Surface")
+            # Apply warp filter as long as result wasn't run using more than 1 mpi rank
+            if self.INHSerial.isChecked():
+                # Warp Filter
+                self.threshold = paraview.simple.WarpByVector(Input=scale_filter)
+                self.threshold.Vectors = ['POINTS', 'ScaledDisplacement']
+                # Display
+                self.display = Show(self.threshold, self.render_view)
+            else:
+                self.display = Show(self.results_reader, self.render_view)
+            paraview.simple.UpdatePipeline()
+        elif str(self.INResultRegion.currentText()) == "Part":
+            # Apply warp filter as long as result wasn't run using more than 1 mpi rank
+            if self.INHSerial.isChecked():
+                # Warp Filter
+                self.transform = paraview.simple.WarpByVector(Input=scale_filter)
+                self.transform.Vectors = ['POINTS', 'ScaledDisplacement']
+                # Threshold Filter
+                self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.transform, Scalars = "phase_id", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 2, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+            else:
+                # Threshold Filter
+                self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 2, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+            # Display
+            self.display = Show(self.threshold, self.render_view)
+            paraview.simple.UpdatePipeline()
+        elif str(self.INResultRegion.currentText()) == "Void":
+            # Apply warp filter as long as result wasn't run using more than 1 mpi rank
+            if self.INHSerial.isChecked():
+                # Warp Filter
+                self.transform = paraview.simple.WarpByVector(Input=scale_filter)
+                self.transform.Vectors = ['POINTS', 'ScaledDisplacement']
+                # Threshold Filter
+                self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.transform, Scalars = "phase_id", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 2, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+            else:
+                # Threshold Filter
+                self.threshold = paraview.simple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 2, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+            # Display
+            self.display = Show(self.threshold, self.render_view)
+            paraview.simple.UpdatePipeline()
+#        else:
+#            self.INResultRegion.setEnabled(False)
+#            paraview.simple.SetDisplayProperties(Representation="Surface")
+#            self.display = Show(self.results_reader, self.render_view)
         
         # Color by the selected variable
         selected_variable = str(self.INPreviewResults.currentText())
