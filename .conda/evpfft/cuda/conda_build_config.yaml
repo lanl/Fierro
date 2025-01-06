@@ -3,6 +3,8 @@ c_compiler:
 cxx_compiler:
   - gxx
 target_platform:
-  - linux-64
+  - linux-64 # [linux]
   #- linux-aarch64
   #- linux-ppc64le
+  - osx-64        # [osx]
+  - osx-arm64     # [osx]

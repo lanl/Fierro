@@ -21,26 +21,24 @@ build:
 requirements:
   build:
     - cmake >=3.17.0
-    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
-    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
-    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
-    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
-    - cuda-toolkit # [linux]
+    - {{ compiler('c') }}={{ linux_compiler_version }}
+    - {{ compiler('cxx') }}={{ linux_compiler_version }}
+    - cuda-toolkit
     - kokkos=4.1
-    - matar-cuda # [linux]
+    - matar-cuda
     - openmpi
   host:
     - openmpi
-    - heffte-cuda # [linux]
+    - heffte-cuda
     - hdf5=*=mpi_openmpi_*
     - kokkos=4.1
-    - matar-cuda # [linux]
+    - matar-cuda
   run:
     - openmpi
-    - heffte-cuda # [linux]
+    - heffte-cuda
     - hdf5=*=mpi_openmpi_*
     - kokkos=4.1
-    - matar-cuda # [linux]
+    - matar-cuda
 
 about:
   home: https://github.com/lanl/Fierro
