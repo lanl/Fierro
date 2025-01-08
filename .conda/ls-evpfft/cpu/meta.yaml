@@ -39,8 +39,6 @@ requirements:
     - hdf5=*=mpi_openmpi_*
     - elements
 
-#TODO: Add tests
-
 about:
   home: https://github.com/lanl/Fierro
   license: BSD-3-Clause

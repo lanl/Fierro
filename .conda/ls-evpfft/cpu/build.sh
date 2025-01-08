@@ -1,4 +1,3 @@
-# Patch the cxx variables for cross-compilation
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
 
 cd src/LS-EVPFFT
