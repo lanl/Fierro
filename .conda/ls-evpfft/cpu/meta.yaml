@@ -30,14 +30,14 @@ requirements:
     - fftw=*=mpi_openmpi_*
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
-    - elements
+    - elements-cpu
   run:
     - openmpi
     - heffte-cpu
     - fftw=*=mpi_openmpi_*
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
-    - elements
+    - elements-cpu
 
 about:
   home: https://github.com/lanl/Fierro

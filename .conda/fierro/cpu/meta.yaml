@@ -33,7 +33,7 @@ requirements:
     - _openmp_mutex # [linux]
     - llvm-openmp   # [osx]
     - trilinos-cpu
-    - elements
+    - elements-cpu
     - openmpi
   run:
     - trilinos-cpu
