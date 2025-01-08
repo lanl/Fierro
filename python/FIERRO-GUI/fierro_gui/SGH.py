@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QTableWidgetItem, QMessageBox)
 from PySide6.QtCore import (QProcess)
-from Explicit_SGH_WInput import *
+from SGH_WInput import *
 import subprocess
 import re
 import vtkmodules.all as vtk
@@ -20,17 +20,7 @@ def warning_message(msg):
     message.setText(msg)
     message.exec()
 
-def Explicit_SGH(self):
-    # Connect tab buttons to settings windows
-    self.BGlobalMesh.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(1))
-    self.BImportPartSGH.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(2))
-    self.BDefineMaterialSGH.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(8))
-    self.BAssignMaterialSGH.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(9))
-    self.BApplyBCSGH.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(10))
-    self.BSolverSettingsSGH.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(11))
-    self.BCreateBasicPart.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(3))
-    self.BViewResultsSGH.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(12))
-    
+def SGH(self):
     # Generate Basic Geometry
     # Disable the cylinder option for now
     self.INSelectBasicGeometry.model().item(2).setEnabled(False)
@@ -222,9 +212,16 @@ def Explicit_SGH(self):
                 self.INPartMaterial.addItem(self.TParts.item(i,0).text())
             for i in range(self.TBasicGeometries.rowCount()):
                 self.INPartMaterial.addItem(self.TBasicGeometries.item(i,0).text())
-        
     self.BGenerateBasicGeometry.clicked.connect(generate_basic_geometry)
     self.BDeleteBasicGeometry.clicked.connect(delete_basic_part)
+
+
+
+
+
+
+
+
 
     # Material Definition
     def add_material_SGH():
@@ -266,6 +263,7 @@ def Explicit_SGH(self):
             # Add material as an option for material assignment
             self.INMaterial.clear()
             for i in range(self.TMaterialsSGH.rowCount()):
+                print ("add material")
                 self.INMaterial.addItem(self.TMaterialsSGH.item(i,0).text())
             
 #            # Clear all inputs
@@ -523,7 +521,7 @@ def Explicit_SGH(self):
     self.explicit_sgh = None
     def run_explicit_SGH():
         if self.explicit_sgh == None:
-            Explicit_SGH_WInput(self)
+            SGH_WInput(self)
             reload(DeveloperInputs)
             if self.UserConfig == "Developer":
                 executable_path = DeveloperInputs.fierro_parallel_explicit_exe

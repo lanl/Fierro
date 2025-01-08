@@ -283,6 +283,12 @@
          </item>
          <item alignment="Qt::AlignTop">
           <widget class="QStackedWidget" name="Configuration">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="frameShape">
             <enum>QFrame::NoFrame</enum>
            </property>
