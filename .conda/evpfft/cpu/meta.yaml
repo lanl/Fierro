@@ -25,14 +25,15 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - openmpi
   host:
-    - openmpi
+    #- openmpi
+    - openmpi >=4.1.6,<5.0a0
     - heffte-cpu
     - fftw=*=mpi_openmpi_*
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
     - elements-cpu
   run:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - heffte-cpu
     - fftw=*=mpi_openmpi_*
     - kokkos=4.1
