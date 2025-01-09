@@ -26,11 +26,11 @@ requirements:
     - matar-cuda
     - openmpi
   host:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - matar-cuda
     - kokkos=4.1
   run:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - matar-cuda
     - kokkos=4.1
 

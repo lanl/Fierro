@@ -28,13 +28,13 @@ requirements:
     - matar-cuda
     - openmpi
   host:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - heffte-cuda
     - hdf5=*=mpi_openmpi_*
     - kokkos=4.1
     - matar-cuda
   run:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - heffte-cuda
     - hdf5=*=mpi_openmpi_*
     - kokkos=4.1

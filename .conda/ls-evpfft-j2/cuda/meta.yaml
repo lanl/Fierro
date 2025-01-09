@@ -27,12 +27,12 @@ requirements:
     - openmpi
   host:
     - cuda-toolkit
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - heffte-cuda
     - hdf5=*=mpi_openmpi_h457a7a6_3
     - elements
   run:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - heffte-cuda
     - hdf5=*=mpi_openmpi_h457a7a6_3
     - elements

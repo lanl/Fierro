@@ -26,10 +26,10 @@ requirements:
     - kokkos=4.1
     - openmpi
   host:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - kokkos=4.1
   run:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - kokkos=4.1
 
 
