@@ -23,11 +23,11 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - matar-cpu
   host:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - matar-cpu
     - kokkos=4.1
   run:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - matar-cpu
     - kokkos=4.1
 
