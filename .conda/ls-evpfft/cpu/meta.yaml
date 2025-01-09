@@ -15,8 +15,6 @@ build:
   script_env:
     - PLATFORM={{ target_platform }}
 
-# commit comment
-
 requirements:
   build:
     - cmake >=3.17.0
@@ -27,19 +25,21 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - openmpi
   host:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - heffte-cpu
     - fftw=*=mpi_openmpi_*
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
     - elements-cpu
   run:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - heffte-cpu
     - fftw=*=mpi_openmpi_*
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
     - elements-cpu
+
+#TODO: Add tests
 
 about:
   home: https://github.com/lanl/Fierro
