@@ -20,12 +20,13 @@ requirements:
     - cmake >=3.17.0
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
   host:
-    - openmpi
+    #- openmpi
+    - openmpi >=4.1.6,<5.0a0
     - kokkos=4.1
   run:
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
     - kokkos=4.1
 
 
