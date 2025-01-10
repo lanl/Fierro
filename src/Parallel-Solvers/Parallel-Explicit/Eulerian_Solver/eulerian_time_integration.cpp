@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -113,7 +113,7 @@ void FEA_Module_Eulerian::get_timestep(mesh_t& mesh,
     int    num_dims = num_dim;
     double dt_lcl;
     double min_dt_calc;
-    REDUCE_MIN_CLASS(elem_gid, 0, rnum_elem, dt_lcl, {
+    FOR_REDUCE_MIN_CLASS(elem_gid, 0, rnum_elem, dt_lcl, {
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);
 
@@ -221,7 +221,7 @@ void FEA_Module_Eulerian::get_timestep2D(mesh_t& mesh,
     double dt_lcl;
     double min_dt_calc;
 
-    REDUCE_MIN_CLASS(elem_gid, 0, rnum_elem, dt_lcl, {
+    FOR_REDUCE_MIN_CLASS(elem_gid, 0, rnum_elem, dt_lcl, {
         double coords0[8];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 4, 2);
 

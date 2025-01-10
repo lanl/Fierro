@@ -400,7 +400,7 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
     float meshZmin;
     
     // Global maximum x-direction
-    REDUCE_MAX(i,0,n_facets,meshXmax, {
+    FOR_REDUCE_MAX(i,0,n_facets,meshXmax, {
         if (v1X(i) > meshXmax | v2X(i) > meshXmax | v3X(i) > meshXmax) {
             if (v1X(i) > v2X(i) && v1X(i) > v3X(i)) {
                 meshXmax = v1X(i);
@@ -413,7 +413,7 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
     }, meshXmax);
     
     // Global minimum x-direction
-    REDUCE_MIN(i,0,n_facets,meshXmin, {
+    FOR_REDUCE_MIN(i,0,n_facets,meshXmin, {
         if (v1X(i) < meshXmin | v2X(i) < meshXmin | v3X(i) < meshXmin) {
             if (v1X(i) < v2X(i) && v1X(i) < v3X(i)) {
                 meshXmin = v1X(i);
@@ -426,7 +426,7 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
     }, meshXmin);
 
     // Global maximum y-direction
-    REDUCE_MAX(i,0,n_facets,meshYmax, {
+    FOR_REDUCE_MAX(i,0,n_facets,meshYmax, {
         if (v1Y(i) > meshYmax | v2Y(i) > meshYmax | v3Y(i) > meshYmax) {
             if (v1Y(i) > v2Y(i) && v1Y(i) > v3Y(i)) {
                 meshYmax = v1Y(i);
@@ -439,7 +439,7 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
     }, meshYmax);
 
     // Global minimum y-direction
-    REDUCE_MIN(i,0,n_facets,meshYmin, {
+    FOR_REDUCE_MIN(i,0,n_facets,meshYmin, {
         if (v1Y(i) < meshYmin | v2Y(i) < meshYmin | v3Y(i) < meshYmin) {
             if (v1Y(i) < v2Y(i) && v1Y(i) < v3Y(i)) {
                 meshYmin = v1Y(i);
@@ -452,7 +452,7 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
     }, meshYmin);
 
     // Global maximum z-direction
-    REDUCE_MAX(i,0,n_facets,meshZmax, {
+    FOR_REDUCE_MAX(i,0,n_facets,meshZmax, {
         if (v1Z(i) > meshZmax | v2Z(i) > meshZmax | v3Z(i) > meshZmax) {
             if (v1Z(i) > v2Z(i) && v1Z(i) > v3Z(i)) {
                 meshZmax = v1Z(i);
@@ -465,7 +465,7 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
     }, meshZmax);
 
     // Global minimum z-direction
-    REDUCE_MIN(i,0,n_facets,meshZmin, {
+    FOR_REDUCE_MIN(i,0,n_facets,meshZmin, {
         if (v1Z(i) < meshZmin | v2Z(i) < meshZmin | v3Z(i) < meshZmin) {
             if (v1Z(i) < v2Z(i) && v1Z(i) < v3Z(i)) {
                 meshZmin = v1Z(i);

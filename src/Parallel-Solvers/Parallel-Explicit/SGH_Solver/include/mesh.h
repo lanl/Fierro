@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -318,7 +318,7 @@ struct mesh_t
         // find the max number of elems around a node
         size_t max_num_elems_in_node;
         size_t max_num_lcl;
-        REDUCE_MAX_CLASS(node_gid, 0, num_nodes, max_num_lcl, {
+        FOR_REDUCE_MAX_CLASS(node_gid, 0, num_nodes, max_num_lcl, {
             // num_corners_in_node = num_elems_in_node
             size_t max_num = num_corners_in_node(node_gid);
 
@@ -677,7 +677,7 @@ struct mesh_t
         // find the max number of elems around a node
         size_t max_num_elems_in_node;
         size_t max_num_lcl;
-        REDUCE_MAX_CLASS(node_gid, 0, num_nodes, max_num_lcl, {
+        FOR_REDUCE_MAX_CLASS(node_gid, 0, num_nodes, max_num_lcl, {
             // num_corners_in_node = num_elems_in_node
             size_t max_num = num_corners_in_node(node_gid);
 

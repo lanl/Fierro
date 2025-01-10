@@ -1351,7 +1351,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
 
     // compute maximum stride
     size_t update = 0;
-    REDUCE_MAX_CLASS(inode, 0, nlocal_nodes, update, {
+    FOR_REDUCE_MAX_CLASS(inode, 0, nlocal_nodes, update, {
         if (update < Graph_Matrix_Strides_initial(inode)) {
             update = Graph_Matrix_Strides_initial(inode);
         }

@@ -315,7 +315,7 @@ public:
             int nobj_volumes = FEM_SGH_->simparam->optimization_options.optimization_objective_regions.size();
             auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
             const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+            FOR_REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
                 int node_id;
                 double current_elem_coords[3];
                 bool contained = false;
@@ -341,7 +341,7 @@ public:
             }, IE_sum);
         }
         else{
-            REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+            FOR_REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
                 IE_loc_sum += elem_mass(elem_gid) * 0.5 * (current_elem_sie(elem_gid,0)+previous_elem_sie(elem_gid,0));
             }, IE_sum);
         }
