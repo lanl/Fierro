@@ -961,6 +961,8 @@ void FEA_Module_SGH::sgh_solve()
     num_active_checkpoints = 0;
     bool time_accumulation;
 
+    TpetraDFArray<double> test_nodes(num_nodes, num_dim);
+
     
     if(simparam->optimization_options.disable_forward_solve_output){
         //sets the value large enough to not write during the sgh loop
