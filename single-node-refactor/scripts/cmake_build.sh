@@ -2,6 +2,7 @@
 
 solver="${1}"
 debug="${2}"
+trilinos="${3}"
 
 echo "Removing old Kokkos build and installation directory"
 rm -rf ${SGH_BUILD_DIR}

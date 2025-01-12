@@ -7,6 +7,8 @@ show_help() {
     echo "  --build_action=<full-app|set-env|install-kokkos|fierro>. Default is 'full-app'"
     echo "  --machine=<darwin|chicoma|linux|mac>. Default is 'linux'"
     echo "  --build_cores=<Integers greater than 0>. Default is set 1"
+    echo "  --trilinos=<enabled|disabled>. Default is 'disabled'"
+    echo "  --intel_mkl=<enabled|disabled>. Default is 'disabled'"
     echo "  --help: Display this help message"
     echo " "
     echo " "
@@ -36,6 +38,16 @@ show_help() {
     echo "          linux                       A general linux machine (that does not use modules)"
     echo "          mac                         A Mac computer. This option does not allow for cuda and hip builds, and build_cores will be set to 1"
     echo " "
+    echo "      --trilinos                      Decides if Trilinos is available for certain MATAR functionality"
+    echo " "
+    echo "          disabled                    Trilinos is not being used"
+    echo "          enabled                     Trilinos will be linked with MATAR to enable relevant functionality"
+    echo " "
+    echo "      --intel_mkl                     Decides whether to build Trilinos using the Intel MKL library"
+    echo " "
+    echo "          enabled                     Links and builds Trilinos with the Intel MKL library"
+    echo "          disabled                    Links and builds Trilinos using LAPACK and BLAS"
+    echo " "
     echo "      --build_cores                   The number of build cores to be used by make and make install commands. The default is 1" 
     echo " "
     echo "      --debug                         Build with debug. Default is false." 
@@ -48,6 +60,8 @@ solver="SGH"
 machine="linux"
 kokkos_build_type="openmp"
 build_cores="1"
+trilinos="disabled"
+intel_mkl="disabled"
 debug="false"
 
 # Define arrays of valid options
@@ -55,6 +69,8 @@ valid_build_action=("full-app" "set-env" "install-kokkos" "fierro")
 valid_solver=("SGH")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_machines=("darwin" "chicoma" "linux" "mac")
+valid_trilinos=("disabled" "enabled")
+valid_intel_mkl=("disabled" "enabled")
 valid_debug=("true" "false")
 
 # Parse command line arguments
@@ -110,6 +126,26 @@ for arg in "$@"; do
                 return 1
             fi
             ;;
+        --trilinos=*)
+            option="${arg#*=}"
+            if [[ " ${valid_trilinos[*]} " == *" $option "* ]]; then
+                trilinos="$option"
+            else
+                echo "Error: Invalid --kokkos_build_type specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --intel_mkl=*)
+            option="${arg#*=}"
+            if [[ " ${valid_intel_mkl[*]} " == *" $option "* ]]; then
+                intel_mkl="$option"
+            else
+                echo "Error: Invalid --intel_mkl specified."
+                show_help
+                return 1
+            fi
+            ;;
         --debug=*)
             option="${arg#*=}"
             if [[ " ${valid_debug[*]} " == *" $option "* ]]; then
@@ -155,6 +191,8 @@ echo "Building based on these argument options:"
 echo "Build action - ${build_action}"
 echo "Solver - ${solver}"
 echo "Kokkos backend - ${kokkos_build_type}"
+echo "Trilinos - ${trilinos}"
+echo "Intel MKL library - ${intel_mkl}"
 echo "make -j ${build_cores}"
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"
@@ -164,13 +202,17 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
-    source kokkos-install.sh ${kokkos_build_type} ${debug}
-    source matar-install.sh ${kokkos_build_type} ${debug}
-    source cmake_build.sh ${solver} ${debug}
+    if [ "$trilinos" = "disabled" ]; then    
+        source kokkos-install.sh ${kokkos_build_type} ${debug} 
+    elif [ "$trilinos" = "enabled" ]; then    
+        source trilinos-install.sh ${kokkos_build_type}  ${intel_mkl} ${debug}
+    fi
+    source matar-install.sh ${kokkos_build_type} ${debug} ${trilinos}
+    source cmake_build.sh ${solver} ${debug} ${trilinos}
 elif [ "$build_action" = "install-kokkos" ]; then
     source kokkos-install.sh ${kokkos_build_type}
 elif [ "$build_action" = "fierro" ]; then
-    source cmake_build.sh ${solver}
+    source cmake_build.sh ${solver} ${debug} ${trilinos}
 else
     echo "No build action, only setup the environment."
 fi
