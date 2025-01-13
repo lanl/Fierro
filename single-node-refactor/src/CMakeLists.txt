@@ -35,13 +35,6 @@ set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} ${VECTOR_Fortran
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${VECTOR_C_FLAGS}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${VECTOR_CXX_FLAGS}")
 
-find_package(Kokkos REQUIRED)
-find_package(Matar REQUIRED)
-
-
-
-
-
 
 message("\n ****** ADDING FIERRO EXECUTABLE ******** \n ")
 

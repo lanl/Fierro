@@ -40,6 +40,9 @@ add_subdirectory(../lib/Elements/matar cbin)
 # include_directories(Mesh-Builder)
 # add_subdirectory(Mesh-Builder)
 
+find_package(Kokkos REQUIRED)
+find_package(Matar REQUIRED)
+
 include_directories(src/material_models/artificial_viscosity)
 include_directories(src/material_models/eos)
 include_directories(src/material_models/erosion)
