@@ -22,6 +22,7 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   int p_order = 2;
   double unit_scaling = 1.0;
   bool topology_optimization_restart = false;
+  bool shape_optimization_restart = false;
 
   ELEMENT_TYPE element_type = ELEMENT_TYPE::hex8;
   bool zero_index_base = false;
@@ -90,4 +91,4 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   }
 };
 IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base, p_order, unit_scaling,
-topology_optimization_restart)
+topology_optimization_restart, shape_optimization_restart)

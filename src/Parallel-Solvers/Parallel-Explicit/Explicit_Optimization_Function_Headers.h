@@ -35,21 +35,16 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
  
-#ifndef TOPOLOGY_OPTIMIZATION_FUNCTION_FILES_H
-#define TOPOLOGY_OPTIMIZATION_FUNCTION_FILES_H  
+#ifndef EXPLICIT_OPTIMIZATION_FUNCTION_FILES_H
+#define EXPLICIT_OPTIMIZATION_FUNCTION_FILES_H 
 
-#include "Mass_Objective.h"
-#include "Mass_Constraint.h"
-#include "Center_of_Mass_Constraint.h"
-#include "Moment_of_Inertia_Constraint.h"
-#include "Bounded_Strain_Constraint.h"
-#include "Strain_Energy_Constraint.h"
-#include "Displacement_Constraint.h"
-#include "Strain_Energy_Minimize.h"
-#include "Strain_Energy_Objective.h"
-#include "Heat_Capacity_Potential_Minimize.h"
-#include "Heat_Capacity_Potential_Constraint.h"
-#include "Multi_Objective.h"
+#include "Mass_Constraint_Top_Opt.h"
+#include "Mass_Constraint_Shape_Opt.h"
+#include "Moment_of_Inertia_Constraint_Top_Opt.h"
+#include "Kinetic_Energy_Minimize.h"
+#include "Internal_Energy_Minimize.h"
+#include "Internal_Energy_Minimize_Shape_Opt.h"
 #include "MMA_Objective.hpp"
+#include "Area_Normals.h"
 
 #endif // end HEADER_H

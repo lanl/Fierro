@@ -225,8 +225,8 @@ public:
     Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> map; // map of node indices
     Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> sorted_map; // sorted contiguous map of node indices
     Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> ghost_node_map; // map of node indices with ghosts on each rank
-    Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> all_node_map; // map of node indices with ghosts on each rank
-    Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> nonoverlap_element_node_map; // map of node indices with ghosts on each rank
+    Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> all_node_map; // map of local + ghost node indices on each rank
+    Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> nonoverlap_element_node_map; // map of node indices belonging to unique element map
     Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> element_map; // non overlapping map of elements owned by each rank used in reduction ops
     Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> all_element_map; // overlapping map of elements connected to the local nodes in each rank
     Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> sorted_element_map; // sorted contiguous map of element indices owned by each rank used in parallel IO
@@ -240,12 +240,15 @@ public:
     Teuchos::RCP<MV>       all_initial_node_coords_distributed;
     Teuchos::RCP<MV>       all_node_coords_distributed;
     Teuchos::RCP<MV>       design_node_densities_distributed;
+    Teuchos::RCP<MV>       design_node_coords_distributed;
     Teuchos::RCP<MV>       filtered_node_densities_distributed;
     Teuchos::RCP<const MV> test_node_densities_distributed;
     Teuchos::RCP<MV>       all_node_densities_distributed;
+    Teuchos::RCP<MV>       all_design_node_coords_distributed;
     Teuchos::RCP<MV>       all_filtered_node_densities_distributed;
     Teuchos::RCP<MV>       lower_bound_node_densities_distributed, all_lower_bound_node_densities_distributed;
     Teuchos::RCP<MV>       upper_bound_node_densities_distributed;
+    Teuchos::RCP<MV>       lower_bound_node_coordinates_distributed, upper_bound_node_coordinates_distributed;
     Teuchos::RCP<MV>       Global_Element_Densities_Upper_Bound;
     Teuchos::RCP<MV>       Global_Element_Densities_Lower_Bound;
     Teuchos::RCP<MV>       Global_Element_Densities;

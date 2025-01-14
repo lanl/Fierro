@@ -305,7 +305,7 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
         size_t sum_local;
         size_t sum_total;
 
-        REDUCE_SUM(elem_gid, 0, num_elems, sum_local, {
+        FOR_REDUCE_SUM(elem_gid, 0, num_elems, sum_local, {
             if (elem_mat_id(elem_gid) == mat_id) {
                 // increment the number of elements the materials live in
                 sum_local++;
