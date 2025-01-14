@@ -498,34 +498,42 @@ void EVPFFT::write_micro_state_pvtu()
   edotp.update_host();
 
   // Calculate point positions
-  MatrixTypeRealDevice xtmp(3);
+  MatrixTypeRealDual defgradavg_dual(3,3);
   MatrixTypeRealDual uf(3,npts1_g,npts2_g,npts3_g);
   MatrixTypeRealDual ufintp(3,npts1+1,npts2+1,npts3+1);
   MatrixTypeRealDual xintp(3,npts1+1,npts2+1,npts3+1);
   MatrixTypeIntHost pid(npts1+1,npts2+1,npts3+1);
 
-  FOR_ALL(
+  for (int ii = 1; ii <= 3; ii++) {
+    for (int jj = 1; jj <= 3; jj++) {
+      defgradavg_dual.host(ii,jj) = defgradavg(ii,jj);
+    }
+  }
+  defgradavg_dual.update_device();
+  
+  FOR_ALL_CLASS(
           kz, 1, npts3+1,
           ky, 1, npts2+1,
           kx, 1, npts1+1, {
 
-        xtmp(1) = double(kx);
-        xtmp(2) = double(ky);
-        xtmp(3) = double(kz);
+        double xtmp[3];
+        xtmp[0] = double(kx);
+        xtmp[1] = double(ky);
+        xtmp[2] = double(kz);
         for (int ii = 1; ii <= 3; ii++) {
           real_t dum = 0.0;
           for (int jj = 1; jj <= 3; jj++) {
-            dum += defgradavg(ii,jj)*xtmp(jj);
+            dum += defgradavg_dual(ii,jj)*xtmp[jj-1];
           }
           uf(ii,kx+local_start1,ky+local_start2,kz+local_start3) = xnode(ii,kx,ky,kz) - dum;
         }
-  }); // end FOR_ALL
+  }); // end FOR_ALL_CLASS
   Kokkos::fence();
   uf.update_host();
 
   MPI_Allreduce(MPI_IN_PLACE, uf.host_pointer(), n, MPI_REAL_T, MPI_SUM, mpi_comm);
 
-  FOR_ALL(
+  FOR_ALL_CLASS(
           kz, 1, npts3+2,
           ky, 1, npts2+2,
           kx, 1, npts1+2, {
@@ -572,27 +580,28 @@ void EVPFFT::write_micro_state_pvtu()
           ufintp(ii,kx,ky,kz) = 0.125*(uf(ii,kxn1,kyn1,kzn1)+uf(ii,kxn2,kyn1,kzn1)+uf(ii,kxn1,kyn2,kzn1)+uf(ii,kxn2,kyn2,kzn1)+
           uf(ii,kxn1,kyn1,kzn2)+uf(ii,kxn2,kyn1,kzn2)+uf(ii,kxn1,kyn2,kzn2)+uf(ii,kxn2,kyn2,kzn2) );
         }
-  }); // end FOR_ALL
+  }); // end FOR_ALL_CLASS
   Kokkos::fence();
   ufintp.update_host();
 
-  FOR_ALL(
+  FOR_ALL_CLASS(
           kz, 1, npts3+2,
           ky, 1, npts2+2,
           kx, 1, npts1+2, {
 
-        xtmp(1) = double(kx+local_start1)-0.5;
-        xtmp(2) = double(ky+local_start2)-0.5;
-        xtmp(3) = double(kz+local_start3)-0.5;
+        double xtmp[3];
+        xtmp[0] = double(kx+local_start1)-0.5;
+        xtmp[1] = double(ky+local_start2)-0.5;
+        xtmp[2] = double(kz+local_start3)-0.5;
 
         for (int ii = 1; ii <= 3; ii++) {
           real_t dum = 0.0;
           for (int jj = 1; jj <= 3; jj++) {
-            dum += defgradavg(ii,jj)*xtmp(jj);
+            dum += defgradavg_dual(ii,jj)*xtmp[jj-1];
           }
           xintp(ii,kx,ky,kz) = dum + ufintp(ii,kx,ky,kz);
         }
-  }); // end FOR_ALL
+  }); // end FOR_ALL_CLASS
   Kokkos::fence();
   xintp.update_host();
 
@@ -794,7 +803,6 @@ void EVPFFT::write_micro_state_pvtu()
   out.open(filename,std::ofstream::binary);
 
   byte_offset = 0;
-  double crap = 0.0;
   
   //  Write Header
   //tmp_str = "<?xml version=\"1.0\"?>\n";
@@ -1033,7 +1041,7 @@ void EVPFFT::write_micro_state_pvtu()
       for (int kx = 1; kx <= npts1+1; kx++){
         ic += 1;
         for (int dim = 1; dim <= num_dims; dim++){
-          coord_tmp = xintp(dim,kx,ky,kz);
+          coord_tmp = xintp.host(dim,kx,ky,kz);
           out.write((char *) &coord_tmp,sizeof(coord_tmp));
         }
         pid(kx,ky,kz) = ic;
@@ -1101,7 +1109,6 @@ void EVPFFT::write_micro_state_pvtu()
   // for (int node_gid = 0; node_gid < num_points; node_gid++){
   //   for (int dim = 0; dim < num_dims; dim++){
   //     //out.write((char *) &node_vel.host(1, node_gid, dim),sizeof(double));
-  //     out.write((char *) &crap,sizeof(double));
   //   }
   // }
 
@@ -1264,7 +1271,6 @@ void EVPFFT::write_micro_state_pvtu()
   // for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
   //   for (int ii = 0; ii < 9; ii++){
   //     //out.write((char *) &elem_stress.host(1,elem_gid,ii),sizeof(double));
-  //     out.write((char *) &crap,sizeof(double));
   //   }
   // }
   // //  Density
