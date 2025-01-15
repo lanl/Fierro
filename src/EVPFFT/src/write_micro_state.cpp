@@ -505,7 +505,7 @@ void EVPFFT::write_micro_state_pvtu()
           for (int jj = 1; jj <= 3; jj++) {
             dum += defgradavg(ii,jj)*xtmp[jj-1];
           }
-          xintp(ii,kx,ky,kz) = dum;
+          xintp(ii,kx,ky,kz) = dum*delt(ii);
         }
   }); // end FOR_ALL_CLASS
   Kokkos::fence();
