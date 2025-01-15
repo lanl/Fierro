@@ -424,7 +424,7 @@ void EVPFFT::init_defgrad() {
       for (int ii = 1; ii <= 3; ii++) {
         defgradavg(jj,ii) = 0.0;
       }
-      defgradavg(jj,jj) = delt(jj);
+      defgradavg(jj,jj) = 1.0;
     } 
   }); // end FOR_ALL_CLASS
 
