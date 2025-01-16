@@ -1,0 +1,2 @@
+need a setup.py file inside of Fierro/src/Voxelizer that looks similar to the one in Fierro/python/FIERRO_GUI/setup.py
+need it for pip install

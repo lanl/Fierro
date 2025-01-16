@@ -1,0 +1,36 @@
+package: 
+  name: fierro_gui
+  version: 1
+
+source:
+  path: ../../
+  # - git_url: https://github.com/lanl/Fierro.git
+  #   depth: 1
+
+build:
+  number: 0
+  script: cd python/FIERRO-GUI/; python -m pip install .
+  noarch: python # This is a pure python package. So build for noarch on linux64
+  entry_points:
+    - fierro-gui = fierro_gui.gui:main
+  skip: true  # [not (linux and x86_64)]
+  skip: false # [linux and x86_64]
+
+requirements:
+  host:
+    - python
+    - setuptools
+  run:
+    - paraview=5.11.2
+    - python
+    - numpy
+    - matplotlib
+    - pyside6=6.5
+
+test:
+  imports:
+    - fierro_gui
+    
+extra:
+  recipe-maintainers:
+    - fierromechanics

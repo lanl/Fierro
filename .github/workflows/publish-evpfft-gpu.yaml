@@ -1,0 +1,16 @@
+name: 'Publish EVPFFT-GPU'
+
+on: 
+  push:
+    paths:
+      - .conda/evpfft/**
+      - src/EVPFFT/src/**
+      - .github/workflows/publish-evpfft-gpu.yaml
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/evpfft/cuda
+    secrets: inherit

@@ -1,0 +1,15 @@
+name: 'Publish Elements-CPU'
+
+on: 
+  push:
+    paths:
+      - .conda/elements/**
+      - .github/workflows/publish-elements-cpu.yaml
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/elements/cpu
+    secrets: inherit

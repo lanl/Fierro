@@ -1,0 +1,15 @@
+name: 'Publish MATAR-CUDA'
+
+on: 
+  push:
+    paths:
+      - .conda/matar/**
+      - .github/workflows/publish-matar-cuda.yaml
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/matar/cuda
+    secrets: inherit

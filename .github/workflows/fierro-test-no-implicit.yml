@@ -60,9 +60,9 @@ jobs:
         source ~/.bashrc
         conda activate build-env
         conda install --solver=classic conda-forge::conda-libmamba-solver conda-forge::libmamba conda-forge::libmambapy conda-forge::libarchive
-        conda install -c conda-forge -c fierromechanics fierro-fe-cpu
-        conda install -c conda-forge -c fierromechanics fierro-evpfft-cpu
-        conda install -c conda-forge -c fierromechanics fierro-gui
+        conda install -c conda-forge -c fierromechanics fierro-cpu
+        conda install -c conda-forge -c fierromechanics evpfft 
+        conda install -c conda-forge -c fierromechanics fierro_gui 
         
     - name: Verify package dependencies
       run: |
