@@ -31,9 +31,11 @@ requirements:
     - boost-cpp
     - libnetcdf
     - libmatio
+    - elements-cpu
       #    - llvm-openmp # [osx]
   run:
     - libblas
+    - elements-cpu
       #    - llvm-openmp # [osx]
 
 about:
