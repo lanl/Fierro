@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.1.3)
 
 
-find_package(Matar REQUIRED)
-find_package(Kokkos REQUIRED)
-
 add_definitions(-DHAVE_KOKKOS=1)
 
 if (CUDA)

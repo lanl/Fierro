@@ -8,7 +8,6 @@ mkdir -p ${MATAR_BUILD_DIR}
 
 cmake_options=(
     -D CMAKE_INSTALL_PREFIX="${MATAR_INSTALL_DIR}"
-    -D CMAKE_PREFIX_PATH="${KOKKOS_INSTALL_DIR}"
 )
 
 if [ "$debug" = "true" ]; then
@@ -19,13 +18,37 @@ if [ "$debug" = "true" ]; then
     )
 fi
 
+
 if [ "$kokkos_build_type" = "none" ]; then
     cmake_options+=(
         -D Matar_ENABLE_KOKKOS=OFF
     )
+elif [ "$trilinos" = "enabled" ]; then
+    if [ ! -d "${TRILINOS_INSTALL_DIR}/lib" ]; then
+        Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib64/cmake/Trilinos
+    else
+        Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
+    fi
+    cmake_options+=(
+        -D Trilinos_DIR="$Trilinos_DIR"
+        -D Matar_ENABLE_TRILINOS=ON
+        -D Matar_ENABLE_KOKKOS=ON
+    )
 else
     cmake_options+=(
         -D Matar_ENABLE_KOKKOS=ON
+        -D CMAKE_PREFIX_PATH="${KOKKOS_INSTALL_DIR}"
+    )
+    if [ "$kokkos_build_type" = "cuda" ]; then
+        cmake_options+=(
+            -D Matar_CUDA_BUILD=ON
+        )
+    fi
+fi
+
+if [[ "$kokkos_build_type" = *"mpi"* ]] || [ "$trilinos" = "enabled" ]; then
+    cmake_options+=(
+    -D Matar_ENABLE_MPI=ON
     )
 fi
 

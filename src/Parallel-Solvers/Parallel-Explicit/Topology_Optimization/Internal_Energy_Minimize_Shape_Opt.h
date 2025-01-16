@@ -32,8 +32,8 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#ifndef INTERNAL_ENERGY_MINIMIZE_TOPOPT_H
-#define INTERNAL_ENERGY_MINIMIZE_TOPOPT_H
+#ifndef INTERNAL_ENERGY_MINIMIZE_SHAPE_OPT_H
+#define INTERNAL_ENERGY_MINIMIZE_SHAPE_OPT_H
 
 #include "matar.h"
 #include "elements.h"
@@ -58,7 +58,7 @@
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver.h"
 
-class InternalEnergyMinimize_TopOpt : public FierroOptimizationObjective
+class InternalEnergyMinimize_ShapeOpt : public FierroOptimizationObjective
 {
 typedef Tpetra::Map<>::local_ordinal_type LO;
 typedef Tpetra::Map<>::global_ordinal_type GO;
@@ -132,7 +132,6 @@ private:
     }
 
 public:
-    bool   nodal_density_flag_;
     int    last_comm_step, last_solve_step, current_step;
     int num_dim;
     size_t nvalid_modules;
@@ -142,7 +141,7 @@ public:
     FEA_MODULE_TYPE set_module_type;
     // std::string my_fea_module = "SGH";
 
-    InternalEnergyMinimize_TopOpt(Explicit_Solver* Explicit_Solver_Pointer, bool nodal_density_flag)
+    InternalEnergyMinimize_ShapeOpt(Explicit_Solver* Explicit_Solver_Pointer)
     {
         Explicit_Solver_Pointer_ = Explicit_Solver_Pointer;
         first_init = false;
@@ -166,12 +165,11 @@ public:
                 }
             }
         }
-        nodal_density_flag_ = nodal_density_flag;
         last_comm_step    = last_solve_step = -1;
         current_step      = 0;
         time_accumulation = true;
         
-        previous_gradients = Teuchos::rcp(new MV(Explicit_Solver_Pointer_->map, 1));
+        previous_gradients = Teuchos::rcp(new MV(Explicit_Solver_Pointer_->map, num_dim));
         if(Explicit_Solver_Pointer_->simparam.optimization_options.maximize_flag){
             objective_sign = -1;
         }
@@ -203,7 +201,7 @@ public:
         Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
         bool print_flag = false;
         ROL::Ptr<const MV>   zp = getVector(z); //tpetra multivector wrapper on design vector
-        const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+        const_host_vec_array design_coordinates = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
         if (type == ROL::UpdateType::Initial) {
             if(first_init){
@@ -369,7 +367,7 @@ public:
         // *fos << std::endl;
         // std::fflush(stdout);
 
-        const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+        const_host_vec_array design_coordinates = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
         // communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
         /*
         if(last_comm_step!=current_step){
@@ -415,7 +413,7 @@ public:
         // get local view of the data
 
         if (set_module_type == FEA_MODULE_TYPE::SGH) {
-            FEM_SGH_->compute_topology_optimization_gradient_full(zp, gp);
+            FEM_SGH_->compute_shape_optimization_gradient_full(zp, gp);
         }
         gp->scale(objective_sign);
         // debug print of gradient
@@ -456,8 +454,8 @@ public:
         Kokkos::fence();
     }
 
-  //contribution to gradient tally from objective w.r.t design density
-    void density_gradient_term(vec_array& gradient_vector, const DViewCArrayKokkos<double>& node_mass,
+  //contribution to gradient tally from objective w.r.t design coordinate
+    void design_coordinate_gradient_term(vec_array& gradient_vector, const DViewCArrayKokkos<double>& node_mass,
                                const DViewCArrayKokkos<double>& elem_mass, const DViewCArrayKokkos<double>& node_vel,
                                const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
                                const size_t& rk_level, const real_t& global_dt = 0){
@@ -466,80 +464,6 @@ public:
         auto corner_value_storage = FEM_SGH_->corner_value_storage;
         auto corners_in_node = FEM_SGH_->corners_in_node;
         auto num_corners_in_node = FEM_SGH_->num_corners_in_node;
-        auto relative_element_densities = FEM_SGH_->relative_element_densities;
-
-        // view scope
-        {
-            if(optimization_objective_regions.size()){
-                int nobj_volumes = optimization_objective_regions.size();
-                const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
-                    size_t node_id;
-                    size_t corner_id;
-                    real_t inner_product;
-                    // std::cout << elem_mass(elem_id) <<std::endl;
-
-                    inner_product = 0;
-                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
-                        int node_id;
-                        double current_elem_coords[3];
-                        bool contained = false;
-                        current_elem_coords[0] = 0;
-                        current_elem_coords[1] = 0;
-                        current_elem_coords[2] = 0;
-                        for(int inode=0; inode< num_nodes_in_elem; inode++){
-                            node_id = nodes_in_elem(elem_id, inode);
-                            current_elem_coords[0] += all_initial_node_coords(node_id, 0)/num_nodes_in_elem;
-                            current_elem_coords[1] += all_initial_node_coords(node_id, 1)/num_nodes_in_elem;
-                            current_elem_coords[2] += all_initial_node_coords(node_id, 2)/num_nodes_in_elem;
-                        }
-                        for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
-                            if(optimization_objective_regions(ivolume).contains(current_elem_coords)){
-                                contained = true;
-                            }
-                        }
-                        if(contained){
-                            inner_product = elem_mass(elem_id) * elem_sie(rk_level, elem_id);
-                        }
-                    }
-
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
-                        // compute gradient of local element contribution to v^t*M*v product
-                        corner_id = elem_id * num_nodes_in_elem + inode;
-                        // division by design ratio recovers nominal element mass used in the gradient operator
-                        corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
-                    }
-                }); // end parallel for
-                Kokkos::fence();
-            }
-            else{
-                FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
-                    size_t corner_id;
-                    real_t inner_product;
-                    // std::cout << elem_mass(elem_id) <<std::endl;
-
-                    inner_product = (elem_mass(elem_id)/relative_element_densities(elem_id)) * elem_sie(rk_level, elem_id);
-
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
-                        // compute gradient of local element contribution to v^t*M*v product
-                        corner_id = elem_id * num_nodes_in_elem + inode;
-                        // division by design ratio recovers nominal element mass used in the gradient operator
-                        corner_value_storage(corner_id) = inner_product;
-                    }
-                }); // end parallel for
-                Kokkos::fence();
-            }
-            // accumulate node values from corner storage
-            // multiply
-            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-                size_t corner_id;
-                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
-                    corner_id = corners_in_node(node_id, icorner);
-                    gradient_vector(node_id, 0) += (corner_value_storage(corner_id)* global_dt) / (double)num_nodes_in_elem;
-                }
-            }); // end parallel for
-            Kokkos::fence();
-        }
     }
 
 };

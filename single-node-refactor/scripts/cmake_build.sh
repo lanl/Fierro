@@ -2,16 +2,31 @@
 
 solver="${1}"
 debug="${2}"
+trilinos="${3}"
 
 echo "Removing old Kokkos build and installation directory"
 rm -rf ${SGH_BUILD_DIR}
 mkdir -p ${SGH_BUILD_DIR}
 
-cmake_options=(
--D BUILD_EXPLICIT_SOLVER=OFF
--D CMAKE_PREFIX_PATH="${MATAR_INSTALL_DIR};${KOKKOS_INSTALL_DIR}"
-#-D CMAKE_CXX_FLAGS="-I${matardir}/src"
-)
+
+if [ "$trilinos" = "enabled" ]; then
+    if [ ! -d "${TRILINOS_INSTALL_DIR}/lib" ]; then
+        Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib64/cmake/Trilinos
+    else
+        Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
+    fi
+    cmake_options+=(
+        -D CMAKE_PREFIX_PATH="${MATAR_INSTALL_DIR}"
+        -D Trilinos_DIR="$Trilinos_DIR"
+        -D FIERRO_ENABLE_TRILINOS=ON
+    )
+else
+    cmake_options=(
+    -D BUILD_EXPLICIT_SOLVER=OFF
+    -D CMAKE_PREFIX_PATH="${MATAR_INSTALL_DIR};${KOKKOS_INSTALL_DIR}"
+    #-D CMAKE_CXX_FLAGS="-I${matardir}/src"
+    )
+fi
 
 if [ "$debug" = "true" ]; then
     echo "Setting debug to true for CMAKE build type"

@@ -399,7 +399,7 @@ public:
             int nobj_volumes = FEM_SGH_->simparam->optimization_options.optimization_objective_regions.size();
             auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
             const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+            FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
                 double ke = 0;
                 double current_node_coords[3];
                 bool contained = false;
@@ -428,7 +428,7 @@ public:
             }, KE_sum);
         }
         else{
-            REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+            FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
                 double ke = 0;
                 for (size_t dim = 0; dim < num_dim; dim++) {
                     // midpoint integration approximation

@@ -146,6 +146,11 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
 void EVPFFT::init_after_reading_input_data()
 {
 
+    init_xk_gb();
+    init_disgradmacro();
+    init_ept();
+    init_evm();
+
 #ifndef ABSOLUTE_NO_OUTPUT
     if (iwfields == 1) {
       int imicro = 0;
@@ -153,11 +158,6 @@ void EVPFFT::init_after_reading_input_data()
       write_micro_state_pvtu();
     }
 #endif
-
-    init_xk_gb();
-    init_disgradmacro();
-    init_ept();
-    init_evm();
 
 // the variables initialized in the funcitons below are reduced into
 // and should be done once, hence the need for #if guard since the variables

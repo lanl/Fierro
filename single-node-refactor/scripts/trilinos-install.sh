@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
 kokkos_build_type="${1}"
-machine="${2}"
-intel_mkl="${3}"
+intel_mkl="${2}"
+debug="${3}"
 
 # If all arguments are valid, you can use them in your script as needed
 echo "Trilinos Kokkos Build Type: $kokkos_build_type"
@@ -26,10 +26,11 @@ then
     mkdir -p ${TRILINOS_BUILD_DIR} 
 fi
 
-if [ "$kokkos_build_type" = "cuda" ]; then
+
+if [ "$kokkos_build_type" = "cuda" ] || [ "$kokkos_build_type" = "cuda_mpi" ]; then
     export OMPI_CXX=${TRILINOS_SOURCE_DIR}/packages/kokkos/bin/nvcc_wrapper
     export CUDA_LAUNCH_BLOCKING=1
-elif [ "$kokkos_build_type" = *"hip"* ]; then
+elif [ "$kokkos_build_type" = *"hip"* ] || [ "$kokkos_build_type" = *"hip_mpi"* ]; then
     export OMPI_CXX=hipcc
 fi
 
@@ -55,8 +56,7 @@ CUDA_ADDITIONS=(
 -D KokkosKernels_ENABLE_TPL_CUBLAS=ON
 -D KokkosKernels_ENABLE_TPL_CUSPARSE=ON
 -D Tpetra_ENABLE_CUDA=ON
--D Xpetra_ENABLE_Kokkos_Refactor=ON
--D MueLu_ENABLE_Kokkos_Refactor=ON
+-D MueLu_ENABLE_Kokkos_Refactor=OFF
 -D Tpetra_ASSUME_GPU_AWARE_MPI:BOOL=FALSE
 )
 
@@ -71,7 +71,6 @@ export OMPI_CXX=hipcc
 -D KokkosKernels_ENABLE_TPL_CUBLAS=OFF
 -D KokkosKernels_ENABLE_TPL_CUSPARSE=OFF
 -D Tpetra_INST_HIP=ON
--D Xpetra_ENABLE_Kokkos_Refactor=ON
 -D Tpetra_ASSUME_GPU_AWARE_MPI:BOOL=FALSE
 )
 
@@ -111,18 +110,19 @@ fi
 cmake_options+=(
 -D Trilinos_ENABLE_Kokkos=ON
 ${ADDITIONS[@]}
--D Trilinos_ENABLE_Amesos2=ON
--D Trilinos_ENABLE_Belos=ON
--D Trilinos_ENABLE_MueLu=ON 
--D Trilinos_ENABLE_ROL=ON 
--D Trilinos_ENABLE_Ifpack2=ON
+-D Trilinos_ENABLE_Amesos2=OFF
+-D Trilinos_ENABLE_Belos=OFF
+-D Trilinos_ENABLE_MueLu=OFF 
+-D Trilinos_ENABLE_ROL=OFF 
+-D Trilinos_ENABLE_Ifpack2=OFF
 -D Trilinos_ENABLE_Zoltan2=ON 
--D Trilinos_ENABLE_Anasazi=ON 
+-D Trilinos_ENABLE_Anasazi=OFF 
 -D MueLu_ENABLE_TESTS=OFF 
 -D Trilinos_ENABLE_ALL_PACKAGES=OFF 
 -D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF 
 -D Trilinos_ENABLE_TESTS=OFF 
--D CMAKE_INSTALL_PREFIX=${TRILINOS_INSTALL_DIR} 
+-D CMAKE_INSTALL_PREFIX=${TRILINOS_INSTALL_DIR}
+-D Xpetra_ENABLE_Kokkos_Refactor=ON 
 )
 
 # Flags for building with Intel MKL library
@@ -145,15 +145,15 @@ if [ "$intel_mkl" = "enabled" ]; then
     )
 fi
 
-if [ "$kokkos_build_type" = "openmp" ]; then
+if [ "$kokkos_build_type" = "openmp" ] || [ "$kokkos_build_type" = "openmp_mpi" ]; then
     cmake_options+=(
         ${OPENMP_ADDITIONS[@]}
     )
-elif [ "$kokkos_build_type" = "cuda" ]; then
+elif [ "$kokkos_build_type" = "cuda" ] || [ "$kokkos_build_type" = "cuda_mpi" ]; then
     cmake_options+=(
         ${CUDA_ADDITIONS[@]}
     )
-elif [ "$kokkos_build_type" = "hip" ]; then
+elif [ "$kokkos_build_type" = *"hip"* ] || [ "$kokkos_build_type" = *"hip_mpi"* ]; then
     cmake_options+=(
         ${HIP_ADDITIONS[@]}
     )
@@ -167,7 +167,7 @@ cmake "${cmake_options[@]}" -B "${TRILINOS_BUILD_DIR}" -S "${TRILINOS_SOURCE_DIR
 
 # Build Trilinos
 echo "Building Trilinos..."
-make -C "${TRILINOS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
+make -C "${TRILINOS_BUILD_DIR}" -j${MATAR_BUILD_CORES}
 
 # Install Trilinos
 echo "Installing Trilinos..."

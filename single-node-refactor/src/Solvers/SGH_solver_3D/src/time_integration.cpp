@@ -123,7 +123,7 @@ void SGH3D::get_timestep(Mesh_t& mesh,
 
     double dt_lcl;
     double min_dt_calc;
-    REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
+    FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
         size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
 
         double coords0[24];  // element coords
