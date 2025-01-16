@@ -6,16 +6,17 @@ set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLA
 
 include_directories(include)
 
-set(SRC_Files 
-src/geometry.cpp 
-src/boundary.cpp 
-src/time_integration.cpp 
-src/momentum.cpp 
+set(SRC_Files
+src/geometry.cpp
+src/boundary.cpp
+src/time_integration.cpp
+src/momentum.cpp
 src/force_sgh.cpp
-src/sgh_optimization.cpp 
-src/force_gradients_sgh.cpp 
-src/power_gradients_sgh.cpp 
-src/energy_sgh.cpp 
+src/sgh_optimization.cpp
+src/sgh_shape_optimization.cpp
+src/force_gradients_sgh.cpp
+src/power_gradients_sgh.cpp
+src/energy_sgh.cpp
 src/properties.cpp
 src/setup_sgh.cpp)
 

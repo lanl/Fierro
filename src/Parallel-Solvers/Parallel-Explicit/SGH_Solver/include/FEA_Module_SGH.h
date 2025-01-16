@@ -424,6 +424,10 @@ public:
 
     virtual void update_forward_solve(Teuchos::RCP<const MV> zp, bool print_design=false);
 
+    void update_forward_solve_TO(Teuchos::RCP<const MV> zp);
+
+    void update_forward_solve_SO(Teuchos::RCP<const MV> zp);
+
     void comm_node_masses();
 
     void comm_adjoint_vector(int cycle);
