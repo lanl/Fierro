@@ -34,10 +34,10 @@ requirements:
     - llvm-openmp   # [osx]
     - trilinos-cpu
     - elements-cpu
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
   run:
     - trilinos-cpu
-    - openmpi
+    - openmpi >=4.1.6,<5.0a0
 
 about:
   home: https://github.com/lanl/Fierro
