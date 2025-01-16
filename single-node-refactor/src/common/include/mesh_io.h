@@ -268,17 +268,20 @@ public:
         // x-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
             fscanf(in, "%le", &node.coords.host(0, node_id, 0));
+            node.coords.host(0, node_id, 0)*= mesh_inps.scale_x;
         }
 
         // y-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
             fscanf(in, "%le", &node.coords.host(0, node_id, 1));
+            node.coords.host(0, node_id, 1)*= mesh_inps.scale_y;
         }
 
         // z-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
             if (num_dims == 3) {
                 fscanf(in, "%le", &node.coords.host(0, node_id, 2));
+                node.coords.host(0, node_id, 2)*= mesh_inps.scale_z;
             }
             else{
                 double dummy;
