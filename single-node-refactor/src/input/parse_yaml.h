@@ -108,6 +108,6 @@ void parse_regions(Yaml::Node& root,
 void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims);
 
 // parse the boundary condition text
-void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions);
+void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const size_t num_solvers);
 
 #endif // end Header Guard

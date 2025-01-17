@@ -43,27 +43,27 @@ solver_options:
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
-        solver: SGHRZ
+        solver_id: 0
         geometry: x_plane
         direction: x_dir
         value: 0.0
-        type: reflected_velocity
+        velocity_model: reflected_velocity
 
             
     # Tag Y plane
     - boundary_condition:
-        solver: SGHRZ
+        solver_id: 0
         geometry: y_plane
         direction: y_dir
         value: 0.0
-        type: reflected_velocity
+        velocity_model: reflected_velocity
 
     # Tag inner circle
     - boundary_condition:
-        solver: SGHRZ
+        solver_id: 0
         geometry: cylinder
         value: 0.025
-        type: zero_velocity
+        velocity_model: zero_velocity
 
 
   

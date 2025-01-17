@@ -52,11 +52,16 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
                                  DCArrayKokkos<double>& node_vel,
-                                 const double time_value) const
+                                 const double time_value,
+                                 const size_t solver_id) const
 {
 
-    // Loop over boundary sets
-    for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
+    size_t num_vel_bdy_sets = BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id); 
+
+    // Loop over the velocity boundary sets
+    for (size_t bc_lid = 0; bc_lid < num_vel_bdy_sets; bc_lid++) {
+        
+        size_t bdy_set = BoundaryConditions.vel_bdy_sets_in_solver.host(bc_lid);
         
         // Loop over boundary nodes in a boundary set
         FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {

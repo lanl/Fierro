@@ -49,6 +49,8 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters,
     int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
     int num_dim = mesh.num_dims;
 
+    // save the solver_id, which is a pravate class variable
+    //this->solver_id = solver_id_inp;
 
     State.node.initialize(rk_num_bins, num_nodes, num_dim, SGHRZ_State::required_node_state);
     State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, 3, SGHRZ_State::required_gauss_pt_state);  // note: dims is always 3 
