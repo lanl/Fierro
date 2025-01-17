@@ -112,6 +112,7 @@ namespace SGHRZ_State
 class SGHRZ : public Solver
 {
 public:
+    size_t solver_id;
 
     SGHRZ()  : Solver()
     {
@@ -209,7 +210,8 @@ public:
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>& node_vel,
-        const double time_value) const;
+        const double time_value,
+        const size_t solver_id) const;
 
     void boundary_contact_rz(
         const Mesh_t& mesh,

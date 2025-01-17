@@ -27,54 +27,54 @@ solver_options:
 boundary_conditions:
     # Tag X=0 plane
     - boundary_condition:
-        solver: SGH3D
+        solver_id: 0
         geometry: x_plane
         direction: x_dir
         value: 0.0
-        type: reflected_velocity
+        velocity_model: reflected_velocity
 
             
     # Tag Y=0 plane
     - boundary_condition:
-        solver: SGH3D
+        solver_id: 0
         geometry: y_plane
         direction: y_dir
         value: 0.0
-        type: reflected_velocity
+        velocity_model: reflected_velocity
 
     # Tag z=0 plane
     - boundary_condition:
-        solver: SGH3D
+        solver_id: 0
         geometry: z_plane
         direction: z_dir
         value: 0.0
-        type: reflected_velocity
+        velocity_model: reflected_velocity
 
 
     # Tag X=1 plane
     - boundary_condition:
-        solver: SGH3D
+        solver_id: 0
         geometry: x_plane
         direction: x_dir
         value: 1.0
-        type: reflected_velocity
+        velocity_model: reflected_velocity
 
             
     # Tag Y=0.01 plane
     - boundary_condition:
-        solver: SGH3D
+        solver_id: 0
         geometry: y_plane
         direction: y_dir
         value: 0.01
-        type: reflected_velocity
+        velocity_model: reflected_velocity
 
     # Tag z=0.01 plane
     - boundary_condition:
-        solver: SGH3D
+        solver_id: 0
         geometry: z_plane
         direction: z_dir
         value: 0.01
-        type: reflected_velocity
+        velocity_model: reflected_velocity
                 
 
 materials:

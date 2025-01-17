@@ -306,7 +306,8 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
         printf("\n");
         std::cout << "Parsing YAML boundary condition options:" << std::endl;
     }
-    parse_bcs(root, Boundary);
+    size_t num_solvers = SimulationParamaters.solver_inputs.size();
+    parse_bcs(root, Boundary, num_solvers);
 
     if (VERBOSE) {
         printf("\n");
@@ -2294,7 +2295,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 // =================================================================================
 //    Parse Boundary Conditions
 // =================================================================================
-void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
+void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const size_t num_solvers)
 {
     Yaml::Node& bc_yaml = root["boundary_conditions"];
 
@@ -2310,6 +2311,16 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
     // enums to select options with boundary conditions
     BoundaryConditions.BoundaryConditionEnums  = DCArrayKokkos<BoundaryConditionEnums_t> (num_bcs,"bc_enums");  
 
+    // stores the velocity bdy node lists per solver, in the future, this needs to be a DualRaggedRight
+    BoundaryConditions.vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "vel_bdy_sets_in_solver");  
+    // this stores the number of bdy sets for a solver
+    BoundaryConditions.num_vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_vel_bdy_sets_in_solver");   
+    // set the storage counter to zero
+    for(size_t solver_id=0; solver_id<num_solvers; solver_id++){
+        BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id) = 0;
+    } // end for
+
+
     // the state for boundary conditions
     BoundaryConditions.bc_global_vars = DCArrayKokkos<double>(num_bcs, 4, "bc_global_values"); // increase 4 for more params
     BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
@@ -2320,11 +2331,44 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
         // read the variables names
         Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"];
 
-        // get the material variables names set by the user
+        // get the boundary condition variables names set by the user
         std::vector<std::string> user_str_bc_inps;
 
         // extract words from the input file and validate they are correct
         validate_inputs(inps_yaml, user_str_bc_inps, str_bc_inps, bc_required_inps);
+
+
+        // verify the boundary condition block connects to a solver
+        // loop over the words in the boundary input definition and find the solver id
+        int solver_id = -1;
+        for (auto& a_word : user_str_bc_inps) {
+
+            Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+            if (a_word.compare("solver_id") == 0) {
+                solver_id = bc_yaml[bc_id]["boundary_condition"][a_word].As<int>();
+
+                if (solver_id<0 || solver_id>=num_solvers){
+                    std::cout << "ERROR: invalid solver_id specified in the boundary condition definition " << std::endl;
+            
+                    throw std::runtime_error("**** Solver_id is out of bounds ****");
+                } // end check on m_id range
+
+                if (VERBOSE) {
+                    std::cout << "\tsolver_id = " << solver_id << std::endl;
+                }
+            } // end id
+
+            // add other checks here...
+
+        } // end loop over all boundary condition inputs
+
+        if (solver_id<0){
+            std::cout << "ERROR: solver_id must be specified in the boundary condition definition " << std::endl;
+            
+            throw std::runtime_error("**** Solver_id is missing ****");
+        } // end check on m_id range
+
 
         // loop over the words in the material input definition
         for (auto& a_word : user_str_bc_inps) {
@@ -2335,50 +2379,36 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
             Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
             // get solver for this boundary condition
-            if (a_word.compare("solver") == 0) {
-                std::string solver = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+            if (a_word.compare("solver_id") == 0) {
+                // do nothing, I already have solver_id
 
-                auto map = solver_map;
-
-                // set the solver
-                if (map.find(solver) != map.end()) {
-                    solver_input::method bc_solver = map[solver];
-
-                    RUN({
-                        BoundaryConditions.BoundaryConditionEnums(bc_id).solver = bc_solver;
-                    });
-
-                    if (VERBOSE) {
-                        std::cout << "\tsolver = " << solver << std::endl;
-                    }
-                }
-                else{
-                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << solver << std::endl;
-                    std::cout << "Valid options are: " << std::endl;
-
-                    for (const auto& pair : map) {
-                        std::cout << "\t" << pair.first << std::endl;
-                    }
-                } // end if
-            } // solver
+            } // solver id
             // get boundary condition type
-            else if (a_word.compare("type") == 0) {
-                std::string type = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+            else if (a_word.compare("velocity_model") == 0) {
+                
+                // Note: solver_id was retrieved at the top of the bc_id loop
 
-                auto map = bc_type_map;
+                // find out how many velocity bdy sets have been saved 
+                size_t num_saved = BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id);
+                BoundaryConditions.vel_bdy_sets_in_solver.host(num_saved) = bc_id;
+                BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
 
-                // set the type
-                if (map.find(type) != map.end()) {
-                    auto bc_type = map[type];
+                std::string velocity_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
-                    // bc_type_map[type] returns enum value, e.g., boundary_conditions::velocity_constant
-                    switch(map[type]){
+                auto map = bc_velocity_model_map; 
+
+                // set the velocity_model
+                if (map.find(velocity_model) != map.end()) {
+                    auto bc_velocity_model = map[velocity_model];
+
+                    // bc_velocity_model_map[velocity_model] returns enum value, e.g., boundary_conditions::velocity_constant
+                    switch(map[velocity_model]){
 
                         case boundary_conditions::constantVelocityBC :
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::constantVelocityBC ;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::constantVelocityBC ;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ConstantVelocityBC::velocity;
                             });
                             break;
@@ -2387,7 +2417,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::timeVaringVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::timeVaringVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &TimeVaryingVelocityBC::velocity;
                             });
                             break;
@@ -2396,7 +2426,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::reflectedVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::reflectedVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ReflectedVelocityBC::velocity;
                             });
                             break;
@@ -2405,7 +2435,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::zeroVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::zeroVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ZeroVelocityBC::velocity;
                             });
                             break;
@@ -2413,7 +2443,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::userDefinedVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::userDefinedVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
                             });
                             break;
@@ -2421,28 +2451,24 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::pistonVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::pistonVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
                             });
                             break;                        
                         default:
                             
-                            std::cout << "Setting velocity bc " << std::endl;
-                            RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::noVelocityBC;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &NoVelocityBC::velocity;
-                            });
-                            // no velocity specified is default
+                            std::cout << "ERROR: invalid velocity boundary condition input: " << velocity_model << std::endl;
+                            throw std::runtime_error("**** Velocity BC model Not Understood ****");
                             break;
                         
                     } // end switch
 
                     if (VERBOSE) {
-                        std::cout << "\ttype = " << type << std::endl;
+                        std::cout << "\tvelocity_bc_model = " << velocity_model << std::endl;
                     }
                 }
                 else{
-                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << type << std::endl;
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << velocity_model << std::endl;
                     std::cout << "Valid options are: " << std::endl;
 
                     for (const auto& pair : map) {
@@ -2475,7 +2501,6 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                     }
                 } // end if
             } // direction
-            // get boundary condition geometry
             // get boundary condition direction
             else if (a_word.compare("direction") == 0) {
                 std::string direction = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();

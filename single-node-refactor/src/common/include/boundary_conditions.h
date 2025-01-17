@@ -58,7 +58,7 @@ enum BdyTag
 
 // types of boundary conditions
 // WARNING: Currently only velocity is supported
-enum BCHydro
+enum BCVelocityModels
 {
     noVelocityBC = 0,
     constantVelocityBC = 1,
@@ -68,12 +68,13 @@ enum BCHydro
     userDefinedVelocityBC = 5,
     pistonVelocityBC = 6
 };
-// future options:
-//    displacement          = 6,
-//    acceleration          = 7,
-//    pressure              = 8,
-//    temperature           = 9,
-//    contact               = 10
+// future model options:
+//    displacementBC          = 6,
+//    accelerationBC          = 7,
+//    pressureBC              = 8,
+//    temperatureBC           = 9,
+//    contactBC               = 10
+
 
 enum BCFcnLocation
 {
@@ -101,7 +102,7 @@ static std::map<std::string, boundary_conditions::BdyTag> bc_geometry_map
 // future options
 //     { "read_file", boundary_conditions::read_file }
 
-static std::map<std::string, boundary_conditions::BCHydro> bc_type_map
+static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_model_map
 {
     { "no_velocity", boundary_conditions::noVelocityBC },
     { "constant_velocity", boundary_conditions::constantVelocityBC },
@@ -112,11 +113,13 @@ static std::map<std::string, boundary_conditions::BCHydro> bc_type_map
     { "piston_velocity", boundary_conditions::pistonVelocityBC }
 };
 // future options
-//    { "displacement",          boundary_conditions::displacement          },
-//    { "acceleration",          boundary_conditions::acceleration          },
-//    { "pressure",              boundary_conditions::pressure              },
-//    { "temperature",           boundary_conditions::temperature           },
-//    { "contact",               boundary_conditions::contact               }
+//    { "displacement",          boundary_conditions::displacementBC          },
+//    { "acceleration",          boundary_conditions::accelerationBC          },
+//    { "pressure",              boundary_conditions::pressureBC              },
+//    { "temperature",           boundary_conditions::temperatureBC           },
+//    { "contact",               boundary_conditions::contactBC               }
+
+
 
 static std::map<std::string, boundary_conditions::BCDirection> bc_direction_map
 {
@@ -156,7 +159,7 @@ struct BoundaryConditionEnums_t
 {
     solver_input::method solver = solver_input::NONE; ///< Numerical solver method
 
-    boundary_conditions::BCHydro BCHydroType;    ///< Type of boundary condition
+    boundary_conditions::BCVelocityModels BCVelocityModel = boundary_conditions::noVelocityBC;    ///< Type of velocity boundary condition
 
     boundary_conditions::BCDirection Direction; ///< Boundary condition direction
 
@@ -207,6 +210,15 @@ struct BoundaryCondition_t
     // enums to select BC capabilities, some enums are needed on the host side and device side
     DCArrayKokkos<BoundaryConditionEnums_t> BoundaryConditionEnums;
 
+    // making a psuedo dual ragged right
+    DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver, ids)
+    DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver)
+
+    // keep adding ragged storage for the other BC models -- temp, displacement, etc.
+    // DCArrayKokkos<size_t> temp_bdy_sets_in_solver;     // (solver, ids)
+    // DCArrayKokkos<size_t> num_temp_bdy_sets_in_solver; // (solver)
+
+
     // global variables for boundary condition models
     DCArrayKokkos<double> bc_global_vars; // it is only 4 values, so ragged doesn't make sense now
 
@@ -220,7 +232,8 @@ struct BoundaryCondition_t
 static std::vector<std::string> str_bc_inps
 {
     "solver",
-    "type",
+    "solver_id",
+    "velocity_model",
     "geometry",
     "direction",
     "value",

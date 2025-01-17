@@ -57,6 +57,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 {
     std::cout << "In execute function in SGH3D solver" << std::endl;
 
+
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
     // double tiny  = SimulationParamaters.dynamic_options.tiny;
     double small = SimulationParamaters.dynamic_options.small;
@@ -87,7 +88,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     double graphics_time = 0.0; // the times for writing graphics dump
 
     std::cout << "Applying initial boundary conditions" << std::endl;
-    boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
+    boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value, this->solver_id); // Time value = 0.0;
 
     // extensive energy tallies over the entire mesh
     double IE_t0 = 0.0;
@@ -297,7 +298,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             } // end for mat_id
 
-
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
                             dt,
@@ -307,7 +307,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.corner.force);
 
             // ---- apply velocity boundary conditions to the boundary patches----
-            boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);
+            boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value, this->solver_id);
 
             // ---- apply contact boundary conditions to the boundary patches----
             boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
