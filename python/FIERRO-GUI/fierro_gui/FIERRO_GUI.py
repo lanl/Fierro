@@ -219,6 +219,7 @@ class FIERRO_GUI(Ui_MainWindow):
         
         # Load menu
         self.actionOpen.triggered.connect(self.open_load_dialog)
+
         
         def loadingAnimation():
             hi = 1
@@ -1083,6 +1084,11 @@ class FIERRO_GUI(Ui_MainWindow):
         def global_mesh_click():
             Mesh_Builder_WInput(self, self.GLOBAL_MESH, self.global_mesh_dir)
         self.BGenerateGlobalMesh.clicked.connect(global_mesh_click)
+        
+        # Paraview camera settings
+        def reset_camera():
+            pvsimple.ResetCamera()
+        self.BResetCamera.clicked.connect(reset_camera)
             
         # ======= HOMOGENIZATION PIPELINE =======
         Homogenization(self)
@@ -1150,7 +1156,7 @@ class FIERRO_GUI(Ui_MainWindow):
         
     # Load file
     def open_load_dialog(self):
-        # Temporairly disconnect unit function
+        # Temporairly disconnect functions
         self.INUnits.currentIndexChanged.disconnect()
         # Load GUI
         Load(self)
@@ -1193,7 +1199,7 @@ class FIERRO_GUI(Ui_MainWindow):
                 for i in range(rows):
                     self.INMaterial_2.addItem(self.TMaterials_2.item(i,0).text())
             
-        # Reconnect unit function
+        # Reconnect functions
         self.INUnits.currentIndexChanged.connect(self.units)
         self.old_units = self.INUnits.currentText()
         self.new_units = 'new'

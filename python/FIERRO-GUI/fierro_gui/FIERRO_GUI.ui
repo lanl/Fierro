@@ -39,7 +39,7 @@
    <string notr="true"/>
   </property>
   <property name="toolButtonStyle">
-   <enum>Qt::ToolButtonIconOnly</enum>
+   <enum>Qt::ToolButtonStyle::ToolButtonIconOnly</enum>
   </property>
   <property name="dockNestingEnabled">
    <bool>false</bool>
@@ -102,10 +102,10 @@
        <bool>false</bool>
       </property>
       <property name="focusPolicy">
-       <enum>Qt::NoFocus</enum>
+       <enum>Qt::FocusPolicy::NoFocus</enum>
       </property>
       <property name="contextMenuPolicy">
-       <enum>Qt::NoContextMenu</enum>
+       <enum>Qt::ContextMenuPolicy::NoContextMenu</enum>
       </property>
       <property name="acceptDrops">
        <bool>true</bool>
@@ -114,7 +114,7 @@
        <number>-1</number>
       </property>
       <property name="layoutDirection">
-       <enum>Qt::LeftToRight</enum>
+       <enum>Qt::LayoutDirection::LeftToRight</enum>
       </property>
       <property name="autoFillBackground">
        <bool>false</bool>
@@ -123,13 +123,13 @@
        <string notr="true"/>
       </property>
       <property name="tabPosition">
-       <enum>QTabWidget::North</enum>
+       <enum>QTabWidget::TabPosition::North</enum>
       </property>
       <property name="tabShape">
-       <enum>QTabWidget::Rounded</enum>
+       <enum>QTabWidget::TabShape::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>6</number>
+       <number>8</number>
       </property>
       <property name="iconSize">
        <size>
@@ -138,7 +138,7 @@
        </size>
       </property>
       <property name="elideMode">
-       <enum>Qt::ElideRight</enum>
+       <enum>Qt::TextElideMode::ElideRight</enum>
       </property>
       <property name="usesScrollButtons">
        <bool>false</bool>
@@ -287,10 +287,10 @@
        </size>
       </property>
       <property name="frameShape">
-       <enum>QFrame::Box</enum>
+       <enum>QFrame::Shape::Box</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
+       <enum>QFrame::Shadow::Raised</enum>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_10">
        <property name="leftMargin">
@@ -305,7 +305,7 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item alignment="Qt::AlignTop">
+       <item alignment="Qt::AlignmentFlag::AlignTop">
         <widget class="QStackedWidget" name="ToolWindow">
          <property name="enabled">
           <bool>true</bool>
@@ -349,7 +349,7 @@
           <bool>false</bool>
          </property>
          <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
+          <enum>QFrame::Shape::NoFrame</enum>
          </property>
          <property name="lineWidth">
           <number>0</number>
@@ -358,7 +358,7 @@
           <number>1</number>
          </property>
          <property name="currentIndex">
-          <number>8</number>
+          <number>6</number>
          </property>
          <widget class="QWidget" name="TitleTool">
           <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -377,7 +377,7 @@
            <property name="bottomMargin">
             <number>20</number>
            </property>
-           <item alignment="Qt::AlignHCenter">
+           <item alignment="Qt::AlignmentFlag::AlignHCenter">
             <widget class="QLabel" name="LosAlamosLogo">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
@@ -405,10 +405,10 @@
            <item>
             <spacer name="verticalSpacer_7">
              <property name="orientation">
-              <enum>Qt::Vertical</enum>
+              <enum>Qt::Orientation::Vertical</enum>
              </property>
              <property name="sizeType">
-              <enum>QSizePolicy::Expanding</enum>
+              <enum>QSizePolicy::Policy::Expanding</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -418,7 +418,7 @@
              </property>
             </spacer>
            </item>
-           <item alignment="Qt::AlignHCenter">
+           <item alignment="Qt::AlignmentFlag::AlignHCenter">
             <widget class="QLabel" name="EVPFFTLogo">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
@@ -458,10 +458,10 @@
            <item>
             <spacer name="verticalSpacer_6">
              <property name="orientation">
-              <enum>Qt::Vertical</enum>
+              <enum>Qt::Orientation::Vertical</enum>
              </property>
              <property name="sizeType">
-              <enum>QSizePolicy::Expanding</enum>
+              <enum>QSizePolicy::Policy::Expanding</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -474,7 +474,7 @@
            <item>
             <widget class="QFrame" name="AdditionalSoftware">
              <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_10">
               <property name="spacing">
@@ -513,7 +513,7 @@
                  </sizepolicy>
                 </property>
                 <property name="frameShape">
-                 <enum>QFrame::NoFrame</enum>
+                 <enum>QFrame::Shape::NoFrame</enum>
                 </property>
                 <layout class="QHBoxLayout" name="horizontalLayout_5">
                  <property name="spacing">
@@ -604,10 +604,10 @@
            <item>
             <widget class="QFrame" name="frame_30">
              <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
+              <enum>QFrame::Shadow::Raised</enum>
              </property>
              <layout class="QFormLayout" name="formLayout_23">
               <property name="leftMargin">
@@ -677,7 +677,7 @@
                 </item>
                 <item>
                  <property name="text">
-                  <string>Bulk Forming</string>
+                  <string>Bulk Deformation</string>
                  </property>
                 </item>
                </widget>
@@ -685,7 +685,7 @@
              </layout>
             </widget>
            </item>
-           <item alignment="Qt::AlignTop">
+           <item alignment="Qt::AlignmentFlag::AlignTop">
             <widget class="QStackedWidget" name="PipelineExtras">
              <property name="currentIndex">
               <number>3</number>
@@ -758,7 +758,7 @@
            <item>
             <spacer name="verticalSpacer_2">
              <property name="orientation">
-              <enum>Qt::Vertical</enum>
+              <enum>Qt::Orientation::Vertical</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -779,7 +779,7 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_15">
            <property name="sizeConstraint">
-            <enum>QLayout::SetDefaultConstraint</enum>
+            <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
            </property>
            <property name="topMargin">
             <number>0</number>
@@ -799,23 +799,23 @@
               </sizepolicy>
              </property>
              <property name="layoutDirection">
-              <enum>Qt::LeftToRight</enum>
+              <enum>Qt::LayoutDirection::LeftToRight</enum>
              </property>
              <property name="autoFillBackground">
               <bool>false</bool>
              </property>
              <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <layout class="QFormLayout" name="_2">
               <property name="fieldGrowthPolicy">
-               <enum>QFormLayout::FieldsStayAtSizeHint</enum>
+               <enum>QFormLayout::FieldGrowthPolicy::FieldsStayAtSizeHint</enum>
               </property>
               <property name="rowWrapPolicy">
-               <enum>QFormLayout::DontWrapRows</enum>
+               <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
               </property>
               <property name="labelAlignment">
-               <set>Qt::AlignRight</set>
+               <set>Qt::AlignmentFlag::AlignRight</set>
               </property>
               <property name="horizontalSpacing">
                <number>0</number>
@@ -860,7 +860,7 @@
               <item row="3" column="0" colspan="2">
                <widget class="Line" name="line_3">
                 <property name="orientation">
-                 <enum>Qt::Vertical</enum>
+                 <enum>Qt::Orientation::Vertical</enum>
                 </property>
                </widget>
               </item>
@@ -886,13 +886,13 @@
              </item>
             </widget>
            </item>
-           <item alignment="Qt::AlignTop">
+           <item alignment="Qt::AlignmentFlag::AlignTop">
             <widget class="QFrame" name="frame_31">
              <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
+              <enum>QFrame::Shadow::Raised</enum>
              </property>
              <layout class="QFormLayout" name="formLayout_24">
               <property name="leftMargin">
@@ -1036,10 +1036,10 @@
               </size>
              </property>
              <property name="layoutDirection">
-              <enum>Qt::LeftToRight</enum>
+              <enum>Qt::LayoutDirection::LeftToRight</enum>
              </property>
              <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="lineWidth">
               <number>1</number>
@@ -1048,13 +1048,13 @@
               <number>1</number>
              </property>
              <property name="verticalScrollBarPolicy">
-              <enum>Qt::ScrollBarAsNeeded</enum>
+              <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
              </property>
              <property name="horizontalScrollBarPolicy">
-              <enum>Qt::ScrollBarAsNeeded</enum>
+              <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
              </property>
              <property name="sizeAdjustPolicy">
-              <enum>QAbstractScrollArea::AdjustToContents</enum>
+              <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContents</enum>
              </property>
              <property name="widgetResizable">
               <bool>true</bool>
@@ -1088,7 +1088,7 @@
                 <number>0</number>
                </property>
                <property name="sizeConstraint">
-                <enum>QLayout::SetDefaultConstraint</enum>
+                <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
                </property>
                <property name="leftMargin">
                 <number>0</number>
@@ -1120,7 +1120,7 @@
                   <bool>false</bool>
                  </property>
                  <property name="focusPolicy">
-                  <enum>Qt::NoFocus</enum>
+                  <enum>Qt::FocusPolicy::NoFocus</enum>
                  </property>
                  <property name="autoFillBackground">
                   <bool>false</bool>
@@ -1171,10 +1171,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_8">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_17">
                       <property name="leftMargin">
@@ -1210,7 +1210,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <string>X</string>
                         </property>
                         <property name="textFormat">
-                         <enum>Qt::PlainText</enum>
+                         <enum>Qt::TextFormat::PlainText</enum>
                         </property>
                        </widget>
                       </item>
@@ -1329,10 +1329,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_9">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_10">
                       <property name="leftMargin">
@@ -1458,10 +1458,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_18">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_12">
                       <property name="leftMargin">
@@ -1615,7 +1615,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_17">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -1629,7 +1629,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </widget>
                  <widget class="QWidget" name="ImportImageStackTool">
                   <layout class="QVBoxLayout" name="verticalLayout_16">
-                   <item alignment="Qt::AlignTop">
+                   <item alignment="Qt::AlignmentFlag::AlignTop">
                     <widget class="QLabel" name="LImageStack">
                      <property name="font">
                       <font>
@@ -1639,7 +1639,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       </font>
                      </property>
                      <property name="layoutDirection">
-                      <enum>Qt::LeftToRight</enum>
+                      <enum>Qt::LayoutDirection::LeftToRight</enum>
                      </property>
                      <property name="text">
                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Image Stack Conversion&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1649,10 +1649,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_29">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_22">
                       <property name="leftMargin">
@@ -1678,7 +1678,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <string>Directory:</string>
                         </property>
                         <property name="textFormat">
-                         <enum>Qt::PlainText</enum>
+                         <enum>Qt::TextFormat::PlainText</enum>
                         </property>
                        </widget>
                       </item>
@@ -1703,7 +1703,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <string>Image File Format:</string>
                         </property>
                         <property name="textFormat">
-                         <enum>Qt::PlainText</enum>
+                         <enum>Qt::TextFormat::PlainText</enum>
                         </property>
                        </widget>
                       </item>
@@ -1723,10 +1723,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_4">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QHBoxLayout" name="horizontalLayout_3">
                       <property name="spacing">
@@ -1782,7 +1782,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_3">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -1796,7 +1796,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </widget>
                  <widget class="QWidget" name="page_13">
                   <layout class="QVBoxLayout" name="verticalLayout_27">
-                   <item alignment="Qt::AlignTop">
+                   <item alignment="Qt::AlignmentFlag::AlignTop">
                     <widget class="QLabel" name="LImageStack_2">
                      <property name="font">
                       <font>
@@ -1806,20 +1806,20 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       </font>
                      </property>
                      <property name="layoutDirection">
-                      <enum>Qt::LeftToRight</enum>
+                      <enum>Qt::LayoutDirection::LeftToRight</enum>
                      </property>
                      <property name="text">
                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Data Viewer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                      </property>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignTop">
+                   <item alignment="Qt::AlignmentFlag::AlignTop">
                     <widget class="QFrame" name="frame_20">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_10">
                       <property name="leftMargin">
@@ -1860,7 +1860,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_4">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -1884,7 +1884,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_6">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_14">
                       <property name="leftMargin">
@@ -1958,10 +1958,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          </property>
                         </widget>
                        </item>
-                       <item alignment="Qt::AlignTop">
+                       <item alignment="Qt::AlignmentFlag::AlignTop">
                         <widget class="QFrame" name="frame_10">
                          <property name="frameShape">
-                          <enum>QFrame::NoFrame</enum>
+                          <enum>QFrame::Shape::NoFrame</enum>
                          </property>
                          <layout class="QFormLayout" name="formLayout_15">
                           <property name="leftMargin">
@@ -2053,7 +2053,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item>
                         <widget class="QFrame" name="frame_11">
                          <property name="frameShape">
-                          <enum>QFrame::NoFrame</enum>
+                          <enum>QFrame::Shape::NoFrame</enum>
                          </property>
                          <layout class="QFormLayout" name="formLayout_16">
                           <property name="leftMargin">
@@ -2124,7 +2124,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item>
                         <spacer name="verticalSpacer_15">
                          <property name="orientation">
-                          <enum>Qt::Vertical</enum>
+                          <enum>Qt::Orientation::Vertical</enum>
                          </property>
                          <property name="sizeHint" stdset="0">
                           <size>
@@ -2148,7 +2148,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item>
                         <widget class="QFrame" name="frame_12">
                          <property name="frameShape">
-                          <enum>QFrame::NoFrame</enum>
+                          <enum>QFrame::Shape::NoFrame</enum>
                          </property>
                          <layout class="QFormLayout" name="formLayout_17">
                           <property name="leftMargin">
@@ -2189,7 +2189,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item>
                         <spacer name="verticalSpacer_16">
                          <property name="orientation">
-                          <enum>Qt::Vertical</enum>
+                          <enum>Qt::Orientation::Vertical</enum>
                          </property>
                          <property name="sizeHint" stdset="0">
                           <size>
@@ -2289,7 +2289,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_5">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -2351,10 +2351,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_22">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_16">
                       <property name="leftMargin">
@@ -2439,10 +2439,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       </size>
                      </property>
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_2">
                       <property name="leftMargin">
@@ -2548,10 +2548,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       </size>
                      </property>
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_9">
                       <property name="leftMargin">
@@ -2651,7 +2651,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_13">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -2692,7 +2692,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </font>
              </property>
              <property name="editTriggers">
-              <set>QAbstractItemView::NoEditTriggers</set>
+              <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
              </property>
              <property name="rowCount">
               <number>0</number>
@@ -2778,13 +2778,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
              </property>
             </widget>
            </item>
-           <item alignment="Qt::AlignTop">
+           <item alignment="Qt::AlignmentFlag::AlignTop">
             <widget class="QFrame" name="frame_5">
              <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
+              <enum>QFrame::Shadow::Raised</enum>
              </property>
              <layout class="QFormLayout" name="formLayout_5">
               <item row="0" column="0">
@@ -2894,7 +2894,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
              </layout>
             </widget>
            </item>
-           <item alignment="Qt::AlignTop">
+           <item alignment="Qt::AlignmentFlag::AlignTop">
             <widget class="QStackedWidget" name="MeshInputs2">
              <property name="currentIndex">
               <number>0</number>
@@ -3233,7 +3233,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QFrame" name="Cylindrical2DInputs2">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <layout class="QHBoxLayout" name="horizontalLayout_13">
                   <property name="topMargin">
@@ -3252,7 +3252,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <item>
                    <widget class="QLineEdit" name="INInnerRadiusC2D">
                     <property name="inputMethodHints">
-                     <set>Qt::ImhNone</set>
+                     <set>Qt::InputMethodHint::ImhNone</set>
                     </property>
                    </widget>
                   </item>
@@ -3262,7 +3262,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QFrame" name="Cylindrical2DInputs">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_5">
                   <property name="topMargin">
@@ -3288,7 +3288,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <item row="1" column="4">
                    <widget class="QLineEdit" name="INLengthThetaC2D">
                     <property name="inputMethodHints">
-                     <set>Qt::ImhNone</set>
+                     <set>Qt::InputMethodHint::ImhNone</set>
                     </property>
                     <property name="placeholderText">
                      <string>theta (deg)</string>
@@ -3305,7 +3305,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <item row="1" column="2">
                    <widget class="QLineEdit" name="INLengthOutRadC2D">
                     <property name="inputMethodHints">
-                     <set>Qt::ImhNone</set>
+                     <set>Qt::InputMethodHint::ImhNone</set>
                     </property>
                     <property name="placeholderText">
                      <string>outer radius</string>
@@ -3322,7 +3322,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <item row="0" column="4">
                    <widget class="QLineEdit" name="INOriginYC2D">
                     <property name="inputMethodHints">
-                     <set>Qt::ImhNone</set>
+                     <set>Qt::InputMethodHint::ImhNone</set>
                     </property>
                     <property name="placeholderText">
                      <string>Y</string>
@@ -3360,7 +3360,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <item row="2" column="4">
                    <widget class="QLineEdit" name="INElementsArcC2D">
                     <property name="inputMethodHints">
-                     <set>Qt::ImhNone</set>
+                     <set>Qt::InputMethodHint::ImhNone</set>
                     </property>
                     <property name="placeholderText">
                      <string>arc </string>
@@ -3370,7 +3370,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <item row="0" column="2">
                    <widget class="QLineEdit" name="INOriginXC2D">
                     <property name="inputMethodHints">
-                     <set>Qt::ImhNone</set>
+                     <set>Qt::InputMethodHint::ImhNone</set>
                     </property>
                     <property name="text">
                      <string/>
@@ -3383,7 +3383,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <item row="2" column="2">
                    <widget class="QLineEdit" name="INElementsRadialC2D">
                     <property name="inputMethodHints">
-                     <set>Qt::ImhNone</set>
+                     <set>Qt::InputMethodHint::ImhNone</set>
                     </property>
                     <property name="placeholderText">
                      <string>radial axis</string>
@@ -3440,7 +3440,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QFrame" name="Cylindrical3DInputs2">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <layout class="QHBoxLayout" name="horizontalLayout_14">
                   <property name="topMargin">
@@ -3465,7 +3465,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QFrame" name="Cylindrical3DInputs">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_6">
                   <property name="topMargin">
@@ -3662,7 +3662,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <item>
             <spacer name="verticalSpacer">
              <property name="orientation">
-              <enum>Qt::Vertical</enum>
+              <enum>Qt::Orientation::Vertical</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -3722,7 +3722,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </size>
              </property>
              <property name="elideMode">
-              <enum>Qt::ElideLeft</enum>
+              <enum>Qt::TextElideMode::ElideLeft</enum>
              </property>
              <widget class="QWidget" name="DefineMaterials">
               <attribute name="icon">
@@ -3792,13 +3792,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <property name="bottomMargin">
                     <number>0</number>
                    </property>
-                   <item alignment="Qt::AlignTop">
+                   <item alignment="Qt::AlignmentFlag::AlignTop">
                     <widget class="QFrame" name="frame_32">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_25">
                       <item row="0" column="0">
@@ -3861,7 +3861,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <string>Artificial Viscosity:</string>
                         </property>
                         <property name="textFormat">
-                         <enum>Qt::PlainText</enum>
+                         <enum>Qt::TextFormat::PlainText</enum>
                         </property>
                        </widget>
                       </item>
@@ -3907,7 +3907,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       </sizepolicy>
                      </property>
                      <property name="editTriggers">
-                      <set>QAbstractItemView::NoEditTriggers</set>
+                      <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
                      </property>
                      <property name="rowCount">
                       <number>0</number>
@@ -3981,7 +3981,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_33">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_11">
                       <property name="leftMargin">
@@ -4215,7 +4215,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="MaterialInputs">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_7">
                       <property name="leftMargin">
@@ -4250,7 +4250,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <item row="0" column="2">
                        <widget class="QFrame" name="frame_35">
                         <property name="frameShape">
-                         <enum>QFrame::NoFrame</enum>
+                         <enum>QFrame::Shape::NoFrame</enum>
                         </property>
                         <layout class="QHBoxLayout" name="horizontalLayout_15">
                          <property name="leftMargin">
@@ -4271,7 +4271,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <item row="0" column="3">
                        <widget class="QFrame" name="frame_34">
                         <property name="frameShape">
-                         <enum>QFrame::NoFrame</enum>
+                         <enum>QFrame::Shape::NoFrame</enum>
                         </property>
                         <layout class="QHBoxLayout" name="horizontalLayout_11">
                          <property name="leftMargin">
@@ -4292,7 +4292,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </layout>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignTop">
+                   <item alignment="Qt::AlignmentFlag::AlignTop">
                     <widget class="QTabWidget" name="MaterialMenu">
                      <property name="enabled">
                       <bool>true</bool>
@@ -4324,10 +4324,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item>
                         <widget class="QFrame" name="frame_24">
                          <property name="frameShape">
-                          <enum>QFrame::NoFrame</enum>
+                          <enum>QFrame::Shape::NoFrame</enum>
                          </property>
                          <property name="frameShadow">
-                          <enum>QFrame::Raised</enum>
+                          <enum>QFrame::Shadow::Raised</enum>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_19">
                           <property name="leftMargin">
@@ -4352,7 +4352,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           <item row="0" column="1">
                            <widget class="QFrame" name="frame_36">
                             <property name="frameShape">
-                             <enum>QFrame::NoFrame</enum>
+                             <enum>QFrame::Shape::NoFrame</enum>
                             </property>
                             <layout class="QHBoxLayout" name="horizontalLayout_18">
                              <property name="leftMargin">
@@ -4446,7 +4446,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <item row="2" column="1">
                             <spacer name="verticalSpacer_14">
                              <property name="orientation">
-                              <enum>Qt::Vertical</enum>
+                              <enum>Qt::Orientation::Vertical</enum>
                              </property>
                              <property name="sizeHint" stdset="0">
                               <size>
@@ -4489,13 +4489,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <property name="bottomMargin">
                             <number>0</number>
                            </property>
-                           <item alignment="Qt::AlignTop">
+                           <item alignment="Qt::AlignmentFlag::AlignTop">
                             <widget class="QFrame" name="frame_37">
                              <property name="frameShape">
-                              <enum>QFrame::NoFrame</enum>
+                              <enum>QFrame::Shape::NoFrame</enum>
                              </property>
                              <property name="frameShadow">
-                              <enum>QFrame::Raised</enum>
+                              <enum>QFrame::Shadow::Raised</enum>
                              </property>
                              <layout class="QFormLayout" name="formLayout_27">
                               <property name="leftMargin">
@@ -4539,7 +4539,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <item>
                             <widget class="QFrame" name="TransverslyIsotropicMat">
                              <property name="frameShape">
-                              <enum>QFrame::NoFrame</enum>
+                              <enum>QFrame::Shape::NoFrame</enum>
                              </property>
                              <layout class="QHBoxLayout" name="horizontalLayout_19">
                               <property name="spacing">
@@ -4560,7 +4560,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               <item>
                                <widget class="QFrame" name="TransverseInPlane">
                                 <property name="frameShape">
-                                 <enum>QFrame::NoFrame</enum>
+                                 <enum>QFrame::Shape::NoFrame</enum>
                                 </property>
                                 <layout class="QVBoxLayout" name="verticalLayout_53">
                                  <property name="spacing">
@@ -4588,7 +4588,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                  <item>
                                   <widget class="QFrame" name="TransverseInPlaneMat">
                                    <property name="frameShape">
-                                    <enum>QFrame::NoFrame</enum>
+                                    <enum>QFrame::Shape::NoFrame</enum>
                                    </property>
                                    <layout class="QGridLayout" name="gridLayout_14">
                                     <item row="1" column="1">
@@ -4639,7 +4639,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               <item>
                                <widget class="QFrame" name="TransverseOutOfPlane">
                                 <property name="frameShape">
-                                 <enum>QFrame::NoFrame</enum>
+                                 <enum>QFrame::Shape::NoFrame</enum>
                                 </property>
                                 <layout class="QVBoxLayout" name="verticalLayout_54">
                                  <property name="spacing">
@@ -4667,7 +4667,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                  <item>
                                   <widget class="QFrame" name="TransverseOutOfPlaneMat">
                                    <property name="frameShape">
-                                    <enum>QFrame::NoFrame</enum>
+                                    <enum>QFrame::Shape::NoFrame</enum>
                                    </property>
                                    <layout class="QGridLayout" name="gridLayout_15">
                                     <item row="1" column="1">
@@ -4769,7 +4769,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <item>
                             <spacer name="verticalSpacer_22">
                              <property name="orientation">
-                              <enum>Qt::Vertical</enum>
+                              <enum>Qt::Orientation::Vertical</enum>
                              </property>
                              <property name="sizeHint" stdset="0">
                               <size>
@@ -5199,10 +5199,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <bool>true</bool>
                      </property>
                      <property name="sizeAdjustPolicy">
-                      <enum>QAbstractScrollArea::AdjustToContents</enum>
+                      <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContents</enum>
                      </property>
                      <property name="editTriggers">
-                      <set>QAbstractItemView::NoEditTriggers</set>
+                      <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
                      </property>
                      <property name="rowCount">
                       <number>0</number>
@@ -5354,7 +5354,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="MaterialInputs_2">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_25">
                       <property name="leftMargin">
@@ -5372,7 +5372,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <item row="0" column="2">
                        <widget class="QFrame" name="frame_46">
                         <property name="frameShape">
-                         <enum>QFrame::NoFrame</enum>
+                         <enum>QFrame::Shape::NoFrame</enum>
                         </property>
                         <layout class="QHBoxLayout" name="horizontalLayout_22">
                          <property name="leftMargin">
@@ -5390,7 +5390,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                         </layout>
                        </widget>
                       </item>
-                      <item row="0" column="0" alignment="Qt::AlignRight">
+                      <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignRight">
                        <widget class="QLabel" name="LMaterialName_3">
                         <property name="text">
                          <string>Name:</string>
@@ -5446,7 +5446,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <item row="0" column="3">
                        <widget class="QFrame" name="frame_47">
                         <property name="frameShape">
-                         <enum>QFrame::NoFrame</enum>
+                         <enum>QFrame::Shape::NoFrame</enum>
                         </property>
                         <layout class="QHBoxLayout" name="horizontalLayout_23">
                          <property name="leftMargin">
@@ -5496,13 +5496,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <property name="bottomMargin">
                         <number>20</number>
                        </property>
-                       <item alignment="Qt::AlignHCenter">
+                       <item alignment="Qt::AlignmentFlag::AlignHCenter">
                         <widget class="QFrame" name="frame_25">
                          <property name="frameShape">
-                          <enum>QFrame::NoFrame</enum>
+                          <enum>QFrame::Shape::NoFrame</enum>
                          </property>
                          <property name="frameShadow">
-                          <enum>QFrame::Raised</enum>
+                          <enum>QFrame::Shadow::Raised</enum>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_20">
                           <property name="leftMargin">
@@ -5527,7 +5527,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           <item row="0" column="1">
                            <widget class="QFrame" name="frame_44">
                             <property name="frameShape">
-                             <enum>QFrame::NoFrame</enum>
+                             <enum>QFrame::Shape::NoFrame</enum>
                             </property>
                             <layout class="QHBoxLayout" name="horizontalLayout_20">
                              <property name="leftMargin">
@@ -5635,7 +5635,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <item row="2" column="1">
                             <spacer name="verticalSpacer_25">
                              <property name="orientation">
-                              <enum>Qt::Vertical</enum>
+                              <enum>Qt::Orientation::Vertical</enum>
                              </property>
                              <property name="sizeHint" stdset="0">
                               <size>
@@ -5664,13 +5664,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <property name="bottomMargin">
                             <number>0</number>
                            </property>
-                           <item alignment="Qt::AlignTop">
+                           <item alignment="Qt::AlignmentFlag::AlignTop">
                             <widget class="QFrame" name="frame_45">
                              <property name="frameShape">
-                              <enum>QFrame::NoFrame</enum>
+                              <enum>QFrame::Shape::NoFrame</enum>
                              </property>
                              <property name="frameShadow">
-                              <enum>QFrame::Raised</enum>
+                              <enum>QFrame::Shadow::Raised</enum>
                              </property>
                              <layout class="QFormLayout" name="formLayout_28">
                               <property name="leftMargin">
@@ -5714,7 +5714,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <item>
                             <widget class="QFrame" name="TransverslyIsotropicMat_2">
                              <property name="frameShape">
-                              <enum>QFrame::NoFrame</enum>
+                              <enum>QFrame::Shape::NoFrame</enum>
                              </property>
                              <layout class="QHBoxLayout" name="horizontalLayout_21">
                               <property name="spacing">
@@ -5735,7 +5735,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               <item>
                                <widget class="QFrame" name="TransverseInPlane_2">
                                 <property name="frameShape">
-                                 <enum>QFrame::NoFrame</enum>
+                                 <enum>QFrame::Shape::NoFrame</enum>
                                 </property>
                                 <layout class="QVBoxLayout" name="verticalLayout_61">
                                  <property name="spacing">
@@ -5763,7 +5763,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                  <item>
                                   <widget class="QFrame" name="TransverseInPlaneMat_2">
                                    <property name="frameShape">
-                                    <enum>QFrame::NoFrame</enum>
+                                    <enum>QFrame::Shape::NoFrame</enum>
                                    </property>
                                    <layout class="QGridLayout" name="gridLayout_22">
                                     <item row="1" column="1">
@@ -5814,7 +5814,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                               <item>
                                <widget class="QFrame" name="TransverseOutOfPlane_2">
                                 <property name="frameShape">
-                                 <enum>QFrame::NoFrame</enum>
+                                 <enum>QFrame::Shape::NoFrame</enum>
                                 </property>
                                 <layout class="QVBoxLayout" name="verticalLayout_62">
                                  <property name="spacing">
@@ -5842,7 +5842,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                  <item>
                                   <widget class="QFrame" name="TransverseOutOfPlaneMat_2">
                                    <property name="frameShape">
-                                    <enum>QFrame::NoFrame</enum>
+                                    <enum>QFrame::Shape::NoFrame</enum>
                                    </property>
                                    <layout class="QGridLayout" name="gridLayout_23">
                                     <item row="1" column="1">
@@ -5944,7 +5944,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <item>
                             <spacer name="verticalSpacer_26">
                              <property name="orientation">
-                              <enum>Qt::Vertical</enum>
+                              <enum>Qt::Orientation::Vertical</enum>
                              </property>
                              <property name="sizeHint" stdset="0">
                               <size>
@@ -6229,7 +6229,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <item>
                             <spacer name="verticalSpacer_32">
                              <property name="orientation">
-                              <enum>Qt::Vertical</enum>
+                              <enum>Qt::Orientation::Vertical</enum>
                              </property>
                              <property name="sizeHint" stdset="0">
                               <size>
@@ -6368,7 +6368,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            <item row="4" column="4">
                             <spacer name="verticalSpacer_33">
                              <property name="orientation">
-                              <enum>Qt::Vertical</enum>
+                              <enum>Qt::Orientation::Vertical</enum>
                              </property>
                              <property name="sizeHint" stdset="0">
                               <size>
@@ -6412,7 +6412,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <property name="bottomMargin">
                         <number>0</number>
                        </property>
-                       <item alignment="Qt::AlignHCenter">
+                       <item alignment="Qt::AlignmentFlag::AlignHCenter">
                         <widget class="QCheckBox" name="BEnablePlasticity">
                          <property name="text">
                           <string>Enable Plasticity</string>
@@ -6483,13 +6483,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                <string>Crystal Axis</string>
                               </attribute>
                               <layout class="QVBoxLayout" name="verticalLayout_65">
-                               <item alignment="Qt::AlignTop">
+                               <item alignment="Qt::AlignmentFlag::AlignTop">
                                 <widget class="QFrame" name="frame_58">
                                  <property name="frameShape">
-                                  <enum>QFrame::NoFrame</enum>
+                                  <enum>QFrame::Shape::NoFrame</enum>
                                  </property>
                                  <property name="frameShadow">
-                                  <enum>QFrame::Raised</enum>
+                                  <enum>QFrame::Shadow::Raised</enum>
                                  </property>
                                  <layout class="QGridLayout" name="gridLayout_33">
                                   <property name="leftMargin">
@@ -6655,10 +6655,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                <item>
                                 <widget class="QFrame" name="frame_56">
                                  <property name="frameShape">
-                                  <enum>QFrame::NoFrame</enum>
+                                  <enum>QFrame::Shape::NoFrame</enum>
                                  </property>
                                  <property name="frameShadow">
-                                  <enum>QFrame::Raised</enum>
+                                  <enum>QFrame::Shadow::Raised</enum>
                                  </property>
                                  <layout class="QHBoxLayout" name="horizontalLayout_7">
                                   <property name="leftMargin">
@@ -6705,20 +6705,20 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                   <string notr="true">background-color: rgb(194, 194, 194)</string>
                                  </property>
                                  <property name="sizeAdjustPolicy">
-                                  <enum>QAbstractScrollArea::AdjustToContentsOnFirstShow</enum>
+                                  <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContentsOnFirstShow</enum>
                                  </property>
                                  <property name="selectionMode">
-                                  <enum>QAbstractItemView::MultiSelection</enum>
+                                  <enum>QAbstractItemView::SelectionMode::MultiSelection</enum>
                                  </property>
                                 </widget>
                                </item>
                                <item>
                                 <widget class="QFrame" name="frame_50">
                                  <property name="frameShape">
-                                  <enum>QFrame::NoFrame</enum>
+                                  <enum>QFrame::Shape::NoFrame</enum>
                                  </property>
                                  <property name="frameShadow">
-                                  <enum>QFrame::Raised</enum>
+                                  <enum>QFrame::Shadow::Raised</enum>
                                  </property>
                                  <layout class="QHBoxLayout" name="horizontalLayout_8">
                                   <property name="spacing">
@@ -6778,7 +6778,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                   <string notr="true"/>
                                  </property>
                                  <property name="frameShape">
-                                  <enum>QFrame::NoFrame</enum>
+                                  <enum>QFrame::Shape::NoFrame</enum>
                                  </property>
                                  <property name="lineWidth">
                                   <number>0</number>
@@ -6804,7 +6804,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                    <property name="bottomMargin">
                                     <number>0</number>
                                    </property>
-                                   <item alignment="Qt::AlignHCenter">
+                                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                                     <widget class="QLabel" name="label_42">
                                      <property name="font">
                                       <font>
@@ -6820,7 +6820,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                    <item>
                                     <widget class="QTableWidget" name="T1">
                                      <property name="editTriggers">
-                                      <set>QAbstractItemView::NoEditTriggers</set>
+                                      <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
                                      </property>
                                      <attribute name="horizontalHeaderDefaultSectionSize">
                                       <number>167</number>
@@ -6998,7 +6998,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                    <property name="bottomMargin">
                                     <number>0</number>
                                    </property>
-                                   <item alignment="Qt::AlignHCenter">
+                                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                                     <widget class="QLabel" name="label_44">
                                      <property name="font">
                                       <font>
@@ -7014,7 +7014,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                    <item>
                                     <widget class="QTableWidget" name="T2">
                                      <property name="editTriggers">
-                                      <set>QAbstractItemView::NoEditTriggers</set>
+                                      <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
                                      </property>
                                      <attribute name="horizontalHeaderDefaultSectionSize">
                                       <number>167</number>
@@ -7192,7 +7192,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                    <property name="bottomMargin">
                                     <number>0</number>
                                    </property>
-                                   <item alignment="Qt::AlignHCenter">
+                                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                                     <widget class="QLabel" name="label_45">
                                      <property name="font">
                                       <font>
@@ -7208,7 +7208,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                    <item>
                                     <widget class="QTableWidget" name="T3">
                                      <property name="editTriggers">
-                                      <set>QAbstractItemView::NoEditTriggers</set>
+                                      <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
                                      </property>
                                      <attribute name="horizontalHeaderDefaultSectionSize">
                                       <number>167</number>
@@ -7386,7 +7386,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                    <property name="bottomMargin">
                                     <number>0</number>
                                    </property>
-                                   <item alignment="Qt::AlignHCenter">
+                                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                                     <widget class="QLabel" name="label_47">
                                      <property name="font">
                                       <font>
@@ -7402,7 +7402,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                    <item>
                                     <widget class="QTableWidget" name="T4">
                                      <property name="editTriggers">
-                                      <set>QAbstractItemView::NoEditTriggers</set>
+                                      <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
                                      </property>
                                      <property name="rowCount">
                                       <number>24</number>
@@ -7731,7 +7731,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                   </sizepolicy>
                                  </property>
                                  <property name="sizeAdjustPolicy">
-                                  <enum>QAbstractScrollArea::AdjustToContentsOnFirstShow</enum>
+                                  <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContentsOnFirstShow</enum>
                                  </property>
                                  <column>
                                   <property name="text">
@@ -7788,10 +7788,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                <item>
                                 <widget class="QFrame" name="frame_57">
                                  <property name="frameShape">
-                                  <enum>QFrame::NoFrame</enum>
+                                  <enum>QFrame::Shape::NoFrame</enum>
                                  </property>
                                  <property name="frameShadow">
-                                  <enum>QFrame::Raised</enum>
+                                  <enum>QFrame::Shadow::Raised</enum>
                                  </property>
                                  <layout class="QVBoxLayout" name="verticalLayout_64">
                                   <property name="spacing">
@@ -7809,13 +7809,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                   <property name="bottomMargin">
                                    <number>0</number>
                                   </property>
-                                  <item alignment="Qt::AlignHCenter">
+                                  <item alignment="Qt::AlignmentFlag::AlignHCenter">
                                    <widget class="QFrame" name="frame_62">
                                     <property name="frameShape">
-                                     <enum>QFrame::NoFrame</enum>
+                                     <enum>QFrame::Shape::NoFrame</enum>
                                     </property>
                                     <property name="frameShadow">
-                                     <enum>QFrame::Raised</enum>
+                                     <enum>QFrame::Shadow::Raised</enum>
                                     </property>
                                     <layout class="QGridLayout" name="gridLayout_32">
                                      <property name="leftMargin">
@@ -7849,10 +7849,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                <item>
                                 <widget class="QFrame" name="frame_55">
                                  <property name="frameShape">
-                                  <enum>QFrame::NoFrame</enum>
+                                  <enum>QFrame::Shape::NoFrame</enum>
                                  </property>
                                  <property name="frameShadow">
-                                  <enum>QFrame::Raised</enum>
+                                  <enum>QFrame::Shadow::Raised</enum>
                                  </property>
                                  <layout class="QGridLayout" name="gridLayout_29">
                                   <property name="leftMargin">
@@ -7990,7 +7990,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                   <item row="5" column="4">
                                    <widget class="QLineEdit" name="INthet1"/>
                                   </item>
-                                  <item row="3" column="0" alignment="Qt::AlignRight">
+                                  <item row="3" column="0" alignment="Qt::AlignmentFlag::AlignRight">
                                    <widget class="QLabel" name="Ltau0xf">
                                     <property name="text">
                                      <string>tau0xf:</string>
@@ -8386,10 +8386,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_61">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QHBoxLayout" name="horizontalLayout_9">
                       <property name="leftMargin">
@@ -8427,10 +8427,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <bool>true</bool>
                      </property>
                      <property name="sizeAdjustPolicy">
-                      <enum>QAbstractScrollArea::AdjustToContents</enum>
+                      <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContents</enum>
                      </property>
                      <property name="editTriggers">
-                      <set>QAbstractItemView::NoEditTriggers</set>
+                      <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
                      </property>
                      <property name="rowCount">
                       <number>0</number>
@@ -8620,10 +8620,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_60">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QHBoxLayout" name="horizontalLayout_6">
                       <property name="leftMargin">
@@ -8697,10 +8697,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_38">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_30">
                       <property name="leftMargin">
@@ -8741,10 +8741,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_39">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QHBoxLayout" name="horizontalLayout_2">
                       <property name="spacing">
@@ -8765,10 +8765,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <item>
                        <widget class="QFrame" name="frame_40">
                         <property name="frameShape">
-                         <enum>QFrame::NoFrame</enum>
+                         <enum>QFrame::Shape::NoFrame</enum>
                         </property>
                         <property name="frameShadow">
-                         <enum>QFrame::Raised</enum>
+                         <enum>QFrame::Shadow::Raised</enum>
                         </property>
                         <layout class="QVBoxLayout" name="verticalLayout_58">
                          <property name="leftMargin">
@@ -8783,7 +8783,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <property name="bottomMargin">
                           <number>0</number>
                          </property>
-                         <item alignment="Qt::AlignTop">
+                         <item alignment="Qt::AlignmentFlag::AlignTop">
                           <widget class="QLabel" name="LDensity">
                            <property name="text">
                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;left&quot;&gt;Density:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -8826,10 +8826,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <item>
                        <widget class="QFrame" name="frame_41">
                         <property name="frameShape">
-                         <enum>QFrame::NoFrame</enum>
+                         <enum>QFrame::Shape::NoFrame</enum>
                         </property>
                         <property name="frameShadow">
-                         <enum>QFrame::Raised</enum>
+                         <enum>QFrame::Shadow::Raised</enum>
                         </property>
                         <layout class="QVBoxLayout" name="verticalLayout_59">
                          <property name="leftMargin">
@@ -8854,10 +8854,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <item>
                           <widget class="QFrame" name="frame_42">
                            <property name="frameShape">
-                            <enum>QFrame::NoFrame</enum>
+                            <enum>QFrame::Shape::NoFrame</enum>
                            </property>
                            <property name="frameShadow">
-                            <enum>QFrame::Raised</enum>
+                            <enum>QFrame::Shadow::Raised</enum>
                            </property>
                            <layout class="QFormLayout" name="formLayout_31">
                             <property name="leftMargin">
@@ -8987,7 +8987,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_43">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_32">
                       <property name="leftMargin">
@@ -9017,7 +9017,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <bool>false</bool>
                         </property>
                         <property name="arrowType">
-                         <enum>Qt::UpArrow</enum>
+                         <enum>Qt::ArrowType::UpArrow</enum>
                         </property>
                        </widget>
                       </item>
@@ -9033,7 +9033,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          </size>
                         </property>
                         <property name="arrowType">
-                         <enum>Qt::DownArrow</enum>
+                         <enum>Qt::ArrowType::DownArrow</enum>
                         </property>
                        </widget>
                       </item>
@@ -9050,7 +9050,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_24">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -9067,10 +9067,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_48">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_33">
                       <property name="leftMargin">
@@ -9124,10 +9124,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       </sizepolicy>
                      </property>
                      <property name="sizeAdjustPolicy">
-                      <enum>QAbstractScrollArea::AdjustIgnored</enum>
+                      <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustIgnored</enum>
                      </property>
                      <property name="editTriggers">
-                      <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::EditKeyPressed</set>
+                      <set>QAbstractItemView::EditTrigger::AnyKeyPressed|QAbstractItemView::EditTrigger::EditKeyPressed</set>
                      </property>
                      <attribute name="horizontalHeaderCascadingSectionResizes">
                       <bool>false</bool>
@@ -9160,7 +9160,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_8">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -9177,10 +9177,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_49">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_34">
                       <property name="leftMargin">
@@ -9234,10 +9234,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       </sizepolicy>
                      </property>
                      <property name="sizeAdjustPolicy">
-                      <enum>QAbstractScrollArea::AdjustIgnored</enum>
+                      <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustIgnored</enum>
                      </property>
                      <property name="editTriggers">
-                      <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::EditKeyPressed</set>
+                      <set>QAbstractItemView::EditTrigger::AnyKeyPressed|QAbstractItemView::EditTrigger::EditKeyPressed</set>
                      </property>
                      <attribute name="horizontalHeaderCascadingSectionResizes">
                       <bool>false</bool>
@@ -9270,7 +9270,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_27">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -9291,7 +9291,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <item>
             <spacer name="verticalSpacer_23">
              <property name="orientation">
-              <enum>Qt::Vertical</enum>
+              <enum>Qt::Orientation::Vertical</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -9347,7 +9347,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QFrame" name="bcsettings">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <layout class="QFormLayout" name="formLayout_18">
                   <property name="leftMargin">
@@ -9555,7 +9555,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <spacer name="verticalSpacer_10">
                  <property name="orientation">
-                  <enum>Qt::Vertical</enum>
+                  <enum>Qt::Orientation::Vertical</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -9570,13 +9570,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
              <widget class="QWidget" name="page_22"/>
              <widget class="QWidget" name="page_19">
               <layout class="QVBoxLayout" name="verticalLayout_6">
-               <item alignment="Qt::AlignHCenter">
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                 <widget class="QFrame" name="frame_52">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
+                  <enum>QFrame::Shadow::Raised</enum>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_28">
                   <property name="leftMargin">
@@ -9617,7 +9617,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </item>
                     <item>
                      <property name="text">
-                      <string>ECAP</string>
+                      <string>Shear XY</string>
                      </property>
                     </item>
                    </widget>
@@ -9628,11 +9628,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="Line" name="line">
                  <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                  <enum>Qt::Orientation::Horizontal</enum>
                  </property>
                 </widget>
                </item>
-               <item alignment="Qt::AlignHCenter">
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                 <widget class="QLabel" name="LVgrad">
                  <property name="font">
                   <font>
@@ -9645,7 +9645,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </property>
                 </widget>
                </item>
-               <item alignment="Qt::AlignHCenter">
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                 <widget class="QLabel" name="label_12">
                  <property name="text">
                   <string>--enforced condition--</string>
@@ -9673,13 +9673,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   </size>
                  </property>
                  <property name="focusPolicy">
-                  <enum>Qt::StrongFocus</enum>
+                  <enum>Qt::FocusPolicy::StrongFocus</enum>
                  </property>
                  <property name="sizeAdjustPolicy">
-                  <enum>QAbstractScrollArea::AdjustToContents</enum>
+                  <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContents</enum>
                  </property>
                  <property name="selectionMode">
-                  <enum>QAbstractItemView::NoSelection</enum>
+                  <enum>QAbstractItemView::SelectionMode::NoSelection</enum>
                  </property>
                  <property name="rowCount">
                   <number>3</number>
@@ -9698,7 +9698,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <column/>
                 </widget>
                </item>
-               <item alignment="Qt::AlignHCenter">
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                 <widget class="QLabel" name="LVgradi">
                  <property name="font">
                   <font>
@@ -9731,10 +9731,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   </size>
                  </property>
                  <property name="sizeAdjustPolicy">
-                  <enum>QAbstractScrollArea::AdjustToContents</enum>
+                  <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContents</enum>
                  </property>
                  <property name="selectionMode">
-                  <enum>QAbstractItemView::NoSelection</enum>
+                  <enum>QAbstractItemView::SelectionMode::NoSelection</enum>
                  </property>
                  <property name="rowCount">
                   <number>3</number>
@@ -9753,7 +9753,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <column/>
                 </widget>
                </item>
-               <item alignment="Qt::AlignHCenter">
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                 <widget class="QLabel" name="LCstress">
                  <property name="font">
                   <font>
@@ -9766,7 +9766,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </property>
                 </widget>
                </item>
-               <item alignment="Qt::AlignHCenter">
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                 <widget class="QLabel" name="label_29">
                  <property name="text">
                   <string>--enforced condition--</string>
@@ -9794,10 +9794,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   </size>
                  </property>
                  <property name="sizeAdjustPolicy">
-                  <enum>QAbstractScrollArea::AdjustToContents</enum>
+                  <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContents</enum>
                  </property>
                  <property name="selectionMode">
-                  <enum>QAbstractItemView::NoSelection</enum>
+                  <enum>QAbstractItemView::SelectionMode::NoSelection</enum>
                  </property>
                  <property name="rowCount">
                   <number>3</number>
@@ -9819,7 +9819,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <spacer name="verticalSpacer_11">
                  <property name="orientation">
-                  <enum>Qt::Vertical</enum>
+                  <enum>Qt::Orientation::Vertical</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -9891,7 +9891,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </rect>
                </property>
                <property name="frameShape">
-                <enum>QFrame::NoFrame</enum>
+                <enum>QFrame::Shape::NoFrame</enum>
                </property>
                <layout class="QFormLayout" name="formLayout_13">
                 <property name="verticalSpacing">
@@ -9992,10 +9992,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QFrame" name="frame_2">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
+                  <enum>QFrame::Shadow::Raised</enum>
                  </property>
                  <layout class="QGridLayout" name="gridLayout">
                   <property name="leftMargin">
@@ -10033,10 +10033,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QFrame" name="frame">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
+                  <enum>QFrame::Shadow::Raised</enum>
                  </property>
                  <layout class="QFormLayout" name="formLayout_3">
                   <property name="leftMargin">
@@ -10117,7 +10117,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <spacer name="verticalSpacer_12">
                  <property name="orientation">
-                  <enum>Qt::Vertical</enum>
+                  <enum>Qt::Orientation::Vertical</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -10131,13 +10131,80 @@ li.checked::marker { content: &quot;\2612&quot;; }
              </widget>
              <widget class="QWidget" name="page_23">
               <layout class="QVBoxLayout" name="verticalLayout_34">
-               <item alignment="Qt::AlignTop">
-                <widget class="QFrame" name="frame_54">
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
+                <widget class="QLabel" name="label_69">
+                 <property name="font">
+                  <font>
+                   <bold>true</bold>
+                   <underline>true</underline>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Solver Type</string>
+                 </property>
+                </widget>
+               </item>
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
+                <widget class="QFrame" name="frame_73">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
+                  <enum>QFrame::Shadow::Raised</enum>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_27">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QRadioButton" name="INLargeStrain">
+                    <property name="text">
+                     <string>Large Strain (Default)</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QRadioButton" name="INSmallStrain">
+                    <property name="text">
+                     <string>Small Strain</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
+                <widget class="QLabel" name="label_68">
+                 <property name="font">
+                  <font>
+                   <bold>true</bold>
+                   <underline>true</underline>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Solver Parameters</string>
+                 </property>
+                </widget>
+               </item>
+               <item alignment="Qt::AlignmentFlag::AlignTop">
+                <widget class="QFrame" name="frame_54">
+                 <property name="frameShape">
+                  <enum>QFrame::Shape::NoFrame</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Shadow::Raised</enum>
                  </property>
                  <layout class="QFormLayout" name="formLayout_8">
                   <property name="leftMargin">
@@ -10252,7 +10319,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <spacer name="verticalSpacer_28">
                  <property name="orientation">
-                  <enum>Qt::Vertical</enum>
+                  <enum>Qt::Orientation::Vertical</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -10277,13 +10344,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
              </property>
             </widget>
            </item>
-           <item alignment="Qt::AlignVCenter">
+           <item alignment="Qt::AlignmentFlag::AlignVCenter">
             <widget class="QFrame" name="frame_26">
              <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
+              <enum>QFrame::Shadow::Raised</enum>
              </property>
              <layout class="QFormLayout" name="formLayout_4">
               <property name="leftMargin">
@@ -10330,7 +10397,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <item>
             <widget class="QStackedWidget" name="RunOptions">
              <property name="currentIndex">
-              <number>2</number>
+              <number>1</number>
              </property>
              <widget class="QWidget" name="page_20">
               <layout class="QVBoxLayout" name="verticalLayout_12">
@@ -10344,7 +10411,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <spacer name="verticalSpacer_19">
                  <property name="orientation">
-                  <enum>Qt::Vertical</enum>
+                  <enum>Qt::Orientation::Vertical</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -10358,13 +10425,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
              </widget>
              <widget class="QWidget" name="page_21">
               <layout class="QVBoxLayout" name="verticalLayout_13">
-               <item alignment="Qt::AlignHCenter">
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                 <widget class="QFrame" name="frame_71">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
+                  <enum>QFrame::Shadow::Raised</enum>
                  </property>
                  <layout class="QFormLayout" name="formLayout_26">
                   <property name="leftMargin">
@@ -10402,11 +10469,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QStackedWidget" name="HomogenizationRunWrite">
                  <property name="currentIndex">
-                  <number>1</number>
+                  <number>0</number>
                  </property>
                  <widget class="QWidget" name="page_37">
                   <layout class="QVBoxLayout" name="verticalLayout_73">
-                   <item alignment="Qt::AlignHCenter">
+                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                     <widget class="QLabel" name="label_53">
                      <property name="font">
                       <font>
@@ -10419,13 +10486,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </property>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignHCenter">
+                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                     <widget class="QFrame" name="frame_16">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout">
                       <property name="leftMargin">
@@ -10460,7 +10527,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </layout>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignTop">
+                   <item alignment="Qt::AlignmentFlag::AlignTop">
                     <widget class="QStackedWidget" name="HomogenizationBatch">
                      <property name="currentIndex">
                       <number>1</number>
@@ -10483,10 +10550,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item>
                         <widget class="QFrame" name="frame_19">
                          <property name="frameShape">
-                          <enum>QFrame::NoFrame</enum>
+                          <enum>QFrame::Shape::NoFrame</enum>
                          </property>
                          <property name="frameShadow">
-                          <enum>QFrame::Raised</enum>
+                          <enum>QFrame::Shadow::Raised</enum>
                          </property>
                          <layout class="QFormLayout" name="formLayout_7">
                           <property name="leftMargin">
@@ -10520,7 +10587,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          </layout>
                         </widget>
                        </item>
-                       <item alignment="Qt::AlignHCenter">
+                       <item alignment="Qt::AlignmentFlag::AlignHCenter">
                         <widget class="QFrame" name="frame_17">
                          <property name="sizePolicy">
                           <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -10529,10 +10596,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           </sizepolicy>
                          </property>
                          <property name="frameShape">
-                          <enum>QFrame::NoFrame</enum>
+                          <enum>QFrame::Shape::NoFrame</enum>
                          </property>
                          <property name="frameShadow">
-                          <enum>QFrame::Raised</enum>
+                          <enum>QFrame::Shadow::Raised</enum>
                          </property>
                          <layout class="QFormLayout" name="formLayout_2">
                           <property name="leftMargin">
@@ -10574,13 +10641,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          </property>
                         </widget>
                        </item>
-                       <item alignment="Qt::AlignHCenter">
+                       <item alignment="Qt::AlignmentFlag::AlignHCenter">
                         <widget class="QFrame" name="frame_21">
                          <property name="frameShape">
-                          <enum>QFrame::NoFrame</enum>
+                          <enum>QFrame::Shape::NoFrame</enum>
                          </property>
                          <property name="frameShadow">
-                          <enum>QFrame::Raised</enum>
+                          <enum>QFrame::Shadow::Raised</enum>
                          </property>
                          <layout class="QHBoxLayout" name="horizontalLayout">
                           <property name="leftMargin">
@@ -10634,7 +10701,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </widget>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignHCenter">
+                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                     <widget class="QLabel" name="label_54">
                      <property name="font">
                       <font>
@@ -10647,13 +10714,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </property>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignHCenter">
+                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                     <widget class="QFrame" name="frame_59">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_6">
                       <property name="leftMargin">
@@ -10688,7 +10755,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </layout>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignTop">
+                   <item alignment="Qt::AlignmentFlag::AlignTop">
                     <widget class="QStackedWidget" name="HomogenizationRunType">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -10729,10 +10796,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item>
                         <widget class="QFrame" name="frame_65">
                          <property name="frameShape">
-                          <enum>QFrame::NoFrame</enum>
+                          <enum>QFrame::Shape::NoFrame</enum>
                          </property>
                          <property name="frameShadow">
-                          <enum>QFrame::Raised</enum>
+                          <enum>QFrame::Shadow::Raised</enum>
                          </property>
                          <layout class="QVBoxLayout" name="verticalLayout_74">
                           <property name="leftMargin">
@@ -10756,10 +10823,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                              </sizepolicy>
                             </property>
                             <property name="frameShape">
-                             <enum>QFrame::NoFrame</enum>
+                             <enum>QFrame::Shape::NoFrame</enum>
                             </property>
                             <property name="frameShadow">
-                             <enum>QFrame::Raised</enum>
+                             <enum>QFrame::Shadow::Raised</enum>
                             </property>
                             <layout class="QFormLayout" name="formLayout_9">
                              <property name="leftMargin">
@@ -10787,7 +10854,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 <bool>false</bool>
                                </property>
                                <property name="buttonSymbols">
-                                <enum>QAbstractSpinBox::UpDownArrows</enum>
+                                <enum>QAbstractSpinBox::ButtonSymbols::UpDownArrows</enum>
                                </property>
                                <property name="minimum">
                                 <number>1</number>
@@ -10800,7 +10867,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                             </layout>
                            </widget>
                           </item>
-                          <item alignment="Qt::AlignTop">
+                          <item alignment="Qt::AlignmentFlag::AlignTop">
                            <widget class="QLabel" name="label_65">
                             <property name="text">
                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#797979;&quot;&gt;Warning: mpi could be slower than serial for small models due to initialization and overhead.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -10817,7 +10884,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </widget>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignHCenter">
+                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                     <widget class="QLabel" name="label_64">
                      <property name="font">
                       <font>
@@ -10830,13 +10897,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </property>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignHCenter">
+                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                     <widget class="QFrame" name="frame_64">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_19">
                       <property name="leftMargin">
@@ -10880,10 +10947,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_68">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QHBoxLayout" name="horizontalLayout_25">
                       <property name="leftMargin">
@@ -10932,7 +10999,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_9">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -10956,7 +11023,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_21">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -10974,13 +11041,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
              </widget>
              <widget class="QWidget" name="page_24">
               <layout class="QVBoxLayout" name="verticalLayout_39">
-               <item alignment="Qt::AlignHCenter">
+               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                 <widget class="QFrame" name="frame_72">
                  <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
+                  <enum>QFrame::Shadow::Raised</enum>
                  </property>
                  <layout class="QFormLayout" name="formLayout_29">
                   <property name="leftMargin">
@@ -11015,14 +11082,14 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </layout>
                 </widget>
                </item>
-               <item alignment="Qt::AlignTop">
+               <item alignment="Qt::AlignmentFlag::AlignTop">
                 <widget class="QStackedWidget" name="BFRunWrite">
                  <property name="currentIndex">
-                  <number>1</number>
+                  <number>0</number>
                  </property>
                  <widget class="QWidget" name="page_39">
                   <layout class="QVBoxLayout" name="verticalLayout_76">
-                   <item alignment="Qt::AlignHCenter">
+                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                     <widget class="QLabel" name="label_62">
                      <property name="font">
                       <font>
@@ -11035,13 +11102,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      </property>
                     </widget>
                    </item>
-                   <item alignment="Qt::AlignHCenter">
+                   <item alignment="Qt::AlignmentFlag::AlignHCenter">
                     <widget class="QFrame" name="frame_63">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_11">
                       <property name="leftMargin">
@@ -11108,7 +11175,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           <bool>false</bool>
                          </property>
                          <property name="buttonSymbols">
-                          <enum>QAbstractSpinBox::UpDownArrows</enum>
+                          <enum>QAbstractSpinBox::ButtonSymbols::UpDownArrows</enum>
                          </property>
                          <property name="minimum">
                           <number>1</number>
@@ -11132,10 +11199,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_69">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QHBoxLayout" name="horizontalLayout_26">
                       <property name="leftMargin">
@@ -11179,7 +11246,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </widget>
                  <widget class="QWidget" name="page_40">
                   <layout class="QVBoxLayout" name="verticalLayout_77">
-                   <item alignment="Qt::AlignTop">
+                   <item alignment="Qt::AlignmentFlag::AlignTop">
                     <widget class="QPushButton" name="BBFWriteFiles">
                      <property name="text">
                       <string>Write Input Files</string>
@@ -11189,7 +11256,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_31">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -11206,7 +11273,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <spacer name="verticalSpacer_29">
                  <property name="orientation">
-                  <enum>Qt::Vertical</enum>
+                  <enum>Qt::Orientation::Vertical</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -11249,7 +11316,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </size>
              </property>
              <property name="elideMode">
-              <enum>Qt::ElideLeft</enum>
+              <enum>Qt::TextElideMode::ElideLeft</enum>
              </property>
              <widget class="QWidget" name="Results">
               <attribute name="icon">
@@ -11283,7 +11350,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                <item>
                 <widget class="QStackedWidget" name="PostprocessingOptions">
                  <property name="currentIndex">
-                  <number>1</number>
+                  <number>2</number>
                  </property>
                  <widget class="QWidget" name="page_11">
                   <layout class="QVBoxLayout" name="verticalLayout_45">
@@ -11297,7 +11364,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_15">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <layout class="QHBoxLayout" name="horizontalLayout_17">
                       <property name="spacing">
@@ -11337,7 +11404,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_13">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <layout class="QHBoxLayout" name="horizontalLayout_12">
                       <property name="leftMargin">
@@ -11368,16 +11435,16 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          </size>
                         </property>
                         <property name="popupMode">
-                         <enum>QToolButton::DelayedPopup</enum>
+                         <enum>QToolButton::ToolButtonPopupMode::DelayedPopup</enum>
                         </property>
                         <property name="toolButtonStyle">
-                         <enum>Qt::ToolButtonIconOnly</enum>
+                         <enum>Qt::ToolButtonStyle::ToolButtonIconOnly</enum>
                         </property>
                         <property name="autoRaise">
                          <bool>false</bool>
                         </property>
                         <property name="arrowType">
-                         <enum>Qt::NoArrow</enum>
+                         <enum>Qt::ArrowType::NoArrow</enum>
                         </property>
                        </widget>
                       </item>
@@ -11438,7 +11505,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_14">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <layout class="QHBoxLayout" name="horizontalLayout_16">
                       <property name="leftMargin">
@@ -11483,7 +11550,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          </size>
                         </property>
                         <property name="toolButtonStyle">
-                         <enum>Qt::ToolButtonIconOnly</enum>
+                         <enum>Qt::ToolButtonStyle::ToolButtonIconOnly</enum>
                         </property>
                        </widget>
                       </item>
@@ -11500,7 +11567,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_18">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -11514,10 +11581,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </widget>
                  <widget class="QWidget" name="page_9">
                   <layout class="QVBoxLayout" name="verticalLayout_47">
-                   <item alignment="Qt::AlignTop">
+                   <item alignment="Qt::AlignmentFlag::AlignTop">
                     <widget class="QFrame" name="PreviewResults">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <layout class="QHBoxLayout" name="horizontalLayout_4">
                       <property name="leftMargin">
@@ -11608,10 +11675,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_66">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_20">
                       <property name="leftMargin">
@@ -11636,10 +11703,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <item row="0" column="1">
                        <widget class="QDoubleSpinBox" name="INHDeform">
                         <property name="buttonSymbols">
-                         <enum>QAbstractSpinBox::UpDownArrows</enum>
+                         <enum>QAbstractSpinBox::ButtonSymbols::UpDownArrows</enum>
                         </property>
                         <property name="correctionMode">
-                         <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                         <enum>QAbstractSpinBox::CorrectionMode::CorrectToNearestValue</enum>
                         </property>
                         <property name="decimals">
                          <number>1</number>
@@ -11790,10 +11857,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_23">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_18">
                       <property name="leftMargin">
@@ -11831,7 +11898,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_20">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -11862,10 +11929,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_67">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QFormLayout" name="formLayout_21">
                       <property name="leftMargin">
@@ -11890,10 +11957,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <item row="0" column="1">
                        <widget class="QDoubleSpinBox" name="INBFDeform">
                         <property name="buttonSymbols">
-                         <enum>QAbstractSpinBox::UpDownArrows</enum>
+                         <enum>QAbstractSpinBox::ButtonSymbols::UpDownArrows</enum>
                         </property>
                         <property name="correctionMode">
-                         <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+                         <enum>QAbstractSpinBox::CorrectionMode::CorrectToNearestValue</enum>
                         </property>
                         <property name="decimals">
                          <number>1</number>
@@ -11925,10 +11992,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <widget class="QFrame" name="frame_53">
                      <property name="frameShape">
-                      <enum>QFrame::NoFrame</enum>
+                      <enum>QFrame::Shape::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
-                      <enum>QFrame::Raised</enum>
+                      <enum>QFrame::Shadow::Raised</enum>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_26">
                       <property name="leftMargin">
@@ -11966,7 +12033,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <item>
                     <spacer name="verticalSpacer_30">
                      <property name="orientation">
-                      <enum>Qt::Vertical</enum>
+                      <enum>Qt::Orientation::Vertical</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -11994,10 +12061,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
        <item>
         <widget class="QFrame" name="frame_28">
          <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
+          <enum>QFrame::Shape::NoFrame</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
+          <enum>QFrame::Shadow::Raised</enum>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_48">
           <property name="leftMargin">
@@ -12033,20 +12100,20 @@ li.checked::marker { content: &quot;\2612&quot;; }
              </size>
             </property>
             <property name="focusPolicy">
-             <enum>Qt::NoFocus</enum>
+             <enum>Qt::FocusPolicy::NoFocus</enum>
             </property>
             <property name="contextMenuPolicy">
-             <enum>Qt::NoContextMenu</enum>
+             <enum>Qt::ContextMenuPolicy::NoContextMenu</enum>
             </property>
             <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
+             <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <property name="lineWidth">
              <number>1</number>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_19">
              <property name="spacing">
-              <number>6</number>
+              <number>0</number>
              </property>
              <property name="leftMargin">
               <number>0</number>
@@ -12060,6 +12127,68 @@ li.checked::marker { content: &quot;\2612&quot;; }
              <property name="bottomMargin">
               <number>0</number>
              </property>
+             <item>
+              <widget class="QFrame" name="frame_75">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(82, 87, 110);</string>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::Shape::NoFrame</enum>
+               </property>
+               <property name="frameShadow">
+                <enum>QFrame::Shadow::Raised</enum>
+               </property>
+               <layout class="QHBoxLayout" name="horizontalLayout_29">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item alignment="Qt::AlignmentFlag::AlignRight">
+                 <widget class="QPushButton" name="BResetCamera">
+                  <property name="toolTip">
+                   <string>Reset camera.</string>
+                  </property>
+                  <property name="text">
+                   <string/>
+                  </property>
+                  <property name="icon">
+                   <iconset resource="Icons/IconResourceFile.qrc">
+                    <normaloff>:/Blue Icons/Blue Icons/Zoom.svg</normaloff>:/Blue Icons/Blue Icons/Zoom.svg</iconset>
+                  </property>
+                  <property name="iconSize">
+                   <size>
+                    <width>32</width>
+                    <height>32</height>
+                   </size>
+                  </property>
+                  <property name="autoDefault">
+                   <bool>false</bool>
+                  </property>
+                  <property name="default">
+                   <bool>false</bool>
+                  </property>
+                  <property name="flat">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
              <item>
               <widget class="QSplitter" name="splitter_2">
                <property name="sizePolicy">
@@ -12075,10 +12204,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </size>
                </property>
                <property name="frameShape">
-                <enum>QFrame::NoFrame</enum>
+                <enum>QFrame::Shape::NoFrame</enum>
                </property>
                <property name="orientation">
-                <enum>Qt::Vertical</enum>
+                <enum>Qt::Orientation::Vertical</enum>
                </property>
                <property name="handleWidth">
                 <number>6</number>
@@ -12100,10 +12229,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  <cursorShape>OpenHandCursor</cursorShape>
                 </property>
                 <property name="frameShape">
-                 <enum>QFrame::NoFrame</enum>
+                 <enum>QFrame::Shape::NoFrame</enum>
                 </property>
                 <property name="frameShadow">
-                 <enum>QFrame::Plain</enum>
+                 <enum>QFrame::Shadow::Plain</enum>
                 </property>
                 <property name="lineWidth">
                  <number>0</number>
@@ -12195,7 +12324,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </size>
                 </property>
                 <property name="frameShape">
-                 <enum>QFrame::NoFrame</enum>
+                 <enum>QFrame::Shape::NoFrame</enum>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_22">
                  <property name="spacing">
@@ -12247,7 +12376,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </sizepolicy>
                    </property>
                    <property name="frameShape">
-                    <enum>QFrame::NoFrame</enum>
+                    <enum>QFrame::Shape::NoFrame</enum>
                    </property>
                    <property name="tabChangesFocus">
                     <bool>false</bool>
@@ -12270,13 +12399,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
       </layout>
      </widget>
     </item>
-    <item alignment="Qt::AlignRight">
+    <item alignment="Qt::AlignmentFlag::AlignRight">
      <widget class="QFrame" name="frame_51">
       <property name="frameShape">
-       <enum>QFrame::NoFrame</enum>
+       <enum>QFrame::Shape::NoFrame</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
+       <enum>QFrame::Shadow::Raised</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout_27">
        <property name="leftMargin">

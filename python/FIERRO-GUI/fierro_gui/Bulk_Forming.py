@@ -650,122 +650,6 @@ def Bulk_Forming(self):
             for i in range(self.TMaterials_2.rowCount()):
                 self.INMaterial_3.addItem(self.TMaterials_2.item(i,0).text())
     self.BDeleteMaterial_2.clicked.connect(delete_material_2)
-            
-#    def regenerate_elastic_constants_2():
-#        current_row = self.TMaterials_2.currentRow()
-#        if current_row < 0:
-#            return QMessageBox.warning(QMessageBox(),"Warning","Please select a material from the table")
-#            
-#        # Define Stiffness Matrix
-#        Mstiffness = [[float(self.TMaterials_2.item(current_row,2).text()), float(self.TMaterials_2.item(current_row,3).text()), float(self.TMaterials_2.item(current_row,4).text()),  float(self.TMaterials_2.item(current_row,5).text()), float(self.TMaterials_2.item(current_row,6).text()), float(self.TMaterials_2.item(current_row,7).text())], [float(self.TMaterials_2.item(current_row,3).text()), float(self.TMaterials_2.item(current_row,8).text()), float(self.TMaterials_2.item(current_row,9).text()),  float(self.TMaterials_2.item(current_row,10).text()), float(self.TMaterials_2.item(current_row,11).text()), float(self.TMaterials_2.item(current_row,12).text())], [float(self.TMaterials_2.item(current_row,4).text()), float(self.TMaterials_2.item(current_row,9).text()), float(self.TMaterials_2.item(current_row,13).text()), float(self.TMaterials_2.item(current_row,14).text()), float(self.TMaterials_2.item(current_row,15).text()), float(self.TMaterials_2.item(current_row,16).text())], [float(self.TMaterials_2.item(current_row,5).text()), float(self.TMaterials_2.item(current_row,10).text()), float(self.TMaterials_2.item(current_row,14).text()), float(self.TMaterials_2.item(current_row,17).text()), float(self.TMaterials_2.item(current_row,18).text()), float(self.TMaterials_2.item(current_row,19).text())], [float(self.TMaterials_2.item(current_row,6).text()), float(self.TMaterials_2.item(current_row,11).text()), float(self.TMaterials_2.item(current_row,15).text()), float(self.TMaterials_2.item(current_row,18).text()), float(self.TMaterials_2.item(current_row,20).text()), float(self.TMaterials_2.item(current_row,21).text())], [float(self.TMaterials_2.item(current_row,7).text()), float(self.TMaterials_2.item(current_row,12).text()), float(self.TMaterials_2.item(current_row,16).text()), float(self.TMaterials_2.item(current_row,19).text()), float(self.TMaterials_2.item(current_row,21).text()), float(self.TMaterials_2.item(current_row,22).text())]]
-#        if self.TMaterials_2.item(current_row,1).text() == 'Isotropic':
-#            Mcompliance = np.linalg.inv(Mstiffness)
-#            self.MaterialTypeTool_2.setCurrentIndex(0)
-#            self.INMaterialType_2.setCurrentIndex(0)
-#            self.INMaterialName_2.clear()
-#            self.INYoungsModulus_2.clear()
-#            self.INPoissonsRatio_2.clear()
-#            E = 1/Mcompliance[0][0]
-#            nu = -Mcompliance[0][1]*E
-#            self.INMaterialName_2.insert(self.TMaterials_2.item(current_row,0).text())
-#            self.INYoungsModulus_2.insert(str(E))
-#            self.INPoissonsRatio_2.insert(str(nu))
-#        elif 'Transversely Isotropic' in self.TMaterials_2.item(current_row,1).text():
-#            Mcompliance = np.linalg.inv(Mstiffness)
-#            self.MaterialTypeTool_2.setCurrentIndex(1)
-#            self.INMaterialType_2.setCurrentIndex(1)
-#            self.INMaterialName_2.clear()
-#            self.INEip_2.clear()
-#            self.INNUip_2.clear()
-#            self.INEop_2.clear()
-#            self.INNUop_2.clear()
-#            self.INGop_2.clear()
-#            if 'x-y plane' in self.TMaterials_2.item(current_row,1).text():
-#                Eip = 1/Mcompliance[0][0]
-#                nuip = -Mcompliance[0][1]*Eip
-#                Eop = 1/Mcompliance[2][2]
-#                nuop = -Mcompliance[0][2]*Eop
-#                Gop  = 1/Mcompliance[3][3]
-#                self.INMaterialName_2.insert(self.TMaterials_2.item(current_row,0).text())
-#                self.INEip_2.insert(str(Eip))
-#                self.INNUip_2.insert(str(nuip))
-#                self.INEop_2.insert(str(Eop))
-#                self.INNUop_2.insert(str(nuop))
-#                self.INGop_2.insert(str(Gop))
-#                self.INIsotropicPlane_2.setCurrentIndex(0)
-#            elif 'x-z plane' in self.TMaterials_2.item(current_row,1).text():
-#                Eip = 1/Mcompliance[0][0]
-#                nuip = -Mcompliance[0][2]*Eip
-#                Eop = 1/Mcompliance[1][1]
-#                nuop = -Mcompliance[0][1]*Eop
-#                Gop  = 1/Mcompliance[3][3]
-#                self.INMaterialName_2.insert(self.TMaterials_2.item(current_row,0).text())
-#                self.INEip_2.insert(str(Eip))
-#                self.INNUip_2.insert(str(nuip))
-#                self.INEop_2.insert(str(Eop))
-#                self.INNUop_2.insert(str(nuop))
-#                self.INGop_2.insert(str(Gop))
-#                self.INIsotropicPlane_2.setCurrentIndex(1)
-#            elif 'y-z plane' in self.TMaterials_2.item(current_row,1).text():
-#                Eip = 1/Mcompliance[1][1]
-#                nuip = -Mcompliance[1][2]*Eip
-#                Eop = 1/Mcompliance[0][0]
-#                nuop = -Mcompliance[0][1]*Eop
-#                Gop  = 1/Mcompliance[4][4]
-#                self.INMaterialName_2.insert(self.TMaterials_2.item(current_row,0).text())
-#                self.INEip_2.insert(str(Eip))
-#                self.INNUip_2.insert(str(nuip))
-#                self.INEop_2.insert(str(Eop))
-#                self.INNUop_2.insert(str(nuop))
-#                self.INGop_2.insert(str(Gop))
-#                self.INIsotropicPlane_2.setCurrentIndex(2)
-#        elif self.TMaterials_2.item(current_row,1).text() == 'Orthotropic':
-#            Mcompliance = np.linalg.inv(Mstiffness)
-#            self.MaterialTypeTool_2.setCurrentIndex(3)
-#            self.INMaterialType_2.setCurrentIndex(2)
-#            self.INMaterialName_2.clear()
-#            self.INEx_2.clear()
-#            self.INEy_2.clear()
-#            self.INEz_2.clear()
-#            self.INNUxy_2.clear()
-#            self.INNUxz_2.clear()
-#            self.INNUyz_2.clear()
-#            self.INGxy_2.clear()
-#            self.INGxz_2.clear()
-#            self.INGyz_2.clear()
-#            Ex = 1/Mcompliance[0][0]
-#            Ey = 1/Mcompliance[1][1]
-#            Ez = 1/Mcompliance[2][2]
-#            NUxy = -Mcompliance[0][1]*Ex
-#            NUxz = -Mcompliance[0][2]*Ex
-#            NUyz = -Mcompliance[1][2]*Ey
-#            Gxy = 1/Mcompliance[5][5]
-#            Gxz = 1/Mcompliance[4][4]
-#            Gyz = 1/Mcompliance[3][3]
-#            self.INMaterialName_2.insert(self.TMaterials_2.item(current_row,0).text())
-#            self.INEx_2.insert(str(Ex))
-#            self.INEy_2.insert(str(Ey))
-#            self.INEz_2.insert(str(Ez))
-#            self.INNUxy_2.insert(str(NUxy))
-#            self.INNUxz_2.insert(str(NUxz))
-#            self.INNUyz_2.insert(str(NUyz))
-#            self.INGxy_2.insert(str(Gxy))
-#            self.INGxz_2.insert(str(Gxz))
-#            self.INGyz_2.insert(str(Gyz))
-#        else:
-#            self.MaterialTypeTool_2.setCurrentIndex(2)
-#            self.INMaterialType_2.setCurrentIndex(3)
-#            self.INMaterialName_2.clear()
-#            self.INMaterialName_2.insert(self.TMaterials_2.item(current_row,0).text())
-#            k = 2
-#            for i in [0,1,2,3,4,5,6]:
-#                for j in range(i,6):
-#                    self.TAnisotropic_2.item(i,j).setText('')
-#                    self.TAnisotropic_2.setItem(
-#                        i, j, QTableWidgetItem(self.TMaterials_2.item(current_row,k).text())
-#                    )
-#                    k += 1
-#    self.BRegenElasticConstants_2.clicked.connect(regenerate_elastic_constants_2)
 
     # View details about a slip system
     def slip_system_details():
@@ -1091,7 +975,7 @@ def Bulk_Forming(self):
             self.TVgrad.setItem(2,2,QTableWidgetItem("1.0"))
             self.TCstress.setItem(0,0,QTableWidgetItem("0."))
             self.TCstress.setItem(1,1,QTableWidgetItem("0."))
-        elif "ECAP" in self.INbulkBC.currentText():
+        elif "Shear XY" in self.INbulkBC.currentText():
             # Clear tables
             self.TVgrad.clearContents()
             self.TVgradi.clearContents()
@@ -1201,15 +1085,26 @@ def Bulk_Forming(self):
             if self.INBFParallel.isChecked():
                 executable_path = "mpirun"
             else:
-                executable_path = "evpfft"
+                if self.INLargeStrain.isChecked():
+                    executable_path = "ls-evpfft"
+                else:
+                    executable_path = "evpfft"
+                
+        # Define arguments
         if ".vtk" in file_type:
             if self.INBFParallel.isChecked():
-                arguments = ["-np", self.INBFmpiRanks.value(), "evpfft", "-f", self.BULK_FORMING_INPUT, "-m", "2"]
+                if self.INLargeStrain.isChecked():
+                    arguments = ["-np", self.INBFmpiRanks.value(), "ls-evpfft", "-f", self.BULK_FORMING_INPUT, "-m", "2"]
+                else:
+                    arguments = ["-np", self.INBFmpiRanks.value(), "evpfft", "-f", self.BULK_FORMING_INPUT, "-m", "2"]
             else:
                 arguments = ["-f", self.BULK_FORMING_INPUT, "-m", "2"]
         else:
             if self.INBFParallel.isChecked():
-                arguments = ["-np", self.INBFmpiRanks.value(), "evpfft", "-f", self.BULK_FORMING_INPUT]
+                if self.INLargeStrain.isChecked():
+                    arguments = ["-np", self.INBFmpiRanks.value(), "ls-evpfft", "-f", self.BULK_FORMING_INPUT]
+                else:
+                    arguments = ["-np", self.INBFmpiRanks.value(), "evpfft", "-f", self.BULK_FORMING_INPUT]
             else:
                 arguments = ["-f", self.BULK_FORMING_INPUT]
         
@@ -1304,6 +1199,7 @@ def Bulk_Forming(self):
         
     # Preview Results
     def preview_results_click_2():
+        self.vis = 1
         # Remove all objects from window view
         SetActiveView(self.render_view)
         renderer = self.render_view.GetRenderer()
@@ -1321,6 +1217,12 @@ def Bulk_Forming(self):
 #        file_name = "micro_state_timestep_" + str(self.INBFloadsteps.text()) + ".xdmf"
         file_name = f"MicroState_{int(self.INBFloadsteps.text()):05}.pvtu"
 #        self.output_directory = os.path.join(self.working_directory, file_name)
+        try:
+            self.working_directory
+        except:
+            self.working_directory = self.INBFJobDir.text()
+        else:
+            False
         self.output_directory = os.path.join(self.working_directory, "pvtu", file_name)
         self.results_reader = paraview.simple.XMLPartitionedUnstructuredGridReader(FileName=self.output_directory)
 #        paraview.simple.SetDisplayProperties(Representation="Surface")
@@ -1350,9 +1252,14 @@ def Bulk_Forming(self):
             for k in range(int(self.TParts.item(0,9).text())+1):
                 for j in range(int(self.TParts.item(0,8).text())+1):
                     for i in range(int(self.TParts.item(0,7).text())+1):
-                        diffX.append(coords[count][0]-(float(i)+0.5))
-                        diffY.append(coords[count][1]-(float(j)+0.5))
-                        diffZ.append(coords[count][2]-(float(k)+0.5))
+                        if self.INLargeStrain.isChecked():
+                            diffX.append(coords[count][0]-(float(i)))
+                            diffY.append(coords[count][1]-(float(j)))
+                            diffZ.append(coords[count][2]-(float(k)))
+                        else:
+                            diffX.append(coords[count][0]-(float(i)+0.5))
+                            diffY.append(coords[count][1]-(float(j)+0.5))
+                            diffZ.append(coords[count][2]-(float(k)+0.5))
                         count += 1
             # Create a new array for displacements
             displacement_array = vtk.vtkFloatArray()
@@ -1405,15 +1312,31 @@ def Bulk_Forming(self):
         # View Results
         self.render_view.ResetCamera()
         self.render_view.StillRender()
-    self.INBFResults.currentIndexChanged.connect(preview_results_click_2)
-    self.INBFDeform.valueChanged.connect(preview_results_click_2)
     
     # Show results immediately when postprocessing tab is pressed
     def show_results_2():
         index = self.NavigationMenu.currentIndex()
+        if index == 8:
+            self.INBFResults.currentIndexChanged.connect(preview_results_click_2)
+            self.INBFDeform.valueChanged.connect(preview_results_click_2)
         if index == 8 and self.run == 1 and "Bulk Forming" in self.INSelectPostprocessing.currentText():
             preview_results_click_2()
     self.NavigationMenu.currentChanged.connect(show_results_2)
+    
+    # Go from results back to back to original input
+    self.vis = 0
+    def show_original_2():
+        index = self.NavigationMenu.currentIndex()
+        if index < 8 and self.vis == 1 and "Bulk Forming" in self.INSelectPostprocessing.currentText():
+            # reset view
+            self.INBFDeform.setValue(.1)
+            paraview.simple.ColorBy(self.display, ('CELLS', 'grain_id'))
+            # View Results
+            self.display.SetScalarBarVisibility(self.render_view, False)
+            self.render_view.ResetCamera()
+            self.render_view.StillRender()
+            self.vis = 0
+    self.NavigationMenu.currentChanged.connect(show_original_2)
     
     # Open Paraview
     def open_paraview_click_2():

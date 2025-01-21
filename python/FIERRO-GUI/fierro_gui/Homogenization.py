@@ -1015,6 +1015,7 @@ def Homogenization(self):
     
     # Preview Results
     def preview_results_click():
+        self.vis = 1
         # Remove all objects from window view
         SetActiveView(self.render_view)
         renderer = self.render_view.GetRenderer()
@@ -1033,6 +1034,12 @@ def Homogenization(self):
         output_parts = output_name.split()
 #        file_name = "micro_state_timestep_" + str(self.INNumberOfSteps.text()) + ".xdmf"
         file_name = f"MicroState_{int(self.INNumberOfSteps.text()):05}.pvtu"
+        try:
+            self.working_directory
+        except:
+            self.working_directory = self.INHomogenizationJobDir.text()
+        else:
+            False
         self.output_directory = os.path.join(self.working_directory, output_parts[0], output_parts[1], "pvtu", file_name)
 #        self.output_directory = os.path.join(self.working_directory, output_parts[0], output_parts[1], file_name)
 #        self.results_reader = paraview.simple.XDMFReader(FileNames=self.output_directory)
@@ -1163,12 +1170,7 @@ def Homogenization(self):
         # View Results
         self.render_view.ResetCamera()
         self.render_view.StillRender()
-#    self.BPreviewResults.clicked.connect(preview_results_click)
-#    self.BPreviewResults.clicked.connect(lambda: self.OutputWindows.setCurrentIndex(0))
-    self.INBCFile.currentIndexChanged.connect(preview_results_click)
-    self.INPreviewResults.currentIndexChanged.connect(preview_results_click)
-    self.INResultRegion.currentIndexChanged.connect(preview_results_click)
-    self.INHDeform.valueChanged.connect(preview_results_click)
+        self.activated = 1
     
     # Restart deformation scale factor
     def restart_scale():
@@ -1176,11 +1178,33 @@ def Homogenization(self):
     self.INBCFile.currentIndexChanged.connect(restart_scale)
     
     # Show results immediately when postprocessing tab is pressed
+    self.activated = 0
     def show_results():
         index = self.NavigationMenu.currentIndex()
+        if index == 8 and self.activated == 0:
+            self.INBCFile.currentIndexChanged.connect(preview_results_click)
+            self.INPreviewResults.currentIndexChanged.connect(preview_results_click)
+            self.INResultRegion.currentIndexChanged.connect(preview_results_click)
+            self.INHDeform.valueChanged.connect(preview_results_click)
         if index == 8 and self.run == 1 and "Homogenization" in self.INSelectPostprocessing.currentText():
             preview_results_click()
     self.NavigationMenu.currentChanged.connect(show_results)
+    
+    # Go from results back to back to original input
+    self.vis = 0
+    def show_original():
+        index = self.NavigationMenu.currentIndex()
+        if index < 8 and self.vis == 1 and "Homogenization" in self.INSelectPostprocessing.currentText():
+            # reset view
+            self.INHDeform.setValue(.1)
+            self.INResultRegion.setCurrentIndex(0)
+            paraview.simple.ColorBy(self.display, ('CELLS', 'grain_id'))
+            # View Results
+            self.display.SetScalarBarVisibility(self.render_view, False)
+            self.render_view.ResetCamera()
+            self.render_view.StillRender()
+            self.vis = 0
+    self.NavigationMenu.currentChanged.connect(show_original)
     
     # Open Paraview
     def open_paraview_click():
