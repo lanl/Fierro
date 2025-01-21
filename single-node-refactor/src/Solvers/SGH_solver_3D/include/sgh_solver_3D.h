@@ -111,7 +111,6 @@ namespace SGH3D_State
 class SGH3D : public Solver
 {
 public:
-    size_t solver_id;
 
     SGH3D()  : Solver()
     {
@@ -203,8 +202,7 @@ public:
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>&     node_vel,
-        const double time_value,
-        const size_t solver_id) const;
+        const double time_value) const;
 
     void boundary_contact(
         const Mesh_t& mesh,

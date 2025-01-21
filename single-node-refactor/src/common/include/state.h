@@ -149,7 +149,7 @@ struct MaterialToMeshMap_t
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize(size_t num_elem_max)
     {
-        this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
+        if (elem.size() == 0) this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
     }; // end method
 }; // end MaterialtoMeshMaps_t
 

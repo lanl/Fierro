@@ -51,10 +51,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH3D::boundary_velocity(const Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               DCArrayKokkos<double>& node_vel,
-                              const double time_value,
-                              const size_t solver_id) const
+                              const double time_value) const
 {
-    size_t num_vel_bdy_sets = BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id);
+    size_t num_vel_bdy_sets = BoundaryConditions.num_vel_bdy_sets_in_solver.host(this->solver_id);
 
     // Loop over the velocity boundary sets
     for (size_t bc_lid = 0; bc_lid < num_vel_bdy_sets; bc_lid++) {
