@@ -554,7 +554,7 @@ double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const C
 ///
 /// \fn compute_topology_optimization_adjoint_full
 ///
-/// \brief Coupled adjoint problem for the kinetic energy minimization problem
+/// \brief Coupled adjoint problem for the topology optimization problem
 ///
 /////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed)
@@ -1556,7 +1556,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
 /// \fn compute_topology_optimization_gradient_tally
 ///
 /// \brief Tally the contribution to the gradient vector each timestep for
-///        the kinetic energy objective
+///        the topology optimization objective
 ///
 /// \param Distributed design densities
 /// \param Distributed design gradients
@@ -1927,7 +1927,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_IVP(Teuchos::RCP<con
 ///
 /// \fn compute_topology_optimization_gradient_full
 ///
-/// \brief Gradient for the (unsimplified) kinetic energy minimization problem
+/// \brief Gradient for the topology optimization problem
 ///
 /// \param Distributed design densities
 /// \param Distributed design gradients

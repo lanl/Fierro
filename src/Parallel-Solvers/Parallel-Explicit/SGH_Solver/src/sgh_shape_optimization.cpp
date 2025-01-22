@@ -447,3 +447,1411 @@ void FEA_Module_SGH::update_forward_solve_SO(Teuchos::RCP<const MV> zp)
     elem_pres.update_host();
     elem_sspd.update_host();
 }
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn compute_shape_optimization_gradient_tally
+///
+/// \brief Tally the contribution to the gradient vector each timestep for
+///        the shape optimization objective
+///
+/// \param Distributed design densities
+/// \param Distributed design gradients
+///
+/////////////////////////////////////////////////////////////////////////////
+
+void FEA_Module_SGH::compute_shape_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed,
+                                                                  Teuchos::RCP<MV> design_gradients_distributed, unsigned long cycle, real_t global_dt)
+{
+    const int num_dim  = simparam->num_dims;
+    int    num_corners = rnum_elem * num_nodes_in_elem;
+    size_t current_data_index, next_data_index;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    bool use_solve_checkpoints = simparam->optimization_options.use_solve_checkpoints;
+
+    { // view scope
+        vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+        const_vec_array design_densities = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+        //tally contribution from design density gradient term
+        objective_function->density_gradient_term(design_gradients, node_mass, elem_mass, node_vel, node_coords, elem_sie, rk_level, global_dt);
+
+        // compute adjoint vector for this data point; use velocity midpoint
+        // view scope
+        {
+            
+            const_vec_array current_velocity_vector;
+            const_vec_array next_velocity_vector;
+            const_vec_array current_adjoint_vector;
+            const_vec_array next_adjoint_vector;
+            if(use_solve_checkpoints){
+                //note that these are assigned backwards because the adjoint loop progresses backwards
+                current_velocity_vector = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_adjoint_vector  = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                next_velocity_vector    = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                next_adjoint_vector     = previous_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+            else{   
+                current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_adjoint_vector  = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                next_velocity_vector    = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                next_adjoint_vector     = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                real_t lambda_dot_current;
+                real_t lambda_dot_next;
+                size_t node_id;
+                size_t corner_id;
+                real_t inner_product;
+                // std::cout << elem_mass(elem_id) <<std::endl;
+                // current_nodal_velocities
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    node_id = nodes_in_elem(elem_id, inode);
+                    // midpoint rule for integration being used; add velocities and divide by 2
+                    current_element_velocities(inode, 0) = (current_velocity_vector(node_id, 0) + next_velocity_vector(node_id, 0)) / 2;
+                    current_element_velocities(inode, 1) = (current_velocity_vector(node_id, 1) + next_velocity_vector(node_id, 1)) / 2;
+                    if (num_dim == 3) {
+                        current_element_velocities(inode, 2) = (current_velocity_vector(node_id, 2) + next_velocity_vector(node_id, 2)) / 2;
+                    }
+                }
+
+                inner_product = 0;
+                for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                    node_id = nodes_in_elem(elem_id, ifill);
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        lambda_dot_current = lambda_dot_next = (next_adjoint_vector(node_id, idim) - current_adjoint_vector(node_id, idim)) / global_dt;
+                        // lambda_dot_current = current_velocity_vector(node_id,idim) + damping_constant*current_adjoint_vector(node_id,idim)/node_mass(node_id) - current_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
+                        // lambda_dot_next = next_velocity_vector(node_id,idim) + damping_constant*next_adjoint_vector(node_id,idim)/node_mass(node_id) - next_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
+                        inner_product += elem_mass(elem_id) * (lambda_dot_current + lambda_dot_current) * current_element_velocities(ifill, idim) / 2;
+                    }
+                }
+
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    // compute gradient of local element contribution to v^t*M*v product
+                    corner_id = elem_id * num_nodes_in_elem + inode;
+                    corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    corner_id = corners_in_node(node_id, icorner);
+                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+        } // end view scope
+
+        // compute adjoint vector for this data point; use velocity midpoint
+        // view scope
+        {
+            const_vec_array current_element_internal_energy;
+            const_vec_array current_psi_adjoint_vector;
+            const_vec_array next_element_internal_energy;
+            const_vec_array next_psi_adjoint_vector;
+            if(use_solve_checkpoints){
+                //note that these are assigned backwards because the adjoint loop progresses backwards
+                current_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_psi_adjoint_vector   = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                next_element_internal_energy = previous_element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                next_psi_adjoint_vector = previous_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+            else{   
+                current_element_internal_energy = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_psi_adjoint_vector   = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                next_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                next_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                real_t psi_dot_current;
+                real_t psi_dot_next;
+                size_t node_id;
+                size_t corner_id;
+                real_t inner_product;
+
+                psi_dot_current = (next_psi_adjoint_vector(elem_id, 0) - current_psi_adjoint_vector(elem_id, 0)) / global_dt;
+                inner_product   = elem_mass(elem_id) * (psi_dot_current + psi_dot_current) * current_element_internal_energy(elem_id, 0) / 2;
+
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    // compute gradient of local element contribution to v^t*M*v product
+                    corner_id = elem_id * num_nodes_in_elem + inode;
+                    corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    corner_id = corners_in_node(node_id, icorner);
+                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+        } // end view scope
+
+        //compute terms with gradient of force and gradient of specific internal energy w.r.t design density
+        // view scope
+        {
+            const_vec_array current_adjoint_vector, previous_adjoint_vector;
+            const_vec_array current_psi_adjoint_vector, previous_psi_adjoint_vector;
+            if(use_solve_checkpoints){
+                current_adjoint_vector = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_adjoint_vector = previous_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_psi_adjoint_vector = previous_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+            else{   
+                current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle+1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+
+            // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                size_t node_id;
+                size_t corner_id;
+                real_t inner_product;
+
+                inner_product = 0;
+                for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                    node_id   = nodes_in_elem(elem_id, ifill);
+                    corner_id = elem_id * num_nodes_in_elem + ifill;
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        inner_product += corner_vector_storage(corner_id, idim) * 0.5*(current_adjoint_vector(node_id, idim)+previous_adjoint_vector(node_id, idim));
+                    }
+                }
+
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    // compute gradient of local element contribution to v^t*M*v product
+                    corner_id = elem_id * num_nodes_in_elem + inode;
+                    corner_value_storage(corner_id) = inner_product;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    corner_id = corners_in_node(node_id, icorner);
+                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) * global_dt;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            //term with gradients of power w.r.t design density
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                size_t node_id;
+                size_t corner_id;
+                real_t inner_product;
+
+                inner_product = 0.5*(current_psi_adjoint_vector(elem_id, 0)+previous_psi_adjoint_vector(elem_id, 0)) * elem_power_dgradients(elem_id);
+
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    // compute gradient of local element contribution to v^t*M*v product
+                    corner_id = elem_id * num_nodes_in_elem + inode;
+                    corner_value_storage(corner_id) = inner_product;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    corner_id = corners_in_node(node_id, icorner);
+                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) * global_dt;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+        } // end view scope
+    } // end view scope design gradients
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn compute_shape_optimization_gradient_IVP
+///
+/// \brief Tally the contribution to the gradient vector from the initial
+///        state values
+///
+/// \param Distributed design densities
+/// \param Distributed design gradients
+///
+/////////////////////////////////////////////////////////////////////////////
+
+void FEA_Module_SGH::compute_shape_optimization_gradient_IVP(Teuchos::RCP<const MV> design_densities_distributed,
+                                                                  Teuchos::RCP<MV> design_gradients_distributed, unsigned long cycle, real_t global_dt)
+{
+    const int num_dim  = simparam->num_dims;
+    int    num_corners = rnum_elem * num_nodes_in_elem;
+    size_t current_data_index, next_data_index;
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    bool use_solve_checkpoints = simparam->optimization_options.use_solve_checkpoints;
+
+    { // view scope
+        vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+        const_vec_array design_densities = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+        // compute initial condition contribution from velocities
+        // view scope
+        {
+            const_vec_array current_velocity_vector;
+            const_vec_array current_adjoint_vector;
+            if(use_solve_checkpoints){
+                current_velocity_vector = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_adjoint_vector  = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+            else{   
+                current_velocity_vector = (*forward_solve_velocity_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_adjoint_vector  = (*adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                real_t lambda_dot;
+                size_t node_id;
+                size_t corner_id;
+                real_t inner_product;
+                // std::cout << elem_mass(elem_id) <<std::endl;
+                // current_nodal_velocities
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    node_id = nodes_in_elem(elem_id, inode);
+                    // midpoint rule for integration being used; add velocities and divide by 2
+                    current_element_velocities(inode, 0) = current_velocity_vector(node_id, 0);
+                    current_element_velocities(inode, 1) = current_velocity_vector(node_id, 1);
+                    if (num_dim == 3) {
+                        current_element_velocities(inode, 2) = current_velocity_vector(node_id, 2);
+                    }
+                }
+
+                inner_product = 0;
+                for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                    node_id = nodes_in_elem(elem_id, ifill);
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        inner_product += elem_mass(elem_id) * current_adjoint_vector(node_id, idim) * current_element_velocities(ifill, idim);
+                    }
+                }
+
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    // compute gradient of local element contribution to v^t*M*v product
+                    corner_id = elem_id * num_nodes_in_elem + inode;
+                    corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    corner_id = corners_in_node(node_id, icorner);
+                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+        } // end view scope
+
+        // compute initial condition contribution from internal energies
+        // view scope
+        {
+            const_vec_array current_element_internal_energy;
+            const_vec_array current_psi_adjoint_vector;
+            if(use_solve_checkpoints){
+                current_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+            else{   
+                current_element_internal_energy = (*forward_solve_internal_energy_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_psi_adjoint_vector = (*psi_adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+
+            // (*psi_adjoint_vector_data)[100]->describe(*fos,Teuchos::VERB_EXTREME);
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                real_t lambda_dot;
+                size_t node_id;
+                size_t corner_id;
+                real_t inner_product;
+                // std::cout << elem_mass(elem_id) <<std::endl;
+
+                if (elem_extensive_initial_energy_condition(elem_id)) {
+                    inner_product = 0;
+                }
+                else{
+                    inner_product = elem_mass(elem_id) * current_psi_adjoint_vector(elem_id, 0) * current_element_internal_energy(elem_id, 0);
+                }
+
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    // compute gradient of local element contribution to v^t*M*v product
+                    corner_id = elem_id * num_nodes_in_elem + inode;
+                    corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    corner_id = corners_in_node(node_id, icorner);
+                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem;
+                }
+            }); // end parallel for
+            Kokkos::fence();
+        } // end view scope
+        
+
+    } // end view scope design gradients
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn compute_shape_optimization_adjoint_full
+///
+/// \brief Coupled adjoint problem for the shape optimization problem
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed)
+{
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    size_t num_bdy_nodes  = mesh->num_bdy_nodes;
+    const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos<material_t> material = simparam->material;
+    const int num_dim = simparam->num_dims;
+    bool use_solve_checkpoints = simparam->optimization_options.use_solve_checkpoints;
+    bool use_gradient_tally = simparam->optimization_options.use_gradient_tally;
+    const size_t    num_lcs = module_params->loading_conditions.size();
+    real_t    global_dt, current_time;
+    size_t    current_data_index, next_data_index;
+    int print_cycle = simparam->dynamic_options.print_cycle;
+    
+    double total_adjoint_time = Explicit_Solver_Pointer_->CPU_Time();
+    double state_adjoint_time = 0;
+    double state_adjoint_time_start, state_adjoint_time_end;
+    auto optimization_objective_regions = simparam->optimization_options.optimization_objective_regions;
+    //initialize tally storage of gradient vector
+    cached_design_gradients_distributed->putScalar(0);
+    // initialize first adjoint vector at last_time_step to 0 as the terminal value
+    if(use_solve_checkpoints){
+        previous_adjoint_vector_distributed->putScalar(0);
+        previous_phi_adjoint_vector_distributed->putScalar(0);
+        previous_psi_adjoint_vector_distributed->putScalar(0);
+    }
+    else{
+        (*adjoint_vector_data)[last_time_step + 1]->putScalar(0);
+        (*phi_adjoint_vector_data)[last_time_step + 1]->putScalar(0);
+        (*psi_adjoint_vector_data)[last_time_step + 1]->putScalar(0);
+    }
+
+    // solve terminal value problem, proceeds in time backward. For simplicity, we use the same timestep data from the forward solve.
+    // A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
+
+    for (int cycle = last_time_step; cycle >= 0; cycle--) {
+        if(!use_solve_checkpoints){
+            // compute timestep from time data
+            global_dt = time_data[cycle + 1] - time_data[cycle];
+            current_time = time_data[cycle];
+        }
+        
+        // else if (cycle==1){
+        // if(myrank==0)
+        // printf("cycle = %lu, time = %f, time step = %f \n", cycle-1, time_data[cycle-1], global_dt);
+        // } // end if
+
+        // compute adjoint vector for this data point; use velocity midpoint
+        // view scope
+        {
+            // set velocity, internal energy, and position for this timestep
+            const_vec_array previous_velocity_vector;
+            const_vec_array current_velocity_vector;
+
+            const_vec_array previous_coordinate_vector;
+            const_vec_array current_coordinate_vector;
+
+            const_vec_array previous_element_internal_energy;
+            const_vec_array current_element_internal_energy;
+            
+            if(use_solve_checkpoints){
+                std::set<Dynamic_Checkpoint>::iterator last_checkpoint = dynamic_checkpoint_set->end();
+                --last_checkpoint;
+                global_dt = last_checkpoint->saved_dt;
+                previous_node_velocities_distributed->assign((*last_checkpoint->get_vector_pointer(V_DATA)));
+                previous_velocity_vector = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_node_coords_distributed->assign((*last_checkpoint->get_vector_pointer(U_DATA)));
+                previous_coordinate_vector = previous_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                previous_element_internal_energy_distributed->assign((*last_checkpoint->get_vector_pointer(SIE_DATA)));
+                previous_element_internal_energy = previous_element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+                //remove the last checkpoint and store it for later so that we can swap its pointers to memory with a new one
+                cached_dynamic_checkpoints->push_back(*last_checkpoint);
+                dynamic_checkpoint_set->erase(last_checkpoint);
+                last_checkpoint = dynamic_checkpoint_set->end();
+                --last_checkpoint;
+                --num_active_checkpoints;
+                //if the next closest checkpoint isnt adjacent, solve up to the adjacent timestep
+                if(last_checkpoint->saved_timestep!=cycle){
+                    checkpoint_solve(last_checkpoint, cycle);
+                    last_checkpoint = dynamic_checkpoint_set->end();
+                    --last_checkpoint;
+                }
+                
+                current_time = last_checkpoint->saved_time;
+                all_node_velocities_distributed->assign(*(last_checkpoint->get_vector_pointer(V_DATA)));
+                all_node_coords_distributed->assign(*(last_checkpoint->get_vector_pointer(U_DATA)));
+                element_internal_energy_distributed->assign(*(last_checkpoint->get_vector_pointer(SIE_DATA)));
+                current_velocity_vector = last_checkpoint->get_vector_pointer(V_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_coordinate_vector = last_checkpoint->get_vector_pointer(U_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_element_internal_energy = last_checkpoint->get_vector_pointer(SIE_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                
+            }
+            else{
+                previous_velocity_vector = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_velocity_vector  = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+                previous_coordinate_vector = (*forward_solve_coordinate_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_coordinate_vector  = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+                previous_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                current_element_internal_energy  = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+
+            // print
+            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+                if (cycle == last_time_step) {
+                    if (myrank == 0) {
+                        printf("cycle = %d, time = %f, time step = %f \n", cycle, current_time, global_dt);
+                    }
+                }
+                // print time step every 20 cycles
+                else if (cycle % print_cycle == 0) {
+                    if (myrank == 0) {
+                        printf("cycle = %d, time = %f, time step = %f \n", cycle, current_time, global_dt);
+                    }
+                } // end if
+            }
+
+            // interface of arrays for current implementation of force calculation
+            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+                for (int idim = 0; idim < num_dim; idim++) {
+                    node_vel(rk_level, node_gid, idim)    = previous_velocity_vector(node_gid, idim);
+                    node_coords(rk_level, node_gid, idim) = previous_coordinate_vector(node_gid, idim);
+                }
+            });
+            Kokkos::fence();
+
+            FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+                elem_sie(rk_level, elem_gid) = previous_element_internal_energy(elem_gid, 0);
+            });
+            Kokkos::fence();
+            // set state according to phase data at this timestep
+            get_vol();
+
+            // ---- Calculate velocity diveregence for the element ----
+            if (num_dim == 2) {
+                get_divergence2D(elem_div,
+                        node_coords,
+                        node_vel,
+                        elem_vol);
+            }
+            else{
+                get_divergence(elem_div,
+                        node_coords,
+                        node_vel,
+                        elem_vol);
+            } // end if 2D
+
+            // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+            if (num_dim == 2) {
+                update_state2D(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_sie,
+                        elem_vol,
+                        elem_mass,
+                        elem_mat_id,
+                        1.0,
+                        cycle);
+            }
+            else{
+                update_state(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_sie,
+                        elem_vol,
+                        elem_mass,
+                        elem_mat_id,
+                        1.0,
+                        cycle);
+            }
+
+            if (num_dim == 2) {
+                get_force_sgh2D(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            elem_den,
+                            elem_sie,
+                            elem_pres,
+                            elem_stress,
+                            elem_sspd,
+                            elem_vol,
+                            elem_div,
+                            elem_mat_id,
+                            corner_force,
+                            1.0,
+                            cycle);
+            }
+            else{
+                get_force_sgh(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_sie,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_vol,
+                        elem_div,
+                        elem_mat_id,
+                        corner_force,
+                        1.0,
+                        cycle);
+            }
+
+            if (have_loading_conditions) {
+                applied_forces(material,
+                                *mesh,
+                                node_coords,
+                                node_vel,
+                                node_mass,
+                                elem_den,
+                                elem_vol,
+                                elem_div,
+                                elem_mat_id,
+                                corner_force,
+                                1.0,
+                                cycle);
+            }
+            // compute gradient matrices
+            get_force_egradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1.0,
+                              cycle);
+
+            get_power_egradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
+
+            get_force_vgradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1.0,
+                              cycle);
+
+            get_power_vgradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
+
+            get_force_ugradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1.0,
+                              cycle);
+
+            get_power_ugradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
+            
+            // state_adjoint_time_start = Explicit_Solver_Pointer_->CPU_Time();
+            // force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
+            const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            // const_vec_array current_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+            const_vec_array previous_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            // const_vec_array current_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+            // compute gradient of force with respect to velocity
+
+            const_vec_array previous_adjoint_vector;
+            const_vec_array phi_previous_adjoint_vector;
+            const_vec_array psi_previous_adjoint_vector;
+            if(use_solve_checkpoints){
+                previous_adjoint_vector     = previous_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                phi_previous_adjoint_vector =  previous_phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                psi_previous_adjoint_vector =  previous_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+            else{
+                previous_adjoint_vector     = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                psi_previous_adjoint_vector =  (*psi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            }
+            
+            adjoint_vector_distributed->putScalar(0);
+            phi_adjoint_vector_distributed->putScalar(0);
+            psi_adjoint_vector_distributed->putScalar(0);
+            vec_array midpoint_adjoint_vector     = adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array phi_midpoint_adjoint_vector =  phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array psi_midpoint_adjoint_vector =  psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            
+            // half step update for RK2 scheme; EQUATION 1
+            objective_function->velocity_gradient_adjoint_contribution(midpoint_adjoint_vector, node_mass, elem_mass, node_vel, node_coords, elem_sie, rk_level);
+
+            if(optimization_objective_regions.size()){
+                int nobj_volumes = optimization_objective_regions.size();
+                const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    real_t rate_of_change;
+                    real_t matrix_contribution;
+                    size_t dof_id;
+                    size_t elem_id;
+                    double current_node_coords[3];
+                    int contained = 0;
+                    current_node_coords[0] = all_initial_node_coords(node_gid, 0);
+                    current_node_coords[1] = all_initial_node_coords(node_gid, 1);
+                    current_node_coords[2] = all_initial_node_coords(node_gid, 2);
+                    for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                        if(optimization_objective_regions(ivolume).contains(current_node_coords)){
+                            contained = 1;
+                        }
+                    }
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        // EQUATION 1
+                        matrix_contribution = 0;
+                        // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
+                        for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
+                            dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
+                            matrix_contribution += previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
+                        }
+
+                        // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
+                        for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
+                            elem_id = elems_in_node(node_gid, ielem);
+                            matrix_contribution += psi_previous_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
+                        }
+                        rate_of_change = contained*midpoint_adjoint_vector(node_gid, idim) -
+                                        matrix_contribution -
+                                        phi_previous_adjoint_vector(node_gid, idim);
+                        midpoint_adjoint_vector(node_gid, idim) = -0.5*rate_of_change * global_dt / node_mass(node_gid) + previous_adjoint_vector(node_gid, idim);
+                    }
+                }); // end parallel for
+            }
+            else{
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    real_t rate_of_change;
+                    real_t matrix_contribution;
+                    size_t dof_id;
+                    size_t elem_id;
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        // EQUATION 1
+                        matrix_contribution = 0;
+                        // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
+                        for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
+                            dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
+                            matrix_contribution += previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
+                        }
+
+                        // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
+                        for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
+                            elem_id = elems_in_node(node_gid, ielem);
+                            matrix_contribution += psi_previous_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
+                        }
+                        rate_of_change = midpoint_adjoint_vector(node_gid, idim) -
+                                        matrix_contribution -
+                                        phi_previous_adjoint_vector(node_gid, idim);
+                        midpoint_adjoint_vector(node_gid, idim) = -0.5*rate_of_change * global_dt / node_mass(node_gid) + previous_adjoint_vector(node_gid, idim);
+                    }
+                }); // end parallel for
+            }
+            Kokkos::fence();
+
+            // half step update for RK2 scheme; EQUATION 2
+            objective_function->displacement_gradient_adjoint_contribution(phi_midpoint_adjoint_vector, node_mass, elem_mass, node_vel, node_coords, elem_sie, rk_level);
+            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                real_t rate_of_change;
+                real_t matrix_contribution;
+                size_t dof_id;
+                size_t elem_id;
+                for (int idim = 0; idim < num_dim; idim++) {
+                    // EQUATION 2
+                    matrix_contribution = 0;
+                    // compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
+                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
+                        dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
+                        matrix_contribution += previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Positions(node_gid * num_dim + idim, idof);
+                    }
+
+                    // compute resulting row of transpose of power gradient w.r.t displacement matrix right multiplied by psi adjoint vector
+                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
+                        elem_id = elems_in_node(node_gid, ielem);
+                        matrix_contribution += psi_previous_adjoint_vector(elem_id, 0) * Power_Gradient_Positions(node_gid * num_dim + idim, ielem);
+                    }
+
+                    rate_of_change = phi_midpoint_adjoint_vector(node_gid, idim)-matrix_contribution;
+                    // rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
+                    phi_midpoint_adjoint_vector(node_gid, idim) = -0.5*rate_of_change * global_dt + phi_previous_adjoint_vector(node_gid, idim);
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+
+            // half step update for RK2 scheme; EQUATION 3
+            objective_function->sie_gradient_adjoint_contribution(psi_midpoint_adjoint_vector, node_mass, elem_mass, node_vel, node_coords, elem_sie, rk_level);
+            FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+                real_t rate_of_change;
+                real_t matrix_contribution;
+                size_t dof_id;
+                size_t elem_id;
+                // EQUATION 3
+                matrix_contribution = 0;
+                // compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
+                for (int idof = 0; idof < num_nodes_in_elem * num_dim; idof++) {
+                    dof_id = nodes_in_elem(elem_gid, idof / num_dim) * num_dim + idof % num_dim;
+                    matrix_contribution += previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Energies(elem_gid, idof);
+                }
+                rate_of_change = psi_midpoint_adjoint_vector(elem_gid, 0)-(matrix_contribution + psi_previous_adjoint_vector(elem_gid, 0) * Power_Gradient_Energies(elem_gid));
+                // rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
+                psi_midpoint_adjoint_vector(elem_gid, 0) = -0.5*rate_of_change * global_dt / elem_mass(elem_gid) + psi_previous_adjoint_vector(elem_gid, 0);
+            }); // end parallel for
+            Kokkos::fence();
+
+            // apply BCs to adjoint vector, only matters for the momentum adjoint if using strictly velocity boundary conditions
+            boundary_adjoint(*mesh, boundary, midpoint_adjoint_vector, phi_midpoint_adjoint_vector, psi_midpoint_adjoint_vector);
+            comm_adjoint_vector(cycle);
+            comm_phi_adjoint_vector(cycle);
+
+            // save data from half time-step completion
+            if(use_solve_checkpoints){
+                midpoint_adjoint_vector_distributed->assign(*all_adjoint_vector_distributed);
+                midpoint_phi_adjoint_vector_distributed->assign(*all_phi_adjoint_vector_distributed);
+                midpoint_psi_adjoint_vector_distributed->assign(*psi_adjoint_vector_distributed);
+            }
+            else{
+                (*phi_adjoint_vector_data)[cycle]->assign(*all_phi_adjoint_vector_distributed);
+                (*adjoint_vector_data)[cycle]->assign(*all_adjoint_vector_distributed);
+                (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
+            }
+
+            // swap names to get ghost nodes for the midpoint vectors
+            adjoint_vector_distributed->putScalar(0);
+            phi_adjoint_vector_distributed->putScalar(0);
+            psi_adjoint_vector_distributed->putScalar(0);
+            vec_array current_adjoint_vector     = adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array psi_current_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+
+            if(use_solve_checkpoints){
+                midpoint_adjoint_vector     =  midpoint_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                phi_midpoint_adjoint_vector =  midpoint_phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                psi_midpoint_adjoint_vector =  midpoint_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            }
+            else{
+                midpoint_adjoint_vector     =  (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                psi_midpoint_adjoint_vector =  (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            }
+            
+
+            // compute gradients at midpoint
+            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+                for (int idim = 0; idim < num_dim; idim++) {
+                    node_vel(rk_level, node_gid, idim)    = 0.5 * (previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim));
+                    node_coords(rk_level, node_gid, idim) = 0.5 * (previous_coordinate_vector(node_gid, idim) + current_coordinate_vector(node_gid, idim));
+                }
+            });
+            Kokkos::fence();
+
+            FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+                elem_sie(rk_level, elem_gid) = 0.5 * (previous_element_internal_energy(elem_gid, 0) + current_element_internal_energy(elem_gid, 0));
+            });
+            Kokkos::fence();
+            
+            // state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+            // state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
+            // set state according to phase data at this timestep
+            get_vol();
+
+            // ---- Calculate velocity diveregence for the element ----
+            if (num_dim == 2) {
+                get_divergence2D(elem_div,
+                          node_coords,
+                          node_vel,
+                          elem_vol);
+            }
+            else{
+                get_divergence(elem_div,
+                        node_coords,
+                        node_vel,
+                        elem_vol);
+            } // end if 2D
+
+            // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+            if (num_dim == 2) {
+                update_state2D(material,
+                          *mesh,
+                          node_coords,
+                          node_vel,
+                          elem_den,
+                          elem_pres,
+                          elem_stress,
+                          elem_sspd,
+                          elem_sie,
+                          elem_vol,
+                          elem_mass,
+                          elem_mat_id,
+                          1.0,
+                          cycle);
+            }
+            else{
+                update_state(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_sie,
+                        elem_vol,
+                        elem_mass,
+                        elem_mat_id,
+                        1.0,
+                        cycle);
+            }
+
+            if (num_dim == 2) {
+                get_force_sgh2D(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            elem_den,
+                            elem_sie,
+                            elem_pres,
+                            elem_stress,
+                            elem_sspd,
+                            elem_vol,
+                            elem_div,
+                            elem_mat_id,
+                            corner_force,
+                            1.0,
+                            cycle);
+            }
+            else{
+                get_force_sgh(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_sie,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_vol,
+                        elem_div,
+                        elem_mat_id,
+                        corner_force,
+                        1.0,
+                        cycle);
+            }
+
+            if (have_loading_conditions) {
+                applied_forces(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              node_mass,
+                              elem_den,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              1.0,
+                              cycle);
+            }
+
+            // compute gradient matrices
+            get_force_egradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1.0,
+                              cycle);
+
+            get_power_egradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
+
+            get_force_vgradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1.0,
+                              cycle);
+
+            get_power_vgradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
+
+            get_force_ugradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1.0,
+                              cycle);
+
+            get_power_ugradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
+            
+            // state_adjoint_time_start = Explicit_Solver_Pointer_->CPU_Time();
+            // full step update with midpoint gradient for RK2 scheme; EQUATION 1
+            objective_function->velocity_gradient_adjoint_contribution(current_adjoint_vector, node_mass, elem_mass, node_vel, node_coords, elem_sie, rk_level);
+            if(optimization_objective_regions.size()){
+                int nobj_volumes = optimization_objective_regions.size();
+                const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    real_t rate_of_change;
+                    real_t matrix_contribution;
+                    size_t dof_id;
+                    size_t elem_id;
+                    double current_node_coords[3];
+                    int contained = 0;
+                    current_node_coords[0] = all_initial_node_coords(node_gid, 0);
+                    current_node_coords[1] = all_initial_node_coords(node_gid, 1);
+                    current_node_coords[2] = all_initial_node_coords(node_gid, 2);
+                    
+                    for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                        if(optimization_objective_regions(ivolume).contains(current_node_coords)){
+                            contained = 1;
+                        }
+                    }
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        // EQUATION 1
+                        matrix_contribution = 0;
+                        // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
+
+                        for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
+                            dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
+                            matrix_contribution += midpoint_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
+                        }
+
+                        // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
+                        for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
+                            elem_id = elems_in_node(node_gid, ielem);
+                            matrix_contribution += psi_midpoint_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
+                        }
+
+                        rate_of_change =  contained*current_adjoint_vector(node_gid, idim) -
+                                        matrix_contribution -
+                                        phi_midpoint_adjoint_vector(node_gid, idim);
+                        current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / node_mass(node_gid) + previous_adjoint_vector(node_gid, idim);
+                    }
+                }); // end parallel for
+            }
+            else{
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                    real_t rate_of_change;
+                    real_t matrix_contribution;
+                    size_t dof_id;
+                    size_t elem_id;
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        // EQUATION 1
+                        matrix_contribution = 0;
+                        // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
+
+                        for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
+                            dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
+                            matrix_contribution += midpoint_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
+                        }
+
+                        // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
+                        for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
+                            elem_id = elems_in_node(node_gid, ielem);
+                            matrix_contribution += psi_midpoint_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
+                        }
+
+                        rate_of_change =  current_adjoint_vector(node_gid, idim) -
+                                        matrix_contribution -
+                                        phi_midpoint_adjoint_vector(node_gid, idim);
+                        current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / node_mass(node_gid) + previous_adjoint_vector(node_gid, idim);
+                    }
+                }); // end parallel for
+            }
+            Kokkos::fence();
+
+
+            // full step update with midpoint gradient for RK2 scheme; EQUATION 2
+            objective_function->displacement_gradient_adjoint_contribution(phi_current_adjoint_vector, node_mass, elem_mass, node_vel, node_coords, elem_sie, rk_level);
+            FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                real_t rate_of_change;
+                real_t matrix_contribution;
+                size_t dof_id;
+                size_t elem_id;
+                for (int idim = 0; idim < num_dim; idim++) {
+                    // EQUATION 2
+                    matrix_contribution = 0;
+                    // compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
+                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
+                        dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
+                        matrix_contribution += midpoint_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Positions(node_gid * num_dim + idim, idof);
+                    }
+
+                    // compute resulting row of transpose of power gradient w.r.t displacement matrix right multiplied by psi adjoint vector
+                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
+                        elem_id = elems_in_node(node_gid, ielem);
+                        matrix_contribution += psi_midpoint_adjoint_vector(elem_id, 0) * Power_Gradient_Positions(node_gid * num_dim + idim, ielem);
+                    }
+
+                    rate_of_change = phi_current_adjoint_vector(node_gid, idim)-matrix_contribution;
+                    // rate_of_change = -0.0000001*midpoint_adjoint_vector(node_gid,idim);
+                    phi_current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt + phi_previous_adjoint_vector(node_gid, idim);
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // full step update for RK2 scheme; EQUATION 3
+            objective_function->sie_gradient_adjoint_contribution(psi_current_adjoint_vector, node_mass, elem_mass, node_vel, node_coords, elem_sie, rk_level);
+            FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+                real_t rate_of_change;
+                real_t matrix_contribution;
+                size_t dof_id;
+                size_t elem_id;
+                // EQUATION 3
+                matrix_contribution = 0;
+                // compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
+                for (int idof = 0; idof < num_nodes_in_elem * num_dim; idof++) {
+                    dof_id = nodes_in_elem(elem_gid, idof / num_dim) * num_dim + idof % num_dim;
+                    matrix_contribution += midpoint_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Energies(elem_gid, idof);
+                }
+                rate_of_change = psi_current_adjoint_vector(elem_gid, 0)-(matrix_contribution + psi_midpoint_adjoint_vector(elem_gid, 0) * Power_Gradient_Energies(elem_gid));
+                // debug
+                // std::cout << "PSI RATE OF CHANGE " << rate_of_change << std::endl;
+                psi_current_adjoint_vector(elem_gid, 0) = -rate_of_change * global_dt/ elem_mass(elem_gid) + psi_previous_adjoint_vector(elem_gid, 0);
+            }); // end parallel for
+            Kokkos::fence();
+
+            boundary_adjoint(*mesh, boundary, current_adjoint_vector, phi_current_adjoint_vector, psi_current_adjoint_vector);
+            comm_adjoint_vector(cycle);
+            comm_phi_adjoint_vector(cycle);
+            
+            if(!use_solve_checkpoints){
+                // save data from time-step completion
+                (*phi_adjoint_vector_data)[cycle]->assign(*all_phi_adjoint_vector_distributed);
+                (*adjoint_vector_data)[cycle]->assign(*all_adjoint_vector_distributed);
+                (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
+            }
+
+            // state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+            // state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
+        } // end view scope
+        
+        //tally contribution to the gradient vector
+        if(use_gradient_tally){
+            
+            //state_adjoint_time_start = Explicit_Solver_Pointer_->CPU_Time();
+            get_force_dgradient_sgh(material,
+                                *mesh,
+                                node_coords,
+                                node_vel,
+                                elem_den,
+                                elem_sie,
+                                elem_pres,
+                                elem_stress,
+                                elem_sspd,
+                                elem_vol,
+                                elem_div,
+                                elem_mat_id,
+                                1.0,
+                                cycle);
+
+            get_power_dgradient_sgh(1.0,
+                            *mesh,
+                            node_vel,
+                            node_coords,
+                            elem_sie,
+                            elem_mass,
+                            corner_force,
+                            elem_power_dgradients);
+            
+            //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+            //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
+            compute_topology_optimization_gradient_tally(design_densities_distributed, cached_design_gradients_distributed, cycle, global_dt);
+
+            if(cycle==0){
+                //RE-ENABLE STATE SETUP FOR T=0 if IVP term involves computed properties
+                // std::set<Dynamic_Checkpoint>::iterator last_checkpoint = dynamic_checkpoint_set->end();
+                // --last_checkpoint;
+                // const_vec_array current_velocity_vector = last_checkpoint->get_vector_pointer(V_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                // const_vec_array current_coordinate_vector = last_checkpoint->get_vector_pointer(U_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                // const_vec_array current_element_internal_energy = last_checkpoint->get_vector_pointer(SIE_DATA)->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+                // // compute gradients at midpoint
+                // FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+                //     for (int idim = 0; idim < num_dim; idim++) {
+                //         node_vel(rk_level, node_gid, idim)    = current_velocity_vector(node_gid, idim);
+                //         node_coords(rk_level, node_gid, idim) = current_coordinate_vector(node_gid, idim);
+                //     }
+                // });
+                // Kokkos::fence();
+
+                // FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+                //     elem_sie(rk_level, elem_gid) = current_element_internal_energy(elem_gid, 0);
+                // });
+                // Kokkos::fence();
+                
+                // // state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+                // // state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
+                // // set state according to phase data at this timestep
+                // get_vol();
+
+                // // ---- Calculate velocity diveregence for the element ----
+                // if (num_dim == 2) {
+                //     get_divergence2D(elem_div,
+                //             node_coords,
+                //             node_vel,
+                //             elem_vol);
+                // }
+                // else{
+                //     get_divergence(elem_div,
+                //             node_coords,
+                //             node_vel,
+                //             elem_vol);
+                // } // end if 2D
+
+                // // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+                // if (num_dim == 2) {
+                //     update_state2D(material,
+                //             *mesh,
+                //             node_coords,
+                //             node_vel,
+                //             elem_den,
+                //             elem_pres,
+                //             elem_stress,
+                //             elem_sspd,
+                //             elem_sie,
+                //             elem_vol,
+                //             elem_mass,
+                //             elem_mat_id,
+                //             1.0,
+                //             cycle);
+                // }
+                // else{
+                //     update_state(material,
+                //             *mesh,
+                //             node_coords,
+                //             node_vel,
+                //             elem_den,
+                //             elem_pres,
+                //             elem_stress,
+                //             elem_sspd,
+                //             elem_sie,
+                //             elem_vol,
+                //             elem_mass,
+                //             elem_mat_id,
+                //             1.0,
+                //             cycle);
+                // }
+
+                // if (num_dim == 2) {
+                //     get_force_sgh2D(material,
+                //                 *mesh,
+                //                 node_coords,
+                //                 node_vel,
+                //                 elem_den,
+                //                 elem_sie,
+                //                 elem_pres,
+                //                 elem_stress,
+                //                 elem_sspd,
+                //                 elem_vol,
+                //                 elem_div,
+                //                 elem_mat_id,
+                //                 corner_force,
+                //                 1.0,
+                //                 cycle);
+                // }
+                // else{
+                //     get_force_sgh(material,
+                //             *mesh,
+                //             node_coords,
+                //             node_vel,
+                //             elem_den,
+                //             elem_sie,
+                //             elem_pres,
+                //             elem_stress,
+                //             elem_sspd,
+                //             elem_vol,
+                //             elem_div,
+                //             elem_mat_id,
+                //             corner_force,
+                //             1.0,
+                //             cycle);
+                // }
+
+                // if (have_loading_conditions) {
+                //     applied_forces(material,
+                //                 *mesh,
+                //                 node_coords,
+                //                 node_vel,
+                //                 node_mass,
+                //                 elem_den,
+                //                 elem_vol,
+                //                 elem_div,
+                //                 elem_mat_id,
+                //                 corner_force,
+                //                 1.0,
+                //                 cycle);
+                // }
+                compute_topology_optimization_gradient_IVP(design_densities_distributed, cached_design_gradients_distributed, cycle, global_dt);
+            }
+        }
+
+        if(use_solve_checkpoints&&cycle!=0){
+            //store current solution in the previous vector storage for the next timestep
+            previous_adjoint_vector_distributed->assign(*all_adjoint_vector_distributed);
+            previous_phi_adjoint_vector_distributed->assign(*all_phi_adjoint_vector_distributed);
+            previous_psi_adjoint_vector_distributed->assign(*psi_adjoint_vector_distributed);
+        }
+
+        // phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+    }
+
+    double total_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+    *fos << "ADJOINT CALCULATION TIME ON RANK " << myrank << " IS " << total_adjoint_time_end-total_adjoint_time << std::endl;
+    // std::cout << "ADJOINT STATE CALCULATION TIME ON RANK " << myrank << " IS " << state_adjoint_time << std::endl;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn compute_shape_optimization_gradient_full
+///
+/// \brief Gradient for the shape optimization problem
+///
+/// \param Distributed design densities
+/// \param Distributed design gradients
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_SGH::compute_shape_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed)
+{
+    const int num_dim  = simparam->num_dims;
+    int    num_corners = rnum_elem * num_nodes_in_elem;
+    real_t global_dt;
+    size_t current_data_index, next_data_index;
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    bool use_solve_checkpoints = simparam->optimization_options.use_solve_checkpoints;
+    bool use_gradient_tally = simparam->optimization_options.use_gradient_tally;
+
+    if (myrank == 0) {
+        std::cout << "Computing accumulated kinetic energy gradient" << std::endl;
+    }
+
+    //initialize design gradient vector
+    if(use_gradient_tally){
+        //set ROL gradient vector to cached gradient vector
+        design_gradients_distributed->assign(*cached_design_gradients_distributed);
+        return;
+    }
+}
