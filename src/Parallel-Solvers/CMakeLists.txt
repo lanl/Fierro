@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.17)
-project(parallel-src)
 
 find_package(Vector)
 if (CMAKE_VECTOR_NOVEC)

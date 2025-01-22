@@ -76,8 +76,6 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
     const size_t cycle
     )
 {
-    const_vec_array initial_node_coords = initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-
     // check to see if any material model will be run on the host
     bool any_host_material_model_run = false;
     for (int imat = 0; imat < material.size(); imat++) {
