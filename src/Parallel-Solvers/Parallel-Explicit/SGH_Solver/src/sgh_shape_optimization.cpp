@@ -461,7 +461,7 @@ void FEA_Module_SGH::update_forward_solve_SO(Teuchos::RCP<const MV> zp)
 ///
 /////////////////////////////////////////////////////////////////////////////
 
-void FEA_Module_SGH::compute_shape_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed,
+void FEA_Module_SGH::compute_shape_optimization_gradient_tally(Teuchos::RCP<const MV> design_coords_distributed,
                                                                   Teuchos::RCP<MV> design_gradients_distributed, unsigned long cycle, real_t global_dt)
 {
     const int num_dim  = simparam->num_dims;
@@ -474,10 +474,9 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_tally(Teuchos::RCP<cons
 
     { // view scope
         vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-        const_vec_array design_densities = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        const_vec_array design_coords = design_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
-        //tally contribution from design density gradient term
-        objective_function->density_gradient_term(design_gradients, node_mass, elem_mass, node_vel, node_coords, elem_sie, rk_level, global_dt);
+        //there is no tally contribution from design coordinate gradient term since all objectives so far have arguments of deformed coordinates
 
         // compute adjoint vector for this data point; use velocity midpoint
         // view scope
@@ -695,7 +694,7 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_tally(Teuchos::RCP<cons
 ///
 /////////////////////////////////////////////////////////////////////////////
 
-void FEA_Module_SGH::compute_shape_optimization_gradient_IVP(Teuchos::RCP<const MV> design_densities_distributed,
+void FEA_Module_SGH::compute_shape_optimization_gradient_IVP(Teuchos::RCP<const MV> design_coords_distributed,
                                                                   Teuchos::RCP<MV> design_gradients_distributed, unsigned long cycle, real_t global_dt)
 {
     const int num_dim  = simparam->num_dims;
@@ -707,7 +706,7 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_IVP(Teuchos::RCP<const 
 
     { // view scope
         vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-        const_vec_array design_densities = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        const_vec_array design_coords = design_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
         // compute initial condition contribution from velocities
         // view scope
@@ -828,7 +827,7 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_IVP(Teuchos::RCP<const 
 /// \brief Coupled adjoint problem for the shape optimization problem
 ///
 /////////////////////////////////////////////////////////////////////////////
-void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed)
+void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const MV> design_coords_distributed)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     size_t num_bdy_nodes  = mesh->num_bdy_nodes;
@@ -1650,34 +1649,9 @@ void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const 
         //tally contribution to the gradient vector
         if(use_gradient_tally){
             
-            //state_adjoint_time_start = Explicit_Solver_Pointer_->CPU_Time();
-            get_force_dgradient_sgh(material,
-                                *mesh,
-                                node_coords,
-                                node_vel,
-                                elem_den,
-                                elem_sie,
-                                elem_pres,
-                                elem_stress,
-                                elem_sspd,
-                                elem_vol,
-                                elem_div,
-                                elem_mat_id,
-                                1.0,
-                                cycle);
-
-            get_power_dgradient_sgh(1.0,
-                            *mesh,
-                            node_vel,
-                            node_coords,
-                            elem_sie,
-                            elem_mass,
-                            corner_force,
-                            elem_power_dgradients);
-            
             //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
             //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
-            compute_topology_optimization_gradient_tally(design_densities_distributed, cached_design_gradients_distributed, cycle, global_dt);
+            compute_topology_optimization_gradient_tally(design_coords_distributed, cached_design_gradients_distributed, cycle, global_dt);
 
             if(cycle==0){
                 //RE-ENABLE STATE SETUP FOR T=0 if IVP term involves computed properties
@@ -1803,7 +1777,7 @@ void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const 
                 //                 1.0,
                 //                 cycle);
                 // }
-                compute_topology_optimization_gradient_IVP(design_densities_distributed, cached_design_gradients_distributed, cycle, global_dt);
+                compute_topology_optimization_gradient_IVP(design_coords_distributed, cached_design_gradients_distributed, cycle, global_dt);
             }
         }
 
@@ -1833,19 +1807,12 @@ void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const 
 /// \param Distributed design gradients
 ///
 /////////////////////////////////////////////////////////////////////////////
-void FEA_Module_SGH::compute_shape_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed)
+void FEA_Module_SGH::compute_shape_optimization_gradient_full(Teuchos::RCP<const MV> design_coords_distributed, Teuchos::RCP<MV> design_gradients_distributed)
 {
-    const int num_dim  = simparam->num_dims;
-    int    num_corners = rnum_elem * num_nodes_in_elem;
-    real_t global_dt;
-    size_t current_data_index, next_data_index;
-    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
-    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
-    bool use_solve_checkpoints = simparam->optimization_options.use_solve_checkpoints;
     bool use_gradient_tally = simparam->optimization_options.use_gradient_tally;
 
     if (myrank == 0) {
-        std::cout << "Computing accumulated kinetic energy gradient" << std::endl;
+        std::cout << "Computing accumulated objective gradient" << std::endl;
     }
 
     //initialize design gradient vector
