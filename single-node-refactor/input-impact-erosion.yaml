@@ -40,10 +40,10 @@ boundary_conditions:
     # Tag Y plane
     - boundary_condition:
         solver_id: 0
-        geometry: 
+        surface: 
             type: y_plane
-            value: 0.0
-        velocity_model: reflected_velocity
+            plane_position: 0.0
+        velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
             - 1   # y
@@ -52,10 +52,10 @@ boundary_conditions:
     # Tag z plane
     - boundary_condition:
         solver_id: 0
-        geometry: 
+        surface: 
             type: z_plane
-            value: 0.0
-        velocity_model: reflected_velocity
+            plane_position: 0.0
+        velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
             - 0   # y

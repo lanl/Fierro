@@ -723,7 +723,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 
     FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
         // tag boundaries
-        int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).geometry;
+        int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
         double val    = boundary.BoundaryConditionSetup(bdy_set).value;
         double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
         double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];

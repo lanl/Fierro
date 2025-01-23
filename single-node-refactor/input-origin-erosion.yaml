@@ -39,10 +39,10 @@ boundary_conditions:
     # Tag X plane
     - boundary_condition:
         solver_id: 0
-        geometry: 
+        surface: 
             type: x_plane
-            value: 0.0
-        velocity_model: reflected_velocity
+            plane_position: 0.0
+        velocity_model: reflected
         velocity_bc_global_vars:
             - 1   # x
             - 0   # y
@@ -51,10 +51,10 @@ boundary_conditions:
     # Tag Y plane
     - boundary_condition:
         solver_id: 0
-        geometry: 
+        surface: 
             type: y_plane
-            value: 0.0
-        velocity_model: reflected_velocity
+            plane_position: 0.0
+        velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
             - 1   # y
@@ -63,10 +63,10 @@ boundary_conditions:
     # Tag Z plane
     - boundary_condition:
         solver_id: 0
-        geometry: 
+        surface: 
             type: z_plane
-            value: 0.0
-        velocity_model: reflected_velocity
+            plane_position: 0.0
+        velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
             - 0   # y
@@ -78,6 +78,7 @@ materials:
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         # strength_model: none
+        dissipation_model: MARS
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
@@ -99,11 +100,14 @@ materials:
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         # strength_model: none
+        dissipation_model: MARS
         dissipation_global_vars:
             - 1.0   # q1
-            - 1.333 # q1ex
-            - 1.0   # q2
+            - 1.0   # q1ex
+            - 1.333 # q2
             - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 1.0   # phi_curl_min
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14

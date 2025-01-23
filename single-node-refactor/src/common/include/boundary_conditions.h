@@ -44,7 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace boundary_conditions
 {
-// supported geometry for boundary conditions
+// supported surface geometry for boundary conditions
 enum BdyTag
 {
     xPlane = 0,     // tag an x-plane
@@ -85,7 +85,7 @@ enum BCFcnLocation
 
 } // end of boundary conditions namespace
 
-static std::map<std::string, boundary_conditions::BdyTag> bc_geometry_map
+static std::map<std::string, boundary_conditions::BdyTag> bc_surface_map
 {
     { "x_plane", boundary_conditions::xPlane },
     { "y_plane", boundary_conditions::yPlane },
@@ -98,13 +98,13 @@ static std::map<std::string, boundary_conditions::BdyTag> bc_geometry_map
 
 static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_model_map
 {
-    { "no_velocity", boundary_conditions::noVelocityBC },
-    { "constant_velocity", boundary_conditions::constantVelocityBC },
-    { "velocity_vs_time", boundary_conditions::timeVaringVelocityBC },
-    { "reflected_velocity", boundary_conditions::reflectedVelocityBC },
-    { "zero_velocity", boundary_conditions::zeroVelocityBC },
-    { "user_defined_velocity", boundary_conditions::userDefinedVelocityBC },
-    { "piston_velocity", boundary_conditions::pistonVelocityBC }
+    { "none", boundary_conditions::noVelocityBC },
+    { "constant", boundary_conditions::constantVelocityBC },
+    { "time_varying", boundary_conditions::timeVaringVelocityBC },
+    { "reflected", boundary_conditions::reflectedVelocityBC },
+    { "fixed", boundary_conditions::zeroVelocityBC },
+    { "user_defined", boundary_conditions::userDefinedVelocityBC },
+    { "piston", boundary_conditions::pistonVelocityBC }
 };
 // future options
 //    { "displacement",          boundary_conditions::displacementBC          },
@@ -131,9 +131,9 @@ static std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
 /////////////////////////////////////////////////////////////////////////////
 struct BoundaryConditionSetup_t
 {
-    boundary_conditions::BdyTag geometry;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
+    boundary_conditions::BdyTag surface;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
     double origin[3] = { 0.0, 0.0, 0.0 };   ///< origin of surface being tagged, e.g., sphere or cylinder surface
-    double value     = 0.0;                 ///< value = position, radius, etc. defining the geometric shape
+    double value     = 0.0;                 ///< value = position, radius, etc. defining the surface geometric shape
 }; // end boundary condition setup
 
 /////////////////////////////////////////////////////////////////////////////
@@ -220,15 +220,16 @@ static std::vector<std::string> str_bc_inps
 {
     "solver_id",
     "velocity_model",
-    "geometry",
+    "surface",
     "velocity_bc_global_vars"
 };
 
-// subfields under geometery
-static std::vector<std::string> str_bc_geometry_inps
+// subfields under surface
+static std::vector<std::string> str_bc_surface_inps
 {
     "type",
-    "value",
+    "plane_position",
+    "radius",
     "origin"
 };
 
@@ -238,7 +239,7 @@ static std::vector<std::string> str_bc_geometry_inps
 static std::vector<std::string> bc_required_inps
 {
 };
-static std::vector<std::string> bc_geometery_required_inps
+static std::vector<std::string> bc_surface_required_inps
 {
 };
 

@@ -349,7 +349,6 @@ void validate_inputs(
         // validate input: user_inputs match words in the str_valid_inputs
         if (std::find(str_valid_inputs.begin(), str_valid_inputs.end(), var_name) == str_valid_inputs.end()) {
             std::cout << "ERROR: invalid input: " << var_name << std::endl;
-            throw std::runtime_error("**** Exiting validate input.  Missing required inputs ****");
         } // end if variable exists
     } // end for item in this yaml input
 
@@ -2485,6 +2484,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     for (const auto& pair : map) {
                         std::cout << "\t" << pair.first << std::endl;
                     }
+
+                    throw std::runtime_error("**** Boundary Condition Velocity Model Not Understood ****");
                 } // end if
             } // type
             // get boundary condition direction
@@ -2510,60 +2511,68 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     for (const auto& pair : map) {
                         std::cout << "\t" << pair.first << std::endl;
                     }
+                    throw std::runtime_error("**** Boundary Conditions Not Understood ****");
                 } // end if
             } // direction
-            // get boundary condition geometry
-            else if (a_word.compare("geometry") == 0) {
+            // get boundary condition surface geometry
+            else if (a_word.compare("surface") == 0) {
 
                 // -----
-                // loop over the sub fields under geometry
+                // loop over the sub fields under surface
                 // -----
-                Yaml::Node& inps_subfields_yaml = bc_yaml[bc_id]["boundary_condition"]["geometry"];
+                Yaml::Node& inps_subfields_yaml = bc_yaml[bc_id]["boundary_condition"]["surface"];
 
                 // get the bc_geometery variables names set by the user
-                std::vector<std::string> user_bc_geometry_inputs;
+                std::vector<std::string> user_bc_surface_inputs;
                 
                 // extract words from the input file and validate they are correct
-                validate_inputs(inps_subfields_yaml, user_bc_geometry_inputs, str_bc_geometry_inps, bc_geometery_required_inps);
+                validate_inputs(inps_subfields_yaml, user_bc_surface_inputs, str_bc_surface_inps, bc_surface_required_inps);
 
 
                 // loop over the subfield words
-                for(auto& a_subfield_word : user_bc_geometry_inputs){ 
+                for(auto& a_subfield_word : user_bc_surface_inputs){ 
 
                     if (a_subfield_word.compare("type") == 0){
-                        std::string geometry = bc_yaml[bc_id]["boundary_condition"]["geometry"][a_subfield_word].As<std::string>();
+                        std::string surface = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<std::string>();
 
-                        auto map = bc_geometry_map;
+                        auto map = bc_surface_map;
 
-                        // set the geometry
-                        if (map.find(geometry) != map.end()) {
-                            auto bc_geometry = map[geometry];
+                        // set the surface
+                        if (map.find(surface) != map.end()) {
+                            auto bc_surface = map[surface];
                             RUN({
-                                BoundaryConditions.BoundaryConditionSetup(bc_id).geometry = bc_geometry;
+                                BoundaryConditions.BoundaryConditionSetup(bc_id).surface = bc_surface;
                             });
 
                             if (VERBOSE) {
-                                std::cout << "\tgeometry = " << geometry << std::endl;
+                                std::cout << "\tsurface = " << surface << std::endl;
                             }
                         }
                         else{
-                            std::cout << "ERROR: invalid boundary condition option input in YAML file: " << geometry << std::endl;
+                            std::cout << "ERROR: invalid boundary condition option input in YAML file: " << surface << std::endl;
                             std::cout << "Valid options are: " << std::endl;
 
                             for (const auto& pair : map) {
                                 std::cout << "\t" << pair.first << std::endl;
                             }
+                            throw std::runtime_error("**** Boundary Condition Surface Inputs Not Understood ****");
                         } // end if
 
                     } // end if type
-                    else if (a_subfield_word.compare("value") == 0) {
-                        double value = bc_yaml[bc_id]["boundary_condition"]["geometry"][a_subfield_word].As<double>();
+                    else if (a_subfield_word.compare("plane_position") == 0) {
+                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
+                        });
+                    } // end if value
+                    else if (a_subfield_word.compare("radius") == 0) {
+                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
                     } // end if value
                     else if (a_subfield_word.compare("origin") == 0) {
-                        std::string origin = bc_yaml[bc_id]["boundary_condition"]["geometry"][a_subfield_word].As<std::string>();
+                        std::string origin = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<std::string>();
                         if (VERBOSE) {
                             std::cout << "\torigin = " << origin << std::endl;
                         }
@@ -2602,14 +2611,14 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         // word is unknown
                         std::cout << "ERROR: invalid input under boundary condition geometery: " << a_subfield_word << std::endl;
                         std::cout << "Valid options are: " << std::endl;
-                        for (const auto& element : str_bc_geometry_inps) {
+                        for (const auto& element : str_bc_surface_inps) {
                             std::cout << element << std::endl;
                         }
                         throw std::runtime_error("**** Boundary Conditions Not Understood ****");
                     }
 
                 } // end loop over words in the subfield
-            } // geometry
+            } // surface
             // set the value
             else if (a_word.compare("velocity_bc_global_vars") == 0) {
                 Yaml::Node & vel_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
@@ -2653,7 +2662,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
 
         // add checks for velocity vs time boundary condition
-        
+
 
     } // end loop over BCs specified
 
