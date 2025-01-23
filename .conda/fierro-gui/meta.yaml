@@ -3,9 +3,10 @@ package:
   version: 1
 
 source:
-  path: ../../
-  # - git_url: https://github.com/lanl/Fierro.git
-  #   depth: 1
+  #path: ../../
+  git_url: https://github.com/lanl/Fierro.git
+  depth: 1
+  git_submodules: false # don't need submodules 
 
 build:
   number: 0
