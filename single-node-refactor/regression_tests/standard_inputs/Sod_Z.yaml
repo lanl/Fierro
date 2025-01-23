@@ -25,57 +25,79 @@ solver_options:
         method: SGH3D
 
 boundary_conditions:
-    # Tag X=0 plane
+    # Tag X plane
     - boundary_condition:
         solver_id: 0
-        geometry: x_plane
-        direction: x_dir
-        value: 0.0
+        geometry: 
+            type: x_plane
+            value: 0.0
         velocity_model: reflected_velocity
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
 
             
-    # Tag Y=0 plane
+    # Tag Y plane
     - boundary_condition:
         solver_id: 0
-        geometry: y_plane
-        direction: y_dir
-        value: 0.0
+        geometry: 
+            type: y_plane
+            value: 0.0
         velocity_model: reflected_velocity
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
 
-    # Tag z=0 plane
+    # Tag Z plane
     - boundary_condition:
         solver_id: 0
-        geometry: z_plane
-        direction: z_dir
-        value: 0.0
+        geometry: 
+            type: z_plane
+            value: 0.0
         velocity_model: reflected_velocity
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z   
 
 
     # Tag X=0.01 plane
     - boundary_condition:
         solver_id: 0
-        geometry: x_plane
-        direction: x_dir
-        value: 0.01
+        geometry: 
+            type: x_plane
+            value: 0.01
         velocity_model: reflected_velocity
-
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
             
     # Tag Y=0.01 plane
     - boundary_condition:
         solver_id: 0
-        geometry: y_plane
-        direction: y_dir
-        value: 0.01
+        geometry: 
+            type: y_plane
+            value: 0.01
         velocity_model: reflected_velocity
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
 
     # Tag z=1.0 plane
     - boundary_condition:
         solver_id: 0
-        geometry: z_plane
-        direction: z_dir
-        value: 1.0
+        geometry: 
+            type: z_plane
+            value: 1.0
         velocity_model: reflected_velocity
-                
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z                
 
 materials:
     - material:

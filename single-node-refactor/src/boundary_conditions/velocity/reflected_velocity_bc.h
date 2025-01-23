@@ -62,7 +62,7 @@ namespace ReflectedVelocityBC
 KOKKOS_FUNCTION
 static void velocity(const Mesh_t& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const DCArrayKokkos<double>& bc_global_vars,
+    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,
     const DCArrayKokkos<double>& node_vel,
     const double time_value,
@@ -70,13 +70,15 @@ static void velocity(const Mesh_t& mesh,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    // directions are:
-    // x_plane  = 0,
-    // y_plane  = 1,
-    // z_plane  = 2,
+    double mag = 0.0;
+    for (size_t dim = 0; dim<mesh.num_dims; dim++){
+        mag += vel_bc_global_vars(bdy_set,dim)*vel_bc_global_vars(bdy_set,dim);
+    } // will make sure it's a unit vector
 
-    // Set velocity to zero in the specified direction
-    node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) = 0.0;
+    // Remove the velocity in the specified direction
+    for (size_t dim = 0; dim<mesh.num_dims; dim++){
+        node_vel(1, bdy_node_gid, dim) -= node_vel(1, bdy_node_gid, dim)*vel_bc_global_vars(bdy_set,dim)/mag;
+    }
 
     return;
 } // end func

@@ -69,7 +69,7 @@ void SGH3D::boundary_velocity(const Mesh_t&      mesh,
             BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(
                 mesh,
                 BoundaryConditions.BoundaryConditionEnums,
-                BoundaryConditions.bc_global_vars,
+                BoundaryConditions.velocity_bc_global_vars,
                 BoundaryConditions.bc_state_vars,
                 node_vel,
                 time_value,

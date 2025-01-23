@@ -39,19 +39,27 @@ boundary_conditions:
     # Tag X plane
     - boundary_condition:
         solver_id: 0
-        geometry: x_plane
-        direction: x_dir
-        value: 0.0
+        geometry: 
+            type: x_plane
+            value: 0.0
         velocity_model: reflected_velocity
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
 
             
     # Tag Y plane
     - boundary_condition:
         solver_id: 0
-        geometry: y_plane
-        direction: y_dir
-        value: 0.0
+        geometry: 
+            type: y_plane
+            value: 0.0
         velocity_model: reflected_velocity
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
 
 
   

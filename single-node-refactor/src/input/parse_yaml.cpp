@@ -349,6 +349,7 @@ void validate_inputs(
         // validate input: user_inputs match words in the str_valid_inputs
         if (std::find(str_valid_inputs.begin(), str_valid_inputs.end(), var_name) == str_valid_inputs.end()) {
             std::cout << "ERROR: invalid input: " << var_name << std::endl;
+            throw std::runtime_error("**** Exiting validate input.  Missing required inputs ****");
         } // end if variable exists
     } // end for item in this yaml input
 
@@ -2189,7 +2190,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     std::cout << "num global strength vars = " << num_global_vars << std::endl;
                 }
 
-                // store the global eos model parameters
+                // store the global strength model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double strength_var = root["materials"][m_id]["material"]["strength_global_vars"][global_var_id].As<double>();
                     
@@ -2201,7 +2202,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                         std::cout << "\t var = " << strength_var << std::endl;
                     }
                 } // end loop over global vars
-            } // "eos_global_vars"
+            } // "strength_global_vars"
             else if (a_word.compare("dissipation_global_vars") == 0) {
                 Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];
 
@@ -2321,13 +2322,23 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     } // end for
 
 
-    // the state for boundary conditions
-    BoundaryConditions.bc_global_vars = DCArrayKokkos<double>(num_bcs, 4, "bc_global_values"); // increase 4 for more params
+    // temporary arrays for boundary condition variables
+    DCArrayKokkos<double> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
+    
+    BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars");
+
+    // initialize the num of global vars to 0 for all models
+    FOR_ALL(bc_id, 0, num_bcs, {
+        BoundaryConditions.num_velocity_bc_global_vars(bc_id) = 0;
+    }); // end parallel for
+
+
+    // state place holder is here
     BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
 
 
     // loop over the BC specified
-    for (int bc_id = 0; bc_id < num_bcs; bc_id++) {
+    for (size_t bc_id = 0; bc_id < num_bcs; bc_id++) {
         // read the variables names
         Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"];
 
@@ -2501,149 +2512,135 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     }
                 } // end if
             } // direction
-            // get boundary condition direction
-            else if (a_word.compare("direction") == 0) {
-                std::string direction = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
-
-                auto map = bc_direction_map;
-
-                // set the direction
-                if (map.find(direction) != map.end()) {
-                    auto bc_direction = map[direction];
-                    RUN({
-                        BoundaryConditions.BoundaryConditionEnums(bc_id).Direction = bc_direction;
-                    });
-                    if (VERBOSE) {
-                        std::cout << "\tdirection = " << direction << std::endl;
-                    }
-                }
-                else{
-                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << direction << std::endl;
-                    std::cout << "Valid options are: " << std::endl;
-
-                    for (const auto& pair : map) {
-                        std::cout << "\t" << pair.first << std::endl;
-                    }
-                } // end if
-            } // direction
             // get boundary condition geometry
             else if (a_word.compare("geometry") == 0) {
-                std::string geometry = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
-                auto map = bc_geometry_map;
+                // -----
+                // loop over the sub fields under geometry
+                // -----
+                Yaml::Node& inps_subfields_yaml = bc_yaml[bc_id]["boundary_condition"]["geometry"];
 
-                // set the geometry
-                if (map.find(geometry) != map.end()) {
-                    auto bc_geometry = map[geometry];
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_bc_geometry_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_bc_geometry_inputs, str_bc_geometry_inps, bc_geometery_required_inps);
+
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_bc_geometry_inputs){ 
+
+                    if (a_subfield_word.compare("type") == 0){
+                        std::string geometry = bc_yaml[bc_id]["boundary_condition"]["geometry"][a_subfield_word].As<std::string>();
+
+                        auto map = bc_geometry_map;
+
+                        // set the geometry
+                        if (map.find(geometry) != map.end()) {
+                            auto bc_geometry = map[geometry];
+                            RUN({
+                                BoundaryConditions.BoundaryConditionSetup(bc_id).geometry = bc_geometry;
+                            });
+
+                            if (VERBOSE) {
+                                std::cout << "\tgeometry = " << geometry << std::endl;
+                            }
+                        }
+                        else{
+                            std::cout << "ERROR: invalid boundary condition option input in YAML file: " << geometry << std::endl;
+                            std::cout << "Valid options are: " << std::endl;
+
+                            for (const auto& pair : map) {
+                                std::cout << "\t" << pair.first << std::endl;
+                            }
+                        } // end if
+
+                    } // end if type
+                    else if (a_subfield_word.compare("value") == 0) {
+                        double value = bc_yaml[bc_id]["boundary_condition"]["geometry"][a_subfield_word].As<double>();
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
+                        });
+                    } // end if value
+                    else if (a_subfield_word.compare("origin") == 0) {
+                        std::string origin = bc_yaml[bc_id]["boundary_condition"]["geometry"][a_subfield_word].As<std::string>();
+                        if (VERBOSE) {
+                            std::cout << "\torigin = " << origin << std::endl;
+                        }
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(origin, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        if (VERBOSE) {
+                            std::cout << "\tx1 = " << x1 << std::endl;
+                            std::cout << "\ty1 = " << y1 << std::endl;
+                            std::cout << "\tz1 = " << z1 << std::endl;
+                        }
+                        // storing the origin values as (x1,y1,z1)
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).origin[0] = x1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).origin[1] = y1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).origin[2] = z1;
+                        });
+
+                    } //end origin
+                    else {
+                        // word is unknown
+                        std::cout << "ERROR: invalid input under boundary condition geometery: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_bc_geometry_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Boundary Conditions Not Understood ****");
+                    }
+
+                } // end loop over words in the subfield
+            } // geometry
+            // set the value
+            else if (a_word.compare("velocity_bc_global_vars") == 0) {
+                Yaml::Node & vel_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+                size_t num_global_vars = vel_bc_global_vars_yaml.Size();
+
+                if(num_global_vars>100){
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 velocity global vars in the input file ****");
+                } // end check on num_global_vars
+
+                RUN({ 
+                    BoundaryConditions.num_velocity_bc_global_vars(bc_id) = num_global_vars;
+                });
+               
+                if (VERBOSE) {
+                    std::cout << "num global velocity_bc vars = " << num_global_vars << std::endl;
+                }
+
+                // store the global eos model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double velocity_bc_var = bc_yaml[bc_id]["boundary_condition"]["velocity_bc_global_vars"][global_var_id].As<double>();
+                    
                     RUN({
-                        BoundaryConditions.BoundaryConditionSetup(bc_id).geometry = bc_geometry;
+                        tempVelocityBCGlobalVars(bc_id, global_var_id) = velocity_bc_var;
                     });
 
                     if (VERBOSE) {
-                        std::cout << "\tgeometry = " << geometry << std::endl;
+                        std::cout << "\t var = " << velocity_bc_var << std::endl;
                     }
-                }
-                else{
-                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << geometry << std::endl;
-                    std::cout << "Valid options are: " << std::endl;
-
-                    for (const auto& pair : map) {
-                        std::cout << "\t" << pair.first << std::endl;
-                    }
-                } // end if
-            } // geometry
-            // set the value
-            else if (a_word.compare("value") == 0) {
-                double value = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
-                });
-            } // value
-            // set the u
-            else if (a_word.compare("u") == 0) {
-                double u = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,0) = u;
-                });
-            } // u
-            // set the v
-            else if (a_word.compare("v") == 0) {
-                double v = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,1) = v;
-                });
-            } // v
-            // set the w
-            else if (a_word.compare("w") == 0) {
-                double w = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,2) = w;
-                });
-            } // w
-            // set the bc_vel_0
-            else if (a_word.compare("hydro_bc_vel_0") == 0) {
-                double hydro_bc_vel_0 = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,0) = hydro_bc_vel_0;
-                });
-            } // 
-            // set the bc_vel_1
-            else if (a_word.compare("hydro_bc_vel_1") == 0) {
-                double hydro_bc_vel_1 = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,1) = hydro_bc_vel_1;
-                });
-            } // 
-            // set the bc_vel_start
-            else if (a_word.compare("hydro_bc_vel_t_start") == 0) {
-                double hydro_bc_vel_t_start = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,2) = hydro_bc_vel_t_start;
-                });
-            } // 
-            // set the bc_vel_end
-            else if (a_word.compare("hydro_bc_vel_t_end") == 0) {
-                double hydro_bc_vel_t_end = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,3) = hydro_bc_vel_t_end;
-                });
-            } // 
-            else if (a_word.compare("origin") == 0) {
-                std::string origin = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
-                if (VERBOSE) {
-                    std::cout << "\torigin = " << origin << std::endl;
-                }
-
-                // get the origin numbers, values are words
-                std::vector<std::string> numbers = exact_array_values(origin, ",");
-
-                double x1 = std::stod(numbers[0]);
-                double y1 = std::stod(numbers[1]);
-                double z1;
-
-                if(numbers.size()==3){ 
-                    // 3D
-                    z1 = std::stod(numbers[2]);
-                }
-                else {
-                    // 2D
-                    z1 = 0.0;
-                } //
-
-                if (VERBOSE) {
-                    std::cout << "\tx1 = " << x1 << std::endl;
-                    std::cout << "\ty1 = " << y1 << std::endl;
-                    std::cout << "\tz1 = " << z1 << std::endl;
-                }
-                // storing the origin values as (x1,y1,z1)
-
-                RUN({
-                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[0] = x1;
-                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[1] = y1;
-                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[2] = z1;
-                });
-
-            } // origin
+                } // end loop over global vars
+            } // end else if on velocity_bc_global_vars
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
@@ -2654,7 +2651,27 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             }
         } // end for words in boundary conditions
 
+
+        // add checks for velocity vs time boundary condition
+        
+
     } // end loop over BCs specified
+
+
+     // allocate ragged right memory to hold the model global variables
+    BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
+    // ... allocate other bc global vars here
+
+    // save the global variables
+    FOR_ALL(bc_id, 0, num_bcs, {
+        
+        for (size_t var_lid=0; var_lid<BoundaryConditions.num_velocity_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.velocity_bc_global_vars(bc_id, var_lid) = tempVelocityBCGlobalVars(bc_id, var_lid);
+        } // end for eos var_lid
+
+        // ... add other bc global vars here
+
+    }); // end for loop over boundary conditions
 
     // copy the enum values to the host 
     BoundaryConditions.BoundaryConditionEnums.update_host();

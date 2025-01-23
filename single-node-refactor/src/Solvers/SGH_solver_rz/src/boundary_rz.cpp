@@ -71,7 +71,7 @@ void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
             // evaluate velocity on this boundary node
             BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(mesh,
                                                                   BoundaryConditions.BoundaryConditionEnums,
-                                                                  BoundaryConditions.bc_global_vars,
+                                                                  BoundaryConditions.velocity_bc_global_vars,
                                                                   BoundaryConditions.bc_state_vars,
                                                                   node_vel,
                                                                   time_value,
