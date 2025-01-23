@@ -21,7 +21,7 @@ requirements:
     - python
     - setuptools
   run:
-    - paraview=5.11.2
+    - paraview=5.13.1
     - python
     - numpy
     - matplotlib
