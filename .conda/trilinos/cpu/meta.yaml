@@ -7,8 +7,10 @@ package:
   version: {{ version }}
 
 source:
-  url: https://github.com/trilinos/Trilinos/archive/trilinos-release-{{ version | replace('.', '-') }}.tar.gz
-  md5: 0b627d9a1c84fc185d145940dead9910
+  #url: https://github.com/trilinos/Trilinos/archive/trilinos-release-{{ version | replace('.', '-') }}.tar.gz
+    #md5: 0b627d9a1c84fc185d145940dead9910 #md5 is for version 15, need the 16 one
+  git_url: https://github.com/trilinos/Trilinos.git
+  git_depth: 1
 
 build:
   number: 2
