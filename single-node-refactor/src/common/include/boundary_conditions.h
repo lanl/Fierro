@@ -44,7 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace boundary_conditions
 {
-// supported geometry for boundary conditions
+// supported surface geometry for boundary conditions
 enum BdyTag
 {
     xPlane = 0,     // tag an x-plane
@@ -58,7 +58,7 @@ enum BdyTag
 
 // types of boundary conditions
 // WARNING: Currently only velocity is supported
-enum BCHydro
+enum BCVelocityModels
 {
     noVelocityBC = 0,
     constantVelocityBC = 1,
@@ -68,12 +68,13 @@ enum BCHydro
     userDefinedVelocityBC = 5,
     pistonVelocityBC = 6
 };
-// future options:
-//    displacement          = 6,
-//    acceleration          = 7,
-//    pressure              = 8,
-//    temperature           = 9,
-//    contact               = 10
+// future model options:
+//    displacementBC          = 6,
+//    accelerationBC          = 7,
+//    pressureBC              = 8,
+//    temperatureBC           = 9,
+//    contactBC               = 10
+
 
 enum BCFcnLocation
 {
@@ -81,16 +82,10 @@ enum BCFcnLocation
     device = 1
 };
 
-// Direction to apply boundary conditions
-enum BCDirection
-{
-    xDir = 0,
-    yDir = 1,
-    zDir = 2
-};
+
 } // end of boundary conditions namespace
 
-static std::map<std::string, boundary_conditions::BdyTag> bc_geometry_map
+static std::map<std::string, boundary_conditions::BdyTag> bc_surface_map
 {
     { "x_plane", boundary_conditions::xPlane },
     { "y_plane", boundary_conditions::yPlane },
@@ -101,29 +96,25 @@ static std::map<std::string, boundary_conditions::BdyTag> bc_geometry_map
 // future options
 //     { "read_file", boundary_conditions::read_file }
 
-static std::map<std::string, boundary_conditions::BCHydro> bc_type_map
+static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_model_map
 {
-    { "no_velocity", boundary_conditions::noVelocityBC },
-    { "constant_velocity", boundary_conditions::constantVelocityBC },
-    { "velocity_vs_time", boundary_conditions::timeVaringVelocityBC },
-    { "reflected_velocity", boundary_conditions::reflectedVelocityBC },
-    { "zero_velocity", boundary_conditions::zeroVelocityBC },
-    { "user_defined_velocity", boundary_conditions::userDefinedVelocityBC },
-    { "piston_velocity", boundary_conditions::pistonVelocityBC }
+    { "none", boundary_conditions::noVelocityBC },
+    { "constant", boundary_conditions::constantVelocityBC },
+    { "time_varying", boundary_conditions::timeVaringVelocityBC },
+    { "reflected", boundary_conditions::reflectedVelocityBC },
+    { "fixed", boundary_conditions::zeroVelocityBC },
+    { "user_defined", boundary_conditions::userDefinedVelocityBC },
+    { "piston", boundary_conditions::pistonVelocityBC }
 };
 // future options
-//    { "displacement",          boundary_conditions::displacement          },
-//    { "acceleration",          boundary_conditions::acceleration          },
-//    { "pressure",              boundary_conditions::pressure              },
-//    { "temperature",           boundary_conditions::temperature           },
-//    { "contact",               boundary_conditions::contact               }
+//    { "displacement",          boundary_conditions::displacementBC          },
+//    { "acceleration",          boundary_conditions::accelerationBC          },
+//    { "pressure",              boundary_conditions::pressureBC              },
+//    { "temperature",           boundary_conditions::temperatureBC           },
+//    { "contact",               boundary_conditions::contactBC               }
 
-static std::map<std::string, boundary_conditions::BCDirection> bc_direction_map
-{
-    { "x_dir", boundary_conditions::xDir },
-    { "y_dir", boundary_conditions::yDir },
-    { "z_dir", boundary_conditions::zDir }
-};
+
+
 
 static std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
 {
@@ -140,9 +131,9 @@ static std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
 /////////////////////////////////////////////////////////////////////////////
 struct BoundaryConditionSetup_t
 {
-    boundary_conditions::BdyTag geometry;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
+    boundary_conditions::BdyTag surface;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
     double origin[3] = { 0.0, 0.0, 0.0 };   ///< origin of surface being tagged, e.g., sphere or cylinder surface
-    double value     = 0.0;                 ///< value = position, radius, etc. defining the geometric shape
+    double value     = 0.0;                 ///< value = position, radius, etc. defining the surface geometric shape
 }; // end boundary condition setup
 
 /////////////////////////////////////////////////////////////////////////////
@@ -156,9 +147,7 @@ struct BoundaryConditionEnums_t
 {
     solver_input::method solver = solver_input::NONE; ///< Numerical solver method
 
-    boundary_conditions::BCHydro BCHydroType;    ///< Type of boundary condition
-
-    boundary_conditions::BCDirection Direction; ///< Boundary condition direction
+    boundary_conditions::BCVelocityModels BCVelocityModel = boundary_conditions::noVelocityBC;    ///< Type of velocity boundary condition
 
     boundary_conditions::BCFcnLocation Location = boundary_conditions::device; // host or device BC function
 }; // end boundary condition enums
@@ -175,7 +164,7 @@ struct BoundaryConditionFunctions_t
     // function pointer for velocity BC's
     void (*velocity) (const Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-        const DCArrayKokkos<double>& bc_global_vars,
+        const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
         const DCArrayKokkos<double>& node_vel,
         const double time_value,
@@ -207,8 +196,18 @@ struct BoundaryCondition_t
     // enums to select BC capabilities, some enums are needed on the host side and device side
     DCArrayKokkos<BoundaryConditionEnums_t> BoundaryConditionEnums;
 
-    // global variables for boundary condition models
-    DCArrayKokkos<double> bc_global_vars; // it is only 4 values, so ragged doesn't make sense now
+    // making a psuedo dual ragged right
+    DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver, ids)
+    DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver)
+
+    // keep adding ragged storage for the other BC models -- temp, displacement, etc.
+    // DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver, ids)
+    // DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver)
+
+
+    // global variables for velocity boundary condition models
+    RaggedRightArrayKokkos<double> velocity_bc_global_vars;
+    CArrayKokkos<size_t> num_velocity_bc_global_vars;
 
     // state variables for boundary conditions
     DCArrayKokkos<double> bc_state_vars;
@@ -219,25 +218,28 @@ struct BoundaryCondition_t
 // -------------------------------------
 static std::vector<std::string> str_bc_inps
 {
-    "solver",
+    "solver_id",
+    "velocity_model",
+    "surface",
+    "velocity_bc_global_vars"
+};
+
+// subfields under surface
+static std::vector<std::string> str_bc_surface_inps
+{
     "type",
-    "geometry",
-    "direction",
-    "value",
-    "u",
-    "v",
-    "w",
-    "origin",
-    "hydro_bc_vel_0",
-    "hydro_bc_vel_1",
-    "hydro_bc_vel_t_start",
-    "hydro_bc_vel_t_end"
+    "plane_position",
+    "radius",
+    "origin"
 };
 
 // ----------------------------------
 // required inputs for boundary condition options
 // ----------------------------------
 static std::vector<std::string> bc_required_inps
+{
+};
+static std::vector<std::string> bc_surface_required_inps
 {
 };
 

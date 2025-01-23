@@ -51,6 +51,8 @@ class Solver
 {
 public:
 
+    size_t solver_id;
+
     Solver();
     virtual ~Solver();
 

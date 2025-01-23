@@ -44,10 +44,13 @@ namespace TimeVaryingVelocityBC
 // add an enum for boundary statevars and global vars
 enum BCVars
 {
-    hydro_bc_vel_0 = 0,
-    hydro_bc_vel_1 = 1,
-    hydro_bc_vel_t_start = 2,
-    hydro_bc_vel_t_end = 3
+    x_comp = 0,
+    y_comp = 1,
+    z_comp = 2,
+    hydro_bc_vel_0 = 3,
+    hydro_bc_vel_1 = 4,
+    hydro_bc_vel_t_start = 5,
+    hydro_bc_vel_t_end = 6
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -73,7 +76,7 @@ enum BCVars
 KOKKOS_FUNCTION
 static void velocity(const Mesh_t& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const DCArrayKokkos<double>& bc_global_vars,
+    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,
     const DCArrayKokkos<double>& node_vel,
     const double time_value,
@@ -81,10 +84,13 @@ static void velocity(const Mesh_t& mesh,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    const double hydro_bc_vel_0 = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_0);
-    const double hydro_bc_vel_1 = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_1);
-    const double hydro_bc_vel_t_start = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_start);
-    const double hydro_bc_vel_t_end   = bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_end);
+    const double x_comp = vel_bc_global_vars(bdy_set, BCVars::x_comp);
+    const double y_comp = vel_bc_global_vars(bdy_set, BCVars::y_comp);
+    const double z_comp = vel_bc_global_vars(bdy_set, BCVars::z_comp);
+    const double hydro_bc_vel_0 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_0);
+    const double hydro_bc_vel_1 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_1);
+    const double hydro_bc_vel_t_start = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_start);
+    const double hydro_bc_vel_t_end   = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_end);
 
     // directions are as follows:
     // x_plane  = 0,
@@ -98,8 +104,22 @@ static void velocity(const Mesh_t& mesh,
         // the time difference
         const double time_delta = time_value - hydro_bc_vel_t_start;
 
-        node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) =
-            hydro_bc_vel_0 * exp(-hydro_bc_vel_1 * time_delta);
+        // the desired velocity
+        const double vel = hydro_bc_vel_0 * exp(-hydro_bc_vel_1 * time_delta);
+
+        double mag = 0.0;
+        for (size_t dim = 0; dim<mesh.num_dims; dim++){
+            mag += vel_bc_global_vars(bdy_set,dim)*vel_bc_global_vars(bdy_set,dim);
+        } // will make sure it's a unit vector
+
+        for (size_t dim = 0; dim<mesh.num_dims; dim++){
+            // remove the velocity in the specified direction
+            node_vel(1, bdy_node_gid, dim) -= node_vel(1, bdy_node_gid, dim)*vel_bc_global_vars(bdy_set,dim)/mag;
+
+            // add the desired velocity in the specified direction
+            node_vel(1, bdy_node_gid, dim) += vel*vel_bc_global_vars(bdy_set,dim)/mag;
+        }
+        
     } // end if on time
 
     return;

@@ -42,7 +42,7 @@ solver_options:
 #         geometry: x_plane
 #         direction: x_dir
 #         value: 0.0
-#         type: reflected_velocity
+#         velocity_model: reflected_velocity
 
             
 #     # Tag Y plane
@@ -51,7 +51,7 @@ solver_options:
 #         geometry: y_plane
 #         direction: y_dir
 #         value: 0.0
-#         type: reflected_velocity
+#         velocity_model: reflected_velocity
 
 #     # Tag z plane
 #     - boundary_condition:
@@ -59,7 +59,7 @@ solver_options:
 #         geometry: z_plane
 #         direction: z_dir
 #         value: 0.0
-#         type: reflected_velocity
+#         velocity_model: reflected_velocity
 
 
   

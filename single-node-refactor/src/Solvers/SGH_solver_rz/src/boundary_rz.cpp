@@ -55,8 +55,12 @@ void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
                                  const double time_value) const
 {
 
-    // Loop over boundary sets
-    for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
+    size_t num_vel_bdy_sets = BoundaryConditions.num_vel_bdy_sets_in_solver.host(this->solver_id); 
+
+    // Loop over the velocity boundary sets
+    for (size_t bc_lid = 0; bc_lid < num_vel_bdy_sets; bc_lid++) {
+        
+        size_t bdy_set = BoundaryConditions.vel_bdy_sets_in_solver.host(bc_lid);
         
         // Loop over boundary nodes in a boundary set
         FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
@@ -67,7 +71,7 @@ void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
             // evaluate velocity on this boundary node
             BoundaryConditions.BoundaryConditionFunctions(bdy_set).velocity(mesh,
                                                                   BoundaryConditions.BoundaryConditionEnums,
-                                                                  BoundaryConditions.bc_global_vars,
+                                                                  BoundaryConditions.velocity_bc_global_vars,
                                                                   BoundaryConditions.bc_state_vars,
                                                                   node_vel,
                                                                   time_value,

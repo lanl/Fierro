@@ -38,20 +38,28 @@ solver_options:
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
-        solver: SGHRZ
-        geometry: x_plane
-        direction: x_dir
-        value: 0.0
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
 
             
     # Tag Y plane
     - boundary_condition:
-        solver: SGHRZ
-        geometry: y_plane
-        direction: y_dir
-        value: 0.0
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
 
 
   
