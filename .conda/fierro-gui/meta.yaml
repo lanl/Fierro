@@ -21,6 +21,7 @@ requirements:
     - python
     - setuptools
     - paraview >=5.13.2
+    - python >=3.12
   run:
     - paraview >=5.13.2
       #- python=3.13
