@@ -1,4 +1,4 @@
-{% set version = "15.0.0" %}
+{% set version = "16.0.0" %}
 {% set linux_compiler_version = "10.4.0" %}
 {% set macos_compiler_version = "16" %}
 
