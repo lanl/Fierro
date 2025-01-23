@@ -14,24 +14,23 @@ build:
   noarch: python # This is a pure python package. So build for noarch on linux64
   entry_points:
     - fierro-gui = fierro_gui.gui:main
-  skip: true  # [not (linux and x86_64)]
+      #skip: true  # [not (linux and x86_64)]
   skip: false # [linux and x86_64]
 
 requirements:
   host:
     - python
     - setuptools
-    - paraview >=5.13.2
-    - python >=3.12
   run:
     - paraview >=5.13.2
+    - python
       #- numpy
       #- matplotlib
     - pyside6 >=6.7.3
 
 test:
   imports:
-    - fierro_gui
+    - fierro-gui
   
 about:
   home: https://github.com/lanl/Fierro
