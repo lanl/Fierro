@@ -1738,29 +1738,16 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
 
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
-
-    int nTO_modules;
     int old_max_forward_buffer;
 
     unsigned long cycle;
 
     real_t objective_accumulation, global_objective_accumulation;
 
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
     // reset time accumulating objective and constraints
-    /*
-    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
-    current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
-    //test if module needs reset
-    if(){
-
-    }
-    }
-    */
-    // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
     if (simparam->topology_optimization_on) {
         obj_pointer = problem->getObjective();
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
@@ -1782,10 +1769,6 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                 (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
             }
         }
-    }
-
-    if (simparam->topology_optimization_on) {
-        nTO_modules = simparam->TO_Module_List.size();
     }
 
     int myrank = Explicit_Solver_Pointer_->myrank;
@@ -1830,7 +1813,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
     int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
 
     // extensive IE
-    REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+    FOR_REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
         IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
     }, IE_sum);
     IE_t0 = IE_sum;
@@ -1838,7 +1821,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
     MPI_Allreduce(&IE_t0, &global_IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     // extensive KE
-    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+    FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         double ke = 0;
         for (size_t dim = 0; dim < num_dim; dim++) {
             ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
@@ -2332,7 +2315,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                 KE_loc_sum = 0.0;
                 KE_sum     = 0.0;
                 // extensive KE
-                REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+                FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
                     double ke = 0;
                     for (size_t dim = 0; dim < num_dim; dim++) {
                         // midpoint integration approximation
@@ -2429,7 +2412,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
     KE_sum     = 0.0;
 
     // extensive IE
-    REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+    FOR_REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
         IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
     }, IE_sum);
     IE_tend = IE_sum;
@@ -2438,7 +2421,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
     MPI_Allreduce(&IE_tend, &global_IE_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     // extensive KE
-    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+    FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         double ke = 0;
         for (size_t dim = 0; dim < num_dim; dim++) {
             ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end

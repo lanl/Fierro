@@ -518,7 +518,7 @@ double sum_domain_internal_energy_rz(const DCArrayKokkos<double>& MaterialPoints
     double IE_loc_sum;
 
     // loop over the material points and tally IE
-    REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
+    FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
         IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(1,matpt_lid);
     }, IE_sum);
     Kokkos::fence();
@@ -535,7 +535,7 @@ double sum_domain_kinetic_energy_rz(const Mesh_t& mesh,
     double KE_sum = 0.0;
     double KE_loc_sum;
 
-    REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
+    FOR_REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
         double ke = 0;
 
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
@@ -560,7 +560,7 @@ double sum_domain_material_mass_rz(const DCArrayKokkos<double>& MaterialPoints_m
     double mass_domain = 0.0;
     double mass_loc_domain;
 
-    REDUCE_SUM(matpt_lid, 0, num_mat_points, mass_loc_domain, {
+    FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, mass_loc_domain, {
 
             mass_loc_domain += MaterialPoints_mass(matpt_lid);
         
@@ -577,7 +577,7 @@ double sum_domain_node_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
     double mass_domain = 0.0;
     double mass_loc_domain;
 
-    REDUCE_SUM(node_gid, 0, num_nodes, mass_loc_domain, {
+    FOR_REDUCE_SUM(node_gid, 0, num_nodes, mass_loc_domain, {
 
             mass_loc_domain += node_extensive_mass(node_gid);
         

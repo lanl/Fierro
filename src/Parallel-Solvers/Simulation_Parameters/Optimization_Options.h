@@ -12,20 +12,23 @@ SERIALIZABLE_ENUM(FUNCTION_TYPE,
 //  VECTOR_INEQUALITY_CONSTRAINT
 )
 
-SERIALIZABLE_ENUM(TO_MODULE_TYPE,
-  Kinetic_Energy_Minimize,
-  Internal_Energy_Minimize,
+SERIALIZABLE_ENUM(OPTIMIZATION_MODULE_TYPE,
+  Kinetic_Energy_Minimize_TopOpt,
+  Internal_Energy_Minimize_TopOpt,
+  Internal_Energy_Minimize_ShapeOpt,
   Multi_Objective,
-  Heat_Capacity_Potential_Minimize,
-  Strain_Energy_Minimize,
-  Mass_Constraint,
-  Moment_of_Inertia_Constraint,
-  Center_of_Mass_Constraint,
-  Heat_Capacity_Potential_Constraint,
+  Heat_Capacity_Potential_Minimize_TopOpt,
+  Strain_Energy_Minimize_TopOpt,
+  Mass_Constraint_TopOpt,
+  Mass_Constraint_ShapeOpt,
+  Moment_of_Inertia_Constraint_TopOpt,
+  Moment_of_Inertia_Constraint_ShapeOpt,
+  Center_of_Mass_Constraint_TopOpt,
+  Heat_Capacity_Potential_Constraint_TopOpt,
   MULTI_OBJECTIVE_TERM,
-  Thermo_Elastic_Strain_Energy_Minimize,
-  Strain_Energy_Constraint,
-  Displacement_Constraint
+  Thermo_Elastic_Strain_Energy_Minimize_TopOpt,
+  Strain_Energy_Constraint_TopOpt,
+  Displacement_Constraint_TopOpt
 )
 
 
@@ -164,6 +167,7 @@ struct Optimization_Options: Yaml::DerivedFields {
   bool use_gradient_tally = false;                            //tallies gradient in tandem with the time sequence solving for the adjoint vectors
   bool optimization_parameters_xml_file = false;
   std::string xml_parameters_file_name = "optimization_parameters.xml";
+  real_t max_coord_move_length = 1;
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
   std::vector<MultiObjectiveModule> multi_objective_modules;
@@ -191,7 +195,7 @@ IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options,
   optimization_process, optimization_objective, 
   constraints, method_of_moving_asymptotes, volume_bound_constraints, objective_regions,
   simp_penalty_power, density_epsilon, thick_condition_boundary,
-  optimization_output_freq, density_filter, minimum_density, maximum_density,
+  optimization_output_freq, density_filter, minimum_density, maximum_density, max_coord_move_length,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
   variable_outer_shell, shell_density, objective_normalization_constant,
   num_solve_checkpoints, use_solve_checkpoints, use_gradient_tally, disable_forward_solve_output,

@@ -29,6 +29,10 @@ export KOKKOS_SOURCE_DIR=${MATAR_SOURCE_DIR}/src/Kokkos/kokkos
 export KOKKOS_BUILD_DIR=${builddir}/kokkos
 export KOKKOS_INSTALL_DIR=${installdir}/kokkos-${kokkos_build_type}
 
+export TRILINOS_SOURCE_DIR=${libdir}/Trilinos
+export TRILINOS_BUILD_DIR=${TRILINOS_SOURCE_DIR}/build-${kokkos_build_type}
+export TRILINOS_INSTALL_DIR=${TRILINOS_BUILD_DIR}
+
 export FIERRO_BUILD_CORES=$build_cores
 
 cd $scriptdir
