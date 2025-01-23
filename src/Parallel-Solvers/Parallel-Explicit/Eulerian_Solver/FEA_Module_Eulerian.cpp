@@ -833,7 +833,7 @@ void FEA_Module_Eulerian::euler_solve()
     int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
 
     // extensive IE
-    REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+    FOR_REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
         IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
     }, IE_sum);
     IE_t0 = IE_sum;
@@ -841,7 +841,7 @@ void FEA_Module_Eulerian::euler_solve()
     MPI_Allreduce(&IE_t0, &global_IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     // extensive KE
-    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+    FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         double ke = 0;
         for (size_t dim = 0; dim < num_dim; dim++) {
             ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
@@ -1248,7 +1248,7 @@ void FEA_Module_Eulerian::euler_solve()
                 KE_loc_sum = 0.0;
                 KE_sum     = 0.0;
                 // extensive KE
-                REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+                FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
                     double ke = 0;
                     for (size_t dim = 0; dim < num_dim; dim++) {
                         // midpoint integration approximation
@@ -1365,7 +1365,7 @@ void FEA_Module_Eulerian::euler_solve()
     KE_sum     = 0.0;
 
     // extensive IE
-    REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+    FOR_REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
         IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
     }, IE_sum);
     IE_tend = IE_sum;
@@ -1374,7 +1374,7 @@ void FEA_Module_Eulerian::euler_solve()
     MPI_Allreduce(&IE_tend, &global_IE_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     // extensive KE
-    REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+    FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         double ke = 0;
         for (size_t dim = 0; dim < num_dim; dim++) {
             ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end

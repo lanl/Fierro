@@ -120,7 +120,269 @@ FEA_Module_Inertial::~FEA_Module_Inertial()
    Compute the mass of each element; estimated with quadrature
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_densities, bool max_flag, bool use_initial_coords)
+void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_variables, bool max_flag, bool use_initial_coords)
+{
+    if(simparam->topology_optimization_on){
+        compute_element_masses_TO(design_variables, max_flag, use_initial_coords);
+    }
+    else if(simparam->shape_optimization_on){
+        compute_element_masses_SO(design_variables, max_flag, use_initial_coords);
+    }
+
+}
+
+/* ------------------------------------------------------------------------------------------
+   Compute the mass of each element when using shape optimization; estimated with quadrature
+--------------------------------------------------------------------------------------------- */
+
+void FEA_Module_Inertial::compute_element_masses_SO(const_host_vec_array design_coords, bool max_flag, bool use_initial_coords)
+{
+    // local number of uniquely assigned elements
+    size_t nonoverlap_nelements = element_map->getLocalNumElements();
+    // initialize memory for volume storage
+    host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+    // local variable for host view in the dual view
+    const_host_vec_array all_node_coords;
+    if (use_initial_coords)
+    {
+        all_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    }
+    else
+    {
+        all_node_coords = all_design_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    }
+    const_host_vec_array all_design_densities;
+    if (nodal_density_flag)
+    {
+        all_design_densities = all_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    }
+    const_host_elem_conn_array nodes_in_elem  = global_nodes_in_elem_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+    int                        nodes_per_elem = elem->num_basis();
+    int                        z_quad, y_quad, x_quad, direct_product_count;
+    size_t                     local_node_id;
+    LO                         ielem;
+    GO                         global_element_index;
+
+    real_t Jacobian, current_density, weight_multiply;
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+    // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+    CArray<real_t>     legendre_nodes_1D(num_gauss_points);
+    CArray<real_t>     legendre_weights_1D(num_gauss_points);
+    
+    real_t pointer_quad_coordinate[num_dim];
+    real_t pointer_quad_coordinate_weight[num_dim];
+    real_t pointer_interpolated_point[num_dim];
+    real_t pointer_JT_row1[num_dim];
+    real_t pointer_JT_row2[num_dim];
+    real_t pointer_JT_row3[num_dim];
+    
+    ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
+    ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
+    ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
+    ViewCArray<real_t> JT_row1(pointer_JT_row1, num_dim);
+    ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
+    ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
+
+    real_t pointer_basis_values[elem->num_basis()];
+    real_t pointer_basis_derivative_s1[elem->num_basis()];
+    real_t pointer_basis_derivative_s2[elem->num_basis()];
+    real_t pointer_basis_derivative_s3[elem->num_basis()];
+    
+    ViewCArray<real_t> basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(), num_dim);
+    CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+
+    // initialize weights
+    elements::legendre_nodes_1D(legendre_nodes_1D, num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D, num_gauss_points);
+
+    Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+    
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+    
+    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 3;
+        convert_node_order(3) = 2;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 7;
+            convert_node_order(7) = 6;
+        }
+    }
+    else
+    {
+        convert_node_order(0) = 0;
+        convert_node_order(1) = 1;
+        convert_node_order(2) = 2;
+        convert_node_order(3) = 3;
+        if (num_dim == 3)
+        {
+            convert_node_order(4) = 4;
+            convert_node_order(5) = 5;
+            convert_node_order(6) = 6;
+            convert_node_order(7) = 7;
+        }
+    }
+
+    // loop over elements and use quadrature rule to compute volume from Jacobian determinant
+    for (int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++)
+    {
+        global_element_index = element_map->getGlobalElement(nonoverlapping_ielem);
+        ielem = all_element_map->getLocalElement(global_element_index);
+        // acquire set of nodes for this local element
+        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+        {
+            local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
+            nodal_positions(node_loop, 0) = all_node_coords(local_node_id, 0);
+            nodal_positions(node_loop, 1) = all_node_coords(local_node_id, 1);
+            nodal_positions(node_loop, 2) = all_node_coords(local_node_id, 2);
+            if (nodal_density_flag)
+            {
+                nodal_density(node_loop) = all_design_densities(local_node_id, 0);
+            }
+            /*
+            if(myrank==1&&nodal_positions(node_loop,2)>10000000){
+                std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+                std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
+                std::fflush(stdout);
+            }
+            */
+            // std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " "
+            // << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) << " " << nodal_density(node_loop) <<std::endl;
+        }
+
+        // debug print of index
+        // std::cout << "nonoverlap element id on TASK " << myrank << " is " << nonoverlapping_ielem << std::endl;
+        // std::fflush(stdout);
+
+        // initialize element mass
+        Element_Masses(nonoverlapping_ielem, 0) = 0;
+
+        direct_product_count = std::pow(num_gauss_points, num_dim);
+
+        // loop over quadrature points
+        for (int iquad = 0; iquad < direct_product_count; iquad++)
+        {
+            // set current quadrature point
+            if (num_dim == 3)
+            {
+                z_quad = iquad / (num_gauss_points * num_gauss_points);
+            }
+            y_quad = (iquad % (num_gauss_points * num_gauss_points)) / num_gauss_points;
+            x_quad = iquad % num_gauss_points;
+            quad_coordinate(0) = legendre_nodes_1D(x_quad);
+            quad_coordinate(1) = legendre_nodes_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate(2) = legendre_nodes_1D(z_quad);
+            }
+
+            // set current quadrature weight
+            quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+            quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+            if (num_dim == 3)
+            {
+                quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+            }
+            else
+            {
+                quad_coordinate_weight(2) = 1;
+            }
+            weight_multiply = quad_coordinate_weight(0) * quad_coordinate_weight(1) * quad_coordinate_weight(2);
+
+            // compute shape functions at this point for the element type
+            elem->basis(basis_values, quad_coordinate);
+
+            // compute all the necessary coordinates and derivatives at this point
+
+            // compute shape function derivatives
+            elem->partial_xi_basis(basis_derivative_s1, quad_coordinate);
+            elem->partial_eta_basis(basis_derivative_s2, quad_coordinate);
+            elem->partial_mu_basis(basis_derivative_s3, quad_coordinate);
+
+            // compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+            // derivative of x,y,z w.r.t s
+            JT_row1(0) = 0;
+            JT_row1(1) = 0;
+            JT_row1(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                JT_row1(0) += nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
+                JT_row1(1) += nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
+                JT_row1(2) += nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
+            }
+
+            // derivative of x,y,z w.r.t t
+            JT_row2(0) = 0;
+            JT_row2(1) = 0;
+            JT_row2(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                JT_row2(0) += nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
+                JT_row2(1) += nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
+                JT_row2(2) += nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
+            }
+
+            // derivative of x,y,z w.r.t w
+            JT_row3(0) = 0;
+            JT_row3(1) = 0;
+            JT_row3(2) = 0;
+            for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+            {
+                JT_row3(0) += nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
+                JT_row3(1) += nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
+                JT_row3(2) += nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
+                // debug print
+                /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
+                std::cout << " ELEMENT VOLUME JACOBIAN DEBUG ON TASK " << myrank << std::endl;
+                std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
+                std::fflush(stdout);
+                }*/
+            }
+
+            // compute the determinant of the Jacobian
+            Jacobian = JT_row1(0) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
+                        JT_row1(1) * (JT_row2(0) * JT_row3(2) - JT_row3(0) * JT_row2(2)) +
+                        JT_row1(2) * (JT_row2(0) * JT_row3(1) - JT_row3(0) * JT_row2(1));
+            if (Jacobian < 0)
+            {
+                Jacobian = -Jacobian;
+            }
+
+            // compute density
+            current_density = 0;
+            if (max_flag)
+            {
+                current_density = 1;
+            }
+            else
+            {
+                for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
+                {
+                    current_density += nodal_density(node_loop) * basis_values(node_loop);
+                }
+            }
+
+            Element_Masses(nonoverlapping_ielem, 0) += current_density * weight_multiply * Jacobian;
+        }
+    
+    }
+}
+
+/* ----------------------------------------------------------------------
+   Compute the mass of each element; estimated with quadrature
+------------------------------------------------------------------------- */
+
+void FEA_Module_Inertial::compute_element_masses_TO(const_host_vec_array design_densities, bool max_flag, bool use_initial_coords)
 {
     // local number of uniquely assigned elements
     size_t nonoverlap_nelements = element_map->getLocalNumElements();
@@ -385,7 +647,30 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
    Compute the gradients of mass function with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, bool use_initial_coords)
+void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, bool use_initial_coords){
+    if(simparam->topology_optimization_on){
+        compute_TO_gradients(design_variables, design_gradients, use_initial_coords);
+    }
+    else if(simparam->shape_optimization_on){
+        compute_shape_gradients(design_variables, design_gradients, use_initial_coords);
+    }
+
+}
+
+/* --------------------------------------------------------------------------------
+   Compute the gradients of mass function with respect to nodal design coordinates
+----------------------------------------------------------------------------------- */
+
+void FEA_Module_Inertial::compute_shape_gradients(const_host_vec_array design_coords, host_vec_array design_gradients, bool use_initial_coords)
+{
+
+}
+
+/* ----------------------------------------------------------------------
+   Compute the gradients of mass function with respect to nodal densities
+------------------------------------------------------------------------- */
+
+void FEA_Module_Inertial::compute_TO_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, bool use_initial_coords)
 {
     // local number of uniquely assigned elements
     size_t nonoverlap_nelements = element_map->getLocalNumElements();

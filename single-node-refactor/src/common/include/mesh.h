@@ -429,7 +429,7 @@ struct Mesh_t
         // find the max number of elems around a node
         size_t max_num_elems_in_node;
         size_t max_num_lcl;
-        REDUCE_MAX_CLASS(node_gid, 0, num_nodes, max_num_lcl, {
+        FOR_REDUCE_MAX_CLASS(node_gid, 0, num_nodes, max_num_lcl, {
             // num_corners_in_node = num_elems_in_node
             size_t max_num = num_corners_in_node(node_gid);
 
@@ -1299,7 +1299,7 @@ struct Mesh_t
         // find the max number of elems around a node
         size_t max_num_elems_in_node;
         size_t max_num_lcl;
-        REDUCE_MAX_CLASS(node_gid, 0, num_nodes, max_num_lcl, {
+        FOR_REDUCE_MAX_CLASS(node_gid, 0, num_nodes, max_num_lcl, {
             // num_corners_in_node = num_elems_in_node
             size_t max_num = num_corners_in_node(node_gid);
 

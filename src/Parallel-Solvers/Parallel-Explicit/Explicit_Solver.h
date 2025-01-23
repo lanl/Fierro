@@ -88,7 +88,9 @@ public:
     // process input to decide TO problem and FEA modules
     void FEA_module_setup();
 
-    void setup_optimization_problem();
+    void setup_topology_optimization_problem();
+
+    void setup_shape_optimization_problem();
 
     // initialize data for boundaries of the model and storage for boundary conditions and applied loads
     void init_boundaries();

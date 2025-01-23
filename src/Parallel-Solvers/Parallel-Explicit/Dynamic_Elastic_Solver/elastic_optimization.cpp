@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -106,7 +106,6 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
     const DCArrayKokkos<material_t> material = simparam->material;
     CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
 
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
@@ -159,16 +158,6 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
     node_velocities_distributed->assign(*initial_node_velocities_distributed);
 
     // reset time accumulating objective and constraints
-    /*
-    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
-      current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
-      //test if module needs reset
-      if(){
-
-      }
-    }
-    */
-    // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
     obj_pointer = problem->getObjective();
     KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
     kinetic_energy_minimize_function.objective_accumulation = 0;
@@ -1362,7 +1351,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
 
     // compute maximum stride
     size_t update = 0;
-    REDUCE_MAX_CLASS(inode, 0, nlocal_nodes, update, {
+    FOR_REDUCE_MAX_CLASS(inode, 0, nlocal_nodes, update, {
         if (update < Graph_Matrix_Strides_initial(inode)) {
             update = Graph_Matrix_Strides_initial(inode);
         }

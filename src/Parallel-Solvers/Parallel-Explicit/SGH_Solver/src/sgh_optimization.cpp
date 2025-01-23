@@ -105,8 +105,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
     CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
-
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
     
@@ -162,16 +160,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_
     node_velocities_distributed->assign(*initial_node_velocities_distributed);
 
     // reset time accumulating objective and constraints
-    /*
-    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
-      current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
-      //test if module needs reset
-      if(){
-
-      }
-    }
-    */
-    // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
     obj_pointer = problem->getObjective();
     objective_function = dynamic_cast<FierroOptimizationObjective*>(obj_pointer.getRawPtr());
     objective_function->objective_accumulation = 0;
@@ -2438,7 +2426,7 @@ void FEA_Module_SGH::init_assembly()
 
     // compute maximum stride
     size_t update = 0;
-    REDUCE_MAX_CLASS(inode, 0, nlocal_nodes, update, {
+    FOR_REDUCE_MAX_CLASS(inode, 0, nlocal_nodes, update, {
         if (update < Graph_Matrix_Strides_initial(inode)) {
             update = Graph_Matrix_Strides_initial(inode);
         }
@@ -2968,7 +2956,7 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     // int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
 
     // // extensive IE
-    // REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+    // FOR_REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
     //     IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
     // }, IE_sum);
     // IE_t0 = IE_sum;
@@ -2976,7 +2964,7 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     // MPI_Allreduce(&IE_t0, &global_IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     // // extensive KE
-    // REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+    // FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
     //     double ke = 0;
     //     for (size_t dim = 0; dim < num_dim; dim++) {
     //         ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
@@ -3556,7 +3544,7 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     // KE_sum     = 0.0;
 
     // // extensive IE
-    // REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
+    // FOR_REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
     //     IE_loc_sum += elem_mass(elem_gid) * elem_sie(rk_level, elem_gid);
     // }, IE_sum);
     // IE_tend = IE_sum;
@@ -3565,7 +3553,7 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
     // MPI_Allreduce(&IE_tend, &global_IE_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     // // extensive KE
-    // REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+    // FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
     //     double ke = 0;
     //     for (size_t dim = 0; dim < num_dim; dim++) {
     //         ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
