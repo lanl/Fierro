@@ -961,7 +961,7 @@ void parse_regions(Yaml::Node& root,
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {
         // read the variables names
-        Yaml::Node& inps_yaml = root["regions"][reg_id]["fill_volume"];
+        Yaml::Node& inps_yaml = root["regions"][reg_id]["region"];
 
         // get the material variables names set by the user
         std::vector<std::string> user_str_region_inps;
@@ -975,18 +975,18 @@ void parse_regions(Yaml::Node& root,
                 std::cout << a_word << std::endl;
             }
 
-            Yaml::Node& material_inps_yaml = root["regions"][reg_id]["fill_volume"][a_word];
+            Yaml::Node& material_inps_yaml = root["regions"][reg_id]["region"][a_word];
 
             // set the values
             if (a_word.compare("material_id") == 0) {
-                int id = root["regions"][reg_id]["fill_volume"][a_word].As<int>();
+                int id = root["regions"][reg_id]["region"][a_word].As<int>();
 
                 RUN({
                     region_fills(reg_id).material_id = id;
                 });
             } // mat_id
             else if (a_word.compare("den") == 0) {
-                double den = root["regions"][reg_id]["fill_volume"]["den"].As<double>();
+                double den = root["regions"][reg_id]["region"]["den"].As<double>();
 
                 // check for a valid density else save it
                 if (den < 0.0) {
@@ -1001,7 +1001,7 @@ void parse_regions(Yaml::Node& root,
             else if (a_word.compare("sie") == 0) {
                 // specific internal energy
 
-                double sie = root["regions"][reg_id]["fill_volume"]["sie"].As<double>();
+                double sie = root["regions"][reg_id]["region"]["sie"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\tsie = " << sie << std::endl;
                 }
@@ -1013,7 +1013,7 @@ void parse_regions(Yaml::Node& root,
             else if (a_word.compare("ie") == 0) {
                 // extensive internal energy
 
-                double ie = root["regions"][reg_id]["fill_volume"]["ie"].As<double>();
+                double ie = root["regions"][reg_id]["region"]["ie"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\tie = " << ie << std::endl;
                 }
@@ -1022,17 +1022,8 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).ie = ie;
                 });
             } // ie
-            else if (a_word.compare("speed") == 0) {
-                double speed = root["regions"][reg_id]["fill_volume"]["speed"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tspeed = " << speed << std::endl;
-                }
-                RUN({
-                    region_fills(reg_id).speed = speed;
-                });
-            } // speed
             else if (a_word.compare("temperature") == 0) {
-                double temperature = root["regions"][reg_id]["fill_volume"]["temperature"].As<double>();
+                double temperature = root["regions"][reg_id]["region"]["temperature"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\ttemperature = " << temperature << std::endl;
                 }
@@ -1040,263 +1031,170 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).temperature = temperature;
                 });
             } // temperature
-            else if (a_word.compare("u") == 0) {
-                // x-component of velocity
-                double u = root["regions"][reg_id]["fill_volume"]["u"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tu = " << u << std::endl;
-                }
-                RUN({
-                    region_fills(reg_id).u = u;
-                });
-            } // u
-            else if (a_word.compare("v") == 0) {
-                // y-component of velocity
-                double v = root["regions"][reg_id]["fill_volume"]["v"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tv = " << v << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).v = v;
-                });
-            } // v
-            else if (a_word.compare("w") == 0) {
-                // z-component of velocity
-
-                double w = root["regions"][reg_id]["fill_volume"]["w"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tw = " << w << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).w = w;
-                });
-            } // w
-            else if (a_word.compare("radius1") == 0) {
-                // inner radius of sphere/cylinder
-
-                double radius1 = root["regions"][reg_id]["fill_volume"]["radius1"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tradius1 = " << radius1 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).radius1 = radius1;
-                });
-            } // radius1
-            else if (a_word.compare("radius2") == 0) {
-                // outer radius of sphere/cylinder
-
-                double radius2 = root["regions"][reg_id]["fill_volume"]["radius2"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tradius2 = " << radius2 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).radius2 = radius2;
-                });
-            } // radius2
-            else if (a_word.compare("x1") == 0) {
-                // inner plane
-
-                double x1 = root["regions"][reg_id]["fill_volume"]["x1"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tx1 = " << x1 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).x1 = x1;
-                });
-            } // x1
-            else if (a_word.compare("x2") == 0) {
-                // outer plane
-
-                double x2 = root["regions"][reg_id]["fill_volume"]["x2"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tx2 = " << x2 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).x2 = x2;
-                });
-            } // x2
-            else if (a_word.compare("y1") == 0) {
-                // inner plane
-
-                double y1 = root["regions"][reg_id]["fill_volume"]["y1"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\ty1 = " << y1 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).y1 = y1;
-                });
-            } // y1
-            else if (a_word.compare("y2") == 0) {
-                // outer plane
-
-                double y2 = root["regions"][reg_id]["fill_volume"]["y2"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\ty2 = " << y2 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).y2 = y2;
-                });
-            } // y2
-            else if (a_word.compare("z1") == 0) {
-                // inner plane
-
-                double z1 = root["regions"][reg_id]["fill_volume"]["z1"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tz1 = " << z1 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).z1 = z1;
-                });
-            } // z1
-            else if (a_word.compare("z2") == 0) {
-                // outer plane
-
-                double z2 = root["regions"][reg_id]["fill_volume"]["z2"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tz2 = " << z2 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).z2 = z2;
-                });
-            } // z2
-            else if (a_word.compare("scale_x") == 0) {
-                // outer plane
-
-                double scale_x = root["regions"][reg_id]["fill_volume"]["scale_x"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tscale_x = " << scale_x << std::endl;
-                }
-
-                region_fills_host(reg_id).scale_x = scale_x;
-
-            } // scale_x
-            else if (a_word.compare("scale_y") == 0) {
-                // outer plane
-
-                double scale_y = root["regions"][reg_id]["fill_volume"]["scale_y"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tscale_y = " << scale_y << std::endl;
-                }
-
-                region_fills_host(reg_id).scale_y = scale_y;
-
-            } // scale_y
-            else if (a_word.compare("scale_z") == 0) {
-                // outer plane
-
-                double scale_z = root["regions"][reg_id]["fill_volume"]["scale_z"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tscale_z = " << scale_z << std::endl;
-                }
-
-                region_fills_host(reg_id).scale_z = scale_z;
-
-            } // scale_z
             else if (a_word.compare("velocity") == 0) {
 
-                // velocity fill region type
-                std::string type = root["regions"][reg_id]["fill_volume"]["velocity"].As<std::string>();
+                // -----
+                // loop over the sub fields under velocity
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["velocity"];
 
-                if (VERBOSE) {
-                    std::cout << "\tvelocity = " << type << std::endl;
-                }
-                // set the volume tag type
-                if (velocity_type_map.find(type) != velocity_type_map.end()) {
-                 
-                    // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
-                    switch(velocity_type_map[type]){
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_vel_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_vel_inputs, str_region_vel_inps, region_vel_required_inps);
 
-                        case init_conds::cartesian:
-                            std::cout << "Setting velocity initial conditions type to cartesian " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::cartesian;
-                            });
-                            break;
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_vel_inputs){ 
 
-                         case init_conds::radial:
-                            std::cout << "Setting velocity initial conditions type to radial " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::radial;
-                            });
-                            break;
+                    if (a_subfield_word.compare("u") == 0) {
+                        // x-component of velocity
+                        double u = root["regions"][reg_id]["region"]["velocity"]["u"].As<double>();
+                        if (VERBOSE) {
+                        std::cout << "\tu = " << u << std::endl;
+                        }
+                        RUN({
+                        region_fills(reg_id).u = u;
+                        });
+                    } // u
+                    else if (a_subfield_word.compare("v") == 0) {
+                        // y-component of velocity
+                        double v = root["regions"][reg_id]["region"]["velocity"]["v"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tv = " << v << std::endl;
+                        }
 
-                         case init_conds::spherical:
-                            std::cout << "Setting velocity initial conditions type to spherical " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::spherical;
-                            });
-                            break;
+                        RUN({
+                            region_fills(reg_id).v = v;
+                        });
+                    } // v
+                    else if (a_subfield_word.compare("w") == 0) {
+                        // z-component of velocity
 
-                         case init_conds::radial_linear:
-                            std::cout << "Setting velocity initial conditions type to radial_linear " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::radial_linear;
-                            });
-                            break;
+                        double w = root["regions"][reg_id]["region"]["velocity"]["w"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tw = " << w << std::endl;
+                        }
 
-                         case init_conds::spherical_linear:
-                            std::cout << "Setting velocity initial conditions type to spherical_linear " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::spherical_linear;
-                            });
-                            break;
+                        RUN({
+                            region_fills(reg_id).w = w;
+                        });
+                    } // w
+                    else if (a_subfield_word.compare("speed") == 0) {
+                        double speed = root["regions"][reg_id]["region"]["velocity"]["speed"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tspeed = " << speed << std::endl;
+                        }
+                        RUN({
+                            region_fills(reg_id).speed = speed;
+                        });
+                    } // speed
+                    else if (a_subfield_word.compare("type") == 0){
 
-                         case init_conds::tg_vortex:
-                            std::cout << "Setting velocity initial conditions type to tg_vortex " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::tg_vortex;
-                            });
-                            break;
+                        std::string type = root["regions"][reg_id]["region"]["velocity"]["type"].As<std::string>();
 
-                         case init_conds::no_ic_vel:
-                            std::cout << "Setting velocity initial conditions type to no velocity" << std::endl;
-                            RUN({ 
-                                region_fills(reg_id).velocity = init_conds::no_ic_vel;
-                            });
-                            break;
+                        if (VERBOSE) {
+                            std::cout << "\tvelocity = " << type << std::endl;
+                        }
+                        // set the volume tag type
+                        if (velocity_type_map.find(type) != velocity_type_map.end()) {
+                        
+                            // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
+                            switch(velocity_type_map[type]){
 
-                        default:
+                                case init_conds::cartesian:
+                                    std::cout << "Setting velocity initial conditions type to cartesian " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::cartesian;
+                                    });
+                                    break;
 
-                            RUN({ 
-                                region_fills(reg_id).velocity = init_conds::no_ic_vel;
-                            });
+                                case init_conds::radial:
+                                    std::cout << "Setting velocity initial conditions type to radial " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::radial;
+                                    });
+                                    break;
 
-                            std::cout << "ERROR: No valid velocity intial conditions type input " << std::endl;
-                            std::cout << "Valid IC types are: " << std::endl;
-                            
-                            for (const auto& pair : velocity_type_map) {
-                                std::cout << pair.second << std::endl;
-                            }
+                                case init_conds::spherical:
+                                    std::cout << "Setting velocity initial conditions type to spherical " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::spherical;
+                                    });
+                                    break;
 
-                            throw std::runtime_error("**** Velocity Initial Conditions Type Not Understood ****");
-                            break;
-                    } // end switch
+                                case init_conds::radial_linear:
+                                    std::cout << "Setting velocity initial conditions type to radial_linear " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::radial_linear;
+                                    });
+                                    break;
 
-                    if (VERBOSE) {
-                        std::cout << "\tvolume_fill = " << type << std::endl;
-                    } // end if
+                                case init_conds::spherical_linear:
+                                    std::cout << "Setting velocity initial conditions type to spherical_linear " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::spherical_linear;
+                                    });
+                                    break;
 
-                }
-                else{
-                    std::cout << "ERROR: invalid input: " << type << std::endl;
-                    throw std::runtime_error("**** Velocity IC Not Understood ****");
-                } // end if
-            } // end velocity fill type
+                                case init_conds::tg_vortex:
+                                    std::cout << "Setting velocity initial conditions type to tg_vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::tg_vortex;
+                                    });
+                                    break;
 
+                                case init_conds::no_ic_vel:
+                                    std::cout << "Setting velocity initial conditions type to no velocity" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).velocity = init_conds::no_ic_vel;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).velocity = init_conds::no_ic_vel;
+                                    });
+
+                                    std::cout << "ERROR: No valid velocity intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : velocity_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** Velocity Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+
+                            if (VERBOSE) {
+                                std::cout << "\tvolume_fill = " << type << std::endl;
+                            } // end if
+
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** Velocity IC Not Understood ****");
+                        } // end if on velocity type
+                        
+                    } // end if on velocity type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_vel_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region Velocity Inputs Not Understood ****");
+                    } // end if on all subfields under velocity
+
+                } // end for loop over text
+            } // end if on velocity
+            //
             else if (a_word.compare("temperature_distribution") == 0) {
 
                 // temperature_distribution fill region type
-                std::string type = root["regions"][reg_id]["fill_volume"]["temperature_distribution"].As<std::string>();
+                std::string type = root["regions"][reg_id]["region"]["temperature_distribution"].As<std::string>();
 
                 if (VERBOSE) {
                     std::cout << "\ttemperature = " << type << std::endl;
@@ -1383,138 +1281,285 @@ void parse_regions(Yaml::Node& root,
                     throw std::runtime_error("**** Temperature IC Not Understood ****");
                 } // end if
             } // end velocity fill type
+            else if (a_word.compare("volume") == 0) {
 
-            //
-            else if (a_word.compare("type") == 0) {
+                // -----
+                // loop over the sub fields under volume
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["volume"];
 
-                // region volume fill type
-                std::string type = root["regions"][reg_id]["fill_volume"]["type"].As<std::string>();
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_volume_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_volume_inputs, str_region_volume_inps, region_volume_required_inps);
 
-                if (VERBOSE) {
-                    std::cout << "\ttype = " << type << std::endl;
-                }
 
-                // set the velocity tag type
-                if (region_type_map.find(type) != region_type_map.end()) {
-                 
-                    // region_type_map[type] returns enum value, e.g., init_conds::velocity 
-                    switch(region_type_map[type]){
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_volume_inputs){ 
 
-                        case region::global:
-                            std::cout << "Setting volume fill type to global " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::global;
-                            });
-                            break;
+                    if (a_subfield_word.compare("radius1") == 0) {
+                        // inner radius of sphere/cylinder
 
-                        case region::box:
-                            std::cout << "Setting volume fill type to box " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::box;
-                            });
-                            break;
+                        double radius1 = root["regions"][reg_id]["region"]["volume"]["radius1"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tradius1 = " << radius1 << std::endl;
+                        }
 
-                        case region::cylinder:
-                            std::cout << "Setting volume fill type to cylinder " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::cylinder;
-                            });
-                            break;
+                        RUN({
+                            region_fills(reg_id).radius1 = radius1;
+                        });
+                    } // radius1
+                    else if (a_subfield_word.compare("radius2") == 0) {
+                        // outer radius of sphere/cylinder
 
-                        case region::sphere:
-                            std::cout << "Setting volume fill type to sphere " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::sphere;
-                            });
-                            break;
+                        double radius2 = root["regions"][reg_id]["region"]["volume"]["radius2"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tradius2 = " << radius2 << std::endl;
+                        }
 
-                        case region::readVoxelFile:
-                            std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::readVoxelFile;
-                            });
-                            break;
+                        RUN({
+                            region_fills(reg_id).radius2 = radius2;
+                        });
+                    } // radius2
+                    else if (a_subfield_word.compare("x1") == 0) {
+                        // inner plane
 
-                        case region::no_volume:
-                            std::cout << "Setting volume fill type to none " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::no_volume;
-                            });
-                            break;
-                        default:
+                        double x1 = root["regions"][reg_id]["region"]["volume"]["x1"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tx1 = " << x1 << std::endl;
+                        }
 
-                            RUN({ 
-                                region_fills(reg_id).volume = region::no_volume;
-                            });
+                        RUN({
+                            region_fills(reg_id).x1 = x1;
+                        });
+                    } // x1
+                    else if (a_subfield_word.compare("x2") == 0) {
+                        // outer plane
 
-                            std::cout << "ERROR: No valid region volume fill type input " << std::endl;
-                            std::cout << "Valid IC volume fill types are: " << std::endl;
-                            
-                            for (const auto& pair : region_type_map) {
-                                std::cout << pair.second << std::endl;
-                            }
+                        double x2 = root["regions"][reg_id]["region"]["volume"]["x2"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tx2 = " << x2 << std::endl;
+                        }
 
-                            throw std::runtime_error("**** Region Volume Fill Type Not Understood ****");
-                            break;
-                    } // end switch
-                }
-                 
-                else{
-                    std::cout << "ERROR: invalid input: " << type << std::endl;
-                    throw std::runtime_error("**** Volume Fill Not Understood ****");
-                } // end if
+                        RUN({
+                            region_fills(reg_id).x2 = x2;
+                        });
+                    } // x2
+                    else if (a_subfield_word.compare("y1") == 0) {
+                        // inner plane
 
+                        double y1 = root["regions"][reg_id]["region"]["volume"]["y1"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\ty1 = " << y1 << std::endl;
+                        }
+
+                        RUN({
+                            region_fills(reg_id).y1 = y1;
+                        });
+                    } // y1
+                    else if (a_subfield_word.compare("y2") == 0) {
+                        // outer plane
+
+                        double y2 = root["regions"][reg_id]["region"]["volume"]["y2"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\ty2 = " << y2 << std::endl;
+                        }
+
+                        RUN({
+                            region_fills(reg_id).y2 = y2;
+                        });
+                    } // y2
+                    else if (a_subfield_word.compare("z1") == 0) {
+                        // inner plane
+
+                        double z1 = root["regions"][reg_id]["region"]["volume"]["z1"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tz1 = " << z1 << std::endl;
+                        }
+
+                        RUN({
+                            region_fills(reg_id).z1 = z1;
+                        });
+                    } // z1
+                    else if (a_subfield_word.compare("z2") == 0) {
+                        // outer plane
+
+                        double z2 = root["regions"][reg_id]["region"]["volume"]["z2"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tz2 = " << z2 << std::endl;
+                        }
+
+                        RUN({
+                            region_fills(reg_id).z2 = z2;
+                        });
+                    } // z2
+                    else if (a_subfield_word.compare("scale_x") == 0) {
+                        // outer plane
+
+                        double scale_x = root["regions"][reg_id]["region"]["volume"]["scale_x"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tscale_x = " << scale_x << std::endl;
+                        }
+
+                        region_fills_host(reg_id).scale_x = scale_x;
+
+                    } // scale_x
+                    else if (a_subfield_word.compare("scale_y") == 0) {
+                        // outer plane
+
+                        double scale_y = root["regions"][reg_id]["region"]["volume"]["scale_y"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tscale_y = " << scale_y << std::endl;
+                        }
+
+                        region_fills_host(reg_id).scale_y = scale_y;
+
+                    } // scale_y
+                    else if (a_subfield_word.compare("scale_z") == 0) {
+                        // outer plane
+
+                        double scale_z = root["regions"][reg_id]["region"]["volume"]["scale_z"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tscale_z = " << scale_z << std::endl;
+                        }
+
+                        region_fills_host(reg_id).scale_z = scale_z;
+
+                    } // scale_z
+                    //
+                    else if (a_subfield_word.compare("type") == 0) {
+
+                        // region volume fill type
+                        std::string type = root["regions"][reg_id]["region"]["volume"]["type"].As<std::string>();
+
+                        if (VERBOSE) {
+                            std::cout << "\ttype = " << type << std::endl;
+                        }
+
+                        // set the velocity tag type
+                        if (region_type_map.find(type) != region_type_map.end()) {
+                        
+                            // region_type_map[type] returns enum value, e.g., init_conds::velocity 
+                            switch(region_type_map[type]){
+
+                                case region::global:
+                                    std::cout << "Setting volume fill type to global " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::global;
+                                    });
+                                    break;
+
+                                case region::box:
+                                    std::cout << "Setting volume fill type to box " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::box;
+                                    });
+                                    break;
+
+                                case region::cylinder:
+                                    std::cout << "Setting volume fill type to cylinder " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::cylinder;
+                                    });
+                                    break;
+
+                                case region::sphere:
+                                    std::cout << "Setting volume fill type to sphere " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::sphere;
+                                    });
+                                    break;
+
+                                case region::readVoxelFile:
+                                    std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::readVoxelFile;
+                                    });
+                                    break;
+
+                                case region::no_volume:
+                                    std::cout << "Setting volume fill type to none " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::no_volume;
+                                    });
+                                    break;
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).volume = region::no_volume;
+                                    });
+
+                                    std::cout << "ERROR: No valid region volume fill type input " << std::endl;
+                                    std::cout << "Valid IC volume fill types are: " << std::endl;
+                                    
+                                    for (const auto& pair : region_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** Region Volume Fill Type Not Understood ****");
+                                    break;
+                            } // end switch
+                        } // end if on setting volume tag
+
+                    }  // end if on volume type
+                    // Get mesh file path
+                    else if (a_subfield_word.compare("file_path") == 0) {
+                        // region volume fill type
+                        std::string path = root["regions"][reg_id]["region"]["volume"]["file_path"].As<std::string>();
+
+                        if (VERBOSE) {
+                            std::cout << "\tfile_path = " << path << std::endl;
+                        }
+
+                        // absolute path to file or local to the director where exe is run
+                        region_fills_host(reg_id).file_path = path;   // saving the absolute file path
+        
+
+                    } // end file path
+                    //
+                    else if (a_subfield_word.compare("origin") == 0) {
+                        std::string origin = root["regions"][reg_id]["region"]["volume"]["origin"].As<std::string>();
+                        if (VERBOSE) {
+                            std::cout << "\torigin = " << origin << std::endl;
+                        }
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(origin, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        if (VERBOSE) {
+                            std::cout << "\tx1 = " << x1 << std::endl;
+                            std::cout << "\ty1 = " << y1 << std::endl;
+                            std::cout << "\tz1 = " << z1 << std::endl;
+                        }
+
+                        // storing the origin values as (x1,y1,z1)
+                        RUN({
+                            region_fills(reg_id).origin[0] = x1;
+                            region_fills(reg_id).origin[1] = y1;
+                            region_fills(reg_id).origin[2] = z1;
+                        });
+                    } // origin
+                    else{
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        throw std::runtime_error("**** Volume Fill Not Understood ****");
+                    } // end if
+
+                } // end for loop over subfields under volume
             } // end volume fill type
-            // Get mesh file path
-            else if (a_word.compare("file_path") == 0) {
-                // region volume fill type
-                std::string path = root["regions"][reg_id]["fill_volume"]["file_path"].As<std::string>();
-
-                if (VERBOSE) {
-                    std::cout << "\tfile_path = " << path << std::endl;
-                }
-
-                // absolute path to file or local to the director where exe is run
-                region_fills_host(reg_id).file_path = path;   // saving the absolute file path
-   
-
-            } // end file path
-            //
-            else if (a_word.compare("origin") == 0) {
-                std::string origin = root["regions"][reg_id]["fill_volume"]["origin"].As<std::string>();
-                if (VERBOSE) {
-                    std::cout << "\torigin = " << origin << std::endl;
-                }
-
-                // get the origin numbers, values are words
-                std::vector<std::string> numbers = exact_array_values(origin, ",");
-
-                double x1 = std::stod(numbers[0]);
-                double y1 = std::stod(numbers[1]);
-                double z1;
-
-                if(numbers.size()==3){ 
-                    // 3D
-                    z1 = std::stod(numbers[2]);
-                }
-                else {
-                    // 2D
-                    z1 = 0.0;
-                } //
-
-                if (VERBOSE) {
-                    std::cout << "\tx1 = " << x1 << std::endl;
-                    std::cout << "\ty1 = " << y1 << std::endl;
-                    std::cout << "\tz1 = " << z1 << std::endl;
-                }
-
-                // storing the origin values as (x1,y1,z1)
-                RUN({
-                    region_fills(reg_id).origin[0] = x1;
-                    region_fills(reg_id).origin[1] = y1;
-                    region_fills(reg_id).origin[2] = z1;
-                });
-            } // origin
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;

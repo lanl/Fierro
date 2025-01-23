@@ -139,9 +139,22 @@ struct RegionFill_host_t
 // ----------------------------------
 static std::vector<std::string> str_region_inps
 {
+    "volume",
+    "material_id",
+    "velocity",
+    "temperature",
+    "sie",
+    "ie",
+    "den",
+};
+
+// ---------------------------------------------------------
+// valid inputs for volume, these are subfields under volume
+// ---------------------------------------------------------
+static std::vector<std::string> str_region_volume_inps
+{
     "type",
     "file_path",
-    "material_id",
     "x1",
     "x2",
     "y1",
@@ -153,16 +166,19 @@ static std::vector<std::string> str_region_inps
     "scale_x",
     "scale_y",
     "scale_z",
-    "velocity",
+    "origin"
+};
+
+// ---------------------------------------------------------------------
+// valid inputs for filling velocity, these are subfields under velocity
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_vel_inps
+{
+    "type",
     "u",
     "v",
     "w",
-    "speed",
-    "temperature",
-    "sie",
-    "ie",
-    "den",
-    "origin"
+    "speed"
 };
 
 // ----------------------------------
@@ -170,8 +186,25 @@ static std::vector<std::string> str_region_inps
 // ----------------------------------
 static std::vector<std::string> region_required_inps
 {
-    "type",
     "material_id",
+    "volume"
+};
+
+// -------------------------------------
+// required inputs for specifying volume
+// -------------------------------------
+static std::vector<std::string> region_volume_required_inps
+{
+    "type"
+};
+
+
+// -------------------------------------
+// required inputs for filling velocity
+// -------------------------------------
+static std::vector<std::string> region_vel_required_inps
+{
+    "type"
 };
 
 #endif // end Header Guard
