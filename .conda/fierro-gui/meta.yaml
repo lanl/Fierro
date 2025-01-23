@@ -20,8 +20,10 @@ requirements:
   host:
     - python
     - setuptools
+    - paraview=5.13
+    - python=3.13
   run:
-    - paraview=5.13.1
+    - paraview=5.13
     - python
     - numpy
     - matplotlib
