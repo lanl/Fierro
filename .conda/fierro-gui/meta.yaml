@@ -24,10 +24,10 @@ requirements:
     - python=3.13
   run:
     - paraview=5.13
-    - python
+    - python=3.13
     - numpy
     - matplotlib
-    - pyside6=6.5
+    - pyside6=6.7
 
 test:
   imports:
