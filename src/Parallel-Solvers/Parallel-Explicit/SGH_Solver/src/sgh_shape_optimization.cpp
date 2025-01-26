@@ -1650,31 +1650,6 @@ void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const 
         //tally contribution to the gradient vector
         if(use_gradient_tally){
             
-            //state_adjoint_time_start = Explicit_Solver_Pointer_->CPU_Time();
-            get_force_dgradient_sgh(material,
-                                *mesh,
-                                node_coords,
-                                node_vel,
-                                elem_den,
-                                elem_sie,
-                                elem_pres,
-                                elem_stress,
-                                elem_sspd,
-                                elem_vol,
-                                elem_div,
-                                elem_mat_id,
-                                1.0,
-                                cycle);
-
-            get_power_dgradient_sgh(1.0,
-                            *mesh,
-                            node_vel,
-                            node_coords,
-                            elem_sie,
-                            elem_mass,
-                            corner_force,
-                            elem_power_dgradients);
-            
             //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
             //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
             compute_topology_optimization_gradient_tally(design_densities_distributed, cached_design_gradients_distributed, cycle, global_dt);
