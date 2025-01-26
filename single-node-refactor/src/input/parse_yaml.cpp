@@ -1602,12 +1602,17 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
         
     }); // end parallel for
 
+    // a check on material_id not being specified more than once or not at all
+    CArray <bool> check_mat_ids(num_materials);
+    check_mat_ids.set_values(false);
 
+    // loop over the materials specified in the input file
+    for (int m_id = 0; m_id < num_materials; m_id++) {
 
-    // loop over the materials specified
-    for (int mat_id = 0; mat_id < num_materials; mat_id++) {
+        // Important: m_id corresponds to the order of the materials entered in the input file
+
         // read the variables names
-        Yaml::Node& inps_yaml = root["materials"][mat_id]["material"];
+        Yaml::Node& inps_yaml = root["materials"][m_id]["material"];
 
         size_t num_vars_set = inps_yaml.Size();
 
@@ -1619,28 +1624,59 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
         // extract words from the input file and validate they are correct
         validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_hydrodynamics_required_inps);
 
-        // loop over the words in the material input definition
+        // loop over the words in the material input definition and find the material id
+        int mat_id = -1;
+        for (auto& a_word : user_str_material_inps) {
+
+            Yaml::Node& material_inps_yaml = root["materials"][m_id]["material"][a_word];
+
+            if (a_word.compare("id") == 0) {
+                mat_id = root["materials"][m_id]["material"]["id"].As<int>();
+
+                if (mat_id<0 || mat_id>=num_materials){
+                    std::cout << "ERROR: invalid material_id specified in the material definition " << std::endl;
+            
+                    throw std::runtime_error("**** Material_id is out of bounds ****");
+                } // end check on m_id range
+
+                if (check_mat_ids(mat_id) == true){
+                    std::cout << "ERROR: material_id = " << mat_id << " was already specified "<< std::endl;
+                    throw std::runtime_error("**** Multiple materials used the material_id ****");
+                }
+                else {
+                    check_mat_ids(mat_id) = true;
+                } // end check on mat_id
+
+                if (VERBOSE) {
+                    std::cout << "\tid = " << mat_id << std::endl;
+                }
+            } // end id
+        } // end loop over all material inputs
+
+        if (mat_id<0){
+            std::cout << "ERROR: material_id must be specified in the material definition " << std::endl;
+            
+            throw std::runtime_error("**** Material_id is missing ****");
+        } // end check on m_id range
+
+
+
+        // loop over the words in the material input definition again
         for (auto& a_word : user_str_material_inps) {
             if (VERBOSE) {
                 std::cout << a_word << std::endl;
             }
 
-            Yaml::Node& material_inps_yaml = root["materials"][mat_id]["material"][a_word];
+            Yaml::Node& material_inps_yaml = root["materials"][m_id]["material"][a_word];
 
-
-            if (a_word.compare("id") == 0) {
-                int m_id = root["materials"][mat_id]["material"]["id"].As<int>();
-                if (VERBOSE) {
-                    std::cout << "\tid = " << m_id << std::endl;
-                }
-                RUN({
-                    Materials.MaterialFunctions(mat_id).id = m_id;
-                });
-            } // id
-            //
+            
             //extract eos model
+            if (a_word.compare("id") == 0) {
+                // do nothing
+                // this id was read in an earlier loop
+            }
             else if (a_word.compare("eos_model_type") == 0) {
-                std::string type = root["materials"][mat_id]["material"]["eos_model_type"].As<std::string>();
+                std::string type = root["materials"][m_id]["material"]["eos_model_type"].As<std::string>();
 
                 // set the eos type
                 if (eos_type_map.find(type) != eos_type_map.end()) {
@@ -1691,7 +1727,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             //
             // set the eos_model
             else if (a_word.compare("eos_model") == 0) {
-                std::string eos = root["materials"][mat_id]["material"]["eos_model"].As<std::string>();
+                std::string eos = root["materials"][m_id]["material"]["eos_model"].As<std::string>();
 
                 // set the EOS
                 if (eos_models_map.find(eos) != eos_models_map.end()) {
@@ -1780,7 +1816,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
             // Type of strength model
             else if (a_word.compare("strength_model_type") == 0) {
-                std::string strength_model_type = root["materials"][mat_id]["material"]["strength_model_type"].As<std::string>();
+                std::string strength_model_type = root["materials"][m_id]["material"]["strength_model_type"].As<std::string>();
 
                 // set the EOS
                 if (strength_type_map.find(strength_model_type) != strength_type_map.end()) {
@@ -1833,7 +1869,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             
             // Set specific strength model
             else if (a_word.compare("strength_model") == 0) {
-                std::string strength_model = root["materials"][mat_id]["material"]["strength_model"].As<std::string>();
+                std::string strength_model = root["materials"][m_id]["material"]["strength_model"].As<std::string>();
 
                 // set the strength
                 if (strength_models_map.find(strength_model) != strength_models_map.end()) {
@@ -1959,7 +1995,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             
             //extract erosion model
             else if (a_word.compare("erosion_model") == 0) {
-                std::string erosion_model = root["materials"][mat_id]["material"]["erosion_model"].As<std::string>();
+                std::string erosion_model = root["materials"][m_id]["material"]["erosion_model"].As<std::string>();
 
                 // set the erosion model
                 if (erosion_model_map.find(erosion_model) != erosion_model_map.end()) {
@@ -2000,7 +2036,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             } // erosion model variables
             //extract dissipation (artificial viscosity) model
             else if (a_word.compare("dissipation_model") == 0) {
-                std::string dissipation_model = root["materials"][mat_id]["material"]["dissipation_model"].As<std::string>();
+                std::string dissipation_model = root["materials"][m_id]["material"]["dissipation_model"].As<std::string>();
 
                 // set the erosion model
                 if (dissipation_model_map.find(dissipation_model) != dissipation_model_map.end()) {
@@ -2082,7 +2118,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             } // erosion model variables
             //
             else if (a_word.compare("erode_tension_val") == 0) {
-                double erode_tension_val = root["materials"][mat_id]["material"]["erode_tension_val"].As<double>();
+                double erode_tension_val = root["materials"][m_id]["material"]["erode_tension_val"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\terode_tension_val = " << erode_tension_val << std::endl;
                 }
@@ -2091,7 +2127,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 });
             } // erode_tension_val
             else if (a_word.compare("erode_density_val") == 0) {
-                double erode_density_val = root["materials"][mat_id]["material"]["erode_density_val"].As<double>();
+                double erode_density_val = root["materials"][m_id]["material"]["erode_density_val"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\terode_density_val = " << erode_density_val << std::endl;
                 }
@@ -2102,7 +2138,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
-                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+                Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];
 
                 size_t num_global_vars = mat_global_vars_yaml.Size();
                 
@@ -2120,7 +2156,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double eos_var = root["materials"][mat_id]["material"]["eos_global_vars"][global_var_id].As<double>();
+                    double eos_var = root["materials"][m_id]["material"]["eos_global_vars"][global_var_id].As<double>();
                     
 
                     RUN({
@@ -2135,7 +2171,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             
             // exact the strength_global_vars
             else if (a_word.compare("strength_global_vars") == 0) {
-                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+                Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];
 
                 size_t num_global_vars = mat_global_vars_yaml.Size();
                 
@@ -2154,7 +2190,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double strength_var = root["materials"][mat_id]["material"]["strength_global_vars"][global_var_id].As<double>();
+                    double strength_var = root["materials"][m_id]["material"]["strength_global_vars"][global_var_id].As<double>();
                     
                     RUN({
                         tempGlobalStrengthVars(mat_id,global_var_id) = strength_var;
@@ -2166,7 +2202,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 } // end loop over global vars
             } // "eos_global_vars"
             else if (a_word.compare("dissipation_global_vars") == 0) {
-                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+                Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];
 
                 size_t num_global_vars = mat_global_vars_yaml.Size();
 
@@ -2188,7 +2224,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double dissipation_var = root["materials"][mat_id]["material"]["dissipation_global_vars"][global_var_id].As<double>();
+                    double dissipation_var = root["materials"][m_id]["material"]["dissipation_global_vars"][global_var_id].As<double>();
                     
                     RUN({
                         tempGlobalDissipationVars(mat_id, global_var_id) = dissipation_var;
