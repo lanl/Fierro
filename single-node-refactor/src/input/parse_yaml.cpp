@@ -59,6 +59,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "user_defined_velocity_bc.h"
 #include "zero_velocity_bc.h"
 
+// temperature bc files
+#include "constant_temp_bc.h"
+
 
 // eos files
 #include "gamma_law_eos.h"
@@ -1031,6 +1034,24 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).temperature = temperature;
                 });
             } // temperature
+            else if (a_word.compare("specific_heat") == 0) {
+                double specific_heat = rootroot["regions"][reg_id]["region"]["specific_heat"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\tspecific_heat = " << specific_heat << std::endl;
+                }
+                RUN({
+                    region_fills(reg_id).specific_heat = specific_heat;
+                });
+            } // specific_heat
+            else if (a_word.compare("thermal_conductivity") == 0) {
+                double thermal_conductivity = root["regions"][reg_id]["region"]["thermal_conductivity"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\tthermal_conductivity = " << thermal_conductivity << std::endl;
+                }
+                RUN({
+                    region_fills(reg_id).thermal_conductivity = thermal_conductivity;
+                });
+            } // thermal_conductivity
             else if (a_word.compare("velocity") == 0) {
 
                 // -----
@@ -1200,7 +1221,7 @@ void parse_regions(Yaml::Node& root,
                     std::cout << "\ttemperature = " << type << std::endl;
                 }
                 // set the volume tag type NOTE: rename to remove reference to velocity, change to distribution
-                if (velocity_type_map.find(type) != velocity_type_map.end()) {
+                if (velocity_type_map.find(type) != velocity_type_map.end()) { //WARNING WARNING Update here, should be temp/distribution
                  
                     // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
                     switch(velocity_type_map[type]){
@@ -2369,7 +2390,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     // temporary arrays for boundary condition variables
     DCArrayKokkos<double> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
     
-    BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars");
+    BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars"); //WARNING: assumes all BCs are velocity
 
     // initialize the num of global vars to 0 for all models
     FOR_ALL(bc_id, 0, num_bcs, {
@@ -2533,6 +2554,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     throw std::runtime_error("**** Boundary Condition Velocity Model Not Understood ****");
                 } // end if
             } // type
+            
             // get boundary condition direction
             else if (a_word.compare("location") == 0) {
                 std::string location = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
@@ -2559,6 +2581,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     throw std::runtime_error("**** Boundary Conditions Not Understood ****");
                 } // end if
             } // direction
+
             // get boundary condition surface geometry
             else if (a_word.compare("surface") == 0) {
 
@@ -2664,6 +2687,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 } // end loop over words in the subfield
             } // surface
+            
             // set the value
             else if (a_word.compare("velocity_bc_global_vars") == 0) {
                 Yaml::Node & vel_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
