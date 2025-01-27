@@ -35,6 +35,7 @@ output_options:
 solver_options:
   - solver:
         method: SGHRZ
+        id: 0
         # solver_vars:
         #  - blah
         #  - blah

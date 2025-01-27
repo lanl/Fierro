@@ -385,16 +385,59 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
 
     solver_input = std::vector<solver_input_t>(num_solvers);
 
+    // a check on solverl_id not being specified more than once or not at all
+    CArray <bool> check_solver_ids(num_solvers);
+    check_solver_ids.set_values(false);
+
     // loop over the solvers specified in the YAML file
-    for (int solver_id = 0; solver_id < num_solvers; solver_id++) {
+    for (int s_id = 0; s_id < num_solvers; s_id++) {
+
+
         // read the variables names
-        Yaml::Node& inps_yaml = root["solver_options"][solver_id]["solver"];
+        Yaml::Node& inps_yaml = root["solver_options"][s_id]["solver"];
 
         // get the solver variables names set by the user
         std::vector<std::string> user_inputs;
 
         // extract words from the input file and validate they are correct
         validate_inputs(inps_yaml, user_inputs, str_solver_inps, solver_required_inps);
+
+
+        // loop over the words in the solver input definition and find the solver id
+        int solver_id = -1;
+        for (auto& a_word : user_inputs) {
+
+            Yaml::Node& solver_inps_yaml = root["solver_options"][s_id]["solver"][a_word];
+
+            if (a_word.compare("id") == 0) {
+                solver_id = root["solver_options"][s_id]["solver"]["id"].As<int>();
+
+                if (solver_id<0 || solver_id>=num_solvers){
+                    std::cout << "ERROR: invalid solver id specified in the solver definition " << std::endl;
+            
+                    throw std::runtime_error("**** Solver id is out of bounds ****");
+                } // end check on solver_id range
+
+                if (check_solver_ids(solver_id) == true){
+                    std::cout << "ERROR: solver id = " << solver_id << " was already specified "<< std::endl;
+                    throw std::runtime_error("**** Multiple solvers used the same solver_id ****");
+                }
+                else {
+                    check_solver_ids(solver_id) = true;
+                } // end check on solver_id
+
+                if (VERBOSE) {
+                    std::cout << "\tid = " << solver_id << std::endl;
+                }
+            } // end id
+        } // end loop over all solver inputs for this solver
+
+        if (solver_id<0){
+            std::cout << "ERROR: solver id must be specified in the solver definition " << std::endl;
+            
+            throw std::runtime_error("**** Solver id is missing ****");
+        } // end check on solver_id specified
+
 
         // loop over the words in the input
         for (auto& a_word : user_inputs) {
@@ -404,13 +447,14 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
 
             // get solver method
             if (a_word.compare("method") == 0) {
-                std::string method = root["solver_options"][solver_id]["solver"][a_word].As<std::string>();
+                // input order is s_id, but we save things in the array using solver_id
+                std::string method = root["solver_options"][s_id]["solver"][a_word].As<std::string>();
 
                 auto map = solver_map;
 
                 // set the method
                 if (map.find(method) != map.end()) {
-                    solver_input[solver_id].method = map[method];
+                    solver_input[solver_id].method = map[method];  // save it to solver_id value, input order may differ
                     if (VERBOSE) {
                         std::cout << "\tmethod = " << method << std::endl;
                     }
@@ -422,8 +466,13 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
                     for (const auto& pair : map) {
                         std::cout << "\t" << pair.first << std::endl;
                     }
+                    throw std::runtime_error("**** Solver Input Method Not Understood ****");
                 } // end if
             } // method
+            else if (a_word.compare("id") == 0) {
+                // do nothing, we already got the id
+            }
+            // add solver_vars parsing here
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
 
@@ -1687,7 +1736,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                 if (check_mat_ids(mat_id) == true){
                     std::cout << "ERROR: material_id = " << mat_id << " was already specified "<< std::endl;
-                    throw std::runtime_error("**** Multiple materials used the material_id ****");
+                    throw std::runtime_error("**** Multiple materials used the same material_id ****");
                 }
                 else {
                     check_mat_ids(mat_id) = true;
@@ -1703,7 +1752,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             std::cout << "ERROR: material_id must be specified in the material definition " << std::endl;
             
             throw std::runtime_error("**** Material_id is missing ****");
-        } // end check on m_id range
+        } // end check on m_id being specified
 
 
 
