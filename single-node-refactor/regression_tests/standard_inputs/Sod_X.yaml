@@ -120,24 +120,27 @@ materials:
             - 1.0
 
 regions:
-    - fill_volume:
-        type: global
+    - region:
+        volume:
+            type: global
         material_id: 0
         den: 1.0
         sie: 2.5
-        velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: 0.0
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
 
-    - fill_volume:
-        type: box
-        x1: 0.5
-        x2: 1.0
-        y1: 0.0
-        y2: 0.01
-        z1: 0.0
-        z2: 0.01
+    - region:
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.0
+            y2: 0.01
+            z1: 0.0
+            z2: 0.01
         material_id: 0
         den: 0.125
         sie: 2
