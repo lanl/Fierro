@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 0.24
+    time_final: 1.0
     dt_min: 1.e-8
     dt_max: 1.e-1
     dt_start: 1.e-5
@@ -24,7 +24,7 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     output_file_format: vtk
-    graphics_time_step: 0.02
+    graphics_time_step: 0.1
     # graphics_iteration_step: 1
 
 solver_options:
@@ -45,6 +45,8 @@ boundary_conditions:
     #     temperature: 293
     #     type:  temperature
 
+
+    # Apply convection to all exposed surfaces
     - boundary_condition:
         solver: SGTM3D
         geometry: x_plane
@@ -92,6 +94,55 @@ boundary_conditions:
         value: 0.001
         temperature: 293
         type:  convection
+
+    # Apply radiation to all exposed surfaces
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: x_plane
+        direction: x_dir
+        value: 0.0
+        temperature: 293
+        type:  radiation
+
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: x_plane
+        direction: x_dir
+        value: 0.1
+        temperature: 293
+        type:  radiation
+
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: y_plane
+        direction: y_dir
+        value: 0.0
+        temperature: 293
+        type:  radiation
+
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: y_plane
+        direction: y_dir
+        value: 0.01
+        temperature: 293
+        type:  radiation
+
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: z_plane
+        direction: z_dir
+        value: 0.0
+        temperature: 293
+        type:  radiation
+
+    - boundary_condition:
+        solver: SGTM3D
+        geometry: z_plane
+        direction: z_dir
+        value: 0.001
+        temperature: 293
+        type:  radiation
 
   
 

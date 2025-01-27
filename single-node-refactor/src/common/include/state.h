@@ -171,6 +171,22 @@ enum class material_pt_state
     specific_heat,
     eroded_flag,
 };
+
+
+struct test{
+
+
+    double a; 
+    double b; 
+    double g;
+    float q;
+
+    int c; 
+    bool d; 
+
+}
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \struct MaterialPoint_t
@@ -197,13 +213,13 @@ struct MaterialPoint_t
     DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
     DCArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
 
-
+    DCArrayKokkos<double> temp_grad; ///< Specific Heat
     DCArrayKokkos<double> volfrac;   ///< MaterialPoint volume fraction
     DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
 
 
 
-    DCArrayKokkos<double> temp_grad; ///< Specific Heat
+    
 
     // initialization method (num_rk_storage_bins, num_pts_max, num_dims)
     void initialize(size_t num_rk, size_t num_pts_max, size_t num_dims, std::vector<material_pt_state> material_pt_states)

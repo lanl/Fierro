@@ -142,14 +142,14 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     double sx = 0.05;
     double sy = 0.05;
 
-    double fy = 0.0;
-    double fx = 3.14;
+    double fy = 2.0*3.16;
+    double fx = 2.0*3.16;
 
-    // sphere_position.host(0) = 0.03*cos(fx*time_value) + sx;
-    // sphere_position.host(1) = 0.03*sin(fy*time_value) + sy;
+    sphere_position.host(0) = 0.03*cos(fx*time_value) + sx;
+    sphere_position.host(1) = 0.03*sin(fy*time_value) + sy;
 
-    sphere_position.host(0) = 0.02 + (time_value/time_final)*0.06;
-    sphere_position.host(1) = 0.05;
+    // sphere_position.host(0) = 0.02 + (time_value/time_final)*0.06;
+    // sphere_position.host(1) = 0.05;
 
     // sphere_position.host(0) = fmod(time_value, 0.02) + 0.01;
     // sphere_position.host(1) = 0.05;
@@ -323,12 +323,12 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---- Move heat source ---- //
         RUN({
 
-            // sphere_position(0) = 0.03*cos(fx*time_value) + sx;
-            // sphere_position(1) = 0.03*sin(fy*time_value) + sy;
+            sphere_position(0) = 0.03*cos(fx*time_value) + sx;
+            sphere_position(1) = 0.03*sin(fy*time_value) + sy;
 
 
-            sphere_position(0) = 0.02 + (time_value/time_final)*0.06;
-            sphere_position(1) = 0.05;
+            // sphere_position(0) = 0.02 + (time_value/time_final)*0.06;
+            // sphere_position(1) = 0.05;
 
 
             // sphere_position(0) = 2 * fmod(time_value, 0.02) + 0.01;
