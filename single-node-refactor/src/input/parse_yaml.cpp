@@ -2806,7 +2806,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         std::cout << "\t var = " << temperature_bc_var << std::endl;
                     }
                 }
-            }   
+            } // end else if on temperature_bc_global_vars
 
             
             else {

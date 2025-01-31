@@ -56,27 +56,27 @@ void SGTM3D::boundary_temperature(const Mesh_t& mesh,
     // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
-        // ---- Skip non temperature BCs ---- //
-        if (BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCHydroType != boundary_conditions::BCHydro::temperature) continue;
+        // // ---- Skip non temperature BCs ---- //
+        // if (BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCHydroType != boundary_conditions::BCHydro::temperature) continue;
 
         
-        // ---- Loop over boundary nodes in a boundary set ---- //
-        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+        // // ---- Loop over boundary nodes in a boundary set ---- //
+        // FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
             
-            // get the global index for this node on the boundary
-            size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
+        //     // get the global index for this node on the boundary
+        //     size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
-            // evaluate temperature on this boundary node
-            BoundaryConditions.BoundaryConditionFunctions(bdy_set).temperature(mesh,
-                                                                  BoundaryConditions.BoundaryConditionEnums,
-                                                                  BoundaryConditions.bc_global_vars,
-                                                                  BoundaryConditions.bc_state_vars,
-                                                                  node_temp,
-                                                                  time_value,
-                                                                  1, // rk_stage
-                                                                  bdy_node_gid,
-                                                                  bdy_set);
-        }); // end for bdy_node_lid
+        //     // evaluate temperature on this boundary node
+        //     BoundaryConditions.BoundaryConditionFunctions(bdy_set).temperature(mesh,
+        //                                                           BoundaryConditions.BoundaryConditionEnums,
+        //                                                           BoundaryConditions.bc_global_vars,
+        //                                                           BoundaryConditions.bc_state_vars,
+        //                                                           node_temp,
+        //                                                           time_value,
+        //                                                           1, // rk_stage
+        //                                                           bdy_node_gid,
+        //                                                           bdy_set);
+        // }); // end for bdy_node_lid
     } // end for bdy_set
 
     return;
@@ -108,108 +108,108 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
     // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
-        // ---- Skip non convection BCs ---- //
-        if(BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCHydroType != boundary_conditions::BCHydro::convection) continue;
+        // // ---- Skip non convection BCs ---- //
+        // if(BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCHydroType != boundary_conditions::BCHydro::convection) continue;
 
 
-        // ---- Get number of boundary patches associated with this boundary set ---- // NOTE: Messy, find better solution
-        DCArrayKokkos<int> num_bdy_patches(1);
-        RUN({
-            num_bdy_patches(0) = mesh.bdy_patches_in_set.stride(bdy_set);
-        });
-        num_bdy_patches.update_host();
+        // // ---- Get number of boundary patches associated with this boundary set ---- // NOTE: Messy, find better solution
+        // DCArrayKokkos<int> num_bdy_patches(1);
+        // RUN({
+        //     num_bdy_patches(0) = mesh.bdy_patches_in_set.stride(bdy_set);
+        // });
+        // num_bdy_patches.update_host();
 
-        // ---- Loop over the boundary patches in the set ---- //
-        FOR_ALL(bdy_patch_gid, 0, num_bdy_patches.host(0),{
+        // // ---- Loop over the boundary patches in the set ---- //
+        // FOR_ALL(bdy_patch_gid, 0, num_bdy_patches.host(0),{
 
-            // ---- For each boundary patch, calculate the flux contribution to each node from convection ---- //
-
-
-            // First: Calculate the surface area
-            // Get the global id for this patch
-            size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+        //     // ---- For each boundary patch, calculate the flux contribution to each node from convection ---- //
 
 
-            // calculate the total area of this patch (decompose into 2 triangles)
-            // using Cayley-Menger Determinant
-            double a_[3];
-            ViewCArrayKokkos<double> a(&a_[0], 3);
+        //     // First: Calculate the surface area
+        //     // Get the global id for this patch
+        //     size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
 
-            double b_[3];
-            ViewCArrayKokkos<double> b(&b_[0], 3);
 
-            double c_[3];
-            ViewCArrayKokkos<double> c(&c_[0], 3);
+        //     // calculate the total area of this patch (decompose into 2 triangles)
+        //     // using Cayley-Menger Determinant
+        //     double a_[3];
+        //     ViewCArrayKokkos<double> a(&a_[0], 3);
 
-            // Get the global ID to the first 3 nodes
-            int node_a_gid = mesh.nodes_in_patch(patch_gid, 0);
-            int node_b_gid = mesh.nodes_in_patch(patch_gid, 1);
-            int node_c_gid = mesh.nodes_in_patch(patch_gid, 2);
+        //     double b_[3];
+        //     ViewCArrayKokkos<double> b(&b_[0], 3);
 
-            for(int dim = 0; dim < 3; dim++){
-                a(dim) = node_coords(0, node_a_gid, dim);
-                b(dim) = node_coords(0, node_b_gid, dim);
-                c(dim) = node_coords(0, node_c_gid, dim);
-            }
+        //     double c_[3];
+        //     ViewCArrayKokkos<double> c(&c_[0], 3);
 
-            double A = 0.0;
-            double B = 0.0;
-            double C = 0.0;
-            for(int dim = 0; dim < mesh.num_dims; dim++){
-                A += (b(dim)-c(dim))*(b(dim)-c(dim));
-                B += (a(dim)-c(dim))*(a(dim)-c(dim));
-                C += (a(dim)-b(dim))*(a(dim)-b(dim));
-            }
+        //     // Get the global ID to the first 3 nodes
+        //     int node_a_gid = mesh.nodes_in_patch(patch_gid, 0);
+        //     int node_b_gid = mesh.nodes_in_patch(patch_gid, 1);
+        //     int node_c_gid = mesh.nodes_in_patch(patch_gid, 2);
 
-            double tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
-            tmp /= 16.0;
-            double area1 = sqrt(tmp);
+        //     for(int dim = 0; dim < 3; dim++){
+        //         a(dim) = node_coords(0, node_a_gid, dim);
+        //         b(dim) = node_coords(0, node_b_gid, dim);
+        //         c(dim) = node_coords(0, node_c_gid, dim);
+        //     }
 
-            // Get the global ID to the second 3 nodes (2 shared nodes)
-            node_a_gid = mesh.nodes_in_patch(patch_gid, 2);
-            node_b_gid = mesh.nodes_in_patch(patch_gid, 3);
-            node_c_gid = mesh.nodes_in_patch(patch_gid, 0);
+        //     double A = 0.0;
+        //     double B = 0.0;
+        //     double C = 0.0;
+        //     for(int dim = 0; dim < mesh.num_dims; dim++){
+        //         A += (b(dim)-c(dim))*(b(dim)-c(dim));
+        //         B += (a(dim)-c(dim))*(a(dim)-c(dim));
+        //         C += (a(dim)-b(dim))*(a(dim)-b(dim));
+        //     }
 
-            for(int dim = 0; dim < mesh.num_dims; dim++){
-                a(dim) = node_coords(0, node_a_gid, dim);
-                b(dim) = node_coords(0, node_b_gid, dim);
-                c(dim) = node_coords(0, node_c_gid, dim);
-            }
+        //     double tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
+        //     tmp /= 16.0;
+        //     double area1 = sqrt(tmp);
 
-            A = 0;
-            B = 0; 
-            C = 0;
-            for(int dim = 0; dim < mesh.num_dims; dim++){
-                A += (b(dim)-c(dim))*(b(dim)-c(dim));
-                B += (a(dim)-c(dim))*(a(dim)-c(dim));
-                C += (a(dim)-b(dim))*(a(dim)-b(dim));
-            }
+        //     // Get the global ID to the second 3 nodes (2 shared nodes)
+        //     node_a_gid = mesh.nodes_in_patch(patch_gid, 2);
+        //     node_b_gid = mesh.nodes_in_patch(patch_gid, 3);
+        //     node_c_gid = mesh.nodes_in_patch(patch_gid, 0);
 
-            tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
+        //     for(int dim = 0; dim < mesh.num_dims; dim++){
+        //         a(dim) = node_coords(0, node_a_gid, dim);
+        //         b(dim) = node_coords(0, node_b_gid, dim);
+        //         c(dim) = node_coords(0, node_c_gid, dim);
+        //     }
 
-            tmp /= 16.0;
-            double area2 = sqrt(tmp);
+        //     A = 0;
+        //     B = 0; 
+        //     C = 0;
+        //     for(int dim = 0; dim < mesh.num_dims; dim++){
+        //         A += (b(dim)-c(dim))*(b(dim)-c(dim));
+        //         B += (a(dim)-c(dim))*(a(dim)-c(dim));
+        //         C += (a(dim)-b(dim))*(a(dim)-b(dim));
+        //     }
 
-            double surface_area = area1+area2;
+        //     tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
 
-            // Partition the total surface area to the corner patches
-            double patch_area = surface_area/4.0;
+        //     tmp /= 16.0;
+        //     double area2 = sqrt(tmp);
 
-            // NOTE: Add parsing to the following variables
-            double ref_temp = 293.15; // room temp in Kelvin
-            double h_film = 100.0;
+        //     double surface_area = area1+area2;
 
-            // ---- Calculate the flux through each patch ---- //
-            for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
+        //     // Partition the total surface area to the corner patches
+        //     double patch_area = surface_area/4.0;
+
+        //     // NOTE: Add parsing to the following variables
+        //     double ref_temp = 293.15; // room temp in Kelvin
+        //     double h_film = 100.0;
+
+        //     // ---- Calculate the flux through each patch ---- //
+        //     for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
                 
-                int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+        //         int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
 
-                double patch_flux = -1.0*h_film * (node_temp(0, node_gid) - ref_temp) * patch_area;
+        //         double patch_flux = -1.0*h_film * (node_temp(0, node_gid) - ref_temp) * patch_area;
 
-                // Add patch flux to nodal flux, atomic for thread safety
-                Kokkos::atomic_add(&node_flux(node_gid), patch_flux);
-            }
-        });
+        //         // Add patch flux to nodal flux, atomic for thread safety
+        //         Kokkos::atomic_add(&node_flux(node_gid), patch_flux);
+        //     }
+        // });
 
     } // end for bdy_set
 
@@ -240,125 +240,125 @@ void SGTM3D::boundary_radiation(const Mesh_t& mesh,
                                 const double time_value) const
 {
     // ---- Loop over boundary sets ---- //
-    for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
+    // for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
-        // ---- Skip non radiation BCs ---- // 
-        if(BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCHydroType != boundary_conditions::BCHydro::convection) continue;
+    //     // ---- Skip non radiation BCs ---- // 
+    //     if(BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCHydroType != boundary_conditions::BCHydro::convection) continue;
 
-        // ---- Get number of boundary patches associated with this boundary set ---- // NOTE: Messy, find better solution
-        DCArrayKokkos<int> num_bdy_patches(1);
-        RUN({
-            num_bdy_patches(0) = mesh.bdy_patches_in_set.stride(bdy_set);
-        });
-        num_bdy_patches.update_host();
+    //     // ---- Get number of boundary patches associated with this boundary set ---- // NOTE: Messy, find better solution
+    //     DCArrayKokkos<int> num_bdy_patches(1);
+    //     RUN({
+    //         num_bdy_patches(0) = mesh.bdy_patches_in_set.stride(bdy_set);
+    //     });
+    //     num_bdy_patches.update_host();
 
-        // ---- Loop over the boundary patches in the set ---- //
-        FOR_ALL(bdy_patch_gid, 0, num_bdy_patches.host(0),{
+    //     // ---- Loop over the boundary patches in the set ---- //
+    //     FOR_ALL(bdy_patch_gid, 0, num_bdy_patches.host(0),{
 
-            // For each boundary patch, calculate the flux contribution to each node from radiation
-
-
-            // First: Calculate the surface area
-            // Get the global id for this patch
-            size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+    //         // For each boundary patch, calculate the flux contribution to each node from radiation
 
 
-            // calculate the total area of this patch (decompose into 2 triangles)
-            // using Cayley-Menger Determinant
-            double a_[3];
-            ViewCArrayKokkos<double> a(&a_[0], 3);
+    //         // First: Calculate the surface area
+    //         // Get the global id for this patch
+    //         size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
 
-            double b_[3];
-            ViewCArrayKokkos<double> b(&b_[0], 3);
 
-            double c_[3];
-            ViewCArrayKokkos<double> c(&c_[0], 3);
+    //         // calculate the total area of this patch (decompose into 2 triangles)
+    //         // using Cayley-Menger Determinant
+    //         double a_[3];
+    //         ViewCArrayKokkos<double> a(&a_[0], 3);
 
-            // Get the global ID to the first 3 nodes
-            int node_a_gid = mesh.nodes_in_patch(patch_gid, 0);
-            int node_b_gid = mesh.nodes_in_patch(patch_gid, 1);
-            int node_c_gid = mesh.nodes_in_patch(patch_gid, 2);
+    //         double b_[3];
+    //         ViewCArrayKokkos<double> b(&b_[0], 3);
 
-            for(int dim = 0; dim < 3; dim++){
-                a(dim) = node_coords(0, node_a_gid, dim);
-                b(dim) = node_coords(0, node_b_gid, dim);
-                c(dim) = node_coords(0, node_c_gid, dim);
-            }
+    //         double c_[3];
+    //         ViewCArrayKokkos<double> c(&c_[0], 3);
 
-            double A = 0.0;
-            double B = 0.0;
-            double C = 0.0;
-            for(int dim = 0; dim < mesh.num_dims; dim++){
-                A += (b(dim)-c(dim))*(b(dim)-c(dim));
-                B += (a(dim)-c(dim))*(a(dim)-c(dim));
-                C += (a(dim)-b(dim))*(a(dim)-b(dim));
-            }
+    //         // Get the global ID to the first 3 nodes
+    //         int node_a_gid = mesh.nodes_in_patch(patch_gid, 0);
+    //         int node_b_gid = mesh.nodes_in_patch(patch_gid, 1);
+    //         int node_c_gid = mesh.nodes_in_patch(patch_gid, 2);
 
-            double tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
-            tmp /= 16.0;
-            double area1 = sqrt(tmp);
+    //         for(int dim = 0; dim < 3; dim++){
+    //             a(dim) = node_coords(0, node_a_gid, dim);
+    //             b(dim) = node_coords(0, node_b_gid, dim);
+    //             c(dim) = node_coords(0, node_c_gid, dim);
+    //         }
 
-            // Get the global ID to the second 3 nodes (2 shared nodes)
-            node_a_gid = mesh.nodes_in_patch(patch_gid, 2);
-            node_b_gid = mesh.nodes_in_patch(patch_gid, 3);
-            node_c_gid = mesh.nodes_in_patch(patch_gid, 0);
+    //         double A = 0.0;
+    //         double B = 0.0;
+    //         double C = 0.0;
+    //         for(int dim = 0; dim < mesh.num_dims; dim++){
+    //             A += (b(dim)-c(dim))*(b(dim)-c(dim));
+    //             B += (a(dim)-c(dim))*(a(dim)-c(dim));
+    //             C += (a(dim)-b(dim))*(a(dim)-b(dim));
+    //         }
 
-            for(int dim = 0; dim < mesh.num_dims; dim++){
-                a(dim) = node_coords(0, node_a_gid, dim);
-                b(dim) = node_coords(0, node_b_gid, dim);
-                c(dim) = node_coords(0, node_c_gid, dim);
-            }
+    //         double tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
+    //         tmp /= 16.0;
+    //         double area1 = sqrt(tmp);
 
-            A = 0;
-            B = 0; 
-            C = 0;
-            for(int dim = 0; dim < mesh.num_dims; dim++){
-                A += (b(dim)-c(dim))*(b(dim)-c(dim));
-                B += (a(dim)-c(dim))*(a(dim)-c(dim));
-                C += (a(dim)-b(dim))*(a(dim)-b(dim));
-            }
+    //         // Get the global ID to the second 3 nodes (2 shared nodes)
+    //         node_a_gid = mesh.nodes_in_patch(patch_gid, 2);
+    //         node_b_gid = mesh.nodes_in_patch(patch_gid, 3);
+    //         node_c_gid = mesh.nodes_in_patch(patch_gid, 0);
 
-            tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
+    //         for(int dim = 0; dim < mesh.num_dims; dim++){
+    //             a(dim) = node_coords(0, node_a_gid, dim);
+    //             b(dim) = node_coords(0, node_b_gid, dim);
+    //             c(dim) = node_coords(0, node_c_gid, dim);
+    //         }
 
-            tmp /= 16.0;
-            double area2 = sqrt(tmp);
+    //         A = 0;
+    //         B = 0; 
+    //         C = 0;
+    //         for(int dim = 0; dim < mesh.num_dims; dim++){
+    //             A += (b(dim)-c(dim))*(b(dim)-c(dim));
+    //             B += (a(dim)-c(dim))*(a(dim)-c(dim));
+    //             C += (a(dim)-b(dim))*(a(dim)-b(dim));
+    //         }
 
-            double surface_area = area1+area2;
+    //         tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
 
-            double patch_area = surface_area/4.0;
+    //         tmp /= 16.0;
+    //         double area2 = sqrt(tmp);
 
-            // NOTE: Parse these in
-            double emmisivity = 0.2; // rough oxidized aluminum
-            double boltzmann = 5.67037442e-8;
+    //         double surface_area = area1+area2;
 
-            double ref_zero_temp = 0.0;
-            double ref_ambient_temp = 0.0;
+    //         double patch_area = surface_area/4.0;
 
-            // Loop over all the nodes in this boundary surface
-            for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
+    //         // NOTE: Parse these in
+    //         double emmisivity = 0.2; // rough oxidized aluminum
+    //         double boltzmann = 5.67037442e-8;
+
+    //         double ref_zero_temp = 0.0;
+    //         double ref_ambient_temp = 0.0;
+
+    //         // Loop over all the nodes in this boundary surface
+    //         for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
                 
-                int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+    //             int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
 
-                double tmp1 = (node_temp(0, node_gid)-ref_zero_temp)*
-                              (node_temp(0, node_gid)-ref_zero_temp)*
-                              (node_temp(0, node_gid)-ref_zero_temp)*
-                              (node_temp(0, node_gid)-ref_zero_temp);
+    //             double tmp1 = (node_temp(0, node_gid)-ref_zero_temp)*
+    //                           (node_temp(0, node_gid)-ref_zero_temp)*
+    //                           (node_temp(0, node_gid)-ref_zero_temp)*
+    //                           (node_temp(0, node_gid)-ref_zero_temp);
 
-                double tmp2 = (ref_ambient_temp - ref_zero_temp)*
-                              (ref_ambient_temp - ref_zero_temp)*
-                              (ref_ambient_temp - ref_zero_temp)*
-                              (ref_ambient_temp - ref_zero_temp);
+    //             double tmp2 = (ref_ambient_temp - ref_zero_temp)*
+    //                           (ref_ambient_temp - ref_zero_temp)*
+    //                           (ref_ambient_temp - ref_zero_temp)*
+    //                           (ref_ambient_temp - ref_zero_temp);
 
 
-                double patch_flux = -1.0 * emmisivity * boltzmann * (tmp1 - tmp2) * patch_area;
+    //             double patch_flux = -1.0 * emmisivity * boltzmann * (tmp1 - tmp2) * patch_area;
 
-                // Add patch flux to nodal flux
-                Kokkos::atomic_add(&node_flux(node_gid), patch_flux);
+    //             // Add patch flux to nodal flux
+    //             Kokkos::atomic_add(&node_flux(node_gid), patch_flux);
 
-            }
-        });
+    //         }
+    //     });
 
-    } // end for bdy_set
+    // } // end for bdy_set
 
     return;
 } // end boundary_velocity function
