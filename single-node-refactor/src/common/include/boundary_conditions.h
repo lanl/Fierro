@@ -68,12 +68,16 @@ enum BCVelocityModels
     userDefinedVelocityBC = 5,
     pistonVelocityBC = 6
 };
-// future model options:
-//    displacementBC          = 6,
-//    accelerationBC          = 7,
-//    pressureBC              = 8,
-//    temperatureBC           = 9,
-//    contactBC               = 10
+// types of temperature boundary conditions
+enum BCTemperatureModels
+{
+    noTemperatureBC = 0,
+    constantTemperatureBC = 1,
+    //timeVaryingTemperatureBC = 2,
+    //adiabaticBC = 3,
+    //userDefinedTemperatureBC = 4
+};
+
 
 
 enum BCFcnLocation
@@ -95,7 +99,9 @@ static std::map<std::string, boundary_conditions::BdyTag> bc_surface_map
 };
 // future options
 //     { "read_file", boundary_conditions::read_file }
+    
 
+// Velocity models
 static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_model_map
 {
     { "none", boundary_conditions::noVelocityBC },
@@ -106,13 +112,16 @@ static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_
     { "user_defined", boundary_conditions::userDefinedVelocityBC },
     { "piston", boundary_conditions::pistonVelocityBC }
 };
-// future options
-//    { "displacement",          boundary_conditions::displacementBC          },
-//    { "acceleration",          boundary_conditions::accelerationBC          },
-//    { "pressure",              boundary_conditions::pressureBC              },
-//    { "temperature",           boundary_conditions::temperatureBC           },
-//    { "contact",               boundary_conditions::contactBC               }
 
+// Temperature models
+static std::map<std::string, boundary_conditions::BCTemperatureModels> bc_temperature_model_map
+{
+    { "none", boundary_conditions::noTemperatureBC },
+    { "constant", boundary_conditions::constantTemperatureBC }
+    //{ "time_varying", boundary_conditions::timeVaryingTemperatureBC },
+    //{ "adiabatic", boundary_conditions::adiabaticBC },
+    //{ "user_defined", boundary_conditions::userDefinedTemperatureBC }
+};
 
 
 
@@ -146,9 +155,11 @@ struct BoundaryConditionSetup_t
 struct BoundaryConditionEnums_t
 {
     solver_input::method solver = solver_input::NONE; ///< Numerical solver method
-
+    // BC model for velocity
     boundary_conditions::BCVelocityModels BCVelocityModel = boundary_conditions::noVelocityBC;    ///< Type of velocity boundary condition
-
+    // BC model for temperature
+    boundary_conditions::BCTemperatureModels BCTemperatureModel = boundary_conditions::noTemperatureBC;    ///< Type of temperature boundary condition
+    
     boundary_conditions::BCFcnLocation Location = boundary_conditions::device; // host or device BC function
 }; // end boundary condition enums
 
@@ -172,8 +183,32 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
 
+    // function pointer for temperature BC's
+    void (*temperature) (const Mesh_t& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& temp_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const DCArrayKokkos<double>& node_temp,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set) = NULL;
+
+    // Function pointer to heat flux BCs
+    void (*heat_flux) (const Mesh_t& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& heat_flux_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const DCArrayKokkos<double>& node_temp,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set) = NULL;
+
     // TODO: add function pointer for pressure BC's and definitions
 }; // end boundary condition fcns
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -221,7 +256,11 @@ static std::vector<std::string> str_bc_inps
     "solver_id",
     "velocity_model",
     "surface",
-    "velocity_bc_global_vars"
+    "velocity_bc_global_vars",
+    "temperature_model",
+    "temperature_bc_global_vars",
+    "heat_flux_model",
+    "heat_flux_bc_global_vars"
 };
 
 // subfields under surface
