@@ -39,7 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct BoundaryConditionEnums_t;
 
-namespace ConstantTempBC
+namespace ConstantTemperatureBC
 {
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -61,18 +61,18 @@ namespace ConstantTempBC
 KOKKOS_FUNCTION
 static void temperature(const Mesh_t& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const DCArrayKokkos<double>& bc_global_vars,
-    const DCArrayKokkos<double>& bc_state_vars,
-    const DCArrayKokkos<double>& node_temp,
-    const double time_value,
-    const size_t rk_stage,
-    const size_t bdy_node_gid,
-    const size_t bdy_set)
+    const RaggedRightArrayKokkos<double>& temp_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const DCArrayKokkos<double>& node_temp,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set)
 {
 
     // Temperature to set the boundary to = bc_global_vars(4)
     // Set velocity to zero in the specified direction
-    node_temp(rk_stage, bdy_node_gid) = bc_global_vars(bdy_set,4); // bc_global_vars(4);
+    node_temp(rk_stage, bdy_node_gid) = temp_bc_global_vars(bdy_set,0); // bc_global_vars(4);
 
     return;
 } // end func

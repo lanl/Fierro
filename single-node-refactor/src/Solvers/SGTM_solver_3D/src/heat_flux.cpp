@@ -76,7 +76,6 @@ void SGTM3D::get_heat_flux(
     const DCArrayKokkos<double>& MaterialPoints_q_flux,
     const DCArrayKokkos<double>& MaterialPoints_conductivity,
     const DCArrayKokkos<double>& MaterialPoints_temp_grad,
-    const DCArrayKokkos<double>& MaterialPoints_statev,
     const DCArrayKokkos<double>& corner_q_flux,
     const corners_in_mat_t corners_in_mat_elem,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,

@@ -1035,7 +1035,7 @@ void parse_regions(Yaml::Node& root,
                 });
             } // temperature
             else if (a_word.compare("specific_heat") == 0) {
-                double specific_heat = rootroot["regions"][reg_id]["region"]["specific_heat"].As<double>();
+                double specific_heat = root["regions"][reg_id]["region"]["specific_heat"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\tspecific_heat = " << specific_heat << std::endl;
                 }
@@ -2390,17 +2390,17 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     // temporary arrays for boundary condition variables
     DCArrayKokkos<double> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
     DCArrayKokkos<double> tempTemperatureBCGlobalVars (num_bcs, 100, "temporary_temperature_bc_global_values");
-    DCArrayKokkos<double> tempHeatFluxBCGlobalVars (num_bcs, 100, "temporary_heat_flux_bc_global_values");
+    // DCArrayKokkos<double> tempHeatFluxBCGlobalVars (num_bcs, 100, "temporary_heat_flux_bc_global_values");
     
     BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars"); 
     BoundaryConditions.num_temperature_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_temperature_bc_global_vars");
-    BoundaryConditions.num_heat_flux_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_heat_flux_bc_global_vars"); 
+    // BoundaryConditions.num_heat_flux_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_heat_flux_bc_global_vars"); 
 
     // initialize the num of global vars to 0 for all models
     FOR_ALL(bc_id, 0, num_bcs, {
         BoundaryConditions.num_velocity_bc_global_vars(bc_id) = 0;
         BoundaryConditions.num_temperature_bc_global_vars(bc_id) = 0;
-        BoundaryConditions.num_heat_flux_bc_global_vars(bc_id) = 0;
+        // BoundaryConditions.num_heat_flux_bc_global_vars(bc_id) = 0;
     }); // end parallel for
 
 

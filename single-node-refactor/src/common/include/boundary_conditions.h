@@ -236,13 +236,17 @@ struct BoundaryCondition_t
     DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver)
 
     // keep adding ragged storage for the other BC models -- temp, displacement, etc.
-    // DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver, ids)
-    // DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver)
+    DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver, ids)
+     DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver)
 
 
     // global variables for velocity boundary condition models
     RaggedRightArrayKokkos<double> velocity_bc_global_vars;
     CArrayKokkos<size_t> num_velocity_bc_global_vars;
+
+    // global variables for temperature boundary condition models
+    RaggedRightArrayKokkos<double> temperature_bc_global_vars;
+    CArrayKokkos<size_t> num_temperature_bc_global_vars;
 
     // state variables for boundary conditions
     DCArrayKokkos<double> bc_state_vars;
