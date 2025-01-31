@@ -2789,7 +2789,25 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 RUN({ 
                     BoundaryConditions.num_temperature_bc_global_vars(bc_id) = num_global_vars;
                 });
+
+                if (VERBOSE) {
+                    std::cout << "num global temperature_bc vars = " << num_global_vars << std::endl;
+                }
+
+                // Store the global temperature boundary condition variables
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double temperature_bc_var = bc_yaml[bc_id]["boundary_condition"]["temperature_bc_global_vars"][global_var_id].As<double>();
+                    
+                    RUN({
+                        tempTemperatureBCGlobalVars(bc_id, global_var_id) = temperature_bc_var;
+                    });
+
+                    if (VERBOSE) {
+                        std::cout << "\t var = " << temperature_bc_var << std::endl;
+                    }
+                }
             }   
+
             
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
@@ -2810,14 +2828,19 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
      // allocate ragged right memory to hold the model global variables
     BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
+    BoundaryConditions.temperature_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_temperature_bc_global_vars, "BoundaryConditions.temperature_bc_global_vars");
     // ... allocate other bc global vars here
 
     // save the global variables
     FOR_ALL(bc_id, 0, num_bcs, {
         
-        for (size_t var_lid=0; var_lid<BoundaryConditions.num_velocity_bc_global_vars(bc_id); var_lid++){
+        for (size_t var_lid = 0; var_lid < BoundaryConditions.num_velocity_bc_global_vars(bc_id); var_lid++){
             BoundaryConditions.velocity_bc_global_vars(bc_id, var_lid) = tempVelocityBCGlobalVars(bc_id, var_lid);
         } // end for eos var_lid
+
+        for (size_t var_lid = 0; var_lid < BoundaryConditions.num_temperature_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.temperature_bc_global_vars(bc_id, var_lid) = tempTemperatureBCGlobalVars(bc_id, var_lid);
+        } // end for var_lid
 
         // ... add other bc global vars here
 
