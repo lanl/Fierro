@@ -210,6 +210,11 @@ public:
         DCArrayKokkos<double>&     node_vel,
         const double time_value) const;
 
+    void boundary_stress(const Mesh_t& mesh,
+                    const BoundaryCondition_t& BoundaryConditions,
+                    DCArrayKokkos<double>& node_bdy_force,
+                    const double time_value) const;    
+
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(
         const double  rk_alpha,

@@ -44,7 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// \param The simulation mesh
 /// \param Boundary contain arrays of information about BCs
-/// \param A view into the nodal velocity array
+/// \param The nodal velocity array
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -90,7 +90,7 @@ void SGH3D::boundary_velocity(const Mesh_t&      mesh,
 ///
 /// \param The simulation mesh
 /// \param An array of BoundaryCondition_t that contain information about BCs
-/// \param A view into the nodal velocity array
+/// \param The nodal velocity array
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -101,3 +101,27 @@ void SGH3D::boundary_contact(const Mesh_t& mesh,
 {
     return;
 } // end boundary_contact function
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn boundary_stress
+///
+/// \brief Evolves the boundary according to a give stress
+///
+/// \param The simulation mesh
+/// \param Boundary contain arrays of information about BCs
+/// \param The boundary force array
+/// \param The current simulation time
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGH3D::boundary_stress(const Mesh_t&      mesh,
+                              const BoundaryCondition_t& BoundaryConditions,
+                              DCArrayKokkos<double>& node_bdy_force,
+                              const double time_value) const
+{
+
+
+    return;
+} // end boundary_velocity function

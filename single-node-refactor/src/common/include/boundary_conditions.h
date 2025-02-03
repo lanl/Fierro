@@ -68,12 +68,17 @@ enum BCVelocityModels
     userDefinedVelocityBC = 5,
     pistonVelocityBC = 6
 };
+enum BCStressModels
+{
+    noStressBC = 0,
+    constantStressBC = 1,
+    timeVaringStressBC = 2,
+    userDefinedStressBC = 3,
+};
 // future model options:
-//    displacementBC          = 6,
-//    accelerationBC          = 7,
-//    pressureBC              = 8,
-//    temperatureBC           = 9,
-//    contactBC               = 10
+//    displacementBC                            
+//    temperatureBC           
+//    contactBC               
 
 
 enum BCFcnLocation
@@ -106,13 +111,14 @@ static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_
     { "user_defined", boundary_conditions::userDefinedVelocityBC },
     { "piston", boundary_conditions::pistonVelocityBC }
 };
-// future options
-//    { "displacement",          boundary_conditions::displacementBC          },
-//    { "acceleration",          boundary_conditions::accelerationBC          },
-//    { "pressure",              boundary_conditions::pressureBC              },
-//    { "temperature",           boundary_conditions::temperatureBC           },
-//    { "contact",               boundary_conditions::contactBC               }
 
+static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_model_map
+{
+    { "none", boundary_conditions::noStressBC },
+    { "constant", boundary_conditions::constantStressBC },
+    { "time_varying", boundary_conditions::timeVaringStressBC },
+    { "user_defined", boundary_conditions::userDefinedStressBC },
+};
 
 
 
@@ -149,6 +155,8 @@ struct BoundaryConditionEnums_t
 
     boundary_conditions::BCVelocityModels BCVelocityModel = boundary_conditions::noVelocityBC;    ///< Type of velocity boundary condition
 
+    boundary_conditions::BCStressModels BCStressModel = boundary_conditions::noStressBC;    ///< Type of stress boundary condition
+
     boundary_conditions::BCFcnLocation Location = boundary_conditions::device; // host or device BC function
 }; // end boundary condition enums
 
@@ -172,7 +180,19 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
 
-    // TODO: add function pointer for pressure BC's and definitions
+
+    // function pointer for stress BC's
+    void (*stress) (const Mesh_t& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const DCArrayKokkos<double>& node_bdy_force,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set) = NULL;
+
+    // TODO: add function pointer for other types of BC's and definitions
 }; // end boundary condition fcns
 
 /////////////////////////////////////////////////////////////////////////////
@@ -200,6 +220,9 @@ struct BoundaryCondition_t
     DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver, ids)
     DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver)
 
+    DCArrayKokkos<size_t> stress_bdy_sets_in_solver;     // (solver, ids)
+    DCArrayKokkos<size_t> num_stress_bdy_sets_in_solver; // (solver)
+
     // keep adding ragged storage for the other BC models -- temp, displacement, etc.
     // DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver, ids)
     // DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver)
@@ -208,6 +231,10 @@ struct BoundaryCondition_t
     // global variables for velocity boundary condition models
     RaggedRightArrayKokkos<double> velocity_bc_global_vars;
     CArrayKokkos<size_t> num_velocity_bc_global_vars;
+
+    // global variables for stress boundary condition models
+    RaggedRightArrayKokkos<double> stress_bc_global_vars;
+    CArrayKokkos<size_t> num_stress_bc_global_vars;
 
     // state variables for boundary conditions
     DCArrayKokkos<double> bc_state_vars;
@@ -220,6 +247,7 @@ static std::vector<std::string> str_bc_inps
 {
     "solver_id",
     "velocity_model",
+    "stress_model",
     "surface",
     "velocity_bc_global_vars"
 };
