@@ -73,7 +73,7 @@ void SGH3D::boundary_velocity(const Mesh_t&      mesh,
                 BoundaryConditions.bc_state_vars,
                 node_vel,
                 time_value,
-                1, // rk_stage
+                1, // rk_stage isn't used
                 bdy_node_gid,
                 bdy_set);
         }); // end for bdy_node_lid
@@ -121,6 +121,39 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
                               DCArrayKokkos<double>& node_bdy_force,
                               const double time_value) const
 {
+
+    // note: node_bdy_force is initialized to zero before calling this routine
+
+    size_t num_stress_bdy_sets = BoundaryConditions.num_stress_bdy_sets_in_solver.host(this->solver_id);
+
+    // Loop over the stress boundary sets
+    for (size_t bc_lid = 0; bc_lid < num_stress_bdy_sets; bc_lid++) {
+        
+        size_t bdy_set = BoundaryConditions.stress_bdy_sets_in_solver.host(bc_lid);
+
+        // Loop over boundary nodes in a boundary set
+        FOR_ALL(bdy_patch_lid, 0, mesh.num_bdy_patches_in_set.host(bdy_set), {
+
+            // get the global index for this patch on the boundary
+            size_t bdy_patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_lid);
+
+            // calculate surfaced area
+
+            // evaluate stress on this boundary patch
+            BoundaryConditions.BoundaryConditionFunctions(bdy_set).stress(
+                mesh,
+                BoundaryConditions.BoundaryConditionEnums,
+                BoundaryConditions.stress_bc_global_vars,
+                BoundaryConditions.bc_state_vars,
+                node_bdy_force,
+                time_value,
+                1, // rk_stage isn't used
+                bdy_patch_gid,
+                bdy_set);
+
+            
+        }); // end for bdy_node_lid
+    } // end for bdy_set
 
 
     return;

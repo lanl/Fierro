@@ -238,4 +238,16 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords);
 
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn build_boundry_node_sets
+///
+/// \brief finds and saves the boundary nodes in a set
+///
+/// \param Simulation mesh
+///
+/////////////////////////////////////////////////////////////////////////////
+void build_boundry_node_sets(Mesh_t& mesh);
+
 #endif

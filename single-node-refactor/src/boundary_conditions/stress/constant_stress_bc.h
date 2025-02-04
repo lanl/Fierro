@@ -45,7 +45,7 @@ namespace ConstantStressBC
 ///
 /// \fn Boundary stress is constant
 ///
-/// \brief This is a function to set the stress in all directions to a value
+/// \brief This is a function to set the stress in the normal dir to a value
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
@@ -71,7 +71,7 @@ static void stress(const Mesh_t& mesh,
 
 
     return;
-} // end velocity
+} // end stress
 } // end namespace
 
 #endif // end Header Guard

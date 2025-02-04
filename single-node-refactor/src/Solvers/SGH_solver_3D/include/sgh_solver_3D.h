@@ -59,6 +59,7 @@ namespace SGH3D_State
         node_state::coords,
         node_state::velocity,
         node_state::mass,
+        node_state::force,
         node_state::temp // Note, remove this, unused WIP
     };
 
@@ -271,6 +272,7 @@ public:
         const Mesh_t& mesh,
         DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_mass,
+        const DCArrayKokkos<double>& node_force,
         const DCArrayKokkos<double>& corner_force) const;
 
     void get_velgrad(

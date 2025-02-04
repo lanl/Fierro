@@ -298,12 +298,25 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             } // end for mat_id
 
+
+            // ---- Calculate boundary and body forces ---- //
+            // setting nodal force to zero here, 
+            // the node force stores the BCs supplied forces and body forces
+            State.node.force.set_values(0.0);
+
+            // call stress BC's routine
+
+            // call body forces routine
+
+
+
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
                             dt,
                             mesh,
                             State.node.vel,
                             State.node.mass,
+                            State.node.force,
                             State.corner.force);
 
             // ---- apply velocity boundary conditions to the boundary patches----

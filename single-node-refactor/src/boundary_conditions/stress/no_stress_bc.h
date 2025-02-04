@@ -64,14 +64,13 @@ static void stress(const Mesh_t& mesh,
     const DCArrayKokkos<double>& bc_state_vars,
     const DCArrayKokkos<double>& node_bdy_force,
     const double time_value,
-    const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
 
 
     return;
-} // end velocity
+} // end stress
 } // end namespace
 
 #endif // end Header Guard

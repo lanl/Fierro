@@ -89,7 +89,7 @@ void Driver::initialize()
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
-    mesh.build_boundry_node_sets(mesh);
+    build_boundry_node_sets(mesh);
 
     // Setup Solvers
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
