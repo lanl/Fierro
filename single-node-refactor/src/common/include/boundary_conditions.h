@@ -251,7 +251,8 @@ static std::vector<std::string> str_bc_inps
     "velocity_model",
     "stress_model",
     "surface",
-    "velocity_bc_global_vars"
+    "velocity_bc_global_vars",
+    "stress_bc_global_vars"
 };
 
 // subfields under surface
@@ -268,6 +269,8 @@ static std::vector<std::string> str_bc_surface_inps
 // ----------------------------------
 static std::vector<std::string> bc_required_inps
 {
+    "solver_id",
+    "surface"
 };
 static std::vector<std::string> bc_surface_required_inps
 {

@@ -2805,7 +2805,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 } // end loop over words in the subfield
             } // surface
-            // set the value
+            // set the velocity global values
             else if (a_word.compare("velocity_bc_global_vars") == 0) {
                 Yaml::Node & vel_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
@@ -2836,6 +2836,37 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     }
                 } // end loop over global vars
             } // end else if on velocity_bc_global_vars
+            // set the stress global values
+            else if (a_word.compare("stress_bc_global_vars") == 0) {
+                Yaml::Node & stress_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+                size_t num_global_vars = stress_bc_global_vars_yaml.Size();
+
+                if(num_global_vars>100){
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 velocity global vars in the input file ****");
+                } // end check on num_global_vars
+
+                RUN({ 
+                    BoundaryConditions.num_stress_bc_global_vars(bc_id) = num_global_vars;
+                });
+               
+                if (VERBOSE) {
+                    std::cout << "num global stress_bc vars = " << num_global_vars << std::endl;
+                }
+
+                // store the global eos model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double stress_bc_var = bc_yaml[bc_id]["boundary_condition"]["stress_bc_global_vars"][global_var_id].As<double>();
+                    
+                    RUN({
+                        tempStressBCGlobalVars(bc_id, global_var_id) = stress_bc_var;
+                    });
+
+                    if (VERBOSE) {
+                        std::cout << "\t var = " << stress_bc_var << std::endl;
+                    }
+                } // end loop over global vars
+            } // end else if on stress_bc_global_vars
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
@@ -2855,6 +2886,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
      // allocate ragged right memory to hold the model global variables
     BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
+    BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
+   
     // ... allocate other bc global vars here
 
     // save the global variables
@@ -2862,6 +2895,10 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
         
         for (size_t var_lid=0; var_lid<BoundaryConditions.num_velocity_bc_global_vars(bc_id); var_lid++){
             BoundaryConditions.velocity_bc_global_vars(bc_id, var_lid) = tempVelocityBCGlobalVars(bc_id, var_lid);
+        } // end for eos var_lid
+
+        for (size_t var_lid=0; var_lid<BoundaryConditions.num_stress_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.stress_bc_global_vars(bc_id, var_lid) = tempStressBCGlobalVars(bc_id, var_lid);
         } // end for eos var_lid
 
         // ... add other bc global vars here

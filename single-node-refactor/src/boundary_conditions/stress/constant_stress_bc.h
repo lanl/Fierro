@@ -41,6 +41,19 @@ struct BoundaryConditionEnums_t;
 
 namespace ConstantStressBC
 {
+
+// add an enum for boundary statevars and global vars
+// Voight notion
+enum BCVars
+{
+    sig_00 = 0,
+    sig_11 = 1,
+    sig_22 = 2,
+    sig_12 = 3,
+    sig_02 = 4,
+    sig_01 = 5,
+};
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn Boundary stress is constant
@@ -69,6 +82,32 @@ static void stress(const Mesh_t& mesh,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
+    double sigma_1D[3];
+    ViewCArrayKokkos<double> sigma(&sigma_1D[0], 3,3);  // its 3D even in 2D
+   
+    // Cauchy stress is symmetric
+    sigma(0,0) = stress_bc_global_vars(bdy_set,BCVars::sig_00);
+    sigma(1,1) = stress_bc_global_vars(bdy_set,BCVars::sig_11);
+    sigma(2,2) = stress_bc_global_vars(bdy_set,BCVars::sig_22);
+
+    sigma(1,2) = stress_bc_global_vars(bdy_set,BCVars::sig_12);
+    sigma(2,1) = stress_bc_global_vars(bdy_set,BCVars::sig_12);
+
+    sigma(0,2) = stress_bc_global_vars(bdy_set,BCVars::sig_02);
+    sigma(2,0) = stress_bc_global_vars(bdy_set,BCVars::sig_02);
+
+    sigma(0,1) = stress_bc_global_vars(bdy_set,BCVars::sig_01);
+    sigma(1,0) = stress_bc_global_vars(bdy_set,BCVars::sig_01);
+
+    
+    // sigma(0,0)*normal(0) + sigma(0,1)*normal(1) + sigma(0,2)*normal(2)
+    // sigma(1,0)*normal(0) + sigma(1,1)*normal(1) + sigma(1,2)*normal(2)
+    // sigma(2,0)*normal(0) + sigma(2,1)*normal(1) + sigma(2,2)*normal(2)
+    for(size_t i=0; i<mesh.num_dims; i++){
+        for(size_t j=0; j<mesh.num_dims; j++){
+            corner_surf_force(i) = sigma(i,j)*corner_surf_normal(j);
+        } // end j
+    } // end i
 
 
     return;

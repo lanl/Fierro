@@ -123,6 +123,7 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
                               const double time_value) const
 {
 
+
     // note: node_bdy_force is initialized to zero before calling this routine
 
     size_t num_stress_bdy_sets = BoundaryConditions.num_stress_bdy_sets_in_solver.host(this->solver_id);
@@ -148,8 +149,9 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
                 // get the node id
                 size_t node_gid = mesh.nodes_in_patch(bdy_patch_gid, node_lid);
 
+
                 for (size_t dim=0; dim<mesh.num_dims; dim++){
-                    avg_coords[dim] += node_coords(1, node_gid,dim);
+                    avg_coords[dim] += node_coords(1, node_gid, dim);
                 } // end for dim
 
             } // end for
@@ -157,6 +159,7 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
             for (size_t dim=0; dim<mesh.num_dims; dim++){
                 avg_coords[dim] /= (double)mesh.num_nodes_in_patch;
             } // end for dim
+
 
             // allocate the corner surface normals and forces 
             double corn_patch_area_normal_1D[3];
@@ -182,11 +185,10 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
                 } else {
                     node_gid_1 = mesh.nodes_in_patch(bdy_patch_gid, 0);
                 } // end if
-
-                
+           
                 for (size_t dim=0; dim<mesh.num_dims; dim++){
-                    vec_a[dim] = node_coords(1, node_gid_0,dim) - avg_coords[dim];
-                    vec_b[dim] = node_coords(1, node_gid_1,dim) - avg_coords[dim];
+                    vec_a[dim] = node_coords(1, node_gid_0, dim) - avg_coords[dim];
+                    vec_b[dim] = node_coords(1, node_gid_1, dim) - avg_coords[dim];
                 } // end for dim
 
                 // calculating the cross product of the 2 vectors, 1/2 multiply is later
@@ -224,7 +226,7 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
 
                 // tally the force to the node
                 for (size_t dim=0; dim<mesh.num_dims; dim++){
-                    Kokkos::atomic_add(&corn_patch_force(dim), node_bdy_force(1, node_gid, dim));
+                    Kokkos::atomic_add(&node_bdy_force(node_gid, dim), corn_patch_force(dim));
                 } // end dim
 
             } // end for node_lid in patch
