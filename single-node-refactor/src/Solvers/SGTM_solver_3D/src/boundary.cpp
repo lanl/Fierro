@@ -56,27 +56,27 @@ void SGTM3D::boundary_temperature(const Mesh_t& mesh,
     // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
-        // // ---- Skip non temperature BCs ---- //
-        // if (BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCHydroType != boundary_conditions::BCHydro::temperature) continue;
+        // ---- Skip non temperature BCs ---- //
+        if (BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCTemperatureModel != boundary_conditions::BCTemperatureModels::constantTemperatureBC) continue;
 
         
-        // // ---- Loop over boundary nodes in a boundary set ---- //
-        // FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+        // ---- Loop over boundary nodes in a boundary set ---- //
+        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
             
-        //     // get the global index for this node on the boundary
-        //     size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
+            // get the global index for this node on the boundary
+            size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
-        //     // evaluate temperature on this boundary node
-        //     BoundaryConditions.BoundaryConditionFunctions(bdy_set).temperature(mesh,
-        //                                                           BoundaryConditions.BoundaryConditionEnums,
-        //                                                           BoundaryConditions.bc_global_vars,
-        //                                                           BoundaryConditions.bc_state_vars,
-        //                                                           node_temp,
-        //                                                           time_value,
-        //                                                           1, // rk_stage
-        //                                                           bdy_node_gid,
-        //                                                           bdy_set);
-        // }); // end for bdy_node_lid
+            // evaluate temperature on this boundary node
+            BoundaryConditions.BoundaryConditionFunctions(bdy_set).temperature(mesh,
+                                                                  BoundaryConditions.BoundaryConditionEnums,
+                                                                  BoundaryConditions.temperature_bc_global_vars,
+                                                                  BoundaryConditions.bc_state_vars,
+                                                                  node_temp,
+                                                                  time_value,
+                                                                  1, // rk_stage
+                                                                  bdy_node_gid,
+                                                                  bdy_set);
+        }); // end for bdy_node_lid
     } // end for bdy_set
 
     return;

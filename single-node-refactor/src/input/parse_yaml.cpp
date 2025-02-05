@@ -2367,6 +2367,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     size_t num_bcs = bc_yaml.Size();
 
+    std::cout<<"num_bcs = " << num_bcs << std::endl;
+
     BoundaryConditions.num_bcs = num_bcs;
 
     BoundaryConditions.BoundaryConditionSetup = CArrayKokkos <BoundaryConditionSetup_t>(num_bcs, "bc_setup_vars");
@@ -2379,11 +2381,16 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     // stores the velocity bdy node lists per solver, in the future, this needs to be a DualRaggedRight
     BoundaryConditions.vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "vel_bdy_sets_in_solver");  
+    BoundaryConditions.temperature_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "temperature_bdy_sets_in_solver");
     // this stores the number of bdy sets for a solver
+   
     BoundaryConditions.num_vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_vel_bdy_sets_in_solver");   
+    BoundaryConditions.num_temperature_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_temperature_bdy_sets_in_solver");
+    
     // set the storage counter to zero
     for(size_t solver_id=0; solver_id<num_solvers; solver_id++){
         BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id) = 0;
+        BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id) = 0;
     } // end for
 
 
@@ -2407,7 +2414,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     // state place holder is here
     BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
 
-
+    std::cout << "Before loop over the BC specified" << std::endl;
     // loop over the BC specified
     for (size_t bc_id = 0; bc_id < num_bcs; bc_id++) {
         // read the variables names
@@ -2457,7 +2464,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             if (VERBOSE) {
                 std::cout << a_word << std::endl;
             }
-
+            std::cout << "a_word = " << a_word << std::endl;
             Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
             // get solver for this boundary condition
@@ -2562,20 +2569,28 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             } // type
 
             else if (a_word.compare("temperature_model") == 0) {
-                
+                std::cout << "Inside temperature_model check" << std::endl;
+
                 // Note: solver_id was retrieved at the top of the bc_id loop
+
+                std::cout<<"Solver id = " << solver_id << std::endl;
+                std::cout<<"bc_id = " << bc_id << std::endl;
 
                 // find out how many temperature bdy sets have been saved 
                 size_t num_saved = BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id);
+
+                std::cout<<"num_saved = " << num_saved << std::endl;
+
                 BoundaryConditions.temperature_bdy_sets_in_solver.host(num_saved) = bc_id;
                 BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
 
                 std::string temperature_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
                 auto map = bc_temperature_model_map; 
-                
+                std::cout<<"Before map check" << std::endl;
                 // set the temperature_model
                 if (map.find(temperature_model) != map.end()) {
+                    std::cout<<"Inside map check" << std::endl;
                     auto bc_temperature_model = map[temperature_model];
                     
                     switch(map[temperature_model]){
@@ -2587,15 +2602,12 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).temperature = &ConstantTemperatureBC::temperature;
                             });
                             break;
+
                         default:
                             std::cout << "ERROR: invalid temperature boundary condition input: " << temperature_model << std::endl;
                             throw std::runtime_error("**** Temperature BC model Not Understood ****");
                             break;
                     }
-                }
-
-                if (VERBOSE) {
-                    std::cout << "\ttemperature_bc_model = " << temperature_model << std::endl;
                 }
                 else{
                     std::cout << "ERROR: invalid boundary condition option input in YAML file: " << temperature_model << std::endl;
@@ -2607,17 +2619,21 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                     throw std::runtime_error("**** Boundary Condition Temperature Model Not Understood ****");
                 } // end if
+
+                if (VERBOSE) {
+                    std::cout << "\ttemperature_bc_model = " << temperature_model << std::endl;
+                }
                 
 
             }   
             
-            // get boundary condition direction
+            // get boundary condition location
             else if (a_word.compare("location") == 0) {
                 std::string location = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
                 auto map = bc_location_map;
 
-                // set the direction
+                // set the location
                 if (map.find(location) != map.end()) {
                     auto bc_location = map[location];
                     RUN({
@@ -2636,7 +2652,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     }
                     throw std::runtime_error("**** Boundary Conditions Not Understood ****");
                 } // end if
-            } // direction
+            } // location
 
             // get boundary condition surface geometry
             else if (a_word.compare("surface") == 0) {
@@ -2776,8 +2792,9 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 } // end loop over global vars
             } // end else if on velocity_bc_global_vars
             
-             // Set the global variables for temperature boundary condition models
+            // Set the global variables for temperature boundary condition models
             else if (a_word.compare("temperature_bc_global_vars") == 0) {
+                std::cout << "Inside temperature_bc_global_vars" << std::endl;
                 Yaml::Node & temp_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
                 size_t num_global_vars = temp_bc_global_vars_yaml.Size();
@@ -2819,12 +2836,12 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             }
         } // end for words in boundary conditions
 
-
+        std::cout << "After loop over words in boundary conditions" << std::endl;
         // add checks for velocity vs time boundary condition
 
 
     } // end loop over BCs specified
-
+    std::cout << "After loop over BCs specified" << std::endl;
 
      // allocate ragged right memory to hold the model global variables
     BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
