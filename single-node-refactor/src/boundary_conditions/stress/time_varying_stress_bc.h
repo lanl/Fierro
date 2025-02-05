@@ -44,13 +44,15 @@ namespace TimeVaryingStressBC
 // add an enum for boundary statevars and global vars
 enum BCVars
 {
-    x_comp = 0,
-    y_comp = 1,
-    z_comp = 2,
-    hydro_bc_stress_0 = 3,
-    hydro_bc_stress_1 = 4,
-    hydro_bc_stress_t_start = 5,
-    hydro_bc_stress_t_end = 6
+    sig_00 = 0,
+    sig_11 = 1,
+    sig_22 = 2,
+    sig_12 = 3,
+    sig_02 = 4,
+    sig_01 = 5,
+    var_decay = 6,
+    time_start = 7,
+    time_end = 8
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -61,13 +63,13 @@ enum BCVars
 ///        pressure that varies in time.  The function form is an exponential
 ///        decay, given by:
 ///         if (t_end > time > t_start) then
-///              p(t) = p0 exp(-p1*(time - time_start) )
+///              sigma(t) = sigma0 exp(-varDecay*(time - time_start) )
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
-/// \param Node velocity
+/// \param corner stress
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
 /// \param Boundary set local id
@@ -85,13 +87,27 @@ static void stress(const Mesh_t& mesh,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    const double x_comp = stress_bc_global_vars(bdy_set, BCVars::x_comp);
-    const double y_comp = stress_bc_global_vars(bdy_set, BCVars::y_comp);
-    const double z_comp = stress_bc_global_vars(bdy_set, BCVars::z_comp);
-    const double hydro_bc_stress_0 = stress_bc_global_vars(bdy_set, BCVars::hydro_bc_stress_0);
-    const double hydro_bc_stress_1 = stress_bc_global_vars(bdy_set, BCVars::hydro_bc_stress_1);
-    const double hydro_bc_stress_t_start = stress_bc_global_vars(bdy_set, BCVars::hydro_bc_stress_t_start);
-    const double hydro_bc_stress_t_end   = stress_bc_global_vars(bdy_set, BCVars::hydro_bc_stress_t_end);
+
+    double sigma_1D[9];
+    ViewCArrayKokkos<double> sigma(&sigma_1D[0], 3,3);  // its 3D even in 2D
+   
+    // Cauchy stress is symmetric
+    sigma(0,0) = stress_bc_global_vars(bdy_set,BCVars::sig_00);
+    sigma(1,1) = stress_bc_global_vars(bdy_set,BCVars::sig_11);
+    sigma(2,2) = stress_bc_global_vars(bdy_set,BCVars::sig_22);
+
+    sigma(1,2) = stress_bc_global_vars(bdy_set,BCVars::sig_12);
+    sigma(2,1) = stress_bc_global_vars(bdy_set,BCVars::sig_12);
+
+    sigma(0,2) = stress_bc_global_vars(bdy_set,BCVars::sig_02);
+    sigma(2,0) = stress_bc_global_vars(bdy_set,BCVars::sig_02);
+
+    sigma(0,1) = stress_bc_global_vars(bdy_set,BCVars::sig_01);
+    sigma(1,0) = stress_bc_global_vars(bdy_set,BCVars::sig_01);
+
+    const double var_decay = stress_bc_global_vars(bdy_set, BCVars::var_decay);
+    const double time_start = stress_bc_global_vars(bdy_set, BCVars::time_start);
+    const double time_end   = stress_bc_global_vars(bdy_set, BCVars::time_end);
 
     // directions are as follows:
     // x_plane  = 0,
@@ -100,8 +116,25 @@ static void stress(const Mesh_t& mesh,
 
     // Set pressure in that direction to specified value
     // if t_end > time > t_start
-    // p(t) = p0 exp(-p1*(time - time_start) )
+    // simga(t) = simga0 exp(-varDecay*(time - time_start) )
+    if (time_value >= time_start && time_value <= time_end) {
+        // the time difference
+        const double time_delta = time_value - time_start;
 
+        // the desired mag
+        const double mag = exp(-var_decay * time_delta);
+
+        
+        // sigma(0,0)*normal(0) + sigma(0,1)*normal(1) + sigma(0,2)*normal(2)
+        // sigma(1,0)*normal(0) + sigma(1,1)*normal(1) + sigma(1,2)*normal(2)
+        // sigma(2,0)*normal(0) + sigma(2,1)*normal(1) + sigma(2,2)*normal(2)
+        for(size_t i=0; i<mesh.num_dims; i++){
+            for(size_t j=0; j<mesh.num_dims; j++){
+                corner_surf_force(i) += mag*sigma(i,j)*corner_surf_normal(j);
+            } // end j
+        } // end i
+
+    } // end if within the time frame
 
     return;
 } // end func
