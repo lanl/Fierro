@@ -305,6 +305,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             State.node.force.set_values(0.0);
 
             // call stress BC's routine
+            boundary_stress(mesh, BoundaryConditions, State.node.force, time_value);
+
+
 
             // call body forces routine
 

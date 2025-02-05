@@ -129,7 +129,7 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
     // Loop over the stress boundary sets
     for (size_t bc_lid = 0; bc_lid < num_stress_bdy_sets; bc_lid++) {
         
-        size_t bdy_set = BoundaryConditions.stress_bdy_sets_in_solver.host(bc_lid);
+        size_t bdy_set = BoundaryConditions.stress_bdy_sets_in_solver.host(this->solver_id, bc_lid);
 
         // Loop over boundary nodes in a boundary set
         FOR_ALL(bdy_patch_lid, 0, mesh.num_bdy_patches_in_set.host(bdy_set), {
