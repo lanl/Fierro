@@ -82,7 +82,7 @@ static void stress(const Mesh_t& mesh,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    double sigma_1D[3];
+    double sigma_1D[9];
     ViewCArrayKokkos<double> sigma(&sigma_1D[0], 3,3);  // its 3D even in 2D
    
     // Cauchy stress is symmetric

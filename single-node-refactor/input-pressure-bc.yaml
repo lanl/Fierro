@@ -111,6 +111,11 @@ boundary_conditions:
             - 0
             - 0
             - 0
+        #velocity_model: reflected
+        #velocity_bc_global_vars:
+        #    - 0   # x
+        #    - 1   # y
+        #    - 0   # z
 
     # Tag Z plane
     - boundary_condition:
@@ -126,7 +131,11 @@ boundary_conditions:
             - 0
             - 0
             - 0 
-
+        #velocity_model: reflected
+        #velocity_bc_global_vars:
+        #    - 0   # x
+        #    - 0   # y
+        #    - 1   # z
 
   
 materials:

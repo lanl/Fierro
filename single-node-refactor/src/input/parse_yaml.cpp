@@ -2838,6 +2838,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             } // end else if on velocity_bc_global_vars
             // set the stress global values
             else if (a_word.compare("stress_bc_global_vars") == 0) {
+
                 Yaml::Node & stress_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
                 size_t num_global_vars = stress_bc_global_vars_yaml.Size();
@@ -2847,6 +2848,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 } // end check on num_global_vars
 
                 RUN({ 
+                    printf("num global stress vars = %zu \n", num_global_vars);
                     BoundaryConditions.num_stress_bc_global_vars(bc_id) = num_global_vars;
                 });
                
@@ -2858,6 +2860,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double stress_bc_var = bc_yaml[bc_id]["boundary_condition"]["stress_bc_global_vars"][global_var_id].As<double>();
                     
+                    printf("stress bc vars = %f \n", stress_bc_var);
+
                     RUN({
                         tempStressBCGlobalVars(bc_id, global_var_id) = stress_bc_var;
                     });

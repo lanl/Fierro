@@ -204,6 +204,20 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
                 corn_patch_area_normal(dim) /= 8;  //  comes from 1/2 * 1/4
             } // end for dim
 
+            //printf("checking area normal \n");
+            //double area = sqrt(corn_patch_area_normal(0)*corn_patch_area_normal(0) +
+            //                   corn_patch_area_normal(1)*corn_patch_area_normal(1) +
+            //                   corn_patch_area_normal(2)*corn_patch_area_normal(2));
+            //if(corn_patch_area_normal(1)/area > (1.0 - 1.e-12) ){
+            //    printf("y normal is (%f, %f, %f) \n", corn_patch_area_normal(0), corn_patch_area_normal(1), corn_patch_area_normal(2));
+            //    printf("y mag is %f \n", area);
+            //    printf(" face coord = (%f, %f, %f) \n", avg_coords[0], avg_coords[1], avg_coords[2]);
+            //}
+            //if(corn_patch_area_normal(2)/area > (1.0 - 1.e-12) ){
+            //    printf("z normal is %f \n", corn_patch_area_normal(2));
+            //}
+            //printf("done checking area normal \n");
+
             // I only need to call the force routine once, as the same corner force applies to all nodes
 
             // evaluate stress on a single boundary corner patch
