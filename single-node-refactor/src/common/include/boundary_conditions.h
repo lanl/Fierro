@@ -206,21 +206,11 @@ struct BoundaryCondition_t
 {
     size_t num_bcs; // the number of boundary conditions
 
-    CArrayKokkos<BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs
-
-    // device functions and associated data
-    CArrayKokkos<BoundaryConditionFunctions_t> BoundaryConditionFunctions; // struct with function pointers
-
-    // note: host functions are launched via enums
-
-    // enums to select BC capabilities, some enums are needed on the host side and device side
-    DCArrayKokkos<BoundaryConditionEnums_t> BoundaryConditionEnums;
-
     // making a psuedo dual ragged right
-    DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver, ids)
+    DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver, bc_ids)
     DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver)
 
-    DCArrayKokkos<size_t> stress_bdy_sets_in_solver;     // (solver, ids)
+    DCArrayKokkos<size_t> stress_bdy_sets_in_solver;     // (solver, bc_ids)
     DCArrayKokkos<size_t> num_stress_bdy_sets_in_solver; // (solver)
 
     // keep adding ragged storage for the other BC models -- temp, displacement, etc.
@@ -228,12 +218,23 @@ struct BoundaryCondition_t
     // DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver)
 
 
+    CArrayKokkos<BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs, accessed using (bc_id)
+
+    // device functions and associated data
+    CArrayKokkos<BoundaryConditionFunctions_t> BoundaryConditionFunctions; // struct with function pointers, accessed using (bc_id)
+
+    // note: host functions are launched via enums
+
+    // enums to select BC capabilities, some enums are needed on the host side and device side
+    DCArrayKokkos<BoundaryConditionEnums_t> BoundaryConditionEnums;  // accessed using (bc_id)
+
+
     // global variables for velocity boundary condition models
-    RaggedRightArrayKokkos<double> velocity_bc_global_vars;
-    CArrayKokkos<size_t> num_velocity_bc_global_vars;
+    RaggedRightArrayKokkos<double> velocity_bc_global_vars;  // (bc_id, vars...)
+    CArrayKokkos<size_t> num_velocity_bc_global_vars;        
 
     // global variables for stress boundary condition models
-    RaggedRightArrayKokkos<double> stress_bc_global_vars;
+    RaggedRightArrayKokkos<double> stress_bc_global_vars;  // (bc_id, vars...)
     CArrayKokkos<size_t> num_stress_bc_global_vars;
 
     // state variables for boundary conditions

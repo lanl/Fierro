@@ -2397,6 +2397,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 // =================================================================================
 void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const size_t num_solvers)
 {
+
     Yaml::Node& bc_yaml = root["boundary_conditions"];
 
     size_t num_bcs = bc_yaml.Size();
@@ -2514,7 +2515,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 // find out how many velocity bdy sets have been saved 
                 size_t num_saved = BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id);
-                BoundaryConditions.vel_bdy_sets_in_solver.host(num_saved) = bc_id;
+                BoundaryConditions.vel_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
                 BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
 
                 std::string velocity_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
@@ -2609,7 +2610,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 // find out how many stress bdy sets have been saved 
                 size_t num_saved = BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id);
-                BoundaryConditions.stress_bdy_sets_in_solver.host(num_saved) = bc_id;
+                BoundaryConditions.stress_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
                 BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
 
                 std::string stress_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
@@ -2869,5 +2870,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     // copy the enum values to the host 
     BoundaryConditions.BoundaryConditionEnums.update_host();
+
+
 
 } // end of function to parse region
