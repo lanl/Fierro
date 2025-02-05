@@ -119,6 +119,7 @@ void SGH3D::boundary_contact(const Mesh_t& mesh,
 void SGH3D::boundary_stress(const Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               DCArrayKokkos<double>& node_bdy_force,
+                              DCArrayKokkos<double>& node_coords,
                               const double time_value) const
 {
 
@@ -137,19 +138,96 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
             // get the global index for this patch on the boundary
             size_t bdy_patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_lid);
 
-            // calculate surfaced area
+            // --- calculate surfaced area ---
+            double avg_coords[3];
+            avg_coords[0] = 0.0;
+            avg_coords[1] = 0.0;
+            avg_coords[2] = 0.0;
+            for (size_t node_lid=0; node_lid<mesh.num_nodes_in_patch; node_lid++){
+                
+                // get the node id
+                size_t node_gid = mesh.nodes_in_patch(bdy_patch_gid, node_lid);
 
-            // evaluate stress on this boundary patch
+                for (size_t dim=0; dim<mesh.num_dims; dim++){
+                    avg_coords[dim] += node_coords(1, node_gid,dim);
+                } // end for dim
+
+            } // end for
+
+            for (size_t dim=0; dim<mesh.num_dims; dim++){
+                avg_coords[dim] /= (double)mesh.num_nodes_in_patch;
+            } // end for dim
+
+            // allocate the corner surface normals and forces 
+            double corn_patch_area_normal_1D[3];
+            ViewCArrayKokkos <double> corn_patch_area_normal(&corn_patch_area_normal_1D[0],3);
+            
+            double corn_patch_force_1D[3];
+            ViewCArrayKokkos <double> corn_patch_force(&corn_patch_force_1D[0], 3);
+            
+            for (size_t dim=0; dim<mesh.num_dims; dim++){
+                corn_patch_area_normal(dim) = 0.0;
+                corn_patch_force(dim) = 0.0;
+            } // end for dim
+
+            double vec_a[3];
+            double vec_b[3];
+            for (size_t node_lid=0; node_lid<mesh.num_nodes_in_patch; node_lid++){
+                
+                // get the node ids for the triangle
+                size_t node_gid_0 = mesh.nodes_in_patch(bdy_patch_gid, node_lid);
+                size_t node_gid_1;
+                if(node_lid<mesh.num_nodes_in_patch-1){
+                    node_gid_1 = mesh.nodes_in_patch(bdy_patch_gid, node_lid+1);
+                } else {
+                    node_gid_1 = mesh.nodes_in_patch(bdy_patch_gid, 0);
+                } // end if
+
+                
+                for (size_t dim=0; dim<mesh.num_dims; dim++){
+                    vec_a[dim] = node_coords(1, node_gid_0,dim) - avg_coords[dim];
+                    vec_b[dim] = node_coords(1, node_gid_1,dim) - avg_coords[dim];
+                } // end for dim
+
+                // calculating the cross product of the 2 vectors, 1/2 multiply is later
+                corn_patch_area_normal(0) += (vec_a[1]*vec_b[2] - vec_a[2]*vec_b[1]);
+                corn_patch_area_normal(1) += (vec_a[2]*vec_b[0] - vec_a[0]*vec_b[2]);
+                corn_patch_area_normal(2) += (vec_a[0]*vec_b[1] - vec_a[1]*vec_b[0]);
+
+            } // end for node_lid in patch
+
+            // each node gets 1/4 of the surface area
+            for (size_t dim=0; dim<mesh.num_dims; dim++){
+                corn_patch_area_normal(dim) /= 8;  //  comes from 1/2 * 1/4
+            } // end for dim
+
+            // I only need to call the force routine once, as the same corner force applies to all nodes
+
+            // evaluate stress on a single boundary corner patch
             BoundaryConditions.BoundaryConditionFunctions(bdy_set).stress(
                 mesh,
                 BoundaryConditions.BoundaryConditionEnums,
                 BoundaryConditions.stress_bc_global_vars,
                 BoundaryConditions.bc_state_vars,
-                node_bdy_force,
+                corn_patch_force,
+                corn_patch_area_normal,
                 time_value,
                 1, // rk_stage isn't used
                 bdy_patch_gid,
                 bdy_set);
+
+            // scatter the corner surface force to the nodes, the same force applies to all nodes
+            for (size_t node_lid=0; node_lid<mesh.num_nodes_in_patch; node_lid++){
+                
+                // get the node id
+                size_t node_gid = mesh.nodes_in_patch(bdy_patch_gid, node_lid);
+
+                // tally the force to the node
+                for (size_t dim=0; dim<mesh.num_dims; dim++){
+                    Kokkos::atomic_add(&corn_patch_force(dim), node_bdy_force(1, node_gid, dim));
+                } // end dim
+
+            } // end for node_lid in patch
 
             
         }); // end for bdy_node_lid
