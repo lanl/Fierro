@@ -105,7 +105,7 @@ static void stress(const Mesh_t& mesh,
     // sigma(2,0)*normal(0) + sigma(2,1)*normal(1) + sigma(2,2)*normal(2)
     for(size_t i=0; i<mesh.num_dims; i++){
         for(size_t j=0; j<mesh.num_dims; j++){
-            corner_surf_force(i) = sigma(i,j)*corner_surf_normal(j);
+            corner_surf_force(i) += sigma(i,j)*corner_surf_normal(j);
         } // end j
     } // end i
 

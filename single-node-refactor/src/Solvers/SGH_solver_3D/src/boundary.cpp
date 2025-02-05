@@ -168,6 +168,7 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
             double corn_patch_force_1D[3];
             ViewCArrayKokkos <double> corn_patch_force(&corn_patch_force_1D[0], 3);
             
+            // inialize corner patch vector to zero
             for (size_t dim=0; dim<mesh.num_dims; dim++){
                 corn_patch_area_normal(dim) = 0.0;
                 corn_patch_force(dim) = 0.0;
