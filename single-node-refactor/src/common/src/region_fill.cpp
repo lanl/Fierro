@@ -957,19 +957,22 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const size_t num_mat_pts,
                             const size_t mat_id)
 {
-
+    std::cout << "Before setting shear modulus to zero" << std::endl;
     // --- Shear modulus ---
     // loop over the material points
-    FOR_ALL(mat_point_lid, 0, num_mat_pts, {
 
-        // setting shear modulii to zero, corresponds to a gas
-        for(size_t i; i<3; i++){
-            MaterialPoints_shear_modulii(mat_point_lid,i) = 0.0;
-        } // end for
+    if (MaterialPoints_shear_modulii.size() > 0) {
+        FOR_ALL(mat_point_lid, 0, num_mat_pts, {
 
-    });
+            // setting shear modulii to zero, corresponds to a gas
+            for(size_t i; i<3; i++){
+                MaterialPoints_shear_modulii(mat_point_lid,i) = 0.0;
+            } // end for
 
+        });
+    }
 
+    
     // --- stress tensor ---
     for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){                
 

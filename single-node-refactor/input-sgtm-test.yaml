@@ -5,7 +5,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 1
+    cycle_stop: 100000
 
 
 # mesh_options:
@@ -25,7 +25,7 @@ output_options:
     timer_output_level: thorough
     output_file_format: vtk
     graphics_time_step: 1.0
-    # graphics_iteration_step: 10
+    # graphics_iteration_step: 1
 
 solver_options:
   - solver:

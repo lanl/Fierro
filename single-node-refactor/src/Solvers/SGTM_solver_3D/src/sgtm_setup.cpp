@@ -462,7 +462,7 @@ void SGTM3D::setup_sgtm(
     } // end serial for loop over all elements
 
     std::cout << "after region fills" << std::endl;
-
+    std::cout << "Before painting nodal state" << std::endl;
     // Paint nodal state
     // parallel loop over nodes in mesh
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
@@ -488,8 +488,10 @@ void SGTM3D::setup_sgtm(
 
     }); // end FOR_ALL node loop
     Kokkos::fence();
-
+    std::cout << "after painting nodal state" << std::endl;
+    
     // copy the state to the device
+    std::cout << "Before updating device" << std::endl;
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
         State.MaterialPoints(mat_id).den.update_device();
         State.MaterialPoints(mat_id).mass.update_device();
@@ -503,7 +505,9 @@ void SGTM3D::setup_sgtm(
         State.MaterialToMeshMaps(mat_id).elem.update_device();
     } // end for
     Kokkos::fence();
+    std::cout << "after updating device" << std::endl;
 
+    std::cout << "Before calculating pressure, sound speed, and stress" << std::endl;
     // calculate pressure, sound speed, and stress for each material
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
         size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
@@ -523,7 +527,7 @@ void SGTM3D::setup_sgtm(
                             mat_id);
 
     } // for loop over mat_id
-
+    std::cout << "after calculating pressure, sound speed, and stress" << std::endl;
     // set corner and node masses to zero
     init_corner_node_masses_zero(mesh, State.node.mass, State.corner.mass);
 
