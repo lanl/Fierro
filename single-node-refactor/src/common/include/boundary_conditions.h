@@ -57,7 +57,6 @@ enum BdyTag
 //     read_file = 5   // read from a file currently unsupported
 
 // types of boundary conditions
-// WARNING: Currently only velocity is supported
 enum BCVelocityModels
 {
     noVelocityBC = 0,
