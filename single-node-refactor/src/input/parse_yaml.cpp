@@ -2860,7 +2860,6 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double stress_bc_var = bc_yaml[bc_id]["boundary_condition"]["stress_bc_global_vars"][global_var_id].As<double>();
                     
-                    printf("stress bc vars = %f \n", stress_bc_var);
 
                     RUN({
                         tempStressBCGlobalVars(bc_id, global_var_id) = stress_bc_var;
@@ -2888,6 +2887,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     } // end loop over BCs specified
 
 
+
      // allocate ragged right memory to hold the model global variables
     BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
     BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
@@ -2896,6 +2896,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     // save the global variables
     FOR_ALL(bc_id, 0, num_bcs, {
+        
         
         for (size_t var_lid=0; var_lid<BoundaryConditions.num_velocity_bc_global_vars(bc_id); var_lid++){
             BoundaryConditions.velocity_bc_global_vars(bc_id, var_lid) = tempVelocityBCGlobalVars(bc_id, var_lid);
