@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 1.0
+    time_final: 10.0
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
@@ -17,8 +17,8 @@ mesh_options:
     num_dims: 3
     type: box
     origin: [0.0, 0.0, 0.0]
-    length: [10.0, 10.0, 10.0]
-    num_elems: [10, 10, 10]
+    length: [10.0, 1.0, 1.0]
+    num_elems: [10, 1, 1]
 
 
 output_options:
@@ -79,6 +79,8 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
+        thermal_conductivity: 273
+        specific_heat: 903
 
 
 

@@ -303,7 +303,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
 
             // ---- apply temperature boundary conditions to the boundary patches----
-            boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
+            // boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
 
             // ---- Find the element average temperature ---- //
 
