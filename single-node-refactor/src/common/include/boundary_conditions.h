@@ -57,7 +57,6 @@ enum BdyTag
 //     read_file = 5   // read from a file currently unsupported
 
 // types of boundary conditions
-// WARNING: Currently only velocity is supported
 enum BCVelocityModels
 {
     noVelocityBC = 0,
@@ -68,12 +67,17 @@ enum BCVelocityModels
     userDefinedVelocityBC = 5,
     pistonVelocityBC = 6
 };
+enum BCStressModels
+{
+    noStressBC = 0,
+    constantStressBC = 1,
+    timeVaringStressBC = 2,
+    userDefinedStressBC = 3,
+};
 // future model options:
-//    displacementBC          = 6,
-//    accelerationBC          = 7,
-//    pressureBC              = 8,
-//    temperatureBC           = 9,
-//    contactBC               = 10
+//    displacementBC                            
+//    temperatureBC           
+//    contactBC               
 
 
 enum BCFcnLocation
@@ -106,13 +110,14 @@ static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_
     { "user_defined", boundary_conditions::userDefinedVelocityBC },
     { "piston", boundary_conditions::pistonVelocityBC }
 };
-// future options
-//    { "displacement",          boundary_conditions::displacementBC          },
-//    { "acceleration",          boundary_conditions::accelerationBC          },
-//    { "pressure",              boundary_conditions::pressureBC              },
-//    { "temperature",           boundary_conditions::temperatureBC           },
-//    { "contact",               boundary_conditions::contactBC               }
 
+static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_model_map
+{
+    { "none", boundary_conditions::noStressBC },
+    { "constant", boundary_conditions::constantStressBC },
+    { "time_varying", boundary_conditions::timeVaringStressBC },
+    { "user_defined", boundary_conditions::userDefinedStressBC },
+};
 
 
 
@@ -132,8 +137,9 @@ static std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
 struct BoundaryConditionSetup_t
 {
     boundary_conditions::BdyTag surface;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
-    double origin[3] = { 0.0, 0.0, 0.0 };   ///< origin of surface being tagged, e.g., sphere or cylinder surface
-    double value     = 0.0;                 ///< value = position, radius, etc. defining the surface geometric shape
+    double origin[3] = { 0.0, 0.0, 0.0 };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
+    double value     = 0.0;                ///< value = position, radius, etc. defining the surface geometric shape
+    double tolerance = 1.0e-7;  ///< tolerance for tagging a boundary surface
 }; // end boundary condition setup
 
 /////////////////////////////////////////////////////////////////////////////
@@ -148,6 +154,8 @@ struct BoundaryConditionEnums_t
     solver_input::method solver = solver_input::NONE; ///< Numerical solver method
 
     boundary_conditions::BCVelocityModels BCVelocityModel = boundary_conditions::noVelocityBC;    ///< Type of velocity boundary condition
+
+    boundary_conditions::BCStressModels BCStressModel = boundary_conditions::noStressBC;    ///< Type of stress boundary condition
 
     boundary_conditions::BCFcnLocation Location = boundary_conditions::device; // host or device BC function
 }; // end boundary condition enums
@@ -172,7 +180,20 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
 
-    // TODO: add function pointer for pressure BC's and definitions
+
+    // function pointer for stress BC's
+    void (*stress) (const Mesh_t& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const ViewCArrayKokkos <double>& corner_surf_force,
+        const ViewCArrayKokkos <double>& corner_surf_normal,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set) = NULL;
+
+    // TODO: add function pointer for other types of BC's and definitions
 }; // end boundary condition fcns
 
 /////////////////////////////////////////////////////////////////////////////
@@ -186,28 +207,36 @@ struct BoundaryCondition_t
 {
     size_t num_bcs; // the number of boundary conditions
 
-    CArrayKokkos<BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs
-
-    // device functions and associated data
-    CArrayKokkos<BoundaryConditionFunctions_t> BoundaryConditionFunctions; // struct with function pointers
-
-    // note: host functions are launched via enums
-
-    // enums to select BC capabilities, some enums are needed on the host side and device side
-    DCArrayKokkos<BoundaryConditionEnums_t> BoundaryConditionEnums;
-
     // making a psuedo dual ragged right
-    DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver, ids)
+    DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver, bc_ids)
     DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver)
+
+    DCArrayKokkos<size_t> stress_bdy_sets_in_solver;     // (solver, bc_ids)
+    DCArrayKokkos<size_t> num_stress_bdy_sets_in_solver; // (solver)
 
     // keep adding ragged storage for the other BC models -- temp, displacement, etc.
     // DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver, ids)
     // DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver)
 
 
+    CArrayKokkos<BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs, accessed using (bc_id)
+
+    // device functions and associated data
+    CArrayKokkos<BoundaryConditionFunctions_t> BoundaryConditionFunctions; // struct with function pointers, accessed using (bc_id)
+
+    // note: host functions are launched via enums
+
+    // enums to select BC capabilities, some enums are needed on the host side and device side
+    DCArrayKokkos<BoundaryConditionEnums_t> BoundaryConditionEnums;  // accessed using (bc_id)
+
+
     // global variables for velocity boundary condition models
-    RaggedRightArrayKokkos<double> velocity_bc_global_vars;
-    CArrayKokkos<size_t> num_velocity_bc_global_vars;
+    RaggedRightArrayKokkos<double> velocity_bc_global_vars;  // (bc_id, vars...)
+    CArrayKokkos<size_t> num_velocity_bc_global_vars;        
+
+    // global variables for stress boundary condition models
+    RaggedRightArrayKokkos<double> stress_bc_global_vars;  // (bc_id, vars...)
+    CArrayKokkos<size_t> num_stress_bc_global_vars;
 
     // state variables for boundary conditions
     DCArrayKokkos<double> bc_state_vars;
@@ -220,8 +249,10 @@ static std::vector<std::string> str_bc_inps
 {
     "solver_id",
     "velocity_model",
+    "stress_model",
     "surface",
-    "velocity_bc_global_vars"
+    "velocity_bc_global_vars",
+    "stress_bc_global_vars"
 };
 
 // subfields under surface
@@ -230,6 +261,7 @@ static std::vector<std::string> str_bc_surface_inps
     "type",
     "plane_position",
     "radius",
+    "tolerance",
     "origin"
 };
 
@@ -238,6 +270,8 @@ static std::vector<std::string> str_bc_surface_inps
 // ----------------------------------
 static std::vector<std::string> bc_required_inps
 {
+    "solver_id",
+    "surface"
 };
 static std::vector<std::string> bc_surface_required_inps
 {

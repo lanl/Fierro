@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 1.0
+    time_final: 0.6
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
@@ -17,14 +17,14 @@ mesh_options:
     num_dims: 3
     type: box
     origin: [0.0, 0.0, 0.0]
-    length: [1.2, 1.2, 1.2]
+    length: [1.0, 1.0, 1.0]
     num_elems: [12, 12, 12]
 
 
 output_options:
     timer_output_level: thorough
-    output_file_format: ensight #state
-    graphics_time_step: 1.0
+    output_file_format: ensight
+    graphics_time_step: 0.6
     # graphics_iteration_step: 10
 
 solver_options:
@@ -37,13 +37,13 @@ solver_options:
         #  - blah
 
 boundary_conditions:
+
     # Tag X plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: x_plane
             plane_position: 0.0
-            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 1   # x
@@ -57,7 +57,6 @@ boundary_conditions:
         surface: 
             type: y_plane
             plane_position: 0.0
-            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
@@ -70,13 +69,73 @@ boundary_conditions:
         surface: 
             type: z_plane
             plane_position: 0.0
-            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
             - 0   # y
             - 1   # z
 
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 1.0
+        stress_model: constant
+        # Voight notation:
+        # sig_00
+        # sig_11
+        # sig_22
+        # sig_12
+        # sig_02
+        # sig_01
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 1.0
+        stress_model: constant
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0
+        #velocity_model: reflected
+        #velocity_bc_global_vars:
+        #    - 0   # x
+        #    - 1   # y
+        #    - 0   # z
+
+    # Tag Z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+        stress_model: constant
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0 
+        #velocity_model: reflected
+        #velocity_bc_global_vars:
+        #    - 0   # x
+        #    - 0   # y
+        #    - 1   # z
 
   
 materials:
@@ -84,10 +143,6 @@ materials:
         id: 0
         eos_model_type: decoupled
         eos_model: gamma_law_gas
-        eos_global_vars:
-            - 1.666666666666667
-            - 1.0E-14
-            - 1.0
         # strength_model: none
         dissipation_model: MARS
         dissipation_global_vars:
@@ -95,9 +150,12 @@ materials:
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.0   # phi_min
-            - 1.0   # pin_curl_min
-
+            - 0     # phi_min
+            - 1.0   # phi_curl
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
 
 regions:
     - region:
@@ -113,22 +171,5 @@ regions:
             w: 0.0
 
     
-
-    # energy source initial conditions
-    - region:
-        volume:
-            type: sphere
-            origin: [0.0, 0.0, 0.0]
-            radius1: 0.0
-            radius2: 0.1
-        material_id: 0
-        den: 1.0
-        # ie: 0.25833839995946534
-        sie: 61.67375002 # 963.652344
-        velocity: 
-            type: cartesian
-            u: 0.0
-            v: 0.0
-            w: 0.0
 
 

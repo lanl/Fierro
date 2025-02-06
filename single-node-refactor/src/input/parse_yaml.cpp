@@ -59,6 +59,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "user_defined_velocity_bc.h"
 #include "zero_velocity_bc.h"
 
+// stress bc files
+#include "constant_stress_bc.h"
+#include "no_stress_bc.h"
+#include "time_varying_stress_bc.h"
+#include "user_defined_stress_bc.h"
+
 
 // eos files
 #include "gamma_law_eos.h"
@@ -2391,6 +2397,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 // =================================================================================
 void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const size_t num_solvers)
 {
+
     Yaml::Node& bc_yaml = root["boundary_conditions"];
 
     size_t num_bcs = bc_yaml.Size();
@@ -2405,24 +2412,38 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     // enums to select options with boundary conditions
     BoundaryConditions.BoundaryConditionEnums  = DCArrayKokkos<BoundaryConditionEnums_t> (num_bcs,"bc_enums");  
 
+    // --- BC velocity ---
     // stores the velocity bdy node lists per solver, in the future, this needs to be a DualRaggedRight
     BoundaryConditions.vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "vel_bdy_sets_in_solver");  
-    // this stores the number of bdy sets for a solver
+    // this stores the number of vel bdy sets for a solver
     BoundaryConditions.num_vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_vel_bdy_sets_in_solver");   
     // set the storage counter to zero
     for(size_t solver_id=0; solver_id<num_solvers; solver_id++){
         BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id) = 0;
     } // end for
 
+    // --- BC stress ---
+    // stores the stress bdy node lists per solver, in the future, this needs to be a DualRaggedRight
+    BoundaryConditions.stress_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "stress_bdy_sets_in_solver");  
+    // this stores the number of stess bdy sets for a solver
+    BoundaryConditions.num_stress_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_stress_bdy_sets_in_solver");   
+    // set the storage counter to zero
+    for(size_t solver_id=0; solver_id<num_solvers; solver_id++){
+        BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id) = 0;
+    } // end for
+
 
     // temporary arrays for boundary condition variables
     DCArrayKokkos<double> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
+    DCArrayKokkos<double> tempStressBCGlobalVars (num_bcs, 100, "temporary_stress_bc_global_values");
     
     BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars");
+    BoundaryConditions.num_stress_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_stress_bc_global_vars");
 
     // initialize the num of global vars to 0 for all models
     FOR_ALL(bc_id, 0, num_bcs, {
         BoundaryConditions.num_velocity_bc_global_vars(bc_id) = 0;
+        BoundaryConditions.num_stress_bc_global_vars(bc_id) = 0;
     }); // end parallel for
 
 
@@ -2494,7 +2515,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 // find out how many velocity bdy sets have been saved 
                 size_t num_saved = BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id);
-                BoundaryConditions.vel_bdy_sets_in_solver.host(num_saved) = bc_id;
+                BoundaryConditions.vel_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
                 BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
 
                 std::string velocity_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
@@ -2582,7 +2603,78 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     throw std::runtime_error("**** Boundary Condition Velocity Model Not Understood ****");
                 } // end if
             } // type
-            // get boundary condition direction
+            // get boundary condition type
+            else if (a_word.compare("stress_model") == 0) {
+                
+                // Note: solver_id was retrieved at the top of the bc_id loop
+
+                // find out how many stress bdy sets have been saved 
+                size_t num_saved = BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id);
+                BoundaryConditions.stress_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
+                BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
+
+                std::string stress_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_stress_model_map; 
+
+                // set the stress_model
+                if (map.find(stress_model) != map.end()) {
+                    auto bc_stress_model = map[stress_model];
+
+                    // bc_stress_model_map[stress_model] returns enum value, e.g., boundary_conditions::stress_constant
+                    switch(map[stress_model]){
+
+                        case boundary_conditions::constantStressBC :
+                            std::cout << "Setting stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::constantStressBC ;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &ConstantStressBC::stress;
+                            });
+                            break;
+
+                        case boundary_conditions::timeVaringStressBC:
+                            std::cout << "Setting stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::timeVaringStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &TimeVaryingStressBC::stress;
+                            });
+                            break;
+
+                        case boundary_conditions::userDefinedStressBC:
+                            std::cout << "Setting stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::userDefinedStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &UserDefinedStressBC::stress;
+                            });
+                            break;
+                      
+                        default:
+                            
+                            std::cout << "ERROR: invalid stress boundary condition input: " << stress_model << std::endl;
+                            throw std::runtime_error("**** stress BC model Not Understood ****");
+                            break;
+                        
+                    } // end switch
+
+                    if (VERBOSE) {
+                        std::cout << "\tstress_bc_model = " << stress_model << std::endl;
+                    }
+                }
+                else{
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << stress_model << std::endl;
+                    std::cout << "Valid options are: " << std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+                    throw std::runtime_error("**** Boundary Condition Stress Model Not Understood ****");
+                } // end if
+            } // type of stress model
+            // get boundary condition direction -- host or device
             else if (a_word.compare("location") == 0) {
                 std::string location = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
@@ -2658,13 +2750,20 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
-                    } // end if value
+                    } // end if plane position
                     else if (a_subfield_word.compare("radius") == 0) {
                         double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
-                    } // end if value
+                    } // end if radius
+                    else if (a_subfield_word.compare("tolerance") == 0) {
+                        // the tolerance to tag a surface
+                        double tolerance = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).tolerance = tolerance;
+                        });
+                    } // end if tolerance 
                     else if (a_subfield_word.compare("origin") == 0) {
                         std::string origin = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<std::string>();
                         if (VERBOSE) {
@@ -2713,7 +2812,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 } // end loop over words in the subfield
             } // surface
-            // set the value
+            // set the velocity global values
             else if (a_word.compare("velocity_bc_global_vars") == 0) {
                 Yaml::Node & vel_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
@@ -2744,6 +2843,40 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     }
                 } // end loop over global vars
             } // end else if on velocity_bc_global_vars
+            // set the stress global values
+            else if (a_word.compare("stress_bc_global_vars") == 0) {
+
+                Yaml::Node & stress_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+                size_t num_global_vars = stress_bc_global_vars_yaml.Size();
+
+                if(num_global_vars>100){
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 velocity global vars in the input file ****");
+                } // end check on num_global_vars
+
+                RUN({ 
+                    printf("num global stress vars = %zu \n", num_global_vars);
+                    BoundaryConditions.num_stress_bc_global_vars(bc_id) = num_global_vars;
+                });
+               
+                if (VERBOSE) {
+                    std::cout << "num global stress_bc vars = " << num_global_vars << std::endl;
+                }
+
+                // store the global eos model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double stress_bc_var = bc_yaml[bc_id]["boundary_condition"]["stress_bc_global_vars"][global_var_id].As<double>();
+                    
+
+                    RUN({
+                        tempStressBCGlobalVars(bc_id, global_var_id) = stress_bc_var;
+                    });
+
+                    if (VERBOSE) {
+                        std::cout << "\t var = " << stress_bc_var << std::endl;
+                    }
+                } // end loop over global vars
+            } // end else if on stress_bc_global_vars
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
@@ -2761,15 +2894,23 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     } // end loop over BCs specified
 
 
+
      // allocate ragged right memory to hold the model global variables
     BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
+    BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
+   
     // ... allocate other bc global vars here
 
     // save the global variables
     FOR_ALL(bc_id, 0, num_bcs, {
         
+        
         for (size_t var_lid=0; var_lid<BoundaryConditions.num_velocity_bc_global_vars(bc_id); var_lid++){
             BoundaryConditions.velocity_bc_global_vars(bc_id, var_lid) = tempVelocityBCGlobalVars(bc_id, var_lid);
+        } // end for eos var_lid
+
+        for (size_t var_lid=0; var_lid<BoundaryConditions.num_stress_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.stress_bc_global_vars(bc_id, var_lid) = tempStressBCGlobalVars(bc_id, var_lid);
         } // end for eos var_lid
 
         // ... add other bc global vars here
@@ -2778,5 +2919,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     // copy the enum values to the host 
     BoundaryConditions.BoundaryConditionEnums.update_host();
+
+
 
 } // end of function to parse region
