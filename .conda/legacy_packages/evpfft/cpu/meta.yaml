@@ -3,24 +3,43 @@
 {% set macos_compiler_version = "16" %}
 
 package:
-  name: elements-cpu
+  name: evpfft
   version: {{ version }}
 
 source:
-  - git_url: https://github.com/lanl/ELEMENTS.git
-    git_depth: 1
+  git_url: https://github.com/lanl/Fierro.git
+  git_depth: 1
 
 build:
   number: 1
-  noarch: False
   script_env:
-    - PLATFORM={{ target_platform }} # [linux]
+    - PLATFORM={{ target_platform }}
 
 requirements:
   build:
-    - cmake >=3.10.0
+    - cmake >=3.17.0
+    - make
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - openmpi
+  host:
+    - openmpi
+    - fierro-heffte
+    - fftw=*=mpi_openmpi_*
+    - kokkos=4.1
+    - hdf5=*=mpi_openmpi_*
+    - elements
+  run:
+    - openmpi
+    - fierro-heffte
+    - fftw=*=mpi_openmpi_*
+    - kokkos=4.1
+    - hdf5=*=mpi_openmpi_*
+    - elements
+
+#TODO: Add tests
 
 about:
   home: https://github.com/lanl/Fierro
@@ -28,12 +47,7 @@ about:
   license_family: BSD
   license_file: LICENSE
   summary:
-    LANL's software for simulating quasi-static solid mechanics.
   description:
-    Fierro (LANL code number C21030) is a modern C++ code designed to simulate quasi-static 
-    solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, 
-    which have meshes with constant mass elements that move with the material, 
-    or with Eulerian methods, which have stationary meshes. 
   dev_url: https://github.com/lanl/Fierro
 
 extra:

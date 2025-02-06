@@ -56,4 +56,4 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
 # exit codes of certain environment-probing binaries.
 # This is necessary when cross-compiling, and essentially ignores those tests.
 
-make -j 10 install
+make install

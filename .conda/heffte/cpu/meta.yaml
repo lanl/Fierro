@@ -20,7 +20,7 @@ requirements:
   build:
     - cmake >=3.17.0
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
-    - {{ compiler('cxx') }} # [osx]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - openmpi
   host:
     - openmpi >=4.1.6,<5.0a0
