@@ -2750,13 +2750,20 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
-                    } // end if value
+                    } // end if plane position
                     else if (a_subfield_word.compare("radius") == 0) {
                         double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
-                    } // end if value
+                    } // end if radius
+                    else if (a_subfield_word.compare("tolerance") == 0) {
+                        // the tolerance to tag a surface
+                        double tolerance = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).tolerance = tolerance;
+                        });
+                    } // end if tolerance 
                     else if (a_subfield_word.compare("origin") == 0) {
                         std::string origin = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<std::string>();
                         if (VERBOSE) {

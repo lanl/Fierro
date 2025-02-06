@@ -137,8 +137,9 @@ static std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
 struct BoundaryConditionSetup_t
 {
     boundary_conditions::BdyTag surface;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
-    double origin[3] = { 0.0, 0.0, 0.0 };   ///< origin of surface being tagged, e.g., sphere or cylinder surface
-    double value     = 0.0;                 ///< value = position, radius, etc. defining the surface geometric shape
+    double origin[3] = { 0.0, 0.0, 0.0 };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
+    double value     = 0.0;                ///< value = position, radius, etc. defining the surface geometric shape
+    double tolerance = 1.0e-7;  ///< tolerance for tagging a boundary surface
 }; // end boundary condition setup
 
 /////////////////////////////////////////////////////////////////////////////
@@ -260,6 +261,7 @@ static std::vector<std::string> str_bc_surface_inps
     "type",
     "plane_position",
     "radius",
+    "tolerance",
     "origin"
 };
 

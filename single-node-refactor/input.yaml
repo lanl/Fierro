@@ -43,6 +43,7 @@ boundary_conditions:
         surface: 
             type: x_plane
             plane_position: 0.0
+            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 1   # x
@@ -56,6 +57,7 @@ boundary_conditions:
         surface: 
             type: y_plane
             plane_position: 0.0
+            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
@@ -68,6 +70,7 @@ boundary_conditions:
         surface: 
             type: z_plane
             plane_position: 0.0
+            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x

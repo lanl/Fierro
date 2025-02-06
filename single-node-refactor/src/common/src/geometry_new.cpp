@@ -626,6 +626,7 @@ KOKKOS_FUNCTION
 size_t check_bdy(const size_t patch_gid,
     const int     this_bc_tag,
     const double  val,
+    const double  tolerance,
     const double  orig_x,
     const double  orig_y,
     const double  orig_z,
@@ -651,19 +652,19 @@ size_t check_bdy(const size_t patch_gid,
 
         // a x-plane
         if (this_bc_tag == 0) {
-            if (fabs(these_patch_coords[0] - val) <= 1.0e-7) {
+            if (fabs(these_patch_coords[0] - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
         // a y-plane
         else if (this_bc_tag == 1) {
-            if (fabs(these_patch_coords[1] - val) <= 1.0e-7) {
+            if (fabs(these_patch_coords[1] - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
         // a z-plane
         else if (this_bc_tag == 2) {
-            if (fabs(these_patch_coords[2] - val) <= 1.0e-7) {
+            if (fabs(these_patch_coords[2] - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
@@ -672,7 +673,7 @@ size_t check_bdy(const size_t patch_gid,
             real_t R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
                             (these_patch_coords[1] - orig_y) * (these_patch_coords[1] - orig_y));
 
-            if (fabs(R - val) <= 1.0e-7) {
+            if (fabs(R - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
@@ -682,7 +683,7 @@ size_t check_bdy(const size_t patch_gid,
                             (these_patch_coords[1] - orig_y) * (these_patch_coords[1] - orig_y) +
                             (these_patch_coords[2] - orig_z) * (these_patch_coords[2] - orig_z));
 
-            if (fabs(R - val) <= 1.0e-7) {
+            if (fabs(R - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
@@ -725,10 +726,12 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
         // tag boundaries
         int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
-        double val    = boundary.BoundaryConditionSetup(bdy_set).value;
+        double value  = boundary.BoundaryConditionSetup(bdy_set).value;
+        double tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
         double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
         double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
         double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
+        
 
 
         // save the boundary patches to this set that are on the plane, spheres, etc.
@@ -739,7 +742,8 @@ void tag_bdys(const BoundaryCondition_t& boundary,
             // check to see if this patch is on the specified plane
             size_t is_on_bdy = check_bdy(bdy_patch_gid,
                                          bc_tag_id,
-                                         val,
+                                         value,
+                                         tolerance,
                                          orig_x,
                                          orig_y,
                                          orig_z,
@@ -797,7 +801,7 @@ void build_boundry_node_sets(Mesh_t& mesh)
 
     mesh.num_bdy_nodes_in_set = DCArrayKokkos<size_t>(mesh.num_bdy_sets, "mesh.num_bdy_nodes_in_set");
     mesh.num_bdy_nodes_in_set.set_values(0.0);
-    
+
     CArrayKokkos<long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes, "temp_count_num_bdy_nodes_in_set");
 
     DynamicRaggedRightArrayKokkos<size_t> temp_nodes_in_set(mesh.num_bdy_sets, mesh.num_bdy_patches * mesh.num_nodes_in_patch, "temp_nodes_in_set");
