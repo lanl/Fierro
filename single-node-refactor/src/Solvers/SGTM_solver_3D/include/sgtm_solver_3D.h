@@ -241,6 +241,7 @@ public:
         const DCArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& node_flux,
+        const DCArrayKokkos<double>& mat_pt_sepcific_heat,
         const double rk_alpha,
         const double dt) const;
 

@@ -298,12 +298,13 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                 State.node.temp,
                 State.node.mass,
                 State.node.q_flux,
+                State.MaterialPoints(0).specific_heat, // Note: Need to make this a node field, and calculate in the material loop
                 rk_alpha,
                 dt);
 
 
             // ---- apply temperature boundary conditions to the boundary patches----
-            // boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
+            boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
 
             // ---- Find the element average temperature ---- //
 

@@ -57,6 +57,7 @@ void SGTM3D::update_temperature(
     const DCArrayKokkos<double>& node_temp,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& node_flux,
+    const DCArrayKokkos<double>& mat_pt_sepcific_heat,
     const double rk_alpha,
     const double dt) const
 {
@@ -70,23 +71,19 @@ void SGTM3D::update_temperature(
             size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
             node_flux(node_gid) += corner_flux(corner_gid);
 
-            // if(node_gid == 1){
-            //     std::cout<<"corner_flux(corner_gid) = " << corner_flux(corner_gid) << std ::endl;
-            // }
-
         } // end for corner_lid
 
         // ---- Calculate the average specific heat for all materials surrounding a node ---- //
-        double Cp = 903.0;
+        double Cp = 0.0;
+
+        for(int elem_lid = 0; elem_lid < mesh.num_corners_in_node(node_gid); elem_lid++){ // NOTE: num_corners_in_node = num_elems_in_node
+            size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
+            Cp += mat_pt_sepcific_heat(elem_gid)/mesh.num_corners_in_node(node_gid);
+        }
 
         // ---- Update the nodal temperature ---- //
         node_temp(1, node_gid) = node_temp(0, node_gid) + rk_alpha * dt * node_flux(node_gid) / (node_mass(node_gid)*Cp);
 
-        if(node_gid == 1){
-            std::cout<<"node_temp(1, node_gid) = " << node_temp(1, node_gid) << std ::endl;
-            std::cout<<"node_temp(0, node_gid) = " << node_temp(0, node_gid) << std ::endl;
-            std::cout<<"node_flux(node_gid) = " << node_flux(node_gid) << std ::endl;
-        }
     }); // end for parallel for over nodes
 
     return;

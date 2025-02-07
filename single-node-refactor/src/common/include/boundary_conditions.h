@@ -117,7 +117,8 @@ static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_
 static std::map<std::string, boundary_conditions::BCTemperatureModels> bc_temperature_model_map
 {
     { "none", boundary_conditions::noTemperatureBC },
-    { "constant", boundary_conditions::constantTemperatureBC }
+    { "constant", boundary_conditions::constantTemperatureBC },
+    { "convection", boundary_conditions::convectionTemperatureBC },
     //{ "time_varying", boundary_conditions::timeVaryingTemperatureBC },
     //{ "adiabatic", boundary_conditions::adiabaticBC },
     //{ "user_defined", boundary_conditions::userDefinedTemperatureBC }
