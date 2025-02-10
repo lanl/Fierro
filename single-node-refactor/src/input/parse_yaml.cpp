@@ -2595,11 +2595,29 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     
                     switch(map[temperature_model]){
                         case boundary_conditions::constantTemperatureBC:
-                            std::cout << "Setting temperature bc " << std::endl;
+                            std::cout << "Setting constant temperature bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::constantTemperatureBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).temperature = &ConstantTemperatureBC::temperature;
+                            });
+                            break;
+
+                        case boundary_conditions::convectionTemperatureBC:
+                            std::cout << "Setting convection bc " << std::endl;
+                            
+                            RUN({   
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::convectionTemperatureBC;
+                                // BoundaryConditions.BoundaryConditionFunctions(bc_id).temperature = &ConvectionTemperatureBC::temperature;
+                            });
+                            break;
+
+                        case boundary_conditions::radiationTemperatureBC:
+                            std::cout << "Setting radiation bc " << std::endl;
+                            
+                            RUN({   
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::radiationTemperatureBC;
+                                // BoundaryConditions.BoundaryConditionFunctions(bc_id).temperature = &RadiationTemperatureBC::temperature;
                             });
                             break;
 
@@ -2609,6 +2627,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
                     }
                 }
+
                 else{
                     std::cout << "ERROR: invalid boundary condition option input in YAML file: " << temperature_model << std::endl;
                     std::cout << "Valid options are: " << std::endl;

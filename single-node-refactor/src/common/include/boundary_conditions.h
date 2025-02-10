@@ -73,6 +73,8 @@ enum BCTemperatureModels
 {
     noTemperatureBC = 0,
     constantTemperatureBC = 1,
+    convectionTemperatureBC = 2,
+    radiationTemperatureBC = 3,
     //timeVaryingTemperatureBC = 2,
     //adiabaticBC = 3,
     //userDefinedTemperatureBC = 4
@@ -119,6 +121,7 @@ static std::map<std::string, boundary_conditions::BCTemperatureModels> bc_temper
     { "none", boundary_conditions::noTemperatureBC },
     { "constant", boundary_conditions::constantTemperatureBC },
     { "convection", boundary_conditions::convectionTemperatureBC },
+    { "radiation", boundary_conditions::radiationTemperatureBC },
     //{ "time_varying", boundary_conditions::timeVaryingTemperatureBC },
     //{ "adiabatic", boundary_conditions::adiabaticBC },
     //{ "user_defined", boundary_conditions::userDefinedTemperatureBC }
