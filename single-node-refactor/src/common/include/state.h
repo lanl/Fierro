@@ -48,7 +48,7 @@ enum class node_state
     velocity,
     mass,
     temp,
-    q_flux
+    q_flux,
     force,
 };
 
