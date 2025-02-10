@@ -60,7 +60,7 @@ void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
     // Loop over the velocity boundary sets
     for (size_t bc_lid = 0; bc_lid < num_vel_bdy_sets; bc_lid++) {
         
-        size_t bdy_set = BoundaryConditions.vel_bdy_sets_in_solver.host(bc_lid);
+        size_t bdy_set = BoundaryConditions.vel_bdy_sets_in_solver.host(this->solver_id,bc_lid);
         
         // Loop over boundary nodes in a boundary set
         FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {

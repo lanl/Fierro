@@ -73,7 +73,8 @@ struct solver_input_t
 // ----------------------------------
 static std::vector<std::string> str_solver_inps
 {
-    "method"
+    "method",
+    "id"
 };
 
 // ----------------------------------
@@ -81,7 +82,8 @@ static std::vector<std::string> str_solver_inps
 // ----------------------------------
 static std::vector<std::string> solver_required_inps
 {
-    "method"
+    "method",
+    "id"
 };
 
 #endif // end Header Guard

@@ -1,31 +1,43 @@
-# Sod problem in Y
+# num_dims: 3
 
 dynamic_options:
-    time_final: 0.15
+    time_final: 0.6
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 2000000
+    cycle_stop: 300000
+
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
 
 mesh_options:
     source: generate
     num_dims: 3
     type: box
-    origin: [0, 0, 0]
-    length: [0.01, 1.0, 0.01]
-    num_elems: [1, 100, 1]
+    origin: [0.0, 0.0, 0.0]
+    length: [1.0, 1.0, 1.0]
+    num_elems: [12, 12, 12]
+
 
 output_options:
     timer_output_level: thorough
-    output_file_format: state
-    graphics_time_step: 0.15
+    output_file_format: ensight
+    graphics_time_step: 0.6
+    # graphics_iteration_step: 10
 
 solver_options:
-    - solver:
+  - solver:
         method: SGH3D
         id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
 
 boundary_conditions:
+
     # Tag X plane
     - boundary_condition:
         solver_id: 0
@@ -38,7 +50,7 @@ boundary_conditions:
             - 0   # y
             - 0   # z
 
-            
+
     # Tag Y plane
     - boundary_condition:
         solver_id: 0
@@ -51,7 +63,7 @@ boundary_conditions:
             - 1   # y
             - 0   # z
 
-    # Tag Z plane
+    # Tag z plane
     - boundary_condition:
         solver_id: 0
         surface: 
@@ -61,60 +73,85 @@ boundary_conditions:
         velocity_bc_global_vars:
             - 0   # x
             - 0   # y
-            - 1   # z   
+            - 1   # z
 
-
-    # Tag X=0.01 plane
+    # Tag X plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: x_plane
-            plane_position: 0.01
-        velocity_model: reflected
-        velocity_bc_global_vars:
-            - 1   # x
-            - 0   # y
-            - 0   # z
+            plane_position: 1.0
+        stress_model: constant
+        # Voight notation:
+        # sig_00
+        # sig_11
+        # sig_22
+        # sig_12
+        # sig_02
+        # sig_01
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0
 
-            
-    # Tag y=1.0 plane
+    # Tag Y plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: y_plane
             plane_position: 1.0
-        velocity_model: reflected
-        velocity_bc_global_vars:
-            - 0   # x
-            - 1   # y
-            - 0   # z  
+        stress_model: constant
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0
+        #velocity_model: reflected
+        #velocity_bc_global_vars:
+        #    - 0   # x
+        #    - 1   # y
+        #    - 0   # z
 
-    # Tag z=0.01 plane
+    # Tag Z plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: z_plane
-            plane_position: 0.01
-        velocity_model: reflected
-        velocity_bc_global_vars:
-            - 0   # x
-            - 0   # y
-            - 1   # z
-                
+            plane_position: 1.0
+        stress_model: constant
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0 
+        #velocity_model: reflected
+        #velocity_bc_global_vars:
+        #    - 0   # x
+        #    - 0   # y
+        #    - 1   # z
 
+  
 materials:
     - material:
         id: 0
         eos_model_type: decoupled
         eos_model: gamma_law_gas
+        # strength_model: none
         dissipation_model: MARS
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.0   # phi_min
-            - 1.0   # phi_min_curl
+            - 0     # phi_min
+            - 1.0   # phi_curl
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14
@@ -126,22 +163,13 @@ regions:
             type: global
         material_id: 0
         den: 1.0
-        sie: 2.5
+        sie: 1.e-10
         velocity: 
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
 
-    - region:
-        volume:
-            type: box
-            x1: 0.0
-            x2: 0.01
-            y1: 0.5
-            y2: 1.0
-            z1: 0.0
-            z2: 0.01
-        material_id: 0
-        den: 0.125
-        sie: 2
+    
+
+

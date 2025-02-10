@@ -49,6 +49,7 @@ enum class node_state
     mass,
     temp,
     q_flux
+    force,
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -63,8 +64,10 @@ struct node_t
     DCArrayKokkos<double> coords; ///< Nodal coordinates
     DCArrayKokkos<double> vel;  ///< Nodal velocity
     DCArrayKokkos<double> mass; ///< Nodal mass
+    DCArrayKokkos<double> force; ///< Nodal force
     DCArrayKokkos<double> temp; ///< Nodal temperature
     DCArrayKokkos<double> q_flux; ///< Nodal heat flux
+
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims, state to allocate)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
@@ -76,6 +79,9 @@ struct node_t
                     break;
                 case node_state::velocity:
                     if (vel.size() == 0) this->vel = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
+                    break;
+                case node_state::force:
+                    if (force.size() == 0) this->force = DCArrayKokkos<double>(num_nodes, num_dims, "node_force");
                     break;
                 case node_state::mass:
                     if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
