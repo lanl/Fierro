@@ -1,11 +1,11 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 10.0
+    time_final: 1.0
     dt_min: 1.e-8
-    dt_max: 1.e-2
+    dt_max: 1.e-1
     dt_start: 1.e-5
-    cycle_stop: 100000
+    cycle_stop: 1000000
 
 
 # mesh_options:
@@ -23,7 +23,7 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: vtk
+    output_file_format: state
     graphics_time_step: 1.0
     # graphics_iteration_step: 1
 
