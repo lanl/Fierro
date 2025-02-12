@@ -1,340 +1,408 @@
-// -----------------------------------------------------------------------------
-// This code handles the geometric information for the mesh for the SHG solver
-//------------------------------------------------------------------------------
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 #include "matar.h"
-#include "mesh.h"
 #include "state.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
-#include "Simulation_Parameters_Dynamic_Elasticity.h"
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_position_elastic
+///
+/// \brief Updates the nodal potitions for the dynamic elastic solver
+///
+///
+/// \param Runge Kutta time integration alpha value
+/// \param Number of nodes
+/// \param Array of nodal potitions
+/// \param Array of nodal velocities
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::update_position_elastic(double rk_alpha,
-                         const size_t num_nodes,
-                         DViewCArrayKokkos <double> &node_coords,
-                         const DViewCArrayKokkos <double> &node_vel){
-
-    const size_t rk_level = simparam.rk_num_bins - 1;
-    int num_dims = simparam.num_dims;
+    const size_t num_nodes,
+    DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel)
+{
+    const size_t rk_level = rk_num_bins - 1;
+    int num_dims = num_dims;
 
     // loop over all the nodes in the mesh
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
-
-        for (int dim = 0; dim < num_dims; dim++){
-            double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
-            node_coords(rk_level, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha*dt*half_vel;
+        for (int dim = 0; dim < num_dims; dim++) {
+            double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
+            node_coords(rk_level, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha * dt * half_vel;
         }
-        
     }); // end parallel for over nodes
-    
 } // end subroutine
 
-
-// -----------------------------------------------------------------------------
-//  This function claculates
-//    B_p =  J^{-T} \cdot (\nabla_{xi} \phi_p w
-//  where
-//    \phi_p is the basis function for vertex p
-//    w is the 1 gauss point for the cell (everything is evaluted at this point)
-//    J^{-T} is the inverse transpose of the Jacobi matrix
-//    \nabla_{xi} is the gradient opperator in the reference coordinates
-//
-//   B_p is the OUTWARD corner area normal at node p
-//------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_bmatrix
+///
+/// \brief Theis function calculate the finite element B matrix:
+///
+///  B_p =  J^{-T} \cdot (\nabla_{xi} \phi_p w,   where:
+///  \phi_p is the basis function for vertex p
+///  w is the 1 gauss point for the cell (everything is evaluted at this point)
+///  J^{-T} is the inverse transpose of the Jacobi matrix
+///  \nabla_{xi} is the gradient opperator in the reference coordinates
+///  B_p is the OUTWARD corner area normal at node p
+///
+/// \param B matrix
+/// \param Global index of the element
+/// \param View of nodal position data
+/// \param View of the elements node ids
+/// \param Runge Kutta time integration level
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
-                 const size_t elem_gid,
-                 const DViewCArrayKokkos <double> &node_coords,
-                 const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                 const size_t rk_level) const {
-
+void FEA_Module_Dynamic_Elasticity::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
+{
     const size_t num_nodes = 8;
 
     double x_array[8];
     double y_array[8];
     double z_array[8];
-    
+
     // x, y, z coordinates of elem vertices
-    auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);
-    auto y  = ViewCArrayKokkos <double> (y_array, num_nodes);
-    auto z  = ViewCArrayKokkos <double> (z_array, num_nodes);
+    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
+    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
+    auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++){
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
         z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
     } // end for
 
-    double twelth = 1./12.;
-        
-    B_matrix(0,0) = ( +y(1)*( -z(2) -z(3) +z(4) +z(5) )
-                      +y(2)*( +z(1) -z(3) )
-                      +y(3)*( +z(1) +z(2) -z(4) -z(7) )
-                      +y(4)*( -z(1) +z(3) -z(5) +z(7) )
-                      +y(5)*( -z(1) +z(4) )
-                      +y(7)*( +z(3) -z(4) ) )*twelth;
+    double twelth = 1. / 12.;
 
-    B_matrix(1,0) = ( +y(0)*( +z(2) +z(3) -z(4) -z(5) )
-                      +y(2)*( -z(0) -z(3) +z(5) +z(6) )
-                      +y(3)*( -z(0) +z(2) )
-                      +y(4)*( +z(0) -z(5) )
-                      +y(5)*( +z(0) -z(2) +z(4) -z(6) )
-                      +y(6)*( -z(2) +z(5) ) )*twelth;
+    B_matrix(0, 0) = (+y(1) * (-z(2) - z(3) + z(4) + z(5) )
+                      + y(2) * (+z(1) - z(3) )
+                      + y(3) * (+z(1) + z(2) - z(4) - z(7) )
+                      + y(4) * (-z(1) + z(3) - z(5) + z(7) )
+                      + y(5) * (-z(1) + z(4) )
+                      + y(7) * (+z(3) - z(4) ) ) * twelth;
 
-    B_matrix(2,0) = ( +y(0)*( -z(1) +z(3) )
-                      +y(1)*( +z(0) +z(3) -z(5) -z(6) )
-                      +y(3)*( -z(0) -z(1) +z(6) +z(7) )
-                      +y(5)*( +z(1) -z(6) )
-                      +y(6)*( +z(1) -z(3) +z(5) -z(7) )
-                      +y(7)*( -z(3) +z(6) ) )*twelth;
+    B_matrix(1, 0) = (+y(0) * (+z(2) + z(3) - z(4) - z(5) )
+                      + y(2) * (-z(0) - z(3) + z(5) + z(6) )
+                      + y(3) * (-z(0) + z(2) )
+                      + y(4) * (+z(0) - z(5) )
+                      + y(5) * (+z(0) - z(2) + z(4) - z(6) )
+                      + y(6) * (-z(2) + z(5) ) ) * twelth;
 
-    B_matrix(3,0) = ( +y(0)*( -z(1) -z(2) +z(4) +z(7) )
-                      +y(1)*( +z(0) -z(2) )
-                      +y(2)*( +z(0) +z(1) -z(6) -z(7) )
-                      +y(4)*( -z(0) +z(7) )
-                      +y(6)*( +z(2) -z(7) )
-                      +y(7)*( -z(0) +z(2) -z(4) +z(6) ) )*twelth;
+    B_matrix(2, 0) = (+y(0) * (-z(1) + z(3) )
+                      + y(1) * (+z(0) + z(3) - z(5) - z(6) )
+                      + y(3) * (-z(0) - z(1) + z(6) + z(7) )
+                      + y(5) * (+z(1) - z(6) )
+                      + y(6) * (+z(1) - z(3) + z(5) - z(7) )
+                      + y(7) * (-z(3) + z(6) ) ) * twelth;
 
-    B_matrix(4,0) = ( +y(0)*( +z(1) -z(3) +z(5) -z(7) )
-                      +y(1)*( -z(0) +z(5) )
-                      +y(3)*( +z(0) -z(7) )
-                      +y(5)*( -z(0) -z(1) +z(6) +z(7) )
-                      +y(6)*( -z(5) +z(7) )
-                      +y(7)*( +z(0) +z(3) -z(5) -z(6) ) )*twelth;
+    B_matrix(3, 0) = (+y(0) * (-z(1) - z(2) + z(4) + z(7) )
+                      + y(1) * (+z(0) - z(2) )
+                      + y(2) * (+z(0) + z(1) - z(6) - z(7) )
+                      + y(4) * (-z(0) + z(7) )
+                      + y(6) * (+z(2) - z(7) )
+                      + y(7) * (-z(0) + z(2) - z(4) + z(6) ) ) * twelth;
 
-    B_matrix(5,0) = ( +y(0)*( +z(1) -z(4) )
-                      +y(1)*( -z(0) +z(2) -z(4) +z(6) )
-                      +y(2)*( -z(1) +z(6) )
-                      +y(4)*( +z(0) +z(1) -z(6) -z(7) )
-                      +y(6)*( -z(1) -z(2) +z(4) +z(7) )
-                      +y(7)*( +z(4) -z(6) ) )*twelth;
+    B_matrix(4, 0) = (+y(0) * (+z(1) - z(3) + z(5) - z(7) )
+                      + y(1) * (-z(0) + z(5) )
+                      + y(3) * (+z(0) - z(7) )
+                      + y(5) * (-z(0) - z(1) + z(6) + z(7) )
+                      + y(6) * (-z(5) + z(7) )
+                      + y(7) * (+z(0) + z(3) - z(5) - z(6) ) ) * twelth;
 
-    B_matrix(6,0) = ( +y(1)*( +z(2) -z(5) )
-                      +y(2)*( -z(1) +z(3) -z(5) +z(7) )
-                      +y(3)*( -z(2) +z(7) )
-                      +y(4)*( +z(5) -z(7) )
-                      +y(5)*( +z(1) +z(2) -z(4) -z(7) )
-                      +y(7)*( -z(2) -z(3) +z(4) +z(5) ) )*twelth;
+    B_matrix(5, 0) = (+y(0) * (+z(1) - z(4) )
+                      + y(1) * (-z(0) + z(2) - z(4) + z(6) )
+                      + y(2) * (-z(1) + z(6) )
+                      + y(4) * (+z(0) + z(1) - z(6) - z(7) )
+                      + y(6) * (-z(1) - z(2) + z(4) + z(7) )
+                      + y(7) * (+z(4) - z(6) ) ) * twelth;
 
-    B_matrix(7,0) = ( +y(0)*( -z(3) +z(4) )
-                      +y(2)*( +z(3) -z(6) )
-                      +y(3)*( +z(0) -z(2) +z(4) -z(6) )
-                      +y(4)*( -z(0) -z(3) +z(5) +z(6) )
-                      +y(5)*( -z(4) +z(6) )
-                      +y(6)*( +z(2) +z(3) -z(4) -z(5) ) )*twelth;
+    B_matrix(6, 0) = (+y(1) * (+z(2) - z(5) )
+                      + y(2) * (-z(1) + z(3) - z(5) + z(7) )
+                      + y(3) * (-z(2) + z(7) )
+                      + y(4) * (+z(5) - z(7) )
+                      + y(5) * (+z(1) + z(2) - z(4) - z(7) )
+                      + y(7) * (-z(2) - z(3) + z(4) + z(5) ) ) * twelth;
 
-    B_matrix(0,1) = ( +z(1)*( -x(2) -x(3) +x(4) +x(5) )
-                      +z(2)*( +x(1) -x(3) )
-                      +z(3)*( +x(1) +x(2) -x(4) -x(7) )
-                      +z(4)*( -x(1) +x(3) -x(5) +x(7) )
-                      +z(5)*( -x(1) +x(4) )
-                      +z(7)*( +x(3) -x(4) ) )*twelth;
+    B_matrix(7, 0) = (+y(0) * (-z(3) + z(4) )
+                      + y(2) * (+z(3) - z(6) )
+                      + y(3) * (+z(0) - z(2) + z(4) - z(6) )
+                      + y(4) * (-z(0) - z(3) + z(5) + z(6) )
+                      + y(5) * (-z(4) + z(6) )
+                      + y(6) * (+z(2) + z(3) - z(4) - z(5) ) ) * twelth;
 
-    B_matrix(1,1) = ( +z(0)*( +x(2) +x(3) -x(4) -x(5) )
-                      +z(2)*( -x(0) -x(3) +x(5) +x(6) )
-                      +z(3)*( -x(0) +x(2) )
-                      +z(4)*( +x(0) -x(5) )
-                      +z(5)*( +x(0) -x(2) +x(4) -x(6) )
-                      +z(6)*( -x(2) +x(5) ) )*twelth;
+    B_matrix(0, 1) = (+z(1) * (-x(2) - x(3) + x(4) + x(5) )
+                      + z(2) * (+x(1) - x(3) )
+                      + z(3) * (+x(1) + x(2) - x(4) - x(7) )
+                      + z(4) * (-x(1) + x(3) - x(5) + x(7) )
+                      + z(5) * (-x(1) + x(4) )
+                      + z(7) * (+x(3) - x(4) ) ) * twelth;
 
-    B_matrix(2,1) = ( +z(0)*( -x(1) +x(3) )
-                      +z(1)*( +x(0) +x(3) -x(5) -x(6) )
-                      +z(3)*( -x(0) -x(1) +x(6) +x(7) )
-                      +z(5)*( +x(1) -x(6) )
-                      +z(6)*( +x(1) -x(3) +x(5) -x(7) )
-                      +z(7)*( -x(3) +x(6) ) )*twelth;
+    B_matrix(1, 1) = (+z(0) * (+x(2) + x(3) - x(4) - x(5) )
+                      + z(2) * (-x(0) - x(3) + x(5) + x(6) )
+                      + z(3) * (-x(0) + x(2) )
+                      + z(4) * (+x(0) - x(5) )
+                      + z(5) * (+x(0) - x(2) + x(4) - x(6) )
+                      + z(6) * (-x(2) + x(5) ) ) * twelth;
 
-    B_matrix(3,1) = ( +z(0)*( -x(1) -x(2) +x(4) +x(7) )
-                      +z(1)*( +x(0) -x(2) )
-                      +z(2)*( +x(0) +x(1) -x(6) -x(7) )
-                      +z(4)*( -x(0) +x(7) )
-                      +z(6)*( +x(2) -x(7) )
-                      +z(7)*( -x(0) +x(2) -x(4) +x(6) ) )*twelth;
+    B_matrix(2, 1) = (+z(0) * (-x(1) + x(3) )
+                      + z(1) * (+x(0) + x(3) - x(5) - x(6) )
+                      + z(3) * (-x(0) - x(1) + x(6) + x(7) )
+                      + z(5) * (+x(1) - x(6) )
+                      + z(6) * (+x(1) - x(3) + x(5) - x(7) )
+                      + z(7) * (-x(3) + x(6) ) ) * twelth;
 
-    B_matrix(4,1) = ( +z(0)*( +x(1) -x(3) +x(5) -x(7) )
-                      +z(1)*( -x(0) +x(5) )
-                      +z(3)*( +x(0) -x(7) )
-                      +z(5)*( -x(0) -x(1) +x(6) +x(7) )
-                      +z(6)*( -x(5) +x(7) )
-                      +z(7)*( +x(0) +x(3) -x(5) -x(6) ) )*twelth;
+    B_matrix(3, 1) = (+z(0) * (-x(1) - x(2) + x(4) + x(7) )
+                      + z(1) * (+x(0) - x(2) )
+                      + z(2) * (+x(0) + x(1) - x(6) - x(7) )
+                      + z(4) * (-x(0) + x(7) )
+                      + z(6) * (+x(2) - x(7) )
+                      + z(7) * (-x(0) + x(2) - x(4) + x(6) ) ) * twelth;
 
-    B_matrix(5,1) = ( +z(0)*( +x(1) -x(4) )
-                      +z(1)*( -x(0) +x(2) -x(4) +x(6) )
-                      +z(2)*( -x(1) +x(6) )
-                      +z(4)*( +x(0) +x(1) -x(6) -x(7) )
-                      +z(6)*( -x(1) -x(2) +x(4) +x(7) )
-                      +z(7)*( +x(4) -x(6) ) )*twelth;
+    B_matrix(4, 1) = (+z(0) * (+x(1) - x(3) + x(5) - x(7) )
+                      + z(1) * (-x(0) + x(5) )
+                      + z(3) * (+x(0) - x(7) )
+                      + z(5) * (-x(0) - x(1) + x(6) + x(7) )
+                      + z(6) * (-x(5) + x(7) )
+                      + z(7) * (+x(0) + x(3) - x(5) - x(6) ) ) * twelth;
 
-    B_matrix(6,1) = ( +z(1)*( +x(2) -x(5) )
-                      +z(2)*( -x(1) +x(3) -x(5) +x(7) )
-                      +z(3)*( -x(2) +x(7) )
-                      +z(4)*( +x(5) -x(7) )
-                      +z(5)*( +x(1) +x(2) -x(4) -x(7) )
-                      +z(7)*( -x(2) -x(3) +x(4) +x(5) ) )*twelth;
+    B_matrix(5, 1) = (+z(0) * (+x(1) - x(4) )
+                      + z(1) * (-x(0) + x(2) - x(4) + x(6) )
+                      + z(2) * (-x(1) + x(6) )
+                      + z(4) * (+x(0) + x(1) - x(6) - x(7) )
+                      + z(6) * (-x(1) - x(2) + x(4) + x(7) )
+                      + z(7) * (+x(4) - x(6) ) ) * twelth;
 
-    B_matrix(7,1) = ( +z(0)*( -x(3) +x(4) )
-                      +z(2)*( +x(3) -x(6) )
-                      +z(3)*( +x(0) -x(2) +x(4) -x(6) )
-                      +z(4)*( -x(0) -x(3) +x(5) +x(6) )
-                      +z(5)*( -x(4) +x(6) )
-                      +z(6)*( +x(2) +x(3) -x(4) -x(5) ) )*twelth;
+    B_matrix(6, 1) = (+z(1) * (+x(2) - x(5) )
+                      + z(2) * (-x(1) + x(3) - x(5) + x(7) )
+                      + z(3) * (-x(2) + x(7) )
+                      + z(4) * (+x(5) - x(7) )
+                      + z(5) * (+x(1) + x(2) - x(4) - x(7) )
+                      + z(7) * (-x(2) - x(3) + x(4) + x(5) ) ) * twelth;
 
-    B_matrix(0,2) = ( +x(1)*( -y(2) -y(3) +y(4) +y(5) )
-                      +x(2)*( +y(1) -y(3) )
-                      +x(3)*( +y(1) +y(2) -y(4) -y(7) )
-                      +x(4)*( -y(1) +y(3) -y(5) +y(7) )
-                      +x(5)*( -y(1) +y(4) )
-                      +x(7)*( +y(3) -y(4) ) )*twelth;
+    B_matrix(7, 1) = (+z(0) * (-x(3) + x(4) )
+                      + z(2) * (+x(3) - x(6) )
+                      + z(3) * (+x(0) - x(2) + x(4) - x(6) )
+                      + z(4) * (-x(0) - x(3) + x(5) + x(6) )
+                      + z(5) * (-x(4) + x(6) )
+                      + z(6) * (+x(2) + x(3) - x(4) - x(5) ) ) * twelth;
 
-    B_matrix(1,2) = ( +x(0)*( +y(2) +y(3) -y(4) -y(5) )
-                      +x(2)*( -y(0) -y(3) +y(5) +y(6) )
-                      +x(3)*( -y(0) +y(2) )
-                      +x(4)*( +y(0) -y(5) )
-                      +x(5)*( +y(0) -y(2) +y(4) -y(6) )
-                      +x(6)*( -y(2) +y(5) ) )*twelth;
+    B_matrix(0, 2) = (+x(1) * (-y(2) - y(3) + y(4) + y(5) )
+                      + x(2) * (+y(1) - y(3) )
+                      + x(3) * (+y(1) + y(2) - y(4) - y(7) )
+                      + x(4) * (-y(1) + y(3) - y(5) + y(7) )
+                      + x(5) * (-y(1) + y(4) )
+                      + x(7) * (+y(3) - y(4) ) ) * twelth;
 
-    B_matrix(2,2) = ( +x(0)*( -y(1) +y(3) )
-                      +x(1)*( +y(0) +y(3) -y(5) -y(6) )
-                      +x(3)*( -y(0) -y(1) +y(6) +y(7) )
-                      +x(5)*( +y(1) -y(6) )
-                      +x(6)*( +y(1) -y(3) +y(5) -y(7) )
-                      +x(7)*( -y(3) +y(6) ) )*twelth;
+    B_matrix(1, 2) = (+x(0) * (+y(2) + y(3) - y(4) - y(5) )
+                      + x(2) * (-y(0) - y(3) + y(5) + y(6) )
+                      + x(3) * (-y(0) + y(2) )
+                      + x(4) * (+y(0) - y(5) )
+                      + x(5) * (+y(0) - y(2) + y(4) - y(6) )
+                      + x(6) * (-y(2) + y(5) ) ) * twelth;
 
-    B_matrix(3,2) = ( +x(0)*( -y(1) -y(2) +y(4) +y(7) )
-                      +x(1)*( +y(0) -y(2) )
-                      +x(2)*( +y(0) +y(1) -y(6) -y(7) )
-                      +x(4)*( -y(0) +y(7) )
-                      +x(6)*( +y(2) -y(7) )
-                      +x(7)*( -y(0) +y(2) -y(4) +y(6) ) )*twelth;
+    B_matrix(2, 2) = (+x(0) * (-y(1) + y(3) )
+                      + x(1) * (+y(0) + y(3) - y(5) - y(6) )
+                      + x(3) * (-y(0) - y(1) + y(6) + y(7) )
+                      + x(5) * (+y(1) - y(6) )
+                      + x(6) * (+y(1) - y(3) + y(5) - y(7) )
+                      + x(7) * (-y(3) + y(6) ) ) * twelth;
 
-    B_matrix(4,2) = ( +x(0)*( +y(1) -y(3) +y(5) -y(7) )
-                      +x(1)*( -y(0) +y(5) )
-                      +x(3)*( +y(0) -y(7) )
-                      +x(5)*( -y(0) -y(1) +y(6) +y(7) )
-                      +x(6)*( -y(5) +y(7) )
-                      +x(7)*( +y(0) +y(3) -y(5) -y(6) ) )*twelth;
+    B_matrix(3, 2) = (+x(0) * (-y(1) - y(2) + y(4) + y(7) )
+                      + x(1) * (+y(0) - y(2) )
+                      + x(2) * (+y(0) + y(1) - y(6) - y(7) )
+                      + x(4) * (-y(0) + y(7) )
+                      + x(6) * (+y(2) - y(7) )
+                      + x(7) * (-y(0) + y(2) - y(4) + y(6) ) ) * twelth;
 
-    B_matrix(5,2) = ( +x(0)*( +y(1) -y(4) )
-                      +x(1)*( -y(0) +y(2) -y(4) +y(6) )
-                      +x(2)*( -y(1) +y(6) )
-                      +x(4)*( +y(0) +y(1) -y(6) -y(7) )
-                      +x(6)*( -y(1) -y(2) +y(4) +y(7) )
-                      +x(7)*( +y(4) -y(6) ) )*twelth;
+    B_matrix(4, 2) = (+x(0) * (+y(1) - y(3) + y(5) - y(7) )
+                      + x(1) * (-y(0) + y(5) )
+                      + x(3) * (+y(0) - y(7) )
+                      + x(5) * (-y(0) - y(1) + y(6) + y(7) )
+                      + x(6) * (-y(5) + y(7) )
+                      + x(7) * (+y(0) + y(3) - y(5) - y(6) ) ) * twelth;
 
-    B_matrix(6,2) = ( +x(1)*( +y(2) -y(5) )
-                      +x(2)*( -y(1) +y(3) -y(5) +y(7) )
-                      +x(3)*( -y(2) +y(7) )
-                      +x(4)*( +y(5) -y(7) )
-                      +x(5)*( +y(1) +y(2) -y(4) -y(7) )
-                      +x(7)*( -y(2) -y(3) +y(4) +y(5) ) )*twelth;
+    B_matrix(5, 2) = (+x(0) * (+y(1) - y(4) )
+                      + x(1) * (-y(0) + y(2) - y(4) + y(6) )
+                      + x(2) * (-y(1) + y(6) )
+                      + x(4) * (+y(0) + y(1) - y(6) - y(7) )
+                      + x(6) * (-y(1) - y(2) + y(4) + y(7) )
+                      + x(7) * (+y(4) - y(6) ) ) * twelth;
 
-    B_matrix(7,2) = ( +x(0)*( -y(3) +y(4) )
-                      +x(2)*( +y(3) -y(6) )
-                      +x(3)*( +y(0) -y(2) +y(4) -y(6) )
-                      +x(4)*( -y(0) -y(3) +y(5) +y(6) )
-                      +x(5)*( -y(4) +y(6) )
-                      +x(6)*( +y(2) +y(3) -y(4) -y(5) ) )*twelth;
+    B_matrix(6, 2) = (+x(1) * (+y(2) - y(5) )
+                      + x(2) * (-y(1) + y(3) - y(5) + y(7) )
+                      + x(3) * (-y(2) + y(7) )
+                      + x(4) * (+y(5) - y(7) )
+                      + x(5) * (+y(1) + y(2) - y(4) - y(7) )
+                      + x(7) * (-y(2) - y(3) + y(4) + y(5) ) ) * twelth;
 
+    B_matrix(7, 2) = (+x(0) * (-y(3) + y(4) )
+                      + x(2) * (+y(3) - y(6) )
+                      + x(3) * (+y(0) - y(2) + y(4) - y(6) )
+                      + x(4) * (-y(0) - y(3) + y(5) + y(6) )
+                      + x(5) * (-y(4) + y(6) )
+                      + x(6) * (+y(2) + y(3) - y(4) - y(5) ) ) * twelth;
 } // end subroutine
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_vol
+///
+/// \brief Compute Volume of each finite element
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_Dynamic_Elasticity::get_vol()
+{
+    const size_t rk_level = rk_num_bins - 1;
+    const size_t num_dims = num_dim;
 
-/* ----------------------------------------------------------------------------
-   Compute Volume of each finite element
-------------------------------------------------------------------------------- */
-
-void FEA_Module_Dynamic_Elasticity::get_vol(){
-
-    const size_t rk_level = simparam.rk_num_bins - 1;
-    const size_t num_dims = mesh->num_dims;
-
-    if (num_dims == 2){
+    if (num_dims == 2) {
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
-            
             // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
+            ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
             get_vol_quad(elem_vol, elem_gid, node_coords, elem_node_gids, rk_level);
-            
         });
         Kokkos::fence();
     }
-    else {
+    else{
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
-            
             // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
+            ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
             get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids, rk_level);
-            
         });
         Kokkos::fence();
     } // end if
-    
+
     return;
-    
 } // end subroutine
 
-
-// Exact volume for a hex element
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_vol_hex
+///
+/// \brief Exact volume for a hex element
+///
+/// \param View of element volume data
+/// \param Global element index
+/// \param View into nodal position data
+/// \param Runge Kutta time integration level
+/// WARNING: How does this work with const elem_vol?
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
-                 const size_t elem_gid,
-                 const DViewCArrayKokkos <double> &node_coords,
-                 const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                 const size_t rk_level) const {
-
+void FEA_Module_Dynamic_Elasticity::get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
+{
     const size_t num_nodes = 8;
 
     double x_array[8];
     double y_array[8];
     double z_array[8];
-    
+
     // x, y, z coordinates of elem vertices
-    auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);
-    auto y  = ViewCArrayKokkos <double> (y_array, num_nodes);
-    auto z  = ViewCArrayKokkos <double> (z_array, num_nodes);
-    
+    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
+    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
+    auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
+
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++){
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
         z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
     } // end for
 
-    double twelth = 1./12.;
-        
+    double twelth = 1. / 12.;
+
     // element volume
     elem_vol(elem_gid) =
-        (x(1)*(y(3)*(-z(0) + z(2)) + y(4)*( z(0) - z(5)) + y(0)*(z(2) + z(3) - z(4) - z(5)) + y(6)*(-z(2) + z(5)) + y(5)*(z(0) - z(2) + z(4) - z(6)) + y(2)*(-z(0) - z(3) + z(5) + z(6))) +
-         x(7)*(y(0)*(-z(3) + z(4)) + y(6)*( z(2) + z(3)  - z(4) - z(5)) + y(2)*(z(3) - z(6)) + y(3)*(z(0) - z(2) + z(4) - z(6)) + y(5)*(-z(4) + z(6)) + y(4)*(-z(0) - z(3) + z(5) + z(6))) +
-         x(3)*(y(1)*( z(0) - z(2)) + y(7)*(-z(0) + z(2)  - z(4) + z(6)) + y(6)*(z(2) - z(7)) + y(2)*(z(0) + z(1) - z(6) - z(7)) + y(4)*(-z(0) + z(7)) + y(0)*(-z(1) - z(2) + z(4) + z(7))) +
-         x(5)*(y(0)*( z(1) - z(4)) + y(7)*( z(4) - z(6)) + y(2)*(-z(1) + z(6)) + y(1)*(-z(0) + z(2) - z(4) + z(6)) + y(4)*(z(0) + z(1) - z(6) - z(7)) + y(6)*(-z(1) - z(2) + z(4) + z(7))) +
-         x(6)*(y(1)*( z(2) - z(5)) + y(7)*(-z(2) - z(3)  + z(4) + z(5)) + y(5)*(z(1) + z(2) - z(4) - z(7)) + y(4)*(z(5) - z(7)) + y(3)*(-z(2) + z(7)) + y(2)*(-z(1) + z(3) - z(5) + z(7))) +
-         x(0)*(y(2)*( z(1) - z(3)) + y(7)*( z(3) - z(4)) + y(5)*(-z(1) + z(4)) + y(1)*(-z(2) - z(3) + z(4) + z(5)) + y(3)*(z(1) + z(2) - z(4) - z(7)) + y(4)*(-z(1) + z(3) - z(5) + z(7))) +
-         x(2)*(y(0)*(-z(1) + z(3)) + y(5)*( z(1) - z(6)) + y(1)*(z(0) + z(3) - z(5) - z(6)) + y(7)*(-z(3) + z(6)) + y(6)*(z(1) - z(3) + z(5) - z(7)) + y(3)*(-z(0) - z(1) + z(6) + z(7))) +
-         x(4)*(y(1)*(-z(0) + z(5)) + y(7)*( z(0) + z(3)  - z(5) - z(6)) + y(3)*(z(0) - z(7)) + y(0)*(z(1) - z(3) + z(5) - z(7)) + y(6)*(-z(5) + z(7)) + y(5)*(-z(0) - z(1) + z(6) + z(7))))*twelth;
+        (x(1) * (y(3) * (-z(0) + z(2)) + y(4) * (z(0) - z(5)) + y(0) * (z(2) + z(3) - z(4) - z(5)) + y(6) * (-z(2) + z(5)) + y(5) * (z(0) - z(2) + z(4) - z(6)) + y(2) * (-z(0) - z(3) + z(5) + z(6))) +
+         x(7) * (y(0) * (-z(3) + z(4)) + y(6) * (z(2) + z(3) - z(4) - z(5)) + y(2) * (z(3) - z(6)) + y(3) * (z(0) - z(2) + z(4) - z(6)) + y(5) * (-z(4) + z(6)) + y(4) * (-z(0) - z(3) + z(5) + z(6))) +
+         x(3) * (y(1) * (z(0) - z(2)) + y(7) * (-z(0) + z(2) - z(4) + z(6)) + y(6) * (z(2) - z(7)) + y(2) * (z(0) + z(1) - z(6) - z(7)) + y(4) * (-z(0) + z(7)) + y(0) * (-z(1) - z(2) + z(4) + z(7))) +
+         x(5) * (y(0) * (z(1) - z(4)) + y(7) * (z(4) - z(6)) + y(2) * (-z(1) + z(6)) + y(1) * (-z(0) + z(2) - z(4) + z(6)) + y(4) * (z(0) + z(1) - z(6) - z(7)) + y(6) * (-z(1) - z(2) + z(4) + z(7))) +
+         x(6) * (y(1) * (z(2) - z(5)) + y(7) * (-z(2) - z(3) + z(4) + z(5)) + y(5) * (z(1) + z(2) - z(4) - z(7)) + y(4) * (z(5) - z(7)) + y(3) * (-z(2) + z(7)) + y(2) * (-z(1) + z(3) - z(5) + z(7))) +
+         x(0) * (y(2) * (z(1) - z(3)) + y(7) * (z(3) - z(4)) + y(5) * (-z(1) + z(4)) + y(1) * (-z(2) - z(3) + z(4) + z(5)) + y(3) * (z(1) + z(2) - z(4) - z(7)) + y(4) * (-z(1) + z(3) - z(5) + z(7))) +
+         x(2) * (y(0) * (-z(1) + z(3)) + y(5) * (z(1) - z(6)) + y(1) * (z(0) + z(3) - z(5) - z(6)) + y(7) * (-z(3) + z(6)) + y(6) * (z(1) - z(3) + z(5) - z(7)) + y(3) * (-z(0) - z(1) + z(6) + z(7))) +
+         x(4) *
+         (y(1) * (-z(0) + z(5)) + y(7) * (z(0) + z(3) - z(5) - z(6)) + y(3) * (z(0) - z(7)) + y(0) * (z(1) - z(3) + z(5) - z(7)) + y(6) * (-z(5) + z(7)) + y(5) * (-z(0) - z(1) + z(6) + z(7)))) *
+        twelth;
 
     return;
-    
 } // end subroutine
 
-
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_bmatrix2D
+///
+/// \brief Calculate the 2D finite element B matrix
+///
+/// <Insert longer more detailed description which
+/// can span multiple lines if needed>
+///
+/// \param B Matrix
+/// \param Global index of the element
+/// \param Nodal coordinates
+/// \param Global indices of the nodes of this element
+/// \param Runge Kutta time integration step
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
-                   const size_t elem_gid,
-                   const DViewCArrayKokkos <double> &node_coords,
-                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                   const size_t rk_level) const {
-
+void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
+{
     const size_t num_nodes = 4;
 
     double x_array[4];
     double y_array[4];
-    
+
     // x, y coordinates of elem vertices
-    auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);
-    auto y  = ViewCArrayKokkos <double> (y_array, num_nodes);
+    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
+    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++){
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
@@ -342,26 +410,16 @@ void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos <double
     /* ensight node order   0 1 2 3
        Flanaghan node order 3 4 1 2
     */
-    
-    
-    B_matrix(0,0) = -0.5*(y(3)-y(1));
-                  
-    B_matrix(1,0) = -0.5*(y(0)-y(2));
-                  
-    B_matrix(2,0) = -0.5*(y(1)-y(3));
-                  
-    B_matrix(3,0) = -0.5*(y(2)-y(0));
-                 
 
-    B_matrix(0,1) = -0.5*(x(1)-x(3));
-                 
-    B_matrix(1,1) = -0.5*(x(2)-x(0));
-                  
-    B_matrix(2,1) = -0.5*(x(3)-x(1));
-                  
-    B_matrix(3,1) = -0.5*(x(0)-x(2));
+    B_matrix(0, 0) = -0.5 * (y(3) - y(1));
+    B_matrix(1, 0) = -0.5 * (y(0) - y(2));
+    B_matrix(2, 0) = -0.5 * (y(1) - y(3));
+    B_matrix(3, 0) = -0.5 * (y(2) - y(0));
+    B_matrix(0, 1) = -0.5 * (x(1) - x(3));
+    B_matrix(1, 1) = -0.5 * (x(2) - x(0));
+    B_matrix(2, 1) = -0.5 * (x(3) - x(1));
+    B_matrix(3, 1) = -0.5 * (x(0) - x(2));
 
-    
     //
     /*
      The Flanagan and Belytschko paper has:
@@ -370,66 +428,75 @@ void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos <double
        node 2: 0.5*(y3 - y1)  ,  0.5*(x1 - x3)
        node 3: 0.5*(y4 - y2)  ,  0.5*(x2 - x4)
        node 4: 0.5*(y1 - y3)  ,  0.5*(x3 - x1)
-     
+
      Ensight order would be
-     
+
        node 2: 0.5*(y3 - y1)  ,  0.5*(x1 - x3)
        node 3: 0.5*(y0 - y2)  ,  0.5*(x2 - x0)
        node 0: 0.5*(y1 - y3)  ,  0.5*(x3 - x1)
        node 1: 0.5*(y2 - y0)  ,  0.5*(x0 - x2)
-     
+
      */
 
     return;
-    
 } // end subroutine
 
-
-// true volume of a quad in RZ coords
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_vol_quad
+///
+/// \brief True volume of a quad in RZ coords
+///
+/// \param Element volume
+/// \param Global index of the element
+/// \param Nodal coordinates
+/// \param Global ids of the nodes in this element
+/// \param Runge Kutta time integration level
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
-                  const size_t elem_gid,
-                  const DViewCArrayKokkos <double> &node_coords,
-                  const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                  const size_t rk_level) const {
-
+void FEA_Module_Dynamic_Elasticity::get_vol_quad(const DViewCArrayKokkos<double>& elem_vol,
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
+{
     // --- testing here ---
     /*
     double test_vol = 0.0;
     // getting the corner facial area
     double corner_areas_array[4];
     ViewCArrayKokkos <double> corner_areas(&corner_areas_array[0],4);
-    
+
     get_area_weights2D(corner_areas,
                        elem_gid,
                        node_coords,
                        elem_node_gids,
                        rk_level);
 
-    
+
     for(size_t node_lid=0; node_lid<4; node_lid++){
         double y = node_coords(rk_level, elem_node_gids(node_lid), 1);  // node radius
         test_vol += corner_areas(node_lid)*y;
     } // end for
-     
+
      test_vol matches the Barlow volume formula
     */
     // -------------------
-    
-    
+
     elem_vol(elem_gid) = 0.0;
-    
+
     const size_t num_nodes = 4;
 
     double x_array[4];
     double y_array[4];
-    
+
     // x, y coordinates of elem vertices
-    auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);
-    auto y  = ViewCArrayKokkos <double> (y_array, num_nodes);
-     
+    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
+    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
+
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++){
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
@@ -438,34 +505,45 @@ void FEA_Module_Dynamic_Elasticity::get_vol_quad(const DViewCArrayKokkos <double
        Flanaghan node order 3 4 1 2
     */
     elem_vol(elem_gid) =
-           ( (y(2)+y(3)+y(0))*((y(2)-y(3))*(x(0)-x(3))-(y(0)-y(3))*(x(2)-x(3)) )
-          +  (y(0)+y(1)+y(2))*((y(0)-y(1))*(x(2)-x(1))-(y(2)-y(1))*(x(0)-x(1))) )/6.0;
+        ( (y(2) + y(3) + y(0)) * ((y(2) - y(3)) * (x(0) - x(3)) - (y(0) - y(3)) * (x(2) - x(3)) )
+          + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / 6.0;
 
     return;
-    
 } // end subroutine
 
-
-// element facial area
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_area_quad
+///
+/// \brief Calculate the area of a elements face
+///
+/// \param Global index of the element
+/// \param Nodal coordinates
+/// \param Global ids of the nodes in this element
+/// \param Runge Kutta time integration level
+///
+/// \return Elements face area (double)
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 double FEA_Module_Dynamic_Elasticity::get_area_quad(const size_t elem_gid,
-                     const DViewCArrayKokkos <double> &node_coords,
-                     const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                     const size_t rk_level) const {
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
+{
+    double elem_area = 0.0;
 
-    double elem_area=0.0;
-    
     const size_t num_nodes = 4;
 
     double x_array[4];
     double y_array[4];
-    
+
     // x, y coordinates of elem vertices
-    auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);
-    auto y  = ViewCArrayKokkos <double> (y_array, num_nodes);
-     
+    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
+    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
+
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++){
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
@@ -473,86 +551,102 @@ double FEA_Module_Dynamic_Elasticity::get_area_quad(const size_t elem_gid,
     /* ensight node order   0 1 2 3
        Flanaghan node order 3 4 1 2
     */
-    
+
     // element facial area
-    elem_area = 0.5*((x(0)-x(2))*(y(1)-y(3))+(x(3)-x(1))*(y(0)-y(2)));
+    elem_area = 0.5 * ((x(0) - x(2)) * (y(1) - y(3)) + (x(3) - x(1)) * (y(0) - y(2)));
 
     return elem_area;
-    
 } // end subroutine
 
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn heron
+///
+/// \brief Calculate the area of a triangle using the heron algorithm
+///
+///
+/// \param Node 1 X coordinate
+/// \param Node 1 Y coordinate
+/// \param Node 2 X coordinate
+/// \param Node 2 Y coordinate
+/// \param Node 3 X coordinate
+/// \param Node 3 Y coordinate
+///
+/// \return Triangle area
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
 double FEA_Module_Dynamic_Elasticity::heron(const double x1,
-             const double y1,
-             const double x2,
-             const double y2,
-             const double x3,
-             const double y3) const
+    const double y1,
+    const double x2,
+    const double y2,
+    const double x3,
+    const double y3) const
 {
-  double S,a,b,c,area;
+    double S, a, b, c, area;
 
-  S=0.0;
-  a=sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
-  S+=a;
-  b=sqrt((x3-x2)*(x3-x2)+(y3-y2)*(y3-y2));
-  S+=b;
-  c=sqrt((x3-x1)*(x3-x1)+(y3-y1)*(y3-y1));
-  S+=c;
+    S  = 0.0;
+    a  = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+    S += a;
+    b  = sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
+    S += b;
+    c  = sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
+    S += c;
 
-  S*=0.5;
-  area=sqrt(S*(S-a)*(S-b)*(S-c));
+    S   *= 0.5;
+    area = sqrt(S * (S - a) * (S - b) * (S - c));
 
-  return area;
+    return area;
 }
-  
-  
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_area_weights2D
+///
+/// \brief Calculate the corner weighted area
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
-                        const size_t elem_gid,
-                        const DViewCArrayKokkos <double> &node_coords,
-                        const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                        const size_t rk_level) const {
-
+void FEA_Module_Dynamic_Elasticity::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
+{
     const size_t num_nodes = 4;
 
     double x_array[4];
     double y_array[4];
 
-    double rc,zc;
-    double A12,A23,A34,A41;
-    
+    double rc, zc;
+    double A12, A23, A34, A41;
+
     // x, y coordinates of elem vertices
-    ViewCArrayKokkos <double> x(x_array, num_nodes);
-    ViewCArrayKokkos <double> y(y_array, num_nodes);
+    ViewCArrayKokkos<double> x(x_array, num_nodes);
+    ViewCArrayKokkos<double> y(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    rc=zc=0.0;
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++){
+    rc = zc = 0.0;
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
-    rc+=0.25*y(node_lid);
-    zc+=0.25*x(node_lid);
+        rc += 0.25 * y(node_lid);
+        zc += 0.25 * x(node_lid);
     } // end for
 
     /* ensight node order   0 1 2 3
        Barlow node order    1 2 3 4
     */
-    
-    A12 = heron(x(0),y(0),zc,rc,x(1),y(1));
-    A23 = heron(x(1),y(1),zc,rc,x(2),y(2));
-    A34 = heron(x(2),y(2),zc,rc,x(3),y(3));
-    A41 = heron(x(3),y(3),zc,rc,x(0),y(0));
 
-    corner_areas(0)=(5.*A41+5.*A12+A23+A34)/12.;
-    corner_areas(1)=(A41+5.*A12+5.*A23+A34)/12.;
-    corner_areas(2)=(A41+A12+5.*A23+5.*A34)/12.;
-    corner_areas(3)=(5.*A41+A12+A23+5.*A34)/12.;
+    A12 = heron(x(0), y(0), zc, rc, x(1), y(1));
+    A23 = heron(x(1), y(1), zc, rc, x(2), y(2));
+    A34 = heron(x(2), y(2), zc, rc, x(3), y(3));
+    A41 = heron(x(3), y(3), zc, rc, x(0), y(0));
 
-
+    corner_areas(0) = (5. * A41 + 5. * A12 + A23 + A34) / 12.;
+    corner_areas(1) = (A41 + 5. * A12 + 5. * A23 + A34) / 12.;
+    corner_areas(2) = (A41 + A12 + 5. * A23 + 5. * A34) / 12.;
+    corner_areas(3) = (5. * A41 + A12 + A23 + 5. * A34) / 12.;
 
     return;
-    
 } // end subroutine
-

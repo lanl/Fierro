@@ -92,6 +92,7 @@ private:
   ROL::Ptr<ROL_MV> ROL_Temperatures;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> all_node_temperatures_distributed_temp;
+  real_t initial_heat_capacity_potential,objective_sign;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
 
@@ -114,7 +115,7 @@ public:
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
       current_step = 0;
-      
+      objective_sign = 1;
       //deep copy solve data into the cache variable
       FEM_->all_cached_node_temperatures_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_temperatures_distributed), Teuchos::Copy));
       all_node_temperatures_distributed_temp = FEM_->all_node_temperatures_distributed;
@@ -123,15 +124,34 @@ public:
       ROL_Temperatures = ROL::makePtr<ROL_MV>(FEM_->node_temperatures_distributed);
 
       real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_Heat);
+      initial_heat_capacity_potential = current_heat_capacity_potential;
+      if(FEM_->simparam->optimization_options.objective_normalization_constant==0){
+        initial_heat_capacity_potential = current_heat_capacity_potential;
+      }
+      else{
+        initial_heat_capacity_potential = FEM_->simparam->optimization_options.objective_normalization_constant;
+      }
+
+      //save initial normalization value for restart data
+      if(FEM_->simparam->output_options.optimization_restart_file){
+        FEM_->simparam->optimization_options.objective_normalization_constant = initial_heat_capacity_potential;
+      }
+      if(FEM_->simparam->optimization_options.maximize_flag){
+        objective_sign = -1;
+      }
       std::cout.precision(10);
       if(FEM_->myrank==0)
-      std::cout << "INITIAL HEAT CAPACITY POTENTIAL " << current_heat_capacity_potential << std::endl;
+      std::cout << "INITIAL HEAT CAPACITY POTENTIAL " << initial_heat_capacity_potential << std::endl;
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
-    //debug
-    std::ostream &out = std::cout;
-    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    // //debug
+    // std::ostream &out = std::cout;
+    // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
 
     current_step++;
     ROL::Ptr<const MV> zp = getVector(z);
@@ -167,22 +187,26 @@ public:
       //update deformation variables
       FEM_->update_linear_solve(zp, current_step);
       if(FEM_->myrank==0)
-      *fos << "called Trial" << std::endl;
+      std::cout << "called Trial" << std::endl;
     }
     else { // ROL::UpdateType::Temp
       // This is a new value of x used for,
       // e.g., finite-difference checks
       if(FEM_->myrank==0)
-      *fos << "called Temp" << std::endl;
+      std::cout << "called Temp" << std::endl;
       FEM_->all_node_temperatures_distributed = all_node_temperatures_distributed_temp;
       FEM_->comm_variables(zp);
       FEM_->update_linear_solve(zp, current_step);
     }
 
     //decide to output current optimization state
-    if(current_step%FEM_->simparam_TO.optimization_output_freq==0)
+    if(current_step%FEM_->simparam->optimization_options.optimization_output_freq==0)
         FEM_->Implicit_Solver_Pointer_->output_design(current_step);
   }
+
+  /* --------------------------------------------------------------------------------------
+   Update objective value with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
     //std::cout << "Started obj value on task " <<FEM_->myrank  << std::endl;
@@ -227,15 +251,15 @@ public:
     real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_Heat);
     std::cout.precision(10);
     if(FEM_->myrank==0)
-    std::cout << "CURRENT HEAT CAPACITY POTENTIAL " << current_heat_capacity_potential << std::endl;
+    std::cout << "CURRENT NORMALIZED HEAT CAPACITY POTENTIAL " << current_heat_capacity_potential/initial_heat_capacity_potential << std::endl;
 
     //std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
-    return current_heat_capacity_potential;
+    return objective_sign*current_heat_capacity_potential/initial_heat_capacity_potential;
   }
 
-  //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //g.zero();
-  //}
+  /* --------------------------------------------------------------------------------------
+   Update gradient vector (g) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
   
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
     //std::cout << "Started obj gradient on task " <<FEM_->myrank  << std::endl;
@@ -263,7 +287,7 @@ public:
 
     if(nodal_density_flag_){
       FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
-      gp->scale(-1);
+      gp->scale(-objective_sign/initial_heat_capacity_potential);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -299,11 +323,15 @@ public:
     //std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
   }
   
-  
+  /* --------------------------------------------------------------------------------------
+   Update Hessian vector product (hv) using the differential design vector (v) and
+   the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //debug
-    std::ostream &out = std::cout;
-    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    // //debug
+    // std::ostream &out = std::cout;
+    // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
     // Unwrap hv
     ROL::Ptr<MV> hvp = getVector(hv);
 
@@ -316,13 +344,13 @@ public:
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
-    hvp->scale(-1);
+    hvp->scale(-objective_sign/initial_heat_capacity_potential);
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);
     //hvp->describe(*fos,Teuchos::VERB_EXTREME);
     if(FEM_->myrank==0)
-    *fos << "Called Heat Capacity Potential Hessianvec" << std::endl;
+    std::cout << "Called Heat Capacity Potential Hessianvec" << std::endl;
     FEM_->hessvec_count++;
   }
 /*

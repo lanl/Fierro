@@ -1,0 +1,37 @@
+name: Ubuntu Build EVPFFT
+
+# Controls when the workflow will run. Currently manually ran
+on: 
+  workflow_dispatch:
+    
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: update the package list
+      run:
+        sudo apt-get update
+      shell: bash
+    - name: Install build tools
+      run:
+        sudo apt-get install build-essential
+      shell: bash
+    - name: Install MPI
+      run: |
+        sudo apt-get install libopenmpi-dev openmpi-bin
+        echo "MPI_OPTS=--oversubscribe" >> $GITHUB_ENV
+    - name: Install cmake
+      run:
+        sudo apt-get -y install cmake
+      shell: bash
+    - name: Run build script
+      run: |
+         chmod +x ./scripts/build-scripts/build_evpfft.sh # Make sure permission is correct
+         ./scripts/build-scripts/build_evpfft.sh --heffte_build_type=fftw --build_fftw --build_hdf5 --kokkos_build_type=openmp  --machine=linux --num_jobs=4
+      working-directory: ./src/EVPFFT
+      shell: bash

@@ -1,0 +1,101 @@
+num_dims: 3
+dynamic_options:
+  time_initial: 0.0
+  time_final: 0.6
+  dt_min: 1.e-8
+  dt_max: 1.e-3
+  dt_start: 1.e-5
+  cycle_stop: 2000000
+  output_time_sequence_level: low
+
+mesh_generation_options:
+  type: Box
+  origin: [0, 0, 0]
+  length: [1.2, 1.2, 1.2]
+  num_elems: [32, 32, 32]
+
+output_options:
+  timer_output_level: thorough
+  graphics_step: 2.0
+  output_file_format: vtk
+  write_initial: false
+  write_final: false
+
+fea_module_parameters:
+  - material_id: 0
+    type: Dynamic_Elasticity
+    boundary_conditions:
+        # Tag X plane
+      - surface: 
+          type: x_plane
+          plane_position: 0.0
+        type: reflected
+        # Tag Y plane
+      - surface: 
+          type: y_plane
+          plane_position: 0.0
+        type: reflected
+        # Tag Z plane
+      - surface: 
+          type: z_plane
+          plane_position: 0.0
+        type: reflected
+    loading_conditions:
+        # Load radially around 0 0 0 corner
+      - volume: 
+          type: sphere
+          radius1: 0.0
+          radius2: 0.1125
+        type: body_force
+        component_x: 0.0001
+        component_y: 0.0001
+        component_z: 0.0001
+
+materials:
+    #eos model is required
+  - id: 0
+    eos_model: ideal_gas
+    strength_model: none
+    elastic_modulus: 10
+    q1: 1.0
+    q2: 0
+    q1ex: 1.0
+    q2ex: 0.0
+    eos_global_vars:
+      - 1.666666666666667
+      - 1.0E-14
+      - 1.0
+
+regions:
+  - volume: 
+      type: global
+    material_id: 0
+    den: 1.0
+    sie: 1.e-10
+        
+    velocity: cartesian
+    u: 0.0
+    v: 0.0
+    w: 0.0
+    # energy source initial conditions
+  - volume: 
+      type: sphere
+      radius1: 0.0
+      radius2: 0.1125
+    material_id: 0
+    den: 1.0
+    ie: 0.25833839995946534
+        
+    velocity: cartesian
+    u: 0.0
+    v: 0.0
+    w: 0.0
+      
+optimization_options:
+    optimization_process: topology_optimization
+    optimization_objective: minimize_kinetic_energy
+    density_epsilon: 0.01
+    constraints:
+      - type: mass
+        relation: equality
+        value: 0.15

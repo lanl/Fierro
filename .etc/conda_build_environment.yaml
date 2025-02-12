@@ -1,0 +1,10 @@
+name: build-env
+channels:
+  - conda-forge
+  - fierromechanics
+  - defaults
+dependencies:
+  - boa # For building
+  - conda-build
+  - anaconda-client # For uploading
+  - python=3.8

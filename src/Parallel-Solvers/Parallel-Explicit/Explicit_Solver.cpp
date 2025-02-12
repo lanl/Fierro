@@ -54,34 +54,21 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
-#include <Tpetra_CrsMatrix.hpp>
-
-#include <Xpetra_MultiVector.hpp>
-#include "Tpetra_Details_makeColMap.hpp"
-#include "Tpetra_Details_DefaultTypes.hpp"
-#include "Tpetra_Details_FixedHashTable.hpp"
 #include "Tpetra_Import.hpp"
 
 #include "elements.h"
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_Explicit.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
-#include "FEA_Module.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
+#include "Simulation_Parameters/FEA_Module/FEA_Module_Headers.h"
 #include "FEA_Module_SGH.h"
+//#include "FEA_Module_Eulerian.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "FEA_Module_Inertial.h"
 #include "Explicit_Solver.h"
 #include "mesh.h"
 #include "state.h"
-#include "Kinetic_Energy_Minimize.h"
-
-//Repartition Package
-#include <Zoltan2_XpetraMultiVectorAdapter.hpp>
-#include <Zoltan2_PartitioningProblem.hpp>
-#include <Zoltan2_PartitioningSolution.hpp>
-#include <Zoltan2_InputTraits.hpp>
 
 //Optimization Package
 #include "ROL_Algorithm.hpp"
@@ -99,9 +86,7 @@
 #include <ROL_TpetraMultiVector.hpp>
 
 //Objective Functions and Constraint Functions
-//#include "Topology_Optimization_Function_Headers.h"
-#include "Mass_Constraint.h"
-#include "Moment_of_Inertia_Constraint.h"
+#include "Explicit_Optimization_Function_Headers.h"
 
 #define BUFFER_LINES 20000
 #define MAX_WORD 30
@@ -111,6 +96,7 @@
 #define BC_EPSILON 1.0e-8
 
 using namespace utils;
+using namespace mtr;
 
 /*
 
@@ -120,18 +106,13 @@ each surface to use for hammering metal into to form it.
 
 */
 
-Explicit_Solver::Explicit_Solver() : Solver(){
+Explicit_Solver::Explicit_Solver(Simulation_Parameters_Explicit params) : Solver(params) {
   //create parameter objects
-  simparam = Simulation_Parameters_Explicit();
-  simparam_dynamic_opt = Simulation_Parameters_Dynamic_Optimization();
-  //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
-  // ---- Read input file, define state and boundary conditions ---- //
-  //simparam->Simulation_Parameters::input();
-
+  simparam = params;
   //create ref element object
   ref_elem = std::make_shared<elements::ref_element>();
   //create mesh objects
-  //init_mesh = new swage::mesh_t(simparam);
+  //init_mesh = new swage::mesh_t(simparaA);
   mesh = std::make_shared<mesh_t>();
 
   element_select = std::make_shared<elements::element_selector>();
@@ -161,7 +142,7 @@ Explicit_Solver::~Explicit_Solver(){
 //==============================================================================
 
 
-void Explicit_Solver::run(int argc, char *argv[]){
+void Explicit_Solver::run() {
     
   //MPI info
   world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
@@ -170,66 +151,64 @@ void Explicit_Solver::run(int argc, char *argv[]){
   
   if(myrank == 0){
     std::cout << "Starting Lagrangian SGH code" << std::endl;
-      // check to see of a mesh was supplied when running the code
-    if (argc == 1) {
-      std::cout << "\n\n**********************************\n\n";
-      std::cout << " ERROR:\n";
-      std::cout << " Please supply a mesh file as the second command line argument \n";
-      std::cout << "**********************************\n\n" << std::endl;
-      return;
-    }
   }
 
   //initialize Trilinos communicator class
   comm = Tpetra::getDefaultComm();
-  int num_dim = simparam.num_dims;
-
-  //error handle for file input name
-  //if(argc < 2)
-  //yaml file reader for simulation parameters
-  filename = std::string(argv[1]);
-  if(filename.find(".yaml") != std::string::npos){
-    simparam_dynamic_opt = Yaml::from_file<Simulation_Parameters_Dynamic_Optimization>(filename);
-    simparam = Yaml::from_file<Simulation_Parameters_Explicit>(filename);
-  }
-
-  //init time
-  //time_value = simparam->time_initial;
-
-  const char* mesh_file_name = simparam.input_options.mesh_file_name.c_str();
-  switch (simparam.input_options.mesh_file_format) {
-    case MESH_FORMAT::tecplot:
-      read_mesh_tecplot(mesh_file_name);
-      break;
-    case MESH_FORMAT::vtk:
-      read_mesh_vtk(mesh_file_name);
-      break;
-    case MESH_FORMAT::ansys_dat:
-      read_mesh_ansys_dat(mesh_file_name);
-      break;
-    case MESH_FORMAT::ensight:
-      read_mesh_ensight(mesh_file_name);
-      break;
+  
+  if (simparam.input_options.has_value()) {
+    const Input_Options& input_options = simparam.input_options.value();
+    const char* mesh_file_name = input_options.mesh_file_name.c_str();
+    switch (input_options.mesh_file_format) {
+      case MESH_FORMAT::tecplot:
+        read_mesh_tecplot(mesh_file_name);
+        break;
+      case MESH_FORMAT::vtk:
+        read_mesh_vtk(mesh_file_name);
+        break;
+      case MESH_FORMAT::ansys_dat:
+        read_mesh_ansys_dat(mesh_file_name);
+        break;
+      case MESH_FORMAT::ensight:
+        read_mesh_ensight(mesh_file_name);
+        break;
+      case MESH_FORMAT::abaqus_inp:
+        read_mesh_abaqus_inp(mesh_file_name);
+        break;
+      default:
+        *fos << "ERROR: MESH FILE FORMAT NOT SUPPORTED BY EXPLICIT SOLVER" << std::endl;
+        exit_solver(0);
+  
+    }
+  } else {
+    generate_mesh(simparam.mesh_generation_options.value());
   }
 
   //debug
   //return;
   init_maps();
 
+  //print element imbalance stats
+  long long int rnum_global_sum = 0;
+  long long int temp_rnum_elem = rnum_elem;
+  MPI_Allreduce(&temp_rnum_elem, &rnum_global_sum, 1, MPI_LONG_LONG_INT, MPI_SUM, MPI_COMM_WORLD);
+  double local_imbalance, max_imbalance, avg_elem;
+  max_imbalance = 0;
+  avg_elem = rnum_global_sum/((double) nranks);
+  local_imbalance = rnum_elem/avg_elem;
+  MPI_Allreduce(&local_imbalance, &max_imbalance, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+  *fos << "Element imbalance: " << max_imbalance << std::endl;
+
   init_state_vectors();
         
   //set initial saved coordinates
   //initial_node_coords_distributed->assign(*node_coords_distributed);
-  all_initial_node_coords_distributed->assign(*all_node_coords_distributed);
-  initial_node_coords_distributed = Teuchos::rcp(new MV(*all_initial_node_coords_distributed, map));
   
-  std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
+  //std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
   
   //initialize timing
-  // TODO: If this is false, we just get bad numbers. Not 
-  // no numbers.
-  if(simparam.report_runtime)
-    init_clock();
+  init_clock();
 
   //initialize runtime counters and timers
   int hessvec_count = 0;
@@ -244,9 +223,8 @@ void Explicit_Solver::run(int argc, char *argv[]){
 
   //set boundary conditions
   //generate_tcs();
-
   //initialize TO design variable storage
-  if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on)
+  if(simparam.topology_optimization_on || simparam.shape_optimization_on)
     init_design();
   //process process list of requested FEA modules to construct list of objects
   FEA_module_setup();
@@ -339,10 +317,11 @@ void Explicit_Solver::run(int argc, char *argv[]){
   //set initial saved velocities
   initial_node_velocities_distributed->assign(*node_velocities_distributed);
     
-  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
-      //design_node_densities_distributed->randomize(1,1);
-      setup_optimization_problem();
-      //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+  if(simparam.topology_optimization_on){
+    setup_topology_optimization_problem();
+  }
+  else if(simparam.shape_optimization_on){
+    setup_shape_optimization_problem();
   }
   else{
     // ---------------------------------------------------------------------
@@ -350,7 +329,7 @@ void Explicit_Solver::run(int argc, char *argv[]){
     // ---------------------------------------------------------------------  
       //sgh_module->sgh_solve();
       for(int imodule = 0; imodule < nfea_modules; imodule++){
-        if(myrank == 0)
+        if(myrank == 0) //TODO; implement solve bool so modules like the inertial module dont print this
           std::cout << "Starting solve for FEA module " << imodule <<std::endl <<std::flush;
         //allocate and fill sparse structures needed for global solution in each FEA module
         fea_modules[imodule]->solve();
@@ -360,8 +339,6 @@ void Explicit_Solver::run(int argc, char *argv[]){
   // clean up all material models
   //sgh_module->cleanup_material_models();
   for(int imodule = 0; imodule < nfea_modules; imodule++){
-    if(myrank == 0)
-      std::cout << "Starting solve for FEA module " << imodule <<std::endl <<std::flush;
     //allocate and fill sparse structures needed for global solution in each FEA module
     fea_modules[imodule]->module_cleanup();
   }
@@ -377,18 +354,18 @@ void Explicit_Solver::run(int argc, char *argv[]){
   }
   */
 
-  std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
+  *fos << " Runtime of code is "<< current_cpu-initial_CPU_time << " comms time "
             << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
   
-  if(simparam.timer_output_level == TIMER_VERBOSITY::thorough){
-    std::cout << " OUTPUT TIME OF CODE ON TASK " << myrank << " is "<< output_time << std::endl;
+  if(simparam.output_options.timer_output_level == TIMER_VERBOSITY::thorough){
+    *fos << " Output time of code is "<< output_time << std::endl;
   }
 
   //parallel_vtk_writer();
   
   //test forward solve call
   int ntests = 0;
-  if(simparam_dynamic_opt.topology_optimization_on){
+  if(simparam.topology_optimization_on){
     for(int itest = 0; itest < ntests; itest++){
       design_node_densities_distributed->randomize(1,1);
       //test_node_densities_distributed = Teuchos::rcp(new MV(*design_node_densities_distributed));
@@ -422,9 +399,10 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
 
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
-  bool restart_file = simparam.restart_file;
+  Input_Options input_options = simparam.input_options.value();
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
+  bool restart_file = simparam.restart_file; 
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring, token;
@@ -435,6 +413,9 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
   GO node_gid;
   real_t dof_value;
   host_vec_array node_densities;
+  bool zero_index_base = input_options.zero_index_base;
+  int negative_index_found = 0;
+  int global_negative_index_found = 0;
   //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
   //read the mesh
@@ -551,7 +532,7 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
     
-  std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+  //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
   // read the initial mesh coordinates
   // x-coords
@@ -559,9 +540,9 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
   stores node data in a buffer and communicates once the buffer cap is reached
   or the data ends*/
 
-  words_per_line = simparam.input_options.words_per_line;
+  words_per_line = input_options.words_per_line;
   //if(restart_file) words_per_line++;
-  elem_words_per_line = simparam.input_options.elem_words_per_line;
+  elem_words_per_line = input_options.elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
@@ -873,11 +854,25 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
         //as we loop through the nodes belonging to this element we store them
         //if any of these nodes belongs to this rank this list is used to store the element locally
         node_gid = atoi(&read_buffer(scan_loop,inode,0));
-        node_store(inode-elem_words_per_line_no_nodes) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+        if(zero_index_base)
+          node_store(inode-elem_words_per_line_no_nodes) = node_gid; //subtract 1 since file index start is 1 but code expects 0
+        else
+          node_store(inode-elem_words_per_line_no_nodes) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+        if(node_store(inode-elem_words_per_line_no_nodes) < 0){
+          negative_index_found = 1;
+        }
         //first we add the elements to a dynamically allocated list
-        if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
-          assign_flag = 1;
-          rnum_elem++;
+        if(zero_index_base){
+          if(map->isNodeGlobalElement(node_gid)&&!assign_flag){
+            assign_flag = 1;
+            rnum_elem++;
+          }
+        }
+        else{
+          if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
+            assign_flag = 1;
+            rnum_elem++;
+          }
         }
       }
 
@@ -917,7 +912,7 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
       while (!line_parse.eof()){
         line_parse >> substring;
         //std::cout << substring << std::endl;
-        if(!substring.compare("Supports")||!substring.compare("Pressure")){
+        if(!substring.compare("Supports")||!substring.compare("Pressure")||!substring.compare("Displacements")){
           No_Conditions = searching_for_conditions = false;
           break;
         }
@@ -934,7 +929,6 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
     // check that the input file has configured some kind of acceptable module
     simparam.validate_module_is_specified(FEA_MODULE_TYPE::Elasticity);
     simparam.fea_module_must_read.insert(FEA_MODULE_TYPE::Elasticity);
-    // TODO: What about simparam_dynamic_opt?
   }
 
   // Close mesh input file if no further readin is done by FEA modules for conditions
@@ -965,14 +959,27 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    for(int inode = 0; inode < nodes_per_element; inode++)
+    for(int inode = 0; inode < nodes_per_element; inode++){
       nodes_in_elem(ielem, inode) = element_temp[ielem*nodes_per_element + inode];
+    }
 
   //view storage for all local elements connected to local nodes on this rank
   Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
+  for(int ielem = 0; ielem < rnum_elem; ielem++){
     All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
+    if(global_indices_temp[ielem]<0){
+      negative_index_found = 1;
+    }
+  }
+  
+  MPI_Allreduce(&negative_index_found,&global_negative_index_found,1,MPI_INT,MPI_MAX,MPI_COMM_WORLD);
+  if(global_negative_index_found){
+    if(myrank==0){
+    std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+    }
+    exit_solver(0);
+  }
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
@@ -1043,18 +1050,21 @@ void Explicit_Solver::init_state_vectors(){
   int num_dim = simparam.num_dims;
   //allocate node_velocities
   //node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
-  initial_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_initial_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  initial_node_coords_distributed = Teuchos::rcp(new MV(*all_initial_node_coords_distributed, map));
+  all_initial_node_coords_distributed->assign(*all_node_coords_distributed);
   initial_node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   node_velocities_distributed = Teuchos::rcp(new MV(*all_node_velocities_distributed, map));
-  ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
-  if(simparam_dynamic_opt.topology_optimization_on){
+  //ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
+  ghost_node_velocities_distributed = Teuchos::rcp(new MV(*all_node_velocities_distributed, ghost_node_map, nlocal_nodes));
+  if(simparam.topology_optimization_on){
     test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   }
-  if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on){
+  if(simparam.topology_optimization_on || simparam.shape_optimization_on){
     corner_value_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element);
     corner_vector_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element,num_dim);
+    corner_gradient_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element, num_dim, max_nodes_per_element, num_dim);
   }
   all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, 1));
@@ -1065,79 +1075,52 @@ void Explicit_Solver::init_state_vectors(){
 ------------------------------------------------------------------------- */
 
 void Explicit_Solver::FEA_module_setup(){
+  nfea_modules = simparam.fea_module_parameters.size();
+  fea_module_must_read = simparam.fea_module_must_read;
 
-  std::vector<FEA_MODULE_TYPE> FEA_Module_List;
-  if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on){
-    FEA_Module_List = simparam.FEA_Modules_List = simparam_dynamic_opt.FEA_Modules_List;
-    nfea_modules = FEA_Module_List.size();
-    fea_module_must_read = simparam.fea_module_must_read = simparam_dynamic_opt.fea_module_must_read;
-  }
-  else{
-    //nfea_modules = simparam->nfea_modules;
-    FEA_Module_List = simparam.FEA_Modules_List;
-    nfea_modules = FEA_Module_List.size();
-    fea_module_must_read = simparam.fea_module_must_read;
-  }
   //allocate lists to size
-  fea_module_types = std::vector<FEA_MODULE_TYPE>(nfea_modules);
-  fea_modules = std::vector<FEA_Module*>(nfea_modules);
-  bool module_found = false;
-  
-  //list should not have repeats since that was checked by simulation parameters setups
-  
-  for(int imodule = 0; imodule < nfea_modules; imodule++){
-    //decides which FEA module objects to setup based on string.
-    //automate selection list later; use std::map maybe?
-    if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::SGH){
-      fea_module_types[imodule] = FEA_MODULE_TYPE::SGH;
-      fea_modules[imodule] = sgh_module = new FEA_Module_SGH(this, mesh);
-      module_found = true;
-      //debug print
-      *fos << " SGH MODULE ALLOCATED AS " <<imodule << std::endl;
-      
-    }
-    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Dynamic_Elasticity){
-      fea_module_types[imodule] = FEA_MODULE_TYPE::Dynamic_Elasticity;
-      fea_modules[imodule] = new FEA_Module_Dynamic_Elasticity(this, mesh);
-      module_found = true;
-      //debug print
-      *fos << " DYNAMIC ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
-      
-    }
-    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Inertial){
-      fea_module_types[imodule] = FEA_MODULE_TYPE::Inertial;
-      fea_modules[imodule] = new FEA_Module_Inertial(this);
-      module_found = true;
-      //debug print
-      *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
-      
-    }
-    else{
-      // TODO: This should be validated earlier.
-      *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" 
-            << FEA_Module_List[imodule] <<"\"" << std::endl;
-      exit_solver(0);
-    }
+  fea_module_types = std::vector<FEA_MODULE_TYPE>();
+  fea_modules = std::vector<FEA_Module*>();
+
+  for (auto& param : simparam.fea_module_parameters) {
+    fea_module_types.push_back(param->type);
+    param->apply(
+      [&](SGH_Parameters& param) {
+        sgh_module = new FEA_Module_SGH(param, this, mesh);
+        fea_modules.push_back(sgh_module);
+      },
+      [&](Dynamic_Elasticity_Parameters& param) {
+        fea_modules.push_back(new FEA_Module_Dynamic_Elasticity(param, this, mesh));
+      },
+      [&](Inertial_Parameters& param) {
+        fea_modules.push_back(new FEA_Module_Inertial(param, this));
+      },
+      [&](const FEA_Module_Parameters& param) {
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" 
+            << param.type <<"\"" << std::endl;
+        exit_solver(0);
+      }
+    );
+
+    *fos << " " << fea_module_types.back() << " MODULE ALLOCATED AS " << fea_module_types.size() - 1 << std::endl;
   }
-  
 }
 
 /* ----------------------------------------------------------------------
    Setup Optimization Problem Object, Relevant Objective, and Constraints
 ------------------------------------------------------------------------- */
 
-void Explicit_Solver::setup_optimization_problem(){
+void Explicit_Solver::setup_topology_optimization_problem(){
   int num_dim = simparam.num_dims;
-  bool nodal_density_flag = simparam_dynamic_opt.nodal_density_flag;
-  int nTO_modules = simparam_dynamic_opt.TO_Module_List.size();
-  //int nmulti_objective_modules = simparam_dynamic_opt->nmulti_objective_modules;
-  std::vector<TO_MODULE_TYPE> TO_Module_List = simparam_dynamic_opt.TO_Module_List;
-  std::vector<FEA_MODULE_TYPE> FEA_Module_List = simparam_dynamic_opt.FEA_Modules_List;
-  std::vector<int> TO_Module_My_FEA_Module = simparam_dynamic_opt.TO_Module_My_FEA_Module;
-  //std::vector<int> Multi_Objective_Modules = simparam_dynamic_opt->Multi_Objective_Modules;
-  //std::vector<real_t> Multi_Objective_Weights = simparam_dynamic_opt->Multi_Objective_Weights;
-  std::vector<std::vector<real_t>> Function_Arguments = simparam_dynamic_opt.Function_Arguments;
-  std::vector<FUNCTION_TYPE> TO_Function_Type = simparam_dynamic_opt.TO_Function_Type;
+  bool nodal_density_flag = simparam.nodal_density_flag;
+  int nOpt_modules = simparam.Optimization_Module_List.size();
+  //int nmulti_objective_modules = simparam->nmulti_objective_modules;
+  std::vector<OPTIMIZATION_MODULE_TYPE> Optimization_Module_List = simparam.Optimization_Module_List;
+  std::vector<int> Optimization_Module_My_FEA_Module = simparam.Optimization_Module_My_FEA_Module;
+  //std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
+  //std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
+  std::vector<std::vector<real_t>> Function_Arguments = simparam.Function_Arguments;
+  std::vector<FUNCTION_TYPE> Optimization_Function_Type = simparam.Optimization_Function_Type;
   std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
 
   std::string constraint_base, constraint_name;
@@ -1155,9 +1138,206 @@ void Explicit_Solver::setup_optimization_problem(){
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
-  std::string filename = "optimization_parameters.xml";
-  auto parlist = ROL::getParametersFromXmlFile( filename );
+
+  Teuchos::RCP<Teuchos::ParameterList> parlist;
+  if(simparam.optimization_options.optimization_parameters_xml_file){
+    std::string xmlFileName = simparam.optimization_options.xml_parameters_file_name;
+    
+    //check if parameter file exists
+    std::ifstream param_file_check(xmlFileName);
+    if (!param_file_check.is_open()) {
+        *fos << "Unable to find xml parameter file required for optimization with the ROL library"  << std::endl;
+        exit_solver(0);
+    }
+    param_file_check.close();
+
+    parlist = ROL::getParametersFromXmlFile(xmlFileName);
+  }
+  else{
+    parlist = Teuchos::rcp(new Teuchos::ParameterList("Inputs"));
+    set_rol_params(parlist);
+  }
   //ROL::ParameterList parlist;
+
+  ROL::Ptr<ROL::BoundConstraint<real_t> > bnd, mma_bnd;
+  // Bound constraint defining the possible range of design density variables
+  ROL::Ptr<ROL::Vector<real_t> > lower_bounds, mma_lower_bounds;
+  ROL::Ptr<ROL::Vector<real_t> > upper_bounds, mma_upper_bounds;
+
+  //set bounds on design variables
+  if(nodal_density_flag){
+    //allocate global vector information
+    upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+    all_lower_bound_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
+    lower_bound_node_densities_distributed = Teuchos::rcp(new MV(*all_lower_bound_node_densities_distributed, map));
+    host_vec_array node_densities_upper_bound = upper_bound_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array node_densities_lower_bound = all_lower_bound_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+    //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
+    for(int inode = 0; inode < nlocal_nodes; inode++){
+      if(simparam.optimization_options.maximum_density<1){
+        node_densities_upper_bound(inode,0) = simparam.optimization_options.maximum_density;
+      }
+      else{
+        node_densities_upper_bound(inode,0) = 1;
+      }
+    }
+    for(int inode = 0; inode < nall_nodes; inode++){
+      if(simparam.optimization_options.minimum_density>simparam.optimization_options.density_epsilon){
+        node_densities_lower_bound(inode,0) = simparam.optimization_options.minimum_density;
+      }
+      else{
+        node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
+      }
+    }
+
+    if(simparam.optimization_options.method_of_moving_asymptotes){
+      Teuchos::RCP<MV> mma_upper_bound_distributed = Teuchos::rcp(new MV(map, 1));
+      Teuchos::RCP<MV> mma_lower_bound_distributed = Teuchos::rcp(new MV(map, 1));
+      
+      mma_lower_bound_distributed->putScalar(-0.1);
+      mma_upper_bound_distributed->putScalar(0.1);
+      mma_lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_lower_bound_distributed);
+      mma_upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_upper_bound_distributed);
+      
+      mma_bnd = ROL::makePtr<ROL::Bounds<real_t>>(mma_lower_bounds, mma_upper_bounds);
+    }
+
+    //set lower bounds for nodes on surfaces with boundary and loading conditions
+    if(!simparam.optimization_options.variable_outer_shell){
+      for(int imodule = 0; imodule < nfea_modules; imodule++){
+        num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
+        for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
+
+          num_bdy_patches_in_set = fea_modules[imodule]->bdy_patches_in_set.stride(iboundary);
+
+          //loop over boundary patches for this boundary set
+          if(simparam.optimization_options.thick_condition_boundary){
+            for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
+                    
+              // get the global id for this boundary patch
+                patch_id = fea_modules[imodule]->bdy_patches_in_set(iboundary, bdy_patch_gid);
+                Surface_Nodes = Boundary_Patches(patch_id).node_set;
+                current_element_index = Boundary_Patches(patch_id).element_id;
+                //debug print of local surface ids
+                //std::cout << " LOCAL SURFACE IDS " << std::endl;
+                //std::cout << local_surface_id << std::endl;
+                //acquire set of nodes for this face
+                for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+                  current_node_index = nodes_in_elem(current_element_index,node_loop);
+                  local_node_index = map->getLocalElement(current_node_index);
+                  node_densities_lower_bound(local_node_index,0) = 1;
+                }// node loop for
+                
+              //if
+              /*
+              else{
+                Surface_Nodes = Boundary_Patches(patch_id).node_set;
+                local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+                //debug print of local surface ids
+                //std::cout << " LOCAL SURFACE IDS " << std::endl;
+                //std::cout << local_surface_id << std::endl;
+                //acquire set of nodes for this face
+                for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+                  current_node_index = Surface_Nodes(node_loop);
+                  if(map->isNodeGlobalElement(current_node_index)){
+                    local_node_index = map->getLocalElement(current_node_index);
+                    node_densities_lower_bound(local_node_index,0) = 1;
+                  }
+                }// node loop for
+              }//if
+              */
+            }//boundary patch for
+          }
+          else{
+            for(int node_loop=0; node_loop < fea_modules[imodule]->num_bdy_nodes_in_set(iboundary); node_loop++){
+              local_node_index = fea_modules[imodule]->bdy_nodes_in_set(iboundary, node_loop);
+              node_densities_lower_bound(local_node_index,0) = 1;
+            }
+          }
+        }//boundary set for
+
+        //set node conditions due to point BCS that might not show up in boundary sets
+        //possible to have overlap in which nodes are set with the previous loop
+        fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
+      }//module for
+
+      //enforce rho=1 on all boundary patches if user setting enabled
+      if(simparam.optimization_options.retain_outer_shell){
+        //loop over boundary patches for this boundary set
+        for (int bdy_patch_gid = 0; bdy_patch_gid < nboundary_patches; bdy_patch_gid++){
+          patch_id = bdy_patch_gid;
+          if(simparam.optimization_options.thick_condition_boundary){
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            current_element_index = Boundary_Patches(patch_id).element_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+              current_node_index = nodes_in_elem(current_element_index,node_loop);
+              local_node_index = all_node_map->getLocalElement(current_node_index);
+              node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
+            }// node loop for
+          }//if
+          else{
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+              current_node_index = Surface_Nodes(node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
+              }
+            }// node loop for
+          }//if
+        }//boundary patch for
+      }
+    }
+
+    //constraints due to specified user regions
+    const size_t num_fills = simparam.optimization_options.volume_bound_constraints.size();
+    const_host_vec_array node_coords_view = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const DCArrayKokkos <Optimization_Bound_Constraint_Region> mat_fill = simparam.optimization_options.optimization_bound_constraint_volumes;
+
+    for(int ifill = 0; ifill < num_fills; ifill++){
+      for(int inode = 0; inode < nlocal_nodes; inode++){
+        real_t node_coords[3];
+        node_coords[0] = node_coords_view(inode,0);
+        node_coords[1] = node_coords_view(inode,1);
+        node_coords[2] = node_coords_view(inode,2);
+        bool fill_this = mat_fill(ifill).volume.contains(node_coords);
+        if(fill_this){
+          node_densities_lower_bound(inode,0) = mat_fill(ifill).set_lower_density_bound;
+          //make sure 0 setting is increased to the epsilon value setting
+          if(node_densities_lower_bound(inode,0) < simparam.optimization_options.density_epsilon){
+            node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
+          }
+          node_densities_upper_bound(inode,0) = mat_fill(ifill).set_upper_density_bound;
+        }
+      }//node for
+    }//fill region for
+
+    //communicate constraints vector
+    lower_bound_node_densities_distributed->doExport(*all_lower_bound_node_densities_distributed, *exporter, Tpetra::ABSMAX, true);
+  }
+  else{
+    //initialize memory for volume storage
+    vec_array Element_Densities_Upper_Bound("Element Densities_Upper_Bound", rnum_elem, 1);
+    vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
+    for(int ielem = 0; ielem < rnum_elem; ielem++){
+      Element_Densities_Upper_Bound(ielem,0) = 1;
+      Element_Densities_Lower_Bound(ielem,0) = simparam.optimization_options.density_epsilon;
+    }
+
+    //create global vector
+    Global_Element_Densities_Upper_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Upper_Bound));
+    Global_Element_Densities_Lower_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Lower_Bound));
+  }
 
   //Design variables to optimize
   ROL::Ptr<ROL::Vector<real_t>> x;
@@ -1168,56 +1348,43 @@ void Explicit_Solver::setup_optimization_problem(){
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities);
   
   //Instantiate (the one) objective function for the problem
-  ROL::Ptr<ROL::Objective<real_t>> obj;
+  ROL::Ptr<ROL::Objective<real_t>> obj, sub_obj;
   bool objective_declared = false;
-  for(int imodule = 0; imodule < nTO_modules; imodule++){
-    if(TO_Function_Type[imodule] == FUNCTION_TYPE::OBJECTIVE){
+  for(int imodule = 0; imodule < nOpt_modules; imodule++){
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::OBJECTIVE){
       //check if previous module already defined an objective, there must be one objective module
       if(objective_declared){
         // TODO: Put this validation earlier.
         *fos << "PROGRAM IS ENDING DUE TO ERROR; ANOTHER OBJECTIVE FUNCTION WITH NAME \"" 
-              << TO_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
+              << Optimization_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
           exit_solver(0);
       }
-      if(TO_Module_List[imodule] == TO_MODULE_TYPE::Kinetic_Energy_Minimize){
+      if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_TopOpt){
         //debug print
-        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
-      }
-      /*
-      else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
-        //debug print
-        *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
-      }
-      */
-      //Multi-Objective case
-      /*
-      else if(TO_Module_List[imodule] == "Multi_Objective"){
-        //allocate vector of Objective Functions to pass
-        Multi_Objective_Terms = std::vector<ROL::Ptr<ROL::Objective<real_t>>>(nmulti_objective_modules);
-        for(int imulti = 0; imulti < nmulti_objective_modules; imulti++){
-          //get module index for objective term
-          module_id = Multi_Objective_Modules[imulti];
-          if(TO_Module_List[module_id] == "Strain_Energy_Minimize"){
-            //debug print
-            *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
-            Multi_Objective_Terms[imulti] = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
-          }
-          else if(TO_Module_List[module_id] == "Heat_Capacity_Potential_Minimize"){
-            //debug print
-            *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
-            Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
-          }
+        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        if(simparam.optimization_options.method_of_moving_asymptotes){
+          sub_obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
         }
-        //allocate multi objective function
-        obj = ROL::makePtr<MultiObjective_TopOpt>(Multi_Objective_Terms, Multi_Objective_Weights);
+        else{
+          obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+        }
       }
-      */
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_TopOpt){
+        //debug print
+        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        if(simparam.optimization_options.method_of_moving_asymptotes){
+          sub_obj = ROL::makePtr<InternalEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
+        }
+        else{
+          obj = ROL::makePtr<InternalEnergyMinimize_TopOpt>(this, nodal_density_flag);
+        }
+      }
       else{
         // TODO: Put validation earlier
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" 
-              << TO_Module_List[imodule] << "\"" << std::endl;
+              << Optimization_Module_List[imodule] << "\"" << std::endl;
         exit_solver(0);
       }
       objective_declared = true;
@@ -1248,35 +1415,35 @@ void Explicit_Solver::setup_optimization_problem(){
   //problem->addConstraint("equality Constraint 3",eq_constraint3,constraint_mul3);
   //problem->addLinearConstraint("Equality Constraint",eq_constraint,constraint_mul);
   
-  for(int imodule = 0; imodule < nTO_modules; imodule++){
+  for(int imodule = 0; imodule < nOpt_modules; imodule++){
     number_union.str(constraint_base);
     number_union << imodule + 1;
     constraint_name = number_union.str();
     ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
     ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
-    if(TO_Function_Type[imodule] == FUNCTION_TYPE::EQUALITY_CONSTRAINT){
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::EQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
-      if(TO_Module_List[imodule]==TO_MODULE_TYPE::Mass_Constraint){
+      if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint_TopOpt){
         
-        *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false, true);
+        *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false, true);
       }
-      else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
-        *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false, true);
+      else if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt){
+        *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false, true);
       }
       else{
         // TODO: Put validation earlier
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED EQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" 
-              << TO_Module_List[imodule] <<"\"" << std::endl;
+              << Optimization_Module_List[imodule] <<"\"" << std::endl;
         exit_solver(0);
       }
       *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
       problem->addConstraint(constraint_name, eq_constraint, constraint_mul);
     }
 
-    if(TO_Function_Type[imodule] == FUNCTION_TYPE::INEQUALITY_CONSTRAINT){
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::INEQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint;
       ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,Function_Arguments[imodule][0]);
@@ -1284,18 +1451,18 @@ void Explicit_Solver::setup_optimization_problem(){
       ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
       ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
       ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
-      if(TO_Module_List[imodule]==TO_MODULE_TYPE::Mass_Constraint){
-        *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, true, true);
+      if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint_TopOpt){
+        *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, 0, true, true);
       }
-      else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
-        *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], true, true);
+      else if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt){
+        *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], true, true);
       }
       else{
         // TODO: Put this validation earlier
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED INEQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" 
-              << TO_Module_List[imodule] << "\"" << std::endl;
+              << Optimization_Module_List[imodule] << "\"" << std::endl;
         exit_solver(0);
       }
       *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
@@ -1304,108 +1471,6 @@ void Explicit_Solver::setup_optimization_problem(){
     number_union.clear();
   }
 
-  //set bounds on design variables
-  if(nodal_density_flag){
-    dual_vec_array dual_node_densities_upper_bound = dual_vec_array("dual_node_densities_upper_bound", nlocal_nodes, 1);
-    dual_vec_array dual_node_densities_lower_bound = dual_vec_array("dual_node_densities_lower_bound", nlocal_nodes, 1);
-    host_vec_array node_densities_upper_bound = dual_node_densities_upper_bound.view_host();
-    host_vec_array node_densities_lower_bound = dual_node_densities_lower_bound.view_host();
-    //notify that the host view is going to be modified in the file readin
-    dual_node_densities_upper_bound.modify_host();
-    dual_node_densities_lower_bound.modify_host();
-
-    //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
-    for(int inode = 0; inode < nlocal_nodes; inode++){
-      node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = simparam_dynamic_opt.optimization_options.value().density_epsilon;
-    }
-
-    //set lower bounds for nodes on surfaces with boundary and loading conditions
-    for(int imodule = 0; imodule < nfea_modules; imodule++){
-      num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
-      for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
-
-        num_bdy_patches_in_set = fea_modules[imodule]->bdy_patches_in_set.stride(iboundary);
-
-        //loop over boundary patches for this boundary set
-        if(simparam_dynamic_opt.thick_condition_boundary){
-          for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
-                  
-            // get the global id for this boundary patch
-              patch_id = fea_modules[imodule]->bdy_patches_in_set(iboundary, bdy_patch_gid);
-              Surface_Nodes = Boundary_Patches(patch_id).node_set;
-              current_element_index = Boundary_Patches(patch_id).element_id;
-              //debug print of local surface ids
-              //std::cout << " LOCAL SURFACE IDS " << std::endl;
-              //std::cout << local_surface_id << std::endl;
-              //acquire set of nodes for this face
-              for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
-                current_node_index = nodes_in_elem(current_element_index,node_loop);
-                if(map->isNodeGlobalElement(current_node_index)){
-                  local_node_index = map->getLocalElement(current_node_index);
-                  node_densities_lower_bound(local_node_index,0) = 1;
-                }
-              }// node loop for
-              
-            //if
-            /*
-            else{
-              Surface_Nodes = Boundary_Patches(patch_id).node_set;
-              local_surface_id = Boundary_Patches(patch_id).local_patch_id;
-              //debug print of local surface ids
-              //std::cout << " LOCAL SURFACE IDS " << std::endl;
-              //std::cout << local_surface_id << std::endl;
-              //acquire set of nodes for this face
-              for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
-                current_node_index = Surface_Nodes(node_loop);
-                if(map->isNodeGlobalElement(current_node_index)){
-                  local_node_index = map->getLocalElement(current_node_index);
-                  node_densities_lower_bound(local_node_index,0) = 1;
-                }
-              }// node loop for
-            }//if
-            */
-          }//boundary patch for
-        }
-        else{
-          for(int node_loop=0; node_loop < fea_modules[imodule]->num_bdy_nodes_in_set(iboundary); node_loop++){
-            local_node_index = fea_modules[imodule]->bdy_nodes_in_set(iboundary, node_loop);
-            node_densities_lower_bound(local_node_index,0) = 1;
-          }
-        }
-      }//boundary set for
-
-      //set node conditions due to point BCS that might not show up in boundary sets
-      //possible to have overlap in which nodes are set with the previous loop
-      fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
-    }//module for
-  
-    //sync device view
-    dual_node_densities_upper_bound.sync_device();
-    dual_node_densities_lower_bound.sync_device();
-    
-    //allocate global vector information
-    upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities_upper_bound));
-    lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities_lower_bound));
-  
-  }
-  else{
-    //initialize memory for volume storage
-    vec_array Element_Densities_Upper_Bound("Element Densities_Upper_Bound", rnum_elem, 1);
-    vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
-    for(int ielem = 0; ielem < rnum_elem; ielem++){
-      Element_Densities_Upper_Bound(ielem,0) = 1;
-      Element_Densities_Lower_Bound(ielem,0) = simparam_dynamic_opt.optimization_options.value().density_epsilon;
-    }
-
-    //create global vector
-    Global_Element_Densities_Upper_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Upper_Bound));
-    Global_Element_Densities_Lower_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Lower_Bound));
-  }
-    
-  // Bound constraint defining the possible range of design density variables
-  ROL::Ptr<ROL::Vector<real_t> > lower_bounds;
-  ROL::Ptr<ROL::Vector<real_t> > upper_bounds;
   if(nodal_density_flag){
     lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(lower_bound_node_densities_distributed);
     upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(upper_bound_node_densities_distributed);
@@ -1414,7 +1479,7 @@ void Explicit_Solver::setup_optimization_problem(){
     lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities_Lower_Bound);
     upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities_Upper_Bound);
   }
-  ROL::Ptr<ROL::BoundConstraint<real_t> > bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
+  bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
   problem->addBoundConstraint(bnd);
 
   //compute initial constraint satisfaction
@@ -1433,22 +1498,49 @@ void Explicit_Solver::setup_optimization_problem(){
   problem->finalize(false,true,*fos);
   //problem->check(true,std::cout);
 
+  // //check area normal gradients
+  // ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_debug_coords =
+  // ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(all_node_coords_distributed);
+  // Teuchos::RCP<MV> debug_directions_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  // ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> debug_rol_d =
+  // ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(debug_directions_distributed);
+  // debug_directions_distributed->randomize(-0.00375,0.00375);
+  // if(myrank==0){
+  // for(int inode = 0; inode < 8; inode++){
+  //   for(int idim = 0; idim < num_dim; idim++){
+  //     std::cout<< "AREA NORMALS GRADIENT FOR NODE " << inode << " AND DIM " << idim << std::endl;
+  //     ROL::Ptr<ROL::Objective<real_t>> debug_obj = ROL::makePtr<AreaNormals>(this, inode, idim, nodal_density_flag);
+  //     //debug_directions_distributed->putScalar(-0.1);
+  //     //debug_directions_distributed->norm2(debug_direction_norm);
+  //     //debug_directions_distributed->scale(1/debug_direction_norm(0));
+  //     //set all but first component to 0 for debug
+  //     host_vec_array debug_directions = debug_directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //     //for(int init = 1; init < nlocal_nodes; init++)
+  //     //directions(4,0) = -0.3;
+  //     debug_obj->checkGradient(*rol_debug_coords, *debug_rol_d);
+  //   }
+  // }
+  // }
+
   //debug checks
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_x =
    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
-  directions_distributed->putScalar(1);
-  //directions_distributed->randomize(-0.8,1);
-  //real_t normd = directions_distributed->norm2();
-  //directions_distributed->scale(normd);
+  directions_distributed->putScalar(-0.1);
+  directions_distributed->randomize(-0.8,1);
+  Kokkos::View <real_t*, array_layout, HostSpace, memory_traits> direction_norm("gradient norm",1);
+  directions_distributed->norm2(direction_norm);
+  directions_distributed->scale(1/direction_norm(0));
   //set all but first component to 0 for debug
   host_vec_array directions = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //for(int init = 1; init < nlocal_nodes; init++)
   //directions(4,0) = -0.3;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  obj->checkGradient(*rol_x, *rol_d);
+  if(simparam.optimization_options.check_objective_gradient){
+    obj->checkGradient(*rol_x, *rol_d);
+  }
   //obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
@@ -1470,6 +1562,257 @@ void Explicit_Solver::setup_optimization_problem(){
     //std::cout << "Final Mass Constraint is " << final_mass/initial_mass << std::endl;
 }
 
+/* ----------------------------------------------------------------------
+   Setup Optimization Problem Object, Relevant Objective, and Constraints
+------------------------------------------------------------------------- */
+
+void Explicit_Solver::setup_shape_optimization_problem(){
+  int num_dim = simparam.num_dims;
+  int nOpt_modules = simparam.Optimization_Module_List.size();
+  //int nmulti_objective_modules = simparam->nmulti_objective_modules;
+  std::vector<OPTIMIZATION_MODULE_TYPE> Optimization_Module_List = simparam.Optimization_Module_List;
+  std::vector<int> Optimization_Module_My_FEA_Module = simparam.Optimization_Module_My_FEA_Module;
+  //std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
+  //std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
+  std::vector<std::vector<real_t>> Function_Arguments = simparam.Function_Arguments;
+  std::vector<FUNCTION_TYPE> Optimization_Function_Type = simparam.Optimization_Function_Type;
+  std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
+
+  std::string constraint_base, constraint_name;
+  std::stringstream number_union;
+  CArray<GO> Surface_Nodes;
+  GO current_node_index, current_element_index;
+  LO local_node_index, local_element_id;
+  int num_bdy_patches_in_set;
+  size_t node_id, patch_id, module_id;
+  int num_boundary_sets;
+  int local_surface_id;
+  const_host_vec_array design_coordinates;
+  typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  bool nodal_density_flag = true;
+  
+  // fill parameter list with desired algorithmic options or leave as default
+  // Read optimization input parameter list.
+
+  Teuchos::RCP<Teuchos::ParameterList> parlist;
+  if(simparam.optimization_options.optimization_parameters_xml_file){
+    std::string xmlFileName = simparam.optimization_options.xml_parameters_file_name;
+    
+    //check if parameter file exists
+    std::ifstream param_file_check(xmlFileName);
+    if (!param_file_check.is_open()) {
+        *fos << "Unable to find xml parameter file required for optimization with the ROL library"  << std::endl;
+        exit_solver(0);
+    }
+    param_file_check.close();
+
+    parlist = ROL::getParametersFromXmlFile(xmlFileName);
+  }
+  else{
+    parlist = Teuchos::rcp(new Teuchos::ParameterList("Inputs"));
+    set_rol_params(parlist);
+  }
+  //ROL::ParameterList parlist;
+
+  ROL::Ptr<ROL::BoundConstraint<real_t> > bnd, mma_bnd;
+  // Bound constraint defining the possible range of design coordinates variables
+  ROL::Ptr<ROL::Vector<real_t> > lower_bounds, mma_lower_bounds;
+  ROL::Ptr<ROL::Vector<real_t> > upper_bounds, mma_upper_bounds;
+
+  //set bounds on design variables
+  //allocate global vector information
+  upper_bound_node_coordinates_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //all_lower_bound_node_coordinates_distributed = Teuchos::rcp(new MV(all_node_map, 1));
+  //lower_bound_node_coordinates_distributed = Teuchos::rcp(new MV(*all_lower_bound_node_coordinates_distributed, map));
+  lower_bound_node_coordinates_distributed = Teuchos::rcp(new MV(map, num_dim));
+  host_vec_array node_coordinates_upper_bound = upper_bound_node_coordinates_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  host_vec_array node_coordinates_lower_bound = lower_bound_node_coordinates_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+  //begin by assigning values of coordinate vectors to bound vectors
+  lower_bound_node_coordinates_distributed->assign(*all_node_coords_distributed);
+  upper_bound_node_coordinates_distributed->assign(*all_node_coords_distributed);
+
+  //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
+  for(int inode = 0; inode < nlocal_nodes; inode++){
+    for(int idim = 0; idim < num_dim; idim++){
+      node_coordinates_upper_bound(inode,idim) += simparam.optimization_options.max_coord_move_length;
+      node_coordinates_lower_bound(inode,idim) -= simparam.optimization_options.max_coord_move_length;
+    }
+  }
+
+  if(simparam.optimization_options.method_of_moving_asymptotes){
+    Teuchos::RCP<MV> mma_upper_bound_distributed = Teuchos::rcp(new MV(map, num_dim));
+    Teuchos::RCP<MV> mma_lower_bound_distributed = Teuchos::rcp(new MV(map, num_dim));
+    
+    mma_lower_bound_distributed->putScalar(-0.1);
+    mma_upper_bound_distributed->putScalar(0.1);
+    mma_lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_lower_bound_distributed);
+    mma_upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_upper_bound_distributed);
+    
+    mma_bnd = ROL::makePtr<ROL::Bounds<real_t>>(mma_lower_bounds, mma_upper_bounds);
+  }
+  
+
+  //Design variables to optimize
+  ROL::Ptr<ROL::Vector<real_t>> x;
+  x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(design_node_coords_distributed);
+  
+  //Instantiate (the one) objective function for the problem
+  ROL::Ptr<ROL::Objective<real_t>> obj, sub_obj;
+  bool objective_declared = false;
+  for(int imodule = 0; imodule < nOpt_modules; imodule++){
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::OBJECTIVE){
+      //check if previous module already defined an objective, there must be one objective module
+      if(objective_declared){
+        // TODO: Put this validation earlier.
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; ANOTHER OBJECTIVE FUNCTION WITH NAME \"" 
+              << Optimization_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
+          exit_solver(0);
+      }
+      if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_TopOpt){
+        //debug print
+        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        if(simparam.optimization_options.method_of_moving_asymptotes){
+          sub_obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
+        }
+        else{
+          obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+        }
+      }
+      else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_ShapeOpt){
+        //debug print
+        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        if(simparam.optimization_options.method_of_moving_asymptotes){
+          sub_obj = ROL::makePtr<InternalEnergyMinimize_ShapeOpt>(this);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
+        }
+        else{
+          obj = ROL::makePtr<InternalEnergyMinimize_ShapeOpt>(this);
+        }
+      }
+      else{
+        // TODO: Put validation earlier
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" 
+              << Optimization_Module_List[imodule] << "\"" << std::endl;
+        exit_solver(0);
+      }
+      objective_declared = true;
+    }
+  }
+  
+  //optimization problem interface that can have constraints added to it before passing to solver object
+  problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+  
+  for(int imodule = 0; imodule < nOpt_modules; imodule++){
+    number_union.str(constraint_base);
+    number_union << imodule + 1;
+    constraint_name = number_union.str();
+    ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
+    ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::EQUALITY_CONSTRAINT){
+      //pointers are reference counting
+      ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
+      if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint_ShapeOpt){
+        
+        *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        eq_constraint = ROL::makePtr<MassConstraint_ShapeOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], Function_Arguments[imodule][0], false, true);
+      }
+      else if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt){
+        *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false, true);
+      }
+      else{
+        // TODO: Put validation earlier
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED EQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" 
+              << Optimization_Module_List[imodule] <<"\"" << std::endl;
+        exit_solver(0);
+      }
+      *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
+      problem->addConstraint(constraint_name, eq_constraint, constraint_mul);
+    }
+
+    if(Optimization_Function_Type[imodule] == FUNCTION_TYPE::INEQUALITY_CONSTRAINT){
+      //pointers are reference counting
+      ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint;
+      ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,Function_Arguments[imodule][0]);
+      ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,Function_Arguments[imodule][1]);    
+      ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
+      ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
+      ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
+      if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Mass_Constraint_ShapeOpt){
+        *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        ineq_constraint = ROL::makePtr<MassConstraint_ShapeOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], 0, true, true);
+      }
+      else if(Optimization_Module_List[imodule]==OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt){
+        *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
+        ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[Optimization_Module_My_FEA_Module[imodule]], Function_Arguments[imodule][1], Function_Arguments[imodule][0], true, true);
+      }
+      else{
+        // TODO: Put this validation earlier
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED INEQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" 
+              << Optimization_Module_List[imodule] << "\"" << std::endl;
+        exit_solver(0);
+      }
+      *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
+      problem->addConstraint(constraint_name, ineq_constraint, constraint_mul, constraint_bnd);
+    }
+    number_union.clear();
+  }
+
+  lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(lower_bound_node_coordinates_distributed);
+  upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(upper_bound_node_coordinates_distributed);
+  
+  bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
+  problem->addBoundConstraint(bnd);
+  
+  //real_t initial_mass = ROL_Element_Masses->reduce(sumreduc);
+
+  problem->setProjectionAlgorithm(*parlist);
+  //finalize problem
+  problem->finalize(false,true,*fos);
+  //problem->check(true,std::cout);
+
+  //debug checks
+  ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_x =
+   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_coords_distributed);
+  //construct direction vector for check
+  Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, num_dim));
+  directions_distributed->putScalar(-0.1);
+  directions_distributed->randomize(-0.8,1);
+  Kokkos::View <real_t*, array_layout, HostSpace, memory_traits> direction_norm("gradient norm",1);
+  directions_distributed->norm2(direction_norm);
+  directions_distributed->scale(1/direction_norm(0));
+  //set all but first component to 0 for debug
+  host_vec_array directions = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //for(int init = 1; init < nlocal_nodes; init++)
+  //directions(4,0) = -0.3;
+  ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
+  ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
+  if(simparam.optimization_options.check_objective_gradient){
+    obj->checkGradient(*rol_x, *rol_d);
+  }
+  //obj->checkHessVec(*rol_x, *rol_d);
+  //directions_distributed->putScalar(-0.000001);
+  //obj->checkGradient(*rol_x, *rol_d);
+  //directions_distributed->putScalar(-0.0000001);
+  //obj->checkGradient(*rol_x, *rol_d);
+  
+
+  // Instantiate Solver.
+  ROL::Solver<real_t> solver(problem,*parlist);
+    
+  // Solve optimization problem.
+  //std::ostream outStream;
+  solver.solve(*fos);
+
+  //print final constraint satisfaction
+  //fea_elasticity->compute_element_masses(design_densities,false);
+  //real_t final_mass = ROL_Element_Masses->reduce(sumreduc);
+  //if(myrank==0)
+    //std::cout << "Final Mass Constraint is " << final_mass/initial_mass << std::endl;
+}
 
 /* ----------------------------------------------------------------------------
    Initialize sets of element boundary surfaces and arrays for input conditions
@@ -1497,7 +1840,7 @@ void Explicit_Solver::init_boundaries(){
   Local_Index_Boundary_Patches.update_device();
   
   //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
-  std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
+  //std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
   
   //disable for now
   //if(0)
@@ -1710,7 +2053,7 @@ void Explicit_Solver::sort_information(){
   */
 
   //sorted nodal density information
-  if(simparam_dynamic_opt.topology_optimization_on){
+  if(simparam.topology_optimization_on){
     sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
     sorted_node_densities_distributed->doImport(*design_node_densities_distributed, *node_sorting_importer, Tpetra::INSERT);
   }
@@ -1867,29 +2210,18 @@ void Explicit_Solver::comm_densities(){
 
 void Explicit_Solver::parallel_tecplot_writer(){
   int num_dim = simparam.num_dims;
-	std::string current_file_name;
-	std::string base_file_name= "TecplotTO";
+    std::string current_file_name;
+    std::string base_file_name= "TecplotTO";
   std::string base_file_name_undeformed= "TecplotTO_undeformed";
   std::stringstream current_line_stream;
   std::string current_line;
-	std::string file_extension= ".dat";
+    std::string file_extension= ".dat";
   std::string file_count;
-	std::stringstream count_temp;
+    std::stringstream count_temp;
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
   bool displace_geometry = false;
-   /*
-  int displacement_index;
-  if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-    displacement_index = fea_modules[displacement_module]->displacement_index;
-  }
-  
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_modules[imodule]->compute_output();
-  }
-  */
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   
@@ -1899,7 +2231,7 @@ void Explicit_Solver::parallel_tecplot_writer(){
   const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_node_densities;
-  if(simparam_dynamic_opt.topology_optimization_on){
+  if(simparam.topology_optimization_on){
     sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1923,7 +2255,7 @@ void Explicit_Solver::parallel_tecplot_writer(){
   count_temp.str("");
   count_temp << file_index;
   file_index++;
-	file_count = count_temp.str();
+    file_count = count_temp.str();
   if(displace_geometry&&displacement_module>=0)
     current_file_name = base_file_name_undeformed + file_count + file_extension;
   else
@@ -1944,7 +2276,7 @@ void Explicit_Solver::parallel_tecplot_writer(){
   //output header of the tecplot file
   
   //std::cout << current_file_name << std::endl;
-	current_line_stream << "TITLE=\"results for FEA simulation\"" "\n";
+    current_line_stream << "TITLE=\"results for FEA simulation\"" "\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -1953,7 +2285,7 @@ void Explicit_Solver::parallel_tecplot_writer(){
   //else
   current_line_stream.str("");
   if(num_dim==3)
-	  current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+      current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
   else if(num_dim==2)
     current_line_stream << "VARIABLES = \"x\", \"y\", \"vx\", \"vy\"";
   current_line = current_line_stream.str();
@@ -1971,20 +2303,20 @@ void Explicit_Solver::parallel_tecplot_writer(){
     }
     */
   current_line_stream.str("");
-	current_line_stream << "\n";
+    current_line_stream << "\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
   header_stream_offset += current_line.length();
 
-	current_line_stream.str("");
+    current_line_stream.str("");
   if(num_dim==2){
-	  current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+      current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+          << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
   }
   else if(num_dim==3){
-   	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
+    current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+        << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
   }
   current_line = current_line_stream.str();
   if(myrank == 0)
@@ -2005,16 +2337,16 @@ void Explicit_Solver::parallel_tecplot_writer(){
   current_line_stream << std::fixed << std::setprecision(8);
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
-		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
-		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
+        current_line_stream << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
+        current_line_stream << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
     if(num_dim==3)
-		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
+        current_line_stream << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
 
     //velocity print
     current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,0) << " ";
-		current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
+        current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
     if(num_dim==3)
-		current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
+        current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
     
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         /*
@@ -2045,7 +2377,7 @@ void Explicit_Solver::parallel_tecplot_writer(){
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
 
   //print buffers at offsets with collective MPI write
   //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
@@ -2079,21 +2411,21 @@ void Explicit_Solver::parallel_tecplot_writer(){
   for (int elementline = 0; elementline < nlocal_elements; elementline++) {
     current_line_stream.str("");
     //convert node ordering
-		for (int ii = 0; ii < max_nodes_per_element; ii++) {
+        for (int ii = 0; ii < max_nodes_per_element; ii++) {
       if(active_node_ordering_convention == IJK)
         temp_convert = convert_ijk_to_ensight(ii);
       else
         temp_convert = ii;
-				current_line_stream << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
-		}
-		current_line_stream << std::endl;
+                current_line_stream << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+        }
+        current_line_stream << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2108,14 +2440,14 @@ void Explicit_Solver::parallel_tecplot_writer(){
 
 void Explicit_Solver::parallel_vtk_writer(){
   int num_dim = simparam.num_dims;
-	std::string current_file_name;
-	std::string base_file_name= "VTK";
+    std::string current_file_name;
+    std::string base_file_name= "VTK";
   std::string base_file_name_undeformed= "VTK_undeformed";
   std::stringstream current_line_stream;
   std::string current_line;
-	std::string file_extension= ".vtk";
+    std::string file_extension= ".vtk";
   std::string file_count;
-	std::stringstream count_temp;
+    std::stringstream count_temp;
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
@@ -2128,17 +2460,6 @@ void Explicit_Solver::parallel_vtk_writer(){
   int buffer_size_per_node_line;
   int nlocal_sorted_nodes;
   GO first_node_global_id;
-   /*
-  int displacement_index;
-  if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-    displacement_index = fea_modules[displacement_module]->displacement_index;
-  }
-  
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_modules[imodule]->compute_output();
-  }
-  */
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   
@@ -2151,7 +2472,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_element_densities = sorted_element_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_node_densities;
-  if(simparam_dynamic_opt.topology_optimization_on){
+  if(simparam.topology_optimization_on){
     sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 
@@ -2173,7 +2494,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   count_temp.str("");
   count_temp << file_index;
   file_index++;
-	file_count = count_temp.str();
+    file_count = count_temp.str();
   if(displace_geometry&&displacement_module>=0)
     current_file_name = base_file_name_undeformed + file_count + file_extension;
   else
@@ -2194,7 +2515,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //output header of the tecplot file
   
   //std::cout << current_file_name << std::endl;
-	current_line_stream << "# vtk DataFile Version 2.0\n";
+    current_line_stream << "# vtk DataFile Version 2.0\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2202,7 +2523,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
   //else
   current_line_stream.str("");
-	current_line_stream << "Mesh for Fierro\n";
+    current_line_stream << "Mesh for Fierro\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2218,23 +2539,23 @@ void Explicit_Solver::parallel_vtk_writer(){
     }
     */
 
-	current_line_stream.str("");
-	current_line_stream << "ASCII\n";
+    current_line_stream.str("");
+    current_line_stream << "ASCII\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
   header_stream_offset += current_line.length();
 
   current_line_stream.str("");
-	current_line_stream << "DATASET UNSTRUCTURED_GRID\n\n";
+    current_line_stream << "DATASET UNSTRUCTURED_GRID\n\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
   header_stream_offset += current_line.length();
 
   current_line_stream.str("");
-	current_line_stream << "POINTS " << num_nodes
-		  << " float\n";
+    current_line_stream << "POINTS " << num_nodes
+          << " float\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2254,10 +2575,10 @@ void Explicit_Solver::parallel_vtk_writer(){
   current_line_stream << std::fixed << std::setprecision(8);
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
-		current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
-		current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
+        current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
+        current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
     if(num_dim==3)
-		current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
+        current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
     
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         /*
@@ -2288,7 +2609,7 @@ void Explicit_Solver::parallel_vtk_writer(){
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
 
   //print buffers at offsets with collective MPI write
   //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
@@ -2311,7 +2632,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "CELLS " << num_elem << " " << num_elem*(max_nodes_per_element+1) << std::endl;
+    current_line_stream << std::endl << "CELLS " << num_elem << " " << num_elem*(max_nodes_per_element+1) << std::endl;
   current_line = current_line_stream.str();
   //std::cout << current_line;
   file_stream_offset = current_stream_position;
@@ -2332,21 +2653,21 @@ void Explicit_Solver::parallel_vtk_writer(){
     current_line_stream.str("");
     //convert node ordering
     current_line_stream << std::left << std::setw(10) << max_nodes_per_element << " ";
-		for (int ii = 0; ii < max_nodes_per_element; ii++) {
+        for (int ii = 0; ii < max_nodes_per_element; ii++) {
       if(active_node_ordering_convention == IJK)
         temp_convert = convert_ijk_to_ensight(ii);
       else
         temp_convert = ii;
-				current_line_stream << std::left << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert)<< " ";
-		}
-		current_line_stream << std::endl;
+                current_line_stream << std::left << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert)<< " ";
+        }
+        current_line_stream << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2365,7 +2686,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "CELL_TYPES " << num_elem << std::endl;
+    current_line_stream << std::endl << "CELL_TYPES " << num_elem << std::endl;
   current_line = current_line_stream.str();
   //std::cout << current_line;
   file_stream_offset = current_stream_position;
@@ -2385,14 +2706,14 @@ void Explicit_Solver::parallel_vtk_writer(){
   for (int elementline = 0; elementline < nlocal_elements; elementline++) {
     current_line_stream.str("");
     //convert node ordering
-		current_line_stream << std::left << std::setw(10) << 12 << std::endl;
+        current_line_stream << std::left << std::setw(10) << 12 << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2411,7 +2732,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "POINT_DATA " << num_nodes << std::endl;
+    current_line_stream << std::endl << "POINT_DATA " << num_nodes << std::endl;
   current_line_stream << "SCALARS design_density float 1" << std::endl;
   current_line_stream << "LOOKUP_TABLE default" << std::endl;
   current_line = current_line_stream.str();
@@ -2435,17 +2756,17 @@ void Explicit_Solver::parallel_vtk_writer(){
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
     //convert node ordering
-    if(simparam_dynamic_opt.topology_optimization_on)
-		  current_line_stream << std::left << std::setw(25) << sorted_node_densities(nodeline,0) << std::endl;
+    if(simparam.topology_optimization_on)
+          current_line_stream << std::left << std::setw(25) << sorted_node_densities(nodeline,0) << std::endl;
     else
-		  current_line_stream << std::left << std::setw(25) << 1 << std::endl;
+          current_line_stream << std::left << std::setw(25) << 1 << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2464,7 +2785,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "VECTORS velocity float" << std::endl;
+    current_line_stream << std::endl << "VECTORS velocity float" << std::endl;
   current_line = current_line_stream.str();
   //std::cout << current_line;
   file_stream_offset = current_stream_position;
@@ -2486,11 +2807,11 @@ void Explicit_Solver::parallel_vtk_writer(){
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
     //convert node ordering
-		//velocity print
+        //velocity print
     current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,0) << " ";
-		current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
+        current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
     if(num_dim==3)
-		current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
+        current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
 
     current_line_stream << std::endl;
     current_line = current_line_stream.str();
@@ -2499,7 +2820,7 @@ void Explicit_Solver::parallel_vtk_writer(){
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2518,7 +2839,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "CELL_DATA " << num_elem << std::endl;
+    current_line_stream << std::endl << "CELL_DATA " << num_elem << std::endl;
   current_line_stream << "SCALARS element_density float 1" << std::endl;
   current_line_stream << "LOOKUP_TABLE default" << std::endl;
   current_line = current_line_stream.str();
@@ -2541,14 +2862,14 @@ void Explicit_Solver::parallel_vtk_writer(){
   for (int elementline = 0; elementline < nlocal_elements; elementline++) {
     current_line_stream.str("");
     //convert node ordering
-		current_line_stream << std::left << std::setw(25) << sorted_element_densities(elementline,0) << std::endl;
+        current_line_stream << std::left << std::setw(25) << sorted_element_densities(elementline,0) << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2566,29 +2887,19 @@ void Explicit_Solver::parallel_vtk_writer(){
 void Explicit_Solver::tecplot_writer(){
   
   int num_dim = simparam.num_dims;
-	std::string current_file_name;
-	std::string base_file_name= "TecplotTO";
+    std::string current_file_name;
+    std::string base_file_name= "TecplotTO";
   std::string base_file_name_undeformed= "TecplotTO_undeformed";
-	std::stringstream ss;
-	std::string file_extension= ".dat";
+    std::stringstream ss;
+    std::string file_extension= ".dat";
   std::string file_count;
-	std::stringstream count_temp;
+    std::stringstream count_temp;
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
   bool displace_geometry = false;
   const_host_vec_array current_collected_output;
   int displacement_index;
-  /*
-  if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-    displacement_index = fea_modules[displacement_module]->displacement_index;
-  }
-  
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_modules[imodule]->compute_output();
-  }
-  */
   collect_information();
   //set host views of the collected data to print out from
   const_host_vec_array collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2617,21 +2928,21 @@ void Explicit_Solver::tecplot_writer(){
       count_temp.str("");
       count_temp << file_index;
       file_index++;
-	    file_count = count_temp.str();
+        file_count = count_temp.str();
       if(displace_geometry&&displacement_module>=0)
         current_file_name = base_file_name_undeformed + file_count + file_extension;
       else
         current_file_name = base_file_name + file_count + file_extension;
       std::ofstream myfile (current_file_name.c_str()); //output filestream object for file output
-	    //read in position data
-	    myfile << std::fixed << std::setprecision(8);
-		
-		  //output header of the tecplot file
+        //read in position data
+        myfile << std::fixed << std::setprecision(8);
+        
+          //output header of the tecplot file
 
-		  myfile << "TITLE=\"results for TO code\"" "\n";
+          myfile << "TITLE=\"results for TO code\"" "\n";
       //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
       //else
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+          myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
       /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -2645,25 +2956,25 @@ void Explicit_Solver::tecplot_writer(){
       myfile << "\n";
       
       if(num_dim==2){
-		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+            myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+                << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
       }
       else if(num_dim==3){
-		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+            myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+                << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
       }
 
-		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
+          for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
+              myfile << std::setw(25) << collected_node_coords(nodeline,0) << " ";
+              myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
+              myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
 
         //velocity print
         myfile << std::setw(25) << collected_node_velocities(nodeline,0) << " ";
-			  myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
+              myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
+              myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
 
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         /*
@@ -2687,18 +2998,18 @@ void Explicit_Solver::tecplot_writer(){
         }
         */
         myfile << std::endl;
-		  }
-		  for (int elementline = 0; elementline < num_elem; elementline++) {
+          }
+          for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
-			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
+              for (int ii = 0; ii < max_nodes_per_element; ii++) {
           if(active_node_ordering_convention == IJK)
             temp_convert = convert_ijk_to_ensight(ii);
           else
             temp_convert = ii;
-				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
-			  }
-			  myfile << " \n";
-		  }
+                  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+              }
+              myfile << " \n";
+          }
       myfile.close();
     }
     if(myrank==0&&(displacement_module>=0&&displace_geometry)){
@@ -2706,17 +3017,17 @@ void Explicit_Solver::tecplot_writer(){
       count_temp.str("");
       count_temp << file_index;
       file_index++;
-	    file_count = count_temp.str();
+        file_count = count_temp.str();
     
       current_file_name = base_file_name + file_count + file_extension;
       std::ofstream myfile (current_file_name.c_str()); //output filestream object for file output
-	    //read in position data
-	    myfile << std::fixed << std::setprecision(8);
-		
-		  //output header of the tecplot file
+        //read in position data
+        myfile << std::fixed << std::setprecision(8);
+        
+          //output header of the tecplot file
 
-		  myfile << "TITLE=\"results for TO code\" \n";
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+          myfile << "TITLE=\"results for TO code\" \n";
+          myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
       /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -2729,21 +3040,21 @@ void Explicit_Solver::tecplot_writer(){
       */
       myfile << "\n";
 
-		  myfile << "ZONE T=\"load step " << time_step + 1 << "\", NODES= " << num_nodes
-			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+          myfile << "ZONE T=\"load step " << time_step + 1 << "\", NODES= " << num_nodes
+            << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
-		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
+          for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
         current_collected_output = fea_modules[displacement_module]->module_outputs[displacement_index];
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + current_collected_output(nodeline*num_dim,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + current_collected_output(nodeline*num_dim + 1,0) << " ";
+              myfile << std::setw(25) << collected_node_coords(nodeline,0) + current_collected_output(nodeline*num_dim,0) << " ";
+              myfile << std::setw(25) << collected_node_coords(nodeline,1) + current_collected_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + current_collected_output(nodeline*num_dim + 2,0) << " ";
+              myfile << std::setw(25) << collected_node_coords(nodeline,2) + current_collected_output(nodeline*num_dim + 2,0) << " ";
 
         //velocity print
         myfile << std::setw(25) << collected_node_velocities(nodeline,0) << " ";
-			  myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
+              myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
+              myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
 
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
@@ -2765,18 +3076,18 @@ void Explicit_Solver::tecplot_writer(){
           }
         }
         myfile << std::endl;
-		  }
-		  for (int elementline = 0; elementline < num_elem; elementline++) {
+          }
+          for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
-			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
+              for (int ii = 0; ii < max_nodes_per_element; ii++) {
           if(active_node_ordering_convention == IJK)
             temp_convert = convert_ijk_to_ensight(ii);
           else
             temp_convert = ii;
-				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
-			  }
-			  myfile << " \n";
-		  }
+                  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+              }
+              myfile << " \n";
+          }
       myfile.close();
     }
 }
@@ -3298,82 +3609,84 @@ void Explicit_Solver::ensight_writer(){
 
 void Explicit_Solver::init_design(){
   int num_dim = simparam.num_dims;
-  bool nodal_density_flag = simparam_dynamic_opt.nodal_density_flag;
-
-  //set densities
-  if(nodal_density_flag){
-    if(!simparam.restart_file){
-      design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
-      host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-      //notify that the host view is going to be modified in the file readin
-      //dual_node_densities.modify_host();
-    
-      //debug Tecplot file readin of initial densities (only works on runs with 1 MPI rank this way)
-      std::string skip_line, read_line, substring;
-      std::stringstream line_parse;
-      real_t read_density;
-      //in = new std::ifstream();
-      //in->open("TecplotDensity.dat");
-      //skip 3 lines
-      //for (int j = 1; j <= 3; j++) {
-      //getline(*in, skip_line);
-      // std::cout << skip_line << std::endl;
-      //}
-  
-    
-      for(int inode = 0; inode < nlocal_nodes; inode++){
-      //getline(*in,read_line);
-      //line_parse.clear();
-      //line_parse.str(read_line);
-      //for(int iword = 0; iword < 10; iword++){
-        //read portions of the line into the substring variable
-        
-       //if(iword==3){ line_parse >> read_density;}
-        //else {line_parse >> substring;}
-      //}
-      //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
-      //if(read_density < 0.3) read_density = 0.1;
-      //node_densities(inode,0) = read_density;
-      
-      node_densities(inode,0) = 1;
-    }
-
-    //sync device view
-    //dual_node_densities.sync_device();
-    }
-    //allocate global vector information
-    all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
-
-    //communicate ghost information to the all vector
-    //create import object using local node indices map and all indices map
-    Tpetra::Import<LO, GO> importer(map, all_node_map);
-
-    //comms to get ghosts
-    all_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
-
-    //debug print
-    //std::ostream &out = std::cout;
-    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(myrank==0)
-    //*fos << "Node Densities with Ghosts :" << std::endl;
-    //all_node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
-    //std::fflush(stdout);
-  
+  bool topology_optimization_on = simparam.topology_optimization_on;
+  bool shape_optimization_on = simparam.shape_optimization_on;
+  Input_Options input_options;
+  if(simparam.input_options.has_value()){
+    input_options = simparam.input_options.value();
   }
-  else{
-    //initialize memory for volume storage
-    vec_array Element_Densities("Element Densities", rnum_elem, 1);
-    for(int ielem = 0; ielem < rnum_elem; ielem++)
-      Element_Densities(ielem,0) = 1;
+  if(topology_optimization_on){
+    bool nodal_density_flag = simparam.nodal_density_flag;
+    //set densities
+    if(nodal_density_flag){
+      if(simparam.input_options.has_value()){
+        if (!input_options.topology_optimization_restart) {
+          design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+          host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+        
+          for(int inode = 0; inode < nlocal_nodes; inode++){
+            node_densities(inode,0) = 1;
+          }
+        }
+      }
+      else{
+        design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+        host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+      
+        for(int inode = 0; inode < nlocal_nodes; inode++){
+          node_densities(inode,0) = 1;
+        }
+      }
+        //allocate global vector information
+      all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
 
-    //create global vector
-    Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, Element_Densities));
+      //communicate ghost information to the all vector
+      //create import object using local node indices map and all indices map
+      //Tpetra::Import<LO, GO> importer(map, all_node_map);
+      
+      //design_node_densities_distributed->randomize(0.1,1);
+      //comms to get ghosts
+      all_node_densities_distributed->doImport(*design_node_densities_distributed, *importer, Tpetra::INSERT);
+      
+    }
+    else{
+      //initialize memory for volume storage
+      vec_array Element_Densities("Element Densities", rnum_elem, 1);
+      for(int ielem = 0; ielem < rnum_elem; ielem++)
+        Element_Densities(ielem,0) = 1;
 
-    //if(myrank==0)
-    //*fos << "Global Element Densities:" << std::endl;
-    //Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
+      //create global vector
+      Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, Element_Densities));
+
+      //if(myrank==0)
+      //*fos << "Global Element Densities:" << std::endl;
+      //Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+    }
+  }
+  else if(shape_optimization_on){
+    //set initial design coordinates (not equal to initial coordinates before optimization when restarting)
+      if(simparam.input_options.has_value()){
+        if (!input_options.shape_optimization_restart) {
+          design_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+          design_node_coords_distributed->assign(*node_coords_distributed);
+        }
+      }
+      else{
+        design_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+        design_node_coords_distributed->assign(*node_coords_distributed);
+      }
+        //allocate global vector information
+      all_design_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+
+      //communicate ghost information to the all vector
+      //create import object using local node indices map and all indices map
+      //Tpetra::Import<LO, GO> importer(map, all_node_map);
+      
+      //design_node_densities_distributed->randomize(0.1,1);
+      //comms to get ghosts
+      all_design_node_coords_distributed->doImport(*design_node_coords_distributed, *importer, Tpetra::INSERT);   
+    
   }
 
 }

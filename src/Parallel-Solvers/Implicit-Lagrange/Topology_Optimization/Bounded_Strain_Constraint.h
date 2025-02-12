@@ -117,15 +117,23 @@ public:
       current_step = 0;
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     current_step++;
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update constraint value (c) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+  
   void value(ROL::Vector<real_t> &c, const ROL::Vector<real_t> &z, real_t &tol ) {
     ROL::Ptr<const MV> zp = getVector(z);
     //ROL::Ptr<MV> cp = getVector(c);
     ROL::Ptr<std::vector<real_t>> cp = dynamic_cast<ROL::StdVector<real_t>&>(c).getVector();
-    int num_dim = FEM_->simparam.num_dims;
+    int num_dim = FEM_->simparam->num_dims;
     int strain_count;
     if(num_dim==3) strain_count = 6;
     else strain_count = 3;

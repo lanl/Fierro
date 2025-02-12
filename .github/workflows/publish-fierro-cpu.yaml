@@ -1,0 +1,14 @@
+name: 'Publish Fierro-CPU'
+
+on: 
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/fierro/cpu
+    secrets: inherit
+      
+
+  

@@ -90,12 +90,12 @@ private:
   FEA_Module_Inertial *FEM_;
   ROL::Ptr<ROL_MV> ROL_Element_Masses;
   ROL::Ptr<ROL_MV> ROL_Element_Moments;
-  ROL::Ptr<ROL_MV> ROL_Gradients;
+  ROL::Ptr<ROL_MV> ROL_Gradients, ROL_Mass_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
   Teuchos::RCP<MV> mass_gradients_distributed;
   real_t initial_center_of_mass;
   bool inequality_flag_;
-  real_t constraint_value_;
+  real_t constraint_value_, normalization_value;
   int constraint_component_;
 
   ROL::Ptr<const MV> getVector( const V& x ) {
@@ -111,7 +111,7 @@ public:
   int last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Inertial";
 
-  CenterOfMassConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, int constraint_component, bool inequality_flag=true, real_t constraint_value=0) 
+  CenterOfMassConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, int constraint_component, real_t constraint_value=0, bool inequality_flag=true) 
   {
     FEM_ = dynamic_cast<FEA_Module_Inertial*>(FEM);
     nodal_density_flag_ = nodal_density_flag;
@@ -120,7 +120,9 @@ public:
     inequality_flag_ = inequality_flag;
     constraint_value_ = constraint_value;
     constraint_component_ = constraint_component;
-    int num_dim = FEM_->simparam.num_dims;
+    normalization_value = constraint_value_;
+    if(constraint_value_==0) normalization_value = 1;
+    int num_dim = FEM_->simparam->num_dims;
     ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
     if(constraint_component_ == 0)
     ROL_Element_Moments = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
@@ -131,11 +133,9 @@ public:
 
     const_host_vec_array design_densities = FEM_->design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     
-    FEM_->compute_element_moments(design_densities,true, constraint_component_);
-    
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
-    real_t initial_moment = ROL_Element_Moments->reduce(sumreduc);
+    real_t initial_moment;
     real_t initial_mass;
 
     if(FEM_->mass_init) { initial_mass = FEM_->mass; }
@@ -147,8 +147,16 @@ public:
       FEM_->mass_init = true;
     }
     
-    FEM_->com_init[constraint_component_] = true;
-    FEM_->center_of_mass[constraint_component_] = initial_center_of_mass = initial_moment/initial_mass;
+    if(FEM_->com_init[constraint_component_]) { initial_center_of_mass = FEM_->center_of_mass[constraint_component_]; }
+    else{
+      FEM_->compute_element_moments(design_densities,true, constraint_component_, false);
+
+      //sum per element results across all MPI ranks
+      ROL::Elementwise::ReductionSum<real_t> sumreduc;
+      initial_moment = ROL_Element_Moments->reduce(sumreduc);
+      FEM_->com_init[constraint_component_] = true;
+      FEM_->center_of_mass[constraint_component_] = initial_center_of_mass = initial_moment/initial_mass;
+    }
 
     //debug print
     if(FEM_->myrank==0){
@@ -165,14 +173,22 @@ public:
     mass_gradients_distributed = FEM_->mass_gradients_distributed; 
 
     if(FEM_->center_of_mass_gradients_distributed.is_null()) 
-      FEM_->center_of_mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, num_dim));
+      FEM_->center_of_mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
     constraint_gradients_distributed = FEM_->center_of_mass_gradients_distributed;
   }
+
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     current_step++;
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update constraint value (c) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+  
   void value(ROL::Vector<real_t> &c, const ROL::Vector<real_t> &z, real_t &tol ) override {
     //std::cout << "Started constraint value on task " <<FEM_->myrank <<std::endl;
     ROL::Ptr<const MV> zp = getVector(z);
@@ -216,14 +232,19 @@ public:
     }
     
     if(inequality_flag_){
-      (*cp)[0] = current_com;
+      (*cp)[0] = current_com/normalization_value;
     }
     else{
-      (*cp)[0] = current_com - constraint_value_;
+      (*cp)[0] = (current_com - constraint_value_)/normalization_value;
     }
 
     //std::cout << "Ended constraint value on task " <<FEM_->myrank <<std::endl;
   }
+
+  /* ----------------------------------------------------------------------------------------
+    Update adjoint of the constraint jacobian (ajv), involves gradient vector
+    and constraint adjoint (v) for the current design variable vector, z
+  ------------------------------------------------------------------------------------------*/
 
   void applyAdjointJacobian(ROL::Vector<real_t> &ajv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &x, real_t &tol) override {
     //std::cout << "Started constraint adjoint grad on task " <<FEM_->myrank << std::endl;
@@ -285,9 +306,9 @@ public:
       //*fos << std::endl;
       //std::fflush(stdout);
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,constraint_component_) /= current_mass;
-      constraint_gradients(i,constraint_component_) -= mass_gradients(i,0)*current_com/current_mass;
-      constraint_gradients(i,constraint_component_) *= (*vp)[0];
+      constraint_gradients(i,0) /= current_mass;
+      constraint_gradients(i,0) -= mass_gradients(i,0)*current_com/current_mass;
+      constraint_gradients(i,0) *= (*vp)[0]/normalization_value;
     }
     
     
@@ -295,10 +316,15 @@ public:
     //debug print
     //std::cout << "Constraint Gradient value " << std::endl;
   }
-  
+
+  /* ----------------------------------------------------------------------------------------
+    Update the constraint jacobian (jv), involves gradient vector
+    and design vector differential (v) for the current design variable vector, x
+  ------------------------------------------------------------------------------------------*/
+
   void applyJacobian(ROL::Vector<real_t> &jv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &x, real_t &tol) override {
     //std::cout << "Started constraint grad on task " <<FEM_->myrank  << std::endl;
-     //get Tpetra multivector pointer from the ROL vector
+    //get Tpetra multivector pointer from the ROL vector
     ROL::Ptr<const MV> zp = getVector(x);
     ROL::Ptr<std::vector<real_t>> jvp = dynamic_cast<ROL::StdVector<real_t>&>(jv).getVector();
     
@@ -346,8 +372,8 @@ public:
     FEM_->compute_nodal_gradients(design_densities, mass_gradients);
 
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,constraint_component_) /= current_mass;
-      constraint_gradients(i,constraint_component_) -= mass_gradients(i,0)*current_com/current_mass;
+      constraint_gradients(i,0) /= current_mass;
+      constraint_gradients(i,0) -= mass_gradients(i,0)*current_com/current_mass;
     }
 
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
@@ -355,95 +381,84 @@ public:
     //debug print
     //std::cout << "Constraint Gradient value " << gradient_dot_v << std::endl;
 
-    (*jvp)[0] = gradient_dot_v;
+    (*jvp)[0] = gradient_dot_v/normalization_value;
     //std::cout << "Ended constraint grad on task " <<FEM_->myrank  << std::endl;
   }
   
-  /*
-  void hessVec_12( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
+  /* ----------------------------------------------------------------------------------------
+    Update adjoint of the constraint Hessian vector product (ahuv), product of hessian and
+    differential design vector (v), and constraint adjoint (u) for the 
+    current design variable vector, z
+  ------------------------------------------------------------------------------------------*/
+
+  void applyAdjointHessian(ROL::Vector<real_t> &ahuv, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol) {
     
+    //get Tpetra multivector pointer from the ROL vector
+    ROL::Ptr<const MV> zp = getVector(z);
+    ROL::Ptr<const std::vector<real_t>> up = dynamic_cast<const ROL::StdVector<real_t>&>(u).getVector();
+    ROL::Ptr<const MV> vp = getVector(v);
+    
+    //ROL::Ptr<ROL_MV> ROL_Element_Volumes;
+
+    //get local view of the data
+    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array v_view = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    host_vec_array moment_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array mass_gradients = mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+    //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
+    //communicate ghosts
+    if(last_comm_step!=current_step){
+      FEM_->comm_variables(zp);
+      last_comm_step = current_step;
+    }
+    
+    int rnum_elem = FEM_->rnum_elem;
+
+    //compute mass
+    real_t current_mass;
+    if(FEM_->mass_update == current_step&&0) { current_mass = FEM_->mass; }
+    else{
+      FEM_->compute_element_masses(design_densities,false);
+      //sum per element results across all MPI ranks
+      ROL::Elementwise::ReductionSum<real_t> sumreduc;
+      FEM_->mass = current_mass = ROL_Element_Masses->reduce(sumreduc);
+      FEM_->mass_update = current_step;
+    }
+
+    //compute center of mass
+    real_t current_com;
+    if(FEM_->com_update[constraint_component_] == current_step) current_com = FEM_->center_of_mass[constraint_component_];
+    else{
+    FEM_->compute_element_moments(design_densities,false,constraint_component_);
+    FEM_->com_update[constraint_component_] = current_step;
+    
+    //sum per element results across all MPI ranks
+    ROL::Elementwise::ReductionSum<real_t> sumreduc;
+    real_t current_moment = ROL_Element_Moments->reduce(sumreduc);
+    FEM_->center_of_mass[constraint_component_] = current_com = current_moment/current_mass;
+    }
+
     // Unwrap hv
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
-
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      MV KU(up->size(),0.0);
-      MV U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      FEM_->apply_jacobian(KU,U,*zp,*vp);
-      for (size_t i=0; i<up->size(); i++) {
-        (*hvp)[i] = 2.0*KU[i];
-      }
+    ROL::Ptr<MV> ahuvp = getVector(ahuv);
+  
+    host_vec_array constraint_adjoint_hess = ahuvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    real_t matrix_product;
+    FEM_->compute_moment_gradients(design_densities, moment_gradients, constraint_component_);
+    FEM_->compute_nodal_gradients(design_densities, mass_gradients);
+    
+    ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
+    ROL_Mass_Gradients = ROL::makePtr<ROL_MV>(mass_gradients_distributed);
+    real_t dot_product_moment = ROL_Gradients->dot(v);
+    real_t dot_product_mass = ROL_Mass_Gradients->dot(v);
+    for(int i = 0; i < FEM_->nlocal_nodes; i++){
+        constraint_adjoint_hess(i,0) = -dot_product_moment*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass-
+                      moment_gradients(i,0)*(*up)[0]*dot_product_mass/current_mass/current_mass+
+                      2*current_com*dot_product_mass*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass;
+        constraint_adjoint_hess(i,0) /= normalization_value;
     }
     
   }
-
-  void hessVec_21( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-                     
-    // Unwrap g
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
- 
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      std::MV<real_t> U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      std::MV<real_t> V;
-      V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,V);
-      for (size_t i=0; i<hvp->size(); i++) {
-        (*hvp)[i] *= 2.0;
-      }
-    }
-    
-  }
-
-  void hessVec_22( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-                     
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
-    
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      MV U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      MV V;
-      V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,*vp,U);
-    }
-    
-  }
-  */
 };
 
 #endif // end header guard

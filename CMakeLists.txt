@@ -12,6 +12,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 option(TEST "Build tests" OFF)
 
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+
 if (TEST)
   include(FetchContent)
   FetchContent_Declare(
@@ -35,20 +37,8 @@ if(NOT DEFINED BUILD_ELEMENTS)
   set(BUILD_ELEMENTS ON)
 endif()
 
-if(BUILD_ELEMENTS)
-#  include_directories(lib/Elements)
-#  add_subdirectory(lib/Elements)
-  set(ELEMENTS_DIRS matar/src elements swage common geometry slam)
-
-  foreach(DIR ${ELEMENTS_DIRS})
-    include_directories(lib/Elements/${DIR})
-  endforeach()
-
-  foreach(DIR ${ELEMENTS_DIRS})
-    add_subdirectory(lib/Elements/${DIR})
-  endforeach()
-  add_subdirectory(lib/Elements/mesh_tools)
-endif()
+find_package(Trilinos REQUIRED)
+find_package(Elements REQUIRED)
 
 include_directories(src)
 add_subdirectory(src)

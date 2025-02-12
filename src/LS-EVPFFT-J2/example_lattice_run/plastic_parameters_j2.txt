@@ -1,0 +1,4 @@
+PLASTICITY
+J2             icryst
+10 1.0         nrs, edot0
+10.0 10.0 50.0 2.0  sigma0, sigma1, theta0, theta1

@@ -89,6 +89,7 @@ private:
 
   FEA_Module_Inertial *FEM_;
   ROL::Ptr<ROL_MV> ROL_Element_Masses;
+  real_t initial_mass;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
 
@@ -112,11 +113,37 @@ public:
     last_comm_step = last_solve_step = -1;
     current_step = 0;
     ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
+    const_host_vec_array design_densities = FEM_->all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    FEM_->compute_element_masses(design_densities,false);
+    
+    //sum per element results across all MPI ranks
+    ROL::Elementwise::ReductionSum<real_t> sumreduc;
+    initial_mass = ROL_Element_Masses->reduce(sumreduc);
+    if(FEM_->simparam->optimization_options.objective_normalization_constant==0){
+        initial_mass = ROL_Element_Masses->reduce(sumreduc);
+    }
+    else{
+        initial_mass = FEM_->simparam->optimization_options.objective_normalization_constant;
+    }
+    //save initial normalization value for restart data
+    if(FEM_->simparam->output_options.optimization_restart_file){
+      FEM_->simparam->optimization_options.objective_normalization_constant = initial_mass;
+    }
+    //debug print
+    std::cout << "INITIAL SYSTEM MASS: " << initial_mass << std::endl;
   }
+
+  /* --------------------------------------------------------------------------------------
+   Update solver state variables to synchronize with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     current_step++;
   }
+
+  /* --------------------------------------------------------------------------------------
+   Update objective value with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol ) {
     ROL::Ptr<const MV> zp = getVector(z);
@@ -146,13 +173,13 @@ public:
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
     c = ROL_Element_Masses->reduce(sumreduc);
     //debug print
-    std::cout << "SYSTEM MASS: " << c << std::endl;
-    return c;
+    std::cout << "NORMALIZED SYSTEM MASS: " << c/initial_mass << std::endl;
+    return c/initial_mass;
   }
 
-  //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //g.zero();
-  //}
+  /* --------------------------------------------------------------------------------------
+   Update gradient vector (g) with the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
   
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
     //get Tpetra multivector pointer from the ROL vector
@@ -185,6 +212,7 @@ public:
       for(int ig = 0; ig < rnum_elem; ig++)
         objective_gradients(ig,0) = element_volumes(ig,0);
     }
+    gp->scale(1/initial_mass);
     std::cout << "Objective Gradient called"<< std::endl;
     //debug print of design variables
     //std::ostream &out = std::cout;
@@ -196,6 +224,11 @@ public:
     //std::fflush(stdout);
   }
 
+  /* --------------------------------------------------------------------------------------
+   Update Hessian vector product (hv) using the differential design vector (v) and
+   the current design variable vector, z
+  ----------------------------------------------------------------------------------------- */
+  
   void hessVec(ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol) {
     
     // Unwrap hv

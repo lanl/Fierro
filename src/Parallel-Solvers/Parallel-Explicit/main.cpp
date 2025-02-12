@@ -11,14 +11,14 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
- 
+
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
- 
+
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
- 
+
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -33,8 +33,8 @@
  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- **********************************************************************************************/
- 
+**********************************************************************************************/
+
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,69 +42,53 @@
 #include <mpi.h>
 #include <Kokkos_Core.hpp>
 #include "Explicit_Solver.h"
-#include "Simulation_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 #include "yaml-serializable.h"
 #include <memory>
+#include <string>
 
-void solver_setup(int argc, char *argv[]);
-
-//==============================================================================
-//    Main
-//==============================================================================
-
-int main(int argc, char *argv[]){
-  
-  //initialize MPI
-  MPI_Init(&argc,&argv);
-
-  Kokkos::initialize();
-  if(argc<2){
-    int myrank;
-    MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
-    if(myrank==0)
-      std::cout << "Fierro requires a yaml setup file as a command line argument" << std::endl;
-  }
-  else{
-    solver_setup(argc, argv);
-  }
-  
-  MPI_Barrier(MPI_COMM_WORLD);
-  
-  Kokkos::finalize();
-  MPI_Finalize();
-
-  return 0;
+void solver_setup(const char* filename)
+{
+    Explicit_Solver solver(Yaml::from_file_strict<Simulation_Parameters_Explicit>(filename));
+    
+    // checks for optional solver routines
+    if (solver.setup_flag)
+    {
+        solver.solver_setup();
+    }
+    // invoke solver's run function (should perform most of the computation)
+    solver.run();
+    // invoke optional finalize function
+    if (solver.finalize_flag)
+    {
+        solver.solver_finalize();
+    }
 }
 
-void solver_setup(int argc, char *argv[]){
-  int myrank;
-  MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+int main(int argc, char* argv[])
+{
+    // initialize MPI
+    MPI_Init(&argc, &argv);
 
-  Simulation_Parameters simparam = Simulation_Parameters();
-  std::string filename = std::string(argv[1]);
-  Yaml::Node node;
+    Kokkos::initialize();
+    if (argc < 2)
+    {
+        int myrank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+        if (myrank == 0)
+        {
+            std::cout << "Fierro requires a yaml setup file as a command line argument" << std::endl;
+        }
+    }
+    else
+    {
+        solver_setup(argv[1]);
+    }
 
-  if (filename.find(".yaml") != std::string::npos) {
-    Yaml::Parse(node, filename.c_str());
-    Yaml::deserialize(simparam, node);
-  }
-  
-  std::shared_ptr<Solver> solver;
-  switch (simparam.solver_type) {
-    case SOLVER_TYPE::Explicit:
-      solver = std::make_shared<Explicit_Solver>(Explicit_Solver());
-      if (!node.IsNone())
-        Yaml::deserialize(solver->simparam, node);
-      break;
-    default:
-      if (myrank == 0)
-        std::cerr << "Invalid solver type" << std::endl;
-      exit(1);
-  }
-  //checks for optional solver routines
-  if(solver->setup_flag) solver->solver_setup();
-  // invoke solver's run function (should perform most of the computation)
-  solver->run(argc, argv);
-  //invoke optional finalize function
-  if(solver->finalize_flag) solver->solver_finalize();
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    Kokkos::finalize();
+    MPI_Finalize();
+
+    return 0;
 }

@@ -1,0 +1,11 @@
+name: 'Publish Heffte CUDA'
+
+on: 
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/heffte/cuda
+    secrets: inherit

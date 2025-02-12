@@ -39,13 +39,19 @@
 #define FEA_MODULE_ELASTICITY_H
 
 #include "FEA_Module.h"
-#include "Simulation_Parameters_Elasticity.h"
-#include "Simulation_Parameters_Topology_Optimization.h"
+
+//Trilinos
+#include <Tpetra_MultiVector.hpp>
 
 //forward declare
 namespace MueLu{
   template<class floattype, class local_ind, class global_ind, class nodetype> 
   class Hierarchy;
+}
+
+namespace Anasazi{
+  template<class floattype, class vectortype> 
+  class Eigensolution;
 }
 
 namespace Xpetra{
@@ -61,10 +67,16 @@ namespace Xpetra{
 
 class Implicit_Solver;
 
+class Elasticity_Parameters;
+
 class FEA_Module_Elasticity: public FEA_Module{
 
 public:
-  FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index = 0);
+
+  typedef Tpetra::Operator<real_t>                OP;
+  typedef Tpetra::Vector<real_t,LO,GO> TpetraVector;
+
+  FEA_Module_Elasticity(Elasticity_Parameters& in_params, Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -87,6 +99,8 @@ public:
 
   int solve();
 
+  int eigensolve();
+
   void linear_solver_parameters();
 
   void comm_variables(Teuchos::RCP<const MV> zp);
@@ -103,17 +117,27 @@ public:
 
   void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
 
+  void local_mass_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
+
   void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
   void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
   void Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
+  void Element_Anisotropic_Material_Properties(size_t ielem, real_t Element_Moduli[3], real_t Poisson_Ratios[3], real_t Shear_Moduli[3], real_t density);
+
+  void Gradient_Element_Anisotropic_Material_Properties(size_t ielem, real_t Element_Moduli[3], real_t Poisson_Ratios[3], real_t Shear_Moduli[3], real_t density);
+
+  void Concavity_Element_Anisotropic_Material_Properties(size_t ielem, real_t Element_Moduli[3], real_t Poisson_Ratios[3], real_t Shear_Moduli[3], real_t density);
+
   void Body_Term(size_t ielem, real_t density, real_t *forces);
 
   void Gradient_Body_Term(size_t ielem, real_t density, real_t *forces);
 
-  void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header);
+  void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header); //ANSYS .dat import of specified load and boundary conditions
+
+  void read_conditions_abaqus_inp(std::ifstream *in, std::streampos before_condition_header); //ABAQUS .inp import of specified load and boundary conditions
 
   //interfaces between user input and creating data structures for bcs
   void generate_bcs();
@@ -132,9 +156,13 @@ public:
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
+
+  //for the displacement constraint adjoint solves
+  void compute_displacement_constraint_gradients(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_int_array active_dofs, host_vec_array gradients);
+
+  void compute_displacement_constraint_hessian_vec(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_int_array active_dofs, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed);
   
-  Simulation_Parameters_Elasticity simparam;
-  Simulation_Parameters_Topology_Optimization simparam_TO;
+  Elasticity_Parameters *module_params;
   Implicit_Solver *Implicit_Solver_Pointer_;
   
   //Local FEA data
@@ -142,11 +170,13 @@ public:
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Stiffness_Matrix;
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Mass_Matrix;
   //CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Forces;
   CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Results; //result of linear solve; typically displacements and densities
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
   RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Stiffness_Entries;
+  RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Mass_Entries;
   RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Original_Stiffness_Entry_Indices;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Stiffness_Entries_Strides;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_RHS_Entries;
@@ -157,18 +187,24 @@ public:
   Teuchos::RCP<MV> all_node_displacements_distributed;
   Teuchos::RCP<MV> all_cached_node_displacements_distributed;
   Teuchos::RCP<MV> all_node_strains_distributed;
-  bool adjoints_allocated;
+  bool adjoints_allocated, constraint_adjoints_allocated;
   Teuchos::RCP<MV> adjoint_displacements_distributed;
+  Teuchos::RCP<MV> psi_adjoint_vector_distributed;
+  Teuchos::RCP<MV> phi_adjoint_vector_distributed;
   Teuchos::RCP<MV> adjoint_equation_RHS_distributed;
   Teuchos::RCP<MV> all_adjoint_displacements_distributed;
+  Teuchos::RCP<MV> all_psi_adjoint_vector_distributed;
+  Teuchos::RCP<MV> all_phi_adjoint_vector_distributed;
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
+  Teuchos::RCP<MAT> Global_Mass_Matrix;
   Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MV> Global_Nodal_Forces;
   
   //Boundary Conditions Data
   
   enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
-   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, SURFACE_PRESSURE_CONDITION};
+   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, ANSYS_DISPLACEMENT_IMPORT,
+   POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, SURFACE_PRESSURE_CONDITION};
   int max_boundary_sets, max_disp_boundary_sets, max_load_boundary_sets;
   int num_surface_disp_sets, num_surface_force_sets;
   bool matrix_bc_reduced;
@@ -196,7 +232,15 @@ public:
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xB;
   Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
   Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
+  Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> eigen_H;
+  Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> eigen_Prec;
   bool Hierarchy_Constructed;
+  bool Eigen_Hierarchy_Constructed;
+
+  //Eigenvalue solution data
+  Teuchos::RCP<Anasazi::Eigensolution<real_t,MV>> sol;
+  Teuchos::RCP<MV> evecs;
+  int numev;
 
   //output dof data
   //Global arrays with collected data used to print

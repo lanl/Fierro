@@ -1,0 +1,119 @@
+# Sod problem in Y
+
+dynamic_options:
+    time_final: 0.15
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 2000000
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0, 0, 0]
+    length: [0.01, 1.0, 0.01]
+    num_elems: [1, 100, 1]
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: state
+    graphics_time_step: 0.15
+
+solver_options:
+    - solver:
+        method: SGH3D
+
+boundary_conditions:
+    # Tag X=0 plane
+    - boundary_condition:
+        solver: SGH3D
+        geometry: x_plane
+        direction: x_dir
+        value: 0.0
+        type: reflected_velocity
+
+            
+    # Tag Y=0 plane
+    - boundary_condition:
+        solver: SGH3D
+        geometry: y_plane
+        direction: y_dir
+        value: 0.0
+        type: reflected_velocity
+
+    # Tag z=0 plane
+    - boundary_condition:
+        solver: SGH3D
+        geometry: z_plane
+        direction: z_dir
+        value: 0.0
+        type: reflected_velocity
+
+
+    # Tag X=0.01 plane
+    - boundary_condition:
+        solver: SGH3D
+        geometry: x_plane
+        direction: x_dir
+        value: 0.01
+        type: reflected_velocity
+
+            
+    # Tag Y=1.0 plane
+    - boundary_condition:
+        solver: SGH3D
+        geometry: y_plane
+        direction: y_dir
+        value: 1.0
+        type: reflected_velocity
+
+    # Tag z=0.01 plane
+    - boundary_condition:
+        solver: SGH3D
+        geometry: z_plane
+        direction: z_dir
+        value: 0.01
+        type: reflected_velocity
+                
+
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 1.0   # phi_min_curl
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+
+regions:
+    - fill_volume:
+        type: global
+        material_id: 0
+        den: 1.0
+        sie: 2.5
+        velocity: cartesian
+        u: 0.0
+        v: 0.0
+        w: 0.0
+
+    - fill_volume:
+        type: box
+        x1: 0.0
+        x2: 0.01
+        y1: 0.5
+        y2: 1.0
+        z1: 0.0
+        z2: 0.01
+        material_id: 0
+        den: 0.125
+        sie: 2

@@ -1,8 +1,3 @@
-cmake_minimum_required(VERSION 3.1.3)
-
-set(CMAKE_CXX_FLAGS  "${Trilinos_CXX_COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
-set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
-set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
 set(SRC_Files geometry.cpp boundary.cpp time_integration.cpp momentum.cpp
 elastic_optimization.cpp force_gradients_elastic.cpp force_elastic.cpp properties.cpp)
 set(FEA_Module_SRC FEA_Module_Dynamic_Elasticity.cpp )

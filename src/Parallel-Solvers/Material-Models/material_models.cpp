@@ -1,67 +1,116 @@
 #include "material_models.h"
+#include <unordered_set>
+
 #include "IdealGasEOSModel.h"
-#include "IdealGasStrengthModel.h"
-#include "UserEOSModel.h"
-#include "UserStrengthModel.h"
+#include "ConstantEOSModel.h"
+#include "UserDefinedEOSModel.h"
+#include "UserDefinedStrengthModel.h"
+#include "VUMATStrengthModel.h"
+#include "EVPStrengthModel.h"
+#include "EVPFFTStrengthModel.h"
+#include "LSEVPFFTStrengthModel.h"
 
-/* EOSParent */
-KOKKOS_FUNCTION
-EOSParent::EOSParent() {}
-
-KOKKOS_FUNCTION
-EOSParent::~EOSParent() {}
-
-/* sterngth_parent */
-KOKKOS_FUNCTION
-StrengthParent::StrengthParent() {}
-
-KOKKOS_FUNCTION
-StrengthParent::~StrengthParent() {}
-
-template <typename P, typename C>
-P* allocate_memory(RUN_LOCATION run_loc)
+void init_state_vars(
+  const DCArrayKokkos <material_t> &material,
+  const DViewCArrayKokkos <size_t> &elem_mat_id,
+  const DCArrayKokkos <double> &eos_state_vars,
+  const DCArrayKokkos <double> &strength_state_vars,
+  const DCArrayKokkos <double> &eos_global_vars,
+  const DCArrayKokkos <double> &strength_global_vars,
+  const DCArrayKokkos <double> &elem_user_output_vars,
+  const size_t num_elems)
 {
-  P* ptr = nullptr;
-  if (run_loc == RUN_LOCATION::device) {
-    ptr = (C*)Kokkos::kokkos_malloc<Kokkos::DefaultExecutionSpace::memory_space>(sizeof(C));
-  }
-  else if (run_loc == RUN_LOCATION::host) {
-    ptr = (C*)Kokkos::kokkos_malloc<Kokkos::HostSpace>(sizeof(C));
-  }
-  else {
-    throw std::runtime_error("run_loc should be device or host");
-  }
-  return ptr;
-}
+  /*
+  This function initializes eos_state_vars and strength_state_vars by calling
+  the init_eos_state_vars or init_strength_state_vars of the models.
+  TODO: split into two different functions
+  */
 
-template <typename P>
-void free_memory(P* model_ptr, RUN_LOCATION run_loc)
-{
-  static_assert(std::is_same<EOSParent, P>::value or std::is_same<StrengthParent, P>::value, 
-                "Invalid type. Type must be EOSParent or StrengthParent");
+  // get all strength models
+  std::unordered_set<STRENGTH_MODEL> strength_models;
+  for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
+    size_t mat_id = elem_mat_id.host(elem_gid);
+    strength_models.insert(material.host(mat_id).strength_model);
+  }
 
-  if (model_ptr == nullptr)
-    return;
+  // call the init functions of all strength models
+  for (auto strength_model : strength_models) {
 
-  if (run_loc == RUN_LOCATION::device) {
-    Kokkos::kokkos_free<Kokkos::DefaultExecutionSpace::memory_space>(model_ptr);
-    model_ptr = nullptr;
+    switch (strength_model) {
+      case STRENGTH_MODEL::user_defined:
+        UserDefinedStrengthModel::init_strength_state_vars(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case STRENGTH_MODEL::vumat:
+        VUMATStrengthModel::init_strength_state_vars(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case STRENGTH_MODEL::evp:
+        EVPStrengthModel::init_strength_state_vars(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case STRENGTH_MODEL::evpfft:
+        EVPFFTStrengthModel::init_strength_state_vars(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case STRENGTH_MODEL::ls_evpfft:
+        LSEVPFFTStrengthModel::init_strength_state_vars(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      default:
+        break;
+    } // end switch
+
+  } // end for
+
+
+  // get all eos models
+  std::unordered_set<EOS_MODEL> eos_models;
+  for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
+    size_t mat_id = elem_mat_id.host(elem_gid);
+    eos_models.insert(material.host(mat_id).eos_model);
   }
-  else if (run_loc == RUN_LOCATION::host) {
-    Kokkos::kokkos_free<Kokkos::HostSpace>(model_ptr);
-    model_ptr = nullptr;
-  }
-  else {
-    throw std::runtime_error("run_loc should be device or host");
-  }
-  
-}
+
+  // call the init functions of all eos models
+  for (auto eos_model : eos_models) {
+
+    switch (eos_model) {
+      case EOS_MODEL::constant:
+        ConstantEOSModel::init_eos_state_vars(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case EOS_MODEL::ideal_gas:
+        IdealGasEOSModel::init_eos_state_vars(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case EOS_MODEL::user_defined:
+        UserDefinedEOSModel::init_eos_state_vars(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;        
+
+      default:
+        break;
+    } // end switch
+
+  } // end for
+
+}  
 
 void init_strength_model(
   DCArrayKokkos <strength_t> &elem_strength,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &eos_state_vars,
+  const DCArrayKokkos <double> &strength_state_vars,
+  const DCArrayKokkos <double> &eos_global_vars,
+  const DCArrayKokkos <double> &strength_global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems)
 {
@@ -69,63 +118,72 @@ void init_strength_model(
   Material model strength should be initialized here.
   */
 
-  // Allocate memory on GPU or CPU depending on model run_location
+  // do not update elem_eos or elem_strength device or host,
+  // the functions will be placed in the right location
+
+  // assign the function pointers of the strength models
   for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
+
     size_t mat_id = elem_mat_id.host(elem_gid);
-    auto run_loc = material.host(mat_id).strength_run_location;
     auto strength_model = material.host(mat_id).strength_model;
+    auto run_loc = material.host(mat_id).strength_run_location;
+
     switch (strength_model) {
-      case STRENGTH_MODEL::ideal_gas:
-        elem_strength.host(elem_gid).model = allocate_memory <StrengthParent, IdealGasStrengthModel> (run_loc);
+      case STRENGTH_MODEL::user_defined:
+        if (run_loc == RUN_LOCATION::host) {
+          elem_strength.host(elem_gid).calc_stress = UserDefinedStrengthModel::calc_stress;
+        } else {
+          RUN({
+            elem_strength(elem_gid).calc_stress = UserDefinedStrengthModel::calc_stress;
+          });
+        }
         break;
-      case STRENGTH_MODEL::user_strength_model:
-        elem_strength.host(elem_gid).model = allocate_memory <StrengthParent, UserStrengthModel> (run_loc);
+
+      case STRENGTH_MODEL::vumat:
+        if (run_loc == RUN_LOCATION::host) {
+          elem_strength.host(elem_gid).calc_stress = VUMATStrengthModel::calc_stress;
+        } else {
+          RUN({
+            elem_strength(elem_gid).calc_stress = VUMATStrengthModel::calc_stress;
+          });
+        }
         break;
+
+      case STRENGTH_MODEL::evp:
+        if (run_loc == RUN_LOCATION::host) {
+          elem_strength.host(elem_gid).calc_stress = EVPStrengthModel::calc_stress;
+        } else {
+          RUN({
+            elem_strength(elem_gid).calc_stress = EVPStrengthModel::calc_stress;
+          });
+        }
+        break;
+
+      case STRENGTH_MODEL::evpfft:
+        if (run_loc == RUN_LOCATION::host) {
+          elem_strength.host(elem_gid).calc_stress = EVPFFTStrengthModel::calc_stress;
+        } else {
+          RUN({
+            elem_strength(elem_gid).calc_stress = EVPFFTStrengthModel::calc_stress;
+          });
+        }
+        break;
+
+      case STRENGTH_MODEL::ls_evpfft:
+        if (run_loc == RUN_LOCATION::host) {
+          elem_strength.host(elem_gid).calc_stress = LSEVPFFTStrengthModel::calc_stress;
+        } else {
+          RUN({
+            elem_strength(elem_gid).calc_stress = LSEVPFFTStrengthModel::calc_stress;
+          });
+        }
+        break;
+
       default:
         break;
     } // end switch
-  }
-  elem_strength.update_device();
 
-  // Create model on GPU using `placement new` for models that run on device
-  FOR_ALL(elem_gid, 0, num_elems, {
-    size_t mat_id = elem_mat_id(elem_gid);
-    auto run_loc = material(mat_id).strength_run_location;
-    auto strength_model = material(mat_id).strength_model;
-    if (run_loc == RUN_LOCATION::device) {
-      switch (strength_model) {
-        case STRENGTH_MODEL::ideal_gas:
-          new ((IdealGasStrengthModel*)elem_strength(elem_gid).model) IdealGasStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
-          break;
-        case STRENGTH_MODEL::user_strength_model:
-          new ((UserStrengthModel*)elem_strength(elem_gid).model) UserStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
-          break;
-        default:
-          break;
-      } // end switch
-    } // end if
-  });
-  Kokkos::fence();
-
-
-  // Create model on CPU using `placement new` for models that run on host
-  for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
-    size_t mat_id = elem_mat_id.host(elem_gid);
-    auto run_loc = material.host(mat_id).strength_run_location;
-    auto strength_model = material.host(mat_id).strength_model;
-    if (run_loc == RUN_LOCATION::host) {
-      switch (strength_model) {
-        case STRENGTH_MODEL::ideal_gas:
-          new ((IdealGasStrengthModel*)elem_strength.host(elem_gid).model) IdealGasStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
-          break;
-        case STRENGTH_MODEL::user_strength_model:
-          new ((UserStrengthModel*)elem_strength.host(elem_gid).model) UserStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
-          break;
-        default:
-          break;
-      } // end switch
-    } // end if
-  }
+  } // end for
 
 } // end init_user_strength_model
 
@@ -134,7 +192,10 @@ void init_eos_model(
   DCArrayKokkos <eos_t> &elem_eos,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &eos_state_vars,
+  const DCArrayKokkos <double> &strength_state_vars,
+  const DCArrayKokkos <double> &eos_global_vars,
+  const DCArrayKokkos <double> &strength_global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems)
 {
@@ -142,63 +203,82 @@ void init_eos_model(
   Material EOS model should be initialized here.
   */
 
-  // Allocate memory on GPU or CPU depending on model run_location
+  // do not update elem_eos or elem_strength device or host,
+  // the functions will be placed in the right location
+
+  // assign the function pointers of the eos models
   for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
+
     size_t mat_id = elem_mat_id.host(elem_gid);
-    auto run_loc = material.host(mat_id).eos_run_location;
     auto eos_model = material.host(mat_id).eos_model;
+    auto run_loc = material.host(mat_id).eos_run_location;
+
     switch (eos_model) {
+      case EOS_MODEL::constant:
+        if (run_loc == RUN_LOCATION::host) {
+          elem_eos.host(elem_gid).calc_pressure = ConstantEOSModel::calc_pressure;
+          elem_eos.host(elem_gid).calc_pressure_gradient_density = ConstantEOSModel::calc_pressure_gradient_density;
+          elem_eos.host(elem_gid).calc_pressure_gradient_internal_energy = ConstantEOSModel::calc_pressure_gradient_internal_energy;
+          elem_eos.host(elem_gid).calc_sound_speed = ConstantEOSModel::calc_sound_speed;
+          elem_eos.host(elem_gid).calc_sound_speed_gradient_density = ConstantEOSModel::calc_sound_speed_gradient_density;
+          elem_eos.host(elem_gid).calc_sound_speed_gradient_internal_energy = ConstantEOSModel::calc_sound_speed_gradient_internal_energy;
+        } else {
+          RUN({
+            elem_eos(elem_gid).calc_pressure = ConstantEOSModel::calc_pressure;
+            elem_eos(elem_gid).calc_pressure_gradient_density = ConstantEOSModel::calc_pressure_gradient_density;
+            elem_eos(elem_gid).calc_pressure_gradient_internal_energy = ConstantEOSModel::calc_pressure_gradient_internal_energy;
+            elem_eos(elem_gid).calc_sound_speed = ConstantEOSModel::calc_sound_speed;
+            elem_eos(elem_gid).calc_sound_speed_gradient_density = ConstantEOSModel::calc_sound_speed_gradient_density;
+            elem_eos(elem_gid).calc_sound_speed_gradient_internal_energy = ConstantEOSModel::calc_sound_speed_gradient_internal_energy;
+          });
+        }
+        break;
+
       case EOS_MODEL::ideal_gas:
-        elem_eos.host(elem_gid).model = allocate_memory <EOSParent, IdealGasEOSModel> (run_loc);
+        if (run_loc == RUN_LOCATION::host) {
+          elem_eos.host(elem_gid).calc_pressure = IdealGasEOSModel::calc_pressure;
+          elem_eos.host(elem_gid).calc_pressure_gradient_density = IdealGasEOSModel::calc_pressure_gradient_density;
+          elem_eos.host(elem_gid).calc_pressure_gradient_internal_energy = IdealGasEOSModel::calc_pressure_gradient_internal_energy;
+          elem_eos.host(elem_gid).calc_sound_speed = IdealGasEOSModel::calc_sound_speed;
+          elem_eos.host(elem_gid).calc_sound_speed_gradient_density = IdealGasEOSModel::calc_sound_speed_gradient_density;
+          elem_eos.host(elem_gid).calc_sound_speed_gradient_internal_energy = IdealGasEOSModel::calc_sound_speed_gradient_internal_energy;
+        } else {
+          RUN({
+            elem_eos(elem_gid).calc_pressure = IdealGasEOSModel::calc_pressure;
+            elem_eos(elem_gid).calc_pressure_gradient_density = IdealGasEOSModel::calc_pressure_gradient_density;
+            elem_eos(elem_gid).calc_pressure_gradient_internal_energy = IdealGasEOSModel::calc_pressure_gradient_internal_energy;
+            elem_eos(elem_gid).calc_sound_speed = IdealGasEOSModel::calc_sound_speed;
+            elem_eos(elem_gid).calc_sound_speed_gradient_density = IdealGasEOSModel::calc_sound_speed_gradient_density;
+            elem_eos(elem_gid).calc_sound_speed_gradient_internal_energy = IdealGasEOSModel::calc_sound_speed_gradient_internal_energy;
+          });
+        }
         break;
-      case EOS_MODEL::user_eos_model:
-        elem_eos.host(elem_gid).model = allocate_memory <EOSParent, UserEOSModel> (run_loc);
-        break;
+
+      case EOS_MODEL::user_defined:
+        if (run_loc == RUN_LOCATION::host) {
+          elem_eos.host(elem_gid).calc_pressure = UserDefinedEOSModel::calc_pressure;
+          elem_eos.host(elem_gid).calc_pressure_gradient_density = UserDefinedEOSModel::calc_pressure_gradient_density;
+          elem_eos.host(elem_gid).calc_pressure_gradient_internal_energy = UserDefinedEOSModel::calc_pressure_gradient_internal_energy;
+          elem_eos.host(elem_gid).calc_sound_speed = UserDefinedEOSModel::calc_sound_speed;
+          elem_eos.host(elem_gid).calc_sound_speed_gradient_density = UserDefinedEOSModel::calc_sound_speed_gradient_density;
+          elem_eos.host(elem_gid).calc_sound_speed_gradient_internal_energy = UserDefinedEOSModel::calc_sound_speed_gradient_internal_energy;
+        } else {
+          RUN({
+            elem_eos(elem_gid).calc_pressure = UserDefinedEOSModel::calc_pressure;
+            elem_eos(elem_gid).calc_pressure_gradient_density = UserDefinedEOSModel::calc_pressure_gradient_density;
+            elem_eos(elem_gid).calc_pressure_gradient_internal_energy = UserDefinedEOSModel::calc_pressure_gradient_internal_energy;
+            elem_eos(elem_gid).calc_sound_speed = UserDefinedEOSModel::calc_sound_speed;
+            elem_eos(elem_gid).calc_sound_speed_gradient_density = UserDefinedEOSModel::calc_sound_speed_gradient_density;
+            elem_eos(elem_gid).calc_sound_speed_gradient_internal_energy = UserDefinedEOSModel::calc_sound_speed_gradient_internal_energy;
+          });
+        }
+        break;        
+
       default:
         break;
     } // end switch
-  }
-  elem_eos.update_device();
 
-  // Create model on GPU using `placement new` for models that run on device
-  FOR_ALL(elem_gid, 0, num_elems, {
-    size_t mat_id = elem_mat_id(elem_gid);
-    auto run_loc = material(mat_id).eos_run_location;
-    auto eos_model = material(mat_id).eos_model;
-    if (run_loc == RUN_LOCATION::device) {
-      switch (eos_model) {
-        case EOS_MODEL::ideal_gas:
-          new ((IdealGasEOSModel*)elem_eos(elem_gid).model) IdealGasEOSModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
-          break;
-        case EOS_MODEL::user_eos_model:
-          new ((UserEOSModel*)elem_eos(elem_gid).model) UserEOSModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
-          break;
-        default:
-          break;
-      } // end switch
-    } // end if
-  });
-  Kokkos::fence();
-
-
-  // Create model on CPU using `placement new` for models that run on host
-  for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
-    size_t mat_id = elem_mat_id.host(elem_gid);
-    auto run_loc = material.host(mat_id).eos_run_location;
-    auto eos_model = material.host(mat_id).eos_model;
-    if (run_loc == RUN_LOCATION::host) {
-      switch (eos_model) {
-        case EOS_MODEL::ideal_gas:
-          new ((IdealGasEOSModel*)elem_eos.host(elem_gid).model) IdealGasEOSModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
-          break;
-        case EOS_MODEL::user_eos_model:
-          new ((UserEOSModel*)elem_eos.host(elem_gid).model) UserEOSModel(material,  global_vars, elem_user_output_vars, mat_id, elem_gid);
-          break;
-        default:
-          break;
-      } // end switch
-    } // end if 
-  }
+  } // end for
 
 } // end init_user_eos_model
 
@@ -206,42 +286,59 @@ void destroy_strength_model(
   DCArrayKokkos <strength_t> &elem_strength,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &global_vars,
-  const DCArrayKokkos <double> elem_user_output_vars,
+  const DCArrayKokkos <double> &eos_state_vars,
+  const DCArrayKokkos <double> &strength_state_vars,
+  const DCArrayKokkos <double> &eos_global_vars,
+  const DCArrayKokkos <double> &strength_global_vars,
+  const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems)
 {
   /*
-    All memory cleanup related to the user material model should be done in this fuction.
+    All memory cleanup related to the strength model should be done in this fuction.
     Fierro calls `destroy_strength_model` at the end of a simulation.
   */
 
-  // Destroy GPU model
-  FOR_ALL(elem_gid, 0, num_elems, {
-    size_t mat_id = elem_mat_id(elem_gid);
-    auto run_loc = material(mat_id).strength_run_location;
-    if (run_loc == RUN_LOCATION::device and elem_strength(elem_gid).model != nullptr) {  
-        elem_strength(elem_gid).model->~StrengthParent();
-    }
-  });
-  Kokkos::fence();
-
-  // Destroy CPU model
-  for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+  // get all strength models
+  std::unordered_set<STRENGTH_MODEL> strength_models;
+  for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
     size_t mat_id = elem_mat_id.host(elem_gid);
-    auto run_loc = material.host(mat_id).strength_run_location;
-    if (run_loc == RUN_LOCATION::host and elem_strength.host(elem_gid).model != nullptr) {  
-        elem_strength.host(elem_gid).model->~StrengthParent();
-    }
+    strength_models.insert(material.host(mat_id).strength_model);
   }
 
-  // Free CPU memory
-  for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-    size_t mat_id = elem_mat_id.host(elem_gid);
-    auto run_loc = material.host(mat_id).strength_run_location;
-    if (elem_strength.host(elem_gid).model != nullptr) {
-      free_memory(elem_strength.host(elem_gid).model, run_loc);
-    }
-  }
+  // call the destroy functions of all strength models
+  for (auto strength_model : strength_models) {
+
+    switch (strength_model) {
+      case STRENGTH_MODEL::user_defined:
+        UserDefinedStrengthModel::destroy(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case STRENGTH_MODEL::vumat:
+        VUMATStrengthModel::destroy(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case STRENGTH_MODEL::evp:
+        EVPStrengthModel::destroy(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case STRENGTH_MODEL::evpfft:
+        EVPFFTStrengthModel::destroy(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case STRENGTH_MODEL::ls_evpfft:
+        LSEVPFFTStrengthModel::destroy(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      default:
+        break;
+    } // end switch
+
+  } // end for
 
   return;
 } // end destroy_strength_model
@@ -251,42 +348,49 @@ void destroy_eos_model(
   DCArrayKokkos <eos_t> &elem_eos,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &eos_state_vars,
+  const DCArrayKokkos <double> &strength_state_vars,
+  const DCArrayKokkos <double> &eos_global_vars,
+  const DCArrayKokkos <double> &strength_global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems)
 {
   /*
-    All memory cleanup related to the user material model should be done in this fuction.
+    All memory cleanup related to the eos model should be done in this fuction.
     Fierro calls `destroy_eos_model()` at the end of a simulation.
   */
 
-  // Destroy GPU model
-  FOR_ALL(elem_gid, 0, num_elems, {
-    size_t mat_id = elem_mat_id(elem_gid);
-    auto run_loc = material(mat_id).eos_run_location;
-    if (run_loc == RUN_LOCATION::device and elem_eos(elem_gid).model != nullptr) {  
-        elem_eos(elem_gid).model->~EOSParent();
-    }
-  });
-  Kokkos::fence();
-
-  // Destroy CPU model
-  for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+  // get all eos models
+  std::unordered_set<EOS_MODEL> eos_models;
+  for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
     size_t mat_id = elem_mat_id.host(elem_gid);
-    auto run_loc = material.host(mat_id).eos_run_location;
-    if (run_loc == RUN_LOCATION::host and elem_eos.host(elem_gid).model != nullptr) {  
-        elem_eos.host(elem_gid).model->~EOSParent();
-    }
+    eos_models.insert(material.host(mat_id).eos_model);
   }
 
-  // Free CPU memory
-  for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-    size_t mat_id = elem_mat_id.host(elem_gid);
-    auto run_loc = material.host(mat_id).eos_run_location;
-    if (elem_eos.host(elem_gid).model != nullptr) {
-      free_memory(elem_eos.host(elem_gid).model, run_loc);
-    }
-  }
+  // call the destroy functions of all eos models
+  for (auto eos_model : eos_models) {
+
+    switch (eos_model) {
+      case EOS_MODEL::constant:
+        ConstantEOSModel::destroy(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case EOS_MODEL::ideal_gas:
+        IdealGasEOSModel::destroy(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case EOS_MODEL::user_defined:
+        UserDefinedEOSModel::destroy(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;        
+
+      default:
+        break;
+    } // end switch
+
+  } // end for
 
   return;
 } // end destroy_eos_model

@@ -1,0 +1,12 @@
+name: 'Publish Voxelizer'
+
+on: 
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/voxelizer
+      additional_variant: .conda/voxelizer/python_variants.yaml
+    secrets: inherit

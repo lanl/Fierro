@@ -1,0 +1,13 @@
+name: 'Publish Trilinos-CPU'
+
+# Create button to enable manual rebuilding of 
+# Trilinos. No automatic builds for this.
+on: workflow_dispatch
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/trilinos/cpu
+    secrets: inherit
+    
