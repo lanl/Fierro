@@ -1430,9 +1430,16 @@ struct Mesh_t
     void build_connectivity()
     {
         build_corner_connectivity();
+        printf("done building corner connectivity \n");
+
         build_elem_elem_connectivity();
+        printf("done building elem elem connectivity \n");
+
         build_patch_connectivity();
+        printf("done building patch connectivity \n");
+
         build_node_node_connectivity();
+        printf("done building node node connectivity \n");
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1444,10 +1451,10 @@ struct Mesh_t
     /////////////////////////////////////////////////////////////////////////////
     void init_bdy_sets(size_t num_bcs)
     {
-        if (num_bcs == 0) {
-            printf("ERROR: number of boundary sets = 0, set it = 1");
-            num_bcs = 1;
-        }
+        // if (num_bcs == 0) {
+        //     printf("ERROR: number of boundary sets = 0, set it = 1");
+        //     num_bcs = 1;
+        // }
         num_bdy_sets = num_bcs;
         num_bdy_patches_in_set = DCArrayKokkos<size_t>(num_bcs, "mesh.num_bdy_patches_in_set");
 
