@@ -300,7 +300,7 @@ void SystemSolve(Teuchos::RCP<Xpetra::Matrix<Scalar,LocalOrdinal,GlobalOrdinal,N
       Teuchos::RCP<Tpetra::CrsMatrix<SC,LO,GO,NO> > Atpetra;
       Teuchos::RCP<Tpetra::MultiVector<SC,LO,GO,NO> > Xtpetra,Btpetra;
       if(lib==Xpetra::UseTpetra) {
-        Atpetra = toTpetra(A);
+        Atpetra = Xpetra::toTpetra(A);
         Xtpetra = rcp(& Xpetra::toTpetra(*X),false);
         Btpetra = rcp(& Xpetra::toTpetra(*B),false);
       }
