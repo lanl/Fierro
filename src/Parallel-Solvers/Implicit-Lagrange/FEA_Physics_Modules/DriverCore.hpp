@@ -131,13 +131,13 @@ struct ML_Wrapper{
 
 
 template<class GlobalOrdinal>
-struct ML_Wrapper<double,int,GlobalOrdinal,Kokkos::Compat::KokkosSerialWrapperNode> {
-  static void Generate_ML_MultiLevelPreconditioner(Teuchos::RCP<Xpetra::Matrix<double,int,GlobalOrdinal,Kokkos::Compat::KokkosSerialWrapperNode> >& A,Teuchos::ParameterList & mueluList,
-                                                   Teuchos::RCP<Xpetra::Operator<double,int,GlobalOrdinal,Kokkos::Compat::KokkosSerialWrapperNode> >& mlopX) {
+struct ML_Wrapper<double,int,GlobalOrdinal,Tpetra::Compat::KokkosSerialWrapperNode> {
+  static void Generate_ML_MultiLevelPreconditioner(Teuchos::RCP<Xpetra::Matrix<double,int,GlobalOrdinal,Tpetra::Compat::KokkosSerialWrapperNode> >& A,Teuchos::ParameterList & mueluList,
+                                                   Teuchos::RCP<Xpetra::Operator<double,int,GlobalOrdinal,Tpetra::Compat::KokkosSerialWrapperNode> >& mlopX) {
     typedef double SC;
     typedef int LO;
     typedef GlobalOrdinal GO;
-    typedef Kokkos::Compat::KokkosSerialWrapperNode NO;
+    typedef Tpetra::Compat::KokkosSerialWrapperNode NO;
     Teuchos::RCP<const Epetra_CrsMatrix> Aep   = Xpetra::Helpers<SC, LO, GO, NO>::Op2EpetraCrs(A);
     Teuchos::RCP<Epetra_Operator> mlop  = Teuchos::rcp<Epetra_Operator>(new ML_Epetra::MultiLevelPreconditioner(*Aep,mueluList));
 #if defined(HAVE_MUELU_BELOS)
@@ -185,7 +185,7 @@ void PreconditionerSetup(Teuchos::RCP<Xpetra::Matrix<Scalar,LocalOrdinal,GlobalO
      A->SetMaxEigenvalueEstimate(-Teuchos::ScalarTraits<SC>::one());
      if(useAMGX) {
 #if defined(HAVE_MUELU_AMGX) and defined(HAVE_MUELU_TPETRA)
-       RCP<Tpetra::CrsMatrix<SC,LO,GO,NO> > Ac      = Utilities::Op2NonConstTpetraCrs(A);
+       RCP<Tpetra::CrsMatrix<SC,LO,GO,NO> > Ac      = Xpetra::toTpetra(A);
        RCP<Tpetra::Operator<SC,LO,GO,NO> > At       = Teuchos::rcp_dynamic_cast<Tpetra::Operator<SC,LO,GO,NO> >(Ac);
        RCP<MueLu::TpetraOperator<SC,LO,GO,NO> > Top = MueLu::CreateTpetraPreconditioner(At, mueluList);
        Prec = Teuchos::rcp(new Xpetra::TpetraOperator<SC,LO,GO,NO>(Top));
@@ -240,17 +240,17 @@ struct Matvec_Wrapper{
 
 
 template<class GlobalOrdinal>
-struct Matvec_Wrapper<double,int,GlobalOrdinal,Kokkos::Compat::KokkosSerialWrapperNode> {
-  static void UnwrapEpetra(Teuchos::RCP<Xpetra::Matrix<double,int,GlobalOrdinal,Kokkos::Compat::KokkosSerialWrapperNode> >& A,
-                           Teuchos::RCP<Xpetra::MultiVector<double,int,GlobalOrdinal,Kokkos::Compat::KokkosSerialWrapperNode> >& X,
-                           Teuchos::RCP<Xpetra::MultiVector<double,int,GlobalOrdinal,Kokkos::Compat::KokkosSerialWrapperNode> >& B,
+struct Matvec_Wrapper<double,int,GlobalOrdinal,Tpetra::Compat::KokkosSerialWrapperNode> {
+  static void UnwrapEpetra(Teuchos::RCP<Xpetra::Matrix<double,int,GlobalOrdinal,Tpetra::Compat::KokkosSerialWrapperNode> >& A,
+                           Teuchos::RCP<Xpetra::MultiVector<double,int,GlobalOrdinal,Tpetra::Compat::KokkosSerialWrapperNode> >& X,
+                           Teuchos::RCP<Xpetra::MultiVector<double,int,GlobalOrdinal,Tpetra::Compat::KokkosSerialWrapperNode> >& B,
                            Teuchos::RCP<const Epetra_CrsMatrix>& Aepetra,
                            Teuchos::RCP<Epetra_MultiVector>& Xepetra,
                            Teuchos::RCP<Epetra_MultiVector>& Bepetra) {
     typedef double SC;
     typedef int LO;
     typedef GlobalOrdinal GO;
-    typedef Kokkos::Compat::KokkosSerialWrapperNode NO;
+    typedef Tpetra::Compat::KokkosSerialWrapperNode NO;
     Aepetra = Xpetra::Helpers<SC, LO, GO, NO>::Op2EpetraCrs(A);
     Xepetra = Teuchos::rcp(& Xpetra::toEpetra(*X),false);
     Bepetra = Teuchos::rcp(& Xpetra::toEpetra(*B),false);
@@ -300,7 +300,7 @@ void SystemSolve(Teuchos::RCP<Xpetra::Matrix<Scalar,LocalOrdinal,GlobalOrdinal,N
       Teuchos::RCP<Tpetra::CrsMatrix<SC,LO,GO,NO> > Atpetra;
       Teuchos::RCP<Tpetra::MultiVector<SC,LO,GO,NO> > Xtpetra,Btpetra;
       if(lib==Xpetra::UseTpetra) {
-        Atpetra = Utilities::Op2NonConstTpetraCrs(A);
+        Atpetra = toTpetra(A);
         Xtpetra = rcp(& Xpetra::toTpetra(*X),false);
         Btpetra = rcp(& Xpetra::toTpetra(*B),false);
       }
