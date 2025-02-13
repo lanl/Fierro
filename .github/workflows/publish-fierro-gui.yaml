@@ -1,6 +1,11 @@
 name: 'Publish FIERRO GUI'
 
 on: 
+  push:
+    paths:
+      - .conda/fierro-gui/**
+      - python/FIERRO-GUI/**
+      - .github/workflows/publish-fierro-gui.yaml
   workflow_dispatch:
 
 jobs:

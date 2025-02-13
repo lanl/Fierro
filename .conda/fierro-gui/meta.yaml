@@ -3,9 +3,10 @@ package:
   version: 1
 
 source:
-  path: ../../
-  # - git_url: https://github.com/lanl/Fierro.git
-  #   depth: 1
+  #path: ../../
+  git_url: https://github.com/lanl/Fierro.git
+  depth: 1
+  git_submodules: false # don't need submodules 
 
 build:
   number: 0
@@ -13,7 +14,7 @@ build:
   noarch: python # This is a pure python package. So build for noarch on linux64
   entry_points:
     - fierro-gui = fierro_gui.gui:main
-  skip: true  # [not (linux and x86_64)]
+      #skip: true  # [not (linux and x86_64)]
   skip: false # [linux and x86_64]
 
 requirements:
@@ -21,16 +22,24 @@ requirements:
     - python
     - setuptools
   run:
-    - paraview=5.11.2
+    - paraview >=5.13.2
     - python
-    - numpy
-    - matplotlib
-    - pyside6=6.5
+      #- numpy
+      #- matplotlib
+    - pyside6 >=6.7.3
 
 test:
   imports:
-    - fierro_gui
-    
+    - fierro-gui
+  
+about:
+  home: https://github.com/lanl/Fierro
+  license: BSD-3-Clause
+  license_family: BSD
+  summary:
+    GUI for the Fierro application, including all dependencies
+  dev_url: https://github.com/lanl/Fierro
+
 extra:
   recipe-maintainers:
     - fierromechanics

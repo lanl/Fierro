@@ -1,0 +1,53 @@
+{% set version = "1.0.0" %}
+{% set linux_compiler_version = "10.4.0" %}
+#{% set macos_compiler_version = "16" %}
+
+package:
+  name: elements-cuda
+  version: {{ version }}
+
+source:
+  - git_url: https://github.com/lanl/ELEMENTS.git
+    git_depth: 1
+
+build:
+  number: 1
+  noarch: False
+  script_env:
+    - PLATFORM={{ target_platform }}
+  skip: True  # [osx]
+  skip: False # [linux]
+
+requirements:
+  build:
+    - cmake >=3.17.0
+    - {{ compiler('cxx') }}={{ linux_compiler_version }}
+    - cuda-toolkit
+    - matar-cuda
+    - openmpi
+  host:
+    - openmpi >=4.1.6,<5.0a0
+    - matar-cuda
+    - kokkos=4.1
+  run:
+    - openmpi >=4.1.6,<5.0a0
+    - matar-cuda
+    - kokkos=4.1
+
+about:
+  home: https://github.com/lanl/ELEMENTS
+  license: BSD-3-Clause
+  license_family: BSD
+  license_file: LICENSE
+  summary:
+    LANL's for lagrangian mesh libraries.
+  description:
+    The C++ ELEMENTS library is a collection of sub-libraries to support implementing a diverse range
+    of numerical methods on low and high-order meshes. The ELEMENTS library can be used for research 
+    and development of both continuous and discontinuous finite element methods, as well as, 
+    finite volume methods to solve a diverse range of partial differential equations.
+  dev_url: https://github.com/lanl/Fierro
+
+extra:
+  recipe-maintainers:
+    - fierromechanics
