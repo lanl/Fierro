@@ -13,7 +13,7 @@ echo "Trilinos Kokkos Build Type: $kokkos_build_type"
 if [ ! -d "${TRILINOS_SOURCE_DIR}" ]
 then
   echo "Directory Trilinos does not exist, downloading Trilinos...."
-  git clone --depth 1 https://github.com/trilinos/Trilinos.git ${TRILINOS_SOURCE_DIR}
+  git clone --depth 1 --branch trilinos-release-16-0-branch https://github.com/trilinos/Trilinos.git ${TRILINOS_SOURCE_DIR}
 fi
 
 #check if Trilinos build directory exists, create Trilinos/build if it doesn't
