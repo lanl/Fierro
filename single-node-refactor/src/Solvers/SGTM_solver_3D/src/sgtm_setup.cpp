@@ -97,7 +97,9 @@ void SGTM3D::fill_regions_sgtm(
     State_t& State,
     DCArrayKokkos <double>& GaussPoint_den,
     DCArrayKokkos <double>& GaussPoint_sie,
+    DCArrayKokkos <double>& GaussPoint_volfrac,
     DCArrayKokkos <size_t>& elem_mat_id,
+    DCArrayKokkos <size_t>& num_mats_saved_in_elem,
     DCArrayKokkos <size_t>& voxel_elem_mat_id,
     const CArrayKokkos <RegionFill_t>& region_fills,
     const CArray <RegionFill_host_t>& region_fills_host,
@@ -202,7 +204,9 @@ void SGTM3D::fill_regions_sgtm(
                                     State.node.coords,
                                     GaussPoint_den,
                                     GaussPoint_sie,
+                                    GaussPoint_volfrac,
                                     elem_mat_id,
+                                    num_mats_saved_in_elem,
                                     region_fills,
                                     elem_coords,
                                     elem_gid,
@@ -237,6 +241,7 @@ void SGTM3D::fill_regions_sgtm(
     elem_mat_id.update_host();
     GaussPoint_den.update_host();
     GaussPoint_sie.update_host();
+    GaussPoint_volfrac.update_host();
     State.node.vel.update_host();
     State.node.temp.update_host();
 
@@ -262,14 +267,22 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
     // the number of elems and nodes in the mesh
     const size_t num_elems = mesh.num_elems;
     const size_t num_nodes = mesh.num_nodes;
+    const size_t num_gauss_points = mesh.num_elems;  // 1 Gauss point per element
 
     const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
 
     // create temporary state fields
     // Painting routine requires only 1 material per GaussPoint
-    DCArrayKokkos<double> GaussPoint_den(num_elems);
-    DCArrayKokkos<double> GaussPoint_sie(num_elems);
-    DCArrayKokkos<size_t> elem_mat_id(num_elems); // the mat_id in the elem
+    const size_t num_mats_per_elem = 3;
+    DCArrayKokkos <double> GaussPoint_den(num_gauss_points, num_mats_per_elem);
+    DCArrayKokkos <double> GaussPoint_sie(num_gauss_points, num_mats_per_elem);
+    DCArrayKokkos <double> GaussPoint_volfrac(num_gauss_points, num_mats_per_elem);
+    DCArrayKokkos <size_t> elem_mat_id(num_elems, num_mats_per_elem); // the mat_id in the elem
+
+    // num mats saved in an element during setup
+    DCArrayKokkos <size_t> num_mats_saved_in_elem(num_elems);
+    num_mats_saved_in_elem.set_values(0); // initialize all elems to storing 0 materials
+    num_mats_saved_in_elem.update_host();
 
     DCArrayKokkos<size_t> voxel_elem_mat_id;       // 1 or 0 if material exist, or it is the material_id
 
@@ -281,7 +294,9 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                      State,
                      GaussPoint_den,
                      GaussPoint_sie,
+                     GaussPoint_volfrac,
                      elem_mat_id,
+                     num_mats_saved_in_elem,
                      voxel_elem_mat_id,
                      SimulationParamaters.region_fills,
                      SimulationParamaters.region_fills_host,
@@ -306,10 +321,17 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
         size_t sum_total;
 
         FOR_REDUCE_SUM(elem_gid, 0, num_elems, sum_local, {
-            if (elem_mat_id(elem_gid) == mat_id) {
-                // increment the number of elements the materials live in
-                sum_local++;
-            } // end if
+            
+            // loop over the materials in the element
+            for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
+
+                if (elem_mat_id(elem_gid, a_mat_in_elem) == mat_id) {
+                    // increment the number of elements the materials live in
+                    sum_local++;
+                } // end if a_mat is equal to mat_id
+            
+            } // end loop over materials in elem
+
         }, sum_total);
 
         // material index space size
@@ -367,49 +389,51 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
 
     // the following loop is not thread safe
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-        // get the material_id in this element
-        size_t mat_id = elem_mat_id.host(elem_gid);
+        for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
+            // get the material_id in this element
+            size_t mat_id = elem_mat_id.host(elem_gid,a_mat_in_elem);
 
-        // mat elem lid (compressed storage) to save the data to, for this material mat_id
-        size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
+            // mat elem lid (compressed storage) to save the data to, for this material mat_id
+            size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
 
-        // --- mapping from material elem lid to elem ---
-        State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
+            // --- mapping from material elem lid to elem ---
+            State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
 
-        // -----------------------
-        // Save MaterialPoints
-        // -----------------------
+            // -----------------------
+            // Save MaterialPoints
+            // -----------------------
 
-        // LOOP OVER Guass points in the element
-        {
-            size_t gauss_gid = elem_gid;  // 1 gauss point per element
+            // LOOP OVER Guass points in the element
+            {
+                size_t gauss_gid = elem_gid;  // 1 gauss point per element
 
-            size_t mat_point_lid = mat_elem_lid; // for more than 1 gauss point, this must increment
+                size_t mat_point_lid = mat_elem_lid; // for more than 1 gauss point, this must increment
 
-            // --- density and mass ---
-            State.MaterialPoints(mat_id).den.host(mat_point_lid)  = GaussPoint_den.host(gauss_gid);
-            State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(gauss_gid) * State.GaussPoints.vol.host(gauss_gid);
+                // --- density and mass ---
+                State.MaterialPoints(mat_id).den.host(mat_point_lid)  = GaussPoint_den.host(gauss_gid,a_mat_in_elem);
+                State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(gauss_gid,a_mat_in_elem) * State.GaussPoints.vol.host(gauss_gid);
 
-            // --- volume fraction ---
-            State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = 1.0;
+                // --- volume fraction ---
+                State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = GaussPoint_volfrac.host(gauss_gid,a_mat_in_elem);;
 
-            // --- set eroded flag to false ---
-            State.MaterialPoints(mat_id).eroded.host(mat_point_lid) = false;
+                // --- set eroded flag to false ---
+                State.MaterialPoints(mat_id).eroded.host(mat_point_lid) = false;
 
-            // --- specific internal energy ---
-            // save state, that is integrated in time, at the RK levels
-            for (size_t rk_level = 0; rk_level < rk_num_bins; rk_level++) {
-                State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = GaussPoint_sie.host(gauss_gid);
-            }
-        } // end loop over gauss points in element
+                // --- specific internal energy ---
+                // save state, that is integrated in time, at the RK levels
+                for (size_t rk_level = 0; rk_level < rk_num_bins; rk_level++) {
+                    State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = GaussPoint_sie.host(gauss_gid,a_mat_in_elem);
+                }
+            } // end loop over gauss points in element
 
-        // -----------------------
-        // Save MaterialZones
-        // -----------------------
-        // For higher-order FE, least squares fit the sie at gauss points to get zone values
+            // -----------------------
+            // Save MaterialZones
+            // -----------------------
+            // For higher-order FE, least squares fit the sie at gauss points to get zone values
 
-        // update counter for how many mat_elem_lid values have been saved
-        num_elems_saved_for_mat.host(mat_id)++;
+            // update counter for how many mat_elem_lid values have been saved
+            num_elems_saved_for_mat.host(mat_id)++; 
+        } // end loop over materials in this element
     } // end serial for loop over all elements
 
     // copy the state to the device

@@ -113,6 +113,7 @@ struct RegionFill_t
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
+    double volfrac = 1.0; ///< volume fraction of material
 
     double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region
 };

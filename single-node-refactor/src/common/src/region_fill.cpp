@@ -529,28 +529,87 @@ void paint_gauss_den_sie(const Material_t& Materials,
                          const DCArrayKokkos <double>& node_coords,
                          const DCArrayKokkos <double>& GaussPoint_den,
                          const DCArrayKokkos <double>& GaussPoint_sie,
+                         const DCArrayKokkos <double>& GaussPoint_volfrac,
                          const DCArrayKokkos <size_t>& elem_mat_id,
+                         const DCArrayKokkos <size_t>& num_mats_saved_in_elem,
                          const CArrayKokkos<RegionFill_t>& region_fills,
                          const ViewCArrayKokkos <double> elem_coords,
                          const double elem_gid,
                          const size_t f_id)
 {
 
-    // the material id
-    size_t mat_id = region_fills(f_id).material_id;
 
-    // --- material_id in elem ---
-    elem_mat_id(elem_gid) = mat_id;
+    // the number of materials saved to this element
+    size_t mat_storage_lid = num_mats_saved_in_elem(elem_gid);
+
+    // check on exceeding 3 materials per element
+    if (num_mats_saved_in_elem(elem_gid) > 3){
+        Kokkos::abort("ERROR: exceeded 3 materials in an element when painting regions on the mesh \n");
+    } // end if check
+
+
+    // material id
+    const size_t mat_id = region_fills(f_id).material_id;
+
 
     // loop over the Gauss points in the element
     {
         
         const size_t gauss_gid = elem_gid;  // 1 gauss point per element
 
+        // increment the number of saved materials if this is the first material in the element
+        if (mat_storage_lid==0){
+            num_mats_saved_in_elem(elem_gid) = 1;
+        }
+        else{
+            // ----------------
+            // mat_storage > 0
+
+            // a material is already here, overwrite that material if new material has a vol fraction of 1
+            // otherwise add room to store another material
+            if(region_fills(f_id).volfrac >= (1.0 - 1.e-14)){
+                // if the volume fraction is 1, reset the counter, deleting all prior materials
+                num_mats_saved_in_elem(elem_gid) = 1;
+                mat_storage_lid = 0; // save state to the zero index of the gauss point arrays
+            }
+            // if the volume fraction of new material is <1 then increment the num mats saved counter
+            else if(region_fills(f_id).volfrac < (1.0 - 1.e-14)){
+                num_mats_saved_in_elem(elem_gid)++;
+                // mat_storage_lid value is correct, it is equal to num_mats_saved-1
+
+                // ensure volume fraction is bounded
+                double vol_frac_total = region_fills(f_id).volfrac;
+                for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid)-1; a_mat_in_elem++){
+                    vol_frac_total += GaussPoint_volfrac(gauss_gid, a_mat_in_elem);
+                }
+                // squish material out if vol fraction is > 1
+                if (vol_frac_total > 1.0){
+
+                    double vol_error = vol_frac_total - 1.0;
+
+                    // squish out material
+                    for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid)-1; a_mat_in_elem++){
+                        double vol_removed = fmin(GaussPoint_volfrac(gauss_gid, a_mat_in_elem), vol_error);
+                        GaussPoint_volfrac(gauss_gid, a_mat_in_elem) -= vol_removed;
+                        vol_error -= fmax(0.0, vol_removed);  // once error =0, no more material removed
+                    } // end for squishing out material
+
+                } // end if too much material
+                
+            } // end if adding a volume fraction less than 1
+                
+        } // end if
+
+
+
+        // --- material_id in elem ---
+        elem_mat_id(elem_gid, mat_storage_lid) = mat_id; // 
+
+
         // add test problem state setups here
         if (region_fills(f_id).velocity == init_conds::tg_vortex) {
 
-            GaussPoint_den(gauss_gid) = 1.0;    
+            GaussPoint_den(gauss_gid, mat_storage_lid) = 1.0;    
 
             // note: elem_coords are the gauss_coords, higher quadrature requires ref elem data
             double pres = 0.25 * (cos(2.0 * PI * elem_coords(0)) + 
@@ -559,21 +618,28 @@ void paint_gauss_den_sie(const Material_t& Materials,
             // p = rho*ie*(gamma - 1)
             // makes sure index 0 matches the gamma in the gamma law function 
             double gamma  = Materials.eos_global_vars(mat_id,0); 
-            GaussPoint_sie(gauss_gid) =
-                pres / (GaussPoint_den(gauss_gid) * (gamma - 1.0));
+            GaussPoint_sie(gauss_gid, mat_storage_lid) =
+                pres / (GaussPoint_den(gauss_gid, mat_storage_lid) * (gamma - 1.0));
+
+            GaussPoint_volfrac(gauss_gid, mat_storage_lid) = region_fills(f_id).volfrac;
         } // end
+        // *****
         // add user initialization here
+        // *****
         else{
             
             // --- density ---
-            GaussPoint_den(gauss_gid) = region_fills(f_id).den;
+            GaussPoint_den(gauss_gid, mat_storage_lid) = region_fills(f_id).den;
 
             // --- specific internal energy ---
-            GaussPoint_sie(gauss_gid) = region_fills(f_id).sie;
+            GaussPoint_sie(gauss_gid, mat_storage_lid) = region_fills(f_id).sie;
+
+            // --- volume fraction ---
+            GaussPoint_volfrac(gauss_gid, mat_storage_lid) = region_fills(f_id).volfrac;
 
         }  // end if 
         
-    } // end loop over gauss points in element'
+    } // end loop over gauss points in element
 
     // done setting the element state
 
