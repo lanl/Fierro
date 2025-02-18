@@ -38,6 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.h"
 #include "ref_elem.h"
 #include <cmath>
+#include <parmetis.h>
 
 #define PI 3.141592653589793
 
@@ -303,6 +304,13 @@ struct Mesh_t
 
     RaggedRightArrayKokkos<size_t> bdy_nodes_in_set; ///< Boundary nodes in a boundary set
     DCArrayKokkos<size_t> num_bdy_nodes_in_set; ///< Number of boundary nodes in a set
+
+
+    // Member variables for partitioning
+    int num_partitions;              ///< Number of partitions (typically number of MPI ranks)
+    CArrayKokkos<idx_t> partition;   ///< Partition ID for each element
+    CArrayKokkos<int> elem_owner;    ///< MPI rank that owns each element
+    CArrayKokkos<int> node_owner;    ///< MPI rank that owns each node
 
     // initialization methods
     void initialize_nodes(const size_t num_nodes_inp)
@@ -1441,6 +1449,92 @@ struct Mesh_t
         build_node_node_connectivity();
         printf("done building node node connectivity \n");
     }
+
+
+     /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn partition_mesh
+    ///
+    /// \brief Partitions the mesh using ParMETIS
+    ///
+    /// \param num_parts - Number of partitions to create (typically number of MPI ranks)
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void partition_mesh(const int num_parts) {
+        // Initialize partition arrays if not already done
+        num_partitions = num_parts;
+        partition = CArrayKokkos<idx_t>(num_elems, "mesh.partition");
+        elem_owner = CArrayKokkos<int>(num_elems, "mesh.elem_owner");
+        node_owner = CArrayKokkos<int>(num_nodes, "mesh.node_owner");
+
+        // Create CSR representation of element-node connectivity for ParMETIS
+        CArrayKokkos<idx_t> xadj(num_elems + 1, "xadj");
+        CArrayKokkos<idx_t> adjncy(num_elems * num_nodes_in_elem, "adjncy");
+
+        // Build adjacency lists
+        FOR_ALL_CLASS(elem_gid, 0, num_elems, {
+            xadj(elem_gid) = elem_gid * num_nodes_in_elem;
+            
+            for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                adjncy(xadj(elem_gid) + node_lid) = nodes_in_elem(elem_gid, node_lid);
+            }
+        });
+        xadj(num_elems) = num_elems * num_nodes_in_elem;
+
+        // Set up ParMETIS arrays
+        idx_t nvtxs = num_elems;  // Number of vertices (elements)
+        idx_t ncon = 1;           // Number of weights per vertex
+        
+        // Vertex weights and sizes (set to 1)
+        CArrayKokkos<idx_t> vwgt(num_elems, "vwgt");
+        CArrayKokkos<idx_t> vsize(num_elems, "vsize");
+        FOR_ALL_CLASS(i, 0, num_elems, {
+            vwgt(i) = 1;
+            vsize(i) = 1;
+        });
+
+        // ParMETIS options
+        idx_t options[4] = {0, 0, 0, 0};  // Use default options
+        idx_t edgecut;                     // Output: Number of edges cut by partition
+        real_t ubvec = 1.05;              // Load imbalance tolerance
+
+        // Call ParMETIS to partition the mesh
+        int result = ParMETIS_V3_PartMeshKway(
+            &nvtxs,                    // Number of vertices
+            &ncon,                     // Number of weights per vertex
+            xadj.data(),              // CSR row pointers
+            adjncy.data(),            // CSR column indices
+            vwgt.data(),              // Vertex weights
+            vsize.data(),             // Vertex sizes
+            &num_partitions,          // Number of parts
+            &ubvec,                   // Load imbalance tolerance
+            options,                  // Options array
+            &edgecut,                 // Output: Edge cut size
+            partition.data()          // Output: Partition assignments
+        );
+
+        if (result != METIS_OK) {
+            printf("ERROR: ParMETIS partitioning failed\n");
+            return;
+        }
+
+        // Assign element owners based on partition
+        FOR_ALL_CLASS(elem_gid, 0, num_elems, {
+            elem_owner(elem_gid) = partition(elem_gid);
+        });
+
+        // Assign node owners (node belongs to lowest numbered partition of connected elements)
+        FOR_ALL_CLASS(node_gid, 0, num_nodes, {
+            int min_part = num_partitions;
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
+                size_t elem_gid = elems_in_node(node_gid, corner_lid);
+                min_part = min(min_part, partition(elem_gid));
+            }
+            node_owner(node_gid) = min_part;
+        });
+    }
+
+
 
     /////////////////////////////////////////////////////////////////////////////
     ///
