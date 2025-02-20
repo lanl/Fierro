@@ -423,7 +423,8 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 
                 // --- density and mass ---
                 State.MaterialPoints(mat_id).den.host(mat_point_lid)  = GaussPoint_den.host(gauss_gid,a_mat_in_elem);
-                State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(gauss_gid,a_mat_in_elem) * State.GaussPoints.vol.host(gauss_gid);
+                State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(gauss_gid,a_mat_in_elem) * 
+                                                                        State.GaussPoints.vol.host(gauss_gid) * GaussPoint_volfrac.host(gauss_gid,a_mat_in_elem);
 
                 // --- volume fraction ---
                 State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = GaussPoint_volfrac.host(gauss_gid,a_mat_in_elem);

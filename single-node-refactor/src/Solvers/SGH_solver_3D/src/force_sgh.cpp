@@ -224,7 +224,7 @@ void SGH3D::get_force(const Material_t& Materials,
                         + disp_corner_forces(node_lid, dim);
 
                     // save the material corner force
-                    MaterialCorners_force(mat_corner_lid, dim) = force_component;
+                    MaterialCorners_force(mat_corner_lid, dim) = force_component*MaterialPoints_volfrac(mat_point_lid);
 
                      // tally all material forces to the corner
                     corner_force(corner_gid, dim) += force_component*MaterialPoints_volfrac(mat_point_lid);

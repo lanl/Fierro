@@ -310,6 +310,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,

@@ -1077,6 +1077,20 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).ie = ie;
                 });
             } // ie
+            else if (a_word.compare("volfrac") == 0) {
+                // extensive internal energy
+
+                double volfrac = root["regions"][reg_id]["region"]["volfrac"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\tvolfrac = " << volfrac << std::endl;
+                }
+
+                RUN({
+                    // make volfrac bounded between 0 and 1
+                    double volfracfloor = fmax(0.0, volfrac);
+                    region_fills(reg_id).volfrac = fmin(1.0, volfracfloor);
+                });
+            } // ie            
             else if (a_word.compare("temperature") == 0) {
                 double temperature = root["regions"][reg_id]["region"]["temperature"].As<double>();
                 if (VERBOSE) {
