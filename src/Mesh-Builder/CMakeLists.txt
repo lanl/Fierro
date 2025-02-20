@@ -5,6 +5,8 @@ project(mesh-builder)
 SET(CMAKE_CXX_STANDARD 17)
 
 find_package(MPI REQUIRED)
+find_package(Elements REQUIRED)
+find_package(Matar REQUIRED)
 
 # Assume if the CXX compiler exists, the rest do too.
 if (EXISTS ${Trilinos_CXX_COMPILER})
@@ -23,7 +25,7 @@ include_directories(${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
 add_library(mesh_builder src/MeshBuilder.cpp src/EnsightIO.cpp src/VtkIO.cpp)
-target_link_libraries(mesh_builder PUBLIC yaml_serializable Elements)
+target_link_libraries(mesh_builder PUBLIC yaml_serializable Elements matar)
 target_include_directories(mesh_builder PUBLIC include)
 
 add_executable(fierro-mesh-builder src/main.cpp)
