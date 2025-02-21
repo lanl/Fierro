@@ -29,12 +29,12 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}
     - openmpi
-    - elements-cpu
+    #- elements-cpu
   host:
     - _openmp_mutex # [linux]
     - llvm-openmp   # [osx]
     - trilinos-cpu
-    - elements-cpu
+    #- elements-cpu
     - openmpi >=4.1.6,<5.0a0
   run:
     - trilinos-cpu
