@@ -2111,6 +2111,7 @@ public:
 
         // save the output scale fields to a single 2D array
 
+
         // export material centeric data to the elements
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
@@ -2171,6 +2172,7 @@ public:
 
             point_scalar_fields(node_gid, 0) = State.node.temp.host(1,node_gid);
         } // end for loop over vertices
+
 
         FILE* out[20];   // the output files that are written to
         char  filename[100]; // char string
@@ -2326,6 +2328,8 @@ public:
 
         // increment graphics id counter
         graphics_id++;
+
+
     } // end write vtk
 
     /////////////////////////////////////////////////////////////////////////////

@@ -85,7 +85,7 @@ struct node_t
                     if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
                     break;
                 case node_state::temp:
-                    if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_nodes, "node_temp");
+                    if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_rk, num_nodes, "node_temp");
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
