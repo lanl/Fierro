@@ -2,7 +2,7 @@
 # ======= EXPLICIT/SGH WRITE INPUT FILE =======
 # =============================================
 
-def Explicit_SGH_WInput(self):
+def SGH_WInput(self):
 #    InputFile = open("Explicit_SGH_Input.yaml","w")
     InputFile = open(self.EXPLICIT_SGH_INPUT,"w")
     

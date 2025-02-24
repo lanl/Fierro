@@ -30,6 +30,7 @@ output_options:
 solver_options:
   - solver:
         method: SGHRZ
+        id: 0
         # solver_vars:
         #  - blah
         #  - blah
@@ -38,20 +39,28 @@ solver_options:
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
-        solver: SGHRZ
-        geometry: x_plane
-        direction: x_dir
-        value: 0.0
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
 
             
     # Tag Y plane
     - boundary_condition:
-        solver: SGHRZ
-        geometry: y_plane
-        direction: y_dir
-        value: 0.0
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
 
 
   
@@ -94,31 +103,35 @@ materials:
 
 
 regions:
-    - fill_volume:
-        type: global
+    - region:
+        volume:
+            type: global
         material_id: 0
         den: 1.0
         sie: 1.e-10
-        velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: 0.0
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
 
     
 
     # energy source initial conditions
-    - fill_volume:
-        type: sphere
-        origin: [0.0, 0.0, 0.0]
-        radius1: 0.0
-        radius2: 0.1
+    - region:
+        volume:
+            type: sphere
+            origin: [0.0, 0.0, 0.0]
+            radius1: 0.0
+            radius2: 0.1
         material_id: 0
         den: 1.0
         # ie: 0.25833839995946534
         sie: 78.5254574 #  (0.5*0.49339/(mat_fill(1).den*vol))
-        velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: 0.0
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
 
 

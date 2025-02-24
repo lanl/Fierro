@@ -268,17 +268,20 @@ public:
         // x-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
             fscanf(in, "%le", &node.coords.host(0, node_id, 0));
+            node.coords.host(0, node_id, 0)*= mesh_inps.scale_x;
         }
 
         // y-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
             fscanf(in, "%le", &node.coords.host(0, node_id, 1));
+            node.coords.host(0, node_id, 1)*= mesh_inps.scale_y;
         }
 
         // z-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
             if (num_dims == 3) {
                 fscanf(in, "%le", &node.coords.host(0, node_id, 2));
+                node.coords.host(0, node_id, 2)*= mesh_inps.scale_z;
             }
             else{
                 double dummy;
@@ -2028,6 +2031,8 @@ public:
             State.MaterialPoints(mat_id).sspd.update_host();
             State.MaterialPoints(mat_id).sie.update_host();
             State.MaterialPoints(mat_id).mass.update_host();
+            State.MaterialPoints(mat_id).conductivity.update_host();
+            State.MaterialPoints(mat_id).temp_grad.update_host();
             State.MaterialPoints(mat_id).eroded.update_host();
         } // end for mat_id
 
@@ -2043,7 +2048,7 @@ public:
         Kokkos::fence();
 
 
-        const int num_cell_scalar_vars = 10;
+        const int num_cell_scalar_vars = 13;
         const int num_cell_vec_vars    = 0;
 
         const int num_point_scalar_vars = 1;
@@ -2052,7 +2057,7 @@ public:
 
         // Scalar values associated with a cell
         const char cell_scalar_var_names[num_cell_scalar_vars][15] = {
-            "den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch", "eroded"
+            "den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch","eroded", "temp_grad_x", "temp_grad_y", "temp_grad_z"
         };
         
         const char cell_vec_var_names[num_cell_vec_vars][15] = {
@@ -2129,6 +2134,9 @@ public:
                 elem_fields(elem_gid, 7) = (double)mat_id;
                 // 8 is the e_switch
                 elem_fields(elem_gid, 9) = (double)State.MaterialPoints(mat_id).eroded.host(mat_elem_lid);
+                elem_fields(elem_gid, 10) = (double)State.MaterialPoints(mat_id).temp_grad.host(elem_gid,0);
+                elem_fields(elem_gid, 11) = (double)State.MaterialPoints(mat_id).temp_grad.host(elem_gid,1);
+                elem_fields(elem_gid, 12) = (double)State.MaterialPoints(mat_id).temp_grad.host(elem_gid,2);
             } // end for mat elems storage
         } // end parallel loop over materials
 
@@ -2137,7 +2145,7 @@ public:
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
-            elem_fields(elem_gid, 8) = e_switch;
+            elem_fields(elem_gid, 8) = State.GaussPoints.div.host(elem_gid);
             elem_switch *= -1;
         } // end for elem_gid
 

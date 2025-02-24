@@ -76,10 +76,47 @@
 ///
 /// \brief Compute new system response due to the design variable update
 ///
-/// \param  Current density value vector chosen by the optimizer
+/// \param  zp current design value vector chosen by the optimizer
 ///
 /////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_design)
+{
+    
+    bool topology_optimization_on = simparam->topology_optimization_on;
+    bool shape_optimization_on    = simparam->shape_optimization_on;
+
+    if(topology_optimization_on){
+        update_forward_solve_TO(zp);
+    }
+    else if(shape_optimization_on){
+        update_forward_solve_SO(zp);
+    }
+
+    //output model before deformation
+    if(simparam->optimization_options.disable_forward_solve_output&&print_design){
+        Explicit_Solver_Pointer_->write_outputs();
+    }
+
+    // execute solve
+    sgh_solve();
+
+    //output model after deformation
+    if(simparam->optimization_options.disable_forward_solve_output&&print_design){
+        Explicit_Solver_Pointer_->write_outputs();
+    }
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_forward_solve
+///
+/// \brief Compute new system response due to the design variable update
+///
+/// \param  Current density value vector chosen by the optimizer
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_SGH::update_forward_solve_TO(Teuchos::RCP<const MV> zp)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     // local variable for host view in the dual view
@@ -95,7 +132,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_
     const size_t rk_num_bins   = simparam->dynamic_options.rk_num_bins;
     const size_t num_bcs       = module_params->boundary_conditions.size();
     const size_t num_materials = simparam->materials.size();
-    real_t objective_accumulation;
 
     // --- Read in the nodes in the mesh ---
     int myrank = Explicit_Solver_Pointer_->myrank;
@@ -107,9 +143,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_
     CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
-    
-    bool topology_optimization_on = simparam->topology_optimization_on;
-    bool shape_optimization_on    = simparam->shape_optimization_on;
 
     // compute element averaged density ratios corresponding to nodal density design variables
     { // view scope
@@ -256,7 +289,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_
                     // specific internal energy
                     elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 
-                    if (topology_optimization_on && mat_fill(f_id).extensive_energy_setting) {
+                    if (mat_fill(f_id).extensive_energy_setting) {
                         elem_sie(rk_level, elem_gid) = elem_sie(rk_level, elem_gid) / relative_element_densities(elem_gid);
                     }
 
@@ -486,11 +519,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_
     } // end view scope
     Kokkos::fence();
 
-    // update stiffness matrix
-    if (topology_optimization_on || shape_optimization_on) {
-        // assemble_matrix();
-    }
-
     // update host copies of arrays modified in this function
     elem_den.update_host();
     elem_mass.update_host();
@@ -498,19 +526,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp, bool print_
     elem_stress.update_host();
     elem_pres.update_host();
     elem_sspd.update_host();
-
-    //output model before deformation
-    if(simparam->optimization_options.disable_forward_solve_output&&print_design){
-        Explicit_Solver_Pointer_->write_outputs();
-    }
-
-    // execute solve
-    sgh_solve();
-
-    //output model after deformation
-    if(simparam->optimization_options.disable_forward_solve_output&&print_design){
-        Explicit_Solver_Pointer_->write_outputs();
-    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -539,7 +554,7 @@ double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const C
 ///
 /// \fn compute_topology_optimization_adjoint_full
 ///
-/// \brief Coupled adjoint problem for the kinetic energy minimization problem
+/// \brief Coupled adjoint problem for the topology optimization problem
 ///
 /////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<const MV> design_densities_distributed)
@@ -1541,7 +1556,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
 /// \fn compute_topology_optimization_gradient_tally
 ///
 /// \brief Tally the contribution to the gradient vector each timestep for
-///        the kinetic energy objective
+///        the topology optimization objective
 ///
 /// \param Distributed design densities
 /// \param Distributed design gradients
@@ -1705,6 +1720,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 previous_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle+1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             }
+
             // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                 size_t node_id;
@@ -1739,7 +1755,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
             }); // end parallel for
             Kokkos::fence();
 
-            // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
+            //term with gradients of power w.r.t design density
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                 size_t node_id;
                 size_t corner_id;
@@ -1911,7 +1927,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_IVP(Teuchos::RCP<con
 ///
 /// \fn compute_topology_optimization_gradient_full
 ///
-/// \brief Gradient for the (unsimplified) kinetic energy minimization problem
+/// \brief Gradient for the topology optimization problem
 ///
 /// \param Distributed design densities
 /// \param Distributed design gradients
@@ -3594,3 +3610,77 @@ void FEA_Module_SGH::checkpoint_solve(std::set<Dynamic_Checkpoint>::iterator sta
 
     return;
 } // end of checkpoint SGH solve
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn comm_variables
+///
+/// \brief Communicate ghosts using the current optimization design data
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp)
+{
+    if (simparam->topology_optimization_on) {
+        // set density vector to the current value chosen by the optimizer
+        test_node_densities_distributed = zp;
+#ifdef DEBUG
+        // debug print of design vector
+        std::ostream& out = std::cout;
+        Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+        if (myrank == 0) {
+            *fos << "Density data :" << std::endl;
+        }
+        node_densities_distributed->describe(*fos, Teuchos::VERB_EXTREME);
+        *fos << std::endl;
+        std::fflush(stdout);
+#endif
+        // comms to get ghosts
+        all_node_densities_distributed->doImport(*test_node_densities_distributed, *importer, Tpetra::INSERT);
+    }
+    else if (simparam->shape_optimization_on) {
+        all_node_coords_distributed->doImport(*zp, *importer, Tpetra::INSERT);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn node_density_constraints
+///
+/// \brief Enforce density constraints on nodes due to BCS
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lower_bound)
+{
+    const size_t    num_dim = mesh->num_dims;
+    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+    const size_t    num_lcs = module_params->loading_conditions.size();
+
+    const DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
+    const DCArrayKokkos<loading_t>  loading  = module_params->loading;
+
+    // debug check
+#ifdef DEBUG
+    std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
+#endif
+    // walk over the nodes to update the velocity
+    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+        double current_node_coords[3];
+        double radius;
+        for (size_t dim = 0; dim < num_dim; dim++) {
+            current_node_coords[dim] = all_initial_node_coords(node_gid, dim);
+        } // end for dim
+        radius = sqrt(current_node_coords[0] * current_node_coords[0]
+            + current_node_coords[1] * current_node_coords[1]
+            + current_node_coords[2] * current_node_coords[2]);
+        for (size_t ilc = 0; ilc < num_lcs; ilc++) {
+            // debug check
+#ifdef DEBUG
+            std::cout << "LOADING CONDITION VOLUME TYPE: " << to_string(loading(ilc).volume) << std::endl;
+#endif
+            bool fill_this = loading(ilc).volume.contains(current_node_coords);
+            if (fill_this) {
+                node_densities_lower_bound(node_gid, 0) = 1;
+            }
+        }
+    }); // end for parallel for over nodes
+}

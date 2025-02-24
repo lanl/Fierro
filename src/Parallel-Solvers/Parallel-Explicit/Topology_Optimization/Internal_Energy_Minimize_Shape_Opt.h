@@ -215,7 +215,7 @@ public:
                 if(Explicit_Solver_Pointer_->myrank == 0){
                     std::cout << "CURRENT TIME INTEGRAL OF INTERNAL ENERGY " << objective_accumulation << std::endl;
                 }
-                FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
+                FEM_SGH_->compute_shape_optimization_adjoint_full(zp);
                 previous_objective_accumulation = objective_accumulation;
                 previous_gradients->assign(*(FEM_SGH_->cached_design_gradients_distributed));
                 // initial design density data was already communicated for ghost nodes in init_design()
@@ -247,7 +247,7 @@ public:
             // FEM_SGH_->comm_variables(zp);
             // // update deformation variables
             // FEM_SGH_->update_forward_solve(zp);
-            // FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
+            // FEM_SGH_->compute_shape_optimization_adjoint_full(zp);
         }
         else if (type == ROL::UpdateType::Trial) {
             // This is a new value of x
@@ -266,7 +266,7 @@ public:
             if(Explicit_Solver_Pointer_->myrank == 0){
                 std::cout << "CURRENT TIME INTEGRAL OF INTERNAL ENERGY " << objective_accumulation << std::endl;
             }
-            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
+            FEM_SGH_->compute_shape_optimization_adjoint_full(zp);
             // decide to output current optimization state
             // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
         }
@@ -281,7 +281,7 @@ public:
             if(Explicit_Solver_Pointer_->myrank == 0){
                 std::cout << "CURRENT TIME INTEGRAL OF INTERNAL ENERGY " << objective_accumulation << std::endl;
             }
-            FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
+            FEM_SGH_->compute_shape_optimization_adjoint_full(zp);
         }
     }
 

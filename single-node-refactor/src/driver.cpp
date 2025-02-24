@@ -38,7 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Headers for solver classes
 #include "sgh_solver_3D.h"
 #include "sgh_solver_rz.h"
-//#include "sgtm_solver_3D.h"
+#include "sgtm_solver_3D.h"
 
 
 // Initialize driver data.  Solver type, number of solvers
@@ -89,10 +89,10 @@ void Driver::initialize()
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
-    mesh.build_boundry_node_sets(mesh);
+    build_boundry_node_sets(mesh);
 
     // Setup Solvers
-    for (int solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
+    for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
 
@@ -103,6 +103,9 @@ void Driver::initialize()
                                    mesh, 
                                    BoundaryConditions,
                                    State);
+
+            // save the solver_id
+            sgh_solver->solver_id = solver_id;
 
             solvers.push_back(sgh_solver);
         } // end if SGH solver
@@ -116,20 +119,28 @@ void Driver::initialize()
                                    BoundaryConditions,
                                    State);
 
+            // save the solver_id
+            sgh_solver_rz->solver_id = solver_id;
+
             solvers.push_back(sgh_solver_rz);
         } // end if SGHRZ solver
-        //else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
+        else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
 
-        //    SGTM3D* sgtm_solver_3d = new SGTM3D(); 
-        //
-        //    sgtm_solver_3d->initialize(SimulationParamaters, 
-        //                               Materials, 
-        //                               mesh, 
-        //                               BoundaryConditions,
-        //                               State);
-        //
-        //    solvers.push_back(sgtm_solver_3d);
-        //} // end if SGTM solver
+            std::cout << "Initializing SGTM3D solver" << std::endl;
+            SGTM3D* sgtm_solver_3d = new SGTM3D(); 
+        
+            sgtm_solver_3d->initialize(SimulationParamaters, 
+                                       Materials, 
+                                       mesh, 
+                                       BoundaryConditions,
+                                       State);
+        
+           solvers.push_back(sgtm_solver_3d);
+        } // end if SGTM solver
+        else {
+            throw std::runtime_error("**** NO SOLVER INPUT OPTIONS PROVIDED IN YAML, OR OPTION NOT UNDERSTOOD ****");
+            return;
+        }
 
     } // end for loop over solvers
 
