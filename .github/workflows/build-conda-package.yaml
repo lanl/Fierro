@@ -38,6 +38,7 @@ jobs:
           miniforge-version: latest
           activate-environment: build-env
       #    use-mamba: true
+          auto-update-conda: false
           condarc-file: .etc/condarc.yaml
 
       # - name: Get Date
