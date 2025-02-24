@@ -23,6 +23,7 @@ fi
 
 # Install Elements
 if [ ! -d "${ELEMENTS_INSTALL_DIR}/lib" ]; then
+#if [ -d "${ELEMENTS_INSTALL_DIR}/lib" ]; then
     echo "Installing Elements..."
     cmake -D CMAKE_INSTALL_PREFIX="$ELEMENTS_INSTALL_DIR" -D Trilinos_DIR="${Trilinos_DIR}" -D Matar_ENABLE_KOKKOS=ON -D Matar_KOKKOS_PACKAGE=Trilinos -B "${ELEMENTS_BUILD_DIR}" -S "${ELEMENTS_SOURCE_DIR}"
     make -C "${ELEMENTS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}

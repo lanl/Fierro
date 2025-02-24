@@ -33,10 +33,10 @@ requirements:
     - boost-cpp
     - libnetcdf
     - libmatio
-      #    - llvm-openmp # [osx]
+    - llvm-openmp # [osx]
   run:
     - libblas
-      #    - llvm-openmp # [osx]
+    - llvm-openmp # [osx]
 
 about:
   home: https://trilinos.org
