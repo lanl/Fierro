@@ -57,6 +57,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 {
     std::cout << "In execute function in SGH3D solver" << std::endl;
 
+
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
     // double tiny  = SimulationParamaters.dynamic_options.tiny;
     double small = SimulationParamaters.dynamic_options.small;
@@ -298,12 +299,31 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             } // end for mat_id
 
 
+            // ---- Calculate boundary and body forces ---- //
+            // setting nodal force to zero here, 
+            // the node force stores the BCs supplied forces and body forces
+            State.node.force.set_values(0.0);
+
+            // call stress BC's routine
+            boundary_stress(mesh, 
+                            BoundaryConditions, 
+                            State.node.force, 
+                            State.node.coords,
+                            time_value);
+
+
+
+            // call body forces routine
+
+
+
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
                             dt,
                             mesh,
                             State.node.vel,
                             State.node.mass,
+                            State.node.force,
                             State.corner.force);
 
             // ---- apply velocity boundary conditions to the boundary patches----

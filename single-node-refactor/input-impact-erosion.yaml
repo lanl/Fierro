@@ -30,6 +30,7 @@ output_options:
 solver_options:
   - solver:
         method: SGH3D
+        id: 0
         # solver_vars:
         #  - blah
         #  - blah
@@ -39,19 +40,27 @@ boundary_conditions:
             
     # Tag Y plane
     - boundary_condition:
-        solver: SGH3D
-        geometry: y_plane
-        direction: y_dir
-        value: 0.0
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
 
     # Tag z plane
     - boundary_condition:
-        solver: SGH3D
-        geometry: z_plane
-        direction: z_dir
-        value: 0.0
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z    
   
 materials:
 
@@ -118,49 +127,55 @@ materials:
 
 regions:
     # air
-    - fill_volume:
-        type: global
+    - region:
+        volume:
+            type: global
         material_id: 2
         den: 0.010
         sie: 3.0e-4
-        velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: 0.0
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
     
     # high-speed projectile
-    - fill_volume:
-        type: box
-        origin: [0.0, 0.0, 0.0]
-        x1: 0.1
-        x2: 0.5
-        y1: 0.0
-        y2: 0.2
-        z1: 0.0
-        z2: 0.2
+    - region:
+        volume:
+            type: box
+            origin: [0.0, 0.0, 0.0]
+            x1: 0.1
+            x2: 0.5
+            y1: 0.0
+            y2: 0.2
+            z1: 0.0
+            z2: 0.2
         material_id: 0
         den: 8.0
         sie: 1.0e-6
-        velocity: cartesian
-        u: 0.3
-        v: 0.0
-        w: 0.0
+        velocity: 
+            type: cartesian
+            u: 0.3
+            v: 0.0
+            w: 0.0
 
     # a wall
-    - fill_volume:
-        type: box
-        origin: [0.0, 0.0, 0.0]
-        x1: 0.5
-        x2: 0.6
-        y1: 0.0
-        y2: 1.2
-        z1: 0.0
-        z2: 1.2
+    - region:
+        volume:
+            type: box
+            origin: [0.0, 0.0, 0.0]
+            x1: 0.5
+            x2: 0.6
+            y1: 0.0
+            y2: 1.2
+            z1: 0.0
+            z2: 1.2
         material_id: 1
         den: 2.7
         sie: 1.0e-6 
-        velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: 0.0
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
 

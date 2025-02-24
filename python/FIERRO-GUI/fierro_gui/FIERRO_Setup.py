@@ -15,6 +15,7 @@ class FierroSetup(QDialog, Ui_Dialog):
 
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
+        self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint)
         self.setupUi(self)
         self.MainWindow = main_window
         

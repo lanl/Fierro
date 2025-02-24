@@ -113,6 +113,8 @@ struct RegionFill_t
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
+    double specific_heat = 0.0;
+    double thermal_conductivity = 0.0;
 
     double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region
 };
@@ -139,9 +141,24 @@ struct RegionFill_host_t
 // ----------------------------------
 static std::vector<std::string> str_region_inps
 {
+    "volume",
+    "material_id",
+    "velocity",
+    "temperature",
+    "specific_heat",
+    "thermal_conductivity",
+    "sie",
+    "ie",
+    "den",
+};
+
+// ---------------------------------------------------------
+// valid inputs for volume, these are subfields under volume
+// ---------------------------------------------------------
+static std::vector<std::string> str_region_volume_inps
+{
     "type",
     "file_path",
-    "material_id",
     "x1",
     "x2",
     "y1",
@@ -153,16 +170,19 @@ static std::vector<std::string> str_region_inps
     "scale_x",
     "scale_y",
     "scale_z",
-    "velocity",
+    "origin"
+};
+
+// ---------------------------------------------------------------------
+// valid inputs for filling velocity, these are subfields under velocity
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_vel_inps
+{
+    "type",
     "u",
     "v",
     "w",
-    "speed",
-    "temperature",
-    "sie",
-    "ie",
-    "den",
-    "origin"
+    "speed"
 };
 
 // ----------------------------------
@@ -170,8 +190,25 @@ static std::vector<std::string> str_region_inps
 // ----------------------------------
 static std::vector<std::string> region_required_inps
 {
-    "type",
     "material_id",
+    "volume"
+};
+
+// -------------------------------------
+// required inputs for specifying volume
+// -------------------------------------
+static std::vector<std::string> region_volume_required_inps
+{
+    "type"
+};
+
+
+// -------------------------------------
+// required inputs for filling velocity
+// -------------------------------------
+static std::vector<std::string> region_vel_required_inps
+{
+    "type"
 };
 
 #endif // end Header Guard

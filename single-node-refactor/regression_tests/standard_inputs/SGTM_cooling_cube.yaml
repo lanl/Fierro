@@ -1,0 +1,176 @@
+# num_dims: 3
+
+dynamic_options:
+    time_final: 1.0
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 100000
+
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [10.0, 10.0, 10.0]
+    num_elems: [10, 10, 10]
+
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: state
+    graphics_time_step: 1.0
+    # graphics_iteration_step: 1
+
+solver_options:
+  - solver:
+        method: SGTM3D
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+
+boundary_conditions:
+    # Set temperature on the z plane
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.0
+        temperature_model: constant
+        temperature_bc_global_vars:
+            - 1000   # temperature
+
+    # convection on the non-constant temp surfaces
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+        temperature_model: convection
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 100.0    # h (film temperature)
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 10.0
+        temperature_model: convection
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 100.0    # h (film temperature)
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+        temperature_model: convection
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 100.0    # h (film temperature)
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 10.0
+        temperature_model: convection
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 100.0    # h (film temperature)
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 10.0
+        temperature_model: convection
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 100.0    # h (film temperature)
+
+
+    # Radiation on the non-constant temp surfaces
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+        temperature_model: radiation
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 10.0
+        temperature_model: radiation
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+        temperature_model: radiation    
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 10.0
+        temperature_model: radiation
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 10.0
+        temperature_model: radiation
+
+
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 1.0   # phi_curl_min
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+
+regions:
+    - region:
+        volume:
+            type: global
+        material_id: 0
+        den: 1.0
+        sie: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        thermal_conductivity: 273
+        specific_heat: 903
+        temperature_distribution: cartesian
+        temperature: 1000
+
+

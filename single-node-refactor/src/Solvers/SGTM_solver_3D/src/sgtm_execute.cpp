@@ -87,62 +87,35 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     double graphics_time = 0.0; // the times for writing graphics dump
 
     std::cout << "Applying initial boundary conditions" << std::endl;
-    boundary_temperature(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
-
-    // extensive energy tallies over the entire mesh
-    double IE_t0 = 0.0;
-    double KE_t0 = 0.0;
-    double TE_t0 = 0.0;
+    boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value); // Time value = 0.0;
 
     double cached_pregraphics_dt = fuzz;
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
 
-    // extensive IE
-    for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
-
-        IE_t0 += sum_domain_internal_energy(State.MaterialPoints(mat_id).mass,
-                                            State.MaterialPoints(mat_id).sie,
-                                            num_mat_points);
-    } // end loop over mat_id
-
-    // extensive KE
-    KE_t0 = sum_domain_kinetic_energy(mesh,
-                                      State.node.vel,
-                                      State.node.coords,
-                                      State.node.mass);
-    // extensive TE
-    TE_t0 = IE_t0 + KE_t0;
-
-    // domain mass for each material (they are at material points)
-    double mass_domain_all_mats_t0 = 0.0;
-    double mass_domain_nodes_t0    = 0.0;
-
-    for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
-
-        double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints(mat_id).mass,
-                                                          num_mat_points);
-
-        mass_domain_all_mats_t0 += mass_domain_mat;
-        printf("material %zu mass in domain = %f \n", mat_id, mass_domain_mat);
-    } // end for
-
-    // node mass of the domain
-    mass_domain_nodes_t0 = sum_domain_node_mass(mesh,
-                                                State.node.coords,
-                                                State.node.mass);
-
-    printf("nodal mass domain = %f \n", mass_domain_nodes_t0);
-
     // a flag to exit the calculation
     size_t stop_calc = 0;
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-    // Write initial state at t=0
+    // ----  Tweak node positions to test irregular meshes ---- //
+    // for(int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
+
+    //     int a=rand()%2;
+
+    //     double da = (double)a;
+
+    //     State.node.coords.host(0, node_gid, 0) += da*0.0002*sin(5000.0 * State.node.coords.host(0, node_gid, 0));
+    //     State.node.coords.host(0, node_gid, 1) += da*0.0002*sin(9000.0 * State.node.coords.host(0, node_gid, 1));
+    //     State.node.coords.host(1, node_gid, 0) += da*0.0002*sin(5000.0 * State.node.coords.host(1, node_gid, 0));
+    //     State.node.coords.host(1, node_gid, 1) += da*0.0002*sin(9000.0 * State.node.coords.host(1, node_gid, 1));
+    // }
+
+    // State.node.coords.update_device();
+
+
+    // ---- Write initial state at t=0 ---- 
     printf("Writing outputs to file at %f \n", graphics_time);
     mesh_writer.write_mesh(
         mesh, 
@@ -157,31 +130,64 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     
     graphics_time = time_value + graphics_dt_ival;
 
-    // loop over the max number of time integration cycles
+
+    // ---- Set up sphere to act as a moving heat source ---- //
+    DCArrayKokkos<double> sphere_position(3, "sphere_position");
+
+    sphere_position.host(0) = 0.0;
+    sphere_position.host(1) = 0.0;
+    sphere_position.host(2) = 0.0;
+
+
+    // ---- parameterized sines and cosines to make pretty pictures ---- //
+    double sx = 0.05;
+    double sy = 0.05;
+
+    double fy = 2.0*3.16;
+    double fx = 2.0*3.16;
+
+    sphere_position.host(0) = 0.03*cos(fx*time_value) + sx;
+    sphere_position.host(1) = 0.03*sin(fy*time_value) + sy;
+
+    // sphere_position.host(0) = 0.02 + (time_value/time_final)*0.06;
+    // sphere_position.host(1) = 0.05;
+
+    // sphere_position.host(0) = fmod(time_value, 0.02) + 0.01;
+    // sphere_position.host(1) = 0.05;
+
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        State.node.q_flux(node_gid) = 0.0;
+    }); // end for parallel for over nodes
+    sphere_position.update_device();
+
+
+    // ---- loop over the max number of time integration cycles ---- //
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
-        
-        // stop calculation if flag
+
+        // ---- stop calculation if flag ---- //
         if (stop_calc == 1) {
             break;
         }
 
-        cached_pregraphics_dt = dt;
+        cached_pregraphics_dt = dt; // save the dt value for resetting after writing graphics dump
 
-        // the smallest time step across all materials
-        double min_dt_calc = dt_max;
+        double min_dt_calc = dt_max; // the smallest time step across all materials
 
-        // calculating time step per material
+        // ---- Calculating the maximum allowable time step ---- //
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
             // initialize the material dt
             double dt_mat = dt;
 
-            // get the stable time step
+            // ---- get the stable time step, both from CFL and Von Neumann stability ---- //
             get_timestep(mesh,
                          State.node.coords,
                          State.node.vel,
                          State.GaussPoints.vol,
                          State.MaterialPoints(mat_id).sspd,
+                         State.MaterialPoints(mat_id).conductivity,
+                         State.MaterialPoints(mat_id).den,
+                         State.MaterialPoints(mat_id).specific_heat,
                          State.MaterialPoints(mat_id).eroded,
                          State.MaterialToMeshMaps(mat_id).elem,
                          State.MaterialToMeshMaps(mat_id).num_material_elems,
@@ -194,29 +200,31 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                          dt_mat,
                          fuzz);
 
-            // save the smallest dt of all materials
+            // ---- save the smallest dt of all materials ---- //
             min_dt_calc = fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
+        dt = min_dt_calc;
 
-        dt = min_dt_calc;  // save this dt time step
-
+        // ---- Print the initial time step and time value ---- //
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
-        // print time step every 10 cycles
+        
+        // ---- Print time step every 10 cycles ---- // 
         else if (cycle % 20 == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
 
-        // ---------------------------------------------------------------------
-        //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
-        // ---------------------------------------------------------------------
+
+
+        // ---- Initialize the state for the RK integration scheme ---- //
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-            // save the values at t_n
+            
+            // save the values at t = n
             rk_init(State.node.coords,
                     State.node.vel,
                     State.node.temp,
-                    State.MaterialPoints(mat_id).q_flux,
+                    State.node.q_flux,
                     State.MaterialPoints(mat_id).stress,
                     mesh.num_dims,
                     mesh.num_elems,
@@ -224,84 +232,111 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.MaterialPoints(mat_id).num_material_points);
         } // end for mat_id
 
-        // integrate solution forward in time
+        // ---- Integrate the solution forward to t(n+1) via Runge Kutta (RK) method ---- //
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
 
+            double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
-            // ---- calculate the temperature gradient  ----
+            // ---- Initialize the nodal flux to zero for this RK stage ---- //
+            FOR_ALL(node_gid, 0, mesh.num_nodes, {
+                State.node.q_flux(node_gid) = 0.0;
+            }); // end for parallel for over nodes
+
+            // ---- Calculate the corner heat flux from conduction per material ---- //
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
                 size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
+                get_heat_flux(
+                    Materials,
+                    mesh,
+                    State.GaussPoints.vol,
+                    State.node.coords,
+                    State.node.temp,
+                    State.MaterialPoints(mat_id).q_flux,
+                    State.MaterialPoints(mat_id).conductivity,
+                    State.MaterialPoints(mat_id).temp_grad,
+                    State.corner.q_flux,
+                    State.corners_in_mat_elem,
+                    State.MaterialPoints(mat_id).eroded,
+                    State.MaterialToMeshMaps(mat_id).elem,
+                    num_mat_elems,
+                    mat_id,
+                    fuzz,
+                    small,
+                    dt, 
+                    rk_alpha);
 
-                // get_temp_gradient();
-
-                // calc_elem_heat_flux();
-
-
-
-                // get_force(Materials,
-                //           mesh,
-                //           State.GaussPoints.vol,
-                //           State.GaussPoints.div,
-                //           State.MaterialPoints(mat_id).eroded,
-                //           State.corner.force,
-                //           State.node.coords,
-                //           State.node.vel,
-                //           State.MaterialPoints(mat_id).den,
-                //           State.MaterialPoints(mat_id).sie,
-                //           State.MaterialPoints(mat_id).pres,
-                //           State.MaterialPoints(mat_id).stress,
-                //           State.MaterialPoints(mat_id).sspd,
-                //           State.MaterialCorners(mat_id).force,
-                //           State.MaterialPoints(mat_id).volfrac,
-                //           State.corners_in_mat_elem,
-                //           State.MaterialToMeshMaps(mat_id).elem,
-                //           num_mat_elems,
-                //           mat_id,
-                //           fuzz,
-                //           small,
-                //           dt,
-                //           rk_alpha);
+                // ---- Calculate the corner heat flux from moving volumetric heat source ----
+                moving_flux(
+                    Materials,
+                    mesh,
+                    State.GaussPoints.vol,
+                    State.node.coords,
+                    State.corner.q_flux,
+                    sphere_position,
+                    State.corners_in_mat_elem,
+                    State.MaterialToMeshMaps(mat_id).elem,
+                    num_mat_elems,
+                    mat_id,
+                    fuzz,
+                    small,
+                    dt, 
+                    rk_alpha
+                    );
 
             } // end for mat_id
 
+            // ---- apply flux boundary conditions (convection/radiation)  ---- //
+            boundary_convection(mesh, BoundaryConditions, State.node.temp, State.node.q_flux, State.node.coords, time_value);
+            boundary_radiation(mesh, BoundaryConditions, State.node.temp, State.node.q_flux, State.node.coords, time_value);
+
             // ---- Update nodal temperature ---- //
+            update_temperature(
+                mesh,
+                State.corner.q_flux,
+                State.node.temp,
+                State.node.mass,
+                State.node.q_flux,
+                State.MaterialPoints(0).specific_heat, // Note: Need to make this a node field, and calculate in the material loop
+                rk_alpha,
+                dt);
 
 
-            // ---- apply temperature boundary conditions to the boundary patches---- //
+            // ---- apply temperature boundary conditions to the boundary patches----
+            boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
+
+            // ---- Find the element average temperature ---- //
 
 
-            // ---- Calculate cell volume for next time step ----
+            // ---- Calculate MaterialPoints state (stress) for next time step ---- //
+            
+
+            // ---- Calculate cell volume for next time step ---- //
             geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
-            // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
-            // for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
-            //     size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
-            //     update_state(Materials,
-            //                  mesh,
-            //                  State.node.coords,
-            //                  State.node.vel,
-            //                  State.MaterialPoints(mat_id).den,
-            //                  State.MaterialPoints(mat_id).pres,
-            //                  State.MaterialPoints(mat_id).stress,
-            //                  State.MaterialPoints(mat_id).sspd,
-            //                  State.MaterialPoints(mat_id).sie,
-            //                  State.GaussPoints.vol,
-            //                  State.MaterialPoints(mat_id).mass,
-            //                  State.MaterialPoints(mat_id).eos_state_vars,
-            //                  State.MaterialPoints(mat_id).strength_state_vars,
-            //                  State.MaterialPoints(mat_id).eroded,
-            //                  State.MaterialToMeshMaps(mat_id).elem,
-            //                  dt,
-            //                  rk_alpha,
-            //                  num_mat_elems,
-            //                  mat_id);
-            // } // end for mat_id
-
+            
         } // end of RK loop
+
+        // ---- Activate new elements, if needed ---- //
+
+
+        // ---- Move heat source ---- //
+        RUN({
+
+            sphere_position(0) = 0.03*cos(fx*time_value) + sx;
+            sphere_position(1) = 0.03*sin(fy*time_value) + sy;
+
+
+            // sphere_position(0) = 0.02 + (time_value/time_final)*0.06;
+            // sphere_position(1) = 0.05;
+
+
+            // sphere_position(0) = 2 * fmod(time_value, 0.02) + 0.01;
+            // sphere_position(1) = 0.05;
+            // sphere_position(2) = 0.05*time_value/10.0;
+        });
+        
 
         // increment the time
         time_value += dt;
@@ -320,9 +355,11 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             write = 1;
         }
 
-        // write outputs
+        // ---- Write outputs ---- //
         if (write == 1) {
+            dt = cached_pregraphics_dt;
             printf("Writing outputs to file at %f \n", graphics_time);
+            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
             mesh_writer.write_mesh(mesh,
                                    State,
                                    SimulationParamaters,
@@ -334,8 +371,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                                    SGTM3D_State::required_material_pt_state);
 
             graphics_time = time_value + graphics_dt_ival;
-
-            dt = cached_pregraphics_dt;
         } // end if
 
         // end of calculation
@@ -346,165 +381,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     auto time_2    = std::chrono::high_resolution_clock::now();
     auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();
-
     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
-    // ---- Calculate energy tallies ----
-    double IE_tend = 0.0;
-    double KE_tend = 0.0;
-    double TE_tend = 0.0;
-
-    // extensive IE
-    for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
-
-        IE_tend += sum_domain_internal_energy(State.MaterialPoints(mat_id).mass,
-                                              State.MaterialPoints(mat_id).sie,
-                                              num_mat_points);
-    } // end loop over mat_id
-
-    // extensive KE
-    KE_tend = sum_domain_kinetic_energy(mesh,
-                                        State.node.vel,
-                                        State.node.coords,
-                                        State.node.mass);
-    // extensive TE
-    TE_tend = IE_tend + KE_tend;
-
-    printf("Time=0:   KE = %.14f, IE = %.14f, TE = %.14f \n", KE_t0, IE_t0, TE_t0);
-    printf("Time=End: KE = %.14f, IE = %.14f, TE = %.14f \n", KE_tend, IE_tend, TE_tend);
-    printf("total energy change = %.15e \n\n", TE_tend - TE_t0);
-
-    // domain mass for each material (they are at material points)
-    double mass_domain_all_mats_tend = 0.0;
-    double mass_domain_nodes_tend    = 0.0;
-
-    for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
-
-        double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints(mat_id).mass,
-                                                          num_mat_points);
-
-        mass_domain_all_mats_tend += mass_domain_mat;
-    } // end for
-
-    // node mass of the domain
-    mass_domain_nodes_tend = sum_domain_node_mass(mesh,
-                                                  State.node.coords,
-                                                  State.node.mass);
-
-    printf("material mass conservation error = %f \n", mass_domain_all_mats_tend - mass_domain_all_mats_t0);
-    printf("nodal mass conservation error = %f \n", mass_domain_nodes_tend - mass_domain_nodes_t0);
-    printf("nodal and material mass error = %f \n\n", mass_domain_nodes_tend - mass_domain_all_mats_tend);
 } // end of SGH execute
-
-
-// a function to tally the internal energy
-double SGTM3D::sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<double>& MaterialPoints_sie,
-    size_t num_mat_points)
-{
-    double IE_sum = 0.0;
-    double IE_loc_sum;
-
-    // loop over the material points and tally IE
-    FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
-        IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(1, matpt_lid);
-    }, IE_sum);
-    Kokkos::fence();
-
-    return IE_sum;
-} // end function
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn sum_domain_kinetic_energy
-///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
-///
-/////////////////////////////////////////////////////////////////////////////
-double SGTM3D::sum_domain_kinetic_energy(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass)
-{
-    // extensive KE
-    double KE_sum = 0.0;
-    double KE_loc_sum;
-
-    FOR_REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
-        double ke = 0;
-
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node_vel(1, node_gid, dim) * node_vel(1, node_gid, dim); // 1/2 at end
-        } // end for
-
-        KE_loc_sum += node_mass(node_gid) * ke;
-
-    }, KE_sum);
-    Kokkos::fence();
-
-    return 0.5 * KE_sum;
-} // end function
-
-// a function to tally the material point masses
-double SGTM3D::sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
-    const size_t num_mat_points)
-{
-    double mass_domain = 0.0;
-    double mass_loc_domain;
-
-    FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, mass_loc_domain, {
-        mass_loc_domain += MaterialPoints_mass(matpt_lid);
-    }, mass_domain);
-    Kokkos::fence();
-
-    return mass_domain;
-} // end function
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn sum_domain_node_mass
-///
-/// \brief <insert brief description>
-///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
-///
-/////////////////////////////////////////////////////////////////////////////
-double SGTM3D::sum_domain_node_mass(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass)
-{
-    double mass_domain = 0.0;
-    double mass_loc_domain;
-
-    FOR_REDUCE_SUM(node_gid, 0, mesh.num_nodes, mass_loc_domain, {
-        if (mesh.num_dims == 2) {
-            mass_loc_domain += node_mass(node_gid) * node_coords(1, node_gid, 1);
-        }
-        else{
-            mass_loc_domain += node_mass(node_gid);
-        }
-    }, mass_domain);
-    Kokkos::fence();
-
-    return mass_domain;
-} // end function
-

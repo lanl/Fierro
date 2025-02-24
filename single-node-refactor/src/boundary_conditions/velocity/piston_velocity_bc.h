@@ -62,7 +62,7 @@ namespace PistonVelocityBC
 KOKKOS_FUNCTION
 static void velocity(const Mesh_t& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const DCArrayKokkos<double>& bc_global_vars,
+    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,
     const DCArrayKokkos<double>& node_vel,
     const double time_value,
@@ -77,7 +77,7 @@ static void velocity(const Mesh_t& mesh,
 
     // Set velocity to the specified value
     node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) =
-        bc_global_vars(bdy_set, BoundaryConditionEnums(bdy_set).Direction);
+        vel_bc_global_vars(bdy_set, BoundaryConditionEnums(bdy_set).Direction);
 
     return;
 }     // end func

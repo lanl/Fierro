@@ -54,16 +54,13 @@ void SGH3D::update_velocity(double rk_alpha,
     const Mesh_t& mesh,
     DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_mass,
+    const DCArrayKokkos<double>& node_force,
     const DCArrayKokkos<double>& corner_force) const
 {
     const size_t num_dims = mesh.num_dims;
 
     // walk over the nodes to update the velocity
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        double node_force[3];
-        for (size_t dim = 0; dim < num_dims; dim++) {
-            node_force[dim] = 0.0;
-        } // end for dim
 
         // loop over all corners around the node and calculate the nodal force
         for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
@@ -72,14 +69,14 @@ void SGH3D::update_velocity(double rk_alpha,
 
             // loop over dimension
             for (size_t dim = 0; dim < num_dims; dim++) {
-                node_force[dim] += corner_force(corner_gid, dim);
+                node_force(node_gid, dim) += corner_force(corner_gid, dim);
             } // end for dim
         } // end for corner_lid
 
         // update the velocity
         for (int dim = 0; dim < num_dims; dim++) {
             node_vel(1, node_gid, dim) = node_vel(0, node_gid, dim) +
-            rk_alpha * dt * node_force[dim] / node_mass(node_gid);
+                    rk_alpha * dt * node_force(node_gid,dim) / node_mass(node_gid);
         } // end for dim
     }); // end for parallel for over nodes
 

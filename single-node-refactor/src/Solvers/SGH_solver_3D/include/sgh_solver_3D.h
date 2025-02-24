@@ -59,6 +59,7 @@ namespace SGH3D_State
         node_state::coords,
         node_state::velocity,
         node_state::mass,
+        node_state::force,
         node_state::temp // Note, remove this, unused WIP
     };
 
@@ -210,6 +211,12 @@ public:
         DCArrayKokkos<double>&     node_vel,
         const double time_value) const;
 
+    void boundary_stress(const Mesh_t& mesh,
+                    const BoundaryCondition_t& BoundaryConditions,
+                    DCArrayKokkos<double>& node_bdy_force,
+                    DCArrayKokkos<double>& node_coords,
+                    const double time_value) const;    
+
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(
         const double  rk_alpha,
@@ -266,6 +273,7 @@ public:
         const Mesh_t& mesh,
         DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_mass,
+        const DCArrayKokkos<double>& node_force,
         const DCArrayKokkos<double>& corner_force) const;
 
     void get_velgrad(
