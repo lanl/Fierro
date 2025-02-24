@@ -34,10 +34,10 @@ jobs:
       - name: Setup Mambaforge
         uses: conda-incubator/setup-miniconda@v2
         with:
-          miniforge-variant: Mambaforge
+      #    miniforge-variant: Mambaforge
           miniforge-version: latest
           activate-environment: build-env
-          use-mamba: true
+      #    use-mamba: true
           condarc-file: .etc/condarc.yaml
 
       # - name: Get Date
