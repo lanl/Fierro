@@ -1,4 +1,4 @@
-{% set version = "15.0.0" %}
+{% set version = "16.0.0" %}
 {% set linux_compiler_version = "10.4.0" %}
 {% set macos_compiler_version = "16" %}
 
@@ -8,7 +8,9 @@ package:
 
 source:
   url: https://github.com/trilinos/Trilinos/archive/trilinos-release-{{ version | replace('.', '-') }}.tar.gz
-  md5: 0b627d9a1c84fc185d145940dead9910
+  #md5: 0b627d9a1c84fc185d145940dead9910 #md5 is for version 15, need the 16 one
+  #git_url: https://github.com/trilinos/Trilinos.git
+  #git_depth: 1
 
 build:
   number: 2
@@ -31,10 +33,10 @@ requirements:
     - boost-cpp
     - libnetcdf
     - libmatio
-    - llvm-openmp # [osx]
+      #    - llvm-openmp # [osx]
   run:
     - libblas
-    - llvm-openmp # [osx]
+      #    - llvm-openmp # [osx]
 
 about:
   home: https://trilinos.org
@@ -48,7 +50,7 @@ about:
     Fast, compiled object-oriented algorithms and enabling
     technologies that support the solution of large-scale,
     complex multi-physics engineering and scientific problems.
-  dev_url: https://github.com/trilinos/Trilinos
+  dev_url: https://github.com/lanl/Fierro
 
 extra:
   recipe-maintainers:

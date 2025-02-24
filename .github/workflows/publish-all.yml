@@ -3,8 +3,8 @@ name: Publish All
 on: workflow_dispatch
 
 jobs:
-  elements:
-    uses: ./.github/workflows/publish-elements.yml
+  elements-cpu:
+    uses: ./.github/workflows/publish-elements-cpu.yml
 
   evpfft-cpu:
     uses: ./.github/workflows/publish-evpfft-cpu.yml
@@ -30,6 +30,18 @@ jobs:
   heffte-cuda:
     uses: ./.github/workflows/publish-heffte-cuda.yml
     
+  ls-evpfft-cpu:
+    uses: ./.github/workflows/publish-ls-evpfft-cpu.yml
+
+  ls-evpfft-j2-cpu:
+    uses: ./.github/workflows/publish-ls-evpfft-j2-cpu.yml
+
+  matar-cpu:
+    uses: ./.github/workflows/publish-matar-cpu.yml
+
+  matar-cuda:
+    uses: ./.github/workflows/publish-matar-cuda.yml
+
   trilinos:
     uses: ./.github/workflows/publish-trillinos.yml
 

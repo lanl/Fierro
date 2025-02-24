@@ -1,6 +1,10 @@
 name: 'Publish Heffte'
 
 on: 
+  push:
+    paths:
+      - .conda/heffte/cpu/**
+      - .github/workflows/publish-heffte-cpu.yaml
   workflow_dispatch:
 
 jobs:

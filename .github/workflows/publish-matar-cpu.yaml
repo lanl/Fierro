@@ -1,0 +1,15 @@
+name: 'Publish MATAR-CPU'
+
+on: 
+  push:
+    paths:
+      - .conda/matar/**
+      - .github/workflows/publish-matar-cpu.yaml
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/matar/cpu
+    secrets: inherit

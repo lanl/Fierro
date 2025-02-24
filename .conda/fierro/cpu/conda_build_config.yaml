@@ -1,0 +1,12 @@
+c_compiler:
+  - gcc   # [linux]
+  - clang # [osx]
+cxx_compiler:
+  - gxx     # [linux]
+  - clangxx # [osx]
+target_platform:
+  - linux-64 # [linux]
+  - linux-aarch64 # [linux] 
+  - linux-ppc64le # [linux]
+  #- osx-64        # [osx]
+  - osx-arm64     # [osx]
