@@ -38,8 +38,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.h"
 #include "ref_elem.h"
 #include <cmath>
-#include <parmetis.h>
 
+
+typedef int32_t idx_t;
 #define PI 3.141592653589793
 
 using namespace mtr;
@@ -1498,40 +1499,40 @@ struct Mesh_t
         idx_t edgecut;                     // Output: Number of edges cut by partition
         real_t ubvec = 1.05;              // Load imbalance tolerance
 
-        // Call ParMETIS to partition the mesh
-        int result = ParMETIS_V3_PartMeshKway(
-            &nvtxs,                    // Number of vertices
-            &ncon,                     // Number of weights per vertex
-            xadj.data(),              // CSR row pointers
-            adjncy.data(),            // CSR column indices
-            vwgt.data(),              // Vertex weights
-            vsize.data(),             // Vertex sizes
-            &num_partitions,          // Number of parts
-            &ubvec,                   // Load imbalance tolerance
-            options,                  // Options array
-            &edgecut,                 // Output: Edge cut size
-            partition.data()          // Output: Partition assignments
-        );
+        // // Call ParMETIS to partition the mesh
+        // int result = ParMETIS_V3_PartMeshKway(
+        //     &nvtxs,                    // Number of vertices
+        //     &ncon,                     // Number of weights per vertex
+        //     xadj.data(),              // CSR row pointers
+        //     adjncy.data(),            // CSR column indices
+        //     vwgt.data(),              // Vertex weights
+        //     vsize.data(),             // Vertex sizes
+        //     &num_partitions,          // Number of parts
+        //     &ubvec,                   // Load imbalance tolerance
+        //     options,                  // Options array
+        //     &edgecut,                 // Output: Edge cut size
+        //     partition.data()          // Output: Partition assignments
+        // );
 
-        if (result != METIS_OK) {
-            printf("ERROR: ParMETIS partitioning failed\n");
-            return;
-        }
+        // if (result != METIS_OK) {
+        //     printf("ERROR: ParMETIS partitioning failed\n");
+        //     return;
+        // }
 
-        // Assign element owners based on partition
-        FOR_ALL_CLASS(elem_gid, 0, num_elems, {
-            elem_owner(elem_gid) = partition(elem_gid);
-        });
+        // // Assign element owners based on partition
+        // FOR_ALL_CLASS(elem_gid, 0, num_elems, {
+        //     elem_owner(elem_gid) = partition(elem_gid);
+        // });
 
-        // Assign node owners (node belongs to lowest numbered partition of connected elements)
-        FOR_ALL_CLASS(node_gid, 0, num_nodes, {
-            int min_part = num_partitions;
-            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
-                size_t elem_gid = elems_in_node(node_gid, corner_lid);
-                min_part = min(min_part, partition(elem_gid));
-            }
-            node_owner(node_gid) = min_part;
-        });
+        // // Assign node owners (node belongs to lowest numbered partition of connected elements)
+        // FOR_ALL_CLASS(node_gid, 0, num_nodes, {
+        //     int min_part = num_partitions;
+        //     for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
+        //         size_t elem_gid = elems_in_node(node_gid, corner_lid);
+        //         min_part = min(min_part, partition(elem_gid));
+        //     }
+        //     node_owner(node_gid) = min_part;
+        // });
     }
 
 

@@ -15,7 +15,11 @@ export basedir=${topdir}/single-node-refactor
 export srcdir=${basedir}/src
 export libdir=${topdir}/lib
 export builddir=${basedir}/${my_build}
-export installdir=${basedir}/install
+export installdir=${basedir}/install    
+
+export PARMETIS_INSTALL_DIR=${installdir}/parmetis-${kokkos_build_type}
+export PARMETIS_SOURCE_DIR=${libdir}/parmetis
+export PARMETIS_BUILD_DIR=${builddir}/parmetis
 
 export SGH_BASE_DIR=${basedir}
 export SGH_SOURCE_DIR=${srcdir}/Solvers/SGH_solver

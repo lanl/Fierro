@@ -63,6 +63,7 @@ build_cores="1"
 trilinos="disabled"
 intel_mkl="disabled"
 debug="false"
+parmetis="enabled"
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-kokkos" "fierro")
@@ -202,6 +203,12 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
+    if [ "$parmetis" = "disabled" ]; then
+        echo "Parmetis is disabled"
+    elif [ "$parmetis" = "enabled" ]; then
+        echo "Parmetis is enabled"
+        source parmetis-install.sh ${kokkos_build_type} ${debug}
+    fi
     if [ "$trilinos" = "disabled" ]; then    
         source kokkos-install.sh ${kokkos_build_type} ${debug} 
     elif [ "$trilinos" = "enabled" ]; then    

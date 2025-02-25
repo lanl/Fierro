@@ -13,3 +13,4 @@ main
 cmake_uninstall.cmake
 CTestTestfile.cmake
 install
+lib/parmetis
