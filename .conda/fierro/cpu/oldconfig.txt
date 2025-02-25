@@ -9,4 +9,4 @@ target_platform:
   - linux-aarch64 # [linux] 
   - linux-ppc64le # [linux]
 #  - osx-64        # [osx] might not support intel based macs anymore
-#  - osx-arm64     # [osx]
+  - osx-arm64     # [osx]
