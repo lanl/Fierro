@@ -2335,7 +2335,7 @@ public:
         graphics_id++;
 
 
-    } // end write vtk
+    } // end write vtk old
 
 
     /////////////////////////////////////////////////////////////////////////////
@@ -2834,7 +2834,6 @@ public:
         fprintf(out[0], "      <Points>\n");
         fprintf(out[0], "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">\n");
 
-printf("write node coords\n");
         // write all components of the point coordinates
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             double coord_z = 0.0;
@@ -2869,7 +2868,6 @@ printf("write node coords\n");
 
         // const int num_1D_points = Pn_order+1;
 
-printf("write node gids in elem\n");
         // write all global point numbers for this elem
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             fprintf(out[0], "          ");  // adding indentation before printing nodes in element
@@ -2922,7 +2920,7 @@ printf("write node gids in elem\n");
         if(num_node_vector_vars >0 || num_node_scalar_vars>0){
 
             fprintf(out[0], "      <PointData>\n");
-printf("write node vectors \n"); 
+
             // node vectors
             for (int a_var = 0; a_var < num_node_vector_vars; a_var++) {
                 fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" NumberOfComponents=\"3\" format=\"ascii\">\n", node_vector_var_names[a_var].c_str());
@@ -2937,7 +2935,7 @@ printf("write node vectors \n");
 
             } // end for vec_vars
 
-printf("write node scalars\n"); 
+
             // node scalar vars
             for (int a_var = 0; a_var < num_node_scalar_vars; a_var++) {
                 fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" format=\"ascii\">\n", node_scalar_var_names[a_var].c_str());
@@ -2961,18 +2959,18 @@ printf("write node scalars\n");
         if(num_elem_scalar_vars >0 || num_elem_tensor_vars>0){
 
             fprintf(out[0], "      <CellData>\n");
-printf("write elem scalars\n"); 
+
             for (int a_var = 0; a_var < num_elem_scalar_vars; a_var++) {
-                printf("elem var name\n");
+
                 fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" format=\"ascii\">\n", elem_scalar_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
-                printf("elem scalar data\n");
+
                 for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
                     fprintf(out[0], "          %f\n", elem_scalar_fields.host(a_var, elem_gid));
                 } // end for elem
                 fprintf(out[0], "        </DataArray>\n");
             } // end for elem scalar_vars
 
-printf("write elem tensors\n"); 
+
             // tensors
             for (int a_var = 0; a_var < num_elem_tensor_vars; a_var++) {
                 fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" NumberOfComponents=\"9\" format=\"ascii\">\n", elem_tensor_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
@@ -3004,6 +3002,127 @@ printf("write elem tensors\n");
         fclose(out[0]);
 
     } // end write vtu
+
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn write_pvd
+    ///
+    /// \brief Writes a pvd ASCII output file for the element and nodal fields
+    ///
+    /// \param Vector of all graphics output times
+    /// \param element average field names
+    /// \param current time value
+    /// \param graphics index
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void write_pvd(CArray<double>& graphics_times,
+                   double time_value,
+                   int graphics_id){
+
+        FILE* out[20];   // the output files that are written to
+        char  filename[100]; // char string
+        int   max_len = sizeof filename;
+        int   str_output_len;
+
+        // Write time series metadata
+        str_output_len = snprintf(filename, max_len, "vtk/meshHexPn.pvd"); 
+        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+        // mesh file
+
+        out[0] = fopen(filename, "w");
+ 
+        fprintf(out[0], "<?xml version=\"1.0\"?>\n");
+        fprintf(out[0], "<VTKFile type=\"Collection\" version=\"1.0\" byte_order=\"LittleEndian\">\n");
+        fprintf(out[0], "  <Collection>\n");
+
+        for (int i = 0; i <= graphics_id; i++) {
+            fprintf(out[0], "    <DataSet timestep=\"%d\" file=\"data/meshHexPn.%05d.vtm\" time= \"%12.5e\" />\n", i, i, graphics_times(i) );
+        }
+
+        fprintf(out[0], "  </Collection>\n");
+        fprintf(out[0], "</VTKFile>"); 
+
+        fclose(out[0]);
+
+    } // end pvd
+
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn write_vtm
+    ///
+    /// \brief Writes a vtm ASCII output file for all fields -- mesh and material
+    ///
+    /// \param Vector of all graphics output times
+    /// \param element average field names
+    /// \param current time value
+    /// \param graphics index
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void write_vtm(CArray<double>& graphics_times,
+                   const  std::string& elem_part_name,
+                   const  std::string& mat_part_name,
+                   double time_value,
+                   int graphics_id,
+                   int num_mats)
+    {
+        // loop over all the files that were written 
+        for(int file_id=0; file_id<=graphics_id; file_id++){
+
+            FILE* out[20];   // the output files that are written to
+            char  filename[100]; // char string
+            int   max_len = sizeof filename;
+            int   str_output_len;
+
+
+            // Write time series metadata to the data file
+            str_output_len = snprintf(filename, max_len, "vtk/data/meshHexPn.%05d.vtm", file_id); 
+            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+            // mesh file
+
+            out[0] = fopen(filename, "w");
+    
+            fprintf(out[0], "<?xml version=\"1.0\"?>\n");
+            fprintf(out[0], "<VTKFile type=\"vtkMultiBlockDataSet\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
+            fprintf(out[0], "  <vtkMultiBlockDataSet>\n");
+
+            
+            // Average mesh fields
+            fprintf(out[0], "    <Block index=\"0\" name=\"Mesh\">\n");
+            {
+                // elem and nodal fields are in this file
+                fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
+                fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"meshHexPn.%s.%05d.vtu\" time= \"%12.5e\" />\n", file_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
+                fprintf(out[0], "      </Piece>\n");
+
+                // add other Mesh average output Pieces here
+            }
+            fprintf(out[0], "    </Block>\n");
+
+
+            size_t block_id = 1;  // this will need to be incremented based on the number of mesh fields written
+            fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
+            for (size_t mat_id=0; mat_id<num_mats; mat_id++){
+                
+                // output the material specific fields
+                fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
+                fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"meshHexPn.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", file_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
+                fprintf(out[0], "      </Piece>\n");
+
+            } // end for loop mat_id
+            fprintf(out[0], "    </Block>\n");
+
+            // done writing the files to be read by the vtm file
+            fprintf(out[0], "  </vtkMultiBlockDataSet>\n");
+            fprintf(out[0], "</VTKFile>"); 
+
+            fclose(out[0]);
+
+        } // end for file_id
+
+    } // end vtm
+
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -3125,10 +3244,10 @@ printf("write elem tensors\n");
         SimulationParameters_t& SimulationParamaters,
         double dt,
         double time_value,
-        CArray<double> graphics_times,
-        std::vector<node_state> node_states,
-        std::vector<gauss_pt_state> gauss_pt_states,
-        std::vector<material_pt_state> material_pt_states)
+        CArray<double>& graphics_times,
+        std::vector<node_state>& node_states,
+        std::vector<gauss_pt_state>& gauss_pt_states,
+        std::vector<material_pt_state>& material_pt_states)
     {
 
         // node_state is an enum for possible fields (e.g., coords, velocity, etc.), see state.h
@@ -3636,9 +3755,6 @@ printf("write elem tensors\n");
             ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
             ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
             
-            printf("num_mat_nodes = %zu, num_nodes_mesh = %zu \n", num_mat_nodes, mesh.num_nodes);
-            printf("num_mat_elems = %zu, num_elems_mesh = %zu \n", num_mat_elems, mesh.num_elems);
-            printf("write mat vtu file \n");
             // write out a vtu file this 
             write_vtu(mat_node_coords_host,
                       mat_nodes_in_elem_host,
@@ -3661,40 +3777,32 @@ printf("write elem tensors\n");
         } // end for mat_id
 
 
+        // *************************************************
+        //  write Paraview files to open the graphics files
+        // *************************************************
+
+        // save the graphics time
+        graphics_times(graphics_id) = time_value;
+
+
+        // call the vtm file writer
+        std::string mat_fields_name = "mat";
+        write_vtm(graphics_times,
+                  elem_fields_name,
+                  mat_fields_name,
+                  time_value,
+                  graphics_id,
+                  num_mats);
 
 
         // call the pvd file writer
+        write_pvd(graphics_times,
+                  time_value,
+                  graphics_id);
 
-        FILE* out[20];   // the output files that are written to
-        char  filename[100]; // char string
-        int   max_len = sizeof filename;
-        int   str_output_len;
-
-        graphics_times(graphics_id) = time_value;
-
-        // Write time series metadata
-        str_output_len = snprintf(filename, max_len, "vtk/meshHexPn.pvd"); 
-        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-        // mesh file
-
-        out[0] = fopen(filename, "w");
- 
-        fprintf(out[0], "<?xml version=\"1.0\"?>\n");
-        fprintf(out[0], "<VTKFile type=\"Collection\" version=\"1.0\" byte_order=\"LittleEndian\">\n");
-        fprintf(out[0], "  <Collection>\n");
-
-        for (int i = 0; i <= graphics_id; i++) {
-            fprintf(out[0], "    <DataSet timestep=\"%d\" file=\"data/meshHexPn.%s.%05d.vtu\" time= \"%12.5e\" />\n", i, elem_fields_name.c_str(), i, graphics_times(i) );
-        }
-
-        fprintf(out[0], "  </Collection>\n");
-        fprintf(out[0], "</VTKFile>"); 
-
-        fclose(out[0]);
 
         // increment graphics id counter
-        graphics_id++;
-
+        graphics_id++; // this is private variable in the class
 
     } // end write vtk
 
