@@ -60,6 +60,17 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "zero_velocity_bc.h"
 
 
+// temperature bc files
+#include "constant_temp_bc.h"
+
+// stress bc files
+#include "constant_stress_bc.h"
+#include "no_stress_bc.h"
+#include "time_varying_stress_bc.h"
+#include "user_defined_stress_bc.h"
+
+
+
 // eos files
 #include "gamma_law_eos.h"
 #include "no_eos.h"
@@ -306,7 +317,8 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
         printf("\n");
         std::cout << "Parsing YAML boundary condition options:" << std::endl;
     }
-    parse_bcs(root, Boundary);
+    size_t num_solvers = SimulationParamaters.solver_inputs.size();
+    parse_bcs(root, Boundary, num_solvers);
 
     if (VERBOSE) {
         printf("\n");
@@ -384,16 +396,59 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
 
     solver_input = std::vector<solver_input_t>(num_solvers);
 
+    // a check on solverl_id not being specified more than once or not at all
+    CArray <bool> check_solver_ids(num_solvers);
+    check_solver_ids.set_values(false);
+
     // loop over the solvers specified in the YAML file
-    for (int solver_id = 0; solver_id < num_solvers; solver_id++) {
+    for (int s_id = 0; s_id < num_solvers; s_id++) {
+
+
         // read the variables names
-        Yaml::Node& inps_yaml = root["solver_options"][solver_id]["solver"];
+        Yaml::Node& inps_yaml = root["solver_options"][s_id]["solver"];
 
         // get the solver variables names set by the user
         std::vector<std::string> user_inputs;
 
         // extract words from the input file and validate they are correct
         validate_inputs(inps_yaml, user_inputs, str_solver_inps, solver_required_inps);
+
+
+        // loop over the words in the solver input definition and find the solver id
+        int solver_id = -1;
+        for (auto& a_word : user_inputs) {
+
+            Yaml::Node& solver_inps_yaml = root["solver_options"][s_id]["solver"][a_word];
+
+            if (a_word.compare("id") == 0) {
+                solver_id = root["solver_options"][s_id]["solver"]["id"].As<int>();
+
+                if (solver_id<0 || solver_id>=num_solvers){
+                    std::cout << "ERROR: invalid solver id specified in the solver definition " << std::endl;
+            
+                    throw std::runtime_error("**** Solver id is out of bounds ****");
+                } // end check on solver_id range
+
+                if (check_solver_ids(solver_id) == true){
+                    std::cout << "ERROR: solver id = " << solver_id << " was already specified "<< std::endl;
+                    throw std::runtime_error("**** Multiple solvers used the same solver_id ****");
+                }
+                else {
+                    check_solver_ids(solver_id) = true;
+                } // end check on solver_id
+
+                if (VERBOSE) {
+                    std::cout << "\tid = " << solver_id << std::endl;
+                }
+            } // end id
+        } // end loop over all solver inputs for this solver
+
+        if (solver_id<0){
+            std::cout << "ERROR: solver id must be specified in the solver definition " << std::endl;
+            
+            throw std::runtime_error("**** Solver id is missing ****");
+        } // end check on solver_id specified
+
 
         // loop over the words in the input
         for (auto& a_word : user_inputs) {
@@ -403,13 +458,14 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
 
             // get solver method
             if (a_word.compare("method") == 0) {
-                std::string method = root["solver_options"][solver_id]["solver"][a_word].As<std::string>();
+                // input order is s_id, but we save things in the array using solver_id
+                std::string method = root["solver_options"][s_id]["solver"][a_word].As<std::string>();
 
                 auto map = solver_map;
 
                 // set the method
                 if (map.find(method) != map.end()) {
-                    solver_input[solver_id].method = map[method];
+                    solver_input[solver_id].method = map[method];  // save it to solver_id value, input order may differ
                     if (VERBOSE) {
                         std::cout << "\tmethod = " << method << std::endl;
                     }
@@ -421,8 +477,13 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
                     for (const auto& pair : map) {
                         std::cout << "\t" << pair.first << std::endl;
                     }
+                    throw std::runtime_error("**** Solver Input Method Not Understood ****");
                 } // end if
             } // method
+            else if (a_word.compare("id") == 0) {
+                // do nothing, we already got the id
+            }
+            // add solver_vars parsing here
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
 
@@ -960,7 +1021,7 @@ void parse_regions(Yaml::Node& root,
     // loop over the fill regions specified
     for (int reg_id = 0; reg_id < num_regions; reg_id++) {
         // read the variables names
-        Yaml::Node& inps_yaml = root["regions"][reg_id]["fill_volume"];
+        Yaml::Node& inps_yaml = root["regions"][reg_id]["region"];
 
         // get the material variables names set by the user
         std::vector<std::string> user_str_region_inps;
@@ -974,18 +1035,18 @@ void parse_regions(Yaml::Node& root,
                 std::cout << a_word << std::endl;
             }
 
-            Yaml::Node& material_inps_yaml = root["regions"][reg_id]["fill_volume"][a_word];
+            Yaml::Node& material_inps_yaml = root["regions"][reg_id]["region"][a_word];
 
             // set the values
             if (a_word.compare("material_id") == 0) {
-                int id = root["regions"][reg_id]["fill_volume"][a_word].As<int>();
+                int id = root["regions"][reg_id]["region"][a_word].As<int>();
 
                 RUN({
                     region_fills(reg_id).material_id = id;
                 });
             } // mat_id
             else if (a_word.compare("den") == 0) {
-                double den = root["regions"][reg_id]["fill_volume"]["den"].As<double>();
+                double den = root["regions"][reg_id]["region"]["den"].As<double>();
 
                 // check for a valid density else save it
                 if (den < 0.0) {
@@ -1000,7 +1061,7 @@ void parse_regions(Yaml::Node& root,
             else if (a_word.compare("sie") == 0) {
                 // specific internal energy
 
-                double sie = root["regions"][reg_id]["fill_volume"]["sie"].As<double>();
+                double sie = root["regions"][reg_id]["region"]["sie"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\tsie = " << sie << std::endl;
                 }
@@ -1012,7 +1073,7 @@ void parse_regions(Yaml::Node& root,
             else if (a_word.compare("ie") == 0) {
                 // extensive internal energy
 
-                double ie = root["regions"][reg_id]["fill_volume"]["ie"].As<double>();
+                double ie = root["regions"][reg_id]["region"]["ie"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\tie = " << ie << std::endl;
                 }
@@ -1021,17 +1082,8 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).ie = ie;
                 });
             } // ie
-            else if (a_word.compare("speed") == 0) {
-                double speed = root["regions"][reg_id]["fill_volume"]["speed"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tspeed = " << speed << std::endl;
-                }
-                RUN({
-                    region_fills(reg_id).speed = speed;
-                });
-            } // speed
             else if (a_word.compare("temperature") == 0) {
-                double temperature = root["regions"][reg_id]["fill_volume"]["temperature"].As<double>();
+                double temperature = root["regions"][reg_id]["region"]["temperature"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\ttemperature = " << temperature << std::endl;
                 }
@@ -1039,269 +1091,194 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).temperature = temperature;
                 });
             } // temperature
-            else if (a_word.compare("u") == 0) {
-                // x-component of velocity
-                double u = root["regions"][reg_id]["fill_volume"]["u"].As<double>();
+            else if (a_word.compare("specific_heat") == 0) {
+                double specific_heat = root["regions"][reg_id]["region"]["specific_heat"].As<double>();
                 if (VERBOSE) {
-                    std::cout << "\tu = " << u << std::endl;
+                    std::cout << "\tspecific_heat = " << specific_heat << std::endl;
                 }
                 RUN({
-                    region_fills(reg_id).u = u;
+                    region_fills(reg_id).specific_heat = specific_heat;
                 });
-            } // u
-            else if (a_word.compare("v") == 0) {
-                // y-component of velocity
-                double v = root["regions"][reg_id]["fill_volume"]["v"].As<double>();
+            } // specific_heat
+            else if (a_word.compare("thermal_conductivity") == 0) {
+                double thermal_conductivity = root["regions"][reg_id]["region"]["thermal_conductivity"].As<double>();
                 if (VERBOSE) {
-                    std::cout << "\tv = " << v << std::endl;
+                    std::cout << "\tthermal_conductivity = " << thermal_conductivity << std::endl;
                 }
-
                 RUN({
-                    region_fills(reg_id).v = v;
+                    region_fills(reg_id).thermal_conductivity = thermal_conductivity;
                 });
-            } // v
-            else if (a_word.compare("w") == 0) {
-                // z-component of velocity
-
-                double w = root["regions"][reg_id]["fill_volume"]["w"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tw = " << w << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).w = w;
-                });
-            } // w
-            else if (a_word.compare("radius1") == 0) {
-                // inner radius of sphere/cylinder
-
-                double radius1 = root["regions"][reg_id]["fill_volume"]["radius1"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tradius1 = " << radius1 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).radius1 = radius1;
-                });
-            } // radius1
-            else if (a_word.compare("radius2") == 0) {
-                // outer radius of sphere/cylinder
-
-                double radius2 = root["regions"][reg_id]["fill_volume"]["radius2"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tradius2 = " << radius2 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).radius2 = radius2;
-                });
-            } // radius2
-            else if (a_word.compare("x1") == 0) {
-                // inner plane
-
-                double x1 = root["regions"][reg_id]["fill_volume"]["x1"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tx1 = " << x1 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).x1 = x1;
-                });
-            } // x1
-            else if (a_word.compare("x2") == 0) {
-                // outer plane
-
-                double x2 = root["regions"][reg_id]["fill_volume"]["x2"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tx2 = " << x2 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).x2 = x2;
-                });
-            } // x2
-            else if (a_word.compare("y1") == 0) {
-                // inner plane
-
-                double y1 = root["regions"][reg_id]["fill_volume"]["y1"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\ty1 = " << y1 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).y1 = y1;
-                });
-            } // y1
-            else if (a_word.compare("y2") == 0) {
-                // outer plane
-
-                double y2 = root["regions"][reg_id]["fill_volume"]["y2"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\ty2 = " << y2 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).y2 = y2;
-                });
-            } // y2
-            else if (a_word.compare("z1") == 0) {
-                // inner plane
-
-                double z1 = root["regions"][reg_id]["fill_volume"]["z1"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tz1 = " << z1 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).z1 = z1;
-                });
-            } // z1
-            else if (a_word.compare("z2") == 0) {
-                // outer plane
-
-                double z2 = root["regions"][reg_id]["fill_volume"]["z2"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tz2 = " << z2 << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).z2 = z2;
-                });
-            } // z2
-            else if (a_word.compare("scale_x") == 0) {
-                // outer plane
-
-                double scale_x = root["regions"][reg_id]["fill_volume"]["scale_x"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tscale_x = " << scale_x << std::endl;
-                }
-
-                region_fills_host(reg_id).scale_x = scale_x;
-
-            } // scale_x
-            else if (a_word.compare("scale_y") == 0) {
-                // outer plane
-
-                double scale_y = root["regions"][reg_id]["fill_volume"]["scale_y"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tscale_y = " << scale_y << std::endl;
-                }
-
-                region_fills_host(reg_id).scale_y = scale_y;
-
-            } // scale_y
-            else if (a_word.compare("scale_z") == 0) {
-                // outer plane
-
-                double scale_z = root["regions"][reg_id]["fill_volume"]["scale_z"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tscale_z = " << scale_z << std::endl;
-                }
-
-                region_fills_host(reg_id).scale_z = scale_z;
-
-            } // scale_z
+            } // thermal_conductivity
             else if (a_word.compare("velocity") == 0) {
 
-                // velocity fill region type
-                std::string type = root["regions"][reg_id]["fill_volume"]["velocity"].As<std::string>();
+                // -----
+                // loop over the sub fields under velocity
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["velocity"];
 
-                if (VERBOSE) {
-                    std::cout << "\tvelocity = " << type << std::endl;
-                }
-                // set the volume tag type
-                if (velocity_type_map.find(type) != velocity_type_map.end()) {
-                 
-                    // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
-                    switch(velocity_type_map[type]){
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_vel_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_vel_inputs, str_region_vel_inps, region_vel_required_inps);
 
-                        case init_conds::cartesian:
-                            std::cout << "Setting velocity initial conditions type to cartesian " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::cartesian;
-                            });
-                            break;
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_vel_inputs){ 
 
-                         case init_conds::radial:
-                            std::cout << "Setting velocity initial conditions type to radial " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::radial;
-                            });
-                            break;
+                    if (a_subfield_word.compare("u") == 0) {
+                        // x-component of velocity
+                        double u = root["regions"][reg_id]["region"]["velocity"]["u"].As<double>();
+                        if (VERBOSE) {
+                        std::cout << "\tu = " << u << std::endl;
+                        }
+                        RUN({
+                        region_fills(reg_id).u = u;
+                        });
+                    } // u
+                    else if (a_subfield_word.compare("v") == 0) {
+                        // y-component of velocity
+                        double v = root["regions"][reg_id]["region"]["velocity"]["v"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tv = " << v << std::endl;
+                        }
 
-                         case init_conds::spherical:
-                            std::cout << "Setting velocity initial conditions type to spherical " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::spherical;
-                            });
-                            break;
+                        RUN({
+                            region_fills(reg_id).v = v;
+                        });
+                    } // v
+                    else if (a_subfield_word.compare("w") == 0) {
+                        // z-component of velocity
 
-                         case init_conds::radial_linear:
-                            std::cout << "Setting velocity initial conditions type to radial_linear " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::radial_linear;
-                            });
-                            break;
+                        double w = root["regions"][reg_id]["region"]["velocity"]["w"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tw = " << w << std::endl;
+                        }
 
-                         case init_conds::spherical_linear:
-                            std::cout << "Setting velocity initial conditions type to spherical_linear " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::spherical_linear;
-                            });
-                            break;
+                        RUN({
+                            region_fills(reg_id).w = w;
+                        });
+                    } // w
+                    else if (a_subfield_word.compare("speed") == 0) {
+                        double speed = root["regions"][reg_id]["region"]["velocity"]["speed"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tspeed = " << speed << std::endl;
+                        }
+                        RUN({
+                            region_fills(reg_id).speed = speed;
+                        });
+                    } // speed
+                    else if (a_subfield_word.compare("type") == 0){
 
-                         case init_conds::tg_vortex:
-                            std::cout << "Setting velocity initial conditions type to tg_vortex " << std::endl;
-                            RUN({
-                                region_fills(reg_id).velocity = init_conds::tg_vortex;
-                            });
-                            break;
+                        std::string type = root["regions"][reg_id]["region"]["velocity"]["type"].As<std::string>();
 
-                         case init_conds::no_ic_vel:
-                            std::cout << "Setting velocity initial conditions type to no velocity" << std::endl;
-                            RUN({ 
-                                region_fills(reg_id).velocity = init_conds::no_ic_vel;
-                            });
-                            break;
+                        if (VERBOSE) {
+                            std::cout << "\tvelocity = " << type << std::endl;
+                        }
+                        // set the volume tag type
+                        if (velocity_type_map.find(type) != velocity_type_map.end()) {
+                        
+                            // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
+                            switch(velocity_type_map[type]){
 
-                        default:
+                                case init_conds::cartesian:
+                                    std::cout << "Setting velocity initial conditions type to cartesian " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::cartesian;
+                                    });
+                                    break;
 
-                            RUN({ 
-                                region_fills(reg_id).velocity = init_conds::no_ic_vel;
-                            });
+                                case init_conds::radial:
+                                    std::cout << "Setting velocity initial conditions type to radial " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::radial;
+                                    });
+                                    break;
 
-                            std::cout << "ERROR: No valid velocity intial conditions type input " << std::endl;
-                            std::cout << "Valid IC types are: " << std::endl;
-                            
-                            for (const auto& pair : velocity_type_map) {
-                                std::cout << pair.second << std::endl;
-                            }
+                                case init_conds::spherical:
+                                    std::cout << "Setting velocity initial conditions type to spherical " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::spherical;
+                                    });
+                                    break;
 
-                            throw std::runtime_error("**** Velocity Initial Conditions Type Not Understood ****");
-                            break;
-                    } // end switch
+                                case init_conds::radial_linear:
+                                    std::cout << "Setting velocity initial conditions type to radial_linear " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::radial_linear;
+                                    });
+                                    break;
 
-                    if (VERBOSE) {
-                        std::cout << "\tvolume_fill = " << type << std::endl;
-                    } // end if
+                                case init_conds::spherical_linear:
+                                    std::cout << "Setting velocity initial conditions type to spherical_linear " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::spherical_linear;
+                                    });
+                                    break;
 
-                }
-                else{
-                    std::cout << "ERROR: invalid input: " << type << std::endl;
-                    throw std::runtime_error("**** Velocity IC Not Understood ****");
-                } // end if
-            } // end velocity fill type
+                                case init_conds::tg_vortex:
+                                    std::cout << "Setting velocity initial conditions type to tg_vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).velocity = init_conds::tg_vortex;
+                                    });
+                                    break;
 
+                                case init_conds::no_ic_vel:
+                                    std::cout << "Setting velocity initial conditions type to no velocity" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).velocity = init_conds::no_ic_vel;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).velocity = init_conds::no_ic_vel;
+                                    });
+
+                                    std::cout << "ERROR: No valid velocity intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : velocity_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** Velocity Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+
+                            if (VERBOSE) {
+                                std::cout << "\tvolume_fill = " << type << std::endl;
+                            } // end if
+
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** Velocity IC Not Understood ****");
+                        } // end if on velocity type
+                        
+                    } // end if on velocity type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_vel_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region Velocity Inputs Not Understood ****");
+                    } // end if on all subfields under velocity
+
+                } // end for loop over text
+            } // end if on velocity
+            //
             else if (a_word.compare("temperature_distribution") == 0) {
 
                 // temperature_distribution fill region type
-                std::string type = root["regions"][reg_id]["fill_volume"]["temperature_distribution"].As<std::string>();
+                std::string type = root["regions"][reg_id]["region"]["temperature_distribution"].As<std::string>();
 
                 if (VERBOSE) {
                     std::cout << "\ttemperature = " << type << std::endl;
                 }
                 // set the volume tag type NOTE: rename to remove reference to velocity, change to distribution
-                if (velocity_type_map.find(type) != velocity_type_map.end()) {
+                if (velocity_type_map.find(type) != velocity_type_map.end()) { //WARNING WARNING Update here, should be temp/distribution
                  
                     // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
                     switch(velocity_type_map[type]){
@@ -1382,138 +1359,285 @@ void parse_regions(Yaml::Node& root,
                     throw std::runtime_error("**** Temperature IC Not Understood ****");
                 } // end if
             } // end velocity fill type
+            else if (a_word.compare("volume") == 0) {
 
-            //
-            else if (a_word.compare("type") == 0) {
+                // -----
+                // loop over the sub fields under volume
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["volume"];
 
-                // region volume fill type
-                std::string type = root["regions"][reg_id]["fill_volume"]["type"].As<std::string>();
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_volume_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_volume_inputs, str_region_volume_inps, region_volume_required_inps);
 
-                if (VERBOSE) {
-                    std::cout << "\ttype = " << type << std::endl;
-                }
 
-                // set the velocity tag type
-                if (region_type_map.find(type) != region_type_map.end()) {
-                 
-                    // region_type_map[type] returns enum value, e.g., init_conds::velocity 
-                    switch(region_type_map[type]){
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_volume_inputs){ 
 
-                        case region::global:
-                            std::cout << "Setting volume fill type to global " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::global;
-                            });
-                            break;
+                    if (a_subfield_word.compare("radius1") == 0) {
+                        // inner radius of sphere/cylinder
 
-                        case region::box:
-                            std::cout << "Setting volume fill type to box " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::box;
-                            });
-                            break;
+                        double radius1 = root["regions"][reg_id]["region"]["volume"]["radius1"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tradius1 = " << radius1 << std::endl;
+                        }
 
-                        case region::cylinder:
-                            std::cout << "Setting volume fill type to cylinder " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::cylinder;
-                            });
-                            break;
+                        RUN({
+                            region_fills(reg_id).radius1 = radius1;
+                        });
+                    } // radius1
+                    else if (a_subfield_word.compare("radius2") == 0) {
+                        // outer radius of sphere/cylinder
 
-                        case region::sphere:
-                            std::cout << "Setting volume fill type to sphere " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::sphere;
-                            });
-                            break;
+                        double radius2 = root["regions"][reg_id]["region"]["volume"]["radius2"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tradius2 = " << radius2 << std::endl;
+                        }
 
-                        case region::readVoxelFile:
-                            std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::readVoxelFile;
-                            });
-                            break;
+                        RUN({
+                            region_fills(reg_id).radius2 = radius2;
+                        });
+                    } // radius2
+                    else if (a_subfield_word.compare("x1") == 0) {
+                        // inner plane
 
-                        case region::no_volume:
-                            std::cout << "Setting volume fill type to none " << std::endl;
-                            RUN({
-                                region_fills(reg_id).volume = region::no_volume;
-                            });
-                            break;
-                        default:
+                        double x1 = root["regions"][reg_id]["region"]["volume"]["x1"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tx1 = " << x1 << std::endl;
+                        }
 
-                            RUN({ 
-                                region_fills(reg_id).volume = region::no_volume;
-                            });
+                        RUN({
+                            region_fills(reg_id).x1 = x1;
+                        });
+                    } // x1
+                    else if (a_subfield_word.compare("x2") == 0) {
+                        // outer plane
 
-                            std::cout << "ERROR: No valid region volume fill type input " << std::endl;
-                            std::cout << "Valid IC volume fill types are: " << std::endl;
-                            
-                            for (const auto& pair : region_type_map) {
-                                std::cout << pair.second << std::endl;
-                            }
+                        double x2 = root["regions"][reg_id]["region"]["volume"]["x2"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tx2 = " << x2 << std::endl;
+                        }
 
-                            throw std::runtime_error("**** Region Volume Fill Type Not Understood ****");
-                            break;
-                    } // end switch
-                }
-                 
-                else{
-                    std::cout << "ERROR: invalid input: " << type << std::endl;
-                    throw std::runtime_error("**** Volume Fill Not Understood ****");
-                } // end if
+                        RUN({
+                            region_fills(reg_id).x2 = x2;
+                        });
+                    } // x2
+                    else if (a_subfield_word.compare("y1") == 0) {
+                        // inner plane
 
+                        double y1 = root["regions"][reg_id]["region"]["volume"]["y1"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\ty1 = " << y1 << std::endl;
+                        }
+
+                        RUN({
+                            region_fills(reg_id).y1 = y1;
+                        });
+                    } // y1
+                    else if (a_subfield_word.compare("y2") == 0) {
+                        // outer plane
+
+                        double y2 = root["regions"][reg_id]["region"]["volume"]["y2"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\ty2 = " << y2 << std::endl;
+                        }
+
+                        RUN({
+                            region_fills(reg_id).y2 = y2;
+                        });
+                    } // y2
+                    else if (a_subfield_word.compare("z1") == 0) {
+                        // inner plane
+
+                        double z1 = root["regions"][reg_id]["region"]["volume"]["z1"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tz1 = " << z1 << std::endl;
+                        }
+
+                        RUN({
+                            region_fills(reg_id).z1 = z1;
+                        });
+                    } // z1
+                    else if (a_subfield_word.compare("z2") == 0) {
+                        // outer plane
+
+                        double z2 = root["regions"][reg_id]["region"]["volume"]["z2"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tz2 = " << z2 << std::endl;
+                        }
+
+                        RUN({
+                            region_fills(reg_id).z2 = z2;
+                        });
+                    } // z2
+                    else if (a_subfield_word.compare("scale_x") == 0) {
+                        // outer plane
+
+                        double scale_x = root["regions"][reg_id]["region"]["volume"]["scale_x"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tscale_x = " << scale_x << std::endl;
+                        }
+
+                        region_fills_host(reg_id).scale_x = scale_x;
+
+                    } // scale_x
+                    else if (a_subfield_word.compare("scale_y") == 0) {
+                        // outer plane
+
+                        double scale_y = root["regions"][reg_id]["region"]["volume"]["scale_y"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tscale_y = " << scale_y << std::endl;
+                        }
+
+                        region_fills_host(reg_id).scale_y = scale_y;
+
+                    } // scale_y
+                    else if (a_subfield_word.compare("scale_z") == 0) {
+                        // outer plane
+
+                        double scale_z = root["regions"][reg_id]["region"]["volume"]["scale_z"].As<double>();
+                        if (VERBOSE) {
+                            std::cout << "\tscale_z = " << scale_z << std::endl;
+                        }
+
+                        region_fills_host(reg_id).scale_z = scale_z;
+
+                    } // scale_z
+                    //
+                    else if (a_subfield_word.compare("type") == 0) {
+
+                        // region volume fill type
+                        std::string type = root["regions"][reg_id]["region"]["volume"]["type"].As<std::string>();
+
+                        if (VERBOSE) {
+                            std::cout << "\ttype = " << type << std::endl;
+                        }
+
+                        // set the velocity tag type
+                        if (region_type_map.find(type) != region_type_map.end()) {
+                        
+                            // region_type_map[type] returns enum value, e.g., init_conds::velocity 
+                            switch(region_type_map[type]){
+
+                                case region::global:
+                                    std::cout << "Setting volume fill type to global " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::global;
+                                    });
+                                    break;
+
+                                case region::box:
+                                    std::cout << "Setting volume fill type to box " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::box;
+                                    });
+                                    break;
+
+                                case region::cylinder:
+                                    std::cout << "Setting volume fill type to cylinder " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::cylinder;
+                                    });
+                                    break;
+
+                                case region::sphere:
+                                    std::cout << "Setting volume fill type to sphere " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::sphere;
+                                    });
+                                    break;
+
+                                case region::readVoxelFile:
+                                    std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::readVoxelFile;
+                                    });
+                                    break;
+
+                                case region::no_volume:
+                                    std::cout << "Setting volume fill type to none " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::no_volume;
+                                    });
+                                    break;
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).volume = region::no_volume;
+                                    });
+
+                                    std::cout << "ERROR: No valid region volume fill type input " << std::endl;
+                                    std::cout << "Valid IC volume fill types are: " << std::endl;
+                                    
+                                    for (const auto& pair : region_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** Region Volume Fill Type Not Understood ****");
+                                    break;
+                            } // end switch
+                        } // end if on setting volume tag
+
+                    }  // end if on volume type
+                    // Get mesh file path
+                    else if (a_subfield_word.compare("file_path") == 0) {
+                        // region volume fill type
+                        std::string path = root["regions"][reg_id]["region"]["volume"]["file_path"].As<std::string>();
+
+                        if (VERBOSE) {
+                            std::cout << "\tfile_path = " << path << std::endl;
+                        }
+
+                        // absolute path to file or local to the director where exe is run
+                        region_fills_host(reg_id).file_path = path;   // saving the absolute file path
+        
+
+                    } // end file path
+                    //
+                    else if (a_subfield_word.compare("origin") == 0) {
+                        std::string origin = root["regions"][reg_id]["region"]["volume"]["origin"].As<std::string>();
+                        if (VERBOSE) {
+                            std::cout << "\torigin = " << origin << std::endl;
+                        }
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(origin, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        if (VERBOSE) {
+                            std::cout << "\tx1 = " << x1 << std::endl;
+                            std::cout << "\ty1 = " << y1 << std::endl;
+                            std::cout << "\tz1 = " << z1 << std::endl;
+                        }
+
+                        // storing the origin values as (x1,y1,z1)
+                        RUN({
+                            region_fills(reg_id).origin[0] = x1;
+                            region_fills(reg_id).origin[1] = y1;
+                            region_fills(reg_id).origin[2] = z1;
+                        });
+                    } // origin
+                    else{
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        throw std::runtime_error("**** Volume Fill Not Understood ****");
+                    } // end if
+
+                } // end for loop over subfields under volume
             } // end volume fill type
-            // Get mesh file path
-            else if (a_word.compare("file_path") == 0) {
-                // region volume fill type
-                std::string path = root["regions"][reg_id]["fill_volume"]["file_path"].As<std::string>();
-
-                if (VERBOSE) {
-                    std::cout << "\tfile_path = " << path << std::endl;
-                }
-
-                // absolute path to file or local to the director where exe is run
-                region_fills_host(reg_id).file_path = path;   // saving the absolute file path
-   
-
-            } // end file path
-            //
-            else if (a_word.compare("origin") == 0) {
-                std::string origin = root["regions"][reg_id]["fill_volume"]["origin"].As<std::string>();
-                if (VERBOSE) {
-                    std::cout << "\torigin = " << origin << std::endl;
-                }
-
-                // get the origin numbers, values are words
-                std::vector<std::string> numbers = exact_array_values(origin, ",");
-
-                double x1 = std::stod(numbers[0]);
-                double y1 = std::stod(numbers[1]);
-                double z1;
-
-                if(numbers.size()==3){ 
-                    // 3D
-                    z1 = std::stod(numbers[2]);
-                }
-                else {
-                    // 2D
-                    z1 = 0.0;
-                } //
-
-                if (VERBOSE) {
-                    std::cout << "\tx1 = " << x1 << std::endl;
-                    std::cout << "\ty1 = " << y1 << std::endl;
-                    std::cout << "\tz1 = " << z1 << std::endl;
-                }
-
-                // storing the origin values as (x1,y1,z1)
-                RUN({
-                    region_fills(reg_id).origin[0] = x1;
-                    region_fills(reg_id).origin[1] = y1;
-                    region_fills(reg_id).origin[2] = z1;
-                });
-            } // origin
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
@@ -1602,12 +1726,17 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
         
     }); // end parallel for
 
+    // a check on material_id not being specified more than once or not at all
+    CArray <bool> check_mat_ids(num_materials);
+    check_mat_ids.set_values(false);
 
+    // loop over the materials specified in the input file
+    for (int m_id = 0; m_id < num_materials; m_id++) {
 
-    // loop over the materials specified
-    for (int mat_id = 0; mat_id < num_materials; mat_id++) {
+        // Important: m_id corresponds to the order of the materials entered in the input file
+
         // read the variables names
-        Yaml::Node& inps_yaml = root["materials"][mat_id]["material"];
+        Yaml::Node& inps_yaml = root["materials"][m_id]["material"];
 
         size_t num_vars_set = inps_yaml.Size();
 
@@ -1619,28 +1748,59 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
         // extract words from the input file and validate they are correct
         validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_hydrodynamics_required_inps);
 
-        // loop over the words in the material input definition
+        // loop over the words in the material input definition and find the material id
+        int mat_id = -1;
+        for (auto& a_word : user_str_material_inps) {
+
+            Yaml::Node& material_inps_yaml = root["materials"][m_id]["material"][a_word];
+
+            if (a_word.compare("id") == 0) {
+                mat_id = root["materials"][m_id]["material"]["id"].As<int>();
+
+                if (mat_id<0 || mat_id>=num_materials){
+                    std::cout << "ERROR: invalid material_id specified in the material definition " << std::endl;
+            
+                    throw std::runtime_error("**** Material_id is out of bounds ****");
+                } // end check on m_id range
+
+                if (check_mat_ids(mat_id) == true){
+                    std::cout << "ERROR: material_id = " << mat_id << " was already specified "<< std::endl;
+                    throw std::runtime_error("**** Multiple materials used the same material_id ****");
+                }
+                else {
+                    check_mat_ids(mat_id) = true;
+                } // end check on mat_id
+
+                if (VERBOSE) {
+                    std::cout << "\tid = " << mat_id << std::endl;
+                }
+            } // end id
+        } // end loop over all material inputs
+
+        if (mat_id<0){
+            std::cout << "ERROR: material_id must be specified in the material definition " << std::endl;
+            
+            throw std::runtime_error("**** Material_id is missing ****");
+        } // end check on m_id being specified
+
+
+
+        // loop over the words in the material input definition again
         for (auto& a_word : user_str_material_inps) {
             if (VERBOSE) {
                 std::cout << a_word << std::endl;
             }
 
-            Yaml::Node& material_inps_yaml = root["materials"][mat_id]["material"][a_word];
+            Yaml::Node& material_inps_yaml = root["materials"][m_id]["material"][a_word];
 
-
-            if (a_word.compare("id") == 0) {
-                int m_id = root["materials"][mat_id]["material"]["id"].As<int>();
-                if (VERBOSE) {
-                    std::cout << "\tid = " << m_id << std::endl;
-                }
-                RUN({
-                    Materials.MaterialFunctions(mat_id).id = m_id;
-                });
-            } // id
-            //
+            
             //extract eos model
+            if (a_word.compare("id") == 0) {
+                // do nothing
+                // this id was read in an earlier loop
+            }
             else if (a_word.compare("eos_model_type") == 0) {
-                std::string type = root["materials"][mat_id]["material"]["eos_model_type"].As<std::string>();
+                std::string type = root["materials"][m_id]["material"]["eos_model_type"].As<std::string>();
 
                 // set the eos type
                 if (eos_type_map.find(type) != eos_type_map.end()) {
@@ -1691,7 +1851,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             //
             // set the eos_model
             else if (a_word.compare("eos_model") == 0) {
-                std::string eos = root["materials"][mat_id]["material"]["eos_model"].As<std::string>();
+                std::string eos = root["materials"][m_id]["material"]["eos_model"].As<std::string>();
 
                 // set the EOS
                 if (eos_models_map.find(eos) != eos_models_map.end()) {
@@ -1780,7 +1940,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
             // Type of strength model
             else if (a_word.compare("strength_model_type") == 0) {
-                std::string strength_model_type = root["materials"][mat_id]["material"]["strength_model_type"].As<std::string>();
+                std::string strength_model_type = root["materials"][m_id]["material"]["strength_model_type"].As<std::string>();
 
                 // set the EOS
                 if (strength_type_map.find(strength_model_type) != strength_type_map.end()) {
@@ -1833,7 +1993,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             
             // Set specific strength model
             else if (a_word.compare("strength_model") == 0) {
-                std::string strength_model = root["materials"][mat_id]["material"]["strength_model"].As<std::string>();
+                std::string strength_model = root["materials"][m_id]["material"]["strength_model"].As<std::string>();
 
                 // set the strength
                 if (strength_models_map.find(strength_model) != strength_models_map.end()) {
@@ -1959,7 +2119,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             
             //extract erosion model
             else if (a_word.compare("erosion_model") == 0) {
-                std::string erosion_model = root["materials"][mat_id]["material"]["erosion_model"].As<std::string>();
+                std::string erosion_model = root["materials"][m_id]["material"]["erosion_model"].As<std::string>();
 
                 // set the erosion model
                 if (erosion_model_map.find(erosion_model) != erosion_model_map.end()) {
@@ -2000,7 +2160,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             } // erosion model variables
             //extract dissipation (artificial viscosity) model
             else if (a_word.compare("dissipation_model") == 0) {
-                std::string dissipation_model = root["materials"][mat_id]["material"]["dissipation_model"].As<std::string>();
+                std::string dissipation_model = root["materials"][m_id]["material"]["dissipation_model"].As<std::string>();
 
                 // set the erosion model
                 if (dissipation_model_map.find(dissipation_model) != dissipation_model_map.end()) {
@@ -2082,7 +2242,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             } // erosion model variables
             //
             else if (a_word.compare("erode_tension_val") == 0) {
-                double erode_tension_val = root["materials"][mat_id]["material"]["erode_tension_val"].As<double>();
+                double erode_tension_val = root["materials"][m_id]["material"]["erode_tension_val"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\terode_tension_val = " << erode_tension_val << std::endl;
                 }
@@ -2091,7 +2251,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 });
             } // erode_tension_val
             else if (a_word.compare("erode_density_val") == 0) {
-                double erode_density_val = root["materials"][mat_id]["material"]["erode_density_val"].As<double>();
+                double erode_density_val = root["materials"][m_id]["material"]["erode_density_val"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\terode_density_val = " << erode_density_val << std::endl;
                 }
@@ -2102,7 +2262,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
-                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+                Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];
 
                 size_t num_global_vars = mat_global_vars_yaml.Size();
                 
@@ -2120,7 +2280,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double eos_var = root["materials"][mat_id]["material"]["eos_global_vars"][global_var_id].As<double>();
+                    double eos_var = root["materials"][m_id]["material"]["eos_global_vars"][global_var_id].As<double>();
                     
 
                     RUN({
@@ -2135,7 +2295,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             
             // exact the strength_global_vars
             else if (a_word.compare("strength_global_vars") == 0) {
-                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+                Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];
 
                 size_t num_global_vars = mat_global_vars_yaml.Size();
                 
@@ -2152,9 +2312,9 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     std::cout << "num global strength vars = " << num_global_vars << std::endl;
                 }
 
-                // store the global eos model parameters
+                // store the global strength model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double strength_var = root["materials"][mat_id]["material"]["strength_global_vars"][global_var_id].As<double>();
+                    double strength_var = root["materials"][m_id]["material"]["strength_global_vars"][global_var_id].As<double>();
                     
                     RUN({
                         tempGlobalStrengthVars(mat_id,global_var_id) = strength_var;
@@ -2164,9 +2324,9 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                         std::cout << "\t var = " << strength_var << std::endl;
                     }
                 } // end loop over global vars
-            } // "eos_global_vars"
+            } // "strength_global_vars"
             else if (a_word.compare("dissipation_global_vars") == 0) {
-                Yaml::Node & mat_global_vars_yaml = root["materials"][mat_id]["material"][a_word];
+                Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];
 
                 size_t num_global_vars = mat_global_vars_yaml.Size();
 
@@ -2188,7 +2348,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double dissipation_var = root["materials"][mat_id]["material"]["dissipation_global_vars"][global_var_id].As<double>();
+                    double dissipation_var = root["materials"][m_id]["material"]["dissipation_global_vars"][global_var_id].As<double>();
                     
                     RUN({
                         tempGlobalDissipationVars(mat_id, global_var_id) = dissipation_var;
@@ -2258,11 +2418,14 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 // =================================================================================
 //    Parse Boundary Conditions
 // =================================================================================
-void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
+void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const size_t num_solvers)
 {
+
     Yaml::Node& bc_yaml = root["boundary_conditions"];
 
     size_t num_bcs = bc_yaml.Size();
+
+    std::cout<<"num_bcs = " << num_bcs << std::endl;
 
     BoundaryConditions.num_bcs = num_bcs;
 
@@ -2274,75 +2437,147 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
     // enums to select options with boundary conditions
     BoundaryConditions.BoundaryConditionEnums  = DCArrayKokkos<BoundaryConditionEnums_t> (num_bcs,"bc_enums");  
 
-    // the state for boundary conditions
-    BoundaryConditions.bc_global_vars = DCArrayKokkos<double>(num_bcs, 4, "bc_global_values"); // increase 4 for more params
+    // --- BC velocity ---
+    // stores the velocity bdy node lists per solver, in the future, this needs to be a DualRaggedRight
+    BoundaryConditions.vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "vel_bdy_sets_in_solver");  
+    BoundaryConditions.temperature_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "temperature_bdy_sets_in_solver");
+    // this stores the number of bdy sets for a solver
+   
+
+    // this stores the number of vel bdy sets for a solver
+    BoundaryConditions.num_vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_vel_bdy_sets_in_solver");   
+    BoundaryConditions.num_temperature_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_temperature_bdy_sets_in_solver");
+    
+    // set the storage counter to zero
+    for(size_t solver_id=0; solver_id<num_solvers; solver_id++){
+        BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id) = 0;
+        BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id) = 0;
+    } // end for
+
+    // --- BC stress ---
+    // stores the stress bdy node lists per solver, in the future, this needs to be a DualRaggedRight
+    BoundaryConditions.stress_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "stress_bdy_sets_in_solver");  
+    // this stores the number of stess bdy sets for a solver
+    BoundaryConditions.num_stress_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_stress_bdy_sets_in_solver");   
+    // set the storage counter to zero
+    for(size_t solver_id=0; solver_id<num_solvers; solver_id++){
+        BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id) = 0;
+    } // end for
+
+
+    // temporary arrays for boundary condition variables
+    DCArrayKokkos<double> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
+
+    DCArrayKokkos<double> tempTemperatureBCGlobalVars (num_bcs, 100, "temporary_temperature_bc_global_values");
+    DCArrayKokkos<double> tempStressBCGlobalVars (num_bcs, 100, "temporary_stress_bc_global_values");
+    // DCArrayKokkos<double> tempHeatFluxBCGlobalVars (num_bcs, 100, "temporary_heat_flux_bc_global_values");
+    
+    BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars"); 
+    BoundaryConditions.num_temperature_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_temperature_bc_global_vars");
+    BoundaryConditions.num_stress_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_stress_bc_global_vars");
+    // BoundaryConditions.num_heat_flux_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_heat_flux_bc_global_vars"); 
+
+    
+    
+
+
+    // initialize the num of global vars to 0 for all models
+    FOR_ALL(bc_id, 0, num_bcs, {
+        BoundaryConditions.num_velocity_bc_global_vars(bc_id) = 0;
+
+        BoundaryConditions.num_temperature_bc_global_vars(bc_id) = 0;
+        BoundaryConditions.num_stress_bc_global_vars(bc_id) = 0;
+        // BoundaryConditions.num_heat_flux_bc_global_vars(bc_id) = 0;
+    }); // end parallel for
+
+
+    // state place holder is here
     BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
 
-
+    std::cout << "Before loop over the BC specified" << std::endl;
     // loop over the BC specified
-    for (int bc_id = 0; bc_id < num_bcs; bc_id++) {
+    for (size_t bc_id = 0; bc_id < num_bcs; bc_id++) {
         // read the variables names
         Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"];
 
-        // get the material variables names set by the user
+        // get the boundary condition variables names set by the user
         std::vector<std::string> user_str_bc_inps;
 
         // extract words from the input file and validate they are correct
         validate_inputs(inps_yaml, user_str_bc_inps, str_bc_inps, bc_required_inps);
 
-        // loop over the words in the material input definition
+
+        // verify the boundary condition block connects to a solver
+        // loop over the words in the boundary input definition and find the solver id
+        int solver_id = -1;
+        for (auto& a_word : user_str_bc_inps) {
+
+            Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+            if (a_word.compare("solver_id") == 0) {
+                solver_id = bc_yaml[bc_id]["boundary_condition"][a_word].As<int>();
+
+                if (solver_id<0 || solver_id>=num_solvers){
+                    std::cout << "ERROR: invalid solver_id specified in the boundary condition definition. Either negative or >= num_solvers" << std::endl;
+            
+                    throw std::runtime_error("**** Solver_id is out of bounds ****");
+                } // end check on m_id range
+
+                if (VERBOSE) {
+                    std::cout << "\tsolver_id = " << solver_id << std::endl;
+                }
+            } // end id
+
+            // add other checks here...
+
+        } // end loop over all boundary condition inputs
+
+        if (solver_id<0){
+            std::cout << "ERROR: solver_id must be specified in the boundary condition definition " << std::endl;
+            
+            throw std::runtime_error("**** Solver_id is missing ****");
+        } // end check on m_id range
+
+
+        // loop over the words in the boundary condition input definition
         for (auto& a_word : user_str_bc_inps) {
             if (VERBOSE) {
                 std::cout << a_word << std::endl;
             }
-
+            std::cout << "a_word = " << a_word << std::endl;
             Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
             // get solver for this boundary condition
-            if (a_word.compare("solver") == 0) {
-                std::string solver = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+            if (a_word.compare("solver_id") == 0) {
+                // do nothing, I already have solver_id since the check above
 
-                auto map = solver_map;
-
-                // set the solver
-                if (map.find(solver) != map.end()) {
-                    solver_input::method bc_solver = map[solver];
-
-                    RUN({
-                        BoundaryConditions.BoundaryConditionEnums(bc_id).solver = bc_solver;
-                    });
-
-                    if (VERBOSE) {
-                        std::cout << "\tsolver = " << solver << std::endl;
-                    }
-                }
-                else{
-                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << solver << std::endl;
-                    std::cout << "Valid options are: " << std::endl;
-
-                    for (const auto& pair : map) {
-                        std::cout << "\t" << pair.first << std::endl;
-                    }
-                } // end if
-            } // solver
+            } // solver id
             // get boundary condition type
-            else if (a_word.compare("type") == 0) {
-                std::string type = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+            else if (a_word.compare("velocity_model") == 0) {
+                
+                // Note: solver_id was retrieved at the top of the bc_id loop
 
-                auto map = bc_type_map;
+                // find out how many velocity bdy sets have been saved 
+                size_t num_saved = BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id);
+                BoundaryConditions.vel_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
+                BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
 
-                // set the type
-                if (map.find(type) != map.end()) {
-                    auto bc_type = map[type];
+                std::string velocity_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
-                    // bc_type_map[type] returns enum value, e.g., boundary_conditions::velocity_constant
-                    switch(map[type]){
+                auto map = bc_velocity_model_map; 
+
+                // set the velocity_model
+                if (map.find(velocity_model) != map.end()) {
+                    auto bc_velocity_model = map[velocity_model];
+
+                    // bc_velocity_model_map[velocity_model] returns enum value, e.g., boundary_conditions::velocity_constant
+                    switch(map[velocity_model]){
 
                         case boundary_conditions::constantVelocityBC :
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::constantVelocityBC ;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::constantVelocityBC ;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ConstantVelocityBC::velocity;
                             });
                             break;
@@ -2351,7 +2586,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::timeVaringVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::timeVaringVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &TimeVaryingVelocityBC::velocity;
                             });
                             break;
@@ -2360,7 +2595,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::reflectedVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::reflectedVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ReflectedVelocityBC::velocity;
                             });
                             break;
@@ -2369,7 +2604,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::zeroVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::zeroVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ZeroVelocityBC::velocity;
                             });
                             break;
@@ -2377,7 +2612,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::userDefinedVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::userDefinedVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
                             });
                             break;
@@ -2385,42 +2620,180 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                             std::cout << "Setting velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::pistonVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::pistonVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
                             });
                             break;                        
                         default:
                             
-                            std::cout << "Setting velocity bc " << std::endl;
-                            RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCHydroType = boundary_conditions::noVelocityBC;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &NoVelocityBC::velocity;
-                            });
-                            // no velocity specified is default
+                            std::cout << "ERROR: invalid velocity boundary condition input: " << velocity_model << std::endl;
+                            throw std::runtime_error("**** Velocity BC model Not Understood ****");
                             break;
                         
                     } // end switch
 
                     if (VERBOSE) {
-                        std::cout << "\ttype = " << type << std::endl;
+                        std::cout << "\tvelocity_bc_model = " << velocity_model << std::endl;
                     }
                 }
                 else{
-                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << type << std::endl;
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << velocity_model << std::endl;
                     std::cout << "Valid options are: " << std::endl;
 
                     for (const auto& pair : map) {
                         std::cout << "\t" << pair.first << std::endl;
                     }
+
+                    throw std::runtime_error("**** Boundary Condition Velocity Model Not Understood ****");
                 } // end if
             } // type
-            // get boundary condition direction
+
+
+            else if (a_word.compare("temperature_model") == 0) {
+                std::cout << "Inside temperature_model check" << std::endl;
+
+                // Note: solver_id was retrieved at the top of the bc_id loop
+
+                std::cout<<"Solver id = " << solver_id << std::endl;
+                std::cout<<"bc_id = " << bc_id << std::endl;
+
+                // find out how many temperature bdy sets have been saved 
+                size_t num_saved = BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id);
+
+                std::cout<<"num_saved = " << num_saved << std::endl;
+
+                BoundaryConditions.temperature_bdy_sets_in_solver.host(num_saved) = bc_id;
+                BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
+
+                std::string temperature_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_temperature_model_map; 
+                std::cout<<"Before map check" << std::endl;
+                // set the temperature_model
+                if (map.find(temperature_model) != map.end()) {
+                    std::cout<<"Inside map check" << std::endl;
+                    auto bc_temperature_model = map[temperature_model];
+                    
+                    switch(map[temperature_model]){
+                        case boundary_conditions::constantTemperatureBC:
+                            std::cout << "Setting constant temperature bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::constantTemperatureBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).temperature = &ConstantTemperatureBC::temperature;
+                            });
+                            break;
+
+                        case boundary_conditions::convectionTemperatureBC:
+                            std::cout << "Setting convection bc " << std::endl;
+                            
+                            RUN({   
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::convectionTemperatureBC;
+                                // BoundaryConditions.BoundaryConditionFunctions(bc_id).temperature = &ConvectionTemperatureBC::temperature;
+                            });
+                            break;
+
+                        case boundary_conditions::radiationTemperatureBC:
+                            std::cout << "Setting radiation bc " << std::endl;
+                            
+                            RUN({   
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::radiationTemperatureBC;
+                                // BoundaryConditions.BoundaryConditionFunctions(bc_id).temperature = &RadiationTemperatureBC::temperature;
+                            });
+                            break;
+
+                        default:
+                            std::cout << "ERROR: invalid temperature boundary condition input: " << temperature_model << std::endl;
+                            throw std::runtime_error("**** Temperature BC model Not Understood ****");
+                            break;
+                    }
+                }
+                if (VERBOSE) {
+                    std::cout << "\ttemperature_bc_model = " << temperature_model << std::endl;
+                }
+            }   
+
+            // get boundary condition type
+            else if (a_word.compare("stress_model") == 0) {
+                
+                // Note: solver_id was retrieved at the top of the bc_id loop
+
+                // find out how many stress bdy sets have been saved 
+                size_t num_saved = BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id);
+                BoundaryConditions.stress_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
+                BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
+
+                std::string stress_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_stress_model_map; 
+
+                // set the stress_model
+                if (map.find(stress_model) != map.end()) {
+                    auto bc_stress_model = map[stress_model];
+
+                    // bc_stress_model_map[stress_model] returns enum value, e.g., boundary_conditions::stress_constant
+                    switch(map[stress_model]){
+
+                        case boundary_conditions::constantStressBC :
+                            std::cout << "Setting stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::constantStressBC ;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &ConstantStressBC::stress;
+                            });
+                            break;
+
+                        case boundary_conditions::timeVaringStressBC:
+                            std::cout << "Setting stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::timeVaringStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &TimeVaryingStressBC::stress;
+                            });
+                            break;
+
+                        case boundary_conditions::userDefinedStressBC:
+                            std::cout << "Setting stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::userDefinedStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &UserDefinedStressBC::stress;
+                            });
+                            break;
+                      
+                        default:
+                            
+                            std::cout << "ERROR: invalid stress boundary condition input: " << stress_model << std::endl;
+                            throw std::runtime_error("**** stress BC model Not Understood ****");
+                            break;
+                        
+                    } // end switch
+
+                    if (VERBOSE) {
+                        std::cout << "\tstress_bc_model = " << stress_model << std::endl;
+                    }
+                }
+                else{
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << stress_model << std::endl;
+                    std::cout << "Valid options are: " << std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+
+                    throw std::runtime_error("**** Boundary Condition Stress Model Not Understood ****");
+                } // end if
+            } // type of stress model
+            // get boundary condition direction -- host or device
+
+            // get boundary condition location
             else if (a_word.compare("location") == 0) {
                 std::string location = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
                 auto map = bc_location_map;
 
-                // set the direction
+                // set the location
                 if (map.find(location) != map.end()) {
                     auto bc_location = map[location];
                     RUN({
@@ -2437,152 +2810,225 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
                     for (const auto& pair : map) {
                         std::cout << "\t" << pair.first << std::endl;
                     }
+                    throw std::runtime_error("**** Boundary Conditions Not Understood ****");
                 } // end if
-            } // direction
-            // get boundary condition geometry
-            // get boundary condition direction
-            else if (a_word.compare("direction") == 0) {
-                std::string direction = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+            } // location
 
-                auto map = bc_direction_map;
+            // get boundary condition surface geometry
+            else if (a_word.compare("surface") == 0) {
 
-                // set the direction
-                if (map.find(direction) != map.end()) {
-                    auto bc_direction = map[direction];
-                    RUN({
-                        BoundaryConditions.BoundaryConditionEnums(bc_id).Direction = bc_direction;
-                    });
-                    if (VERBOSE) {
-                        std::cout << "\tdirection = " << direction << std::endl;
+                // -----
+                // loop over the sub fields under surface
+                // -----
+                Yaml::Node& inps_subfields_yaml = bc_yaml[bc_id]["boundary_condition"]["surface"];
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_bc_surface_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_bc_surface_inputs, str_bc_surface_inps, bc_surface_required_inps);
+
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_bc_surface_inputs){ 
+
+                    if (a_subfield_word.compare("type") == 0){
+                        std::string surface = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<std::string>();
+
+                        auto map = bc_surface_map;
+
+                        // set the surface
+                        if (map.find(surface) != map.end()) {
+                            auto bc_surface = map[surface];
+                            RUN({
+                                BoundaryConditions.BoundaryConditionSetup(bc_id).surface = bc_surface;
+                            });
+
+                            if (VERBOSE) {
+                                std::cout << "\tsurface = " << surface << std::endl;
+                            }
+                        }
+                        else{
+                            std::cout << "ERROR: invalid boundary condition option input in YAML file: " << surface << std::endl;
+                            std::cout << "Valid options are: " << std::endl;
+
+                            for (const auto& pair : map) {
+                                std::cout << "\t" << pair.first << std::endl;
+                            }
+                            throw std::runtime_error("**** Boundary Condition Surface Inputs Not Understood ****");
+                        } // end if
+
+                    } // end if type
+                    else if (a_subfield_word.compare("plane_position") == 0) {
+                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
+                        });
+                    } // end if plane position
+                    else if (a_subfield_word.compare("radius") == 0) {
+                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
+                        });
+                    } // end if radius
+                    else if (a_subfield_word.compare("tolerance") == 0) {
+                        // the tolerance to tag a surface
+                        double tolerance = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).tolerance = tolerance;
+                        });
+                    } // end if tolerance 
+                    else if (a_subfield_word.compare("origin") == 0) {
+                        std::string origin = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<std::string>();
+                        if (VERBOSE) {
+                            std::cout << "\torigin = " << origin << std::endl;
+                        }
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(origin, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        if (VERBOSE) {
+                            std::cout << "\tx1 = " << x1 << std::endl;
+                            std::cout << "\ty1 = " << y1 << std::endl;
+                            std::cout << "\tz1 = " << z1 << std::endl;
+                        }
+                        // storing the origin values as (x1,y1,z1)
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).origin[0] = x1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).origin[1] = y1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).origin[2] = z1;
+                        });
+
+                    } //end origin
+                    else {
+                        // word is unknown
+                        std::cout << "ERROR: invalid input under boundary condition geometery: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_bc_surface_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Boundary Conditions Not Understood ****");
                     }
-                }
-                else{
-                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << direction << std::endl;
-                    std::cout << "Valid options are: " << std::endl;
 
-                    for (const auto& pair : map) {
-                        std::cout << "\t" << pair.first << std::endl;
-                    }
-                } // end if
-            } // direction
-            // get boundary condition geometry
-            else if (a_word.compare("geometry") == 0) {
-                std::string geometry = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+                } // end loop over words in the subfield
+            } // surface
 
-                auto map = bc_geometry_map;
+            
+            // Set the global variables for velocity boundary condition models
+            else if (a_word.compare("velocity_bc_global_vars") == 0) {
+                Yaml::Node & vel_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
-                // set the geometry
-                if (map.find(geometry) != map.end()) {
-                    auto bc_geometry = map[geometry];
-                    RUN({
-                        BoundaryConditions.BoundaryConditionSetup(bc_id).geometry = bc_geometry;
-                    });
+                size_t num_global_vars = vel_bc_global_vars_yaml.Size();
 
-                    if (VERBOSE) {
-                        std::cout << "\tgeometry = " << geometry << std::endl;
-                    }
-                }
-                else{
-                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << geometry << std::endl;
-                    std::cout << "Valid options are: " << std::endl;
+                if(num_global_vars > 100){
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 velocity global vars in the input file ****");
+                } // end check on num_global_vars
 
-                    for (const auto& pair : map) {
-                        std::cout << "\t" << pair.first << std::endl;
-                    }
-                } // end if
-            } // geometry
-            // set the value
-            else if (a_word.compare("value") == 0) {
-                double value = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
+                RUN({ 
+                    BoundaryConditions.num_velocity_bc_global_vars(bc_id) = num_global_vars;
                 });
-            } // value
-            // set the u
-            else if (a_word.compare("u") == 0) {
-                double u = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,0) = u;
-                });
-            } // u
-            // set the v
-            else if (a_word.compare("v") == 0) {
-                double v = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,1) = v;
-                });
-            } // v
-            // set the w
-            else if (a_word.compare("w") == 0) {
-                double w = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,2) = w;
-                });
-            } // w
-            // set the bc_vel_0
-            else if (a_word.compare("hydro_bc_vel_0") == 0) {
-                double hydro_bc_vel_0 = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,0) = hydro_bc_vel_0;
-                });
-            } // 
-            // set the bc_vel_1
-            else if (a_word.compare("hydro_bc_vel_1") == 0) {
-                double hydro_bc_vel_1 = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,1) = hydro_bc_vel_1;
-                });
-            } // 
-            // set the bc_vel_start
-            else if (a_word.compare("hydro_bc_vel_t_start") == 0) {
-                double hydro_bc_vel_t_start = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,2) = hydro_bc_vel_t_start;
-                });
-            } // 
-            // set the bc_vel_end
-            else if (a_word.compare("hydro_bc_vel_t_end") == 0) {
-                double hydro_bc_vel_t_end = bc_yaml[bc_id]["boundary_condition"][a_word].As<double>();
-                RUN({
-                    BoundaryConditions.bc_global_vars(bc_id,3) = hydro_bc_vel_t_end;
-                });
-            } // 
-            else if (a_word.compare("origin") == 0) {
-                std::string origin = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+               
                 if (VERBOSE) {
-                    std::cout << "\torigin = " << origin << std::endl;
+                    std::cout << "num global velocity_bc vars = " << num_global_vars << std::endl;
                 }
 
-                // get the origin numbers, values are words
-                std::vector<std::string> numbers = exact_array_values(origin, ",");
+                // store the global eos model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double velocity_bc_var = bc_yaml[bc_id]["boundary_condition"]["velocity_bc_global_vars"][global_var_id].As<double>();
+                    
+                    RUN({
+                        tempVelocityBCGlobalVars(bc_id, global_var_id) = velocity_bc_var;
+                    });
 
-                double x1 = std::stod(numbers[0]);
-                double y1 = std::stod(numbers[1]);
-                double z1;
+                    if (VERBOSE) {
+                        std::cout << "\t var = " << velocity_bc_var << std::endl;
+                    }
+                } // end loop over global vars
+            } // end else if on velocity_bc_global_vars
 
-                if(numbers.size()==3){ 
-                    // 3D
-                    z1 = std::stod(numbers[2]);
-                }
-                else {
-                    // 2D
-                    z1 = 0.0;
-                } //
+            
+            // Set the global variables for temperature boundary condition models
+            else if (a_word.compare("temperature_bc_global_vars") == 0) {
+                std::cout << "Inside temperature_bc_global_vars" << std::endl;
+                Yaml::Node & temp_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
-                if (VERBOSE) {
-                    std::cout << "\tx1 = " << x1 << std::endl;
-                    std::cout << "\ty1 = " << y1 << std::endl;
-                    std::cout << "\tz1 = " << z1 << std::endl;
-                }
-                // storing the origin values as (x1,y1,z1)
+                size_t num_global_vars = temp_bc_global_vars_yaml.Size();
 
-                RUN({
-                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[0] = x1;
-                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[1] = y1;
-                    BoundaryConditions.BoundaryConditionSetup(bc_id).origin[2] = z1;
+                if(num_global_vars > 100){
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 temperature global vars in the input file ****");
+                } // end check on num_global_vars
+
+                RUN({ 
+                    BoundaryConditions.num_temperature_bc_global_vars(bc_id) = num_global_vars;
                 });
 
-            } // origin
+                if (VERBOSE) {
+                    std::cout << "num global temperature_bc vars = " << num_global_vars << std::endl;
+                }
+
+                // Store the global temperature boundary condition variables
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double temperature_bc_var = bc_yaml[bc_id]["boundary_condition"]["temperature_bc_global_vars"][global_var_id].As<double>();
+                    
+                    RUN({
+                        tempTemperatureBCGlobalVars(bc_id, global_var_id) = temperature_bc_var;
+                    });
+
+                    if (VERBOSE) {
+                        std::cout << "\t var = " << temperature_bc_var << std::endl;
+                    }
+                }
+            } // end else if on temperature_bc_global_vars
+
+      
+            // set the stress global values
+            else if (a_word.compare("stress_bc_global_vars") == 0) {
+
+                Yaml::Node & stress_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+                size_t num_global_vars = stress_bc_global_vars_yaml.Size();
+
+                if(num_global_vars>100){
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 velocity global vars in the input file ****");
+                } // end check on num_global_vars
+
+                RUN({ 
+                    printf("num global stress vars = %zu \n", num_global_vars);
+                    BoundaryConditions.num_stress_bc_global_vars(bc_id) = num_global_vars;
+                });
+               
+                if (VERBOSE) {
+                    std::cout << "num global stress_bc vars = " << num_global_vars << std::endl;
+                }
+
+                // store the global eos model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double stress_bc_var = bc_yaml[bc_id]["boundary_condition"]["stress_bc_global_vars"][global_var_id].As<double>();
+                    
+
+                    RUN({
+                        tempStressBCGlobalVars(bc_id, global_var_id) = stress_bc_var;
+                    });
+
+                    if (VERBOSE) {
+                        std::cout << "\t var = " << stress_bc_var << std::endl;
+                    }
+                } // end loop over global vars
+            } // end else if on stress_bc_global_vars
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
@@ -2593,9 +3039,47 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions)
             }
         } // end for words in boundary conditions
 
+        std::cout << "After loop over words in boundary conditions" << std::endl;
+        // add checks for velocity vs time boundary condition
+
+
     } // end loop over BCs specified
+    std::cout << "After loop over BCs specified" << std::endl;
+
+
+     // allocate ragged right memory to hold the model global variables
+    BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
+
+    BoundaryConditions.temperature_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_temperature_bc_global_vars, "BoundaryConditions.temperature_bc_global_vars");
+
+    BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
+   
+
+    // ... allocate other bc global vars here
+
+    // save the global variables
+    FOR_ALL(bc_id, 0, num_bcs, {
+
+        for (size_t var_lid = 0; var_lid < BoundaryConditions.num_velocity_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.velocity_bc_global_vars(bc_id, var_lid) = tempVelocityBCGlobalVars(bc_id, var_lid);
+        } // end for eos var_lid
+
+        for (size_t var_lid = 0; var_lid < BoundaryConditions.num_temperature_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.temperature_bc_global_vars(bc_id, var_lid) = tempTemperatureBCGlobalVars(bc_id, var_lid);
+        } // end for var_lid
+      
+        for (size_t var_lid=0; var_lid<BoundaryConditions.num_stress_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.stress_bc_global_vars(bc_id, var_lid) = tempStressBCGlobalVars(bc_id, var_lid);
+        } // end for eos var_lid
+
+
+        // ... add other bc global vars here
+
+    }); // end for loop over boundary conditions
 
     // copy the enum values to the host 
     BoundaryConditions.BoundaryConditionEnums.update_host();
+
+
 
 } // end of function to parse region

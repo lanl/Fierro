@@ -216,7 +216,8 @@ void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 KOKKOS_FUNCTION
 size_t check_bdy(const size_t patch_gid,
     const int     this_bc_tag,
-    const double  val,
+    const double  value,
+    const double  tolerance,
     const double  orig_x,
     const double  orig_y,
     const double  orig_z,
@@ -237,5 +238,17 @@ size_t check_bdy(const size_t patch_gid,
 void tag_bdys(const BoundaryCondition_t& boundary,
     Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords);
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn build_boundry_node_sets
+///
+/// \brief finds and saves the boundary nodes in a set
+///
+/// \param Simulation mesh
+///
+/////////////////////////////////////////////////////////////////////////////
+void build_boundry_node_sets(Mesh_t& mesh);
 
 #endif

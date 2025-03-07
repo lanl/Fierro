@@ -85,6 +85,8 @@ include_directories(src/material_models/fracture)
 include_directories(src/material_models/strength)
 
 include_directories(src/boundary_conditions/velocity)
+include_directories(src/boundary_conditions/temperature)
+include_directories(src/boundary_conditions/stress)
 
 include_directories(src)
 include_directories(src/common)

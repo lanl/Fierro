@@ -23,6 +23,6 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
       -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
 
-make -j 10 install
+make install
 
 source "$RECIPE_DIR/../make-relocatable.sh"

@@ -1,21 +1,16 @@
-cmake_minimum_required(VERSION 3.1.3)
-
-set(CMAKE_CXX_FLAGS  "${Trilinos_CXX_COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
-set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
-set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
-
 include_directories(include)
 
-set(SRC_Files 
-src/geometry.cpp 
-src/boundary.cpp 
-src/time_integration.cpp 
-src/momentum.cpp 
+set(SRC_Files
+src/geometry.cpp
+src/boundary.cpp
+src/time_integration.cpp
+src/momentum.cpp
 src/force_sgh.cpp
-src/sgh_optimization.cpp 
-src/force_gradients_sgh.cpp 
-src/power_gradients_sgh.cpp 
-src/energy_sgh.cpp 
+src/sgh_optimization.cpp
+src/sgh_shape_optimization.cpp
+src/force_gradients_sgh.cpp
+src/power_gradients_sgh.cpp
+src/energy_sgh.cpp
 src/properties.cpp
 src/setup_sgh.cpp)
 

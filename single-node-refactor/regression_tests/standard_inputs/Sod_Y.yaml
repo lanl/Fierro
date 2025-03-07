@@ -23,58 +23,83 @@ output_options:
 solver_options:
     - solver:
         method: SGH3D
+        id: 0
 
 boundary_conditions:
-    # Tag X=0 plane
+    # Tag X plane
     - boundary_condition:
-        solver: SGH3D
-        geometry: x_plane
-        direction: x_dir
-        value: 0.0
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
 
             
-    # Tag Y=0 plane
+    # Tag Y plane
     - boundary_condition:
-        solver: SGH3D
-        geometry: y_plane
-        direction: y_dir
-        value: 0.0
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
 
-    # Tag z=0 plane
+    # Tag Z plane
     - boundary_condition:
-        solver: SGH3D
-        geometry: z_plane
-        direction: z_dir
-        value: 0.0
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z   
 
 
     # Tag X=0.01 plane
     - boundary_condition:
-        solver: SGH3D
-        geometry: x_plane
-        direction: x_dir
-        value: 0.01
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.01
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
 
             
-    # Tag Y=1.0 plane
+    # Tag y=1.0 plane
     - boundary_condition:
-        solver: SGH3D
-        geometry: y_plane
-        direction: y_dir
-        value: 1.0
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 1.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z  
 
     # Tag z=0.01 plane
     - boundary_condition:
-        solver: SGH3D
-        geometry: z_plane
-        direction: z_dir
-        value: 0.01
-        type: reflected_velocity
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.01
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
                 
 
 materials:
@@ -96,24 +121,27 @@ materials:
             - 1.0
 
 regions:
-    - fill_volume:
-        type: global
+    - region:
+        volume:
+            type: global
         material_id: 0
         den: 1.0
         sie: 2.5
-        velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: 0.0
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
 
-    - fill_volume:
-        type: box
-        x1: 0.0
-        x2: 0.01
-        y1: 0.5
-        y2: 1.0
-        z1: 0.0
-        z2: 0.01
+    - region:
+        volume:
+            type: box
+            x1: 0.0
+            x2: 0.01
+            y1: 0.5
+            y2: 1.0
+            z1: 0.0
+            z2: 0.01
         material_id: 0
         den: 0.125
         sie: 2

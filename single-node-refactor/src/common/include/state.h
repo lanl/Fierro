@@ -47,7 +47,9 @@ enum class node_state
     coords,
     velocity,
     mass,
-    temp
+    temp,
+    q_flux,
+    force,
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -62,7 +64,10 @@ struct node_t
     DCArrayKokkos<double> coords; ///< Nodal coordinates
     DCArrayKokkos<double> vel;  ///< Nodal velocity
     DCArrayKokkos<double> mass; ///< Nodal mass
+    DCArrayKokkos<double> force; ///< Nodal force
     DCArrayKokkos<double> temp; ///< Nodal temperature
+    DCArrayKokkos<double> q_flux; ///< Nodal heat flux
+
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims, state to allocate)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
@@ -75,11 +80,17 @@ struct node_t
                 case node_state::velocity:
                     if (vel.size() == 0) this->vel = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
                     break;
+                case node_state::force:
+                    if (force.size() == 0) this->force = DCArrayKokkos<double>(num_nodes, num_dims, "node_force");
+                    break;
                 case node_state::mass:
                     if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
                     break;
                 case node_state::temp:
-                    if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_nodes, "node_temp");
+                    if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_rk, num_nodes, "node_temp");
+                    break;
+                case node_state::q_flux:
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_nodes, "node_q_flux");
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
@@ -149,7 +160,7 @@ struct MaterialToMeshMap_t
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize(size_t num_elem_max)
     {
-        this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
+        if (elem.size() == 0) this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
     }; // end method
 }; // end MaterialtoMeshMaps_t
 
@@ -170,6 +181,8 @@ enum class material_pt_state
     elastic_modulii,
     shear_modulii,
     poisson_ratios,
+    thermal_conductivity,
+    specific_heat
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -188,7 +201,9 @@ struct MaterialPoint_t
     DCArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
     DCArrayKokkos<double> mass;   ///< MaterialPoint mass
     DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
-    DCArrayKokkos<double> q_flux; ///< Heat flux
+    DCArrayKokkos<double> q_flux; ///< Divergence of heat flux
+    DCArrayKokkos<double> conductivity; ///< Thermal conductivity
+    DCArrayKokkos<double> specific_heat; ///< Specific Heat
 
     DCArrayKokkos<double> elastic_modulii;  ///<  MaterialPoint elastic modulii Exx, Eyy, Ezz
     DCArrayKokkos<double> shear_modulii;    ///<  MaterialPoint shear modulii Gxy, Gxz, Gyz
@@ -199,13 +214,16 @@ struct MaterialPoint_t
     DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
     DCArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
 
-
+    DCArrayKokkos<double> temp_grad; ///< Temperature gradient
     DCArrayKokkos<double> volfrac;   ///< MaterialPoint volume fraction
     DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
 
     // initialization method (num_rk_storage_bins, num_pts_max, num_dims)
     void initialize(size_t num_rk, size_t num_pts_max, size_t num_dims, std::vector<material_pt_state> material_pt_states)
     {
+
+        this->temp_grad = DCArrayKokkos<double>(num_pts_max, 3, "material_point_temperature_gradient"); //WARNING: Bug here, WIP
+
         for (auto field : material_pt_states){
             switch(field){
                 case material_pt_state::density:
@@ -239,7 +257,13 @@ struct MaterialPoint_t
                     if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_rk, num_pts_max, "material_point_sie");
                     break;
                 case material_pt_state::heat_flux:
-                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, "material_point_heat_flux");
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_pts_max, num_dims, "material_point_heat_flux");
+                    break;
+                case material_pt_state::thermal_conductivity:
+                    if (conductivity.size() == 0) this->conductivity = DCArrayKokkos<double>(num_pts_max, "material_point_thermal_conductivity");
+                    break;
+                case material_pt_state::specific_heat:
+                    if (specific_heat.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_pts_max, "material_point_specific_heat");
                     break;
                 case material_pt_state::eroded_flag:
                     if (eroded.size() == 0) this->eroded = DCArrayKokkos<bool>(num_pts_max, "material_point_eroded");
@@ -321,7 +345,7 @@ struct MaterialCorner_t
                     if (force.size() == 0) this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
                     break;
                 case material_corner_state::heat_flux:
-                    if (force.size() == 0) this->q_flux = DCArrayKokkos<double>(2, num_corners_max, num_dims, "material_corner_heat_flux"); // WARNING: hard coding rk2
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_corners_max, "material_corner_heat_flux"); // WARNING: hard coding rk2
                     break;
                 default:
                     std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;
