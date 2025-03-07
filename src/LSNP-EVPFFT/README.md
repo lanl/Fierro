@@ -108,7 +108,7 @@ To use LSNP-EVPFFT as a user material model for Fierro, build Fierro with the fo
 
 See `example_input_files/taylor_anvil.yaml` for the yaml file setup when using EVPFFT with Fierro.
 
-Also, input files for each material should be defined as `evpfftNP1.in`, `evpfftNP2.in`, etc. and should be provided in the directory Fierro is being run from.
+Also, input files for each material should be defined as `evpfft1.in`, `evpfft2.in`, etc. and should be provided in the directory Fierro is being run from.
 
 # Additional Information
 
@@ -132,16 +132,3 @@ The LSNP-EVPFFT `CMakeLists.txt` uses the following default values to build LSNP
 ```
 
 To change these default options include the `-D OPTION=<value>` in the `cmake` option, E.g. `-D ABSOLUTE_NO_OUTPUT=ON` in the `build_lsnp-evpfft.sh`.
-
-# Using LSNP-EVPFFT for Lattice Structure Homogenization
-
-Example for input files needed to run LSNP-EVPFFT for lattice structure homogenization is shown in `example_input_files/lattice_input_files`. In that file you will see how to set up evpft input file, elastic and plastic parameter files.
-
-Provide a vtk file type that contains information about which grid point is solid (1) or void (0), example is shown in `example_input_files/lattice_input_files/void_in_solid.vtk`.
-
-Run LSNP-EVPFFT as:
-```
-  mpirun -n 1 lsnp-evpfft -f tension_11.txt -m 2
-```
-the `-m 2` option tells LSNP-EVPFFT to use the vtk lattice file microstructure file type.
-
