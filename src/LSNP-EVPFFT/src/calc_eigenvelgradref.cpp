@@ -50,6 +50,7 @@ void EVPFFT::calc_eigenvelgradref()
 
     }
     data(i,j,k) = indf(i,j,k);
+    // printf(" indf %d %d %d = %24.14E \n", i,j,k,indf(i,j,k));
 
   });
 
@@ -69,8 +70,12 @@ void EVPFFT::calc_eigenvelgradref()
   FOR_ALL_CLASS(k, 1, npts3_cmplx+1,
                 j, 1, npts2_cmplx+1,
                 i, 1, npts1_cmplx+1, {
-    data_cmplx(1,i,j,k) = data_cmplx(1,i,j,k)*wfhat_re(i,j,k);
-    data_cmplx(2,i,j,k) = data_cmplx(2,i,j,k)*wfhat_re(i,j,k);
+    real_t dumre;
+    real_t dumim;
+    dumre = data_cmplx(1,i,j,k)*wfhat_re(i,j,k) - data_cmplx(2,i,j,k)*wfhat_im(i,j,k);
+    dumim = data_cmplx(2,i,j,k)*wfhat_re(i,j,k) + data_cmplx(1,i,j,k)*wfhat_im(i,j,k);
+    data_cmplx(1,i,j,k) = dumre;
+    data_cmplx(2,i,j,k) = dumim;
   }); // end FOR_ALL_CLASS
   Kokkos::fence();
 
@@ -92,6 +97,14 @@ void EVPFFT::calc_eigenvelgradref()
     wfn(i,j,k) = 1.0/data(i,j,k);
   }); // end FOR_ALL_CLASS
   Kokkos::fence();
+
+  // for (int k = 1; k <= npts3_cmplx; k++) {
+  //   for (int j = 1; j <= npts2_cmplx; j++) {
+  //     for (int i = 1; i <= npts1_cmplx; i++) {
+  //       printf(" wfhat_re %d %d %d = %24.14E \n", i,j,k,wfhat_re(i,j,k));
+  //       printf(" wfhat_im %d %d %d = %24.14E \n", i,j,k,wfhat_im(i,j,k));
+  // }}};
+  // exit(1);
 
   // applied velocity interpolation
   for (int ii = 1; ii <= 3; ii++) {
@@ -119,10 +132,21 @@ void EVPFFT::calc_eigenvelgradref()
     FOR_ALL_CLASS(k, 1, npts3_cmplx+1,
                   j, 1, npts2_cmplx+1,
                   i, 1, npts1_cmplx+1, {
-      data_cmplx(1,i,j,k) = data_cmplx(1,i,j,k)*wfhat_re(i,j,k);
-      data_cmplx(2,i,j,k) = data_cmplx(2,i,j,k)*wfhat_re(i,j,k);
+      real_t dumre;
+      real_t dumim;
+      dumre = data_cmplx(1,i,j,k)*wfhat_re(i,j,k) - data_cmplx(2,i,j,k)*wfhat_im(i,j,k);
+      dumim = data_cmplx(2,i,j,k)*wfhat_re(i,j,k) + data_cmplx(1,i,j,k)*wfhat_im(i,j,k);
+      data_cmplx(1,i,j,k) = dumre;
+      data_cmplx(2,i,j,k) = dumim;
     }); // end FOR_ALL_CLASS
     Kokkos::fence();
+
+    // for (int k = 1; k <= npts3_cmplx; k++) {
+    //   for (int j = 1; j <= npts2_cmplx; j++) {
+    //     for (int i = 1; i <= npts1_cmplx; i++) {
+    //       printf(" %d %d %d %24.14E %24.14E \n", i,j,k,data_cmplx(1,i,j,k),data_cmplx(2,i,j,k));
+    // }}};
+    // exit(1);
 
 #if defined USE_FFTW || USE_MKL
     data_cmplx.update_host();
@@ -135,6 +159,13 @@ void EVPFFT::calc_eigenvelgradref()
     fft->backward((std::complex<double>*) data_cmplx.device_pointer(), data.device_pointer());
 #endif
 
+    // for (int k = 1; k <= npts3; k++) {
+    //   for (int j = 1; j <= npts2; j++) {
+    //     for (int i = 1; i <= npts1; i++) {
+    //       printf(" %d %d %d %24.14E \n", i,j,k,data(i,j,k));
+    // }}};
+    // exit(1);
+
     // write result to ouput
     FOR_ALL_CLASS(k, 1, npts3+1,
                   j, 1, npts2+1,
@@ -144,6 +175,14 @@ void EVPFFT::calc_eigenvelgradref()
       }
     }); // end FOR_ALL_CLASS
     Kokkos::fence();
+
+    // for (int k = 1; k <= npts3; k++) {
+    //   for (int j = 1; j <= npts2; j++) {
+    //     for (int i = 1; i <= npts1; i++) {
+    //       // printf(" %d %d %d %24.14E \n", i,j,k,velapp_node(ii,i,j,k));
+    //       printf(" %d %d %d %24.14E \n", i,j,k,wfn(i,j,k));
+    // }}};
+    // exit(1);
 
   } // end for ii
 
@@ -248,7 +287,6 @@ void EVPFFT::calc_eigenvelgradref()
     } // end for jj
   } // end for ii
 
-
 //  // print for each cpu
 //  for (int k = 1; k <= npts3; k++) {
 //  for (int j = 1; j <= npts2; j++) {
@@ -261,11 +299,11 @@ void EVPFFT::calc_eigenvelgradref()
 //    i_g = i + local_start1;
 //    j_g = j + local_start2;
 //    k_g = k + local_start3;
-//    printf("%d %d %d %16.8E %16.8E %16.8E %16.8E %16.8E %16.8E %16.8E %16.8E %16.8E\n",i_g,j_g,k_g,
+//    printf("%d %d %d %24.14E %24.14E %24.14E %24.14E %24.14E %24.14E %24.14E %24.14E %24.14E\n",i_g,j_g,k_g,
 //     eigenvelgradref(1,1,i,j,k),eigenvelgradref(2,1,i,j,k),eigenvelgradref(3,1,i,j,k),
 //     eigenvelgradref(1,2,i,j,k),eigenvelgradref(2,2,i,j,k),eigenvelgradref(3,2,i,j,k),
 //     eigenvelgradref(1,3,i,j,k),eigenvelgradref(2,3,i,j,k),eigenvelgradref(3,3,i,j,k));
-//    printf("%d %d %d %16.8E %16.8E %16.8E\n",i_g,j_g,k_g,velapp_node(1,i,j,k),velapp_node(2,i,j,k),velapp_node(3,i,j,k));
+//    // printf("%d %d %d %24.14E %24.14E %24.14E\n",i_g,j_g,k_g,velapp_node(1,i,j,k),velapp_node(2,i,j,k),velapp_node(3,i,j,k));
 //
 //  }
 //  }

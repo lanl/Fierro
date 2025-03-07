@@ -239,9 +239,9 @@ void EVPFFT::calc_velocity()
 
     if (igamma == 0) {
 
-      X_ref(1) = float(i + local_start1);
-      X_ref(2) = float(j + local_start2);
-      X_ref(3) = float(k + local_start3);
+      X_ref(1) = 1.0*(i + local_start1);
+      X_ref(2) = 1.0*(j + local_start2);
+      X_ref(3) = 1.0*(k + local_start3);
 
       for (int ii = 1; ii <= 3; ii++) {
         for (int jj = 1; jj <= 3; jj++) {
@@ -251,9 +251,9 @@ void EVPFFT::calc_velocity()
 
     } else if (igamma == 1) {
 
-      X_ref(1) = float(i + local_start1) - 0.5;
-      X_ref(2) = float(j + local_start2) - 0.5;
-      X_ref(3) = float(k + local_start3) - 0.5;
+      X_ref(1) = 1.0*(i + local_start1) - 0.5;
+      X_ref(2) = 1.0*(j + local_start2) - 0.5;
+      X_ref(3) = 1.0*(k + local_start3) - 0.5;
       for (int ii = 1; ii <= 3; ii++) {
         for (int jj = 1; jj <= 3; jj++) {
           velocity(ii,i,j,k) += velgradrefavg(ii,jj)*X_ref(jj);

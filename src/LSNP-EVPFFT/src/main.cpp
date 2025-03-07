@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 
 
 #if BUILD_LSNP_EVPFFT_FIERRO
-void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid, real_t udotAccThIn)
+void EVPFFT::solve(real_t* node_vel, real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid, real_t udotAccThIn)
 {
 #ifndef NDEBUG
     feenableexcept (FE_DIVBYZERO); 
@@ -106,6 +106,7 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
 
   /* All tensors must come in in a F-layout */
 
+  ViewFMatrix node_vel_view (node_vel,3,8);
   ViewFMatrix vel_grad_view (vel_grad,3,3);
   ViewFMatrix stress_view (stress,3,3);
   double udotAccTh = udotAccThIn;
@@ -223,6 +224,17 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   if (ibc == 1) {
     // velvert
     calc_velvert();
+    //FUTURE FEATURE:Direct connection of nodal velocity to FFT vertex velocity
+    //for (int ii = 1; ii <= 3; ii++) {
+    //  velvert(ii,1) = node_vel_view(ii,4);
+    //  velvert(ii,2) = node_vel_view(ii,1);
+    //  velvert(ii,3) = node_vel_view(ii,2);
+    //  velvert(ii,4) = node_vel_view(ii,3);
+    //  velvert(ii,5) = node_vel_view(ii,8);
+    //  velvert(ii,6) = node_vel_view(ii,5);
+    //  velvert(ii,7) = node_vel_view(ii,6);
+    //  velvert(ii,8) = node_vel_view(ii,7);
+    //}
     calc_vel_boundary_lin_el();
     calc_eigenvelgradref();
   }

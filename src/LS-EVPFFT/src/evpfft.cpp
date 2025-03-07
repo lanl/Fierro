@@ -138,11 +138,11 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
     for (int ii = 1; ii <= 3; ii++) {
       scauav(ii,jj) = 0.0;  // macroscopic stress
       udotAcc(ii,jj) = 0.0;
-      if (ii == jj) {
-        defgradinvavgc_inv(ii,jj) = 1.0;
-      } else {
-        defgradinvavgc_inv(ii,jj) = 0.0;
-      }
+      // if (ii == jj) {
+      //   defgradinvavgc_inv(ii,jj) = 1.0;
+      // } else {
+      //   defgradinvavgc_inv(ii,jj) = 0.0;
+      // }
     }
   }
 }
@@ -398,6 +398,15 @@ void EVPFFT::deinit_c0_s0()
 
 void EVPFFT::init_defgrad() {
 
+  for (int jj = 1; jj <= 3; jj++) {
+    for (int ii = 1; ii <= 3; ii++) {
+      defgradavg(jj,ii) = 0.0;
+      defgradinvavgc_inv(jj,ii) = 0.0;
+    }
+    defgradavg(jj,jj) = delt(jj);
+    defgradinvavgc_inv(jj,jj) = delt(jj);
+  } 
+
   FOR_ALL_CLASS(k, 1, npts3+1,
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
@@ -412,29 +421,36 @@ void EVPFFT::init_defgrad() {
       }
       defgradp (jj,jj,i,j,k) = 1.0;
       defgrade (jj,jj,i,j,k) = 1.0;
-      defgrad (jj,jj,i,j,k) = 1.0;
-      defgradinv (jj,jj,i,j,k) = 1.0;
-      defgradini (jj,jj,i,j,k) = 1.0;
+      defgrad (jj,jj,i,j,k) = defgradavg(jj,jj);
+      defgradinv (jj,jj,i,j,k) = 1.0/defgradavg(jj,jj);
+      defgradini (jj,jj,i,j,k) = defgradavg(jj,jj);
     }
-    detF(i,j,k) = 1.0;
+    detF(i,j,k) = delt(1)*delt(2)*delt(3);
 
     wgtc(i,j,k) = wgt;
 
-    for (int jj = 1; jj <= 3; jj++) {
-      for (int ii = 1; ii <= 3; ii++) {
-        defgradavg(jj,ii) = 0.0;
-      }
-      defgradavg(jj,jj) = delt(jj);
-    } 
   }); // end FOR_ALL_CLASS
 
   FOR_ALL_CLASS(k, 1, npts3+2,
                 j, 1, npts2+2,
                 i, 1, npts1+2, {
 
-    xnode(1,i,j,k) = float(i) - 0.5;
-    xnode(2,i,j,k) = float(j) - 0.5;
-    xnode(3,i,j,k) = float(k) - 0.5;
+    // thread private arrays
+    real_t x_[3];
+
+    // create views of thread private arrays
+    ViewMatrixTypeReal x(x_,3);
+
+    x(1) = float(i) - 0.5;
+    x(2) = float(j) - 0.5;
+    x(3) = float(k) - 0.5;
+
+    for (int ii = 1; ii <= 3; ii++) {
+      xnode(ii,i,j,k) = 0.0;
+      for (int jj = 1; jj <= 3; jj++) {
+        xnode(ii,i,j,k) = xnode(ii,i,j,k) + defgradavg(ii,jj)*x(jj);
+      }
+    }
 
   }); // end FOR_ALL_CLASS
 
@@ -457,15 +473,16 @@ void EVPFFT::evolve()
           velgradmacro.host(ii,jj)  = udot.host(ii,jj);
         }
       }
-      // if (imicro == 1) {
-      //   step_update_velgrad();
-      // }
-      step_update_velgrad();
+      if (imicro == 1) {
+        step_update_velgrad();
+      }
+      // step_update_velgrad();
 
       if (imicro == 1 || iupdate == 1) {
         update_schmid();
       }
 
+      calc_Goperr0();
       calc_c066mod();
 
       step_set_dvelgradmacro_and_dvelgradmacroacum_to_zero();
@@ -565,7 +582,7 @@ void EVPFFT::evolve()
         harden(imicro);
       }
 
-      //calc_c0();
+      calc_c0();
       deinit_c0_s0();
 
 #ifndef ABSOLUTE_NO_OUTPUT

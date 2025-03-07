@@ -228,7 +228,8 @@ void EVPFFT::evpal(int imicro)
             for (int ii = 1; ii <= 6; ii++) {
               res(ii) = sg6(ii) - xlambda6(ii);
               for (int jj = 1; jj <= 6; jj++) {
-                res(ii) += c066mod(ii,jj,i,j,k) * (strainceq6(jj) - strain6(jj));
+                res(ii) += c066mod(ii,jj,i,j,k) * (strainceq6(jj) - strain6(jj)) - 
+                  c066modGoperr066mod(ii,jj,i,j,k) * (sg6(jj) - xlambda6(jj));
               }
             }
 
@@ -262,7 +263,7 @@ void EVPFFT::evpal(int imicro)
           for (int ii = 1; ii <= 6; ii++) {
             for (int jj = 1; jj <= 6; jj++) {
 
-              xjacobinv(ii,jj) = (ii/jj)*(jj/ii);
+              xjacobinv(ii,jj) = (ii/jj)*(jj/ii) - c066modGoperr066mod(ii,jj,i,j,k);
 
               for (int kk = 1; kk <= 6; kk++) {
                 xjacobinv(ii,jj) += c066mod(ii,kk,i,j,k)*(sg66(kk,jj)/tdot+dedotp66(kk,jj));

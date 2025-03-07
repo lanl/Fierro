@@ -43,9 +43,9 @@ void EVPFFT::calc_vel_boundary_lin_el()
 
       ViewMatrixTypeReal phi(phi_,8);
 
-      g = float(i_g - 1)/float(npts1_g - 2*dnpts1_g)*2.0 - 1.0;
-      h = float(j_g - 1)/float(npts2_g - 2*dnpts2_g)*2.0 - 1.0;
-      r = float(k_g - 1)/float(npts3_g - 2*dnpts3_g)*2.0 - 1.0;
+      g = 2.0*(i_g - 1)/(npts1_g - 2*dnpts1_g) - 1.0;
+      h = 2.0*(j_g - 1)/(npts2_g - 2*dnpts2_g) - 1.0;
+      r = 2.0*(k_g - 1)/(npts3_g - 2*dnpts3_g) - 1.0;
 
       phi(1) = 0.125*(1.0 - g)*(1.0 - h)*(1.0 - r);
       phi(2) = 0.125*(1.0 + g)*(1.0 - h)*(1.0 - r);

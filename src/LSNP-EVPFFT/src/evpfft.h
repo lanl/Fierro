@@ -117,6 +117,7 @@ public:
   MatrixTypeIntHost iudot;
   MatrixTypeIntHost idsim;
   MatrixTypeIntHost iscau;
+  MatrixTypeRealHost defgradavg;
   MatrixTypeRealHost defgradinvavgc_inv;
   int ictrl;
   int nsteps;
@@ -176,6 +177,7 @@ public:
   MatrixTypeRealDual c0;
   MatrixTypeRealDual s0;
   MatrixTypeRealDual c066;
+  MatrixTypeRealDual Goperr0;
 
   real_t wph1;
   real_t svm1;
@@ -207,11 +209,14 @@ public:
   MatrixTypeRealDual detF;
   MatrixTypeRealDual sgPK1;
   MatrixTypeRealDual c066mod;
+  MatrixTypeRealDual c066modGoperr066mod;
   MatrixTypeRealDual velgradref;
   MatrixTypeRealDual x_grid;
   MatrixTypeRealDual xnode;
+  MatrixTypeRealDual Ghat;
   MatrixTypeRealDual velapp_node;
   MatrixTypeRealDual wfhat_re;
+  MatrixTypeRealDual wfhat_im;
   MatrixTypeRealDual eigenvelgradref;
 #ifdef NON_SCHMID_EFFECTS
   MatrixTypeRealDual schnon;
@@ -306,7 +311,7 @@ public:
   void check_mixed_bc();
   void init_after_reading_input_data();
   void solve();
-  void solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid, real_t udotAccThIn);
+  void solve(real_t* node_vel, real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid, real_t udotAccThIn);
   void evolve();
   void check_macrostress();
   void print_vel_grad();
@@ -348,6 +353,7 @@ public:
   void calc_wfhat();
   void Cauchy_to_PK1();
   void calc_c066mod();
+  void calc_Goperr0();
   void calc_IC0a_inv();
   void calc_velocity();
   void update_grid();
@@ -360,7 +366,8 @@ public:
   void read_vtk_lattice_structure(const std::string & filetext);
   void calculate_eel(MatrixTypeRealDual &eel);
   void write_macro_state();
-  void write_micro_state();
+  void write_micro_state_xdmf();
+  void write_micro_state_pvtu();
   void write_texture();
 
   void init_crss_voce();

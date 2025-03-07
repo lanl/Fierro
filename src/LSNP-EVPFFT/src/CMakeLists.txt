@@ -115,6 +115,7 @@ set( Sources
      update_el_stiff.cpp
      Cauchy_to_PK1.cpp
      calc_c066mod.cpp
+     calc_Goperr0.cpp
      update_grid_velgrad.cpp
      forward_backward_fft.cpp
      inverse_the_greens.cpp

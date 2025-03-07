@@ -127,6 +127,7 @@ namespace FierroLSEVPFFTLink
       elem_user_output_vars.host(elem_gid,2) = elem_evpfft[elem_gid]->dvm;
       elem_user_output_vars.host(elem_gid,3) = elem_evpfft[elem_gid]->dvmp;
       elem_user_output_vars.host(elem_gid,4) = elem_evpfft[elem_gid]->svm;
+      elem_user_output_vars.host(elem_gid,5) = mat_id;
 
       return;
     }

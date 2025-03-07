@@ -20,7 +20,7 @@ namespace FierroLSNPEVPFFTLink
     const size_t num_elems)
     {
       printf("Executing FierroLSNPEVPFFTLink::init_strength_state_vars ...\n");
-
+      fflush(stdout);
       // First, lets create a new communicator with each rank having its own communicator containing only itself.
       if (evpfft_mpi_comm == MPI_COMM_NULL) {
         int global_rank;
@@ -102,16 +102,21 @@ namespace FierroLSNPEVPFFTLink
       // Note EVPFFT uses F-layout while Fierro uses C-layout
       FArray <double> Fvel_grad(3,3);
       FArray <double> Fstress(3,3);
+      FArray <double> Fnode_vel(3,8);
       // Transpose vel_grad
       for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
           Fvel_grad(i,j) = vel_grad(i,j);
           Fstress(i,j) = elem_stress.host(rk_level,elem_gid,i,j);
         }
+        for (int j = 0; j < 8; j++) {
+          size_t node_gid = elem_node_gids(j);
+          Fnode_vel(i,j) = node_vel(rk_level, node_gid, i);
+        }
       }
 
       double udotAccTh = strength_global_vars.host(mat_id,0); // Linear Aprox. Threshold
-      elem_evpfft[elem_gid]->solve(Fvel_grad.pointer(), Fstress.pointer(), dt_rk, cycle, elem_gid, udotAccTh);
+      elem_evpfft[elem_gid]->solve(Fnode_vel.pointer(), Fvel_grad.pointer(), Fstress.pointer(), dt_rk, cycle, elem_gid, udotAccTh);
 
       // Transpose stress. Not needed, stress is symmetric. But why not.
       for (int i = 0; i < 3; i++) {
@@ -127,6 +132,7 @@ namespace FierroLSNPEVPFFTLink
       elem_user_output_vars.host(elem_gid,2) = elem_evpfft[elem_gid]->dvm;
       elem_user_output_vars.host(elem_gid,3) = elem_evpfft[elem_gid]->dvmp;
       elem_user_output_vars.host(elem_gid,4) = elem_evpfft[elem_gid]->svm;
+      elem_user_output_vars.host(elem_gid,5) = mat_id;
 
       return;
     }

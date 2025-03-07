@@ -139,11 +139,11 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
     for (int ii = 1; ii <= 3; ii++) {
       scauav(ii,jj) = 0.0;  // macroscopic stress
       udotAcc(ii,jj) = 0.0;
-      if (ii == jj) {
-        defgradinvavgc_inv(ii,jj) = 1.0;
-      } else {
-        defgradinvavgc_inv(ii,jj) = 0.0;
-      }
+      // if (ii == jj) {
+      //   defgradinvavgc_inv(ii,jj) = 1.0;
+      // } else {
+      //   defgradinvavgc_inv(ii,jj) = 0.0;
+      // }
     }
   }
 }
@@ -161,6 +161,13 @@ void EVPFFT::init_after_reading_input_data()
       init_Xvert();
     }
 
+#ifndef ABSOLUTE_NO_OUTPUT
+    if (iwfields == 1) {
+      int imicro = 0;
+      //write_micro_state_xdmf();
+      write_micro_state_pvtu();
+    }
+#endif
 // the variables initialized in the funcitons below are reduced into
 // and should be done once, hence the need for #if guard since the variables
 // needs to be initialized after udot and dt are know from fierro
@@ -177,22 +184,22 @@ void EVPFFT::init_xk_gb()
   FOR_ALL_CLASS(kxx, 0, npts1, {
         int kx;
         kx = kxx + local_start1_cmplx;
-        if (kx >  npts1_g/2-1) kx = kx-npts1_g;
-        xk_gb(kxx+1) = kx/float(npts1_g);
+        if (kx >  npts1_g/2) kx = kx-npts1_g;
+        xk_gb(kxx+1) = 1.0*kx/npts1_g;
   });
 
   FOR_ALL_CLASS(kyy, 0, npts2, {
         int ky;
         ky = kyy + local_start2_cmplx;
-        if (ky >  npts2_g/2-1) ky = ky-npts2_g;
-        yk_gb(kyy+1) = ky/float(npts2_g);
+        if (ky >  npts2_g/2) ky = ky-npts2_g;
+        yk_gb(kyy+1) = 1.0*ky/npts2_g;
   });
 
   FOR_ALL_CLASS(kzz, 0, npts3, {
         int kz;
         kz = kzz + local_start3_cmplx;
-        if (kz >  npts3_g/2-1) kz = kz-npts3_g;
-        zk_gb(kzz+1) = kz/float(npts3_g);
+        if (kz >  npts3_g/2) kz = kz-npts3_g;
+        zk_gb(kzz+1) = 1.0*kz/npts3_g;
   });
   Kokkos::fence();
 
@@ -418,6 +425,15 @@ void EVPFFT::deinit_c0_s0()
 
 void EVPFFT::init_defgrad() {
 
+  for (int jj = 1; jj <= 3; jj++) {
+    for (int ii = 1; ii <= 3; ii++) {
+      defgradavg(jj,ii) = 0.0;
+      defgradinvavgc_inv(jj,ii) = 0.0;
+    }
+    defgradavg(jj,jj) = delt(jj);
+    defgradinvavgc_inv(jj,jj) = delt(jj);
+  } 
+
   FOR_ALL_CLASS(k, 1, npts3+1,
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
@@ -432,11 +448,11 @@ void EVPFFT::init_defgrad() {
       }
       defgradp (jj,jj,i,j,k) = 1.0;
       defgrade (jj,jj,i,j,k) = 1.0;
-      defgrad (jj,jj,i,j,k) = 1.0;
-      defgradinv (jj,jj,i,j,k) = 1.0;
-      defgradini (jj,jj,i,j,k) = 1.0;
+      defgrad (jj,jj,i,j,k) = defgradavg(jj,jj);
+      defgradinv (jj,jj,i,j,k) = 1.0/defgradavg(jj,jj);
+      defgradini (jj,jj,i,j,k) = defgradavg(jj,jj);
     }
-    detF(i,j,k) = 1.0;
+    detF(i,j,k) = delt(1)*delt(2)*delt(3);
 
     wgtc(i,j,k) = wgt;
   }); // end FOR_ALL_CLASS
@@ -445,14 +461,26 @@ void EVPFFT::init_defgrad() {
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
 
+    // thread private arrays
+    real_t x_[3];
+
+    // create views of thread private arrays
+    ViewMatrixTypeReal x(x_,3);
+
     if (igamma == 0) {
-      x_grid(1,i,j,k) = float(i + local_start1 - dnpts1_g); // voxel center
-      x_grid(2,i,j,k) = float(j + local_start2 - dnpts2_g);
-      x_grid(3,i,j,k) = float(k + local_start3 - dnpts3_g);
+      x(1) = 1.0*(i + local_start1 - dnpts1_g);
+      x(2) = 1.0*(j + local_start2 - dnpts2_g);
+      x(3) = 1.0*(k + local_start3 - dnpts3_g);
     } else if (igamma == 1) {
-      x_grid(1,i,j,k) = float(i + local_start1 - dnpts1_g) - 0.5; // nodal
-      x_grid(2,i,j,k) = float(j + local_start2 - dnpts2_g) - 0.5;
-      x_grid(3,i,j,k) = float(k + local_start3 - dnpts3_g) - 0.5;
+      x(1) = 1.0*(i + local_start1 - dnpts1_g) - 0.5; // nodal
+      x(2) = 1.0*(j + local_start2 - dnpts2_g) - 0.5;
+      x(3) = 1.0*(k + local_start3 - dnpts3_g) - 0.5;
+    }
+    for (int ii = 1; ii <= 3; ii++) {
+      x_grid(ii,i,j,k) = 0.0;
+      for (int jj = 1; jj <= 3; jj++) {
+        x_grid(ii,i,j,k) = x_grid(ii,i,j,k) + defgradavg(ii,jj)*x(jj);
+      }
     }
 
   }); // end FOR_ALL_CLASS
@@ -461,9 +489,22 @@ void EVPFFT::init_defgrad() {
                 j, 1, npts2+2,
                 i, 1, npts1+2, {
 
-    xnode(1,i,j,k) = float(i + local_start1 - dnpts1_g) - 0.5;
-    xnode(2,i,j,k) = float(j + local_start2 - dnpts2_g) - 0.5;
-    xnode(3,i,j,k) = float(k + local_start3 - dnpts3_g) - 0.5;
+    // thread private arrays
+    real_t x_[3];
+
+    // create views of thread private arrays
+    ViewMatrixTypeReal x(x_,3);
+
+    x(1) = 1.0*(i + local_start1 - dnpts1_g) - 0.5;
+    x(2) = 1.0*(j + local_start2 - dnpts2_g) - 0.5;
+    x(3) = 1.0*(k + local_start3 - dnpts3_g) - 0.5;
+
+    for (int ii = 1; ii <= 3; ii++) {
+      xnode(ii,i,j,k) = 0.0;
+      for (int jj = 1; jj <= 3; jj++) {
+        xnode(ii,i,j,k) = xnode(ii,i,j,k) + defgradavg(ii,jj)*x(jj);
+      }
+    }
 
   }); // end FOR_ALL_CLASS
 
@@ -475,33 +516,33 @@ void EVPFFT::init_Xvert() {
   Xvert(2,1) = 0.5; // 1
   Xvert(3,1) = 0.5; // 1
 
-  Xvert(1,2) = float(npts1_g - dnpts1_g*2) + 0.5; // 2
+  Xvert(1,2) = 1.0*(npts1_g - dnpts1_g*2) + 0.5; // 2
   Xvert(2,2) = 0.5; // 2
   Xvert(3,2) = 0.5; // 2
 
-  Xvert(1,3) = float(npts1_g - dnpts1_g*2) + 0.5; // 3
-  Xvert(2,3) = float(npts2_g - dnpts2_g*2) + 0.5; // 3
+  Xvert(1,3) = 1.0*(npts1_g - dnpts1_g*2) + 0.5; // 3
+  Xvert(2,3) = 1.0*(npts2_g - dnpts2_g*2) + 0.5; // 3
   Xvert(3,3) = 0.5; // 3
 
   Xvert(1,4) = 0.5; // 4
-  Xvert(2,4) = float(npts2_g - dnpts2_g*2) + 0.5; // 4
+  Xvert(2,4) = 1.0*(npts2_g - dnpts2_g*2) + 0.5; // 4
   Xvert(3,4) = 0.5; // 4
 
   Xvert(1,5) = 0.5; // 5
   Xvert(2,5) = 0.5; // 5
-  Xvert(3,5) = float(npts3_g - dnpts3_g*2) + 0.5; // 5
+  Xvert(3,5) = 1.0*(npts3_g - dnpts3_g*2) + 0.5; // 5
 
-  Xvert(1,6) = float(npts1_g - dnpts1_g*2) + 0.5; // 6
+  Xvert(1,6) = 1.0*(npts1_g - dnpts1_g*2) + 0.5; // 6
   Xvert(2,6) = 0.5; // 6
-  Xvert(3,6) = float(npts3_g - dnpts3_g*2) + 0.5; // 6
+  Xvert(3,6) = 1.0*(npts3_g - dnpts3_g*2) + 0.5; // 6
 
-  Xvert(1,7) = float(npts1_g - dnpts1_g*2) + 0.5; // 7
-  Xvert(2,7) = float(npts2_g - dnpts2_g*2) + 0.5; // 7
-  Xvert(3,7) = float(npts3_g - dnpts3_g*2) + 0.5; // 7
+  Xvert(1,7) = 1.0*(npts1_g - dnpts1_g*2) + 0.5; // 7
+  Xvert(2,7) = 1.0*(npts2_g - dnpts2_g*2) + 0.5; // 7
+  Xvert(3,7) = 1.0*(npts3_g - dnpts3_g*2) + 0.5; // 7
 
   Xvert(1,8) = 0.5; // 8
-  Xvert(2,8) = float(npts2_g - dnpts2_g*2) + 0.5; // 8
-  Xvert(3,8) = float(npts3_g - dnpts3_g*2) + 0.5; // 8
+  Xvert(2,8) = 1.0*(npts2_g - dnpts2_g*2) + 0.5; // 8
+  Xvert(3,8) = 1.0*(npts3_g - dnpts3_g*2) + 0.5; // 8
 
   xvert_current = Xvert;
 
@@ -524,15 +565,16 @@ void EVPFFT::evolve()
           velgradmacro.host(ii,jj)  = udot.host(ii,jj);
         }
       }
-      // if (imicro == 1) {
-      //   step_update_velgrad();
-      // }
-      step_update_velgrad();
+      if (imicro == 1) {
+        step_update_velgrad();
+      }
+      // step_update_velgrad();
 
       if (imicro == 1 || iupdate == 1) {
         update_schmid();
       }
 
+      calc_Goperr0();
       calc_c066mod();
 
       step_set_dvelgradmacro_and_dvelgradmacroacum_to_zero();
@@ -632,8 +674,10 @@ void EVPFFT::evolve()
       } else if (ibc == 1) {
         calc_vel_bc_error();
         if (0 == my_rank) {
+#ifndef ABSOLUTE_NO_OUTPUT
           fprintf(ofile_mgr.err_file.get(), "%d,%d,%10.4E,%10.4E,%10.4E,%10.4E,%10.4E\n", 
                   imicro, itertot, erre, errs, err_disp_bc_vel, svm, avg_nr_iter);
+#endif
         }
       } 
       
@@ -665,13 +709,14 @@ void EVPFFT::evolve()
         harden(imicro);
       }
 
-      // calc_c0();
+      calc_c0();
       deinit_c0_s0();
 
 #ifndef ABSOLUTE_NO_OUTPUT
       write_macro_state();
       if (iwfields == 1 and imicro % iwstep == 0) {
-        write_micro_state();
+        //write_micro_state_xdmf();
+        write_micro_state_pvtu();
       }
       if (iwtex == 1 and imicro == nsteps) {
         write_texture();

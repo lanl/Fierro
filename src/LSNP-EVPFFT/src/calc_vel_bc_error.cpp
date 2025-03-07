@@ -131,8 +131,10 @@ void EVPFFT::calc_vel_bc_error()
   veln_avg = all_reduce.array[0]/count;
   dveln_avg = all_reduce.array[1]/count;
   err_disp_bc_vel = dveln_avg/veln_avg;
+#ifndef ABSOLUTE_NO_OUTPUT
   if (0 == my_rank) {
     printf(" err_disp_bc_vel %16.8E\n", err_disp_bc_vel);
   }
+#endif
 
 }

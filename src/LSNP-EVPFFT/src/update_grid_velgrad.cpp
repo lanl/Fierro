@@ -235,9 +235,9 @@ void EVPFFT::update_grid_velgrad()
     ViewMatrixTypeReal dvnode(dvnode_,3);
     ViewMatrixTypeReal Xnode_ref(Xnode_ref_,3);
 
-    Xnode_ref(1) = float(i + local_start1) - 0.5;
-    Xnode_ref(2) = float(j + local_start2) - 0.5;
-    Xnode_ref(3) = float(k + local_start3) - 0.5;
+    Xnode_ref(1) = 1.0*(i + local_start1) - 0.5;
+    Xnode_ref(2) = 1.0*(j + local_start2) - 0.5;
+    Xnode_ref(3) = 1.0*(k + local_start3) - 0.5;
 
     if (igamma == 0) {
 

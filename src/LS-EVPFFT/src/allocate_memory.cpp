@@ -76,6 +76,7 @@ void EVPFFT::allocate_memory()
   c0 = MatrixTypeRealDual (3,3,3,3);
   s0 = MatrixTypeRealDual (3,3,3,3);
   c066 = MatrixTypeRealDual (6,6);
+  Goperr0 = MatrixTypeRealDual (3,3,3,3);
 
   scauav1 = MatrixTypeRealHost (3,3);
 
@@ -102,8 +103,10 @@ void EVPFFT::allocate_memory()
   detF = MatrixTypeRealDual (npts1, npts2, npts3);
   sgPK1 = MatrixTypeRealDual (3, 3, npts1, npts2, npts3);
   c066mod = MatrixTypeRealDual (6, 6, npts1, npts2, npts3);
+  c066modGoperr066mod = MatrixTypeRealDual (6, 6, npts1, npts2, npts3);
   velgradref = MatrixTypeRealDual (3, 3, npts1, npts2, npts3);
   xnode = MatrixTypeRealDual (3, npts1 + 1, npts2 + 1, npts3 + 1);
+  Ghat = MatrixTypeRealDual (3, 3, npts1, npts2, npts3);
 #ifdef NON_SCHMID_EFFECTS
   schnon = MatrixTypeRealDual (5, NSYSMX, npts1, npts2, npts3);
 #endif

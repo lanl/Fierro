@@ -37,7 +37,7 @@ void EVPFFT::update_grid_velgrad()
     for (int ii = 1; ii <= 3; ii++) {
       for (int jj = 1; jj <= 3; jj++) {
         ic = ic + 1;
-        loc_reduce.array[ic] += velgradref(ii,jj,i,j,k) * wgtc(i,j,k);
+        loc_reduce.array[ic] += velgradref(ii,jj,i,j,k) * wgt;
       }
     }
 

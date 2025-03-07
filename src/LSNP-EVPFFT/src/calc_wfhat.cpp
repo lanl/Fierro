@@ -24,25 +24,25 @@ void EVPFFT::calc_wfhat()
     ViewMatrixTypeReal x(x_,3);
 
     if (kx_g <= npts1_g/2){
-      x(1) = float(kx_g - 1);
+      x(1) = 1.0*(kx_g - 1);
     } else if (kx_g > npts1_g/2){
-      x(1) = float(kx_g - npts1_g - 1);
+      x(1) = 1.0*(kx_g - npts1_g - 1);
     } else {
       x(1) = 0.0;
     }
 
     if (ky_g <= npts2_g/2){
-      x(2) = float(ky_g - 1);
+      x(2) = 1.0*(ky_g - 1);
     } else if (ky_g > npts2_g/2){
-      x(2) = float(ky_g - npts2_g - 1);
+      x(2) = 1.0*(ky_g - npts2_g - 1);
     } else {
       x(2) = 0.0;
     }
 
     if (kz_g <= npts3_g/2){
-      x(3) = float(kz_g - 1);
+      x(3) = 1.0*(kz_g - 1);
     } else if (kz_g > npts3_g/2){
-      x(3) = float(kz_g - npts3_g - 1);
+      x(3) = 1.0*(kz_g - npts3_g - 1);
     } else {
       x(3) = 0.0;
     }
@@ -72,6 +72,7 @@ void EVPFFT::calc_wfhat()
                 j, 1, npts2_cmplx+1,
                 i, 1, npts1_cmplx+1, {
     wfhat_re(i,j,k) = data_cmplx(1,i,j,k);
+    wfhat_im(i,j,k) = data_cmplx(2,i,j,k);
   }); // end FOR_ALL_CLASS
   Kokkos::fence();
 
