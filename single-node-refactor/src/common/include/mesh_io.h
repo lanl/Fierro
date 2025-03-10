@@ -46,7 +46,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstring>
 #include <sys/stat.h>
 #include <iostream>
+#include <regex>    // for string pattern recoginition
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <string>
 
@@ -76,6 +78,61 @@ inline int get_id(int i, int j, int k, int num_i, int num_j)
 
 /////////////////////////////////////////////////////////////////////////////
 ///
+/// \fn PointIndexFromIJK
+///
+/// \brief Given (i,j,k) coordinates within the Lagrange hex, return an 
+/// offset into the local connectivity (PointIds) array. The order parameter
+/// must point to an array of 3 integers specifying the order along each 
+/// axis of the hexahedron.
+///
+/////////////////////////////////////////////////////////////////////////////
+inline int PointIndexFromIJK(int i, int j, int k, const int* order)
+{
+    bool ibdy = (i == 0 || i == order[0]);
+    bool jbdy = (j == 0 || j == order[1]);
+    bool kbdy = (k == 0 || k == order[2]);
+    // How many boundaries do we lie on at once?
+    int nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0) + (kbdy ? 1 : 0);
+
+    if (nbdy == 3) { // Vertex DOF
+        // ijk is a corner node. Return the proper index (somewhere in [0,7]):
+        return (i ? (j ? 2 : 1) : (j ? 3 : 0)) + (k ? 4 : 0);
+    }
+
+    int offset = 8;
+    if (nbdy == 2) { // Edge DOF
+        if (!ibdy) { // On i axis
+            return (i - 1) + (j ? order[0] - 1 + order[1] - 1 : 0) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
+        }
+        if (!jbdy) { // On j axis
+            return (j - 1) + (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] - 1) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
+        }
+        // !kbdy, On k axis
+        offset += 4 * (order[0] - 1) + 4 * (order[1] - 1);
+        return (k - 1) + (order[2] - 1) * (i ? (j ? 3 : 1) : (j ? 2 : 0)) + offset;
+    }
+
+    offset += 4 * (order[0] - 1 + order[1] - 1 + order[2] - 1);
+    if (nbdy == 1) { // Face DOF
+        if (ibdy) { // On i-normal face
+            return (j - 1) + ((order[1] - 1) * (k - 1)) + (i ? (order[1] - 1) * (order[2] - 1) : 0) + offset;
+        }
+        offset += 2 * (order[1] - 1) * (order[2] - 1);
+        if (jbdy) { // On j-normal face
+            return (i - 1) + ((order[0] - 1) * (k - 1)) + (j ? (order[2] - 1) * (order[0] - 1) : 0) + offset;
+        }
+        offset += 2 * (order[2] - 1) * (order[0] - 1);
+        // kbdy, On k-normal face
+        return (i - 1) + ((order[0] - 1) * (j - 1)) + (k ? (order[0] - 1) * (order[1] - 1) : 0) + offset;
+    }
+
+    // nbdy == 0: Body DOF
+    offset += 2 * ( (order[1] - 1) * (order[2] - 1) + (order[2] - 1) * (order[0] - 1) + (order[0] - 1) * (order[1] - 1));
+    return offset + (i - 1) + (order[0] - 1) * ( (j - 1) + (order[1] - 1) * ( (k - 1)));
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
 /// \fn get_id_device
 ///
 /// \brief This gives the index value of the point or the elem
@@ -97,6 +154,120 @@ int get_id_device(int i, int j, int k, int num_i, int num_j)
     return i + j * num_i + k * num_i * num_j;
 }
 
+
+//-------
+// word is the field name e.g., Offsets, connectivity, etc.
+// stop is the phrase to stop extracting values
+template <typename T>
+inline bool extract_values_xml(T *values_xml,
+                        const std::string& word,
+                        const std::string& stop,
+                        std::ifstream& in,
+                        size_t& size)
+{
+
+        bool found = false;
+
+        std::string line;
+
+        size_t i = 0;
+
+        // Read the file line by line looking for specified word
+        while (std::getline(in, line)) {
+
+            if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
+                found = true;
+            } 
+            if(found) {
+
+                // loop over the lines in the file, extracting the values of the field corresponding to the word
+                while (std::getline(in, line)){  
+                
+                    std::istringstream iss(line);  // Create a stream from the line
+
+                    // extract the individual values from the stream
+                    T value;
+                    while (iss >> value) {
+                        values_xml[i] = value;
+                        i++;
+                    } // end while
+
+                    if (line.find(stop) != std::string::npos) { // Check if the stop word is in the line
+                        break;
+                    } // end if
+
+                } // end while
+
+                if(found) break;
+
+            } // end if found
+
+        } // end while
+
+        size = i;
+
+        return found;
+
+} // end function
+
+
+// find the number of points and number of cells in the mesh
+inline bool extract_num_points_and_cells_xml(int& numberOfPoints,
+                                      int& numberOfCells,
+                                      std::ifstream& in)
+{
+    bool found = false;
+
+    std::string line;
+
+        
+    // Read the file line by line looking for NumberOfPoints
+    while (std::getline(in, line)) {
+        
+        std::string word = "NumberOfPoints=";  // A portion of a word
+
+        if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
+            found = true;
+        }
+        if(found) {
+            // Define regex pattern to match the attributes and capture values
+            std::regex pattern(R"(NumberOfPoints=\"(\d+)\" NumberOfCells=\"(\d+)\")");
+            std::smatch match;
+
+            if (std::regex_search(line, match, pattern)) {
+                //std::cout << "Number of nodes in mesh file: " << match[1] << std::endl;
+                //std::cout << "Number of cells in mesh file: " << match[2] << std::endl;
+
+                numberOfPoints = std::stoi(match[1].str());
+                numberOfCells = std::stoi(match[2].str());
+
+            } else {
+                std::cout << "Error reading the number of points and cells in the mesh!" << std::endl;
+            }
+            
+            break;
+        } // end if
+        
+    } // end while
+
+    return found;
+
+} // end function
+
+
+//    12 = linear ensight ordering
+//    9  = linear quad ensight ordering
+//    72 = VTK_LAGRANGE_HEXAHEDRON
+namespace element_types
+{
+    enum element_name
+    {
+        linear_hex_ijk = 8,
+        linear_quad = 9,
+        linear_hex = 12,
+        arbitrary_hex = 72
+    };
+}
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -199,11 +370,10 @@ public:
             read_Abaqus_mesh(mesh, State, num_dims, rk_num_bins);
         }
         else if(extension == "vtk"){ // vtk file format
-
             read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims, rk_num_bins);
-
-            //throw std::runtime_error("**** VTK mesh reader not yet implemented ****");
-            // read_VTK_mesh(mesh, State, num_dims, rk_num_bins);
+        }
+        else if(extension == "vtu"){ // vtu file format
+            read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims, rk_num_bins);
         }
         else{
             throw std::runtime_error("**** Mesh file extension not understood ****");
@@ -634,7 +804,6 @@ public:
             if(num_dims==3){
                 node.coords.host(0, node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
             }
-
             
         } // end for nodes
 
@@ -785,6 +954,330 @@ public:
         in.close();
         
     } // end of VTKread function
+
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn read_vtu_mesh
+    ///
+    /// \brief Read ASCII .vtu mesh file
+    ///
+    /// \param Simulation mesh
+    /// \param Simulation state
+    /// \param Node state struct
+    /// \param Number of dimensions
+    /// \param Number of RK bins
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void read_vtu_mesh(Mesh_t& mesh,
+                    GaussPoint_t& GaussPoints,
+                    node_t&   node,
+                    corner_t& corner,
+                    mesh_input_t& mesh_inps,
+                    int num_dims,
+                    int rk_num_bins)
+    {
+
+        std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
+    
+        int i;           // used for writing information to file
+        int node_gid;    // the global id for the point
+        int elem_gid;    // the global id for the elem
+
+
+        //
+        int Pn_order = mesh_inps.p_order;
+        size_t num_nodes_in_elem = 1;
+        for (int dim = 0; dim < num_dims; dim++) {
+            num_nodes_in_elem *= (Pn_order + 1);
+        }
+        
+        bool found;
+        
+        std::ifstream in;  // FILE *in;
+        in.open(mesh_file_);
+        
+
+        // --- extract the number of points and cells from the XML file ---
+        int num_nodes;
+        int num_elems;
+        found = extract_num_points_and_cells_xml(num_nodes,
+                                                 num_elems,
+                                                 in);
+        if(found==false){
+            throw std::runtime_error("ERROR: number of points and/or cells not found in the XML file!");
+            //std::cout << "ERROR: number of points and cells not found in the XML file!" << std::endl;
+        }
+        std::cout << "Number of nodes in the mesh file: " << num_nodes << std::endl;
+        std::cout << "Number of elements in the mesh file: " << num_elems << std::endl;
+        
+        //------------------------------------
+        // allocate mesh class nodes and elems
+        mesh.initialize_nodes(num_nodes);
+        mesh.initialize_elems(num_elems, num_dims);
+
+        //------------------------------------
+        // allocate node coordinate state
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
+
+        //------------------------------------
+        // allocate the elem object id array
+        mesh_inps.object_ids = DCArrayKokkos <size_t> (num_elems);
+
+
+        // ------------------------
+        // Mesh file storage order:
+        //     objectId
+        //     Points
+        //     connectivity
+        //     offsets
+        //     types
+        // ------------------------
+        
+        // temporary arrays
+        DCArrayKokkos<double> node_coords(num_nodes,3); // always 3 with vtu files
+        DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem);
+        DCArrayKokkos<int> elem_types(num_elems); // element types
+
+
+        // for all fields, we stop recording when we get to "<"
+        std::string stop = "<";
+
+        // the size of 1D storage from reading the mesh file
+        size_t size;
+
+        // ---
+        //  Object ids
+        // ---
+
+        // the object id in the element
+        // array dims are (num_elems)
+        found = extract_values_xml(mesh_inps.object_ids.host.pointer(),
+                                "\"ObjectId\"",
+                                stop,
+                                in,
+                                size);
+        if(found==false){
+            throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
+            //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
+        }
+        mesh_inps.object_ids.update_device();
+
+
+        // ---
+        //  Nodal coordinates of mesh
+        // ---
+
+        // coordinates of the node
+        // array dims are (num_nodes,dims)
+        // must use the quotes around Points to read the point values
+        found = extract_values_xml(node_coords.host.pointer(),
+                                "\"Points\"",
+                                stop,
+                                in,
+                                size);
+        if(found==false){
+            throw std::runtime_error("**** ERROR: mesh nodes were not found in the XML file! ****");
+            //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+        }
+        if (size!=num_nodes*3){
+            throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
+            //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
+        }
+        node_coords.update_device();
+
+        // dimensional scaling of the mesh
+        const double scl_x = mesh_inps.scale_x;
+        const double scl_y = mesh_inps.scale_y;
+        const double scl_z = mesh_inps.scale_z;
+
+        // save the node coordinates to the state array
+        FOR_ALL(node_gid, 0, mesh.num_nodes, {
+            
+            for (int rk = 0; rk < rk_num_bins; rk++) {
+
+                // save the nodal coordinates
+                node.coords(rk, node_gid, 0) = scl_x*node_coords(node_gid, 0); // double
+                node.coords(rk, node_gid, 1) = scl_y*node_coords(node_gid, 1); // double
+                if(num_dims==3){
+                    node.coords(rk, node_gid, 2) = scl_z*node_coords(node_gid, 2); // double
+                }
+
+            } // end for
+            
+        }); // end for parallel nodes
+        node.coords.update_host();
+
+
+        // ---
+        //  Nodes in the element 
+        // ---
+
+        // fill temporary nodes in the element array
+        // array dims are (num_elems,num_nodes_in_elem)
+        found = extract_values_xml(connectivity.host.pointer(),
+                                "\"connectivity\"",
+                                stop,
+                                in,
+                                size);
+        if(found==false){
+            std::cout << "ERROR: mesh connectivity was not found in the XML file!" << std::endl;
+        }
+        connectivity.update_device();
+
+        // array dims are the (num_elems) 
+        //    8  = pixal (i,j,k) hex format
+        //    12 = linear ensight ordering
+        //    9  = linear quad ensight ordering
+        //    72 = VTK_LAGRANGE_HEXAHEDRON
+        // ....
+        found = extract_values_xml(elem_types.host.pointer(),
+                                "\"types\"",
+                                stop,
+                                in,
+                                size);
+        if(found==false){
+            std::cout << "ERROR: element types were not found in the XML file!" << std::endl;
+        }
+        elem_types.update_device();
+
+        // check that the element type is supported by Fierro
+        FOR_ALL (elem_gid, 0, mesh.num_elems, {
+            if(elem_types(elem_gid) == element_types::linear_quad || 
+               elem_types(elem_gid) == element_types::linear_hex ||
+               elem_types(elem_gid) == element_types::arbitrary_hex )
+            {
+                // at least one of them is true
+            }
+            else 
+            {
+               // unknown element used
+               Kokkos::abort("Unknown element type in the mesh \n");
+            }
+        });
+
+        // Convert from ensight linear hex to a IJK mesh
+        CArrayKokkos <size_t> convert_ensight_to_ijk(8);
+
+        // Convert the arbitrary order hex to a IJK mesh
+        DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(mesh.num_nodes_in_elem);
+
+        //build the connectivity for element type 12
+        // elem_types.host(0)
+        switch(elem_types.host(0)){
+
+            case element_types::linear_quad:
+                // the node order is correct, no changes required
+
+                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                    
+                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                        mesh.nodes_in_elem.host(elem_gid, node_lid) = 
+                                    connectivity(elem_gid,node_lid);
+                    }
+                    
+                }); // end for
+
+                break;
+                // next case
+
+            case element_types::linear_hex_ijk:
+
+                // read the node ids in the element, no maps required
+                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                    
+                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                        mesh.nodes_in_elem.host(elem_gid, node_lid) = 
+                                    connectivity(elem_gid,node_lid);
+                    }
+                    
+                }); // end for
+
+                break;
+                // next case
+
+            case element_types::linear_hex:
+
+                RUN({
+                    convert_ensight_to_ijk(0) = 0;
+                    convert_ensight_to_ijk(1) = 1;
+                    convert_ensight_to_ijk(2) = 3;
+                    convert_ensight_to_ijk(3) = 2;
+                    convert_ensight_to_ijk(4) = 4;
+                    convert_ensight_to_ijk(5) = 5;
+                    convert_ensight_to_ijk(6) = 7;
+                    convert_ensight_to_ijk(7) = 6;
+                });
+
+                // read the node ids in the element
+                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                    
+                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                        mesh.nodes_in_elem.host(elem_gid, node_lid) = 
+                                    connectivity(elem_gid,convert_ensight_to_ijk(node_lid));
+                    }
+                    
+                }); // end for
+
+                break;
+                // next case
+
+            case element_types::arbitrary_hex:
+
+                // re-order the nodes to be in i,j,k format for Fierro
+                size_t this_node = 0;
+                for (int k=0; k<=Pn_order; k++){
+                    for (int j=0; j<=Pn_order; j++){
+                        for (int i=0; i<=Pn_order; i++){
+                            
+                            // convert this_node index to the FE index convention
+                            int order[3] = {Pn_order, Pn_order, Pn_order};
+                            int this_index = PointIndexFromIJK(i, j, k, order);
+                            
+                            // store the points in this elem according the the finite
+                            // element numbering convention
+                            convert_pn_vtk_to_ijk.host(this_index) = this_node;
+                            
+                            // increment the point counting index
+                            this_node = this_node + 1;
+                            
+                        } // end for icount
+                    } // end for jcount
+                }  // end for kcount
+                convert_pn_vtk_to_ijk.update_device();
+                Kokkos::fence();
+
+                // read the node ids in the element
+                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                    
+                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                        mesh.nodes_in_elem.host(elem_gid, node_lid) = 
+                                    connectivity(elem_gid,convert_pn_vtk_to_ijk(node_lid));
+                    }
+                    
+                }); // end for
+
+                break;
+                // next case
+
+        } // end switch
+        mesh.nodes_in_elem.update_host();
+
+
+        // initialize corner variables
+        size_t num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+
+
+        // Build connectivity
+        mesh.build_connectivity();
+
+
+        in.close();
+            
+    } // end of VTMread function
+
 
 }; // end of Mesh reader class
 
@@ -1947,56 +2440,6 @@ public:
         delete[] name;
 
         return;
-    }
-
-    /**\brief Given (i,j,k) coordinates within the Lagrange hex, return an offset into the local connectivity (PointIds) array.
-    *"den", "pres", "sie", "vol", "mass", "sspd", "speed", "mat_id", "elem_switch", "eroded"
-    * The \a order parameter must point to an array of 3 integers specifying the order
-    * along each axis of the hexahedron.
-    */
-    int PointIndexFromIJK(int i, int j, int k, const int* order)
-    {
-        bool ibdy = (i == 0 || i == order[0]);
-        bool jbdy = (j == 0 || j == order[1]);
-        bool kbdy = (k == 0 || k == order[2]);
-        // How many boundaries do we lie on at once?
-        int nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0) + (kbdy ? 1 : 0);
-
-        if (nbdy == 3) { // Vertex DOF
-            // ijk is a corner node. Return the proper index (somewhere in [0,7]):
-            return (i ? (j ? 2 : 1) : (j ? 3 : 0)) + (k ? 4 : 0);
-        }
-
-        int offset = 8;
-        if (nbdy == 2) { // Edge DOF
-            if (!ibdy) { // On i axis
-                return (i - 1) + (j ? order[0] - 1 + order[1] - 1 : 0) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
-            }
-            if (!jbdy) { // On j axis
-                return (j - 1) + (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] - 1) + (k ? 2 * (order[0] - 1 + order[1] - 1) : 0) + offset;
-            }
-            // !kbdy, On k axis
-            offset += 4 * (order[0] - 1) + 4 * (order[1] - 1);
-            return (k - 1) + (order[2] - 1) * (i ? (j ? 3 : 1) : (j ? 2 : 0)) + offset;
-        }
-
-        offset += 4 * (order[0] - 1 + order[1] - 1 + order[2] - 1);
-        if (nbdy == 1) { // Face DOF
-            if (ibdy) { // On i-normal face
-                return (j - 1) + ((order[1] - 1) * (k - 1)) + (i ? (order[1] - 1) * (order[2] - 1) : 0) + offset;
-            }
-            offset += 2 * (order[1] - 1) * (order[2] - 1);
-            if (jbdy) { // On j-normal face
-                return (i - 1) + ((order[0] - 1) * (k - 1)) + (j ? (order[2] - 1) * (order[0] - 1) : 0) + offset;
-            }
-            offset += 2 * (order[2] - 1) * (order[0] - 1);
-            // kbdy, On k-normal face
-            return (i - 1) + ((order[0] - 1) * (j - 1)) + (k ? (order[0] - 1) * (order[1] - 1) : 0) + offset;
-        }
-
-        // nbdy == 0: Body DOF
-        offset += 2 * ( (order[1] - 1) * (order[2] - 1) + (order[2] - 1) * (order[0] - 1) + (order[0] - 1) * (order[1] - 1));
-        return offset + (i - 1) + (order[0] - 1) * ( (j - 1) + (order[1] - 1) * ( (k - 1)));
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -3805,14 +4248,6 @@ public:
         graphics_id++; // this is private variable in the class
 
     } // end write vtk
-
-
-    
-
-
-
-
-
 
 
 
