@@ -255,15 +255,18 @@ inline bool extract_num_points_and_cells_xml(int& numberOfPoints,
 } // end function
 
 
-//    12 = linear ensight ordering
+//    8  = pixal i,j,k linear quad ording
 //    9  = linear quad ensight ordering
+//    11 = voxel i,j,k linear hex ording
+//    12 = linear ensight hex ordering
 //    72 = VTK_LAGRANGE_HEXAHEDRON
 namespace element_types
 {
     enum element_name
     {
-        linear_hex_ijk = 8,
+        linear_quad_ijk = 8,
         linear_quad = 9,
+        linear_hex_ijk = 11,
         linear_hex = 12,
         arbitrary_hex = 72
     };
@@ -1127,9 +1130,9 @@ public:
         connectivity.update_device();
 
         // array dims are the (num_elems) 
-        //    8  = pixal (i,j,k) hex format
-        //    12 = linear ensight ordering
+        //    8  = pixal i,j,k linear quad format
         //    9  = linear quad ensight ordering
+        //    12 = linear ensight hex ordering
         //    72 = VTK_LAGRANGE_HEXAHEDRON
         // ....
         found = extract_values_xml(elem_types.host.pointer(),
@@ -1145,6 +1148,7 @@ public:
         // check that the element type is supported by Fierro
         FOR_ALL (elem_gid, 0, mesh.num_elems, {
             if(elem_types(elem_gid) == element_types::linear_quad || 
+               elem_types(elem_gid) == element_types::linear_hex_ijk ||
                elem_types(elem_gid) == element_types::linear_hex ||
                elem_types(elem_gid) == element_types::arbitrary_hex )
             {
