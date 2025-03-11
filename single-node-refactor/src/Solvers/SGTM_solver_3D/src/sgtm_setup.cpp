@@ -101,6 +101,7 @@ void SGTM3D::fill_regions_sgtm(
     DCArrayKokkos <size_t>& elem_mat_id,
     DCArrayKokkos <size_t>& num_mats_saved_in_elem,
     DCArrayKokkos <size_t>& voxel_elem_mat_id,
+    const DCArrayKokkos <int>& object_ids,
     const CArrayKokkos <RegionFill_t>& region_fills,
     const CArray <RegionFill_host_t>& region_fills_host,
     const size_t num_fills,
@@ -184,6 +185,7 @@ void SGTM3D::fill_regions_sgtm(
             size_t fill_this = fill_geometric_region(mesh,
                                                      voxel_elem_mat_id,
                                                      region_fills,
+                                                     object_ids,
                                                      elem_coords,
                                                      voxel_dx,
                                                      voxel_dy,
@@ -194,7 +196,8 @@ void SGTM3D::fill_regions_sgtm(
                                                      voxel_num_i,
                                                      voxel_num_j,
                                                      voxel_num_k,
-                                                     f_id);
+                                                     f_id,
+                                                     elem_gid);
 
             // paint the material state on the element if fill_this=1
             if (fill_this == 1) {
@@ -298,6 +301,7 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                      elem_mat_id,
                      num_mats_saved_in_elem,
                      voxel_elem_mat_id,
+                     SimulationParamaters.mesh_input.object_ids,
                      SimulationParamaters.region_fills,
                      SimulationParamaters.region_fills_host,
                      num_fills,

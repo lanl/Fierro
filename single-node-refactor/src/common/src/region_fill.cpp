@@ -373,6 +373,7 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 KOKKOS_FUNCTION
 size_t fill_geometric_region(const Mesh_t& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
+                             const DCArrayKokkos<int>& object_ids,
                              const CArrayKokkos<RegionFill_t>& region_fills,
                              const ViewCArrayKokkos <double>& mesh_coords,
                              const double voxel_dx, 
@@ -384,7 +385,8 @@ size_t fill_geometric_region(const Mesh_t& mesh,
                              const size_t voxel_num_i, 
                              const size_t voxel_num_j, 
                              const size_t voxel_num_k,
-                             const size_t f_id)
+                             const size_t f_id,
+                             const size_t elem_gid)
 {
 
     // default is not to fill the element
@@ -483,6 +485,15 @@ size_t fill_geometric_region(const Mesh_t& mesh,
                 break;
 
             } // end case
+        case region::readVTUFile:
+            {
+                printf("object_id = %d,  fill_part_id = %d\n", object_ids(elem_gid), region_fills(f_id).part_id);
+                // if the part id in .vtu file matches the specified id, then fill it
+                if(object_ids(elem_gid) == region_fills(f_id).part_id){
+                    fill_this = 1;
+                }
+                break;
+            }
         case region::no_volume:
             {
                 fill_this = 0; // default is no, don't fill it

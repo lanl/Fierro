@@ -1471,6 +1471,7 @@ void parse_regions(Yaml::Node& root,
                             std::cout << "\tscale_x = " << scale_x << std::endl;
                         }
 
+                        // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_x = scale_x;
 
                     } // scale_x
@@ -1482,6 +1483,7 @@ void parse_regions(Yaml::Node& root,
                             std::cout << "\tscale_y = " << scale_y << std::endl;
                         }
 
+                        // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_y = scale_y;
 
                     } // scale_y
@@ -1493,7 +1495,19 @@ void parse_regions(Yaml::Node& root,
                             std::cout << "\tscale_z = " << scale_z << std::endl;
                         }
 
+                        // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_z = scale_z;
+
+                    } // scale_z
+                    else if (a_subfield_word.compare("part_id") == 0) {
+                        // part_id in 
+
+                        int part_id = root["regions"][reg_id]["region"]["volume"]["part_id"].As<int>();
+                        if (VERBOSE) {
+                            std::cout << "\tpart_id = " << part_id << std::endl;
+                        }
+
+                        region_fills(reg_id).part_id = part_id;
 
                     } // scale_z
                     //
@@ -1546,7 +1560,12 @@ void parse_regions(Yaml::Node& root,
                                         region_fills(reg_id).volume = region::readVoxelFile;
                                     });
                                     break;
-
+                                case region::readVTUFile:
+                                    std::cout << "Setting volume fill type to readVTUFile " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::readVTUFile;
+                                    });
+                                    break;
                                 case region::no_volume:
                                     std::cout << "Setting volume fill type to none " << std::endl;
                                     RUN({

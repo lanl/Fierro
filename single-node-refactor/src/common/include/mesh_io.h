@@ -1026,7 +1026,7 @@ public:
 
         //------------------------------------
         // allocate the elem object id array
-        mesh_inps.object_ids = DCArrayKokkos <size_t> (num_elems);
+        mesh_inps.object_ids = DCArrayKokkos <int> (num_elems);
 
 
         // ------------------------

@@ -101,7 +101,7 @@ struct mesh_input_t
     double scale_y = 1.0; ///< Scales mesh y coordinate dimensions
     double scale_z = 1.0; ///< Scales mesh z coordinate dimensions
 
-    DCArrayKokkos <size_t> object_ids; ///< the object_ids in the vtu full mesh file (from exodus mesh)  
+    DCArrayKokkos <int> object_ids; ///< the object_ids in the vtu full mesh file (from exodus mesh)  
 
 }; // mesh_input_t
 

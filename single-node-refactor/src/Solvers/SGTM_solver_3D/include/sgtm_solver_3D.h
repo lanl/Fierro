@@ -185,6 +185,7 @@ public:
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& num_mats_saved_in_elem,
         DCArrayKokkos<size_t>& voxel_elem_mat_id,
+        const DCArrayKokkos <int>& object_ids,
         const CArrayKokkos<RegionFill_t>& region_fills,
         const CArray<RegionFill_host_t>&  region_fills_host,
         const size_t num_fills,
