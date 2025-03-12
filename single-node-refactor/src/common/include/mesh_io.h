@@ -1026,7 +1026,7 @@ public:
 
         //------------------------------------
         // allocate the elem object id array
-        mesh_inps.object_ids = DCArrayKokkos <int> (num_elems);
+        mesh_inps.object_ids = DCArrayKokkos <int> (num_elems, "ObjectIDs");
 
 
         // ------------------------
@@ -1039,9 +1039,9 @@ public:
         // ------------------------
         
         // temporary arrays
-        DCArrayKokkos<double> node_coords(num_nodes,3); // always 3 with vtu files
-        DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem);
-        DCArrayKokkos<int> elem_types(num_elems); // element types
+        DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
+        DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
+        DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
 
 
         // for all fields, we stop recording when we get to "<"
@@ -1165,7 +1165,7 @@ public:
         CArrayKokkos <size_t> convert_ensight_to_ijk(8);
 
         // Convert the arbitrary order hex to a IJK mesh
-        DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(mesh.num_nodes_in_elem);
+        DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(mesh.num_nodes_in_elem, "convert_pn_vtk_to_ijk");
 
         //build the connectivity for element type 12
         // elem_types.host(0)
@@ -2847,7 +2847,7 @@ public:
         int  elem_switch = 1;
 
 
-        DCArrayKokkos<double> speed(num_elems);
+        DCArrayKokkos<double> speed(num_elems, "speed");
         FOR_ALL(elem_gid, 0, num_elems, {
             double elem_vel[3]; // note:initialization with a list won't work
             elem_vel[0] = 0.0;
@@ -3266,7 +3266,7 @@ public:
         auto elem_fields = CArray<double>(num_elems, num_cell_scalar_vars);
         int  elem_switch = 1;
 
-        DCArrayKokkos<double> speed(num_elems);
+        DCArrayKokkos<double> speed(num_elems, "speed");
         FOR_ALL(elem_gid, 0, num_elems, {
             double elem_vel[3]; // note:initialization with a list won't work
             elem_vel[0] = 0.0;
