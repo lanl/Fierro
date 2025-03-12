@@ -1592,8 +1592,9 @@ void parse_regions(Yaml::Node& root,
                         if (VERBOSE) {
                             std::cout << "\tpart_id = " << part_id << std::endl;
                         }
-
-                        region_fills(reg_id).part_id = part_id;
+                        RUN({
+                            region_fills(reg_id).part_id = part_id;
+                        });
 
                     } // scale_z
                     //

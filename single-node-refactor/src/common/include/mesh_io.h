@@ -2318,7 +2318,6 @@ public:
         int sie_id = -1;
         int sspd_id = -1;
         int mass_id = -1; 
-        int eroded_id = -1;
         int stress_id = -1;
 
         // reset the counters
@@ -2505,7 +2504,6 @@ public:
         DCArrayKokkos<double> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3);
         elem_scalar_fields.set_values(0.0);
         elem_tensor_fields.set_values(0.0);
-        int  elem_switch = 1;
 
         // -----------------------------------------------------------------------
         // save the output fields to a single element average array for all state
