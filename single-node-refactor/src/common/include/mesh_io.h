@@ -1177,8 +1177,7 @@ public:
                 FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
                     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem.host(elem_gid, node_lid) = 
-                                    connectivity(elem_gid,node_lid);
+                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
                     }
                     
                 }); // end for
@@ -1192,8 +1191,7 @@ public:
                 FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
                     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem.host(elem_gid, node_lid) = 
-                                    connectivity(elem_gid,node_lid);
+                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
                     }
                     
                 }); // end for
@@ -1218,8 +1216,7 @@ public:
                 FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
                     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem.host(elem_gid, node_lid) = 
-                                    connectivity(elem_gid,convert_ensight_to_ijk(node_lid));
+                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_ensight_to_ijk(node_lid));
                     }
                     
                 }); // end for
@@ -1256,8 +1253,7 @@ public:
                 FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
                     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem.host(elem_gid, node_lid) = 
-                                    connectivity(elem_gid,convert_pn_vtk_to_ijk(node_lid));
+                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_pn_vtk_to_ijk(node_lid));
                     }
                     
                 }); // end for

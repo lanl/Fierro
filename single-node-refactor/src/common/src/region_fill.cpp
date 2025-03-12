@@ -580,9 +580,6 @@ void paint_gauss_den_sie(const Material_t& Materials,
         // we are adding a new material, so increment the number of saved
         num_mats_saved_in_elem(elem_gid) += 1;
     } // end check
-    if(check_mat_exists){
-        std::cout << "check mat exists = " << check_mat_exists << "\n";
-    }
 
     // check to see if the volfrac paint is equal to 1
     bool eraise_mats = false;

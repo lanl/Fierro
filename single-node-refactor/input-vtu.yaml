@@ -24,7 +24,7 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: viz #vtu #ensight #state  # viz # viz_and_state
+    output_file_format: viz # only options are viz or viz_and_state
     graphics_time_step: 0.1
     # graphics_iteration_step: 10
     elem_field_outputs:
