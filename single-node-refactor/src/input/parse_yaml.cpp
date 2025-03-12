@@ -986,6 +986,90 @@ void parse_output_options(Yaml::Node& root,
 
             output_options.graphics_iteration_step = graphics_iteration_step;
         } // graphics_iteration_step
+        else if (a_word.compare("elem_field_outputs") == 0) {
+                Yaml::Node & output_vars_yaml = root["output_options"][a_word];
+
+                size_t num_output_vars = output_vars_yaml.Size();
+
+                // loop over the output vars
+                for (int var_id = 0; var_id < num_output_vars; var_id++){
+                    std::string var_name = root["output_options"][a_word][var_id].As<std::string>();
+                    
+                    // save the enum fields to the outputs
+                    if (elem_outputs_map.find(var_name) != elem_outputs_map.end()) {
+                        auto field_var = elem_outputs_map[var_name]; // get the enum for this field variabled
+                        
+                        output_options.output_elem_state.push_back(field_var);
+                    }
+                    else{
+                        throw std::runtime_error("**** Element Field Ouput Variable Name Not Understood ****");
+                    } // end if
+
+                } // end for over variables
+        } // end of elem fields outputs
+        else if (a_word.compare("node_field_outputs") == 0) {
+                Yaml::Node & output_vars_yaml = root["output_options"][a_word];
+
+                size_t num_output_vars = output_vars_yaml.Size();
+
+                // loop over the output vars
+                for (int var_id = 0; var_id < num_output_vars; var_id++){
+                    std::string var_name = root["output_options"][a_word][var_id].As<std::string>();
+                    
+                    // save the enum fields to the outputs
+                    if (node_outputs_map.find(var_name) != node_outputs_map.end()) {
+                        auto field_var = node_outputs_map[var_name]; // get the enum for this field variabled
+                        
+                        output_options.output_node_state.push_back(field_var);
+                    }
+                    else{
+                        throw std::runtime_error("**** Node Field Ouput Variable Name Not Understood ****");
+                    } // end if
+
+                } // end for over variables
+        } // end of elem fields outputs
+        else if (a_word.compare("gauss_pt_field_outputs") == 0) {
+                Yaml::Node & output_vars_yaml = root["output_options"][a_word];
+
+                size_t num_output_vars = output_vars_yaml.Size();
+
+                // loop over the output vars
+                for (int var_id = 0; var_id < num_output_vars; var_id++){
+                    std::string var_name = root["output_options"][a_word][var_id].As<std::string>();
+                    
+                    // save the enum fields to the outputs
+                    if (gauss_pt_outputs_map.find(var_name) != gauss_pt_outputs_map.end()) {
+                        auto field_var = gauss_pt_outputs_map[var_name]; // get the enum for this field variabled
+                        
+                        output_options.output_gauss_pt_state.push_back(field_var);
+                    }
+                    else{
+                        throw std::runtime_error("**** Gauss Pnt Field Ouput Variable Name Not Understood ****");
+                    } // end if
+
+                } // end for over variables
+        } // end of elem fields outputs
+        else if (a_word.compare("mat_pt_field_outputs") == 0) {
+                Yaml::Node & output_vars_yaml = root["output_options"][a_word];
+
+                size_t num_output_vars = output_vars_yaml.Size();
+
+                // loop over the output vars
+                for (int var_id = 0; var_id < num_output_vars; var_id++){
+                    std::string var_name = root["output_options"][a_word][var_id].As<std::string>();
+                    
+                    // save the enum fields to the outputs
+                    if (mat_pt_outputs_map.find(var_name) != mat_pt_outputs_map.end()) {
+                        auto field_var = mat_pt_outputs_map[var_name]; // get the enum for this field variabled
+                        
+                        output_options.output_mat_pt_state.push_back(field_var);
+                    }
+                    else{
+                        throw std::runtime_error("**** Gauss Pnt Field Ouput Variable Name Not Understood ****");
+                    } // end if
+
+                } // end for over variables
+        } // end of elem fields outputs
         else {
             std::cout << "ERROR: invalid input: " << a_word << std::endl;
 

@@ -1991,7 +1991,7 @@ public:
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states)
     {
-        if (SimulationParamaters.output_options.format == output_options::vtk) {
+        if (SimulationParamaters.output_options.format == output_options::vtu) {
             write_vtk(mesh,
                       State,
                       SimulationParamaters,

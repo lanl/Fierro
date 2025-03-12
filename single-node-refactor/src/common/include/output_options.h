@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+ï¿½ 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -36,15 +36,17 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define FIERRO_OUTPUT_OPTIONS_H
 #include <stdio.h>
 #include "matar.h"
+#include "state.h"
 
 namespace output_options
 {
 // output file options
 enum format
 {
-    vtk = 0,
+    vtu = 0,
     ensight = 1,
-    state = 2
+    state = 2,
+    vtk = 3,
 };
 
 // timer output level
@@ -56,7 +58,7 @@ enum timer_output_level
 
 static std::map<std::string, output_options::format> output_format_map
 {
-    { "vtk", output_options::vtk },
+    { "vtu", output_options::vtu },
     { "ensight", output_options::ensight },
     { "state", output_options::state }
 };
@@ -65,6 +67,48 @@ static std::map<std::string, output_options::timer_output_level> timer_output_le
 {
     { "thorough", output_options::thorough }
 };
+
+
+// nodal state variables writen to file
+static std::map<std::string, node_state> node_outputs_map
+{
+    { "coords", node_state::coords },
+    { "vel",    node_state::velocity },
+    { "mass",   node_state::mass },
+    { "force",  node_state::force }
+};
+
+// gauss point state variables writen to file
+static std::map<std::string, gauss_pt_state> gauss_pt_outputs_map
+{
+    { "volume",   gauss_pt_state::volume },
+    { "vel_grad", gauss_pt_state::gradient_velocity }
+};
+
+// material point state variables writen to file
+static std::map<std::string, material_pt_state> mat_pt_outputs_map
+{
+    { "den", material_pt_state::density},
+    { "pres", material_pt_state::pressure},
+    { "stress", material_pt_state::stress},
+    { "sie", material_pt_state::specific_internal_energy},
+    { "sspd", material_pt_state::sound_speed},
+    { "mass", material_pt_state::mass},
+    { "volfrac", material_pt_state::volume_fraction},
+    { "eroded", material_pt_state::eroded_flag}
+};
+
+// element average state variables writen to file
+static std::map<std::string, material_pt_state> elem_outputs_map
+{
+    { "den", material_pt_state::density},
+    { "pres", material_pt_state::pressure},
+    { "stress", material_pt_state::stress},
+    { "sie", material_pt_state::specific_internal_energy},
+    { "sspd", material_pt_state::sound_speed},
+    { "mass", material_pt_state::mass}
+};
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -80,6 +124,12 @@ struct output_options_t
 
     double graphics_time_step   = 1.0;  ///< How often to write a graphics dump in time
     int graphics_iteration_step = 2000000;  ///< How often to write a graphics dump by iteration count
+
+    std::vector<material_pt_state> output_elem_state;
+    std::vector<node_state> output_node_state;
+    std::vector<gauss_pt_state> output_gauss_pt_state;
+    std::vector<material_pt_state> output_mat_pt_state;
+
 }; // output_options_t
 
 // ----------------------------------
@@ -90,7 +140,11 @@ static std::vector<std::string> str_output_options_inps
     "timer_output_level",
     "output_file_format",
     "graphics_time_step",
-    "graphics_iteration_step"
+    "graphics_iteration_step",
+    "elem_field_outputs",
+    "node_field_outputs",
+    "mat_point_field_outputs",
+    "gauss_pt_field_outputs"
 };
 
 // ----------------------------------

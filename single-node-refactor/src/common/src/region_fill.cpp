@@ -487,7 +487,6 @@ size_t fill_geometric_region(const Mesh_t& mesh,
             } // end case
         case region::readVTUFile:
             {
-                printf("object_id = %d,  fill_part_id = %d\n", object_ids(elem_gid), region_fills(f_id).part_id);
                 // if the part id in .vtu file matches the specified id, then fill it
                 if(object_ids(elem_gid) == region_fills(f_id).part_id){
                     fill_this = 1;
@@ -665,7 +664,7 @@ void paint_gauss_den_sie(const Material_t& Materials,
             vol_frac_total += GaussPoint_volfrac(gauss_gid, a_mat_in_elem);
         }
 
-        printf("volfract total = %f \n",vol_frac_total);
+        //printf("volfrac total = %f \n",vol_frac_total);
         
         // squish material out if vol fraction in element is > 1
         if (vol_frac_total > 1.0){
@@ -685,9 +684,9 @@ void paint_gauss_den_sie(const Material_t& Materials,
                 GaussPoint_volfrac(gauss_gid, a_mat_in_elem) = fmin(1.0, volfracfloor);
             } // end loop on bounded volfracs
 
-            for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
-                printf("volfrac in elem after squishing = %f \n",GaussPoint_volfrac(gauss_gid, a_mat_in_elem));
-            }
+            //for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
+            //    printf("volfrac in elem after squishing = %f \n",GaussPoint_volfrac(gauss_gid, a_mat_in_elem));
+            //}
 
         } // end if too much material in an element
 
@@ -706,7 +705,7 @@ void paint_gauss_den_sie(const Material_t& Materials,
 
         } // end loop over mats in this elem
 
-        printf("num actual mats = %zu \n",num_actual_mats);
+        //printf("num actual mats = %zu \n",num_actual_mats);
 
 
         size_t shift = num_mats_saved_in_elem(elem_gid)-num_actual_mats;
