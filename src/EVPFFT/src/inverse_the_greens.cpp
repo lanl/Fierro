@@ -41,9 +41,9 @@ void EVPFFT::inverse_the_greens()
       } // end for i
     } // end if (xknorm != 0.0)
 
-    if ( kxx + local_start1_cmplx == npts1_g/2+1 || 
-         kyy + local_start2_cmplx == npts2_g/2+1 || 
-         (npts3_g > 1 && kzz + local_start3_cmplx == npts3_g/2+1) ) {
+    if ( (kxx + local_start1_cmplx == npts1_g/2+1 && npts1_g % 2 == 0) || 
+         (kyy + local_start2_cmplx == npts2_g/2+1 && npts2_g % 2 == 0) || 
+         (npts3_g > 1 && (kzz + local_start3_cmplx == npts3_g/2+1 && npts3_g % 2 == 0)) ) {
       for (int l = 1; l <= 3; l++) {
         for (int k = 1; k <= 3; k++) {
           for (int j = 1; j <= 3; j++) {

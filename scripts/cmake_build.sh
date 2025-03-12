@@ -57,7 +57,7 @@ elif [ "$solver" = "implicit" ]; then
         -D BUILD_PARALLEL_EXPLICIT_SOLVER=OFF
         -D BUILD_IMPLICIT_SOLVER=ON
     )
-elif [ "$solver" = "explicit-evpfft" ] || [ "$solver" = "explicit-ls-evpfft" ]; then
+elif [ "$solver" = "explicit-evpfft" ] || [ "$solver" = "explicit-ls-evpfft" ] || [ "$solver" = "explicit-lsnp-evpfft" ]; then
     if [ "$solver" = "explicit-evpfft" ]; then
         cmake_options+=(
             -D BUILD_EVPFFT_FIERRO=ON
@@ -66,9 +66,13 @@ elif [ "$solver" = "explicit-evpfft" ] || [ "$solver" = "explicit-ls-evpfft" ]; 
         cmake_options+=(
             -D BUILD_LS_EVPFFT_FIERRO=ON
         )
+    elif [ "$solver" = "explicit-lsnp-evpfft" ]; then
+        cmake_options+=(
+            -D BUILD_LSNP_EVPFFT_FIERRO=ON
+        )
     fi
 
-    # below options work for both explicit-evpfft and explicit-ls-evpfft
+    # below options work for explicit-evpfft, explicit-ls-evpfft and explicit-lsnp-evpfft
     cmake_options+=(
         -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
         -D BUILD_IMPLICIT_SOLVER=OFF
@@ -107,6 +111,11 @@ elif [ "$kokkos_build_type" = "hip" ]; then
         -D CMAKE_CXX_COMPILER=hipcc
     )
 fi
+
+#EJL: add fix for conda cxx compile
+cmake_options+=(
+    -D CMAKE_CXX_FLAGS="-fPIE"
+)
 
 # Print CMake options for reference
 echo "CMake Options: ${cmake_options[@]}"

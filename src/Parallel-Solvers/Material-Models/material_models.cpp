@@ -9,6 +9,7 @@
 #include "EVPStrengthModel.h"
 #include "EVPFFTStrengthModel.h"
 #include "LSEVPFFTStrengthModel.h"
+#include "LSNPEVPFFTStrengthModel.h"
 
 void init_state_vars(
   const DCArrayKokkos <material_t> &material,
@@ -59,6 +60,11 @@ void init_state_vars(
 
       case STRENGTH_MODEL::ls_evpfft:
         LSEVPFFTStrengthModel::init_strength_state_vars(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case STRENGTH_MODEL::lsnp_evpfft:
+        LSNPEVPFFTStrengthModel::init_strength_state_vars(material, elem_mat_id, eos_state_vars, 
         strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
         break;
 
@@ -178,6 +184,16 @@ void init_strength_model(
           });
         }
         break;
+
+      case STRENGTH_MODEL::lsnp_evpfft:
+        if (run_loc == RUN_LOCATION::host) {
+          elem_strength.host(elem_gid).calc_stress = LSNPEVPFFTStrengthModel::calc_stress;
+        } else {
+          RUN({
+            elem_strength(elem_gid).calc_stress = LSNPEVPFFTStrengthModel::calc_stress;
+          });
+	}
+	break;
 
       default:
         break;
@@ -331,6 +347,11 @@ void destroy_strength_model(
 
       case STRENGTH_MODEL::ls_evpfft:
         LSEVPFFTStrengthModel::destroy(material, elem_mat_id, eos_state_vars, 
+        strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
+        break;
+
+      case STRENGTH_MODEL::lsnp_evpfft:
+        LSNPEVPFFTStrengthModel::destroy(material, elem_mat_id, eos_state_vars, 
         strength_state_vars, eos_global_vars, strength_global_vars, elem_user_output_vars, num_elems);
         break;
 

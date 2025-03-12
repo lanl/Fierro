@@ -79,7 +79,7 @@ void EVPFFT::update_defgrad()
     determinant33(defgradnew.pointer(), detFtmp);
 
     if (detFtmp < 0.0) {
-      printf(" -> WARNING: detF = %E24.14E in voxel %d %d %d\n", detFtmp, i, j, k);
+      printf(" -> WARNING: detF = %24.14E in voxel %d %d %d\n", detFtmp, i, j, k);
       printf("elem = %d\n",elem_id);
     }
 
@@ -103,7 +103,10 @@ void EVPFFT::update_defgrad()
 
     for (int jj = 1; jj <= 3; jj++) {
       for (int ii = 1; ii <= 3; ii++) {
-        disgrad(ii,jj,i,j,k) = - defgradinvtmp(ii,jj);
+        disgrad(ii,jj,i,j,k) = 0.0;
+        for (int kk = 1; kk <= 3; kk++) {
+          disgrad(ii,jj,i,j,k) = disgrad(ii,jj,i,j,k) - defgradini(ii,kk,i,j,k)*defgradinvtmp(kk,jj);
+        }
       }
       disgrad(jj,jj,i,j,k) = disgrad(jj,jj,i,j,k) + 1.0;
     }
