@@ -1991,29 +1991,778 @@ public:
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states)
     {
-        if (SimulationParamaters.output_options.format == output_options::vtu) {
-            write_vtk(mesh,
-                      State,
-                      SimulationParamaters,
-                      dt,
-                      time_value,
-                      graphics_times,
-                      node_states,
-                      gauss_pt_states,
-                      material_pt_states);
-        }
-        else if (SimulationParamaters.output_options.format == output_options::ensight) {
-            write_ensight(mesh,
-                          State,
-                          SimulationParamaters,
-                          dt,
-                          time_value,
-                          graphics_times,
-                          node_states,
-                          gauss_pt_states,
-                          material_pt_states);
-        }
-        else if (SimulationParamaters.output_options.format == output_options::state) {
+
+
+        // node_state is an enum for possible fields (e.g., coords, velocity, etc.), see state.h
+        // gauss_pt_state is an enum for possible fields (e.g., vol, divergence, etc.)
+        // material_pt_state is an enum for possible fields (e.g., den, pres, etc.)
+
+
+        // *******************
+        //  Update host 
+        // *******************
+
+        const size_t num_mats = State.MaterialPoints.size();
+
+        // material point values
+        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+            
+            //  Update host data for mat_pt state
+            for (auto field : material_pt_states){
+                switch(field){
+                    // scalar vars to write out
+                    case material_pt_state::density:
+                        State.MaterialPoints(mat_id).den.update_host();
+                        break;
+                    case material_pt_state::pressure:
+                        State.MaterialPoints(mat_id).pres.update_host();
+                        break;
+                    case material_pt_state::specific_internal_energy:
+                        State.MaterialPoints(mat_id).sie.update_host();
+                        break;
+                    case material_pt_state::sound_speed:
+                        State.MaterialPoints(mat_id).sspd.update_host();
+                        break;
+                    case material_pt_state::mass:
+                        State.MaterialPoints(mat_id).mass.update_host();
+                        break;
+                    case material_pt_state::volume_fraction:
+                        State.MaterialPoints(mat_id).volfrac.update_host();
+                        break;
+                    case material_pt_state::eroded_flag:
+                        State.MaterialPoints(mat_id).eroded.update_host();
+                        break;
+                    // tensor vars to write out
+                    case material_pt_state::stress:
+                        State.MaterialPoints(mat_id).stress.update_host();
+                        break;
+                  
+                    // add other variables here
+
+                    // not used
+                    case material_pt_state::elastic_modulii:
+                        break;
+                    case material_pt_state::shear_modulii:
+                        break;
+                    case material_pt_state::poisson_ratios:
+                        break;
+                    case material_pt_state::heat_flux:
+                        break;
+                    default:
+                        std::cout<<"Desired material point state not understood in outputs"<<std::endl;
+                } // end switch
+            } // end for over mat_pt_states
+
+        } // end for mat_id
+
+
+        // update gauss point values
+        for (auto field : gauss_pt_states){
+            switch(field){
+                // scalar vars to write out
+                case gauss_pt_state::volume:
+                    State.GaussPoints.vol.update_host();
+                    break;
+                case gauss_pt_state::divergence_velocity:
+                    State.GaussPoints.div.update_host();
+                    break;
+                // tensor vars to write out
+                case gauss_pt_state::gradient_velocity:
+                    State.GaussPoints.vel_grad.update_host();
+                    break;
+                default:
+                    std::cout<<"Desired Gauss point state not understood in vtk outputs"<<std::endl;
+
+            } // end switch
+        } // end loop
+
+
+        // nodal values
+        for (auto field : node_states){
+            switch(field){
+                case node_state::mass:
+                    State.node.mass.update_host();
+                    break;
+                case node_state::temp:
+                    State.node.temp.update_host();
+                    break;
+                case node_state::coords:
+                    State.node.coords.update_host();
+                    break;
+                case node_state::velocity:
+                    State.node.vel.update_host();
+                    break;
+                case node_state::force:
+                    break;
+            } // end switch
+        } // end for over 
+        Kokkos::fence();
+
+
+
+        // ******************************************
+        //  Build Material and Element state outputs
+        // ******************************************
+
+        size_t num_mat_pt_scalar_vars = 0;
+        size_t num_mat_pt_tensor_vars = 0;
+            
+        // count the number of material point state vars to write out
+        for (auto field : SimulationParamaters.output_options.output_mat_pt_state){
+            switch(field){
+                // scalar vars to write out
+                case material_pt_state::density:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::pressure:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::specific_internal_energy:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::sound_speed:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::mass:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::volume_fraction:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::eroded_flag:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                // tensor vars to write out
+                case material_pt_state::stress:
+                    num_mat_pt_tensor_vars ++;
+                    break;
+                
+                // add other variables here
+
+                // not used
+                case material_pt_state::elastic_modulii:
+                    break;
+                case material_pt_state::shear_modulii:
+                    break;
+                case material_pt_state::poisson_ratios:
+                    break;
+                case material_pt_state::heat_flux:
+                    break;
+                default:
+                    std::cout<<"Desired material point state not understood in outputs"<<std::endl;
+            } // end switch
+        } // end for over mat_pt_states
+
+
+        size_t num_elem_scalar_vars = 0;
+        size_t num_elem_tensor_vars = 0;
+
+        // count the number of element average fields to write out
+        for (auto field : SimulationParamaters.output_options.output_elem_state){
+            switch(field){
+                // scalar vars to write out
+                case material_pt_state::density:
+                    num_elem_scalar_vars ++;
+                    break;
+                case material_pt_state::pressure:
+                    num_elem_scalar_vars ++;
+                    break;
+                case material_pt_state::specific_internal_energy:
+                    num_elem_scalar_vars ++;
+                    break;
+                case material_pt_state::sound_speed:
+                    num_elem_scalar_vars ++;
+                    break;
+                case material_pt_state::mass:
+                    num_elem_scalar_vars ++;
+                    break;
+                // tensor vars to write out
+                case material_pt_state::stress:
+                    num_elem_tensor_vars ++;
+                    break;
+                
+                // add other variables here
+
+                // not used
+                case material_pt_state::volume_fraction:
+                    break;
+                case material_pt_state::eroded_flag:
+                    break;
+                case material_pt_state::elastic_modulii:
+                    break;
+                case material_pt_state::shear_modulii:
+                    break;
+                case material_pt_state::poisson_ratios:
+                    break;
+                case material_pt_state::heat_flux:
+                    break;
+                default:
+                    std::cout<<"Desired material point state not understood in outputs"<<std::endl;
+            } // end switch
+        } // end for over mat_pt_states
+
+        size_t num_gauss_pt_scalar_vars = 0;
+        size_t num_gauss_pt_tensor_vars = 0;
+
+        // gauss point values to ouptput
+        for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
+            switch(field){
+                // scalar vars to write out
+                case gauss_pt_state::volume:
+                    num_gauss_pt_scalar_vars ++;
+                    break;
+                case gauss_pt_state::divergence_velocity:
+                    num_gauss_pt_scalar_vars ++;
+                    break;
+                // tensor vars to write out
+                case gauss_pt_state::gradient_velocity:
+                    num_gauss_pt_tensor_vars ++;
+                    break;
+                default:
+                    std::cout<<"Desired Gauss point state not understood in vtk outputs"<<std::endl;
+
+            } // end switch
+        } // end loop
+
+        // add the Gauss point state to the element state
+        num_elem_scalar_vars += num_gauss_pt_scalar_vars;
+        num_elem_tensor_vars += num_gauss_pt_tensor_vars;
+
+
+        // Scalar and tensor value names associated with a elem
+        std::vector<std::string> elem_scalar_var_names(num_elem_scalar_vars);
+        std::vector<std::string> elem_tensor_var_names(num_elem_tensor_vars);
+
+        // Scalar and tensor values associated with a material in part elems
+        std::vector<std::string> mat_elem_scalar_var_names(num_mat_pt_scalar_vars);
+        std::vector<std::string> mat_elem_tensor_var_names(num_mat_pt_tensor_vars);
+
+
+        // the ids to access a variable in the mat_scalar_var_name or tensor list
+        int mat_den_id = -1;
+        int mat_pres_id = -1;
+        int mat_sie_id = -1;
+        int mat_sspd_id = -1;
+        int mat_mass_id = -1;
+        int mat_volfrac_id = -1;  
+        int mat_eroded_id = -1;
+        int mat_stress_id = -1;
+
+        // the index for the scalar, vector, and tensor fields
+        size_t var = 0;
+        size_t vector_var = 0;
+        size_t tensor_var = 0;
+
+        // material point state to output
+        for (auto field : SimulationParamaters.output_options.output_mat_pt_state){
+            switch(field){
+                // scalar vars
+                case material_pt_state::density:
+                    mat_elem_scalar_var_names[var] = "mat_den";
+                    mat_den_id = var;
+                    var++;
+                    break;
+                case material_pt_state::pressure:
+                    mat_elem_scalar_var_names[var] = "mat_pres";
+                    mat_pres_id = var;
+                    var++;
+                    break;
+                case material_pt_state::specific_internal_energy:
+                    mat_elem_scalar_var_names[var] = "mat_sie";
+                    mat_sie_id = var;
+                    var++;
+                    break;
+                case material_pt_state::sound_speed:
+                    mat_elem_scalar_var_names[var] = "mat_sspd";
+                    mat_sspd_id = var;
+                    var++;
+                    break;
+                case material_pt_state::mass:
+                    mat_elem_scalar_var_names[var] = "mat_mass";
+                    mat_mass_id = var;
+                    var++;
+                    break;
+                case material_pt_state::volume_fraction:
+                    mat_elem_scalar_var_names[var] = "mat_volfrac";
+                    mat_volfrac_id = var; 
+                    var++;
+                    break;
+                case material_pt_state::eroded_flag:
+                    mat_elem_scalar_var_names[var] = "mat_eroded";
+                    mat_eroded_id = var;
+                    var++;
+                    break;
+                // tensor vars
+                case material_pt_state::stress:
+                    mat_elem_tensor_var_names[tensor_var] = "mat_stress";
+                    mat_stress_id = tensor_var;
+                    tensor_var++;
+                    break;
+
+                // add other variables here
+
+                // not used
+                case material_pt_state::elastic_modulii:
+                    break;
+                case material_pt_state::shear_modulii:
+                    break;
+                case material_pt_state::poisson_ratios:
+                    break;
+                case material_pt_state::heat_flux:
+                    break;
+            } // end switch
+        } // end for over mat_pt_states
+
+
+        // element average fields to output
+
+        // the ids to access a variable in the elem_scalar_var_name or tensor list
+        int den_id = -1;
+        int pres_id = -1;
+        int sie_id = -1;
+        int sspd_id = -1;
+        int mass_id = -1; 
+        int eroded_id = -1;
+        int stress_id = -1;
+
+        // reset the counters
+        var = 0;
+        vector_var = 0;
+        tensor_var = 0;
+
+        // element state to output
+        for (auto field : SimulationParamaters.output_options.output_elem_state){
+            switch(field){
+                // scalar vars
+                case material_pt_state::density:
+                    elem_scalar_var_names[var] = "den";
+                    den_id = var;
+                    var++;
+                    break;
+                case material_pt_state::pressure:
+                    elem_scalar_var_names[var] = "pres";
+                    pres_id = var;
+                    var++;
+                    break;
+                case material_pt_state::specific_internal_energy:
+                    elem_scalar_var_names[var] = "sie";
+                    sie_id = var;
+                    var++;
+                    break;
+                case material_pt_state::sound_speed:
+                    elem_scalar_var_names[var] = "sspd";
+                    sspd_id = var;
+                    var++;
+                    break;
+                case material_pt_state::mass:
+                    elem_scalar_var_names[var] = "mass";
+                    mass_id = var;
+                    var++;
+                    break;
+                // tensor vars
+                case material_pt_state::stress:
+                    elem_tensor_var_names[tensor_var] = "stress";
+                    stress_id = tensor_var;
+                    tensor_var++;
+                    break;
+
+                // add other variables here
+
+                // not used
+                case material_pt_state::volume_fraction:
+                    break;
+                case material_pt_state::eroded_flag:
+                    break;
+                case material_pt_state::elastic_modulii:
+                    break;
+                case material_pt_state::shear_modulii:
+                    break;
+                case material_pt_state::poisson_ratios:
+                    break;
+                case material_pt_state::heat_flux:
+                    break;
+            } // end switch
+        } // end for over mat_pt_states
+
+        // append Gauss point vars to the element arrays
+        int vol_id = -1;
+        int div_id = -1;
+        int vel_grad_id = -1;
+
+        for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
+            switch(field){
+                // scalars
+                case gauss_pt_state::volume:
+                    elem_scalar_var_names[var] = "vol";
+                    vol_id = var;
+                    var++;
+                    break;
+                case gauss_pt_state::divergence_velocity:
+                    elem_scalar_var_names[var] = "div";
+                    div_id = var;
+                    var++;
+                    break;
+                // tensors
+
+                // tensors
+                case gauss_pt_state::gradient_velocity:
+                    elem_tensor_var_names[tensor_var] = "vel_grad";
+                    vel_grad_id = tensor_var;
+                    tensor_var++;
+                    break;
+            } // end switch
+        } // end loop over gauss_pt_states
+
+
+        // *******************
+        //  nodal values
+        // *******************
+
+        size_t num_node_scalar_vars = 0;
+        size_t num_node_vector_vars = 0;
+
+        for (auto field : SimulationParamaters.output_options.output_node_state){
+            switch(field){
+                case node_state::mass:
+                    num_node_scalar_vars ++;
+                    break;
+                case node_state::temp:
+                    num_node_scalar_vars ++;
+                    break;
+                case node_state::coords:
+                    num_node_vector_vars ++;
+                    break;
+                case node_state::velocity:
+                    num_node_vector_vars ++; // for velocity
+                    num_node_vector_vars ++; // for acceleration
+                    break;
+                case node_state::force:
+                    break;
+            } // end switch
+        } // end for over 
+        Kokkos::fence();
+
+
+        // Scalar and vector values associated with a node
+        std::vector<std::string> node_scalar_var_names(num_node_scalar_vars);
+        std::vector<std::string> node_vector_var_names(num_node_vector_vars);
+
+        int node_mass_id = -1;
+        int node_vel_id = -1;
+        int node_accel_id = -1;
+        int node_coord_id = -1;
+        int node_temp_id = -1;
+
+        // reset counters for node fields
+        var = 0;
+        vector_var = 0;
+        tensor_var = 0;
+
+        for (auto field : SimulationParamaters.output_options.output_node_state){
+            switch(field){
+                // scalars
+                case node_state::mass:
+                    node_scalar_var_names[var] = "node_mass";
+                    node_mass_id = var;
+                    var++;
+                    break;
+                case node_state::temp:
+                    node_scalar_var_names[var] = "node_temp";
+                    node_temp_id = var;
+                    var++;
+                    break;
+                // vector fields
+                case node_state::coords:
+                    node_vector_var_names[vector_var] = "node_coords";
+                    node_coord_id = vector_var;
+                    vector_var++;
+                    break;
+                case node_state::velocity:
+                    node_vector_var_names[vector_var] = "node_vel";
+                    node_vel_id = vector_var;
+                    vector_var++;
+
+                    node_vector_var_names[vector_var] = "node_accel";
+                    node_accel_id = vector_var;
+                    vector_var++;
+                    break;
+                case node_state::force:
+                    break;
+                // tensors
+            } // end switch
+        } // end for over 
+
+
+        // **************************************
+        //  build and save element average fields
+        // **************************************
+
+        // short hand
+        const size_t num_nodes = mesh.num_nodes;
+        const size_t num_elems = mesh.num_elems;
+        const size_t num_dims  = mesh.num_dims;
+        const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
+        const int Pn_order = mesh.Pn;
+
+        // save the elem state to an array for exporting to graphics files
+        DCArrayKokkos<double> elem_scalar_fields(num_elem_scalar_vars, num_elems);
+        DCArrayKokkos<double> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3);
+        elem_scalar_fields.set_values(0.0);
+        elem_tensor_fields.set_values(0.0);
+        int  elem_switch = 1;
+
+        // -----------------------------------------------------------------------
+        // save the output fields to a single element average array for all state
+        // -----------------------------------------------------------------------
+        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+            // material point and guass point state are concatenated together
+            concatenate_elem_fields(State.MaterialPoints(mat_id),
+                                    State.GaussPoints,
+                                    elem_scalar_fields,
+                                    elem_tensor_fields,
+                                    State.MaterialToMeshMaps(mat_id).elem,
+                                    SimulationParamaters.output_options.output_elem_state,
+                                    SimulationParamaters.output_options.output_gauss_pt_state,
+                                    num_mat_elems,
+                                    num_elems,
+                                    den_id,
+                                    pres_id,
+                                    sie_id,
+                                    sspd_id,
+                                    mass_id,
+                                    stress_id,
+                                    vol_id,
+                                    div_id,
+                                    vel_grad_id
+                                    );
+        } // end for mats
+
+        // make specific fields for the element average
+        if (sie_id>=0){
+            FOR_ALL(elem_gid, 0, num_elems, {
+                // get sie by dividing by the mass
+                elem_scalar_fields(sie_id, elem_gid) /= elem_scalar_fields(mass_id, elem_gid); 
+            });
+        } // end if
+
+        Kokkos::fence();
+        elem_scalar_fields.update_host();
+        elem_tensor_fields.update_host();
+        
+
+
+        // ************************
+        //  Build the nodal fields 
+        // ************************
+
+        // save the nodal fields to an array for exporting to graphics files
+        DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes);
+        DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3);
+        
+        concatenate_nodal_fields(State.node,
+                                 node_scalar_fields,
+                                 node_vector_fields,
+                                 SimulationParamaters.output_options.output_node_state,
+                                 dt,
+                                 num_nodes,
+                                 num_dims,
+                                 node_mass_id,
+                                 node_vel_id,
+                                 node_accel_id,
+                                 node_coord_id,
+                                 node_temp_id);
+
+        Kokkos::fence();
+        node_scalar_fields.update_host();
+        node_vector_fields.update_host();
+
+
+        // ********************************
+        //  Write the nodal and elem fields 
+        // ********************************
+
+        if (SimulationParamaters.output_options.format == output_options::viz ||
+            SimulationParamaters.output_options.format == output_options::viz_and_state) {
+
+            // create the folder structure if it does not exist
+            struct stat st;
+
+            if (stat("vtk", &st) != 0) {
+                system("mkdir vtk");
+            }
+
+            if (stat("vtk/data", &st) != 0) {
+                system("mkdir vtk/data");
+            }
+            
+            // call the .vtu writer for element fields
+            std::string elem_fields_name = "fields";
+
+            // make a view of node coords for passing into functions
+            ViewCArray <double> node_coords_host(&State.node.coords.host(1,0,0), num_nodes, num_dims);
+            ViewCArray <size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0,0), num_elems, num_nodes_in_elem);
+            write_vtu(node_coords_host,
+                    nodes_in_elem_host,
+                    elem_scalar_fields,
+                    elem_tensor_fields,
+                    node_scalar_fields,
+                    node_vector_fields,
+                    elem_scalar_var_names,
+                    elem_tensor_var_names,
+                    node_scalar_var_names,
+                    node_vector_var_names,
+                    elem_fields_name,
+                    graphics_id,
+                    num_nodes,
+                    num_elems,
+                    num_nodes_in_elem,
+                    Pn_order,
+                    num_dims);
+
+
+            // ********************************
+            //  Build and write the mat fields 
+            // ********************************
+
+
+            // note: the file path and folder was created in the elem and node outputs
+
+            if(num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars >0){
+
+                for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+                    size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+                    // set the nodal vars to zero size, we don't write these fields again
+                    node_scalar_var_names.clear();
+                    node_vector_var_names.clear();
+
+                    // the arrays storing all the material field data
+                    DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems);
+                    DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3);
+
+                    // concatenate material fields into a single array
+                    concatenate_mat_fields(State.MaterialPoints(mat_id),
+                                        mat_elem_scalar_fields,
+                                        mat_elem_tensor_fields,
+                                        State.MaterialToMeshMaps(mat_id).elem,
+                                        SimulationParamaters.output_options.output_mat_pt_state,
+                                        num_mat_elems,
+                                        mat_den_id,
+                                        mat_pres_id,
+                                        mat_sie_id,
+                                        mat_sspd_id,
+                                        mat_mass_id,
+                                        mat_volfrac_id,  
+                                        mat_eroded_id,
+                                        mat_stress_id);
+                    Kokkos::fence();
+                    mat_elem_scalar_fields.update_host();
+                    mat_elem_tensor_fields.update_host();
+
+                    std::string str_mat_val = std::to_string(mat_id);                       
+                    std::string mat_fields_name = "mat";
+                    mat_fields_name += str_mat_val;  // add the mat number
+
+                    // save the nodes belonging to this part (i.e., the material)
+                    DCArrayKokkos <double> mat_node_coords(num_nodes,3);
+                    DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem);
+
+                    // the number of actual nodes belonging to the part (i.e., the material)
+                    size_t num_mat_nodes = 0;
+
+                    // build a unique mesh (element and nodes) for the material (i.e., the part)
+                    build_material_elem_node_lists(mesh,
+                                                State.node.coords,
+                                                mat_node_coords,
+                                                mat_nodes_in_mat_elem,
+                                                State.MaterialToMeshMaps(mat_id).elem,
+                                                num_mat_nodes,
+                                                num_mat_elems,
+                                                num_nodes_in_elem,
+                                                num_dims);
+
+                    ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
+                    ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
+                    
+                    // write out a vtu file this 
+                    write_vtu(mat_node_coords_host,
+                            mat_nodes_in_elem_host,
+                            mat_elem_scalar_fields,
+                            mat_elem_tensor_fields,
+                            node_scalar_fields,
+                            node_vector_fields,
+                            mat_elem_scalar_var_names,
+                            mat_elem_tensor_var_names,
+                            node_scalar_var_names,
+                            node_vector_var_names,
+                            mat_fields_name,
+                            graphics_id,
+                            num_mat_nodes,
+                            num_mat_elems,
+                            num_nodes_in_elem,
+                            Pn_order,
+                            num_dims);
+
+                } // end for mat_id
+                
+            } // end if mat variables are to be written
+
+
+            // *************************************************
+            //  write Paraview files to open the graphics files
+            // *************************************************
+
+            // save the graphics time
+            graphics_times(graphics_id) = time_value;
+
+            // check to see if an mesh state was written 
+            bool write_mesh_state = false;
+            if( num_elem_scalar_vars > 0 ||
+                num_elem_tensor_vars > 0 ||
+                num_node_scalar_vars > 0 ||
+                num_node_vector_vars > 0)
+            {
+                write_mesh_state = true;
+            }
+
+            // check to see if a mat state was written
+            bool write_mat_pt_state = false;
+            if( num_mat_pt_scalar_vars > 0 ||
+                num_mat_pt_tensor_vars > 0)
+            {
+                 write_mat_pt_state = true;
+            }
+
+            // call the vtm file writer
+            std::string mat_fields_name = "mat";
+            write_vtm(graphics_times,
+                    elem_fields_name,
+                    mat_fields_name,
+                    time_value,
+                    graphics_id,
+                    num_mats,
+                    write_mesh_state,
+                    write_mat_pt_state);
+
+            // call the pvd file writer
+            write_pvd(graphics_times,
+                    time_value,
+                    graphics_id);
+
+
+            // increment graphics id counter
+            graphics_id++; // this is private variable in the class
+
+        } // end if viz paraview output is to be written
+
+
+        // STATE
+        if (SimulationParamaters.output_options.format == output_options::state ||
+            SimulationParamaters.output_options.format == output_options::viz_and_state) {
+
             write_material_point_state(mesh,
                                       State,
                                       SimulationParamaters,
@@ -2022,17 +2771,9 @@ public:
                                       node_states,
                                       gauss_pt_states,
                                       material_pt_states);
-        }
-        else{
-            std::cout << "**** MESH OUTPUT TYPE NOT SUPPORTED **** " << std::endl;
-            std::cout << "Valid options are: " << std::endl;
-            auto map = output_format_map;
-            for (const auto& pair : map) {
-                std::cout << "\t" << pair.first << std::endl;
-            }
-            throw std::runtime_error("**** MESH OUTPUT TYPE NOT SUPPORTED ****");
-            // return;
-        }
+
+        } // end if state is to be written
+
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -2796,7 +3537,7 @@ public:
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
     /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
-    /// \param material_pt_states a std::vector of enums specifying the model
+    /// \param output_elem_state a std::vector of enums specifying the elem avg outputs
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
     ///
@@ -2806,8 +3547,8 @@ public:
                                  DCArrayKokkos<double>& elem_scalar_fields,
                                  DCArrayKokkos<double>& elem_tensor_fields,
                                  const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                                 const std::vector<material_pt_state>& material_pt_states,
-                                 const std::vector<gauss_pt_state>& gauss_pt_states,
+                                 const std::vector<material_pt_state>& output_elem_state,
+                                 const std::vector<gauss_pt_state>& output_gauss_pt_states,
                                  const size_t num_mat_elems,
                                  const size_t num_elems,
                                  const int den_id,
@@ -2815,17 +3556,15 @@ public:
                                  const int sie_id,
                                  const int sspd_id,
                                  const int mass_id,
-                                 const int volfrac_id,  
-                                 const int eroded_id,
                                  const int stress_id,
                                  const int vol_id,
                                  const int div_id,
                                  const int vel_grad_id)
     {
-        
+
         // --- loop over the material point states
 
-        for (auto field : material_pt_states){
+        for (auto field : output_elem_state){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
@@ -2883,28 +3622,6 @@ public:
                         elem_scalar_fields(mass_id, elem_gid) += MaterialPointsOfMatID.mass(mat_elem_lid);
                     });
                     break;
-                case material_pt_state::volume_fraction:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
-
-                        // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
-
-                        // field
-                        // this will become void fraction after this function is finished 
-                        elem_scalar_fields(volfrac_id, elem_gid) += MaterialPointsOfMatID.volfrac(mat_elem_lid);
-                    });
-                    break;
-                case material_pt_state::eroded_flag:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
-
-                        // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
-
-                        // field
-                        elem_scalar_fields(eroded_id, elem_gid) = fmax(elem_scalar_fields(eroded_id, elem_gid), 
-                                                                (double)MaterialPointsOfMatID.eroded(mat_elem_lid));
-                    });
-                    break;
                 // ---------------    
                 // tensor vars
                 // ---------------
@@ -2932,6 +3649,10 @@ public:
                 // add other variables here
 
                 // not used variables
+                case material_pt_state::volume_fraction:
+                    break;
+                case material_pt_state::eroded_flag:
+                    break;
                 case material_pt_state::elastic_modulii:
                     break;
                 case material_pt_state::shear_modulii:
@@ -2945,7 +3666,7 @@ public:
 
 
         // export element centric data
-        for (auto field : gauss_pt_states){
+        for (auto field : output_gauss_pt_states){
             switch(field){
                 // scalars
                 case gauss_pt_state::volume:
@@ -2995,7 +3716,7 @@ public:
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
     /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
-    /// \param material_pt_states a std::vector of enums specifying the model
+    /// \param output_material_pt_states a std::vector of enums specifying the model
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
     ///
@@ -3004,35 +3725,35 @@ public:
                                 DCArrayKokkos<double>& mat_elem_scalar_fields,
                                 DCArrayKokkos<double>& mat_elem_tensor_fields,
                                 const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                                const std::vector<material_pt_state>& material_pt_states,
+                                const std::vector<material_pt_state>& output_material_pt_states,
                                 const size_t num_mat_elems,
-                                const int den_id,
-                                const int pres_id,
-                                const int sie_id,
-                                const int sspd_id,
-                                const int mass_id,
-                                const int volfrac_id,  
-                                const int eroded_id,
-                                const int stress_id)
+                                const int mat_den_id,
+                                const int mat_pres_id,
+                                const int mat_sie_id,
+                                const int mat_sspd_id,
+                                const int mat_mass_id,
+                                const int mat_volfrac_id,  
+                                const int mat_eroded_id,
+                                const int mat_stress_id)
     {
         
         // --- loop over the material point states
 
-        for (auto field : material_pt_states){
+        for (auto field : output_material_pt_states){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(den_id, mat_elem_lid) = MaterialPointsOfMatID.den(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_den_id, mat_elem_lid) = MaterialPointsOfMatID.den(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::pressure:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(pres_id, mat_elem_lid) = MaterialPointsOfMatID.pres(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_pres_id, mat_elem_lid) = MaterialPointsOfMatID.pres(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::specific_internal_energy:
@@ -3040,21 +3761,21 @@ public:
 
                         // field
                         // extensive ie here, but after this function, it will become specific ie
-                        mat_elem_scalar_fields(sie_id, mat_elem_lid) = MaterialPointsOfMatID.mass(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_sie_id, mat_elem_lid) = MaterialPointsOfMatID.sie(1,mat_elem_lid);
                     });
                     break;
                 case material_pt_state::sound_speed:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(sspd_id, mat_elem_lid) = MaterialPointsOfMatID.sspd(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_sspd_id, mat_elem_lid) = MaterialPointsOfMatID.sspd(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::mass:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mass_id, mat_elem_lid) = MaterialPointsOfMatID.mass(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_mass_id, mat_elem_lid) = MaterialPointsOfMatID.mass(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::volume_fraction:
@@ -3062,14 +3783,14 @@ public:
 
                         // field
                         // this is the volume fraction
-                        mat_elem_scalar_fields(volfrac_id, mat_elem_lid) = MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_volfrac_id, mat_elem_lid) = MaterialPointsOfMatID.volfrac(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::eroded_flag:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(eroded_id, mat_elem_lid) = (double)MaterialPointsOfMatID.eroded(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_eroded_id, mat_elem_lid) = (double)MaterialPointsOfMatID.eroded(mat_elem_lid);
                     });
                     break;
                 // ---------------    
@@ -3085,7 +3806,7 @@ public:
                             for(size_t j=0; j<3; j++){
 
                                 // stress tensor 
-                                mat_elem_tensor_fields(stress_id, mat_elem_lid, i, j) =
+                                mat_elem_tensor_fields(mat_stress_id, mat_elem_lid, i, j) =
                                                 MaterialPointsOfMatID.stress(1,mat_elem_lid,i,j);
                             } // end for
                         } // end for
@@ -3106,6 +3827,7 @@ public:
             } // end switch
         }// end for over mat point state
 
+
     } // end of function
     
     /////////////////////////////////////////////////////////////////////////////
@@ -3119,7 +3841,7 @@ public:
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
     /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
-    /// \param material_pt_states a std::vector of enums specifying the model
+    /// \param output_node_states a std::vector of enums specifying the model
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
     ///
@@ -3127,7 +3849,7 @@ public:
     void concatenate_nodal_fields(const node_t& Node,
                                   DCArrayKokkos<double>& node_scalar_fields,
                                   DCArrayKokkos<double>& node_vector_fields,
-                                  std::vector<node_state>& node_states,
+                                  std::vector<node_state>& output_node_states,
                                   double dt,
                                   const size_t num_nodes,
                                   const size_t num_dims,
@@ -3137,7 +3859,7 @@ public:
                                   const int node_coord_id,
                                   const int node_temp_id)
     {
-        for (auto field : node_states){
+        for (auto field : output_node_states){
             switch(field){
                 // scalars
                 case node_state::mass:
@@ -3444,7 +4166,7 @@ public:
         fprintf(out[0], "</VTKFile>\n");
         
         //-----------------
-        // close the vtu file for element average fields
+        // close the vtu file for element fields
         //-----------------
         fclose(out[0]);
 
@@ -3512,7 +4234,9 @@ public:
                    const  std::string& mat_part_name,
                    double time_value,
                    int graphics_id,
-                   int num_mats)
+                   int num_mats,
+                   bool write_mesh_state,
+                   bool write_mat_pt_state)
     {
         // loop over all the files that were written 
         for(int file_id=0; file_id<=graphics_id; file_id++){
@@ -3535,30 +4259,36 @@ public:
             fprintf(out[0], "  <vtkMultiBlockDataSet>\n");
 
             
-            // Average mesh fields
-            fprintf(out[0], "    <Block index=\"0\" name=\"Mesh\">\n");
-            {
-                // elem and nodal fields are in this file
-                fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
-                fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"meshHexPn.%s.%05d.vtu\" time= \"%12.5e\" />\n", file_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
-                fprintf(out[0], "      </Piece>\n");
+            // Average mesh fields -- node and elem state written
+            size_t block_id = 0;  // this will need to be incremented based on the number of mesh fields written
+            if(write_mesh_state){
+                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
+                {
+                    block_id++;  // increment block id for material outputs that follow the element avg block
 
-                // add other Mesh average output Pieces here
-            }
-            fprintf(out[0], "    </Block>\n");
+                    // elem and nodal fields are in this file
+                    fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
+                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"meshHexPn.%s.%05d.vtu\" time= \"%12.5e\" />\n", file_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
+                    fprintf(out[0], "      </Piece>\n");
 
+                    // add other Mesh average output Pieces here
+                }
+                fprintf(out[0], "    </Block>\n");
+            } // end if write elem and node state is true
 
-            size_t block_id = 1;  // this will need to be incremented based on the number of mesh fields written
-            fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
-            for (size_t mat_id=0; mat_id<num_mats; mat_id++){
-                
-                // output the material specific fields
-                fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
-                fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"meshHexPn.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", file_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
-                fprintf(out[0], "      </Piece>\n");
+            // note: the block_id was incremented if an element average field output was made
+            if(write_mat_pt_state){
+                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
+                for (size_t mat_id=0; mat_id<num_mats; mat_id++){
+                    
+                    // output the material specific fields
+                    fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
+                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"meshHexPn.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", file_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
+                    fprintf(out[0], "      </Piece>\n");
 
-            } // end for loop mat_id
-            fprintf(out[0], "    </Block>\n");
+                } // end for loop mat_id
+                fprintf(out[0], "    </Block>\n");
+            } // end if write mat satte is true
 
             // done writing the files to be read by the vtm file
             fprintf(out[0], "  </vtkMultiBlockDataSet>\n");
@@ -3673,585 +4403,6 @@ public:
     } // end build part (i.e., material elem and point lists) function
 
 
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn write_vtk
-    ///
-    /// \brief Writes a vtk output file
-    ///
-    /// \param Simulation mesh
-    /// \param State data
-    /// \param Simulation parameters
-    /// \param current time value
-    /// \param Vector of all graphics output times
-    ///
-    /////////////////////////////////////////////////////////////////////////////
-    void write_vtk(Mesh_t& mesh,
-        State_t& State,
-        SimulationParameters_t& SimulationParamaters,
-        double dt,
-        double time_value,
-        CArray<double>& graphics_times,
-        std::vector<node_state>& node_states,
-        std::vector<gauss_pt_state>& gauss_pt_states,
-        std::vector<material_pt_state>& material_pt_states)
-    {
-
-        // node_state is an enum for possible fields (e.g., coords, velocity, etc.), see state.h
-        // gauss_pt_state is an enum for possible fields (e.g., vol, divergence, etc.)
-        // material_pt_state is an enum for possible fields (e.g., den, pres, etc.)
-
-
-        // *******************
-        //  element values
-        // *******************
-
-        const size_t num_mats = State.MaterialPoints.size();
-
-        // material point values
-
-        size_t num_mat_pt_scalar_vars;
-        size_t num_mat_pt_tensor_vars;
-
-        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-
-            num_mat_pt_scalar_vars = 0;
-            num_mat_pt_tensor_vars = 0;
-            
-            // ---- Update host data ----
-            for (auto field : material_pt_states){
-                switch(field){
-                    // scalar vars to write out
-                    case material_pt_state::density:
-                        State.MaterialPoints(mat_id).den.update_host();
-                        num_mat_pt_scalar_vars ++;
-                        break;
-                    case material_pt_state::pressure:
-                        State.MaterialPoints(mat_id).pres.update_host();
-                        num_mat_pt_scalar_vars ++;
-                        break;
-                    case material_pt_state::specific_internal_energy:
-                        State.MaterialPoints(mat_id).sie.update_host();
-                        num_mat_pt_scalar_vars ++;
-                        break;
-                    case material_pt_state::sound_speed:
-                        State.MaterialPoints(mat_id).sspd.update_host();
-                        num_mat_pt_scalar_vars ++;
-                        break;
-                    case material_pt_state::mass:
-                        State.MaterialPoints(mat_id).mass.update_host();
-                        num_mat_pt_scalar_vars ++;
-                        break;
-                    case material_pt_state::volume_fraction:
-                        State.MaterialPoints(mat_id).volfrac.update_host();
-                        num_mat_pt_scalar_vars ++;
-                        break;
-                    case material_pt_state::eroded_flag:
-                        State.MaterialPoints(mat_id).eroded.update_host();
-                        num_mat_pt_scalar_vars ++;
-                        break;
-                    // tensor vars to write out
-                    case material_pt_state::stress:
-                        State.MaterialPoints(mat_id).stress.update_host();
-                        num_mat_pt_tensor_vars ++;
-                        break;
-                  
-                    // add other variables here
-
-                    // not used
-                    case material_pt_state::elastic_modulii:
-                        break;
-                    case material_pt_state::shear_modulii:
-                        break;
-                    case material_pt_state::poisson_ratios:
-                        break;
-                    case material_pt_state::heat_flux:
-                        break;
-                    default:
-                        std::cout<<"Desired material point state not understood in vtk outputs"<<std::endl;
-                } // end switch
-            } // end for over mat_pt_states
-
-        } // end for mat_id
-
-
-        // gauss point values
-
-        size_t num_gauss_pt_scalar_vars = 0;
-        size_t num_gauss_pt_tensor_vars = 0;
-
-        for (auto field : gauss_pt_states){
-            switch(field){
-                // scalar vars to write out
-                case gauss_pt_state::volume:
-                    State.GaussPoints.vol.update_host();
-                    num_gauss_pt_scalar_vars ++;
-                    break;
-                case gauss_pt_state::divergence_velocity:
-                    State.GaussPoints.div.update_host();
-                    num_gauss_pt_scalar_vars ++;
-                    break;
-                // tensor vars to write out
-                case gauss_pt_state::gradient_velocity:
-                    State.GaussPoints.vel_grad.update_host();
-                    num_gauss_pt_tensor_vars ++;
-                    break;
-                default:
-                    std::cout<<"Desired Gauss point state not understood in vtk outputs"<<std::endl;
-
-            } // end switch
-        } // end loop
-        Kokkos::fence();
-
-        const size_t num_elem_scalar_vars = num_mat_pt_scalar_vars + num_gauss_pt_scalar_vars;
-        const size_t num_elem_tensor_vars = num_mat_pt_tensor_vars + num_gauss_pt_tensor_vars;
-
-
-        // Scalar and tensor value names associated with a elem
-        std::vector<std::string> elem_scalar_var_names(num_elem_scalar_vars);
-        std::vector<std::string> elem_tensor_var_names(num_elem_tensor_vars);
-
-        // Scalar and tensor values associated with a material in part elems
-        std::vector<std::string> mat_elem_scalar_var_names(num_mat_pt_scalar_vars);
-        std::vector<std::string> mat_elem_tensor_var_names(num_mat_pt_tensor_vars);
-
-        // the ids to access a variable in the elem_scalar_var_name list
-        int den_id = -1;
-        int pres_id = -1;
-        int sie_id = -1;
-        int sspd_id = -1;
-        int mass_id = -1;
-        int volfrac_id = -1;  // this is for void fraction
-        int eroded_id = -1;
-        int stress_id = -1;
-
-        // the index for the scalar, vector, and tensor fields
-        size_t var = 0;
-        size_t vector_var = 0;
-        size_t tensor_var = 0;
-
-        for (auto field : material_pt_states){
-            switch(field){
-                // scalar vars
-                case material_pt_state::density:
-                    elem_scalar_var_names[var] = "den";
-                    mat_elem_scalar_var_names[var] = "mat_den";
-                    den_id = var;
-                    var++;
-                    break;
-                case material_pt_state::pressure:
-                    elem_scalar_var_names[var] = "pres";
-                    mat_elem_scalar_var_names[var] = "mat_pres";
-                    pres_id = var;
-                    var++;
-                    break;
-                case material_pt_state::specific_internal_energy:
-                    elem_scalar_var_names[var] = "sie";
-                    mat_elem_scalar_var_names[var] = "mat_sie";
-                    sie_id = var;
-                    var++;
-                    break;
-                case material_pt_state::sound_speed:
-                    elem_scalar_var_names[var] = "sspd";
-                    mat_elem_scalar_var_names[var] = "mat_sspd";
-                    sspd_id = var;
-                    var++;
-                    break;
-                case material_pt_state::mass:
-                    elem_scalar_var_names[var] = "mass";
-                    mat_elem_scalar_var_names[var] = "mat_mass";
-                    mass_id = var;
-                    var++;
-                    break;
-                case material_pt_state::volume_fraction:
-                    elem_scalar_var_names[var] = "voidfrac";
-                    mat_elem_scalar_var_names[var] = "mat_volfrac";
-                    volfrac_id = var; // used for void fraction
-                    var++;
-                    break;
-                case material_pt_state::eroded_flag:
-                    elem_scalar_var_names[var] = "eroded";
-                    mat_elem_scalar_var_names[var] = "mat_eroded";
-                    eroded_id = var;
-                    var++;
-                    break;
-                // tensor vars
-                case material_pt_state::stress:
-                    elem_tensor_var_names[tensor_var] = "stress";
-                    mat_elem_tensor_var_names[tensor_var] = "mat_stress";
-                    stress_id = tensor_var;
-                    tensor_var++;
-                    break;
-
-                // add other variables here
-
-                // not used
-                case material_pt_state::elastic_modulii:
-                    break;
-                case material_pt_state::shear_modulii:
-                    break;
-                case material_pt_state::poisson_ratios:
-                    break;
-                case material_pt_state::heat_flux:
-                    break;
-            } // end switch
-        } // end for over mat_pt_states
-
-        // append Gauss point vars
-        int vol_id = -1;
-        int div_id = -1;
-        int vel_grad_id = -1;
-
-        for (auto field : gauss_pt_states){
-            switch(field){
-                // scalars
-                case gauss_pt_state::volume:
-                    elem_scalar_var_names[var] = "vol";
-                    vol_id = var;
-                    var++;
-                    break;
-                case gauss_pt_state::divergence_velocity:
-                    elem_scalar_var_names[var] = "div";
-                    div_id = var;
-                    var++;
-                    break;
-                // tensors
-
-                // tensors
-                case gauss_pt_state::gradient_velocity:
-                    elem_tensor_var_names[tensor_var] = "vel_grad";
-                    vel_grad_id = tensor_var;
-                    tensor_var++;
-                    break;
-            } // end switch
-        } // end loop over gauss_pt_states
-
-
-        // *******************
-        //  nodal values
-        // *******************
-        size_t num_node_scalar_vars = 0;
-        size_t num_node_vector_vars = 0;
-
-        for (auto field : node_states){
-            switch(field){
-                case node_state::mass:
-                    State.node.mass.update_host();
-                    num_node_scalar_vars ++;
-                    break;
-                case node_state::temp:
-                    State.node.temp.update_host();
-                    num_node_scalar_vars ++;
-                    break;
-                case node_state::coords:
-                    State.node.coords.update_host();
-                    num_node_vector_vars ++;
-                    break;
-                case node_state::velocity:
-                    State.node.vel.update_host();
-                    num_node_vector_vars ++; // for velocity
-                    num_node_vector_vars ++; // for acceleration
-                    break;
-                case node_state::force:
-                    break;
-            } // end switch
-        } // end for over 
-        Kokkos::fence();
-
-
-
-        // Scalar and vector values associated with a node
-        std::vector<std::string> node_scalar_var_names(num_node_scalar_vars);
-        std::vector<std::string> node_vector_var_names(num_node_vector_vars);
-
-        int node_mass_id = -1;
-        int node_vel_id = -1;
-        int node_accel_id = -1;
-        int node_coord_id = -1;
-        int node_temp_id = -1;
-
-        // reset counters for node fields
-        var = 0;
-        vector_var = 0;
-        tensor_var = 0;
-
-        for (auto field : node_states){
-            switch(field){
-                // scalars
-                case node_state::mass:
-                    node_scalar_var_names[var] = "node_mass";
-                    node_mass_id = var;
-                    var++;
-                    break;
-                case node_state::temp:
-                    node_scalar_var_names[var] = "node_temp";
-                    node_temp_id = var;
-                    var++;
-                    break;
-                // vector fields
-                case node_state::coords:
-                    node_vector_var_names[vector_var] = "node_coords";
-                    node_coord_id = vector_var;
-                    vector_var++;
-                    break;
-                case node_state::velocity:
-                    node_vector_var_names[vector_var] = "node_vel";
-                    node_vel_id = vector_var;
-                    vector_var++;
-
-                    node_vector_var_names[vector_var] = "node_accel";
-                    node_accel_id = vector_var;
-                    vector_var++;
-                    break;
-                case node_state::force:
-                    break;
-                // tensors
-            } // end switch
-        } // end for over 
-
-
-        // **************************************
-        //  build and save element average fields
-        // **************************************
-
-        // short hand
-        const size_t num_nodes = mesh.num_nodes;
-        const size_t num_elems = mesh.num_elems;
-        const size_t num_dims  = mesh.num_dims;
-        const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
-        const int Pn_order = mesh.Pn;
-
-        // save the elem state to an array for exporting to graphics files
-        DCArrayKokkos<double> elem_scalar_fields(num_elem_scalar_vars, num_elems);
-        DCArrayKokkos<double> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3);
-        elem_scalar_fields.set_values(0.0);
-        elem_tensor_fields.set_values(0.0);
-        int  elem_switch = 1;
-
-        // -----------------------------------------------------------------------
-        // save the output fields to a single element average array for all state
-        // -----------------------------------------------------------------------
-        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
-            // material point and guass point state are concatenated together
-            concatenate_elem_fields(State.MaterialPoints(mat_id),
-                                    State.GaussPoints,
-                                    elem_scalar_fields,
-                                    elem_tensor_fields,
-                                    State.MaterialToMeshMaps(mat_id).elem,
-                                    material_pt_states,
-                                    gauss_pt_states,
-                                    num_mat_elems,
-                                    num_elems,
-                                    den_id,
-                                    pres_id,
-                                    sie_id,
-                                    sspd_id,
-                                    mass_id,
-                                    volfrac_id,  
-                                    eroded_id,
-                                    stress_id,
-                                    vol_id,
-                                    div_id,
-                                    vel_grad_id
-                                    );
-        } // end for mats
-
-        // make specific fields for the element average
-        if (sie_id>=0){
-            FOR_ALL(elem_gid, 0, num_elems, {
-                // get sie by dividing by the mass
-                elem_scalar_fields(sie_id, elem_gid) /= elem_scalar_fields(mass_id, elem_gid); 
-            });
-        } // end if
-        if (volfrac_id>=0){
-            FOR_ALL(elem_gid, 0, num_elems, {
-                // making it void fraction
-                elem_scalar_fields(volfrac_id, elem_gid) = 1.0 - elem_scalar_fields(volfrac_id, elem_gid);
-            });
-        } // end if
-
-        Kokkos::fence();
-        elem_scalar_fields.update_host();
-        elem_tensor_fields.update_host();
-        
-
-
-        // **********************
-        //  get the nodal fields 
-        // **********************
-
-        // save the nodal fields to an array for exporting to graphics files
-        DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes);
-        DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3);
-        
-        concatenate_nodal_fields(State.node,
-                                 node_scalar_fields,
-                                 node_vector_fields,
-                                 node_states,
-                                 dt,
-                                 num_nodes,
-                                 num_dims,
-                                 node_mass_id,
-                                 node_vel_id,
-                                 node_accel_id,
-                                 node_coord_id,
-                                 node_temp_id);
-
-        Kokkos::fence();
-        node_scalar_fields.update_host();
-        node_vector_fields.update_host();
-
-
-        // **********************
-        //  write fields
-        // **********************
-
-        // create the folder structure if it does not exist
-        struct stat st;
-
-        if (stat("vtk", &st) != 0) {
-            system("mkdir vtk");
-        }
-
-        if (stat("vtk/data", &st) != 0) {
-            system("mkdir vtk/data");
-        }
-
-        
-        // call the .vtu writer for element fields
-        std::string elem_fields_name = "fields";
-
-        // make a view of node coords for passing into functions
-        ViewCArray <double> node_coords_host(&State.node.coords.host(1,0,0), num_nodes, num_dims);
-        ViewCArray <size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0,0), num_elems, num_nodes_in_elem);
-        write_vtu(node_coords_host,
-                  nodes_in_elem_host,
-                  elem_scalar_fields,
-                  elem_tensor_fields,
-                  node_scalar_fields,
-                  node_vector_fields,
-                  elem_scalar_var_names,
-                  elem_tensor_var_names,
-                  node_scalar_var_names,
-                  node_vector_var_names,
-                  elem_fields_name,
-                  graphics_id,
-                  num_nodes,
-                  num_elems,
-                  num_nodes_in_elem,
-                  Pn_order,
-                  num_dims);
-
-
-        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-
-            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
-
-            // set the nodal vars to zero size, we don't write these fields again
-            node_scalar_var_names.clear();
-            node_vector_var_names.clear();
-
-            // the arrays storing all the material field data
-            DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems);
-            DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3);
-
-            // concatenate material fields into a single array
-            concatenate_mat_fields(State.MaterialPoints(mat_id),
-                                   mat_elem_scalar_fields,
-                                   mat_elem_tensor_fields,
-                                   State.MaterialToMeshMaps(mat_id).elem,
-                                   material_pt_states,
-                                   num_mat_elems,
-                                   den_id,
-                                   pres_id,
-                                   sie_id,
-                                   sspd_id,
-                                   mass_id,
-                                   volfrac_id,  
-                                   eroded_id,
-                                   stress_id);
-            Kokkos::fence();
-            mat_elem_scalar_fields.update_host();
-            mat_elem_tensor_fields.update_host();
-
-            std::string str_mat_val = std::to_string(mat_id);                       
-            std::string mat_fields_name = "mat";
-            mat_fields_name += str_mat_val;  // add the mat number
-
-            // save the nodes belonging to this part (i.e., the material)
-            DCArrayKokkos <double> mat_node_coords(num_nodes,3);
-            DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem);
-
-            // the number of actual nodes belonging to the part (i.e., the material)
-            size_t num_mat_nodes = 0;
-
-            // build a unique mesh (element and nodes) for the material (i.e., the part)
-            build_material_elem_node_lists(mesh,
-                                           State.node.coords,
-                                           mat_node_coords,
-                                           mat_nodes_in_mat_elem,
-                                           State.MaterialToMeshMaps(mat_id).elem,
-                                           num_mat_nodes,
-                                           num_mat_elems,
-                                           num_nodes_in_elem,
-                                           num_dims);
-
-            ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
-            ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
-            
-            // write out a vtu file this 
-            write_vtu(mat_node_coords_host,
-                      mat_nodes_in_elem_host,
-                      mat_elem_scalar_fields,
-                      mat_elem_tensor_fields,
-                      node_scalar_fields,
-                      node_vector_fields,
-                      mat_elem_scalar_var_names,
-                      mat_elem_tensor_var_names,
-                      node_scalar_var_names,
-                      node_vector_var_names,
-                      mat_fields_name,
-                      graphics_id,
-                      num_mat_nodes,
-                      num_mat_elems,
-                      num_nodes_in_elem,
-                      Pn_order,
-                      num_dims);
-
-        } // end for mat_id
-
-
-        // *************************************************
-        //  write Paraview files to open the graphics files
-        // *************************************************
-
-        // save the graphics time
-        graphics_times(graphics_id) = time_value;
-
-
-        // call the vtm file writer
-        std::string mat_fields_name = "mat";
-        write_vtm(graphics_times,
-                  elem_fields_name,
-                  mat_fields_name,
-                  time_value,
-                  graphics_id,
-                  num_mats);
-
-
-        // call the pvd file writer
-        write_pvd(graphics_times,
-                  time_value,
-                  graphics_id);
-
-
-        // increment graphics id counter
-        graphics_id++; // this is private variable in the class
-
-    } // end write vtk
 
 
 

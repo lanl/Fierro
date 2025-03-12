@@ -944,6 +944,7 @@ void parse_output_options(Yaml::Node& root,
                 for (const auto& pair : map) {
                     std::cout << "\t" << pair.first << std::endl;
                 }
+                throw std::runtime_error("**** Output Format Not Understood ****");
             } // end if
         } // output format
         // get timer_output_level
@@ -960,12 +961,13 @@ void parse_output_options(Yaml::Node& root,
                 }
             }
             else{
-                std::cout << "ERROR: invalid output option input in YAML file: " << timer_level << std::endl;
+                std::cout << "ERROR: invalid timer output option input in YAML file: " << timer_level << std::endl;
                 std::cout << "Valid options are: " << std::endl;
 
                 for (const auto& pair : map) {
                     std::cout << "\t" << pair.first << std::endl;
                 }
+                throw std::runtime_error("**** Time Output Level Syntax Not Understood ****");
             } // end if
         } // timer_level
         // Graphics time step
@@ -1027,7 +1029,7 @@ void parse_output_options(Yaml::Node& root,
                     } // end if
 
                 } // end for over variables
-        } // end of elem fields outputs
+        } // end of nodal fields outputs
         else if (a_word.compare("gauss_pt_field_outputs") == 0) {
                 Yaml::Node & output_vars_yaml = root["output_options"][a_word];
 
@@ -1048,7 +1050,7 @@ void parse_output_options(Yaml::Node& root,
                     } // end if
 
                 } // end for over variables
-        } // end of elem fields outputs
+        } // end of gauss_pt fields outputs
         else if (a_word.compare("mat_pt_field_outputs") == 0) {
                 Yaml::Node & output_vars_yaml = root["output_options"][a_word];
 
@@ -1065,7 +1067,7 @@ void parse_output_options(Yaml::Node& root,
                         output_options.output_mat_pt_state.push_back(field_var);
                     }
                     else{
-                        throw std::runtime_error("**** Gauss Pnt Field Ouput Variable Name Not Understood ****");
+                        throw std::runtime_error("**** Mat Pnt Field Ouput Variable Name Not Understood ****");
                     } // end if
 
                 } // end for over variables

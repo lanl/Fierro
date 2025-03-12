@@ -43,10 +43,9 @@ namespace output_options
 // output file options
 enum format
 {
-    vtu = 0,
-    ensight = 1,
-    state = 2,
-    vtk = 3,
+    viz = 0,
+    state = 1,
+    viz_and_state = 2
 };
 
 // timer output level
@@ -58,9 +57,9 @@ enum timer_output_level
 
 static std::map<std::string, output_options::format> output_format_map
 {
-    { "vtu", output_options::vtu },
-    { "ensight", output_options::ensight },
-    { "state", output_options::state }
+    { "viz", output_options::viz },
+    { "state", output_options::state },
+    { "viz_and_state", output_options::viz_and_state }
 };
 
 static std::map<std::string, output_options::timer_output_level> timer_output_level_map
@@ -143,7 +142,7 @@ static std::vector<std::string> str_output_options_inps
     "graphics_iteration_step",
     "elem_field_outputs",
     "node_field_outputs",
-    "mat_point_field_outputs",
+    "mat_pt_field_outputs",
     "gauss_pt_field_outputs"
 };
 
