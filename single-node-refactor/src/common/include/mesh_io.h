@@ -1162,7 +1162,7 @@ public:
         });
 
         // Convert from ensight linear hex to a IJK mesh
-        CArrayKokkos <size_t> convert_ensight_to_ijk(8);
+        CArrayKokkos <size_t> convert_ensight_to_ijk(8, "convert_ensight_to_ijk");
 
         // Convert the arbitrary order hex to a IJK mesh
         DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(mesh.num_nodes_in_elem, "convert_pn_vtk_to_ijk");

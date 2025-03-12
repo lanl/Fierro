@@ -301,7 +301,7 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
     found = false;
 
     // allocate memory for element voxel values
-    elem_values = DCArrayKokkos<size_t>(num_elems);
+    elem_values = DCArrayKokkos<size_t>(num_elems, "elem_values");
 
     // reading the cell data
     while (found == false) {
