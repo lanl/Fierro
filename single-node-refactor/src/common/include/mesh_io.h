@@ -2500,8 +2500,8 @@ public:
         const int Pn_order = mesh.Pn;
 
         // save the elem state to an array for exporting to graphics files
-        DCArrayKokkos<double> elem_scalar_fields(num_elem_scalar_vars, num_elems);
-        DCArrayKokkos<double> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3);
+        DCArrayKokkos<double> elem_scalar_fields(num_elem_scalar_vars, num_elems, "elem_scalars");
+        DCArrayKokkos<double> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3, "elem_tensors");
         elem_scalar_fields.set_values(0.0);
         elem_tensor_fields.set_values(0.0);
 
@@ -2552,8 +2552,8 @@ public:
         // ************************
 
         // save the nodal fields to an array for exporting to graphics files
-        DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes);
-        DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3);
+        DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
+        DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
         
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
@@ -2634,8 +2634,8 @@ public:
                     node_vector_var_names.clear();
 
                     // the arrays storing all the material field data
-                    DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems);
-                    DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3);
+                    DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
+                    DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
 
                     // concatenate material fields into a single array
                     concatenate_mat_fields(State.MaterialPoints(mat_id),
@@ -2661,8 +2661,8 @@ public:
                     mat_fields_name += str_mat_val;  // add the mat number
 
                     // save the nodes belonging to this part (i.e., the material)
-                    DCArrayKokkos <double> mat_node_coords(num_nodes,3);
-                    DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem);
+                    DCArrayKokkos <double> mat_node_coords(num_nodes,3, "mat_node_coords");
+                    DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem, "mat_nodes_in_mat_elem");
 
                     // the number of actual nodes belonging to the part (i.e., the material)
                     size_t num_mat_nodes = 0;
@@ -4325,8 +4325,8 @@ public:
     {
 
         // helper arrays
-        DCArrayKokkos <size_t> dummy_counter(mesh.num_nodes);
-        DCArrayKokkos <size_t> access_mat_node_gids(mesh.num_nodes);
+        DCArrayKokkos <size_t> dummy_counter(mesh.num_nodes, "dummy_counter");
+        DCArrayKokkos <size_t> access_mat_node_gids(mesh.num_nodes, "access_mat_node_gids");
         dummy_counter.set_values(0);
 
         // tag and count the number of nodes in this part
@@ -4361,7 +4361,7 @@ public:
                     mat_node_coords.host(mat_node_gid, 2) = state_node_coords.host(1, node_gid, 2);
                 } // end if on dims
 
-                access_mat_node_gids(node_gid) = mat_node_gid; // the part node id
+                access_mat_node_gids.host(node_gid) = mat_node_gid; // the part node id
 
                 mat_node_gid ++;
 
@@ -4369,9 +4369,10 @@ public:
             } // end if this node is on the part
 
         } // end loop over all mesh nodes
-        Kokkos::fence();
         mat_node_coords.update_device();
+        access_mat_node_gids.update_device();
         dummy_counter.update_device();
+        Kokkos::fence();
 
         // save the number of nodes defining the material region, i.e., the part
         num_mat_nodes = mat_node_gid;
