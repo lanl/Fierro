@@ -247,6 +247,7 @@ void SGTM3D::fill_regions_sgtm(
     GaussPoint_volfrac.update_host();
     State.node.vel.update_host();
     State.node.temp.update_host();
+    num_mats_saved_in_elem.update_host();
 
     Kokkos::fence();
 } // end SGH fill regions

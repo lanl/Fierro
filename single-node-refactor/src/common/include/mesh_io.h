@@ -2769,6 +2769,7 @@ public:
         } // end if state is to be written
 
 
+        // will drop ensight outputs in the near future
         if (SimulationParamaters.output_options.format == output_options::ensight){
            write_ensight(mesh,
                          State,

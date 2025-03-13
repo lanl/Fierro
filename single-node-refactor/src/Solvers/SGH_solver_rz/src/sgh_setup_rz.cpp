@@ -266,6 +266,7 @@ void SGHRZ::fill_regions_sgh_rz(const Material_t& Materials,
     GaussPoint_sie.update_host();
     GaussPoint_volfrac.update_host();
     node_vel.update_host();
+    num_mats_saved_in_elem.update_host();
 
     Kokkos::fence();
 
