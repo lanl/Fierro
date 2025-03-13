@@ -5,7 +5,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 1
+    cycle_stop: 100000
 
 
 # mesh_options:
@@ -15,7 +15,7 @@ dynamic_options:
 mesh_options:
     source: file
     num_dims: 3
-    file_path: ../../full_mesh.vtu
+    file_path: ../../cylinder.vtu
     scale_x: 0.1 # scale the mesh to be in cm units
     scale_y: 0.1
     scale_z: 0.1
@@ -51,39 +51,12 @@ solver_options:
         #  - blah
 
 boundary_conditions:
-    # Tag X plane
-    - boundary_condition:
-        solver_id: 0
-        surface: 
-            type: x_plane
-            plane_position: 0.0
-            tolerance: 1.e-5
-        velocity_model: reflected
-        velocity_bc_global_vars:
-            - 1   # x
-            - 0   # y
-            - 0   # z
-
-
-    # Tag Y plane
-    - boundary_condition:
-        solver_id: 0
-        surface: 
-            type: y_plane
-            plane_position: 0.0
-            tolerance: 1.e-5
-        velocity_model: reflected
-        velocity_bc_global_vars:
-            - 0   # x
-            - 1   # y
-            - 0   # z
-
     # Tag z plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: z_plane
-            plane_position: 0.0
+            plane_position: -0.1524
             tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
@@ -112,42 +85,6 @@ materials:
             - 0.0   # phi_min
             - 1.0   # pin_curl_min
 
-    - material:
-        id: 1
-        eos_model_type: decoupled
-        eos_model: gamma_law_gas
-        eos_global_vars:
-            - 1.666666666666667
-            - 1.0E-14
-            - 1.0
-        # strength_model: none
-        dissipation_model: MARS
-        dissipation_global_vars:
-            - 1.0   # q1
-            - 1.0   # q1ex
-            - 1.333 # q2
-            - 1.333 # q2ex
-            - 0.0   # phi_min
-            - 1.0   # pin_curl_min
-
-    - material:
-        id: 2
-        eos_model_type: decoupled
-        eos_model: gamma_law_gas
-        eos_global_vars:
-            - 1.666666666666667
-            - 1.0E-14
-            - 1.0
-        # strength_model: none
-        dissipation_model: MARS
-        dissipation_global_vars:
-            - 1.0   # q1
-            - 1.0   # q1ex
-            - 1.333 # q2
-            - 1.333 # q2ex
-            - 0.0   # phi_min
-            - 1.0   # pin_curl_min
-
 regions:
     - region:
         volume:
@@ -160,32 +97,7 @@ regions:
             type: cartesian
             u: 0.0
             v: 0.0
-            w: 1.0
+            w: -0.123
 
-    - region:
-        volume:
-            type: vtu_file
-            part_id: 2
-        material_id: 1
-        den: 2.0
-        sie: 1.e-10
-        velocity: 
-            type: cartesian
-            u: 0.0
-            v: 0.0
-            w: 1.0
-
-    - region:
-        volume:
-            type: vtu_file
-            part_id: 3
-        material_id: 2
-        den: 3.0
-        sie: 1.e-10
-        velocity: 
-            type: cartesian
-            u: 0.0
-            v: 0.0
-            w: 0.0
 
 
