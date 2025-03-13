@@ -152,26 +152,30 @@ void paint_node_vel(const CArrayKokkos<RegionFill_t>& region_fills,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn paint_node_temp
+/// \fn paint_node_scalar
 ///
-/// \brief a function to paint a temperature on the nodes of the mesh
+/// \brief a function to paint a scalars on the nodes of the mesh
 ///
-/// \param mesh is the simulation mesh
-/// \param node_temp is the nodal temperature array
+/// \param The scalar value to be painted onto the nodes
+/// \param Regions to fill
+/// \param node_scalar is the nodal scalar array
 /// \param node_coords are the coordinates of the nodes
-/// \param elem_gid is the element global mesh index
+/// \param node_gid is the element global mesh index
 /// \param f_id is fill instruction
+/// \param Number of dimensions of the mesh
+/// \param The ID of the fill instruction
 /// \param rk_num_bins is time integration storage level
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
-                    const DCArrayKokkos<double>& node_temp,
-                    const DCArrayKokkos<double>& node_coords,
-                    const double node_gid,
-                    const double num_dims,
-                    const size_t f_id,
-                    const size_t rk_num_bins);
+void paint_node_scalar(const double scalar,
+                       const CArrayKokkos<RegionFill_t>& region_fills,
+                       const DCArrayKokkos<double>& node_scalars,
+                       const DCArrayKokkos<double>& node_coords,
+                       const double node_gid,
+                       const double num_dims,
+                       const size_t f_id,
+                       const size_t rk_num_bins);
 
 
 /////////////////////////////////////////////////////////////////////////////

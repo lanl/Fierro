@@ -2,7 +2,7 @@
 #include "yaml-serializable.h"
 
 SERIALIZABLE_ENUM(EOS_MODEL, ideal_gas, user_defined, constant)
-SERIALIZABLE_ENUM(STRENGTH_MODEL, none, user_defined, vumat, evp, evpfft, ls_evpfft)
+SERIALIZABLE_ENUM(STRENGTH_MODEL, none, user_defined, vumat, evp, evpfft, ls_evpfft, lsnp_evpfft)
 SERIALIZABLE_ENUM(STRENGTH_TYPE, none, hypo, hyper)
 SERIALIZABLE_ENUM(RUN_LOCATION, device, host)
 

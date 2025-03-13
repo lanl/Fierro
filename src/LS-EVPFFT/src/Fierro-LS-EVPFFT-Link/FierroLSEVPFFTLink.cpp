@@ -20,7 +20,7 @@ namespace FierroLSEVPFFTLink
     const size_t num_elems)
     {
       printf("Executing FierroLSEVPFFTLink::init_strength_state_vars ...\n");
-
+      fflush(stdout);
       // First, lets create a new communicator with each rank having its own communicator containing only itself.
       if (evpfft_mpi_comm == MPI_COMM_NULL) {
         int global_rank;
@@ -127,6 +127,7 @@ namespace FierroLSEVPFFTLink
       elem_user_output_vars.host(elem_gid,2) = elem_evpfft[elem_gid]->dvm;
       elem_user_output_vars.host(elem_gid,3) = elem_evpfft[elem_gid]->dvmp;
       elem_user_output_vars.host(elem_gid,4) = elem_evpfft[elem_gid]->svm;
+      elem_user_output_vars.host(elem_gid,5) = mat_id;
 
       return;
     }

@@ -173,6 +173,7 @@ public:
   MatrixTypeRealDual c0;
   MatrixTypeRealDual s0;
   MatrixTypeRealDual c066;
+  MatrixTypeRealDual Goperr0;
 
   real_t wph1;
   real_t svm1;
@@ -204,8 +205,10 @@ public:
   MatrixTypeRealDual detF;
   MatrixTypeRealDual sgPK1;
   MatrixTypeRealDual c066mod;
+  MatrixTypeRealDual c066modGoperr066mod;
   MatrixTypeRealDual velgradref;
   MatrixTypeRealDual xnode;
+  MatrixTypeRealDual Ghat;
 #ifdef NON_SCHMID_EFFECTS
   MatrixTypeRealDual schnon;
 #endif
@@ -318,6 +321,7 @@ public:
   void calc_c0();
   void Cauchy_to_PK1();
   void calc_c066mod();
+  void calc_Goperr0();
   void update_grid_velgrad();
   void harden(int imicro);
   void read_classic_los_alamos_texture_file(const std::string & filetext);

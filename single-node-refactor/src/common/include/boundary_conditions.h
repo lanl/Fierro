@@ -67,6 +67,19 @@ enum BCVelocityModels
     userDefinedVelocityBC = 5,
     pistonVelocityBC = 6
 };
+
+// types of temperature boundary conditions
+enum BCTemperatureModels
+{
+    noTemperatureBC = 0,
+    constantTemperatureBC = 1,
+    convectionTemperatureBC = 2,
+    radiationTemperatureBC = 3,
+    //timeVaryingTemperatureBC = 2,
+    //adiabaticBC = 3,
+    //userDefinedTemperatureBC = 4
+};
+
 enum BCStressModels
 {
     noStressBC = 0,
@@ -78,6 +91,7 @@ enum BCStressModels
 //    displacementBC                            
 //    temperatureBC           
 //    contactBC               
+
 
 
 enum BCFcnLocation
@@ -99,7 +113,9 @@ static std::map<std::string, boundary_conditions::BdyTag> bc_surface_map
 };
 // future options
 //     { "read_file", boundary_conditions::read_file }
+    
 
+// Velocity models
 static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_model_map
 {
     { "none", boundary_conditions::noVelocityBC },
@@ -109,6 +125,19 @@ static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_
     { "fixed", boundary_conditions::zeroVelocityBC },
     { "user_defined", boundary_conditions::userDefinedVelocityBC },
     { "piston", boundary_conditions::pistonVelocityBC }
+};
+
+
+// Temperature models
+static std::map<std::string, boundary_conditions::BCTemperatureModels> bc_temperature_model_map
+{
+    { "none", boundary_conditions::noTemperatureBC },
+    { "constant", boundary_conditions::constantTemperatureBC },
+    { "convection", boundary_conditions::convectionTemperatureBC },
+    { "radiation", boundary_conditions::radiationTemperatureBC },
+    //{ "time_varying", boundary_conditions::timeVaryingTemperatureBC },
+    //{ "adiabatic", boundary_conditions::adiabaticBC },
+    //{ "user_defined", boundary_conditions::userDefinedTemperatureBC }
 };
 
 static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_model_map
@@ -152,11 +181,15 @@ struct BoundaryConditionSetup_t
 struct BoundaryConditionEnums_t
 {
     solver_input::method solver = solver_input::NONE; ///< Numerical solver method
-
+    // BC model for velocity
     boundary_conditions::BCVelocityModels BCVelocityModel = boundary_conditions::noVelocityBC;    ///< Type of velocity boundary condition
 
+    // BC model for temperature
+    boundary_conditions::BCTemperatureModels BCTemperatureModel = boundary_conditions::noTemperatureBC;    ///< Type of temperature boundary condition
+    
+    // BC model for stress
     boundary_conditions::BCStressModels BCStressModel = boundary_conditions::noStressBC;    ///< Type of stress boundary condition
-
+    
     boundary_conditions::BCFcnLocation Location = boundary_conditions::device; // host or device BC function
 }; // end boundary condition enums
 
@@ -180,6 +213,28 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
 
+    // function pointer for temperature BC's
+    void (*temperature) (const Mesh_t& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& temp_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const DCArrayKokkos<double>& node_temp,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set) = NULL;
+
+    // Function pointer to heat flux BCs
+    void (*heat_flux) (const Mesh_t& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& heat_flux_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const DCArrayKokkos<double>& node_temp,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set) = NULL;
+
 
     // function pointer for stress BC's
     void (*stress) (const Mesh_t& mesh,
@@ -193,8 +248,10 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
 
-    // TODO: add function pointer for other types of BC's and definitions
+
 }; // end boundary condition fcns
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -215,8 +272,8 @@ struct BoundaryCondition_t
     DCArrayKokkos<size_t> num_stress_bdy_sets_in_solver; // (solver)
 
     // keep adding ragged storage for the other BC models -- temp, displacement, etc.
-    // DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver, ids)
-    // DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver)
+    DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver, ids)
+    DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver)
 
 
     CArrayKokkos<BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs, accessed using (bc_id)
@@ -238,6 +295,10 @@ struct BoundaryCondition_t
     RaggedRightArrayKokkos<double> stress_bc_global_vars;  // (bc_id, vars...)
     CArrayKokkos<size_t> num_stress_bc_global_vars;
 
+    // global variables for temperature boundary condition models
+    RaggedRightArrayKokkos<double> temperature_bc_global_vars;
+    CArrayKokkos<size_t> num_temperature_bc_global_vars;
+
     // state variables for boundary conditions
     DCArrayKokkos<double> bc_state_vars;
 }; // end boundary conditions
@@ -252,7 +313,12 @@ static std::vector<std::string> str_bc_inps
     "stress_model",
     "surface",
     "velocity_bc_global_vars",
+    "temperature_model",
+    "temperature_bc_global_vars",
+    "heat_flux_model",
+    "heat_flux_bc_global_vars",
     "stress_bc_global_vars"
+
 };
 
 // subfields under surface

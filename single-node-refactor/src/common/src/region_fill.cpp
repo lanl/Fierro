@@ -366,7 +366,7 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 /// \param mesh is the simulation mesh
 /// \param node_coords is the nodal position array
 /// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh 
-/// \param region_fills are the instructures to paint state on the mesh
+/// \param region_fills are the instructions to paint state on the mesh
 /// \param mesh_coords is the geometric center of the element or a node coordinates
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -527,7 +527,7 @@ size_t fill_geometric_region(const Mesh_t& mesh,
 /// \param GaussPoint_den is density at the GaussPoints on the mesh
 /// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
 /// \param elem_mat_id is the material id in an element
-/// \param region_fills are the instructures to paint state on the mesh
+/// \param region_fills are the instructions to paint state on the mesh
 /// \param elem_coords is the geometric center of the element
 /// \param elem_gid is the element global mesh index
 /// \param f_id is fill instruction
@@ -899,28 +899,31 @@ void paint_node_vel(const CArrayKokkos<RegionFill_t>& region_fills,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn paint_node_temp
+/// \fn paint_node_scalar
 ///
-/// \brief a function to paint a temperature on the nodes of the mesh
+/// \brief a function to paint a scalars on the nodes of the mesh
 ///
-/// \param mesh is the simulation mesh
-/// \param node_temp is the nodal temperature array
+/// \param The scalar value to be painted onto the nodes
+/// \param Regions to fill
+/// \param node_scalar is the nodal scalar array
 /// \param node_coords are the coordinates of the nodes
-/// \param elem_gid is the element global mesh index
+/// \param node_gid is the element global mesh index
 /// \param f_id is fill instruction
+/// \param Number of dimensions of the mesh
+/// \param The ID of the fill instruction
 /// \param rk_num_bins is time integration storage level
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
-                    const DCArrayKokkos<double>& node_temp,
-                    const DCArrayKokkos<double>& node_coords,
-                    const double node_gid,
-                    const double num_dims,
-                    const size_t f_id,
-                    const size_t rk_num_bins)
+void paint_node_scalar(const double scalar,
+                       const CArrayKokkos<RegionFill_t>& region_fills,
+                       const DCArrayKokkos<double>& node_scalar,
+                       const DCArrayKokkos<double>& node_coords,
+                       const double node_gid,
+                       const double num_dims,
+                       const size_t f_id,
+                       const size_t rk_num_bins)
 {
-
     // save velocity at all rk_levels
     for(size_t rk_level = 0; rk_level < rk_num_bins; rk_level++){
 
@@ -929,7 +932,7 @@ void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
             case init_conds::cartesian:
                 {
 
-                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature;
+                    node_scalar(rk_level, node_gid) = scalar;
                     break;
                 }
             // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
@@ -956,8 +959,8 @@ void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
                         }
                     } // end for
 
-                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature * dir[0];
-                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature * dir[1];
+                    node_scalar(rk_level, node_gid) = scalar * dir[0];
+                    node_scalar(rk_level, node_gid) = scalar * dir[1];
 
                     break;
                 }
@@ -985,7 +988,7 @@ void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
                         }
                     } // end for
 
-                    node_temp(rk_level, node_gid) = region_fills(f_id).temperature * radius_val;
+                    node_scalar(rk_level, node_gid) = scalar * radius_val;
                     break;
                 }
             case init_conds::radial_linear:
@@ -1000,18 +1003,18 @@ void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
                 }
             case init_conds::tg_vortex:
                 {
-                    printf("**** TG Vortex not supported for temperature initial conditions ****\n");
+                    printf("**** TG Vortex not supported for general scalar initial conditions ****\n");
 
                     break;
                 }
 
             default:
                 {
-                    // no velocity
-                    node_temp(rk_level, node_gid) = 0.0;
-                    node_temp(rk_level, node_gid) = 0.0;
+                    // no temperature
+                    node_scalar(rk_level, node_gid) = 0.0;
+                    node_scalar(rk_level, node_gid) = 0.0;
                     if (num_dims == 3) {
-                        node_temp(rk_level, node_gid) = 0.0;
+                        node_scalar(rk_level, node_gid) = 0.0;
                     }
 
                     break;
@@ -1020,9 +1023,7 @@ void paint_node_temp(const CArrayKokkos<RegionFill_t>& region_fills,
 
     } // end loop over rk_num_bins
 
-
-    // done setting the velocity
-}  // end function paint_node_temp
+}  // end function paint_node_scalar
 
 
 
@@ -1116,19 +1117,22 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const size_t num_mat_pts,
                             const size_t mat_id)
 {
-
+    std::cout << "Before setting shear modulus to zero" << std::endl;
     // --- Shear modulus ---
     // loop over the material points
-    FOR_ALL(mat_point_lid, 0, num_mat_pts, {
 
-        // setting shear modulii to zero, corresponds to a gas
-        for(size_t i; i<3; i++){
-            MaterialPoints_shear_modulii(mat_point_lid,i) = 0.0;
-        } // end for
+    if (MaterialPoints_shear_modulii.size() > 0) {
+        FOR_ALL(mat_point_lid, 0, num_mat_pts, {
 
-    });
+            // setting shear modulii to zero, corresponds to a gas
+            for(size_t i; i<3; i++){
+                MaterialPoints_shear_modulii(mat_point_lid,i) = 0.0;
+            } // end for
 
+        });
+    }
 
+    
     // --- stress tensor ---
     for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){                
 

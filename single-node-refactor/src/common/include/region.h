@@ -115,6 +115,8 @@ struct RegionFill_t
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
     double volfrac = 1.0; ///< volume fraction of material
+    double specific_heat = 0.0; ///< specific heat
+    double thermal_conductivity = 0.0; ///< thermal conductivity
 
     double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region
 
@@ -147,6 +149,8 @@ static std::vector<std::string> str_region_inps
     "material_id",
     "velocity",
     "temperature",
+    "specific_heat",
+    "thermal_conductivity",
     "sie",
     "ie",
     "den",

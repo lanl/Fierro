@@ -1654,7 +1654,9 @@ void Implicit_Solver::setup_optimization_problem(){
   //obj->update(*rol_x,ROL::UpdateType::Initial);
   //real_t obj_value = obj->value(*rol_x,tol);
   //std::cout << " VALUE TEST " << obj_value << std::endl;
-  //obj->checkGradient(*rol_x, *rol_d);
+  if(simparam.optimization_options.check_objective_gradient){
+    obj->checkGradient(*rol_x, *rol_d);
+  }
   //obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);

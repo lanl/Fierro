@@ -183,7 +183,7 @@ void EVPFFT::calc_c0()
   for (int ii = 1; ii <= 6; ii++) {
     for (int jj = 1; jj <= 6; jj++) {
       ic = ic + 1;
-      dP6_dF6(ii,jj) = all_reduce.array[ic];
+      dP6_dF6(ii,jj) = all_reduce.array[ic]*10.0;
     }
   }
 

@@ -1,5 +1,9 @@
 <RCC>
   <qresource prefix="Blue Icons">
+    <file>Blue Icons/Zoom.svg</file>
+    <file>Blue Icons/Elastic.svg</file>
+    <file>Blue Icons/information.svg</file>
+    <file>Blue Icons/Plastic.svg</file>
     <file>Blue Icons/File.svg</file>
     <file>Blue Icons/UserProfile.svg</file>
     <file>Blue Icons/FirstFrame.svg</file>
@@ -9,6 +13,7 @@
     <file>Blue Icons/PreviousFrame.svg</file>
     <file>Blue Icons/Shapes.svg</file>
     <file>Blue Icons/DownloadCube.svg</file>
+    <file>Blue Icons/DownloadStack.svg</file>
     <file>Blue Icons/Clipboard.svg</file>
     <file>Blue Icons/mesh.svg</file>
     <file>Blue Icons/brick.svg</file>
@@ -29,5 +34,10 @@
     <file>Logos/LANL Logo Ultramarine.png</file>
     <file>Logos/MATAR_logo2.png</file>
     <file>Logos/ParaView_logo.png</file>
+    <file>Logos/fierroload.webp</file>
+    <file>Logos/fierroload.gif</file>
+    <file>Logos/FierroLoading.gif</file>
+    <file>Logos/FIERRO_NoText.png</file>
+    <file>Logos/FierroAppIcon.png</file>
   </qresource>
 </RCC>

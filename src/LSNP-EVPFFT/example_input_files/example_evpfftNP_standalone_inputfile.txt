@@ -1,0 +1,52 @@
+1 1 1 12               NPHMX, NMODMX, NTWMMX, NSYSMX
+11 11 11               x-dim, y-dim, z-dim *x-dim = 2 times dx-dim + microstructure x-dim
+2 2 2                  dx-dim, dy-dim, dz-dim
+1                      number of phases (nph)                         
+1.  1.  1.             RVE dimensions (delt)
+* name and path of microstructure file (filetext)                                
+/absolute/path/to/random_microstructure_7x7x7.txt
+*INFORMATION ABOUT PHASE #1
+0                          igas(iph)
+* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)  
+/absolute/path/to/example_plastic_parameters.txt
+/absolute/path/to/example_elastic_parameters.txt
+* Green's operator
+1                      igamma (0-continious GAMMA, 1-rotated)
+* Scaling of C0
+1.0                    xc0
+*INFORMATION ABOUT TEST CONDITIONS                                                            
+* boundary conditions                                                     
+1                      ibc (0 - periodic, 1 - applied velocity b.c.)
+    1       1       1           iudot     |    flag for vel.grad. 
+    1       1       1                     |    (0:unknown-1:known)        
+    1       1       1                     |            
+                                          |                               
+   -0.5e-5       0.        0.          udot    |    vel.grad                   
+    0.      -0.5e-5        0.                  |                               
+    0.       0.         1.0e-5                |                               
+                                          |                               
+    0       0        0           iscau    |    flag for Cauchy            
+            0        0                    |                               
+                     0                    |                               
+                                          |                               
+    0.      0.       0.          scauchy  |    Cauchy stress              
+            0.       0.                   |                               
+                     0.                   @               
+1.0               frame_c (stiffness of frame)         
+1.25 10.0         mult_incr, mult_incr_mx  (increase of frame stiffness and max allowed increase)
+1.0e-3 1 10       error_bc, itout_min, itout_max (erorr for b.c., min and max outer iteration numbers)       
+* other                                                                   
+100.0             eqincr (if ictrl>=0) or tdot (if ictrl=-1)
+-1              ictrl (1-6: strain comp, 0: VM eq, -1: tdot)              
+*INFORMATION ABOUT RUN CONDITIONS                                         
+10               nsteps                                                     
+5.0e-4          err                                                        
+200               itmax                                                      
+0               IRECOVER read grain states from STRESS.IN  (1) or not (0)?      
+0               ISAVE write grain states in STRESS.OUT (1) or not (0)?                    
+1               IUPDATE update tex & RVE dim (1) or not (0)?
+0               IUPHARD
+0               IWTEX
+1 1            IWFIELDS,IWSTEP
+0               ITHERMO (if ithermo=1, next line is filethermo) 
+dummy 

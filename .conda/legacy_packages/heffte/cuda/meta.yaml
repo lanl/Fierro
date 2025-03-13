@@ -1,0 +1,68 @@
+{% set version = "1.0.0" %}
+{% set linux_compiler_version = "12.4.0" %}
+{% set macos_compiler_version = "16" %}
+#{% set cuda_version = "12.5" %}
+
+package:
+  name: fierro-heffte-cuda
+  version: {{ version }}
+
+source:
+  git_url: https://github.com/icl-utk-edu/heffte.git
+  git_depth: 1
+
+build:
+  number: 1
+  noarch: False
+  script_env:
+    - PLATFORM={{ target_platform }}
+  skip: True  # [osx]
+  skip: False # [linux]
+
+requirements:
+  build:
+    - cmake >=3.17.0
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('fortran') }}={{ linux_compiler_version }}
+    - openmpi
+      # - cuda-compiler
+      #    - cuda-toolkit={{ cuda_version }}
+    - cuda-toolkit
+  # These host CUDA dependencies are definitely overspecified.
+  # Not sure which ones are totally necessary.
+  host:
+    #- cuda-cudart-static={{ cuda_version }} # Make sure your nvcc version and cudart versions are the same
+    - cuda-compiler
+    - cuda-cudart-static
+    - cuda-toolkit
+    - libcusolver-dev
+    - libcufft-dev
+    - libcublas-dev
+    - libcusparse-dev
+    - openmpi >=4.1.6,<5.0a0
+  run:
+    - cuda-cudart
+    - libcufft
+    - libcublas
+    - openmpi >=4.1.6,<5.0a0
+
+about:
+  home: https://github.com/lanl/Fierro
+  license: BSD-3-Clause
+  license_family: BSD
+  license_file: LICENSE
+  summary:
+    LANL Fierro's dependency for EVPFFT solutions
+  description:
+    Fierro (LANL code number C21030) is a modern C++ code designed to simulate quasi-static 
+    solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, 
+    which have meshes with constant mass elements that move with the material, 
+    or with Eulerian methods, which have stationary meshes. 
+  dev_url: https://github.com/lanl/Fierro
+
+extra:
+  recipe-maintainers:
+    - fierromechanics

@@ -12,8 +12,12 @@ source "$RECIPE_DIR/../../cross-compile-setup.sh"
 #           ^ Passes $NVCC_WRAPPER_DEFAULT_COMPILER as the host compiler to nvcc
 # Setting NVCC_WRAPPER_DEFAULT_COMPILER=$GXX enforces that
 # nvcc gets the correct compiler for the target platform.
-export OMPI_CXX=nvcc_wrapper
-export NVCC_WRAPPER_DEFAULT_COMPILER=$GXX
+#export OMPI_CXX=nvcc_wrapper
+#export NVCC_WRAPPER_DEFAULT_COMPILER=$GXX
+
+    #-D CMAKE_CXX_COMPILER=$BUILD_PREFIX/bin/mpicxx \
+    #-D CMAKE_C_COMPILER=$BUILD_PREFIX/bin/mpicc \
+    #-D CUDAToolkit_ROOT=$PREFIX/bin \
 
 cd src/EVPFFT
 mkdir build
@@ -23,8 +27,5 @@ cmake ../src/ \
     -D USE_CUFFT=1 \
     $CMAKE_ARGS \
     -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
-    -D CUDAToolkit_ROOT=$PREFIX/bin \
-    -D CMAKE_CXX_COMPILER=$BUILD_PREFIX/bin/mpicxx \
-    -D CMAKE_C_COMPILER=$BUILD_PREFIX/bin/mpicc \
 
 make install
