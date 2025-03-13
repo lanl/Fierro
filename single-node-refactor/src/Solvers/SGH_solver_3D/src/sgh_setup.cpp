@@ -251,6 +251,7 @@ void SGH3D::fill_regions_sgh(const Material_t& Materials,
     GaussPoint_sie.update_host();
     GaussPoint_volfrac.update_host();
     node_vel.update_host();
+    num_mats_saved_in_elem.update_host();
 
     Kokkos::fence();
 } // end SGH fill regions
@@ -404,7 +405,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 
     // the following loop is not thread safe
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-        for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
+        for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem.host(elem_gid); a_mat_in_elem++){
 
             // get the material_id in this element
             size_t mat_id = elem_mat_id.host(elem_gid,a_mat_in_elem);
