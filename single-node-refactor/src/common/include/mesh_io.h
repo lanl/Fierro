@@ -2768,6 +2768,19 @@ public:
 
         } // end if state is to be written
 
+
+        if (SimulationParamaters.output_options.format == output_options::ensight){
+           write_ensight(mesh,
+                         State,
+                         SimulationParamaters,
+                         dt,
+                         time_value,
+                         graphics_times,
+                         node_states,
+                         gauss_pt_states,
+                         material_pt_states);
+        }
+
     }
 
     /////////////////////////////////////////////////////////////////////////////

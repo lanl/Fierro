@@ -45,7 +45,8 @@ enum format
 {
     viz = 0,
     state = 1,
-    viz_and_state = 2
+    viz_and_state = 2,
+    ensight = 3
 };
 
 // timer output level
@@ -58,6 +59,7 @@ enum timer_output_level
 static std::map<std::string, output_options::format> output_format_map
 {
     { "viz", output_options::viz },
+    { "ensight", output_options::ensight },
     { "state", output_options::state },
     { "viz_and_state", output_options::viz_and_state }
 };

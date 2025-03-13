@@ -304,13 +304,13 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
     // Painting routine requires only 1 material per GaussPoint
     // allowing for up to 3 materials in an element
     const size_t num_mats_per_elem = 3;
-    DCArrayKokkos <double> GaussPoint_den(num_gauss_points, num_mats_per_elem);
-    DCArrayKokkos <double> GaussPoint_sie(num_gauss_points, num_mats_per_elem);
-    DCArrayKokkos <double> GaussPoint_volfrac(num_gauss_points, num_mats_per_elem);
-    DCArrayKokkos <size_t> elem_mat_id(num_elems, num_mats_per_elem); // the mat_id in the elem
+    DCArrayKokkos <double> GaussPoint_den(num_gauss_points, num_mats_per_elem, "GaussPoint_den");
+    DCArrayKokkos <double> GaussPoint_sie(num_gauss_points, num_mats_per_elem, "GaussPoint_sie");
+    DCArrayKokkos <double> GaussPoint_volfrac(num_gauss_points, num_mats_per_elem, "GaussPoint_vofrac");
+    DCArrayKokkos <size_t> elem_mat_id(num_elems, num_mats_per_elem, "elem_mat_id"); // the mat_id in the elem
 
     // num mats saved in an element during setup
-    DCArrayKokkos <size_t> num_mats_saved_in_elem(num_elems);
+    DCArrayKokkos <size_t> num_mats_saved_in_elem(num_elems, "num_mats_saved_in_elem");
     num_mats_saved_in_elem.set_values(0); // initialize all elems to storing 0 materials
     num_mats_saved_in_elem.update_host();
 
@@ -357,7 +357,7 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
     // a counter for the Material index spaces
-    DCArrayKokkos <size_t> num_elems_saved_for_mat(num_mats);  
+    DCArrayKokkos <size_t> num_elems_saved_for_mat(num_mats, "num_elems_saved_for_mat");  
 
     for(int mat_id=0; mat_id<num_mats; mat_id++){
 
@@ -442,7 +442,7 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
 
     // the following loop is not thread safe
     for(size_t elem_gid=0; elem_gid<num_elems; elem_gid++){
-        for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
+        for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem.host(elem_gid); a_mat_in_elem++){
 
 
             // get the material_id in this element
