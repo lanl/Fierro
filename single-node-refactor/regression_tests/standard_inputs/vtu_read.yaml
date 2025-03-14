@@ -15,7 +15,7 @@ dynamic_options:
 mesh_options:
     source: file
     num_dims: 3
-    file_path: ../../regression_tests/standard_inputs/meshes/cylinder.vtu
+    file_path: standard_inputs/meshes/cylinder.vtu
     scale_x: 0.1 # scale the mesh to be in cm units
     scale_y: 0.1
     scale_z: 0.1
