@@ -55,7 +55,7 @@ enum vol_tag
     readVoxelFile = 5,      ///< tag all elements in a voxel mesh (structured VTK)
     readPolycrystalFile = 6,///< tag all elements in a polycrystallince voxel mesh (structured VTK)
     readSTLFile = 7,        ///< read a STL file and voxelize it
-    readVTKFile = 8,        ///< tag all elements in a VTK mesh (unstructured mesh)
+    readVTUFile = 8,        ///< tag elements in an unstructured .vtu mesh with object_ids
 };
 } // end of namespace
 
@@ -65,7 +65,8 @@ static std::map<std::string, region::vol_tag> region_type_map
     { "box", region::box },
     { "sphere", region::sphere },
     { "cylinder", region::cylinder },
-    { "voxel_file", region::readVoxelFile }
+    { "voxel_file", region::readVoxelFile },
+    { "vtu_file", region::readVTUFile}
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -113,10 +114,13 @@ struct RegionFill_t
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
-    double specific_heat = 0.0;
-    double thermal_conductivity = 0.0;
+    double volfrac = 1.0; ///< volume fraction of material
+    double specific_heat = 0.0; ///< specific heat
+    double thermal_conductivity = 0.0; ///< thermal conductivity
 
     double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region
+
+    int part_id = 1; // object_id in the .vtu file, starts at 1 and goes to N parts
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -170,7 +174,8 @@ static std::vector<std::string> str_region_volume_inps
     "scale_x",
     "scale_y",
     "scale_z",
-    "origin"
+    "origin",
+    "part_id"
 };
 
 // ---------------------------------------------------------------------

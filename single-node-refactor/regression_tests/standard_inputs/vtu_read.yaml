@@ -1,0 +1,103 @@
+# num_dims: 3
+
+dynamic_options:
+    time_final: 0.25
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 100000
+
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
+mesh_options:
+    source: file
+    num_dims: 3
+    file_path: standard_inputs/meshes/cylinder.vtu
+    scale_x: 0.1 # scale the mesh to be in cm units
+    scale_y: 0.1
+    scale_z: 0.1
+
+
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: state # only options are viz or viz_and_state
+    graphics_time_step: 0.25
+    # graphics_iteration_step: 10
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+    node_field_outputs:
+        - vel
+        - mass
+
+solver_options:
+  - solver:
+        method: SGH3D
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+    # Tag z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: -0.1524
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
+
+  
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 1.0   # pin_curl_min
+
+regions:
+    - region:
+        volume:
+            type: vtu_file
+            part_id: 1
+        material_id: 0
+        den: 1.0
+        sie: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: -0.123
+
+
+

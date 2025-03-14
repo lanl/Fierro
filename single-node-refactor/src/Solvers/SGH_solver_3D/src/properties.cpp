@@ -75,6 +75,7 @@ void SGH3D::update_state(
     const DCArrayKokkos<double>& MaterialPoints_stress,
     const DCArrayKokkos<double>& MaterialPoints_sspd,
     const DCArrayKokkos<double>& MaterialPoints_sie,
+    const DCArrayKokkos<double>& MaterialPoints_vofrac,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& MaterialPoints_mass,
     const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
@@ -107,7 +108,8 @@ void SGH3D::update_state(
             size_t gauss_gid = elem_gid;
 
             // --- Density ---
-            MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
+            MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / 
+                                            (GaussPoints_vol(gauss_gid)* MaterialPoints_vofrac(mat_point_lid));
 
             // --- Pressure ---
             Materials.MaterialFunctions(mat_id).calc_pressure(

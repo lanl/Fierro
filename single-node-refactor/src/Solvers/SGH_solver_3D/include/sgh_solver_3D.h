@@ -60,7 +60,6 @@ namespace SGH3D_State
         node_state::velocity,
         node_state::mass,
         node_state::force,
-        node_state::temp // Note, remove this, unused WIP
     };
 
     // Gauss point state to be initialized for the SGH solver
@@ -76,10 +75,10 @@ namespace SGH3D_State
         material_pt_state::density,
         material_pt_state::pressure,
         material_pt_state::stress,
+        material_pt_state::specific_internal_energy,
         material_pt_state::sound_speed,
         material_pt_state::mass,
         material_pt_state::volume_fraction,
-        material_pt_state::specific_internal_energy,
         material_pt_state::eroded_flag,
         material_pt_state::shear_modulii
     };
@@ -184,8 +183,11 @@ public:
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoint_den,
         DCArrayKokkos<double>& GaussPoint_sie,
-        DCArrayKokkos<size_t>& elem_mat_id,
+        DCArrayKokkos <double>& GaussPoint_volfrac,
+        DCArrayKokkos <size_t>& elem_mat_id,
+        DCArrayKokkos <size_t>& num_mats_saved_in_elem,
         DCArrayKokkos<size_t>& voxel_elem_mat_id,
+        const DCArrayKokkos <int>& object_ids,
         const CArrayKokkos<RegionFill_t>& region_fills,
         const CArray<RegionFill_host_t>&  region_fills_host,
         const size_t num_fills,
@@ -308,6 +310,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
