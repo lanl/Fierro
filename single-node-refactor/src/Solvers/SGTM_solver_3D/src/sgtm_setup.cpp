@@ -184,6 +184,7 @@ void SGTM3D::tag_regions(
                                                      elem_gid);
             // paint the material state on the element if fill_this=1
             if (fill_this == 1) {
+
                 // the material id
                 size_t mat_id = region_fills(f_id).material_id;
 
@@ -203,8 +204,10 @@ void SGTM3D::tag_regions(
 
 
             //WARNING: This is not correct, hack to get a element_id value for fill_geometric_region
-            int elem_gid = mesh.nodes_in_elem(node_gid, 0); 
-            
+            size_t elem_gid = 0; //mesh.nodes_in_elem(node_gid, 0); BUG HERE !!!!
+            //correct coding, if you want an elem_gid, should be elems_in_node(node_gid,0)
+             
+
             coords(0) = node_coords(1, node_gid, 0);
             coords(1) = node_coords(1, node_gid, 1);
             coords(2) = node_coords(1, node_gid, 2);
@@ -229,6 +232,7 @@ void SGTM3D::tag_regions(
 
 
             if (fill_this == 1) {
+
                 // the material id
                 size_t mat_id = region_fills(f_id).material_id;
                 node_region_id(node_gid) = f_id;
