@@ -66,7 +66,7 @@ struct node_t
     DCArrayKokkos<double> mass; ///< Nodal mass
     DCArrayKokkos<double> force; ///< Nodal force
     DCArrayKokkos<double> temp; ///< Nodal temperature
-    DCArrayKokkos<double> q_flux; ///< Nodal heat flux
+    DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
 
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims, state to allocate)
@@ -90,7 +90,7 @@ struct node_t
                     if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_rk, num_nodes, "node_temp");
                     break;
                 case node_state::q_flux:
-                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_nodes, "node_q_flux");
+                    if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_nodes, "node_q_transfer");
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
@@ -334,7 +334,7 @@ struct MaterialCorner_t
 
     DCArrayKokkos<double> force;   ///< Corner force for the material
 
-    DCArrayKokkos<double> q_flux;  ///< Corner heat flux
+    DCArrayKokkos<double> q_transfer;  ///< Corner heat tranfer per material
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners_max, size_t num_dims, std::vector<material_corner_state> material_corner_states)
@@ -345,7 +345,7 @@ struct MaterialCorner_t
                     if (force.size() == 0) this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
                     break;
                 case material_corner_state::heat_flux:
-                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_corners_max, "material_corner_heat_flux"); // WARNING: hard coding rk2
+                    if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_corners_max, "material_corner_heat_transfer"); 
                     break;
                 default:
                     std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;
@@ -374,7 +374,7 @@ struct corner_t
 {
     DCArrayKokkos<double> force; ///< Corner force
     DCArrayKokkos<double> mass; ///< Corner mass
-    DCArrayKokkos<double> q_flux;  ///< Corner heat flux
+    DCArrayKokkos<double> q_transfer;  ///< Corner heat transfer
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims, std::vector<corner_state> corner_states)
@@ -389,7 +389,7 @@ struct corner_t
                     if (mass.size() == 0) this->mass  = DCArrayKokkos<double>(num_corners, "corner_mass");
                     break;
                 case corner_state::heat_flux:
-                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(2, num_corners, num_dims, "corner_heat_flux"); // WARNING: hard coding rk2
+                    if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_corners, "corner_heat_transfer"); 
                     break;
                 default:
                     std::cout<<"Desired corner state not understood in corner_t initialize"<<std::endl;

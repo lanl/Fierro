@@ -76,7 +76,7 @@ void SGTM3D::get_heat_flux(
     const DCArrayKokkos<double>& MaterialPoints_q_flux,
     const DCArrayKokkos<double>& MaterialPoints_conductivity,
     const DCArrayKokkos<double>& MaterialPoints_temp_grad,
-    const DCArrayKokkos<double>& corner_q_flux,
+    const DCArrayKokkos<double>& corner_q_transfer,
     const corners_in_mat_t corners_in_mat_elem,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -175,11 +175,14 @@ void SGTM3D::get_heat_flux(
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
             // Zero out flux at material corners
-            corner_q_flux(corner_gid) = 0.0;
+            corner_q_transfer(corner_gid) = 0.0;
 
             // Dot the flux into the corner normal
             for(int dim = 0; dim < mesh.num_dims; dim++){
-                corner_q_flux(corner_gid) += MaterialPoints_q_flux(mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
+                corner_q_transfer(corner_gid) += MaterialPoints_q_flux(mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
+                // BUG WAS HERE: corner_q_flux had num_dims and an rk level
+                // q_flux = DCArrayKokkos<double>(2, num_corners, num_dims, "corner_heat_flux"); // WARNING: hard coding rk2
+                // new coding fixed the excess memory allocation
             }
         }
     }); // end parallel for loop over elements associated with the given material
