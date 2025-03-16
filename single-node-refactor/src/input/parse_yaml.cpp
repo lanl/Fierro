@@ -2614,7 +2614,6 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     // state place holder is here
     BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
 
-    std::cout << "Before loop over the BC specified" << std::endl;
     // loop over the BC specified
     for (size_t bc_id = 0; bc_id < num_bcs; bc_id++) {
         // read the variables names
@@ -2664,7 +2663,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             if (VERBOSE) {
                 std::cout << a_word << std::endl;
             }
-            std::cout << "a_word = " << a_word << std::endl;
+            
             Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
             // get solver for this boundary condition
@@ -2782,7 +2781,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 std::cout<<"num_saved = " << num_saved << std::endl;
 
-                BoundaryConditions.temperature_bdy_sets_in_solver.host(num_saved) = bc_id;
+                BoundaryConditions.temperature_bdy_sets_in_solver.host(solver_id,num_saved) = bc_id;
                 BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
 
                 std::string temperature_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
@@ -3159,12 +3158,12 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             }
         } // end for words in boundary conditions
 
-        std::cout << "After loop over words in boundary conditions" << std::endl;
+
         // add checks for velocity vs time boundary condition
 
 
     } // end loop over BCs specified
-    std::cout << "After loop over BCs specified" << std::endl;
+
 
 
      // allocate ragged right memory to hold the model global variables
