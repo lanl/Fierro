@@ -83,6 +83,7 @@ void SGTM3D::tag_regions(
     DCArrayKokkos <size_t>& voxel_elem_mat_id,
     DCArrayKokkos <size_t>& elem_region_id,
     DCArrayKokkos <size_t>& node_region_id,
+    const DCArrayKokkos<int>& object_ids,
     const CArrayKokkos<RegionFill_t>& region_fills,
     const CArray<RegionFill_host_t>&  region_fills_host) const
 {
@@ -167,6 +168,7 @@ void SGTM3D::tag_regions(
             // calc if we are to fill this element
             size_t fill_this = fill_geometric_region(mesh,
                                                      voxel_elem_mat_id,
+                                                     object_ids,
                                                      region_fills,
                                                      elem_coords,
                                                      voxel_dx,
@@ -178,10 +180,11 @@ void SGTM3D::tag_regions(
                                                      voxel_num_i,
                                                      voxel_num_j,
                                                      voxel_num_k,
-                                                     f_id);
-
+                                                     f_id,
+                                                     elem_gid);
             // paint the material state on the element if fill_this=1
             if (fill_this == 1) {
+
                 // the material id
                 size_t mat_id = region_fills(f_id).material_id;
 
@@ -198,7 +201,13 @@ void SGTM3D::tag_regions(
             // Get the nodal coordinates
             double coords_1D[3]; // note:initialization with a list won't work
             ViewCArrayKokkos<double> coords(&coords_1D[0], 3);
-            
+
+
+            //WARNING: This is not correct, hack to get a element_id value for fill_geometric_region
+            size_t elem_gid = 0; //mesh.nodes_in_elem(node_gid, 0); BUG HERE !!!!
+            //correct coding, if you want an elem_gid, should be elems_in_node(node_gid,0)
+             
+
             coords(0) = node_coords(1, node_gid, 0);
             coords(1) = node_coords(1, node_gid, 1);
             coords(2) = node_coords(1, node_gid, 2);
@@ -206,6 +215,7 @@ void SGTM3D::tag_regions(
             // calc if we are to fill this element
             size_t fill_this = fill_geometric_region(mesh,
                                                      voxel_elem_mat_id,
+                                                     object_ids,
                                                      region_fills,
                                                      coords,
                                                      voxel_dx,
@@ -217,10 +227,12 @@ void SGTM3D::tag_regions(
                                                      voxel_num_i,
                                                      voxel_num_j,
                                                      voxel_num_k,
-                                                     f_id);
+                                                     f_id,
+                                                     elem_gid);
 
 
             if (fill_this == 1) {
+
                 // the material id
                 size_t mat_id = region_fills(f_id).material_id;
                 node_region_id(node_gid) = f_id;
@@ -276,6 +288,8 @@ void SGTM3D::setup_sgtm(
         BoundaryCondition_t& Boundary,
         State_t& State) const
 {
+
+    
     size_t num_fills = SimulationParamaters.region_fills.size();
     printf("Num Fills's = %zu\n", num_fills);
 
@@ -306,6 +320,7 @@ void SGTM3D::setup_sgtm(
         voxel_elem_mat_id, 
         elem_region_id,
         node_region_id,
+        SimulationParamaters.mesh_input.object_ids,
         SimulationParamaters.region_fills,
         SimulationParamaters.region_fills_host);
     // note: the device and host side are updated in the above function

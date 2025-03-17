@@ -79,6 +79,7 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 KOKKOS_FUNCTION
 size_t fill_geometric_region(const Mesh_t& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
+                             const DCArrayKokkos<int>& object_ids,
                              const CArrayKokkos<RegionFill_t>& region_fills,
                              const ViewCArrayKokkos <double>& mesh_coords,
                              const double voxel_dx, 
@@ -90,7 +91,8 @@ size_t fill_geometric_region(const Mesh_t& mesh,
                              const size_t voxel_num_i, 
                              const size_t voxel_num_j, 
                              const size_t voxel_num_k,
-                             const size_t f_id);
+                             const size_t f_id,
+                             const size_t elem_gid);
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn paint_gauss_den_sie
@@ -115,7 +117,9 @@ void paint_gauss_den_sie(const Material_t& Materials,
                          const DCArrayKokkos <double>& node_coords,
                          const DCArrayKokkos <double>& GaussPoint_den,
                          const DCArrayKokkos <double>& GaussPoint_sie,
+                         const DCArrayKokkos <double>& GaussPoint_vofrac,
                          const DCArrayKokkos <size_t>& elem_mat_id,
+                         const DCArrayKokkos <size_t>& num_mats_saved_in_elem,
                          const CArrayKokkos<RegionFill_t>& region_fills,
                          const ViewCArrayKokkos <double> elem_coords,
                          const double elem_gid,

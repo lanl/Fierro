@@ -949,6 +949,7 @@ void parse_output_options(Yaml::Node& root,
                 for (const auto& pair : map) {
                     std::cout << "\t" << pair.first << std::endl;
                 }
+                throw std::runtime_error("**** Output Format Not Understood ****");
             } // end if
         } // output format
         // get timer_output_level
@@ -965,12 +966,13 @@ void parse_output_options(Yaml::Node& root,
                 }
             }
             else{
-                std::cout << "ERROR: invalid output option input in YAML file: " << timer_level << std::endl;
+                std::cout << "ERROR: invalid timer output option input in YAML file: " << timer_level << std::endl;
                 std::cout << "Valid options are: " << std::endl;
 
                 for (const auto& pair : map) {
                     std::cout << "\t" << pair.first << std::endl;
                 }
+                throw std::runtime_error("**** Time Output Level Syntax Not Understood ****");
             } // end if
         } // timer_level
         // Graphics time step
@@ -991,6 +993,90 @@ void parse_output_options(Yaml::Node& root,
 
             output_options.graphics_iteration_step = graphics_iteration_step;
         } // graphics_iteration_step
+        else if (a_word.compare("elem_field_outputs") == 0) {
+                Yaml::Node & output_vars_yaml = root["output_options"][a_word];
+
+                size_t num_output_vars = output_vars_yaml.Size();
+
+                // loop over the output vars
+                for (int var_id = 0; var_id < num_output_vars; var_id++){
+                    std::string var_name = root["output_options"][a_word][var_id].As<std::string>();
+                    
+                    // save the enum fields to the outputs
+                    if (elem_outputs_map.find(var_name) != elem_outputs_map.end()) {
+                        auto field_var = elem_outputs_map[var_name]; // get the enum for this field variabled
+                        
+                        output_options.output_elem_state.push_back(field_var);
+                    }
+                    else{
+                        throw std::runtime_error("**** Element Field Ouput Variable Name Not Understood ****");
+                    } // end if
+
+                } // end for over variables
+        } // end of elem fields outputs
+        else if (a_word.compare("node_field_outputs") == 0) {
+                Yaml::Node & output_vars_yaml = root["output_options"][a_word];
+
+                size_t num_output_vars = output_vars_yaml.Size();
+
+                // loop over the output vars
+                for (int var_id = 0; var_id < num_output_vars; var_id++){
+                    std::string var_name = root["output_options"][a_word][var_id].As<std::string>();
+                    
+                    // save the enum fields to the outputs
+                    if (node_outputs_map.find(var_name) != node_outputs_map.end()) {
+                        auto field_var = node_outputs_map[var_name]; // get the enum for this field variabled
+                        
+                        output_options.output_node_state.push_back(field_var);
+                    }
+                    else{
+                        throw std::runtime_error("**** Node Field Ouput Variable Name Not Understood ****");
+                    } // end if
+
+                } // end for over variables
+        } // end of nodal fields outputs
+        else if (a_word.compare("gauss_pt_field_outputs") == 0) {
+                Yaml::Node & output_vars_yaml = root["output_options"][a_word];
+
+                size_t num_output_vars = output_vars_yaml.Size();
+
+                // loop over the output vars
+                for (int var_id = 0; var_id < num_output_vars; var_id++){
+                    std::string var_name = root["output_options"][a_word][var_id].As<std::string>();
+                    
+                    // save the enum fields to the outputs
+                    if (gauss_pt_outputs_map.find(var_name) != gauss_pt_outputs_map.end()) {
+                        auto field_var = gauss_pt_outputs_map[var_name]; // get the enum for this field variabled
+                        
+                        output_options.output_gauss_pt_state.push_back(field_var);
+                    }
+                    else{
+                        throw std::runtime_error("**** Gauss Pnt Field Ouput Variable Name Not Understood ****");
+                    } // end if
+
+                } // end for over variables
+        } // end of gauss_pt fields outputs
+        else if (a_word.compare("mat_pt_field_outputs") == 0) {
+                Yaml::Node & output_vars_yaml = root["output_options"][a_word];
+
+                size_t num_output_vars = output_vars_yaml.Size();
+
+                // loop over the output vars
+                for (int var_id = 0; var_id < num_output_vars; var_id++){
+                    std::string var_name = root["output_options"][a_word][var_id].As<std::string>();
+                    
+                    // save the enum fields to the outputs
+                    if (mat_pt_outputs_map.find(var_name) != mat_pt_outputs_map.end()) {
+                        auto field_var = mat_pt_outputs_map[var_name]; // get the enum for this field variabled
+                        
+                        output_options.output_mat_pt_state.push_back(field_var);
+                    }
+                    else{
+                        throw std::runtime_error("**** Mat Pnt Field Ouput Variable Name Not Understood ****");
+                    } // end if
+
+                } // end for over variables
+        } // end of elem fields outputs
         else {
             std::cout << "ERROR: invalid input: " << a_word << std::endl;
 
@@ -1082,6 +1168,20 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).ie = ie;
                 });
             } // ie
+            else if (a_word.compare("volfrac") == 0) {
+                // extensive internal energy
+
+                double volfrac = root["regions"][reg_id]["region"]["volfrac"].As<double>();
+                if (VERBOSE) {
+                    std::cout << "\tvolfrac = " << volfrac << std::endl;
+                }
+
+                RUN({
+                    // make volfrac bounded between 0 and 1
+                    double volfracfloor = fmax(0.0, volfrac);
+                    region_fills(reg_id).volfrac = fmin(1.0, volfracfloor);
+                });
+            } // ie            
             else if (a_word.compare("temperature") == 0) {
                 double temperature = root["regions"][reg_id]["region"]["temperature"].As<double>();
                 if (VERBOSE) {
@@ -1480,6 +1580,7 @@ void parse_regions(Yaml::Node& root,
                             std::cout << "\tscale_x = " << scale_x << std::endl;
                         }
 
+                        // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_x = scale_x;
 
                     } // scale_x
@@ -1491,6 +1592,7 @@ void parse_regions(Yaml::Node& root,
                             std::cout << "\tscale_y = " << scale_y << std::endl;
                         }
 
+                        // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_y = scale_y;
 
                     } // scale_y
@@ -1502,7 +1604,20 @@ void parse_regions(Yaml::Node& root,
                             std::cout << "\tscale_z = " << scale_z << std::endl;
                         }
 
+                        // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_z = scale_z;
+
+                    } // scale_z
+                    else if (a_subfield_word.compare("part_id") == 0) {
+                        // part_id in 
+
+                        int part_id = root["regions"][reg_id]["region"]["volume"]["part_id"].As<int>();
+                        if (VERBOSE) {
+                            std::cout << "\tpart_id = " << part_id << std::endl;
+                        }
+                        RUN({
+                            region_fills(reg_id).part_id = part_id;
+                        });
 
                     } // scale_z
                     //
@@ -1555,7 +1670,12 @@ void parse_regions(Yaml::Node& root,
                                         region_fills(reg_id).volume = region::readVoxelFile;
                                     });
                                     break;
-
+                                case region::readVTUFile:
+                                    std::cout << "Setting volume fill type to readVTUFile " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::readVTUFile;
+                                    });
+                                    break;
                                 case region::no_volume:
                                     std::cout << "Setting volume fill type to none " << std::endl;
                                     RUN({
@@ -2494,7 +2614,6 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     // state place holder is here
     BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
 
-    std::cout << "Before loop over the BC specified" << std::endl;
     // loop over the BC specified
     for (size_t bc_id = 0; bc_id < num_bcs; bc_id++) {
         // read the variables names
@@ -2544,7 +2663,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             if (VERBOSE) {
                 std::cout << a_word << std::endl;
             }
-            std::cout << "a_word = " << a_word << std::endl;
+            
             Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
             // get solver for this boundary condition
@@ -2662,7 +2781,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 std::cout<<"num_saved = " << num_saved << std::endl;
 
-                BoundaryConditions.temperature_bdy_sets_in_solver.host(num_saved) = bc_id;
+                BoundaryConditions.temperature_bdy_sets_in_solver.host(solver_id,num_saved) = bc_id;
                 BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
 
                 std::string temperature_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
@@ -3039,12 +3158,12 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             }
         } // end for words in boundary conditions
 
-        std::cout << "After loop over words in boundary conditions" << std::endl;
+
         // add checks for velocity vs time boundary condition
 
 
     } // end loop over BCs specified
-    std::cout << "After loop over BCs specified" << std::endl;
+
 
 
      // allocate ragged right memory to hold the model global variables

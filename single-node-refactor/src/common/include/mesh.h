@@ -395,7 +395,7 @@ struct Mesh_t
             count_saved_corners_in_node(node_gid) = 0;
         });
 
-        // he elems_in_elem data type
+        // the elems_in_elem data type
         elems_in_node = RaggedRightArrayKokkos<size_t>(num_corners_in_node, "mesh.elems_in_node");
 
         // populate the elements connected to a node list and corners in a node
