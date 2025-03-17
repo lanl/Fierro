@@ -60,7 +60,7 @@ namespace SGTM3D_State
         node_state::velocity,
         node_state::mass,
         node_state::temp,
-        node_state::q_flux
+        node_state::heat_transfer
     };
 
     // Gauss point state to be initialized for the SGH solver
@@ -89,7 +89,7 @@ namespace SGTM3D_State
     // Material corner state to be initialized for the SGH solver
     static const std::vector<material_corner_state> required_material_corner_state = 
     { 
-        material_corner_state::force,
+        material_corner_state::force
     };
 
     // Corner state to be initialized for the SGH solver
@@ -97,7 +97,7 @@ namespace SGTM3D_State
     { 
         corner_state::force,
         corner_state::mass,
-        corner_state::heat_flux
+        corner_state::heat_transfer
     };
 }
 

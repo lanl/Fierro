@@ -48,7 +48,7 @@ enum class node_state
     velocity,
     mass,
     temp,
-    q_flux,
+    heat_transfer,
     force,
 };
 
@@ -89,7 +89,7 @@ struct node_t
                 case node_state::temp:
                     if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_rk, num_nodes, "node_temp");
                     break;
-                case node_state::q_flux:
+                case node_state::heat_transfer:
                     if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_nodes, "node_q_transfer");
                     break;
                 default:
@@ -257,7 +257,7 @@ struct MaterialPoint_t
                     if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_rk, num_pts_max, "material_point_sie");
                     break;
                 case material_pt_state::heat_flux:
-                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_pts_max, num_dims, "material_point_heat_flux");
+                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_pts_max, num_dims, "material_point_q_flux");
                     break;
                 case material_pt_state::thermal_conductivity:
                     if (conductivity.size() == 0) this->conductivity = DCArrayKokkos<double>(num_pts_max, "material_point_thermal_conductivity");
@@ -280,7 +280,7 @@ struct MaterialPoint_t
 // Possible material zone states, used to initialize MaterialZone_t
 enum class material_zone_state
 {
-    specific_internal_energy,
+    specific_internal_energy
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -318,7 +318,7 @@ struct MaterialZone_t
 enum class material_corner_state
 {
     force, 
-    heat_flux,
+    heat_transfer
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -344,8 +344,8 @@ struct MaterialCorner_t
                 case material_corner_state::force:
                     if (force.size() == 0) this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
                     break;
-                case material_corner_state::heat_flux:
-                    if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_corners_max, "material_corner_heat_transfer"); 
+                case material_corner_state::heat_transfer:
+                    if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_corners_max, "material_corner_q_transfer"); 
                     break;
                 default:
                     std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;
@@ -361,7 +361,7 @@ enum class corner_state
 {
     force, 
     mass,
-    heat_flux,
+    heat_transfer
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -388,8 +388,8 @@ struct corner_t
                 case corner_state::mass:
                     if (mass.size() == 0) this->mass  = DCArrayKokkos<double>(num_corners, "corner_mass");
                     break;
-                case corner_state::heat_flux:
-                    if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_corners, "corner_heat_transfer"); 
+                case corner_state::heat_transfer:
+                    if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_corners, "corner_q_transfer"); 
                     break;
                 default:
                     std::cout<<"Desired corner state not understood in corner_t initialize"<<std::endl;

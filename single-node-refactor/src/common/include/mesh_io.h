@@ -2033,8 +2033,17 @@ public:
                         State.MaterialPoints(mat_id).stress.update_host();
                         break;
                   
-                    // add other variables here
+                    // additional vars for thermal-mechanical solver
+                    case material_pt_state::thermal_conductivity:
+                        State.MaterialPoints(mat_id).conductivity.update_host();
+                        break;
+                    
+                    case material_pt_state::specific_heat:
+                        State.MaterialPoints(mat_id).specific_heat.update_host();
+                        break;
 
+                    // add other variables here
+                    
                     // not used
                     case material_pt_state::elastic_modulii:
                         break;
@@ -2088,8 +2097,14 @@ public:
                 case node_state::velocity:
                     State.node.vel.update_host();
                     break;
+                
                 case node_state::force:
                     break;
+
+                // heat transer vars
+                case node_state::heat_transfer:
+                    break;
+
             } // end switch
         } // end for over 
         Kokkos::fence();
@@ -2133,6 +2148,15 @@ public:
                     num_mat_pt_tensor_vars ++;
                     break;
                 
+                // additional vars for thermal-mechanical solver
+                case material_pt_state::thermal_conductivity:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                
+                case material_pt_state::specific_heat:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+
                 // add other variables here
 
                 // not used
@@ -2151,6 +2175,7 @@ public:
 
 
         size_t num_elem_scalar_vars = 0;
+        size_t num_elem_vector_vars = 0;
         size_t num_elem_tensor_vars = 0;
 
         // count the number of element average fields to write out
@@ -2176,7 +2201,16 @@ public:
                 case material_pt_state::stress:
                     num_elem_tensor_vars ++;
                     break;
+
+                // additional vars for thermal-mechanical solver
+                case material_pt_state::thermal_conductivity:
+                    num_elem_scalar_vars ++;
+                    break;
                 
+                case material_pt_state::specific_heat:
+                    num_elem_scalar_vars ++;
+                    break;
+
                 // add other variables here
 
                 // not used
@@ -2225,11 +2259,11 @@ public:
         num_elem_tensor_vars += num_gauss_pt_tensor_vars;
 
 
-        // Scalar and tensor value names associated with a elem
+        // Scalar, vector, and tensor value names associated with a elem
         std::vector<std::string> elem_scalar_var_names(num_elem_scalar_vars);
         std::vector<std::string> elem_tensor_var_names(num_elem_tensor_vars);
 
-        // Scalar and tensor values associated with a material in part elems
+        // Scalar, vector, and tensor values associated with a material in part elems
         std::vector<std::string> mat_elem_scalar_var_names(num_mat_pt_scalar_vars);
         std::vector<std::string> mat_elem_tensor_var_names(num_mat_pt_tensor_vars);
 
@@ -2243,6 +2277,9 @@ public:
         int mat_volfrac_id = -1;  
         int mat_eroded_id = -1;
         int mat_stress_id = -1;
+
+        int mat_conductivity_id = -1;
+        int mat_specific_heat_id = -1;
 
         // the index for the scalar, vector, and tensor fields
         size_t var = 0;
@@ -2295,6 +2332,21 @@ public:
                     tensor_var++;
                     break;
 
+    
+                // additional vars for thermal-mechanical solver
+                case material_pt_state::thermal_conductivity:
+                    mat_elem_scalar_var_names[var] = "mat_thermal_K";
+                    mat_conductivity_id = var;
+                    var++;
+                    break;
+                
+                case material_pt_state::specific_heat:
+                    mat_elem_scalar_var_names[var] = "mat_Cp";
+                    mat_specific_heat_id = var;
+                    var++;
+                    break;
+
+
                 // add other variables here
 
                 // not used
@@ -2319,6 +2371,9 @@ public:
         int sspd_id = -1;
         int mass_id = -1; 
         int stress_id = -1;
+
+        int conductivity_id = -1;
+        int specific_heat_id = -1;
 
         // reset the counters
         var = 0;
@@ -2359,6 +2414,19 @@ public:
                     elem_tensor_var_names[tensor_var] = "stress";
                     stress_id = tensor_var;
                     tensor_var++;
+                    break;
+
+                // heat transfer variables
+                case material_pt_state::thermal_conductivity:
+                    elem_scalar_var_names[var] = "thermal_K";
+                    conductivity_id = var;
+                    var++;
+                    break;
+                
+                case material_pt_state::specific_heat:
+                    elem_scalar_var_names[var] = "Cp";
+                    specific_heat_id = var;
+                    var++;
                     break;
 
                 // add other variables here
@@ -2433,6 +2501,10 @@ public:
                     break;
                 case node_state::force:
                     break;
+                
+                // heat transer vars
+                case node_state::heat_transfer:
+                    break;
             } // end switch
         } // end for over 
         Kokkos::fence();
@@ -2447,6 +2519,7 @@ public:
         int node_accel_id = -1;
         int node_coord_id = -1;
         int node_temp_id = -1;
+
 
         // reset counters for node fields
         var = 0;
@@ -2481,9 +2554,17 @@ public:
                     node_accel_id = vector_var;
                     vector_var++;
                     break;
+
+                // -- not used vars
                 case node_state::force:
                     break;
+
+                // heat transer vars
+                case node_state::heat_transfer:
+                    break;
+
                 // tensors
+
             } // end switch
         } // end for over 
 
@@ -2529,8 +2610,9 @@ public:
                                     stress_id,
                                     vol_id,
                                     div_id,
-                                    vel_grad_id
-                                    );
+                                    vel_grad_id,
+                                    conductivity_id,
+                                    specific_heat_id);
         } // end for mats
 
         // make specific fields for the element average
@@ -2651,7 +2733,9 @@ public:
                                         mat_mass_id,
                                         mat_volfrac_id,  
                                         mat_eroded_id,
-                                        mat_stress_id);
+                                        mat_stress_id,
+                                        mat_conductivity_id,
+                                        mat_specific_heat_id);
                     Kokkos::fence();
                     mat_elem_scalar_fields.update_host();
                     mat_elem_tensor_fields.update_host();
@@ -3573,7 +3657,9 @@ public:
                                  const int stress_id,
                                  const int vol_id,
                                  const int div_id,
-                                 const int vel_grad_id)
+                                 const int vel_grad_id,
+                                 const int conductivity_id,
+                                 const int specific_heat_id)
     {
 
         // --- loop over the material point states
@@ -3659,6 +3745,32 @@ public:
                         } // end for
                     });
                     break;
+
+                // thermal solver vars
+                case material_pt_state::thermal_conductivity:
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+                        // get elem gid
+                        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+
+                        // field
+                        elem_scalar_fields(conductivity_id, elem_gid) += MaterialPointsOfMatID.conductivity(mat_elem_lid)*
+                                                                             MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                    });
+                    break;
+
+                case material_pt_state::specific_heat:
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+                        // get elem gid
+                        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+
+                        // field
+                        elem_scalar_fields(specific_heat_id, elem_gid) += MaterialPointsOfMatID.specific_heat(mat_elem_lid)*
+                                                                              MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                    });
+                    break;
+
 
                 // add other variables here
 
@@ -3748,7 +3860,9 @@ public:
                                 const int mat_mass_id,
                                 const int mat_volfrac_id,  
                                 const int mat_eroded_id,
-                                const int mat_stress_id)
+                                const int mat_stress_id,
+                                const int mat_conductivity_id,
+                                const int mat_specific_heat_id)
     {
         
         // --- loop over the material point states
@@ -3824,6 +3938,29 @@ public:
                                                 MaterialPointsOfMatID.stress(1,mat_elem_lid,i,j);
                             } // end for
                         } // end for
+                    });
+                    break;
+
+                // thermal solver vars
+                case material_pt_state::thermal_conductivity:
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+                        // get elem gid
+                        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+
+                        // field
+                        mat_elem_scalar_fields(mat_conductivity_id, elem_gid) += MaterialPointsOfMatID.conductivity(mat_elem_lid);
+                    });
+                    break;
+
+                case material_pt_state::specific_heat:
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+                        // get elem gid
+                        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+
+                        // field
+                        mat_elem_scalar_fields(mat_specific_heat_id, elem_gid) += MaterialPointsOfMatID.specific_heat(mat_elem_lid);
                     });
                     break;
 
@@ -3935,12 +4072,14 @@ public:
                     }); // end parallel for
 
                     break;
+                
+                
+                // -- not used vars
                 case node_state::force:
+                    break;
 
-                    FOR_ALL(node_gid, 0, num_nodes, {
-                    
-                    });
-
+                // heat transer vars
+                case node_state::heat_transfer:
                     break;
                 // tensors
             } // end switch
