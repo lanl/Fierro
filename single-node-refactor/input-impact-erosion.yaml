@@ -131,6 +131,7 @@ regions:
         volume:
             type: global
         material_id: 2
+        solver_id: 0
         den: 0.010
         sie: 3.0e-4
         velocity: 
@@ -151,6 +152,7 @@ regions:
             z1: 0.0
             z2: 0.2
         material_id: 0
+        solver_id: 0
         den: 8.0
         sie: 1.0e-6
         velocity: 
@@ -171,6 +173,7 @@ regions:
             z1: 0.0
             z2: 1.2
         material_id: 1
+        solver_id: 0
         den: 2.7
         sie: 1.0e-6 
         velocity: 
