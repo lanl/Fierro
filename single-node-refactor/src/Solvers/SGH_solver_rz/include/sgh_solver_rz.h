@@ -195,11 +195,10 @@ public:
         DCArrayKokkos <size_t>& num_mats_saved_in_elem,
         DCArrayKokkos <size_t>& voxel_elem_mat_id,
         const DCArrayKokkos <int>& object_ids,
+        const DCArrayKokkos<size_t>& reg_fills_in_solver,
         const CArrayKokkos <RegionFill_t>& region_fills,
         const CArray <RegionFill_host_t>& region_fills_host,
-        const size_t num_fills,
-        const size_t num_elems,
-        const size_t num_nodes,
+        const size_t num_fills_in_solver,
         const size_t rk_num_bins) const;
                         
     void init_corner_node_masses_zero_rz(

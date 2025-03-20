@@ -37,6 +37,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <map>
 
+#include "matar.h"
+
 #include "initial_conditions.h"
 
 // ==============================================================================
@@ -80,6 +82,9 @@ struct RegionFill_t
 {
     // type
     region::vol_tag volume; ///< Type of volume for this region eg. global, box, sphere, planes, etc.
+
+    // solver id
+    size_t solver_id; ///< solver ID for this region
 
     // material id
     size_t material_id; ///< Material ID for this region
@@ -140,11 +145,30 @@ struct RegionFill_host_t
     double scale_z = 1.0;
 };
 
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct SolverRegionSetup_t
+///
+/// \brief Contains kokkos arrays of fill instructions for the regions
+///
+/////////////////////////////////////////////////////////////////////////////
+struct SolverRegionSetup_t
+{
+    mtr::DCArrayKokkos<size_t> reg_fills_in_solver;     // (solver_id, fill_lid)
+    mtr::DCArrayKokkos<size_t> num_reg_fills_in_solver; // (solver_id)
+
+    mtr::CArrayKokkos<RegionFill_t> region_fills;  ///< Region data for simulation mesh, set the initial conditions
+    mtr::CArray<RegionFill_host_t> region_fills_host;  ///< Region data on CPU, set the initial conditions
+};
+
+
 // ----------------------------------
 // valid inputs for a material fill
 // ----------------------------------
 static std::vector<std::string> str_region_inps
 {
+    "solver_id",
     "volume",
     "material_id",
     "velocity",
@@ -195,6 +219,7 @@ static std::vector<std::string> str_region_vel_inps
 // ----------------------------------
 static std::vector<std::string> region_required_inps
 {
+    "solver_id",
     "material_id",
     "volume"
 };

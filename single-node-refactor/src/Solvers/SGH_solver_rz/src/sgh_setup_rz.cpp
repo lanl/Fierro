@@ -83,57 +83,61 @@ void SGHRZ::init_corner_node_masses_zero_rz(const Mesh_t& mesh,
 /// \param mesh is the simulation mesh
 /// \param node_coords are the coordinates of the nodes
 /// \param node_vel is the nodal velocity array
-/// \param region_fills are the instructures to paint state on the mesh
-/// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh 
 /// \param GaussPoint_den is density at the GaussPoints on the mesh
 /// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
+/// \param GaussPoint_volfrac is volume fraction at the GaussPoints on the mesh
 /// \param elem_mat_id is the material id in an element
-/// \param num_fills is number of fill instruction
+/// \param num_mats_saved_in_elem is the number of material with volfrac<1 saved to the element
+/// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh
+/// \param object_ids are the object ids in the vtu file
+/// \param reg_fills_in_solver are the regions to fill for this solver
+/// \param region_fills are the instructures to paint state on the mesh
+/// \param region_fills_host are the instructures on the host side to paint state on the mesh
+/// \param num_fills_in_solver is number of fill instruction for the solver
 /// \param num_elems is number of elements on the mesh
 /// \param num_nodes is number of nodes on the mesh
 /// \param rk_num_bins is number of time integration storage bins
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::fill_regions_sgh_rz(const Material_t& Materials,
-                      const Mesh_t& mesh,
-                      const DCArrayKokkos <double>& node_coords,
-                      DCArrayKokkos <double>& node_vel,
-                      DCArrayKokkos <double>& GaussPoint_den,
-                      DCArrayKokkos <double>& GaussPoint_sie,
-                      DCArrayKokkos <double>& GaussPoint_volfrac,
-                      DCArrayKokkos <size_t>& elem_mat_id,
-                      DCArrayKokkos <size_t>& num_mats_saved_in_elem,
-                      DCArrayKokkos <size_t>& voxel_elem_mat_id,
-                      const DCArrayKokkos <int>& object_ids,
-                      const CArrayKokkos <RegionFill_t>& region_fills,
-                      const CArray <RegionFill_host_t>& region_fills_host,
-                      const size_t num_fills,
-                      const size_t num_elems,
-                      const size_t num_nodes,
-                      const size_t rk_num_bins) const
+void SGHRZ::fill_regions_sgh_rz(
+                    const Material_t& Materials,
+                    const Mesh_t& mesh,
+                    const DCArrayKokkos <double>& node_coords,
+                    DCArrayKokkos <double>& node_vel,
+                    DCArrayKokkos <double>& GaussPoint_den,
+                    DCArrayKokkos <double>& GaussPoint_sie,
+                    DCArrayKokkos <double>& GaussPoint_volfrac,
+                    DCArrayKokkos <size_t>& elem_mat_id,
+                    DCArrayKokkos <size_t>& num_mats_saved_in_elem,
+                    DCArrayKokkos <size_t>& voxel_elem_mat_id,
+                    const DCArrayKokkos <int>& object_ids,
+                    const DCArrayKokkos<size_t>& reg_fills_in_solver,
+                    const CArrayKokkos <RegionFill_t>& region_fills,
+                    const CArray <RegionFill_host_t>& region_fills_host,
+                    const size_t num_fills_in_solver,
+                    const size_t rk_num_bins) const
 {
-
-
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
     size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
 
+    size_t num_fills_total = region_fills.size();  // the total number of fills in the input file
 
     // ---------------------------------------------
     // copy to host, enum to read a voxel file
     // ---------------------------------------------
     
-    DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
+    DCArrayKokkos<size_t> read_voxel_file(num_fills_total); // check to see if readVoxelFile
 
-    FOR_ALL(f_id, 0, num_fills, {
-        if (region_fills(f_id).volume == region::readVoxelFile)
+    FOR_ALL(fill_id, 0, num_fills_total, {
+        if (region_fills(fill_id).volume == region::readVoxelFile)
         {
-            read_voxel_file(f_id) = region::readVoxelFile;  // read the  voxel file
+            read_voxel_file(fill_id) = region::readVoxelFile;  // read the  voxel file
         }
         // add other mesh voxel files
         else
         {
-            read_voxel_file(f_id) = 0;
+            read_voxel_file(fill_id) = 0;
         }
     }); // end parallel for
     read_voxel_file.update_host(); // copy to CPU if code is to read a file
@@ -141,12 +145,15 @@ void SGHRZ::fill_regions_sgh_rz(const Material_t& Materials,
     // ---------------------------------------------
 
 
-    // loop over the fill instructions
-    for (size_t f_id = 0; f_id < num_fills; f_id++) {
+    // loop over the fill instructions for this solver
+    for (size_t f_lid = 0; f_lid < num_fills_in_solver; f_lid++) {
+
+        // get the fill id
+        size_t fill_id = reg_fills_in_solver.host(this->solver_id, f_lid);
 
         // ----
         // voxel mesh setup
-        if (read_voxel_file.host(f_id) == region::readVoxelFile)
+        if (read_voxel_file.host(fill_id) == region::readVoxelFile)
         {
             // read voxel mesh to get the values in the fcn interface
             user_voxel_init(voxel_elem_mat_id,
@@ -159,10 +166,10 @@ void SGHRZ::fill_regions_sgh_rz(const Material_t& Materials,
                             voxel_num_i, 
                             voxel_num_j, 
                             voxel_num_k,
-                            region_fills_host(f_id).scale_x,
-                            region_fills_host(f_id).scale_y,
-                            region_fills_host(f_id).scale_z,
-                            region_fills_host(f_id).file_path);
+                            region_fills_host(fill_id).scale_x,
+                            region_fills_host(fill_id).scale_y,
+                            region_fills_host(fill_id).scale_z,
+                            region_fills_host(fill_id).file_path);
 
             // copy values read from file to device
             voxel_elem_mat_id.update_device();
@@ -171,7 +178,7 @@ void SGHRZ::fill_regions_sgh_rz(const Material_t& Materials,
 
 
         // parallel loop over elements in mesh
-        FOR_ALL(elem_gid, 0, num_elems, {
+        FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
             // calculate the coordinates and radius of the element
             double elem_coords_1D[3]; // note:initialization with a list won't work
@@ -207,7 +214,7 @@ void SGHRZ::fill_regions_sgh_rz(const Material_t& Materials,
                                                      voxel_num_i, 
                                                      voxel_num_j, 
                                                      voxel_num_k,
-                                                     f_id,
+                                                     fill_id,
                                                      elem_gid);
 
 
@@ -226,7 +233,7 @@ void SGHRZ::fill_regions_sgh_rz(const Material_t& Materials,
                                     region_fills,
                                     elem_coords,
                                     elem_gid,
-                                    f_id);
+                                    fill_id);
 
                 // add user defined paint here
                 // user_defined_sgh_state();
@@ -245,7 +252,7 @@ void SGHRZ::fill_regions_sgh_rz(const Material_t& Materials,
                                 node_coords,
                                 node_gid,
                                 mesh.num_dims,
-                                f_id,
+                                fill_id,
                                 rk_num_bins);
 
                     // add user defined paint here
@@ -287,8 +294,8 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
                 State_t& State)
 {
 
-    size_t num_fills = SimulationParamaters.region_fills.size();
-    printf("Num Fills's = %zu\n", num_fills);
+    size_t num_fills_in_solver = SimulationParamaters.region_setups.num_reg_fills_in_solver.host(this->solver_id);
+    printf("Num fills's = %zu\n in solver = %zu", num_fills_in_solver, this->solver_id);
 
     // the number of elems and nodes in the mesh
     const size_t num_elems = mesh.num_elems;
@@ -340,11 +347,10 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
                         num_mats_saved_in_elem,
                         voxel_elem_mat_id,
                         SimulationParamaters.mesh_input.object_ids,
-                        SimulationParamaters.region_fills,
-                        SimulationParamaters.region_fills_host,
-                        num_fills,
-                        num_elems,
-                        num_nodes,
+                        SimulationParamaters.region_setups.reg_fills_in_solver,
+                        SimulationParamaters.region_setups.region_fills,
+                        SimulationParamaters.region_setups.region_fills_host,
+                        num_fills_in_solver,
                         rk_num_bins);
 
 

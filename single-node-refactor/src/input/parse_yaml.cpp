@@ -326,9 +326,11 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
     }
     // parse the region yaml text into a vector of region_fills
     parse_regions(root, 
-                  SimulationParamaters.region_fills,
-                  SimulationParamaters.region_fills_host);
-
+                  SimulationParamaters.region_setups.reg_fills_in_solver,
+                  SimulationParamaters.region_setups.num_reg_fills_in_solver,
+                  SimulationParamaters.region_setups.region_fills,
+                  SimulationParamaters.region_setups.region_fills_host,
+                  num_solvers);
 
     if (VERBOSE) {
         printf("\n");
@@ -1093,15 +1095,25 @@ void parse_output_options(Yaml::Node& root,
 //    Parse Fill regions
 // =================================================================================
 void parse_regions(Yaml::Node& root, 
+                   DCArrayKokkos<size_t>& reg_fills_in_solver,  
+                   DCArrayKokkos<size_t>& num_reg_fills_in_solver,
                    CArrayKokkos<RegionFill_t>& region_fills, 
-                   CArray<RegionFill_host_t>&  region_fills_host)
+                   CArray<RegionFill_host_t>&  region_fills_host,
+                   const size_t num_solvers)
 
 {
+    // allocate memory
+    num_reg_fills_in_solver = DCArrayKokkos<size_t>(num_solvers, "sim_param.region_setup.num_reg_fills_in_solver");
+    num_reg_fills_in_solver.set_values(0);
+
+
     Yaml::Node& region_yaml = root["regions"];
 
     size_t num_regions = region_yaml.Size();
 
-    region_fills = CArrayKokkos<RegionFill_t>(num_regions , "sim_param.region_fills");
+    // reg_fills_in_solver(solver_id, fill_lid) = fill_id
+    reg_fills_in_solver = DCArrayKokkos<size_t>(num_solvers, num_regions, "sim_param.region_setup.reg_fills_in_solver");
+    region_fills = CArrayKokkos<RegionFill_t>(num_regions , "sim_param.region_setup.region_fills");
     region_fills_host = CArray<RegionFill_host_t>(num_regions); 
 
     // loop over the fill regions specified
@@ -1124,7 +1136,21 @@ void parse_regions(Yaml::Node& root,
             Yaml::Node& material_inps_yaml = root["regions"][reg_id]["region"][a_word];
 
             // set the values
-            if (a_word.compare("material_id") == 0) {
+            if (a_word.compare("solver_id") == 0) {
+                int solver_id = root["regions"][reg_id]["region"][a_word].As<int>();
+                
+                // get the local id for filling this region
+                size_t fill_lid = num_reg_fills_in_solver.host(solver_id);
+
+                // save the fill_id, which is the reg_id
+                reg_fills_in_solver(solver_id, fill_lid) = reg_id;
+                num_reg_fills_in_solver.host(solver_id) ++;
+
+                RUN({
+                    region_fills(reg_id).solver_id = solver_id;
+                });
+            } // mat_id
+            else if (a_word.compare("material_id") == 0) {
                 int id = root["regions"][reg_id]["region"][a_word].As<int>();
 
                 RUN({
@@ -1766,7 +1792,11 @@ void parse_regions(Yaml::Node& root,
                 }
                 throw std::runtime_error("**** Region Not Understood ****");
             }
-        } // end for words in material
+        } // end for words in fill region
+
+        // update the device
+        reg_fills_in_solver.update_device();    
+        num_reg_fills_in_solver.update_device();
 
         // -----------------------------------------------
         // check for consistency in input settings

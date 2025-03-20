@@ -77,47 +77,53 @@ void SGTM3D::init_corner_node_masses_zero(const Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::tag_regions(
-    const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos <size_t>& elem_mat_id,
-    DCArrayKokkos <size_t>& voxel_elem_mat_id,
-    DCArrayKokkos <size_t>& elem_region_id,
-    DCArrayKokkos <size_t>& node_region_id,
-    const DCArrayKokkos<int>& object_ids,
-    const CArrayKokkos<RegionFill_t>& region_fills,
-    const CArray<RegionFill_host_t>&  region_fills_host) const
+           const Mesh_t& mesh,
+           const DCArrayKokkos<double>& node_coords,
+           DCArrayKokkos <size_t>& elem_mat_id,
+           DCArrayKokkos <size_t>& voxel_elem_mat_id,
+           DCArrayKokkos <size_t>& elem_region_id,
+           DCArrayKokkos <size_t>& node_region_id,
+           const DCArrayKokkos<int>& object_ids,
+           const DCArrayKokkos<size_t>& reg_fills_in_solver,
+           const CArrayKokkos<RegionFill_t>& region_fills,
+           const CArray<RegionFill_host_t>&  region_fills_host,
+           size_t num_fills_in_solver) const
 {
-    std::cout << "Tagging Regions" << std::endl;
+
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
     size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
 
-    size_t num_fills = region_fills.size();
+    size_t num_fills_total = region_fills.size();  // the total number of fills in the input file
 
     // ---------------------------------------------
     // copy to host, enum to read a voxel file
     // ---------------------------------------------
 
-    DCArrayKokkos<size_t> read_voxel_file(num_fills); // check to see if readVoxelFile
+    DCArrayKokkos<size_t> read_voxel_file(num_fills_total); // check to see if readVoxelFile
 
-    FOR_ALL(f_id, 0, num_fills, {
-        if (region_fills(f_id).volume == region::readVoxelFile) {
-            read_voxel_file(f_id) = region::readVoxelFile;  // read the  voxel file
+    FOR_ALL(fill_id, 0, num_fills_total, {
+        if (region_fills(fill_id).volume == region::readVoxelFile) {
+            read_voxel_file(fill_id) = region::readVoxelFile;  // read the  voxel file
         }
         // add other mesh voxel files
         else{
-            read_voxel_file(f_id) = 0;
+            read_voxel_file(fill_id) = 0;
         }
     }); // end parallel for
     read_voxel_file.update_host(); // copy to CPU if code is to read a file
     Kokkos::fence();
     // ---------------------------------------------
 
-    // loop over the fill instructions
-    for (size_t f_id = 0; f_id < num_fills; f_id++) {
+    // loop over the fill instructions for this solver
+    for (size_t f_lid = 0; f_lid < num_fills_in_solver; f_lid++) {
+
+        // get the fill id
+        size_t fill_id = reg_fills_in_solver.host(this->solver_id, f_lid);
+
         // ----
         // voxel mesh setup
-        if (read_voxel_file.host(f_id) == region::readVoxelFile) {
+        if (read_voxel_file.host(fill_id) == region::readVoxelFile) {
             // read voxel mesh to get the values in the fcn interface
             user_voxel_init(voxel_elem_mat_id,
                             voxel_dx,
@@ -129,10 +135,10 @@ void SGTM3D::tag_regions(
                             voxel_num_i,
                             voxel_num_j,
                             voxel_num_k,
-                            region_fills_host(f_id).scale_x,
-                            region_fills_host(f_id).scale_y,
-                            region_fills_host(f_id).scale_z,
-                            region_fills_host(f_id).file_path);
+                            region_fills_host(fill_id).scale_x,
+                            region_fills_host(fill_id).scale_y,
+                            region_fills_host(fill_id).scale_z,
+                            region_fills_host(fill_id).file_path);
 
             // copy values read from file to device
             voxel_elem_mat_id.update_device();
@@ -180,17 +186,17 @@ void SGTM3D::tag_regions(
                                                      voxel_num_i,
                                                      voxel_num_j,
                                                      voxel_num_k,
-                                                     f_id,
+                                                     fill_id,
                                                      elem_gid);
             // paint the material state on the element if fill_this=1
             if (fill_this == 1) {
 
                 // the material id
-                size_t mat_id = region_fills(f_id).material_id;
+                size_t mat_id = region_fills(fill_id).material_id;
 
                 // --- material_id in elem ---
                 elem_mat_id(elem_gid) = mat_id;
-                elem_region_id(elem_gid) = f_id;
+                elem_region_id(elem_gid) = fill_id;
             } // end if fill this
         }); // end FOR_ALL element loop
         Kokkos::fence();
@@ -227,15 +233,15 @@ void SGTM3D::tag_regions(
                                                      voxel_num_i,
                                                      voxel_num_j,
                                                      voxel_num_k,
-                                                     f_id,
+                                                     fill_id,
                                                      elem_gid);
 
 
             if (fill_this == 1) {
 
                 // the material id
-                size_t mat_id = region_fills(f_id).material_id;
-                node_region_id(node_gid) = f_id;
+                size_t mat_id = region_fills(fill_id).material_id;
+                node_region_id(node_gid) = fill_id;
             } // end if fill this
         }); // end FOR_ALL node loop
         Kokkos::fence();
@@ -264,7 +270,7 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
 {
     
     setup_sgtm(SimulationParamaters,
-        SimulationParamaters.region_fills,
+        SimulationParamaters.region_setups.region_fills,
         Materials,
         mesh, 
         Boundary,
@@ -289,9 +295,8 @@ void SGTM3D::setup_sgtm(
         State_t& State) const
 {
 
-    
-    size_t num_fills = SimulationParamaters.region_fills.size();
-    printf("Num Fills's = %zu\n", num_fills);
+    size_t num_fills_in_solver = SimulationParamaters.region_setups.num_reg_fills_in_solver.host(this->solver_id);
+    printf("Num fills's = %zu\n in solver = %zu", num_fills_in_solver, this->solver_id);
 
     // the number of elems and nodes in the mesh
     const size_t num_elems = mesh.num_elems;
@@ -321,12 +326,14 @@ void SGTM3D::setup_sgtm(
         elem_region_id,
         node_region_id,
         SimulationParamaters.mesh_input.object_ids,
-        SimulationParamaters.region_fills,
-        SimulationParamaters.region_fills_host);
+        SimulationParamaters.region_setups.reg_fills_in_solver,
+        SimulationParamaters.region_setups.region_fills,
+        SimulationParamaters.region_setups.region_fills_host,
+        num_fills_in_solver);
     // note: the device and host side are updated in the above function
 
     // ---------------------------------------------
-    std::cout << "After Tagging Regions" << std::endl;
+    //std::cout << "After Tagging Regions" << std::endl;
     // ----------------------------------------------------------------
     //  Walk over the mesh and find dimensions of material storage arrays
     // ----------------------------------------------------------------
@@ -407,8 +414,9 @@ void SGTM3D::setup_sgtm(
     // Storage for device side variables needed on host
     DCArrayKokkos<double> init_den(1);
     DCArrayKokkos<double> init_sie(1);
-    DCArrayKokkos<double> init_sh(1);
-    DCArrayKokkos<double> init_tc(1);
+    DCArrayKokkos<double> init_sh(1); // specific_heat
+    DCArrayKokkos<double> init_tc(1); // thermal_conductivity
+
 
     // the following loop is not thread safe
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
@@ -422,6 +430,7 @@ void SGTM3D::setup_sgtm(
         // --- mapping from material elem lid to elem ---
         State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid; 
 
+        // using the fill_ids, copy the fill den, sie, sh, and tc to the cpu 
         RUN({
             init_den(0) = region_fills(elem_region_id(elem_gid)).den;
             init_sie(0) = region_fills(elem_region_id(elem_gid)).sie;

@@ -265,15 +265,15 @@ struct BoundaryCondition_t
     size_t num_bcs; // the number of boundary conditions
 
     // making a psuedo dual ragged right
-    DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver, bc_ids)
-    DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver)
+    DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver_id, bc_lid)
+    DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver_id)
 
-    DCArrayKokkos<size_t> stress_bdy_sets_in_solver;     // (solver, bc_ids)
-    DCArrayKokkos<size_t> num_stress_bdy_sets_in_solver; // (solver)
+    DCArrayKokkos<size_t> stress_bdy_sets_in_solver;     // (solver_id, bc_lid)
+    DCArrayKokkos<size_t> num_stress_bdy_sets_in_solver; // (solver_id)
 
     // keep adding ragged storage for the other BC models -- temp, displacement, etc.
-    DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver, ids)
-    DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver)
+    DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver_id, lids)
+    DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver_id)
 
 
     CArrayKokkos<BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs, accessed using (bc_id)
