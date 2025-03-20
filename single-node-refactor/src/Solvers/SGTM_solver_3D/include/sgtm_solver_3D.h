@@ -197,8 +197,10 @@ public:
         DCArrayKokkos <size_t>& elem_region_id,
         DCArrayKokkos <size_t>& node_region_id,
         const DCArrayKokkos<int>& object_ids,
+        const DCArrayKokkos<size_t>& reg_fills_in_solver,
         const CArrayKokkos<RegionFill_t>& region_fills,
-        const CArray<RegionFill_host_t>&  region_fills_host) const;
+        const CArray<RegionFill_host_t>&  region_fills_host,
+        size_t num_fills_in_solver) const;
 
     void init_corner_node_masses_zero(
         const Mesh_t& mesh,

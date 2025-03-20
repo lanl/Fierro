@@ -126,6 +126,7 @@ regions:
         volume:
             type: global
         material_id: 0
+        solver_id: 0
         den: 1.0
         sie: 1.0e-10
 
