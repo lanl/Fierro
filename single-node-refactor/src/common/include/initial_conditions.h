@@ -38,52 +38,73 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace init_conds
 {
-// initial velocity conditions distribution
-// TODO: remove references to velocity, and make it general distributions
-enum init_velocity_conds
-{
-    no_ic_vel = 0,
+    // initial conditions for a vector field
+    enum init_vector_conds
+    {
+        noICsVec = 0,  // do nothing
 
-    // uniform
-    cartesian = 1,       // cart velocity
-    radial = 2,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
-    spherical = 3,       // spherical
+        stationary = 1,   // set components in the vector to zero
 
-    // linear variation
-    radial_linear = 4,         // linear variation from 0,0,0
-    spherical_linear = 5,      // linear variation from 0,0,0
+        // uniform
+        cartesian = 2,       // cart vector
+        radialVec = 3,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+        sphericalVec = 4,       // spherical
 
-    // vortical initial conditions
-    tg_vortex = 6
-};
+        // linear variation
+        radialLinearVec = 5,         // linear variation from 0,0,0
+        sphericalLinearVec = 6,      // linear variation from 0,0,0
 
-// // initial temperature conditions distribution
-// enum init_temperature_distribution
-// {
-//     no_ic_temp = 0,
+        // vortical initial conditions
+        tgVortexVec = 7
 
-//     // uniform
-//     cartesian = 1,       // cart temperature
-//     radial = 2,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
-//     spherical = 3,       // spherical
+        // user defined here
+    };
 
-//     // linear variation
-//     radial_linear = 4,         // linear variation from 0,0,0
-//     spherical_linear = 5,      // linear variation from 0,0,0
+    // initial conditions for a scalar field
+    enum init_scalar_conds
+    {
+        noICsScalar = 0,  // do nothing
 
-// };
+        // uniform
+        uniform = 1,  // same value everywhere
+        radialScalar = 2,     // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+        sphericalScalar = 3,  // spherical
 
+        // linear variations
+        xlinearScalar = 4, // linear variations from 0,0,0
+        ylinearScalar = 5,
+        zlinearScalar = 6,
+        // xy_linear = 5,
+        // xz_linear = 6,
+        // yz_linear = 7,
+        // xyz_linear = 8,
+        // rad_linear = 9,      // linear variation from 0,0,0
+        // sph_linear = 10,     // linear variation from 0,0,0
+
+        // vortical initial conditions
+        tgVortexScalar = 11
+    };
 
 } // end of initial conditions namespace
 
-static std::map<std::string, init_conds::init_velocity_conds> velocity_type_map
+static std::map<std::string, init_conds::init_vector_conds> vector_ics_type_map
 {
+    { "static", init_conds::stationary },
     { "cartesian", init_conds::cartesian },
-    { "radial", init_conds::radial },
-    { "spherical", init_conds::spherical },
-    { "radial_linear", init_conds::radial_linear },
-    { "spherical_linear", init_conds::spherical_linear },
-    { "tg_vortex", init_conds::tg_vortex }
+    { "radial", init_conds::radialVec },
+    { "spherical", init_conds::sphericalVec },
+    { "radial_linear", init_conds::radialLinearVec },
+    { "spherical_linear", init_conds::sphericalLinearVec },
+    { "tg_vortex", init_conds::tgVortexVec }
+};
+
+static std::map<std::string, init_conds::init_scalar_conds> scalar_ics_type_map
+{
+    { "uniform", init_conds::uniform },
+    { "x_linear", init_conds::xlinearScalar },
+    { "y_linear", init_conds::ylinearScalar },
+    { "z_linear", init_conds::zlinearScalar },
+    { "tg_vortex", init_conds::tgVortexScalar }
 };
 
 #endif // end Header Guard

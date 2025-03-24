@@ -1159,47 +1159,10 @@ void parse_regions(Yaml::Node& root,
                     region_fills(reg_id).material_id = id;
                 });
             } // mat_id
-            else if (a_word.compare("den") == 0) {
-                double den = root["regions"][reg_id]["region"]["den"].As<double>();
-
-                // check for a valid density else save it
-                if (den < 0.0) {
-                    std::cout << "ERROR: density is negative: " << den << std::endl;
-                }
-                else {
-                    RUN({
-                        region_fills(reg_id).den = den;  // NOTE: GPUs will require a RUN({})
-                    });
-                }
-            } // den
-            else if (a_word.compare("sie") == 0) {
-                // specific internal energy
-
-                double sie = root["regions"][reg_id]["region"]["sie"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tsie = " << sie << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).sie = sie;
-                });
-            } // sie
-            else if (a_word.compare("ie") == 0) {
-                // extensive internal energy
-
-                double ie = root["regions"][reg_id]["region"]["ie"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tie = " << ie << std::endl;
-                }
-
-                RUN({
-                    region_fills(reg_id).ie = ie;
-                });
-            } // ie
             else if (a_word.compare("volfrac") == 0) {
                 // extensive internal energy
 
-                double volfrac = root["regions"][reg_id]["region"]["volfrac"].As<double>();
+                double volfrac = root["regions"][reg_id]["region"]["volume_fraction"].As<double>();
                 if (VERBOSE) {
                     std::cout << "\tvolfrac = " << volfrac << std::endl;
                 }
@@ -1209,34 +1172,679 @@ void parse_regions(Yaml::Node& root,
                     double volfracfloor = fmax(0.0, volfrac);
                     region_fills(reg_id).volfrac = fmin(1.0, volfracfloor);
                 });
+            } // volume fraction
+            else if (a_word.compare("density") == 0) {
+                
+                // -----
+                // loop over the sub fields under den
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["density"];
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_den_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_den_inputs, str_region_den_inps, region_den_required_inps);
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_den_inputs){ 
+
+                    if (a_subfield_word.compare("value") == 0) {
+                        // density
+                        double value = root["regions"][reg_id]["region"]["density"]["value"].As<double>();
+
+                        // check for a valid density, and then save it if it is
+                        if (value < 0.0) {
+                            std::cout << "ERROR: density is negative: " << value << std::endl;
+                        }
+
+                        if (VERBOSE) {
+                        std::cout << "\tvalue = " << value << std::endl;
+                        }
+                        RUN({
+                        region_fills(reg_id).den = value;
+                        });
+                    } // value
+                    else if (a_subfield_word.compare("type") == 0){
+
+                        std::string type = root["regions"][reg_id]["region"]["density"]["type"].As<std::string>();
+
+                        if (VERBOSE) {
+                            std::cout << "\tdensity = " << type << std::endl;
+                        }
+                        // set the IC tag type
+                        if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
+                        
+                            // scalar_ics_type_map[type] returns enum value, e.g., init_conds::uniform 
+                            switch(scalar_ics_type_map[type]){
+
+                                case init_conds::uniform:
+                                    std::cout << "Setting density initial conditions type to uniform " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).den_field = init_conds::uniform;
+                                    });
+                                    break;
+
+                                case init_conds::tgVortexScalar:
+                                    std::cout << "Setting density initial conditions type to TG Vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).den_field = init_conds::tgVortexScalar;
+                                    });
+                                    break;
+
+                                case init_conds::noICsScalar:
+                                    std::cout << "Setting density initial conditions type to no density" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).den_field = init_conds::noICsScalar;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).den_field = init_conds::noICsScalar;
+                                    });
+
+                                    std::cout << "ERROR: No valid density intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : scalar_ics_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** density Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+
+                            if (VERBOSE) {
+                                std::cout << "\tvolume_fill = " << type << std::endl;
+                            } // end if
+
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** density IC Not Understood ****");
+                        } // end if on density type
+                        
+                    } // end if on density type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_den_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region density Inputs Not Understood ****");
+                    } // end if on all subfields under density
+
+                } // end for loop over text
+
+            } // den
+            else if (a_word.compare("specific_internal_energy") == 0) {
+                // specific internal energy
+
+                // -----
+                // loop over the sub fields under sie
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["specific_internal_energy"];
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_sie_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_sie_inputs, str_region_sie_inps, region_sie_required_inps);
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_sie_inputs){ 
+
+                    if (a_subfield_word.compare("value") == 0) {
+                        // specific_internal_energy value
+                        double value = root["regions"][reg_id]["region"]["specific_internal_energy"]["value"].As<double>();
+                        RUN({
+                        region_fills(reg_id).sie = value;
+                        });
+                    } // value
+                    else if (a_subfield_word.compare("type") == 0){
+
+                        std::string type = root["regions"][reg_id]["region"]["specific_internal_energy"]["type"].As<std::string>();
+
+                        // set the IC tag type
+                        if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
+                        
+                            // scalar_ics_type_map[type] returns enum value, e.g., init_conds::uniform 
+                            switch(scalar_ics_type_map[type]){
+
+                                case init_conds::uniform:
+                                    std::cout << "Setting specific_internal_energy initial conditions type to uniform " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).sie_field = init_conds::uniform;
+                                    });
+                                    break;
+
+                                case init_conds::tgVortexScalar:
+                                    std::cout << "Setting specific_internal_energy initial conditions type to TG Vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).sie_field = init_conds::tgVortexScalar;
+                                    });
+                                    break;
+
+                                case init_conds::noICsScalar:
+                                    std::cout << "Setting specific_internal_energy initial conditions type to no specific_internal_energy" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).sie_field = init_conds::noICsScalar;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).sie_field = init_conds::noICsScalar;
+                                    });
+
+                                    std::cout << "ERROR: No valid specific_internal_energy intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : scalar_ics_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** specific_internal_energy Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** specific_internal_energy IC Not Understood ****");
+                        } // end if on specific_internal_energy type
+                        
+                    } // end if on specific_internal_energy type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_sie_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region specific_internal_energy Inputs Not Understood ****");
+                    } // end if on all subfields under specific_internal_energy
+
+                } // end for loop over text
+
+            } // sie
+            else if (a_word.compare("ie") == 0) {
+                // extensive internal energy
+
+                // -----
+                // loop over the sub fields under internal_energy
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["internal_energy"];
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_ie_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_ie_inputs, str_region_ie_inps, region_ie_required_inps);
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_ie_inputs){ 
+
+                    if (a_subfield_word.compare("value") == 0) {
+                        // extensive internal_energy
+                        double value = root["regions"][reg_id]["region"]["internal_energy"]["value"].As<double>();
+                        RUN({
+                        region_fills(reg_id).ie = value;
+                        });
+                    } // value
+                    else if (a_subfield_word.compare("type") == 0){
+
+                        std::string type = root["regions"][reg_id]["region"]["internal_energy"]["type"].As<std::string>();
+
+                        // set the IC tag type
+                        if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
+                        
+                            // scalar_ics_type_map[type] returns enum value, e.g., init_conds::uniform 
+                            switch(scalar_ics_type_map[type]){
+
+                                case init_conds::uniform:
+                                    std::cout << "Setting internal_energy initial conditions type to uniform " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).ie_field = init_conds::uniform;
+                                    });
+                                    break;
+
+                                case init_conds::tgVortexScalar:
+                                    std::cout << "Setting internal_energy initial conditions type to TG Vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).ie_field = init_conds::tgVortexScalar;
+                                    });
+                                    break;
+
+                                case init_conds::noICsScalar:
+                                    std::cout << "Setting internal_energy initial conditions type to no internal_energy" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).ie_field = init_conds::noICsScalar;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).ie_field = init_conds::noICsScalar;
+                                    });
+
+                                    std::cout << "ERROR: No valid internal_energy intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : scalar_ics_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** internal_energy Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** internal_energy IC Not Understood ****");
+                        } // end if on internal_energy type
+                        
+                    } // end if on internal_energy type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_ie_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region internal_energy Inputs Not Understood ****");
+                    } // end if on all subfields under internal_energy
+
+                } // end for loop over text
+
             } // ie            
             else if (a_word.compare("temperature") == 0) {
-                double temperature = root["regions"][reg_id]["region"]["temperature"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\ttemperature = " << temperature << std::endl;
-                }
-                RUN({
-                    region_fills(reg_id).temperature = temperature;
-                });
+                // -----
+                // loop over the sub fields under temperature
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["temperature"];
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_temperature_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_temperature_inputs, str_region_temperature_inps, region_temperature_required_inps);
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_temperature_inputs){ 
+
+                    if (a_subfield_word.compare("value") == 0) {
+                        //temperature
+                        double value = root["regions"][reg_id]["region"]["temperature"]["value"].As<double>();
+                        RUN({
+                        region_fills(reg_id).temperature = value;
+                        });
+                    } // value
+                    else if (a_subfield_word.compare("type") == 0){
+
+                        std::string type = root["regions"][reg_id]["region"]["temperature"]["type"].As<std::string>();
+
+                        // set the IC tag type
+                        if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
+                        
+                            // scalar_ics_type_map[type] returns enum value, e.g., init_conds::uniform 
+                            switch(scalar_ics_type_map[type]){
+
+                                case init_conds::uniform:
+                                    std::cout << "Setting temperature initial conditions type to uniform " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).temperature_field = init_conds::uniform;
+                                    });
+                                    break;
+
+                                case init_conds::tgVortexScalar:
+                                    std::cout << "Setting temperature initial conditions type to TG Vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).temperature_field = init_conds::tgVortexScalar;
+                                    });
+                                    break;
+
+                                case init_conds::noICsScalar:
+                                    std::cout << "Setting temperature initial conditions type to no temperature" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).temperature_field = init_conds::noICsScalar;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).temperature_field = init_conds::noICsScalar;
+                                    });
+
+                                    std::cout << "ERROR: No valid temperature intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : scalar_ics_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** temperature Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** temperature IC Not Understood ****");
+                        } // end if on temperature type
+                        
+                    } // end if on temperature type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_temperature_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region temperature Inputs Not Understood ****");
+                    } // end if on all subfields under temperature
+
+                } // end for loop over text
+
             } // temperature
             else if (a_word.compare("specific_heat") == 0) {
-                double specific_heat = root["regions"][reg_id]["region"]["specific_heat"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tspecific_heat = " << specific_heat << std::endl;
-                }
-                RUN({
-                    region_fills(reg_id).specific_heat = specific_heat;
-                });
+                // -----
+                // loop over the sub fields under specific_heat
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["specific_heat"];
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_specific_heat_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_specific_heat_inputs, str_region_specific_heat_inps, region_specific_heat_required_inps);
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_specific_heat_inputs){ 
+
+                    if (a_subfield_word.compare("value") == 0) {
+                        // x-component of specific_heat
+                        double value = root["regions"][reg_id]["region"]["specific_heat"]["value"].As<double>();
+                        RUN({
+                        region_fills(reg_id).specific_heat = value;
+                        });
+                    } // value
+                    else if (a_subfield_word.compare("type") == 0){
+
+                        std::string type = root["regions"][reg_id]["region"]["specific_heat"]["type"].As<std::string>();
+
+                        // set the IC tag type
+                        if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
+                        
+                            // scalar_ics_type_map[type] returns enum value, e.g., init_conds::uniform 
+                            switch(scalar_ics_type_map[type]){
+
+                                case init_conds::uniform:
+                                    std::cout << "Setting specific_heat initial conditions type to uniform " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).specific_heat_field = init_conds::uniform;
+                                    });
+                                    break;
+
+                                case init_conds::tgVortexScalar:
+                                    std::cout << "Setting specific_heat initial conditions type to TG Vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).specific_heat_field = init_conds::tgVortexScalar;
+                                    });
+                                    break;
+
+                                case init_conds::noICsScalar:
+                                    std::cout << "Setting specific_heat initial conditions type to no specific_heat" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).specific_heat_field = init_conds::noICsScalar;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).specific_heat_field = init_conds::noICsScalar;
+                                    });
+
+                                    std::cout << "ERROR: No valid specific_heat intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : scalar_ics_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** specific_heat Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** specific_heat IC Not Understood ****");
+                        } // end if on specific_heat type
+                        
+                    } // end if on specific_heat type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_specific_heat_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region specific_heat Inputs Not Understood ****");
+                    } // end if on all subfields under specific_heat
+
+                } // end for loop over text
+
             } // specific_heat
             else if (a_word.compare("thermal_conductivity") == 0) {
-                double thermal_conductivity = root["regions"][reg_id]["region"]["thermal_conductivity"].As<double>();
-                if (VERBOSE) {
-                    std::cout << "\tthermal_conductivity = " << thermal_conductivity << std::endl;
-                }
-                RUN({
-                    region_fills(reg_id).thermal_conductivity = thermal_conductivity;
-                });
+                // -----
+                // loop over the sub fields under thermal_conductivity
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["thermal_conductivity"];
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_thermal_conductivity_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_thermal_conductivity_inputs, str_region_thermal_conductivity_inps, region_thermal_conductivity_required_inps);
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_thermal_conductivity_inputs){ 
+
+                    if (a_subfield_word.compare("value") == 0) {
+                        // thermal_conductivity
+                        double value = root["regions"][reg_id]["region"]["thermal_conductivity"]["value"].As<double>();
+
+                        RUN({
+                        region_fills(reg_id).thermal_conductivity = value;
+                        });
+                    } // value
+                    else if (a_subfield_word.compare("type") == 0){
+
+                        std::string type = root["regions"][reg_id]["region"]["thermal_conductivity"]["type"].As<std::string>();
+
+                        // set the IC tag type
+                        if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
+                        
+                            // scalar_ics_type_map[type] returns enum value, e.g., init_conds::uniform 
+                            switch(scalar_ics_type_map[type]){
+
+                                case init_conds::uniform:
+                                    std::cout << "Setting thermal_conductivity initial conditions type to uniform " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).thermal_conductivity_field = init_conds::uniform;
+                                    });
+                                    break;
+
+                                case init_conds::tgVortexScalar:
+                                    std::cout << "Setting thermal_conductivity initial conditions type to TG Vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).thermal_conductivity_field = init_conds::tgVortexScalar;
+                                    });
+                                    break;
+
+                                case init_conds::noICsScalar:
+                                    std::cout << "Setting thermal_conductivity initial conditions type to no thermal_conductivity" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).thermal_conductivity_field = init_conds::noICsScalar;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).thermal_conductivity_field = init_conds::noICsScalar;
+                                    });
+
+                                    std::cout << "ERROR: No valid thermal_conductivity intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : scalar_ics_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** thermal_conductivity Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** thermal_conductivity IC Not Understood ****");
+                        } // end if on thermal_conductivity type
+                        
+                    } // end if on thermal_conductivity type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_thermal_conductivity_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region thermal_conductivity Inputs Not Understood ****");
+                    } // end if on all subfields under thermal_conductivity
+
+                } // end for loop over text
+
             } // thermal_conductivity
+            else if (a_word.compare("volume_fraction") == 0){
+                // -----
+                // loop over the sub fields under volfrac
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["volume_fraction"];
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_volfrac_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_volfrac_inputs, str_region_volfrac_inps, region_volfrac_required_inps);
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_volfrac_inputs){ 
+
+                    if (a_subfield_word.compare("value") == 0) {
+                        // volfrac value or the intercept if linear variation
+                        double value = root["regions"][reg_id]["region"]["volume_fraction"]["value"].As<double>();
+      
+                        RUN({
+                            region_fills(reg_id).volfrac = value;
+                        });
+                    } // value
+                    else if (a_subfield_word.compare("slope") == 0) {
+                        // volfrac slope
+                        double slope = root["regions"][reg_id]["region"]["volume_fraction"]["slope"].As<double>();
+      
+                        RUN({
+                            region_fills(reg_id).volfrac_slope = slope;
+                        });
+                    } // slope
+                    else if (a_subfield_word.compare("type") == 0){
+
+                        std::string type = root["regions"][reg_id]["region"]["volume_fraction"]["type"].As<std::string>();
+
+                        // set the IC tag type
+                        if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
+                        
+                            // scalar_ics_type_map[type] returns enum value, e.g., init_conds::uniform 
+                            switch(scalar_ics_type_map[type]){
+
+                                case init_conds::uniform:
+                                    std::cout << "Setting volfrac initial conditions type to uniform " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volfrac_field = init_conds::uniform;
+                                    });
+                                    break;
+
+                                case init_conds::xlinearScalar:
+                                    std::cout << "Setting volfrac initial conditions type to xlinearScalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volfrac_field = init_conds::xlinearScalar;
+                                    });
+                                    break;
+                                
+                                case init_conds::ylinearScalar:
+                                    std::cout << "Setting volfrac initial conditions type to ylinearScalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volfrac_field = init_conds::ylinearScalar;
+                                    });
+                                    break;
+                                
+                                case init_conds::zlinearScalar:
+                                    std::cout << "Setting volfrac initial conditions type to zlinearScalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volfrac_field = init_conds::zlinearScalar;
+                                    });
+                                    break;
+
+                                case init_conds::tgVortexScalar:
+                                    std::cout << "Setting volfrac initial conditions type to TG Vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volfrac_field = init_conds::tgVortexScalar;
+                                    });
+                                    break;
+
+                                case init_conds::noICsScalar:
+                                    std::cout << "Setting volfrac initial conditions type to no volfrac" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).volfrac_field = init_conds::noICsScalar;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).volfrac_field = init_conds::noICsScalar;
+                                    });
+
+                                    std::cout << "ERROR: No valid volume fraction intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : scalar_ics_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** Volume Fraction Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** Volume Fraction IC Not Understood ****");
+                        } // end if on Volume Fraction type
+                        
+                    } // end if on Volume Fraction type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_volfrac_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region Volume Fraction Inputs Not Understood ****");
+                    } // end if on all subfields under Volume Fraction
+
+                } // end for loop over text
+            }
             else if (a_word.compare("velocity") == 0) {
 
                 // -----
@@ -1256,9 +1864,7 @@ void parse_regions(Yaml::Node& root,
                     if (a_subfield_word.compare("u") == 0) {
                         // x-component of velocity
                         double u = root["regions"][reg_id]["region"]["velocity"]["u"].As<double>();
-                        if (VERBOSE) {
-                        std::cout << "\tu = " << u << std::endl;
-                        }
+
                         RUN({
                         region_fills(reg_id).u = u;
                         });
@@ -1266,9 +1872,6 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("v") == 0) {
                         // y-component of velocity
                         double v = root["regions"][reg_id]["region"]["velocity"]["v"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tv = " << v << std::endl;
-                        }
 
                         RUN({
                             region_fills(reg_id).v = v;
@@ -1278,9 +1881,6 @@ void parse_regions(Yaml::Node& root,
                         // z-component of velocity
 
                         double w = root["regions"][reg_id]["region"]["velocity"]["w"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tw = " << w << std::endl;
-                        }
 
                         RUN({
                             region_fills(reg_id).w = w;
@@ -1288,9 +1888,7 @@ void parse_regions(Yaml::Node& root,
                     } // w
                     else if (a_subfield_word.compare("speed") == 0) {
                         double speed = root["regions"][reg_id]["region"]["velocity"]["speed"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tspeed = " << speed << std::endl;
-                        }
+
                         RUN({
                             region_fills(reg_id).speed = speed;
                         });
@@ -1299,84 +1897,84 @@ void parse_regions(Yaml::Node& root,
 
                         std::string type = root["regions"][reg_id]["region"]["velocity"]["type"].As<std::string>();
 
-                        if (VERBOSE) {
-                            std::cout << "\tvelocity = " << type << std::endl;
-                        }
                         // set the volume tag type
-                        if (velocity_type_map.find(type) != velocity_type_map.end()) {
+                        if (vector_ics_type_map.find(type) != vector_ics_type_map.end()) {
                         
-                            // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
-                            switch(velocity_type_map[type]){
+                            // vector_ics_type_map[type] returns enum value, e.g., init_conds::velocity 
+                            switch(vector_ics_type_map[type]){
+
+                                case init_conds::stationary:
+                                    std::cout << "Setting velocity initial conditions type to static " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).vel_field = init_conds::stationary;
+                                    });
+                                    break;
 
                                 case init_conds::cartesian:
                                     std::cout << "Setting velocity initial conditions type to cartesian " << std::endl;
                                     RUN({
-                                        region_fills(reg_id).velocity = init_conds::cartesian;
+                                        region_fills(reg_id).vel_field = init_conds::cartesian;
                                     });
                                     break;
 
-                                case init_conds::radial:
+                                case init_conds::radialVec:
                                     std::cout << "Setting velocity initial conditions type to radial " << std::endl;
                                     RUN({
-                                        region_fills(reg_id).velocity = init_conds::radial;
+                                        region_fills(reg_id).vel_field = init_conds::radialVec;
                                     });
                                     break;
 
-                                case init_conds::spherical:
+                                case init_conds::sphericalVec:
                                     std::cout << "Setting velocity initial conditions type to spherical " << std::endl;
                                     RUN({
-                                        region_fills(reg_id).velocity = init_conds::spherical;
+                                        region_fills(reg_id).vel_field = init_conds::sphericalVec;
                                     });
                                     break;
 
-                                case init_conds::radial_linear:
+                                case init_conds::radialLinearVec:
                                     std::cout << "Setting velocity initial conditions type to radial_linear " << std::endl;
                                     RUN({
-                                        region_fills(reg_id).velocity = init_conds::radial_linear;
+                                        region_fills(reg_id).vel_field = init_conds::radialLinearVec;
                                     });
                                     break;
 
-                                case init_conds::spherical_linear:
+                                case init_conds::sphericalLinearVec:
                                     std::cout << "Setting velocity initial conditions type to spherical_linear " << std::endl;
                                     RUN({
-                                        region_fills(reg_id).velocity = init_conds::spherical_linear;
+                                        region_fills(reg_id).vel_field = init_conds::sphericalLinearVec;
                                     });
                                     break;
 
-                                case init_conds::tg_vortex:
+                                case init_conds::tgVortexVec:
                                     std::cout << "Setting velocity initial conditions type to tg_vortex " << std::endl;
                                     RUN({
-                                        region_fills(reg_id).velocity = init_conds::tg_vortex;
+                                        region_fills(reg_id).vel_field = init_conds::tgVortexVec;
                                     });
                                     break;
 
-                                case init_conds::no_ic_vel:
+                                case init_conds::noICsVec:
                                     std::cout << "Setting velocity initial conditions type to no velocity" << std::endl;
                                     RUN({ 
-                                        region_fills(reg_id).velocity = init_conds::no_ic_vel;
+                                        region_fills(reg_id).vel_field = init_conds::noICsVec;
                                     });
                                     break;
 
                                 default:
 
                                     RUN({ 
-                                        region_fills(reg_id).velocity = init_conds::no_ic_vel;
+                                        region_fills(reg_id).vel_field = init_conds::noICsVec;
                                     });
 
                                     std::cout << "ERROR: No valid velocity intial conditions type input " << std::endl;
                                     std::cout << "Valid IC types are: " << std::endl;
                                     
-                                    for (const auto& pair : velocity_type_map) {
+                                    for (const auto& pair : vector_ics_type_map) {
                                         std::cout << pair.second << std::endl;
                                     }
 
                                     throw std::runtime_error("**** Velocity Initial Conditions Type Not Understood ****");
                                     break;
                             } // end switch
-
-                            if (VERBOSE) {
-                                std::cout << "\tvolume_fill = " << type << std::endl;
-                            } // end if
 
                         }
                         else{
@@ -1396,97 +1994,6 @@ void parse_regions(Yaml::Node& root,
 
                 } // end for loop over text
             } // end if on velocity
-            //
-            else if (a_word.compare("temperature_distribution") == 0) {
-
-                // temperature_distribution fill region type
-                std::string type = root["regions"][reg_id]["region"]["temperature_distribution"].As<std::string>();
-
-                if (VERBOSE) {
-                    std::cout << "\ttemperature = " << type << std::endl;
-                }
-                // set the volume tag type NOTE: rename to remove reference to velocity, change to distribution
-                if (velocity_type_map.find(type) != velocity_type_map.end()) { //WARNING WARNING Update here, should be temp/distribution
-                 
-                    // velocity_type_map[type] returns enum value, e.g., init_conds::velocity 
-                    switch(velocity_type_map[type]){
-
-                        case init_conds::cartesian:
-                            std::cout << "Setting temperature_distribution initial conditions type to cartesian " << std::endl;
-                            RUN({
-                                region_fills(reg_id).temp_distribution = init_conds::cartesian;
-                            });
-                            break;
-
-                         case init_conds::radial:
-                            std::cout << "Setting temperature_distribution initial conditions type to radial " << std::endl;
-                            RUN({
-                                region_fills(reg_id).temp_distribution = init_conds::radial;
-                            });
-                            break;
-
-                         case init_conds::spherical:
-                            std::cout << "Setting temperature_distribution initial conditions type to spherical " << std::endl;
-                            RUN({
-                                region_fills(reg_id).temp_distribution = init_conds::spherical;
-                            });
-                            break;
-
-                         case init_conds::radial_linear:
-                            std::cout << "Setting temperature_distribution initial conditions type to radial_linear " << std::endl;
-                            RUN({
-                                region_fills(reg_id).temp_distribution = init_conds::radial_linear;
-                            });
-                            break;
-
-                         case init_conds::spherical_linear:
-                            std::cout << "Setting temperature_distribution initial conditions type to spherical_linear " << std::endl;
-                            RUN({
-                                region_fills(reg_id).temp_distribution = init_conds::spherical_linear;
-                            });
-                            break;
-
-                         case init_conds::tg_vortex:
-                            std::cout << "Setting temperature_distribution initial conditions type to tg_vortex " << std::endl;
-                            RUN({
-                                region_fills(reg_id).temp_distribution = init_conds::tg_vortex;
-                            });
-                            break;
-
-                         case init_conds::no_ic_vel:
-                            std::cout << "Setting temperature_distribution initial conditions type to no temperature" << std::endl;
-                            RUN({ 
-                                region_fills(reg_id).temp_distribution = init_conds::no_ic_vel;
-                            });
-                            break;
-
-                        default:
-
-                            RUN({ 
-                                region_fills(reg_id).temp_distribution = init_conds::no_ic_vel;
-                            });
-
-                            std::cout << "ERROR: No valid temperature_distribution intial conditions type input " << std::endl;
-                            std::cout << "Valid IC types are: " << std::endl;
-                            
-                            for (const auto& pair : velocity_type_map) {
-                                std::cout << pair.second << std::endl;
-                            }
-
-                            throw std::runtime_error("**** Temperature Initial Conditions Type Not Understood ****");
-                            break;
-                    } // end switch
-
-                    if (VERBOSE) {
-                        std::cout << "\tvolume_fill = " << type << std::endl;
-                    } // end if
-
-                }
-                else{
-                    std::cout << "ERROR: invalid input: " << type << std::endl;
-                    throw std::runtime_error("**** Temperature IC Not Understood ****");
-                } // end if
-            } // end velocity fill type
             else if (a_word.compare("volume") == 0) {
 
                 // -----
@@ -1508,9 +2015,6 @@ void parse_regions(Yaml::Node& root,
                         // inner radius of sphere/cylinder
 
                         double radius1 = root["regions"][reg_id]["region"]["volume"]["radius1"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tradius1 = " << radius1 << std::endl;
-                        }
 
                         RUN({
                             region_fills(reg_id).radius1 = radius1;
@@ -1520,9 +2024,6 @@ void parse_regions(Yaml::Node& root,
                         // outer radius of sphere/cylinder
 
                         double radius2 = root["regions"][reg_id]["region"]["volume"]["radius2"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tradius2 = " << radius2 << std::endl;
-                        }
 
                         RUN({
                             region_fills(reg_id).radius2 = radius2;
@@ -1532,9 +2033,6 @@ void parse_regions(Yaml::Node& root,
                         // inner plane
 
                         double x1 = root["regions"][reg_id]["region"]["volume"]["x1"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tx1 = " << x1 << std::endl;
-                        }
 
                         RUN({
                             region_fills(reg_id).x1 = x1;
@@ -1544,9 +2042,6 @@ void parse_regions(Yaml::Node& root,
                         // outer plane
 
                         double x2 = root["regions"][reg_id]["region"]["volume"]["x2"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tx2 = " << x2 << std::endl;
-                        }
 
                         RUN({
                             region_fills(reg_id).x2 = x2;
@@ -1556,9 +2051,6 @@ void parse_regions(Yaml::Node& root,
                         // inner plane
 
                         double y1 = root["regions"][reg_id]["region"]["volume"]["y1"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\ty1 = " << y1 << std::endl;
-                        }
 
                         RUN({
                             region_fills(reg_id).y1 = y1;
@@ -1568,9 +2060,6 @@ void parse_regions(Yaml::Node& root,
                         // outer plane
 
                         double y2 = root["regions"][reg_id]["region"]["volume"]["y2"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\ty2 = " << y2 << std::endl;
-                        }
 
                         RUN({
                             region_fills(reg_id).y2 = y2;
@@ -1580,9 +2069,6 @@ void parse_regions(Yaml::Node& root,
                         // inner plane
 
                         double z1 = root["regions"][reg_id]["region"]["volume"]["z1"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tz1 = " << z1 << std::endl;
-                        }
 
                         RUN({
                             region_fills(reg_id).z1 = z1;
@@ -1592,9 +2078,6 @@ void parse_regions(Yaml::Node& root,
                         // outer plane
 
                         double z2 = root["regions"][reg_id]["region"]["volume"]["z2"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tz2 = " << z2 << std::endl;
-                        }
 
                         RUN({
                             region_fills(reg_id).z2 = z2;
@@ -1604,9 +2087,6 @@ void parse_regions(Yaml::Node& root,
                         // outer plane
 
                         double scale_x = root["regions"][reg_id]["region"]["volume"]["scale_x"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tscale_x = " << scale_x << std::endl;
-                        }
 
                         // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_x = scale_x;
@@ -1628,9 +2108,6 @@ void parse_regions(Yaml::Node& root,
                         // outer plane
 
                         double scale_z = root["regions"][reg_id]["region"]["volume"]["scale_z"].As<double>();
-                        if (VERBOSE) {
-                            std::cout << "\tscale_z = " << scale_z << std::endl;
-                        }
 
                         // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_z = scale_z;
@@ -1640,9 +2117,7 @@ void parse_regions(Yaml::Node& root,
                         // part_id in 
 
                         int part_id = root["regions"][reg_id]["region"]["volume"]["part_id"].As<int>();
-                        if (VERBOSE) {
-                            std::cout << "\tpart_id = " << part_id << std::endl;
-                        }
+
                         RUN({
                             region_fills(reg_id).part_id = part_id;
                         });
@@ -1653,10 +2128,6 @@ void parse_regions(Yaml::Node& root,
 
                         // region volume fill type
                         std::string type = root["regions"][reg_id]["region"]["volume"]["type"].As<std::string>();
-
-                        if (VERBOSE) {
-                            std::cout << "\ttype = " << type << std::endl;
-                        }
 
                         // set the velocity tag type
                         if (region_type_map.find(type) != region_type_map.end()) {
@@ -1734,10 +2205,6 @@ void parse_regions(Yaml::Node& root,
                         // region volume fill type
                         std::string path = root["regions"][reg_id]["region"]["volume"]["file_path"].As<std::string>();
 
-                        if (VERBOSE) {
-                            std::cout << "\tfile_path = " << path << std::endl;
-                        }
-
                         // absolute path to file or local to the director where exe is run
                         region_fills_host(reg_id).file_path = path;   // saving the absolute file path
         
@@ -1746,9 +2213,6 @@ void parse_regions(Yaml::Node& root,
                     //
                     else if (a_subfield_word.compare("origin") == 0) {
                         std::string origin = root["regions"][reg_id]["region"]["volume"]["origin"].As<std::string>();
-                        if (VERBOSE) {
-                            std::cout << "\torigin = " << origin << std::endl;
-                        }
 
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
@@ -1765,12 +2229,6 @@ void parse_regions(Yaml::Node& root,
                             // 2D
                             z1 = 0.0;
                         } //
-
-                        if (VERBOSE) {
-                            std::cout << "\tx1 = " << x1 << std::endl;
-                            std::cout << "\ty1 = " << y1 << std::endl;
-                            std::cout << "\tz1 = " << z1 << std::endl;
-                        }
 
                         // storing the origin values as (x1,y1,z1)
                         RUN({

@@ -83,7 +83,7 @@ void SGH3D::init_corner_node_masses_zero(const Mesh_t& mesh,
 /// \param node_vel is the nodal velocity array
 /// \param GaussPoint_den is density at the GaussPoints on the mesh
 /// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
-/// \param GaussPoint_volfrac is volume fraction at the GaussPoints on the mesh
+/// \param elem_volfrac is volume fraction at the GaussPoints on the mesh
 /// \param elem_mat_id is the material id in an element
 /// \param num_mats_saved_in_elem is the number of material with volfrac<1 saved to the element
 /// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh
@@ -104,9 +104,9 @@ void SGH3D::fill_regions_sgh(
         DCArrayKokkos <double>& node_vel,
         DCArrayKokkos <double>& GaussPoint_den,
         DCArrayKokkos <double>& GaussPoint_sie,
-        DCArrayKokkos <double>& GaussPoint_volfrac,
+        DCArrayKokkos <double>& elem_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
-        DCArrayKokkos <size_t>& num_mats_saved_in_elem,
+        DCArrayKokkos <size_t>& num_fills_saved_in_elem,
         DCArrayKokkos <size_t>& voxel_elem_mat_id,
         const DCArrayKokkos <int>& object_ids,
         const DCArrayKokkos<size_t>& reg_fills_in_solver,
@@ -121,6 +121,10 @@ void SGH3D::fill_regions_sgh(
 
     size_t num_fills_total = region_fills.size();  // the total number of fills in the input file
 
+    DCArrayKokkos<double> elem_coords(mesh.num_elems, 3);
+    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems,3);
+    // remember: num_fills_saved_in_elem = num_mats_saved_in_elem
+    
     // ---------------------------------------------
     // copy to host, enum to read a voxel file
     // ---------------------------------------------
@@ -171,34 +175,34 @@ void SGH3D::fill_regions_sgh(
 
         // parallel loop over elements in mesh
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
-            // calculate the coordinates and radius of the element
-            double elem_coords_1D[3]; // note:initialization with a list won't work
-            ViewCArrayKokkos<double> elem_coords(&elem_coords_1D[0], 3);
-            elem_coords(0) = 0.0;
-            elem_coords(1) = 0.0;
-            elem_coords(2) = 0.0;
+            // calculate the coordinates and radius of the element     
+            elem_coords(elem_gid, 0) = 0.0;
+            elem_coords(elem_gid, 1) = 0.0;
+            elem_coords(elem_gid, 2) = 0.0;
 
             // get the coordinates of the element center (using rk_level=1 or node coords)
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_coords(0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_coords(1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                elem_coords(elem_gid, 0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_coords(elem_gid, 1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3) {
-                    elem_coords(2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_coords(elem_gid, 2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
                 }
                 else{
-                    elem_coords(2) = 0.0;
+                    elem_coords(elem_gid, 2) = 0.0;
                 }
             } // end loop over nodes in element
-            elem_coords(0) = (elem_coords(0) / mesh.num_nodes_in_elem);
-            elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
-            elem_coords(2) = (elem_coords(2) / mesh.num_nodes_in_elem);
+            elem_coords(elem_gid, 0) = (elem_coords(elem_gid, 0) / mesh.num_nodes_in_elem);
+            elem_coords(elem_gid, 1) = (elem_coords(elem_gid, 1) / mesh.num_nodes_in_elem);
+            elem_coords(elem_gid, 2) = (elem_coords(elem_gid, 2) / mesh.num_nodes_in_elem);
+
+            ViewCArrayKokkos <double> coords(&elem_coords(elem_gid,0), 3);
 
             // calc if we are to fill this element
             size_t fill_this = fill_geometric_region(mesh,
                                                      voxel_elem_mat_id,
                                                      object_ids,
                                                      region_fills,
-                                                     elem_coords,
+                                                     coords,
                                                      voxel_dx,
                                                      voxel_dy,
                                                      voxel_dz,
@@ -213,53 +217,149 @@ void SGH3D::fill_regions_sgh(
 
             // paint the material state on the element if fill_this=1
             if (fill_this == 1) {
+                
+                // calculate volume fraction of the region intersecting the element
+                double geo_volfrac = 1.0; 
+                
+                // get the volfrac for the region
+                double vfrac = get_region_scalar(coords,
+                                                 region_fills(fill_id).volfrac,
+                                                 region_fills(fill_id).volfrac_slope,
+                                                 elem_gid,
+                                                 mesh.num_dims,
+                                                 region_fills(fill_id).volfrac_field);
+                vfrac = fmax(0.0, vfrac);
+                vfrac = fmin(1.0, vfrac);
+                
+                // geometric * material volume fraction
+                double combined_volfrac = geo_volfrac*vfrac;
 
-                // default sgh paint
-                paint_gauss_den_sie(Materials,
-                                    mesh,
-                                    node_coords,
-                                    GaussPoint_den,
-                                    GaussPoint_sie,
-                                    GaussPoint_volfrac,
-                                    elem_mat_id,
-                                    num_mats_saved_in_elem,
-                                    region_fills,
-                                    elem_coords,
-                                    elem_gid,
-                                    fill_id);
+                // if this fill is to add a material to existing ones, do so
+                if (combined_volfrac < 1.0 - 1.0e-8){
 
-                // add user defined paint here
-                // user_defined_sgh_state();
+                    // append the fill id in this element and
+                    // append the elem_volfrac value too
+                    append_fills_in_elem(elem_volfrac,
+                                         elem_fill_ids,
+                                         num_fills_saved_in_elem,
+                                         region_fills,
+                                         combined_volfrac,
+                                         elem_gid,
+                                         fill_id);
 
-                // technically, not thread safe, but making it a separate loop created bad fill behavior
-                // loop over the nodes of this element and apply velocity
-                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                    // get the mesh node index
-                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                } else {
+                    // --- this logic makes it a single material element with volfrac=1 ---
 
-                    // default sgh paint
-                    paint_node_vel(region_fills,
-                                node_vel,
-                                node_coords,
-                                node_gid,
-                                mesh.num_dims,
-                                fill_id,
-                                rk_num_bins);
+                    // save and overwrite any prior fills
+                    elem_fill_ids(elem_gid, 0) = fill_id;
 
-                    // add user defined paint here
-                    // user_defined_vel_state();
-                } // end loop over the nodes in elem
+                    // save volume fraction
+                    elem_volfrac(elem_gid, 0) = 1.0;
+
+                    num_fills_saved_in_elem(elem_gid) = 1;
+                } // end of 
+
             } // end if fill this
         }); // end FOR_ALL node loop
         Kokkos::fence();
+
     } // end for loop over fills
 
+    num_fills_saved_in_elem.update_host();
+
+
+    //---------
+    // parallel loop over elements in the mesh and set specified state
+    //---------
+    FOR_ALL(elem_gid, 0, mesh.num_elems, {
+
+
+        // verify that all geometric volfracs sum to 1
+
+
+        for(size_t bin=0; bin<num_fills_saved_in_elem(elem_gid); bin++){
+
+            // get the region fill id
+            size_t fill_id = elem_fill_ids(elem_gid, bin);
+
+            // saving mat_ids if den || sie are set
+            if(region_fills(fill_id).den_field != init_conds::noICsScalar ||
+               region_fills(fill_id).sie_field != init_conds::noICsScalar){ 
+                
+                // save mat_ids to element, its a uniform field
+                elem_mat_id(elem_gid,bin) = region_fills(fill_id).material_id;
+
+            } // end if setting volfrac and mat_id
+
+
+            // --------
+            // for high-order, add loop over gauss points here
+            // gauss_gid = elem_gid for this solver
+
+
+            // gauss_coords=elem_coords
+            ViewCArrayKokkos <double> coords(&elem_coords(elem_gid,0), 3);
+
+            // paint the den on the gauss pts of the mesh
+            paint_multi_scalar(GaussPoint_den,
+                              coords,
+                              region_fills(fill_id).den,
+                              0.0,
+                              elem_gid,
+                              mesh.num_dims,
+                              bin,
+                              region_fills(fill_id).den_field);
+
+            // paint the sie on the gauss pts of the mesh
+            paint_multi_scalar(GaussPoint_sie,
+                              coords,
+                              region_fills(fill_id).sie,
+                              0.0,
+                              elem_gid,
+                              mesh.num_dims,
+                              bin,
+                              region_fills(fill_id).sie_field);
+
+            //--- saving extensive ie ---
+
+
+            // --- saving nodal velocity ---
+        
+            // technically, not thread safe, but making it a separate loop created bad fill behavior
+            // loop over the nodes of this element and apply velocity
+            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                
+                // get the mesh node index
+                size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+
+                // node coords(rk,node_gid,dim), using the first rk level in the view
+                ViewCArrayKokkos <double> a_node_coords(&node_coords(0,node_gid,0), 3);
+
+                // paint the velocity onto the nodes of the mesh
+                // checks on whether to paint or not are inside fcn
+                paint_vector_rk(node_vel,
+                                a_node_coords,
+                                region_fills(fill_id).u,
+                                region_fills(fill_id).v,
+                                region_fills(fill_id).w,
+                                region_fills(fill_id).speed,
+                                node_gid,
+                                mesh.num_dims,
+                                rk_num_bins,
+                                region_fills(fill_id).vel_field);
+
+            } // end loop over the nodes in elem
+
+        } // loop over the fills in this elem
+    }); // end FOR_ALL node loop
+    Kokkos::fence();
+
     elem_mat_id.update_host();
+    elem_volfrac.update_host();
     GaussPoint_den.update_host();
     GaussPoint_sie.update_host();
-    GaussPoint_volfrac.update_host();
     node_vel.update_host();
-    num_mats_saved_in_elem.update_host();
+    num_fills_saved_in_elem.update_host();  // this is num_mats_saved_in_elem
 
     Kokkos::fence();
 } // end SGH fill regions
@@ -296,7 +396,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     const size_t num_mats_per_elem = 3;
     DCArrayKokkos <double> GaussPoint_den(num_gauss_points, num_mats_per_elem, "GaussPoint_den");
     DCArrayKokkos <double> GaussPoint_sie(num_gauss_points, num_mats_per_elem, "GaussPoint_sie");
-    DCArrayKokkos <double> GaussPoint_volfrac(num_gauss_points, num_mats_per_elem, "GaussPoint_vofrac");
+    DCArrayKokkos <double> elem_volfrac(num_elems, num_mats_per_elem, "elem_vofrac");
     DCArrayKokkos <size_t> elem_mat_id(num_elems, num_mats_per_elem, "elem_mat_id"); // the mat_id in the elem
 
     // num mats saved in an element during setup
@@ -315,7 +415,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                      State.node.vel,
                      GaussPoint_den,
                      GaussPoint_sie,
-                     GaussPoint_volfrac,
+                     elem_volfrac,
                      elem_mat_id,
                      num_mats_saved_in_elem,
                      voxel_elem_mat_id,
@@ -438,10 +538,10 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                 // --- density and mass ---
                 State.MaterialPoints(mat_id).den.host(mat_point_lid)  = GaussPoint_den.host(gauss_gid,a_mat_in_elem);
                 State.MaterialPoints(mat_id).mass.host(mat_point_lid) = GaussPoint_den.host(gauss_gid,a_mat_in_elem) * 
-                                                                        State.GaussPoints.vol.host(gauss_gid) * GaussPoint_volfrac.host(gauss_gid,a_mat_in_elem);
+                                                                        State.GaussPoints.vol.host(gauss_gid) * elem_volfrac.host(elem_gid,a_mat_in_elem);
 
                 // --- volume fraction ---
-                State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = GaussPoint_volfrac.host(gauss_gid,a_mat_in_elem);
+                State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = elem_volfrac.host(elem_gid,a_mat_in_elem);
 
                 // --- set eroded flag to false ---
                 State.MaterialPoints(mat_id).eroded.host(mat_point_lid) = false;
@@ -466,6 +566,10 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 
     // copy the state to the device
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+        std::cout << "Number of material elems = " << 
+            State.MaterialToMeshMaps(mat_id).num_material_elems  << "\n"<< std::endl;
+
         State.MaterialPoints(mat_id).den.update_device();
         State.MaterialPoints(mat_id).mass.update_device();
         State.MaterialPoints(mat_id).sie.update_device();

@@ -23,9 +23,22 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: ensight #state
+    output_file_format: viz #ensight #state
     graphics_time_step: 1.0
     # graphics_iteration_step: 10
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+    node_field_outputs:
+        - vel
+        - mass
 
 solver_options:
   - solver:
@@ -98,6 +111,23 @@ materials:
             - 0.0   # phi_min
             - 1.0   # pin_curl_min
 
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 1.0   # pin_curl_min
 
 regions:
     - region:
@@ -119,6 +149,7 @@ regions:
         volume_fraction:
             type: uniform
             value: 1.0
+
 
     # energy source initial conditions
     - region:
@@ -143,5 +174,29 @@ regions:
             w: 0.0
         volume_fraction:
             type: uniform
-            value: 1.0
+            value: 0.25
 
+    # energy source initial conditions
+    - region:
+        volume:
+            type: sphere
+            origin: [0.0, 0.0, 0.0]
+            radius1: 0.0
+            radius2: 0.1
+        solver_id: 0
+        material_id: 1
+        density: 
+            type: uniform
+            value: 1.0
+        # ie: 0.25833839995946534
+        specific_internal_energy: 
+            type: uniform
+            value: 61.67375002 # 963.652344
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 0.75

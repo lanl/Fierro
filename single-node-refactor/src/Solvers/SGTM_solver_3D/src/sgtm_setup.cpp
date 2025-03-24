@@ -490,13 +490,29 @@ void SGTM3D::setup_sgtm(
     // Paint nodal state
     // parallel loop over nodes in mesh
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        paint_node_vel(region_fills,
-                       State.node.vel,
-                       State.node.coords,
-                       node_gid,
-                       mesh.num_dims,
-                       node_region_id(node_gid),
-                       rk_num_bins);
+
+        //paint_node_vel(region_fills,
+        //               State.node.vel,
+        //               State.node.coords,
+        //               node_gid,
+        //               mesh.num_dims,
+        //               node_region_id(node_gid),
+        //               rk_num_bins);
+        
+        // node coords(rk,node_gid,dim), using the first rk level in the view
+        ViewCArrayKokkos <double> a_node_coords(&State.node.coords(0,node_gid,0), 3);
+        
+        paint_vector_rk(State.node.vel,
+                    a_node_coords,
+                    region_fills(node_region_id(node_gid)).u,
+                    region_fills(node_region_id(node_gid)).v,
+                    region_fills(node_region_id(node_gid)).w,
+                    region_fills(node_region_id(node_gid)).speed,
+                    node_gid,
+                    mesh.num_dims,
+                    rk_num_bins,
+                    region_fills(node_region_id(node_gid)).vel_field);
+        
 
         // Paint on initial temperature
         double temperature = region_fills(node_region_id(node_gid)).temperature;
