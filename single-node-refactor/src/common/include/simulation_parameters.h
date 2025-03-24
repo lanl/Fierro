@@ -62,9 +62,8 @@ struct SimulationParameters_t
 
     std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
 
-    CArrayKokkos<RegionFill_t> region_fills;  ///< Region data for simulation mesh, set the initial conditions
+    SolverRegionSetup_t region_setups;  ///< region fills across all solvers
 
-    CArray<RegionFill_host_t> region_fills_host;  ///< Region data on CPU, set the initial conditions
 }; // simulation_parameters_t
 
 #endif // end Header Guard

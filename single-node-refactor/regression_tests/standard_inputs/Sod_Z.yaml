@@ -122,6 +122,7 @@ regions:
     - region:
         volume:
             type: global
+        solver_id: 0
         material_id: 0
         den: 1.0
         sie: 2.5
@@ -140,6 +141,7 @@ regions:
             y2: 0.01
             z1: 0.5
             z2: 1.0
+        solver_id: 0
         material_id: 0
         den: 0.125
         sie: 2

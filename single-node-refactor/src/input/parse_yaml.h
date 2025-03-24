@@ -101,8 +101,11 @@ void parse_output_options(Yaml::Node& root, output_options_t& output_options);
 
 // parse the region text
 void parse_regions(Yaml::Node& root, 
-                   CArrayKokkos<RegionFill_t>& region_fills,
-                   CArray<RegionFill_host_t>& region_fills_host);
+                   DCArrayKokkos<size_t>& reg_fills_in_solver,  
+                   DCArrayKokkos<size_t>& num_reg_fills_in_solver,
+                   CArrayKokkos<RegionFill_t>& region_fills, 
+                   CArray<RegionFill_host_t>&  region_fills_host,
+                   const size_t num_solvers);
 
 // parse the region text
 void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims);
