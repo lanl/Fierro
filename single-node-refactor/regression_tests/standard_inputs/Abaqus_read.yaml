@@ -120,8 +120,12 @@ regions:
             type: global
         solver_id: 0
         material_id: 0
-        den: 1.0
-        sie: 1.e-10
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
         velocity: 
             type: cartesian
             u: 0.0
@@ -155,8 +159,12 @@ regions:
             z2: 1.0
         material_id: 0
         solver_id: 0
-        den: 1.0
-        sie: 61.67375002
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 61.67375002
         velocity: 
             type: cartesian
             u: 0.0
