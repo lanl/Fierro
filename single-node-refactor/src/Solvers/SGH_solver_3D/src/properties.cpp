@@ -109,7 +109,7 @@ void SGH3D::update_state(
 
             // --- Density ---
             MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / 
-                                            (GaussPoints_vol(gauss_gid)* MaterialPoints_vofrac(mat_point_lid) + 1.0e-18);
+                                            (GaussPoints_vol(gauss_gid)* MaterialPoints_vofrac(mat_point_lid) + 1.0e-20);
 
             // --- Pressure ---
             Materials.MaterialFunctions(mat_id).calc_pressure(
