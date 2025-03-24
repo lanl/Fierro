@@ -209,10 +209,8 @@ void SGTM3D::tag_regions(
             ViewCArrayKokkos<double> coords(&coords_1D[0], 3);
 
 
-            //WARNING: This is not correct, hack to get a element_id value for fill_geometric_region
-            size_t elem_gid = 0; //mesh.nodes_in_elem(node_gid, 0); BUG HERE !!!!
-            //correct coding, if you want an elem_gid, should be elems_in_node(node_gid,0)
-             
+            // a dummy variable
+            size_t elem_gid = 0; // not used
 
             coords(0) = node_coords(1, node_gid, 0);
             coords(1) = node_coords(1, node_gid, 1);

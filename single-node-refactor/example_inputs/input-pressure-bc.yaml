@@ -23,7 +23,7 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: state
+    output_file_format: ensight
     graphics_time_step: 0.6
     # graphics_iteration_step: 10
 
@@ -37,6 +37,7 @@ solver_options:
         #  - blah
 
 boundary_conditions:
+
     # Tag X plane
     - boundary_condition:
         solver_id: 0
@@ -48,6 +49,7 @@ boundary_conditions:
             - 1   # x
             - 0   # y
             - 0   # z
+
 
     # Tag Y plane
     - boundary_condition:
@@ -61,7 +63,7 @@ boundary_conditions:
             - 1   # y
             - 0   # z
 
-    # Tag Z plane
+    # Tag z plane
     - boundary_condition:
         solver_id: 0
         surface: 
@@ -71,8 +73,69 @@ boundary_conditions:
         velocity_bc_global_vars:
             - 0   # x
             - 0   # y
-            - 1   # z    
+            - 1   # z
 
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 1.0
+        stress_model: constant
+        # Voight notation:
+        # sig_00
+        # sig_11
+        # sig_22
+        # sig_12
+        # sig_02
+        # sig_01
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 1.0
+        stress_model: constant
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0
+        #velocity_model: reflected
+        #velocity_bc_global_vars:
+        #    - 0   # x
+        #    - 1   # y
+        #    - 0   # z
+
+    # Tag Z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+        stress_model: constant
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0 
+        #velocity_model: reflected
+        #velocity_bc_global_vars:
+        #    - 0   # x
+        #    - 0   # y
+        #    - 1   # z
 
   
 materials:
@@ -98,14 +161,22 @@ regions:
     - region:
         volume:
             type: global
-        material_id: 0
         solver_id: 0
-        den: 1.0
-        sie: 1.e-10
+        material_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
         velocity: 
-            type: spherical
-            speed: -1.0
-
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
     
 
 
