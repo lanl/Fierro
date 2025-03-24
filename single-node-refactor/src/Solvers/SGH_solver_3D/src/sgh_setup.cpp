@@ -248,6 +248,9 @@ void SGH3D::fill_regions_sgh(
                                          fill_id);
 
                 } else {
+
+                    // maybe add a check here if the other material has volfrac=0, then append it?
+
                     // --- this logic makes it a single material element with volfrac=1 ---
 
                     // save and overwrite any prior fills
