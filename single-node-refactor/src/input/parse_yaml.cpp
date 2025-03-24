@@ -1106,7 +1106,7 @@ void parse_regions(Yaml::Node& root,
     num_reg_fills_in_solver = DCArrayKokkos<size_t>(num_solvers, "sim_param.region_setup.num_reg_fills_in_solver");
     num_reg_fills_in_solver.set_values(0);
     Kokkos::fence();
-    num_reg_fills_in_solver.update_host();
+    num_reg_fills_in_solver.update_host(); // initiallizing host side to 0
 
 
     Yaml::Node& region_yaml = root["regions"];
