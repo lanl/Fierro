@@ -101,7 +101,7 @@ void SGH3D::update_energy(const double rk_alpha,
 
         // update the specific energy
         MaterialPoints_sie(1, mat_point_lid) = MaterialPoints_sie(0, mat_point_lid) -
-                rk_alpha * dt / (MaterialPoints_mass(mat_point_lid) + 1.e-17) * MaterialPoints_power;
+                rk_alpha * dt / (MaterialPoints_mass(mat_point_lid) + 1.e-18) * MaterialPoints_power;
     }); // end parallel loop over the elements
 
     return;
