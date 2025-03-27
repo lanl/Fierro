@@ -67,8 +67,8 @@ void print_inputs()
 {
 
     //std::vector<std::string>& str_dyn_opts_inps, 
-    //std::vector<std::string>& mesh_options_inps,
-    //std::vector<std::string>& output_options_inps,
+    // mesh_input.h defines str_mesh_inps
+    //std::vector<std::string>& str_output_options_inps,
     //std::vector<std::string>& str_bc_inps,
     //std::vector<std::string>& str_bc_surface_inps
     
@@ -81,11 +81,35 @@ void print_inputs()
 
     std::cout << " YAML INPUT OPTIONS \n";
 
+// ---
     std::cout << "    dynamic_options \n";
     for (auto field : str_dyn_opts_inps){
         std::cout << "       "<< field << "\n";
     }
-
+// ---
+    std::cout << "    mesh_options \n";
+    for (auto field : str_mesh_inps){
+        std::cout << "       "<< field << "\n";
+    }
+// ---
+    std::cout << "    output_options \n";
+    for (auto field : str_output_options_inps){
+        if(field.compare("elem_field_outputs") == 0){
+            std::cout << "       elem_field_outputs \n";
+            for (const auto& pair : elem_outputs_map) {
+                std::cout << "         - "<< pair.first << "\n";
+            }
+        }
+        else {
+            std::cout << "       "<< field << "\n";
+        }
+    }
+// ---
+    std::cout << "    solver_options \n";
+    for (auto field : str_solver_inps){
+        std::cout << "       "<< field << "\n";
+    }
+// ---
     std::cout << "    boundary_conditions \n";
     for (auto field : str_bc_inps){
         if(field.compare("surface") == 0){
