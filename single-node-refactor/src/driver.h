@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "mesh_io.h"
-#include "parse_yaml.h"
+#include "parse_yaml.hpp"
 #include "solver.h"
 #include "simulation_parameters.h"
 

@@ -38,6 +38,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include "matar.h"
 
+using namespace mtr;
+
 namespace model
 {
     // strength model types

@@ -85,7 +85,27 @@ namespace init_conds
         tgVortexScalar = 11
     };
 
+    enum initMaterialPointVarsNames
+    {
+        density,
+        specificInternalEnergy,
+        internalEnergy,
+        thermalConductivity,
+        specificHeat
+    };
+
+    enum initNodeVarsNames
+    {
+        velocity,
+        temperature,
+    };
+
 } // end of initial conditions namespace
+
+// arrays for variables to be set in region setup
+static std::vector<init_conds::initMaterialPointVarsNames> init_mat_pt_vars;
+static std::vector<init_conds::initNodeVarsNames> init_node_vars;
+
 
 static std::map<std::string, init_conds::init_vector_conds> vector_ics_type_map
 {
