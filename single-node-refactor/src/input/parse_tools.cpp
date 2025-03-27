@@ -48,7 +48,63 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Yaml.hpp"
 #include "matar.h"
 
+// simulation parameters contains:
+//   mesh_input
+//   output_options
+//   dynamic_options
+//   solver_inputs
+//   region_setups
+#include "simulation_parameters.h"
 
+// boundary conditions
+#include "boundary_conditions.h"
+
+
+// =================================================================================
+//    A function to print out all possible inputs when --help flag is given
+// =================================================================================
+void print_inputs()
+{
+
+    //std::vector<std::string>& str_dyn_opts_inps, 
+    //std::vector<std::string>& mesh_options_inps,
+    //std::vector<std::string>& output_options_inps,
+    //std::vector<std::string>& str_bc_inps,
+    //std::vector<std::string>& str_bc_surface_inps
+    
+    std::cout << "\n";
+    std::cout << " Fierro: Forging the future of engineering analysis \n\n";
+
+     std::cout << " USE \n";
+    std::cout << "    To run Fierro, supply an input file writen in yaml  \n";
+    std::cout << "       ./Fierro input.yaml \n\n";
+
+    std::cout << " YAML INPUT OPTIONS \n";
+
+    std::cout << "    dynamic_options \n";
+    for (auto field : str_dyn_opts_inps){
+        std::cout << "       "<< field << "\n";
+    }
+
+    std::cout << "    boundary_conditions \n";
+    for (auto field : str_bc_inps){
+        if(field.compare("surface") == 0){
+            std::cout << "       surface \n";
+            for (auto subfield : str_bc_surface_inps){
+                std::cout << "          "<< subfield << "\n";
+            }
+        }
+        else {
+            std::cout << "       "<< field << "\n";
+        }
+    } 
+    
+    std::cout << "  " << std::endl;
+
+    return;
+
+
+} // end print_inputs
 
 
 // =================================================================================

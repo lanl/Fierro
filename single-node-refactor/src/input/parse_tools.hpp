@@ -46,6 +46,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Yaml.hpp"
 
 
+
 using namespace mtr;
 
 // checks to see if a path exists
@@ -55,8 +56,8 @@ static bool DoesPathExist(const std::string& s)
     return (stat(s.c_str(), &buffer) == 0);
 }
 
-// prints the contents of a parsed yaml file
-void print_yaml(Yaml::Node root);
+void print_inputs();
+
 
 // Read and validate user inputs
 void validate_inputs(
@@ -64,5 +65,9 @@ void validate_inputs(
     std::vector<std::string>& user_inputs, 
     std::vector<std::string>& str_valid_inputs,
     std::vector<std::string>& str_required_inputs);
+
+
+// prints the contents of a parsed yaml file
+void print_yaml(Yaml::Node root);
 
 #endif // end Header Guard
