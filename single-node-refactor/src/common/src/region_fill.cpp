@@ -517,6 +517,616 @@ size_t fill_geometric_region(const Mesh_t& mesh,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
+/// \fn append_fills_in_elem
+///
+/// \brief a function to append fills 
+///
+/// \param elem_fill_ids is the fill id in an element
+/// \param num_fills_saved_in_elem is the number of fills the element has
+/// \param region_fills are the instructions to paint state on the mesh
+/// \param elem_gid is the element global mesh index
+/// \param fill_id is fill instruction
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
+                          const CArrayKokkos <size_t>& elem_fill_ids,
+                          const DCArrayKokkos <size_t>& num_fills_saved_in_elem,
+                          const CArrayKokkos<RegionFill_t>& region_fills,
+                          const double combined_volfrac,
+                          const size_t elem_gid,
+                          const size_t fill_id)
+{
+
+    // the number of materials saved to this element, initialized to 0 at start of code
+    size_t fill_storage_lid = num_fills_saved_in_elem(elem_gid);
+
+    // check on exceeding 3 materials per element
+    if (num_fills_saved_in_elem(elem_gid) > 3){
+        Kokkos::abort("ERROR: exceeded 3 materials in an element when painting regions on the mesh \n");
+    } // end if check
+
+
+    // material id assigned to this fill
+    const size_t mat_id = region_fills(fill_id).material_id;
+
+
+    // check to see if the material already exists
+    bool check_mat_exists = false;
+    for (size_t a_fill=0; a_fill < num_fills_saved_in_elem(elem_gid); a_fill++){
+
+        // get the mat_id in this fill
+        size_t a_mat_id = region_fills(a_fill).material_id;
+        if(mat_id == a_mat_id){
+            // overwrite the existing material lid with new fill instructions
+            fill_storage_lid = a_fill;  
+            check_mat_exists = true;
+        } // end if check on mat_id existing already
+
+    } // end for a_fill
+
+
+    // There will now be at least 1 material so we want
+    // num_fills_saved_in_elem >= 1, and it is intialized at 0 
+    if (check_mat_exists == false){
+        // we are adding a new material, so increment the number of saved
+        num_fills_saved_in_elem(elem_gid) += 1;
+    } // end check if material is a new one
+
+
+    // confirm the volume fractions in each elem tally to 1 later in the code
+
+    // --- append the volfracs and fill ids in elem ---
+    elem_fill_ids(elem_gid, fill_storage_lid) = fill_id;
+    elem_volfracs(elem_gid, fill_storage_lid) = combined_volfrac;
+
+    // done with calculating the fill instructions
+
+} // end function painting fill ids
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_region_scalar
+///
+/// \brief a function to get the scalar field value
+///
+/// \param field_scalar is the field
+/// \param mesh_coords are the coordinates of the elem/gauss/nodes
+/// \param scalar value
+/// \param slope value
+/// \param mesh_gid is the elem/gauss/nodes global mesh index
+/// \param num_dims is dimensions
+/// \param scalar_field is an enum on how the field is to be calculated
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
+                         const double scalar,
+                         const double slope,
+                         const size_t mesh_gid,
+                         const size_t num_dims,
+                         const init_conds::init_scalar_conds scalarFieldType)
+{
+    double value_out;
+
+    // --- scalar field ---
+    switch (scalarFieldType) {
+        case init_conds::uniform:
+            {
+                value_out = scalar;
+                break;
+            }
+        // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+        case init_conds::radialScalar:
+            {
+                // Setting up radial
+                double dir[2];
+                dir[0] = 0.0;
+                dir[1] = 0.0;
+                double radius_val = 0.0;
+
+                for (int dim = 0; dim < 2; dim++) {
+                    dir[dim]    = mesh_coords(dim);
+                    radius_val += mesh_coords(dim) * mesh_coords(dim);
+                } // end for
+                radius_val = sqrt(radius_val);
+
+                for (int dim = 0; dim < 2; dim++) {
+                    if (radius_val > 1.0e-14) {
+                        dir[dim] /= (radius_val);
+                    }
+                    else{
+                        dir[dim] = 0.0;
+                    }
+                } // end for
+
+                value_out = scalar * dir[0];
+                value_out = scalar * dir[1];
+
+                break;
+            }
+        case init_conds::sphericalScalar:
+            {
+                // Setting up spherical
+                double dir[3];
+                dir[0] = 0.0;
+                dir[1] = 0.0;
+                dir[2] = 0.0;
+                double radius_val = 0.0;
+
+                for (int dim = 0; dim < 3; dim++) {
+                    dir[dim]    = mesh_coords(dim);
+                    radius_val += mesh_coords(dim) * mesh_coords(dim);
+                } // end for
+                radius_val = sqrt(radius_val);
+
+                for (int dim = 0; dim < 3; dim++) {
+                    if (radius_val > 1.0e-14) {
+                        dir[dim] /= (radius_val);
+                    }
+                    else{
+                        dir[dim] = 0.0;
+                    }
+                } // end for
+
+                value_out = scalar * radius_val;
+                break;
+            }
+        case init_conds::xlinearScalar:
+            {
+                // scalar_field = slope*x + value
+                value_out = slope*mesh_coords(0) + scalar;
+                break;
+            }
+        case init_conds::ylinearScalar:
+            {
+                // scalar_field = slope*y + value
+                value_out = slope*mesh_coords(1) + scalar;
+                break;
+            }
+        case init_conds::zlinearScalar:
+            {
+                // scalar_field = slope*z + value
+                value_out = slope*mesh_coords(2) + scalar;
+                break;
+            }
+        case init_conds::tgVortexScalar:
+            {
+                printf("**** TG Vortex not supported for general scalar initial conditions ****\n");
+
+                break;
+            }
+        case init_conds::noICsScalar:
+            {
+                // nothing is done
+
+                break;
+            }
+        default:
+            {
+                // do nothing
+
+                break;
+            }
+    } // end of switch
+
+    return value_out;
+
+}  // end function paint_scalar
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn paint_multi_scalar
+///
+/// \brief a function to paint multiple material scalars on the mesh
+///
+/// \param field_scalar is the field
+/// \param mesh_coords are the coordinates of the elem/gauss/nodes
+/// \param mesh_gid is the elem/gauss/nodes global mesh index
+/// \param num_dims is dimensions
+/// \param bin is for multiple materials at that location
+/// \param scalar_field is an enum on how the field is to be set
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
+                        const ViewCArrayKokkos <double> mesh_coords,
+                        const double scalar,
+                        const double slope,
+                        const size_t mesh_gid,
+                        const size_t num_dims,
+                        const size_t bin,
+                        const init_conds::init_scalar_conds scalarFieldType)
+{
+
+    // --- scalar field ---
+    switch (scalarFieldType) {
+        case init_conds::uniform:
+            {
+                field_scalar(mesh_gid,bin) = scalar;
+                break;
+            }
+        // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+        case init_conds::radialScalar:
+            {
+                // Setting up radial
+                double dir[2];
+                dir[0] = 0.0;
+                dir[1] = 0.0;
+                double radius_val = 0.0;
+
+                for (int dim = 0; dim < 2; dim++) {
+                    dir[dim]    = mesh_coords(dim);
+                    radius_val += mesh_coords(dim) * mesh_coords(dim);
+                } // end for
+                radius_val = sqrt(radius_val);
+
+                for (int dim = 0; dim < 2; dim++) {
+                    if (radius_val > 1.0e-14) {
+                        dir[dim] /= (radius_val);
+                    }
+                    else{
+                        dir[dim] = 0.0;
+                    }
+                } // end for
+
+                field_scalar(mesh_gid,bin) = scalar * dir[0];
+                field_scalar(mesh_gid,bin) = scalar * dir[1];
+
+                break;
+            }
+        case init_conds::sphericalScalar:
+            {
+                // Setting up spherical
+                double dir[3];
+                dir[0] = 0.0;
+                dir[1] = 0.0;
+                dir[2] = 0.0;
+                double radius_val = 0.0;
+
+                for (int dim = 0; dim < 3; dim++) {
+                    dir[dim]    = mesh_coords(dim);
+                    radius_val += mesh_coords(dim) * mesh_coords(dim);
+                } // end for
+                radius_val = sqrt(radius_val);
+
+                for (int dim = 0; dim < 3; dim++) {
+                    if (radius_val > 1.0e-14) {
+                        dir[dim] /= (radius_val);
+                    }
+                    else{
+                        dir[dim] = 0.0;
+                    }
+                } // end for
+
+                field_scalar(mesh_gid,bin) = scalar * radius_val;
+                break;
+            }
+        case init_conds::xlinearScalar:
+            {
+                // scalar_field = slope*x + value
+                field_scalar(mesh_gid,bin) = slope*mesh_coords(0) + scalar;
+                break;
+            }
+        case init_conds::ylinearScalar:
+            {
+                // scalar_field = slope*y + value
+                field_scalar(mesh_gid,bin) = slope*mesh_coords(1) + scalar;
+                break;
+            }
+        case init_conds::zlinearScalar:
+            {
+                // scalar_field = slope*z + value
+                field_scalar(mesh_gid,bin) = slope*mesh_coords(2) + scalar;
+                break;
+            }
+        case init_conds::tgVortexScalar:
+            {
+                printf("**** TG Vortex not supported for general scalar initial conditions ****\n");
+
+                break;
+            }
+        case init_conds::noICsScalar:
+            {
+                // nothing is done
+
+                break;
+            }
+        default:
+            {
+                // do nothing
+
+                break;
+            }
+    } // end of switch
+
+}  // end function paint_multi_scalar
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn paint_vector_rk
+///
+/// \brief a function to paint a vector fields on the mesh 
+///
+/// \param vector is the vector field on elem/gauss/node
+/// \param coords are the coordinates of the mesh elem/guass/node
+/// \param u is the x-comp
+/// \param v is the y-comp
+/// \param w is the z-comp
+/// \param scalar is the magnitude
+/// \param mesh_gid is the node global mesh index
+/// \param rk_num_bins is time integration storage level
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
+                     const ViewCArrayKokkos <double>& mesh_coords,
+                     const double u,
+                     const double v,
+                     const double w,
+                     const double scalar,
+                     const size_t mesh_gid,
+                     const size_t num_dims,
+                     const size_t rk_num_bins,
+                     const init_conds::init_vector_conds vectorFieldType)
+{
+
+    // save vector field at all rk_levels
+    for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){
+
+        // --- vector ---
+        switch (vectorFieldType) {
+            case init_conds::cartesian:
+                {
+                    vector_field(rk_level, mesh_gid, 0) = u;
+                    vector_field(rk_level, mesh_gid, 1) = v;
+                    if (num_dims == 3) {
+                        vector_field(rk_level, mesh_gid, 2) = w;
+                    }
+
+                    break;
+                }
+            // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+            case init_conds::radialVec:
+                {
+                    // Setting up radial
+                    double dir[2];
+                    dir[0] = 0.0;
+                    dir[1] = 0.0;
+                    double radius_val = 0.0;
+
+                    for (int dim = 0; dim < 2; dim++) {
+                        dir[dim]    = mesh_coords(dim);
+                        radius_val += mesh_coords(dim) * mesh_coords(dim);
+                    } // end for
+                    radius_val = sqrt(radius_val);
+
+                    for (int dim = 0; dim < 2; dim++) {
+                        if (radius_val > 1.0e-14) {
+                            dir[dim] /= (radius_val);
+                        }
+                        else{
+                            dir[dim] = 0.0;
+                        }
+                    } // end for
+
+                    vector_field(rk_level, mesh_gid, 0) = scalar * dir[0];
+                    vector_field(rk_level, mesh_gid, 1) = scalar * dir[1];
+                    if (num_dims == 3) {
+                        vector_field(rk_level, mesh_gid, 2) = 0.0;
+                    }
+
+                    break;
+                }
+            case init_conds::sphericalVec:
+                {
+                    // Setting up spherical
+                    double dir[3];
+                    dir[0] = 0.0;
+                    dir[1] = 0.0;
+                    dir[2] = 0.0;
+                    double radius_val = 0.0;
+
+                    for (int dim = 0; dim < 3; dim++) {
+                        dir[dim]    = mesh_coords(dim);
+                        radius_val += mesh_coords(dim) * mesh_coords(dim);
+                    } // end for
+                    radius_val = sqrt(radius_val);
+
+                    for (int dim = 0; dim < 3; dim++) {
+                        if (radius_val > 1.0e-14) {
+                            dir[dim] /= (radius_val);
+                        }
+                        else{
+                            dir[dim] = 0.0;
+                        }
+                    } // end for
+
+                    vector_field(rk_level, mesh_gid, 0) = scalar * dir[0];
+                    vector_field(rk_level, mesh_gid, 1) = scalar * dir[1];
+                    if (num_dims == 3) {
+                        vector_field(rk_level, mesh_gid, 2) = scalar * dir[2];
+                    }
+
+                    break;
+                }
+            case init_conds::radialLinearVec:
+                {
+                    printf("**** Radial_linear initial conditions not yet supported ****\n");
+                    break;
+                }
+            case init_conds::sphericalLinearVec:
+                {
+                    printf("**** spherical_linear initial conditions not yet supported ****\n");
+                    break;
+                }
+            case init_conds::tgVortexVec:
+                {
+                    vector_field(rk_level, mesh_gid, 0) = sin(PI * mesh_coords(0)) * 
+                                                        cos(PI * mesh_coords(1));
+                    vector_field(rk_level, mesh_gid, 1) = -1.0 * cos(PI * mesh_coords(0)) * 
+                                                        sin(PI * mesh_coords(1));
+                    if (num_dims == 3) {
+                        vector_field(rk_level, mesh_gid, 2) = 0.0;
+                    }
+
+                    break;
+                }
+            case init_conds::stationary:
+                {
+                    // no velocity
+                    vector_field(rk_level, mesh_gid, 0) = 0.0;
+                    vector_field(rk_level, mesh_gid, 1) = 0.0;
+                    if (num_dims == 3) {
+                        vector_field(rk_level, mesh_gid, 2) = 0.0;
+                    }
+
+                    break;
+                }
+            case init_conds::noICsVec:
+                {
+                    // nothing is done
+
+                    break;
+                }
+            default:
+                {
+                    // nothing is done
+
+                    break;
+                }
+        } // end of switch
+
+    } // end loop over rk_num_bins
+
+
+    // done setting the velocity
+}  // end function paint_vector
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn paint_node_scalar
+///
+/// \brief a function to paint a scalars on the nodes of the mesh
+///
+/// \param The scalar value to be painted onto the nodes
+/// \param Regions to fill
+/// \param node_scalar is the nodal scalar array
+/// \param node_coords are the coordinates of the nodes
+/// \param node_gid is the element global mesh index
+/// \param f_id is fill instruction
+/// \param Number of dimensions of the mesh
+/// \param The ID of the fill instruction
+/// \param rk_num_bins is time integration storage level
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void paint_node_scalar(const double scalar,
+                       const CArrayKokkos<RegionFill_t>& region_fills,
+                       const DCArrayKokkos<double>& node_scalar,
+                       const DCArrayKokkos<double>& node_coords,
+                       const double node_gid,
+                       const double num_dims,
+                       const size_t f_id,
+                       const size_t rk_num_bins)
+{
+    // save velocity at all rk_levels
+    for(size_t rk_level = 0; rk_level < rk_num_bins; rk_level++){
+
+        // --- scalar field ---
+        switch (region_fills(f_id).temperature_field) {
+            case init_conds::uniform:
+                {
+
+                    node_scalar(rk_level, node_gid) = scalar;
+                    break;
+                }
+            // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+            case init_conds::radialScalar:
+                {
+                    // Setting up radial
+                    double dir[2];
+                    dir[0] = 0.0;
+                    dir[1] = 0.0;
+                    double radius_val = 0.0;
+
+                    for (int dim = 0; dim < 2; dim++) {
+                        dir[dim]    = node_coords(rk_level, node_gid, dim);
+                        radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
+                    } // end for
+                    radius_val = sqrt(radius_val);
+
+                    for (int dim = 0; dim < 2; dim++) {
+                        if (radius_val > 1.0e-14) {
+                            dir[dim] /= (radius_val);
+                        }
+                        else{
+                            dir[dim] = 0.0;
+                        }
+                    } // end for
+
+                    node_scalar(rk_level, node_gid) = scalar * dir[0];
+                    node_scalar(rk_level, node_gid) = scalar * dir[1];
+
+                    break;
+                }
+            case init_conds::sphericalScalar:
+                {
+                    // Setting up spherical
+                    double dir[3];
+                    dir[0] = 0.0;
+                    dir[1] = 0.0;
+                    dir[2] = 0.0;
+                    double radius_val = 0.0;
+
+                    for (int dim = 0; dim < 3; dim++) {
+                        dir[dim]    = node_coords(rk_level, node_gid, dim);
+                        radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
+                    } // end for
+                    radius_val = sqrt(radius_val);
+
+                    for (int dim = 0; dim < 3; dim++) {
+                        if (radius_val > 1.0e-14) {
+                            dir[dim] /= (radius_val);
+                        }
+                        else{
+                            dir[dim] = 0.0;
+                        }
+                    } // end for
+
+                    node_scalar(rk_level, node_gid) = scalar * radius_val;
+                    break;
+                }
+            case init_conds::tgVortexScalar:
+                {
+                    printf("**** TG Vortex not supported for general scalar initial conditions ****\n");
+
+                    break;
+                }
+            case init_conds::noICsScalar:
+                {
+                    // nothing is done
+
+                    break;
+                }
+            default:
+                {
+                    // do nothing
+
+                    break;
+                }
+        } // end of switch
+
+    } // end loop over rk_num_bins
+
+}  // end function paint_node_scalar
+
+/////////////////////////////////////////////////////////////////////////////
+///
 /// \fn paint_gauss_den_sie
 ///
 /// \brief a function to paint den and sie on the Gauss points of the mesh 
@@ -608,7 +1218,7 @@ void paint_gauss_den_sie(const Material_t& Materials,
 
 
         // add test problem state setups here
-        if (region_fills(f_id).velocity == init_conds::tg_vortex) {
+        if (region_fills(f_id).vel_field == init_conds::tgVortexVec) {
 
             GaussPoint_den(gauss_gid, mat_storage_lid) = 1.0;    
 
@@ -737,295 +1347,6 @@ void paint_gauss_den_sie(const Material_t& Materials,
 
 
 } // end function
-
-
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn paint_node_vel
-///
-/// \brief a function to paint a velocity field on the nodes of the mesh 
-///
-/// \param mesh is the simulation mesh
-/// \param node_vel is the nodal velocity array
-/// \param node_coords are the coordinates of the nodes
-/// \param elem_gid is the element global mesh index
-/// \param f_id is fill instruction
-/// \param rk_num_bins is time integration storage level
-///
-/////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-void paint_node_vel(const CArrayKokkos<RegionFill_t>& region_fills,
-                    const DCArrayKokkos<double>& node_vel,
-                    const DCArrayKokkos<double>& node_coords,
-                    const double node_gid,
-                    const double num_dims,
-                    const size_t f_id,
-                    const size_t rk_num_bins)
-{
-
-    // save velocity at all rk_levels
-    for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){
-
-        // --- Velocity ---
-        switch (region_fills(f_id).velocity) {
-            case init_conds::cartesian:
-                {
-                    node_vel(rk_level, node_gid, 0) = region_fills(f_id).u;
-                    node_vel(rk_level, node_gid, 1) = region_fills(f_id).v;
-                    if (num_dims == 3) {
-                        node_vel(rk_level, node_gid, 2) = region_fills(f_id).w;
-                    }
-
-                    break;
-                }
-            // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
-            case init_conds::radial:
-                {
-                    // Setting up radial
-                    double dir[2];
-                    dir[0] = 0.0;
-                    dir[1] = 0.0;
-                    double radius_val = 0.0;
-
-                    for (int dim = 0; dim < 2; dim++) {
-                        dir[dim]    = node_coords(rk_level, node_gid, dim);
-                        radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
-                    } // end for
-                    radius_val = sqrt(radius_val);
-
-                    for (int dim = 0; dim < 2; dim++) {
-                        if (radius_val > 1.0e-14) {
-                            dir[dim] /= (radius_val);
-                        }
-                        else{
-                            dir[dim] = 0.0;
-                        }
-                    } // end for
-
-                    node_vel(rk_level, node_gid, 0) = region_fills(f_id).speed * dir[0];
-                    node_vel(rk_level, node_gid, 1) = region_fills(f_id).speed * dir[1];
-                    if (num_dims == 3) {
-                        node_vel(rk_level, node_gid, 2) = 0.0;
-                    }
-
-                    break;
-                }
-            case init_conds::spherical:
-                {
-                    // Setting up spherical
-                    double dir[3];
-                    dir[0] = 0.0;
-                    dir[1] = 0.0;
-                    dir[2] = 0.0;
-                    double radius_val = 0.0;
-
-                    for (int dim = 0; dim < 3; dim++) {
-                        dir[dim]    = node_coords(rk_level, node_gid, dim);
-                        radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
-                    } // end for
-                    radius_val = sqrt(radius_val);
-
-                    for (int dim = 0; dim < 3; dim++) {
-                        if (radius_val > 1.0e-14) {
-                            dir[dim] /= (radius_val);
-                        }
-                        else{
-                            dir[dim] = 0.0;
-                        }
-                    } // end for
-
-                    node_vel(rk_level, node_gid, 0) = region_fills(f_id).speed * dir[0];
-                    node_vel(rk_level, node_gid, 1) = region_fills(f_id).speed * dir[1];
-                    if (num_dims == 3) {
-                        node_vel(rk_level, node_gid, 2) = region_fills(f_id).speed * dir[2];
-                    }
-
-                    break;
-                }
-            case init_conds::radial_linear:
-                {
-                    printf("**** Radial_linear initial conditions not yet supported ****\n");
-                    break;
-                }
-            case init_conds::spherical_linear:
-                {
-                    printf("**** spherical_linear initial conditions not yet supported ****\n");
-                    break;
-                }
-            case init_conds::tg_vortex:
-                {
-                    node_vel(rk_level, node_gid, 0) = sin(PI * node_coords(rk_level, node_gid, 0)) * 
-                                                        cos(PI * node_coords(rk_level, node_gid, 1));
-                    node_vel(rk_level, node_gid, 1) = -1.0 * cos(PI * node_coords(rk_level, node_gid, 0)) * 
-                                                        sin(PI * node_coords(rk_level, node_gid, 1));
-                    if (num_dims == 3) {
-                        node_vel(rk_level, node_gid, 2) = 0.0;
-                    }
-
-                    break;
-                }
-
-            case init_conds::no_ic_vel:
-                {
-                    // no velocity
-                    node_vel(rk_level, node_gid, 0) = 0.0;
-                    node_vel(rk_level, node_gid, 1) = 0.0;
-                    if (num_dims == 3) {
-                        node_vel(rk_level, node_gid, 2) = 0.0;
-                    }
-
-                    break;
-                }
-            default:
-                {
-                    // no velocity
-                    node_vel(rk_level, node_gid, 0) = 0.0;
-                    node_vel(rk_level, node_gid, 1) = 0.0;
-                    if (num_dims == 3) {
-                        node_vel(rk_level, node_gid, 2) = 0.0;
-                    }
-
-                    break;
-                }
-        } // end of switch
-
-    } // end loop over rk_num_bins
-
-
-    // done setting the velocity
-}  // end function paint_node_vel
-
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn paint_node_scalar
-///
-/// \brief a function to paint a scalars on the nodes of the mesh
-///
-/// \param The scalar value to be painted onto the nodes
-/// \param Regions to fill
-/// \param node_scalar is the nodal scalar array
-/// \param node_coords are the coordinates of the nodes
-/// \param node_gid is the element global mesh index
-/// \param f_id is fill instruction
-/// \param Number of dimensions of the mesh
-/// \param The ID of the fill instruction
-/// \param rk_num_bins is time integration storage level
-///
-/////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-void paint_node_scalar(const double scalar,
-                       const CArrayKokkos<RegionFill_t>& region_fills,
-                       const DCArrayKokkos<double>& node_scalar,
-                       const DCArrayKokkos<double>& node_coords,
-                       const double node_gid,
-                       const double num_dims,
-                       const size_t f_id,
-                       const size_t rk_num_bins)
-{
-    // save velocity at all rk_levels
-    for(size_t rk_level = 0; rk_level < rk_num_bins; rk_level++){
-
-        // --- temperature ---
-        switch (region_fills(f_id).temp_distribution) {
-            case init_conds::cartesian:
-                {
-
-                    node_scalar(rk_level, node_gid) = scalar;
-                    break;
-                }
-            // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
-            case init_conds::radial:
-                {
-                    // Setting up radial
-                    double dir[2];
-                    dir[0] = 0.0;
-                    dir[1] = 0.0;
-                    double radius_val = 0.0;
-
-                    for (int dim = 0; dim < 2; dim++) {
-                        dir[dim]    = node_coords(rk_level, node_gid, dim);
-                        radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
-                    } // end for
-                    radius_val = sqrt(radius_val);
-
-                    for (int dim = 0; dim < 2; dim++) {
-                        if (radius_val > 1.0e-14) {
-                            dir[dim] /= (radius_val);
-                        }
-                        else{
-                            dir[dim] = 0.0;
-                        }
-                    } // end for
-
-                    node_scalar(rk_level, node_gid) = scalar * dir[0];
-                    node_scalar(rk_level, node_gid) = scalar * dir[1];
-
-                    break;
-                }
-            case init_conds::spherical:
-                {
-                    // Setting up spherical
-                    double dir[3];
-                    dir[0] = 0.0;
-                    dir[1] = 0.0;
-                    dir[2] = 0.0;
-                    double radius_val = 0.0;
-
-                    for (int dim = 0; dim < 3; dim++) {
-                        dir[dim]    = node_coords(rk_level, node_gid, dim);
-                        radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
-                    } // end for
-                    radius_val = sqrt(radius_val);
-
-                    for (int dim = 0; dim < 3; dim++) {
-                        if (radius_val > 1.0e-14) {
-                            dir[dim] /= (radius_val);
-                        }
-                        else{
-                            dir[dim] = 0.0;
-                        }
-                    } // end for
-
-                    node_scalar(rk_level, node_gid) = scalar * radius_val;
-                    break;
-                }
-            case init_conds::radial_linear:
-                {
-                    printf("**** Radial_linear initial conditions not yet supported ****\n");
-                    break;
-                }
-            case init_conds::spherical_linear:
-                {
-                    printf("**** spherical_linear initial conditions not yet supported ****\n");
-                    break;
-                }
-            case init_conds::tg_vortex:
-                {
-                    printf("**** TG Vortex not supported for general scalar initial conditions ****\n");
-
-                    break;
-                }
-
-            default:
-                {
-                    // no temperature
-                    node_scalar(rk_level, node_gid) = 0.0;
-                    node_scalar(rk_level, node_gid) = 0.0;
-                    if (num_dims == 3) {
-                        node_scalar(rk_level, node_gid) = 0.0;
-                    }
-
-                    break;
-                }
-        } // end of switch
-
-    } // end loop over rk_num_bins
-
-}  // end function paint_node_scalar
-
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///

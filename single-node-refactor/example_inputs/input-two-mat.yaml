@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 10.0
+    time_final: 1.0
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
@@ -18,14 +18,27 @@ mesh_options:
     type: box
     origin: [0.0, 0.0, 0.0]
     length: [1.2, 1.2, 1.2]
-    num_elems: [30, 30, 30]
+    num_elems: [12, 12, 12]
 
 
 output_options:
     timer_output_level: thorough
-    output_file_format: ensight
-    graphics_time_step: 0.05
+    output_file_format: viz #ensight #state
+    graphics_time_step: 1.0
     # graphics_iteration_step: 10
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+    node_field_outputs:
+        - vel
+        - mass
 
 solver_options:
   - solver:
@@ -37,13 +50,27 @@ solver_options:
         #  - blah
 
 boundary_conditions:
-            
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+
     # Tag Y plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: y_plane
             plane_position: 0.0
+            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
@@ -56,19 +83,24 @@ boundary_conditions:
         surface: 
             type: z_plane
             plane_position: 0.0
+            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
             - 0   # y
-            - 1   # z    
+            - 1   # z
+
+
   
 materials:
-
-    # the rod
     - material:
         id: 0
         eos_model_type: decoupled
         eos_model: gamma_law_gas
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
         # strength_model: none
         dissipation_model: MARS
         dissipation_global_vars:
@@ -77,17 +109,16 @@ materials:
             - 1.333 # q2
             - 1.333 # q2ex
             - 0.0   # phi_min
-            - 1.0   # phi_curl_min
-        eos_global_vars:
-            - 3.0
-            - 1.0E-4
-            - 1.0
-
+            - 1.0   # pin_curl_min
 
     - material:
         id: 1
         eos_model_type: decoupled
         eos_model: gamma_law_gas
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
         # strength_model: none
         dissipation_model: MARS
         dissipation_global_vars:
@@ -96,89 +127,76 @@ materials:
             - 1.333 # q2
             - 1.333 # q2ex
             - 0.0   # phi_min
-            - 1.0   # phi_curl_min
-        eos_global_vars:
-            - 1.666666666666667
-            - 1.0E-4
-            - 1.0
-        erosion_model: basic
-        erode_tension_val: 2.0e-7
-        erode_density_val: 0.01
-    
-
-    # background air
-    - material:
-        id: 2
-        eos_model_type: decoupled
-        eos_model: gamma_law_gas
-        # strength_model: none
-        dissipation_model: MARS
-        dissipation_global_vars:
-            - 1.0   # q1
-            - 1.0   # q1ex
-            - 1.333 # q2
-            - 1.333 # q2ex
-            - 0.0   # phi_min
-            - 1.0   # phi_curl_min
-        eos_global_vars:
-            - 1.666666666666667
-            - 1.0E-4
-            - 1.0
+            - 1.0   # pin_curl_min
 
 regions:
-    # air
     - region:
         volume:
             type: global
-        material_id: 2
         solver_id: 0
-        den: 0.010
-        sie: 3.0e-4
-        velocity: 
-            type: cartesian
-            u: 0.0
-            v: 0.0
-            w: 0.0
-    
-    # high-speed projectile
-    - region:
-        volume:
-            type: box
-            origin: [0.0, 0.0, 0.0]
-            x1: 0.1
-            x2: 0.5
-            y1: 0.0
-            y2: 0.2
-            z1: 0.0
-            z2: 0.2
         material_id: 0
-        solver_id: 0
-        den: 8.0
-        sie: 1.0e-6
-        velocity: 
-            type: cartesian
-            u: 0.3
-            v: 0.0
-            w: 0.0
-
-    # a wall
-    - region:
-        volume:
-            type: box
-            origin: [0.0, 0.0, 0.0]
-            x1: 0.5
-            x2: 0.6
-            y1: 0.0
-            y2: 1.2
-            z1: 0.0
-            z2: 1.2
-        material_id: 1
-        solver_id: 0
-        den: 2.7
-        sie: 1.0e-6 
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
         velocity: 
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
 
+
+    # energy source initial conditions
+    - region:
+        volume:
+            type: sphere
+            origin: [0.0, 0.0, 0.0]
+            radius1: 0.0
+            radius2: 0.1
+        solver_id: 0
+        material_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        # ie: 0.25833839995946534
+        specific_internal_energy: 
+            type: uniform
+            value: 61.67375002 # 963.652344
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 0.25
+
+    # energy source initial conditions
+    - region:
+        volume:
+            type: sphere
+            origin: [0.0, 0.0, 0.0]
+            radius1: 0.0
+            radius2: 0.1
+        solver_id: 0
+        material_id: 1
+        density: 
+            type: uniform
+            value: 1.0
+        # ie: 0.25833839995946534
+        specific_internal_energy: 
+            type: uniform
+            value: 61.67375002 # 963.652344
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 0.75

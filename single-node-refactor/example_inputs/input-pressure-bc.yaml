@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 25.0
+    time_final: 0.6
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
@@ -17,14 +17,14 @@ mesh_options:
     num_dims: 3
     type: box
     origin: [0.0, 0.0, 0.0]
-    length: [10.0, 10.0, 1.0]
-    num_elems: [40, 40, 4]
+    length: [1.0, 1.0, 1.0]
+    num_elems: [12, 12, 12]
 
 
 output_options:
     timer_output_level: thorough
     output_file_format: ensight
-    graphics_time_step: 1.0
+    graphics_time_step: 0.6
     # graphics_iteration_step: 10
 
 solver_options:
@@ -37,6 +37,7 @@ solver_options:
         #  - blah
 
 boundary_conditions:
+
     # Tag X plane
     - boundary_condition:
         solver_id: 0
@@ -48,6 +49,7 @@ boundary_conditions:
             - 1   # x
             - 0   # y
             - 0   # z
+
 
     # Tag Y plane
     - boundary_condition:
@@ -61,23 +63,59 @@ boundary_conditions:
             - 1   # y
             - 0   # z
 
+    # Tag z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
     # Tag X plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: x_plane
-            plane_position: 10.0
-        velocity_model: fixed
-
+            plane_position: 1.0
+        stress_model: constant
+        # Voight notation:
+        # sig_00
+        # sig_11
+        # sig_22
+        # sig_12
+        # sig_02
+        # sig_01
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0
 
     # Tag Y plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: y_plane
-            plane_position: 10.0
-        velocity_model: fixed
-
+            plane_position: 1.0
+        stress_model: constant
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0
+        #velocity_model: reflected
+        #velocity_bc_global_vars:
+        #    - 0   # x
+        #    - 1   # y
+        #    - 0   # z
 
     # Tag Z plane
     - boundary_condition:
@@ -85,20 +123,19 @@ boundary_conditions:
         surface: 
             type: z_plane
             plane_position: 1.0
-        stress_model: time_varying
-        #simga(t) = simga0 exp(-varDecay*(time - time_start) )
+        stress_model: constant
         stress_bc_global_vars:
-            - -0.01   # press, stress(0,0)
-            - -0.01   # press, stress(1,1)
-            - -0.01   # press, stress(2,2)
-            - 0   # stress(1,2)
-            - 0   # stress(0,2)
-            - 0   # stress(0,1)
-            - 0.01   # decay rate
-            - 0   # time start
-            - 30   # time end
-
-
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0 
+        #velocity_model: reflected
+        #velocity_bc_global_vars:
+        #    - 0   # x
+        #    - 0   # y
+        #    - 1   # z
 
   
 materials:
@@ -113,24 +150,33 @@ materials:
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.1     # phi_min
+            - 0     # phi_min
             - 1.0   # phi_curl
         eos_global_vars:
-            - 10 #1.666666666666667
+            - 1.666666666666667
             - 1.0E-14
             - 1.0
-
 
 regions:
     - region:
         volume:
             type: global
-        material_id: 0
         solver_id: 0
-        den: 1.0
-        sie: 1.0e-10
-
-
+        material_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
     
 
 

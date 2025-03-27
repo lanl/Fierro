@@ -246,14 +246,20 @@ void SGHRZ::fill_regions_sgh_rz(
                     // get the mesh node index
                     size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);       
 
+                    // node coords(rk,node_gid,dim), using the first rk level in the view
+                    ViewCArrayKokkos <double> a_node_coords(&node_coords(0,node_gid,0), 3);
+                    
                     // default sghRZ paint
-                    paint_node_vel(region_fills,
-                                node_vel,
-                                node_coords,
+                    paint_vector_rk(node_vel,
+                                a_node_coords,
+                                region_fills(fill_id).u,
+                                region_fills(fill_id).v,
+                                region_fills(fill_id).w,
+                                region_fills(fill_id).speed,
                                 node_gid,
                                 mesh.num_dims,
-                                fill_id,
-                                rk_num_bins);
+                                rk_num_bins,
+                                region_fills(fill_id).vel_field);
 
                     // add user defined paint here
                     // user_defined_vel_state();

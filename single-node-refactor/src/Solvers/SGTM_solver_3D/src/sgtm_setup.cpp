@@ -209,10 +209,8 @@ void SGTM3D::tag_regions(
             ViewCArrayKokkos<double> coords(&coords_1D[0], 3);
 
 
-            //WARNING: This is not correct, hack to get a element_id value for fill_geometric_region
-            size_t elem_gid = 0; //mesh.nodes_in_elem(node_gid, 0); BUG HERE !!!!
-            //correct coding, if you want an elem_gid, should be elems_in_node(node_gid,0)
-             
+            // a dummy variable
+            size_t elem_gid = 0; // not used
 
             coords(0) = node_coords(1, node_gid, 0);
             coords(1) = node_coords(1, node_gid, 1);
@@ -490,13 +488,29 @@ void SGTM3D::setup_sgtm(
     // Paint nodal state
     // parallel loop over nodes in mesh
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        paint_node_vel(region_fills,
-                       State.node.vel,
-                       State.node.coords,
-                       node_gid,
-                       mesh.num_dims,
-                       node_region_id(node_gid),
-                       rk_num_bins);
+
+        //paint_node_vel(region_fills,
+        //               State.node.vel,
+        //               State.node.coords,
+        //               node_gid,
+        //               mesh.num_dims,
+        //               node_region_id(node_gid),
+        //               rk_num_bins);
+        
+        // node coords(rk,node_gid,dim), using the first rk level in the view
+        ViewCArrayKokkos <double> a_node_coords(&State.node.coords(0,node_gid,0), 3);
+        
+        paint_vector_rk(State.node.vel,
+                    a_node_coords,
+                    region_fills(node_region_id(node_gid)).u,
+                    region_fills(node_region_id(node_gid)).v,
+                    region_fills(node_region_id(node_gid)).w,
+                    region_fills(node_region_id(node_gid)).speed,
+                    node_gid,
+                    mesh.num_dims,
+                    rk_num_bins,
+                    region_fills(node_region_id(node_gid)).vel_field);
+        
 
         // Paint on initial temperature
         double temperature = region_fills(node_region_id(node_gid)).temperature;
