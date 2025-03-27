@@ -161,6 +161,7 @@ static std::map<std::string, model::EOSModels> eos_models_map
     { "gamma_law_gas", model::gammaLawGasEOS },
     { "void", model::voidEOS },
     { "user_defined_eos", model::userDefinedEOS },
+    { "host_user_defined_eos", model::hostUserDefinedEOS },
     { "mie_gruneisen_eos", model::mieGruneisenEOS },
 };
 
@@ -216,8 +217,13 @@ struct MaterialEnums_t
     // none, decoupled, or coupled eos
     model::EOSType EOSType = model::noEOSType;
 
+    // noEOS etc
+    model::EOSModels EOSModels = model::noEOS;
+
     // eos model run location
     model::RunLocation EOSRunLocation = model::device;
+
+    // -- Strength --
 
     // Strength model type: none, or increment- or state-based
     model::StrengthType StrengthType = model::noStrengthType;
@@ -228,8 +234,13 @@ struct MaterialEnums_t
     // strength model intialization location    
     model::RunLocation StrengthSetupLocation = model::host;
 
+    // -- erosion --
+
     // Erosion model type: none or basis
     model::ErosionModels ErosionModels = model::noErosion;
+
+
+    // -- dissipation --
 
     // dissipation model
     model::DissipationModels DissipationModels = model::noDissipation;
