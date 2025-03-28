@@ -1670,15 +1670,15 @@ void Explicit_Solver::setup_shape_optimization_problem(){
               << Optimization_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
           exit_solver(0);
       }
-      if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_TopOpt){
+      if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_ShapeOpt){
         //debug print
         *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<Optimization_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam.optimization_options.method_of_moving_asymptotes){
-          sub_obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          sub_obj = ROL::makePtr<KineticEnergyMinimize_ShapeOpt>(this);
           obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
         }
         else{
-          obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
+          obj = ROL::makePtr<KineticEnergyMinimize_ShapeOpt>(this);
         }
       }
       else if(Optimization_Module_List[imodule] == OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_ShapeOpt){
