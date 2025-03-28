@@ -192,17 +192,17 @@ struct SolverRegionSetup_t
 // ----------------------------------
 static std::vector<std::string> str_region_inps
 {
-    "solver_id",
     "volume",
+    "solver_id",
     "material_id",
+    "volume_fraction",
     "velocity",
     "temperature",
+    "density",
     "specific_heat",
     "thermal_conductivity",
     "specific_internal_energy",
-    "internal_energy",
-    "density",
-    "volume_fraction"
+    "internal_energy"
 };
 
 // ---------------------------------------------------------

@@ -60,6 +60,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.h"
 
 
+// check to see if a word is in the string, the sentence is a string
+bool contains_word(const std::string& text, const std::string& word) {
+  return text.find(word) != std::string::npos;
+}
+
 // =================================================================================
 //    A function to print out all possible inputs when --help flag is given
 // =================================================================================
@@ -73,56 +78,518 @@ void print_inputs()
     //std::vector<std::string>& str_bc_surface_inps
     
     std::cout << "\n";
-    std::cout << " Fierro: Forging the future of engineering analysis \n\n";
+    std::cout << "    Fierro: Forging the future of engineering analysis                       \n\n";
+    
+    std::cout << " DESCRIPTION                                                                 \n";
+    std::cout << "    A multi-solver multi-physics multi-material code that runs in parallel   \n";
+    std::cout << "    across CPU and GPU computer architectures.   \n\n";
 
-     std::cout << " USE \n";
-    std::cout << "    To run Fierro, supply an input file writen in yaml  \n";
-    std::cout << "       ./Fierro input.yaml \n\n";
+    std::cout << " SOLVERS                                                                     \n";
+    std::cout << "    dynx_FE --    A conservative transient finite element solver for high    \n";
+    std::cout << "                  strain rate, shock-driven problems in 3D Cartesian         \n";
+    std::cout << "                  coordinates. This solver is for unstructured meshes with   \n";
+    std::cout << "                  linear hexahedral elements.                                \n";
+    std::cout << "    dynx_FE_rz -- A conservative transient finite element solver for high    \n";
+    std::cout << "                  strain rate, shock-driven problems in 2D axisymmetric      \n";
+    std::cout << "                  coordinates. The axis of symmetry (i.e., axis of rotation) \n";
+    std::cout << "                  is the horizontal-axis. This solver preservers symmetry on \n";
+    std::cout << "                  on polar meshes with uniform angular spacing.  This solver \n"; 
+    std::cout << "                  is for unstructured meshes with linear quadralateral       \n";
+    std::cout << "                  elements.                                                  \n";
+    std::cout << "    thrmex_FE  -- A conservative transient finite element solver for thermal \n";
+    std::cout << "                  mechanical problems in 3D Cartesian coordinates. This      \n";
+    std::cout << "                  solver is for unstructured meshes with linear hexahedral   \n";
+    std::cout << "                  elements.                                                  \n\n";
 
-    std::cout << " YAML INPUT OPTIONS \n";
+    std::cout << " USE                                                                         \n";
+    std::cout << "    To run Fierro, supply an input file written in yaml                      \n";
+    std::cout << "       ./Fierro input.yaml                                                   \n\n";
+
+    std::cout << " YAML INPUT                                                                  \n";
+    std::cout << "    Example input files are provided in,                                     \n";
+    std::cout << "        Fierro/single-node-refactor/example_inputs                           \n\n";
+
+    std::cout << "...press Enter to continue or 'q' to quit...                                 \n"; 
+    char letter = std::cin.get();  // Waits for user to press Enter
+    if (letter == 'q' || letter == 'Q') {
+        return;
+    } // end if
+
+    std::cout << "    All input key words are listed below here. In some cases, the options, a \n";
+    std::cout << "    number or blank fields are provided to show the input structure (e.g. a  \n";
+    std::cout << "    vector input). Words like <word> are possible string inputs to use.      \n";
+    std::cout << "    Double and interger values are also denoted. The user will need to input \n";
+    std::cout << "    a double or integer value.  Inputs left blank are doubles or integers.   \n\n";
 
 // ---
-    std::cout << "    dynamic_options \n";
+    std::cout << "    dynamic_options: \n";
     for (auto field : str_dyn_opts_inps){
-        std::cout << "       "<< field << "\n";
+        std::cout << "       "<< field << ":\n";
     }
 // ---
-    std::cout << "    mesh_options \n";
+    std::cout << "    mesh_options: \n";
     for (auto field : str_mesh_inps){
-        std::cout << "       "<< field << "\n";
+        if(field.compare("origin") == 0){
+            std::cout << "       "<< field << ": [double, double, double]\n";
+        }
+        else if(field.compare("source") == 0){
+            std::cout << "       source:";
+            for (const auto& pair : mesh_input_source_map) {
+                std::cout << " <" << pair.first << ">";
+            }
+            std::cout << "\n";
+        }
+        else if(field.compare("type") == 0){
+            std::cout << "       type:";
+            for (const auto& pair : mesh_input_type_map) {
+                std::cout << " <" << pair.first << ">";
+            }
+            std::cout << "\n";
+        }
+        else if(field.compare("length") == 0){
+            std::cout << "       "<< field << ": [double, double, double]\n";
+        }
+        else if(field.compare("num_elems") == 0){
+            std::cout << "       "<< field << ": [int, int, int]\n";
+        }
+        else {
+            std::cout << "       "<< field << ":\n";
+        }
     }
 // ---
-    std::cout << "    output_options \n";
+    std::cout << "    output_options: \n";
     for (auto field : str_output_options_inps){
         if(field.compare("elem_field_outputs") == 0){
-            std::cout << "       elem_field_outputs \n";
+            std::cout << "       elem_field_outputs: \n";
             for (const auto& pair : elem_outputs_map) {
                 std::cout << "         - "<< pair.first << "\n";
             }
         }
-        else {
-            std::cout << "       "<< field << "\n";
+        else if(field.compare("timer_output_level:") == 0){
+            std::cout << "       timer_output_level: \n";
+            for (const auto& pair :  timer_output_level_map) {
+                std::cout << "         - "<< pair.first << "\n";
+            }
         }
-    }
-// ---
-    std::cout << "    solver_options \n";
-    for (auto field : str_solver_inps){
-        std::cout << "       "<< field << "\n";
-    }
-// ---
-    std::cout << "    boundary_conditions \n";
-    for (auto field : str_bc_inps){
-        if(field.compare("surface") == 0){
-            std::cout << "       surface \n";
-            for (auto subfield : str_bc_surface_inps){
-                std::cout << "          "<< subfield << "\n";
+        else if(field.compare("output_file_format:") == 0){
+            std::cout << "       output_file_format: \n";
+            for (const auto& pair :  output_format_map) {
+                std::cout << "         - "<< pair.first << "\n";
+            }
+        }
+        else if(field.compare("node_field_outputs") == 0){
+            std::cout << "       node_field_outputs: \n";
+            for (const auto& pair : node_outputs_map) {
+                std::cout << "         - "<< pair.first << "\n";
+            }
+        }
+        else if(field.compare("mat_pt_field_outputs") == 0){
+            std::cout << "       mat_pt_field_outputs: \n";
+            for (const auto& pair : mat_pt_outputs_map) {
+                std::cout << "         - "<< pair.first << "\n";
+            }
+        }
+        else if(field.compare("gauss_pt_field_outputs") == 0){
+            std::cout << "       gauss_pt_field_outputs: \n";
+            for (const auto& pair : gauss_pt_outputs_map) {
+                std::cout << "         - "<< pair.first << "\n";
             }
         }
         else {
-            std::cout << "       "<< field << "\n";
+            std::cout << "       "<< field << ":\n";
         }
-    } 
-    
+    }
+// ---
+    std::cout << "    solver_options: \n";
+    std::cout << "       #...as many solvers as you need... \n";
+    std::cout << "       - solver: \n";
+    for (auto field : str_solver_inps){
+        if(field.compare("method") == 0){
+            std::cout << "          method:";
+            for (const auto& pair : solver_map) {
+                std::cout << " <" << pair.first << ">";
+            }
+            std::cout << "\n";
+        }
+        else {
+            std::cout << "          "<< field << ":\n";
+        }
+    }
+// ---
+    std::cout << "    boundary_conditions: \n";
+    std::cout << "       #...as many conditions as you need... \n";
+    std::cout << "       - boundary_condition: \n";
+    for (auto field : str_bc_inps){
+        if(field.compare("surface") == 0){
+            std::cout << "          surface: \n";
+
+            for (auto subfield : str_bc_surface_inps){
+
+                if(subfield.compare("type") == 0){
+
+                    std::cout << "             type:";
+                    for (const auto& pair : bc_surface_map) {
+                        std::cout << " <" << pair.first << ">";
+                    }
+                    std::cout << "\n";
+
+                } // end if type
+                else if(subfield.compare("origin") == 0){
+                    std::cout << "             "<< subfield << ": [double, double, double]\n";
+                }
+                else {
+                    std::cout << "             "<< subfield << ":\n";
+                } // end if type
+
+            } // end for
+
+        }
+        else if(field.compare("velocity_model") == 0){
+            std::cout << "          velocity_model:";
+            size_t count = 0;
+            for (const auto& pair : bc_velocity_model_map) {
+                if(count==4){
+                    std::cout << "\n"; // new line
+                    std::cout << "                         "; // tab in
+                    count=0;
+                }
+                std::cout << " <" << pair.first << ">";
+                count++;
+            }
+            std::cout << "\n";
+        }
+        else if(field.compare("stress_model") == 0){
+            std::cout << "          stress_model:";
+            for (const auto& pair : bc_stress_model_map) {
+                std::cout << " <" << pair.first << ">";
+            }
+            std::cout << "\n";
+        }
+        else if(field.compare("temperature_model") == 0){
+            std::cout << "          temperature_model:";
+            for (const auto& pair : bc_temperature_model_map) {
+                std::cout << " <" << pair.first << ">";
+            }
+            std::cout << "\n";
+        }
+        else if(contains_word(field, "global_vars")){
+            std::cout << "          " << field <<":\n";
+            std::cout << "             - double/int \n";
+            std::cout << "             - double/int \n";
+            std::cout << "             #...as many values as you need... \n";
+            std::cout << "             - double/int \n";
+        }
+        else {
+            std::cout << "          "<< field << ":\n";
+        }
+    } // end bcs
+ // ---
+    std::cout << "    materials: \n";
+    std::cout << "       #...as many materials as you need... \n";
+    std::cout << "       - material: \n";
+    for (auto field : str_material_inps){
+        
+        if(field.compare("eos_model") == 0){
+            std::cout << "          eos_model:";
+            size_t count=0;
+            for (const auto& pair : eos_models_map) {
+                if(count==2){
+                    std::cout << "\n"; // new line
+                    std::cout << "                    "; // tab in
+                    count=0;
+                }
+                std::cout << " <" << pair.first << ">";
+                count++;
+            }
+            std::cout << "\n";
+        }
+        else if(field.compare("eos_model_type") == 0){
+            std::cout << "          eos_model_type:";
+            for (const auto& pair : eos_type_map) {
+                std::cout << " <" << pair.first << ">";
+            }
+            std::cout << "\n";
+        }
+        else if(field.compare("strength_model") == 0){
+            std::cout << "          strength_model:";
+            size_t count=0;
+            for (const auto& pair : strength_models_map) {
+                if(count==2){
+                    std::cout << "\n"; // new line
+                    std::cout << "                         "; // tab in
+                    count=0;
+                }
+                std::cout << " <" << pair.first << ">";
+                count++;
+            }
+            std::cout << "\n";
+        }
+        else if(field.compare("strength_model_type") == 0){
+            std::cout << "          strength_model_type:";
+            for (const auto& pair : strength_type_map) {
+                std::cout << " <" << pair.first << ">";
+            }
+            std::cout << "\n";
+        }
+        else if(field.compare("dissipation_model") == 0){
+            std::cout << "          dissipation_model:";
+            size_t count=0;
+            for (const auto& pair : dissipation_model_map) {
+                if(count==2){
+                    std::cout << "\n"; // new line
+                    std::cout << "                            "; // tab in
+                    count=0;
+                }
+                std::cout << " <" << pair.first << ">";
+                count++;
+            }
+            std::cout << "\n";
+        }
+        else if(field.compare("erosion_model") == 0){
+            std::cout << "          erosion_model:";
+            for (const auto& pair : erosion_model_map) {
+                std::cout << " <" << pair.first << ">";
+            }
+            std::cout << "\n";
+        }
+        else if(contains_word(field, "global_vars")){
+            std::cout << "          " << field <<":\n";
+            std::cout << "             - double/int \n";
+            std::cout << "             - double/int \n";
+            std::cout << "             #...as many values as you need... \n";
+            std::cout << "             - double/int \n";
+        }
+        else {
+            std::cout << "          "<< field << ":\n";
+        }
+    } // end mats
+// ---
+    std::cout << "    region: \n";
+    std::cout << "       #...as many regions as you need... \n";
+    std::cout << "       - region: \n";
+    for (auto field : str_region_inps){
+        if(field.compare("volume") == 0){
+            std::cout << "          volume: \n";
+
+            for (auto subfield : str_region_volume_inps){
+
+                if(subfield.compare("type") == 0){
+
+                    std::cout << "             type:";
+                    for (const auto& pair : region_type_map) {
+                        std::cout << " <" << pair.first << ">";
+                    }
+                    std::cout << "\n";
+
+                } // end if type
+                else if(subfield.compare("origin") == 0){
+                    std::cout << "             "<< subfield << ": [double, double, double]\n";
+                }
+                else {
+                    std::cout << "             "<< subfield << ":\n";
+                } // end if type
+
+            } // end for
+        } // end if volume
+        else if(field.compare("volume_fraction") == 0){
+            std::cout << "          volume_fraction: \n";
+
+            for (auto subfield : str_region_volfrac_inps){
+
+                if(subfield.compare("type") == 0){
+
+                    std::cout << "             type:";
+                    for (const auto& pair : scalar_ics_type_map) {
+                        std::cout << " <" << pair.first << ">";
+                    }
+                    std::cout << "\n";
+
+                } // end if type
+                else if(subfield.compare("origin") == 0){
+                    std::cout << "             "<< subfield << ": [double, double, double]\n";
+                }
+                else {
+                    std::cout << "             "<< subfield << ":\n";
+                } // end if type
+
+            } // end for
+        } // end if volfrac
+        else if(field.compare("density") == 0){
+            std::cout << "          density: \n";
+
+            for (auto subfield : str_region_den_inps){
+
+                if(subfield.compare("type") == 0){
+
+                    std::cout << "             type:";
+                    for (const auto& pair : scalar_ics_type_map) {
+                        std::cout << " <" << pair.first << ">";
+                    }
+                    std::cout << "\n";
+
+                } // end if type
+                else if(subfield.compare("origin") == 0){
+                    std::cout << "             "<< subfield << ": [double, double, double]\n";
+                }
+                else {
+                    std::cout << "             "<< subfield << ":\n";
+                } // end if type
+
+            } // end for
+        } // end if density
+        else if(field.compare("specific_internal_energy") == 0){
+            std::cout << "          specific_internal_energy: \n";
+
+            for (auto subfield : str_region_sie_inps){
+
+                if(subfield.compare("type") == 0){
+
+                    std::cout << "             type:";
+                    for (const auto& pair : scalar_ics_type_map) {
+                        std::cout << " <" << pair.first << ">";
+                    }
+                    std::cout << "\n";
+
+                } // end if type
+                else if(subfield.compare("origin") == 0){
+                    std::cout << "             "<< subfield << ": [double, double, double]\n";
+                }
+                else {
+                    std::cout << "             "<< subfield << ":\n";
+                } // end if type
+
+            } // end for
+        } // end if sie
+        else if(field.compare("internal_energy") == 0){
+            std::cout << "          internal_energy: \n";
+
+            for (auto subfield : str_region_ie_inps){
+
+                if(subfield.compare("type") == 0){
+
+                    std::cout << "             type:";
+                    for (const auto& pair : scalar_ics_type_map) {
+                        std::cout << " <" << pair.first << ">";
+                    }
+                    std::cout << "\n";
+
+                } // end if type
+                else if(subfield.compare("origin") == 0){
+                    std::cout << "             "<< subfield << ": [double, double, double]\n";
+                }
+                else {
+                    std::cout << "             "<< subfield << ":\n";
+                } // end if type
+
+            } // end for
+        } // end if ie
+        else if(field.compare("specific_heat") == 0){
+            std::cout << "          specific_heat: \n";
+
+            for (auto subfield : str_region_specific_heat_inps){
+
+                if(subfield.compare("type") == 0){
+
+                    std::cout << "             type:";
+                    for (const auto& pair : scalar_ics_type_map) {
+                        std::cout << " <" << pair.first << ">";
+                    }
+                    std::cout << "\n";
+
+                } // end if type
+                else if(subfield.compare("origin") == 0){
+                    std::cout << "             "<< subfield << ": [double, double, double]\n";
+                }
+                else {
+                    std::cout << "             "<< subfield << ":\n";
+                } // end if type
+
+            } // end for
+        } // end if specific heat
+        else if(field.compare("thermal_conductivity") == 0){
+            std::cout << "          thermal_conductivity: \n";
+
+            for (auto subfield : str_region_thermal_conductivity_inps){
+
+                if(subfield.compare("type") == 0){
+
+                    std::cout << "             type:";
+                    for (const auto& pair : scalar_ics_type_map) {
+                        std::cout << " <" << pair.first << ">";
+                    }
+                    std::cout << "\n";
+
+                } // end if type
+                else if(subfield.compare("origin") == 0){
+                    std::cout << "             "<< subfield << ": [double, double, double]\n";
+                }
+                else {
+                    std::cout << "             "<< subfield << ":\n";
+                } // end if type
+
+            } // end for
+        } // end if thermal_conductivity
+        else if(field.compare("temperature") == 0){
+            std::cout << "          temperature: \n";
+
+            for (auto subfield : str_region_temperature_inps){
+
+                if(subfield.compare("type") == 0){
+
+                    std::cout << "             type:";
+                    for (const auto& pair : scalar_ics_type_map) {
+                        std::cout << " <" << pair.first << ">";
+                    }
+                    std::cout << "\n";
+
+                } // end if type
+                else if(subfield.compare("origin") == 0){
+                    std::cout << "             "<< subfield << ": [double, double, double]\n";
+                }
+                else {
+                    std::cout << "             "<< subfield << ":\n";
+                } // end if type
+
+            } // end for
+        } // end if temperature
+        else if(field.compare("velocity") == 0){
+            std::cout << "          velocity: \n";
+            
+
+            for (auto subfield : str_region_vel_inps){
+
+                if(subfield.compare("type") == 0){
+                    std::cout << "             type:";
+
+                    size_t count=0;
+                    for (const auto& pair : vector_ics_type_map) {
+                        if(count==4){
+                            std::cout << "\n"; // new line
+                            std::cout << "                  "; // tab in
+                            count=0;
+                        }
+                        std::cout << " <" << pair.first << ">";
+                        count++;
+                    }
+                    std::cout << "\n";
+
+                } // end if type
+                else if(subfield.compare("origin") == 0){
+                    std::cout << "             "<< subfield << ": [double, double, double]\n";
+                }
+                else {
+                    std::cout << "             "<< subfield << ":\n";
+                } // end if type
+
+            } // end for
+        } // end if sie
+        else{
+            std::cout << "          "<< field << ":\n";
+        } // end if
+
+    } // end for
+
+
     std::cout << "  " << std::endl;
 
     return;
