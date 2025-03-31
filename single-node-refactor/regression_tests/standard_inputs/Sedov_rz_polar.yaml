@@ -34,7 +34,7 @@ output_options:
 
 solver_options:
   - solver:
-        method: SGHRZ
+        method: dynx_FE_rz
         id: 0
         # solver_vars:
         #  - blah

@@ -35,7 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef MARS_H
 #define MARS_H
 
-
+#include "material.h"
 
 // -----------------------------------------------------------------------------
 // 3D MARS

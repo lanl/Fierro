@@ -29,7 +29,7 @@ output_options:
 
 solver_options:
   - solver:
-        method: SGH3D
+        method: dynx_FE
         id: 0
         # solver_vars:
         #  - blah
@@ -103,13 +103,13 @@ materials:
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         # strength_model: none
-        dissipation_global_vars:
-            - 1.0   # q1
-            - 1.0   # q1ex
-            - 1.333 # q2
-            - 1.333 # q2ex
-            - 0.0   # phi_min
-            - 1.0   # phi_min_curl
+        #dissipation_global_vars:
+        #    - 1.0   # q1
+        #    - 1.0   # q1ex
+        #    - 1.333 # q2
+        #    - 1.333 # q2ex
+        #    - 0.0   # phi_min
+        #    - 1.0   # phi_min_curl
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14

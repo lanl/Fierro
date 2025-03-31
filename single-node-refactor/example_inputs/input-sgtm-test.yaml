@@ -29,7 +29,7 @@ output_options:
 
 solver_options:
   - solver:
-        method: SGTM3D
+        method: dynx_FE
         id: 0
         # solver_vars:
         #  - blah

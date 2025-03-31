@@ -45,6 +45,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.h"
 #include "dynamic_options.h"
 
+using namespace mtr;
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \struct simulation_parameters_t

@@ -48,69 +48,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct SimulationParameters_t;
 struct solver_input_t;
-struct mesh_input_t;
-struct RegionFill_t;
-struct RegionFill_host_t;
-struct output_options_t;
-
 struct Material_t;
-struct MaterialSetup_t;
-struct MaterialFunctions_t;
-struct MaterialEnums_t;
-
 struct BoundaryCondition_t;
-struct BoundaryConditionSetup_t;
-struct BoundaryConditionEnums_t;
-struct BoundaryConditionFunctions_t;
-
-struct dynamic_options_t;
 
 using namespace mtr;
 
-// checks to see if a path exists
-static bool DoesPathExist(const std::string& s)
-{
-    struct stat buffer;
-    return (stat(s.c_str(), &buffer) == 0);
-}
-
-// prints the contents of a parsed yaml file
-void print_yaml(Yaml::Node root);
-
-// Read and validate user inputs
-void validate_inputs(
-    Yaml::Node& yaml, 
-    std::vector<std::string>& user_inputs, 
-    std::vector<std::string>& str_valid_inputs,
-    std::vector<std::string>& str_required_inputs);
 
 // utility function for parsing YAML file
 void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary);
 
-// Parse the solver related data
-void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_input);
-
-// Parse dynamic time related options
-void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options);
-
-// Parse the mesh related data
-void parse_mesh_input(Yaml::Node& root, mesh_input_t& mesh_input);
-
-// Parse output options
-void parse_output_options(Yaml::Node& root, output_options_t& output_options);
-
-// parse the region text
-void parse_regions(Yaml::Node& root, 
-                   DCArrayKokkos<size_t>& reg_fills_in_solver,  
-                   DCArrayKokkos<size_t>& num_reg_fills_in_solver,
-                   CArrayKokkos<RegionFill_t>& region_fills, 
-                   CArray<RegionFill_host_t>&  region_fills_host,
-                   const size_t num_solvers);
-
-// parse the region text
-void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims);
-
-// parse the boundary condition text
-void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const size_t num_solvers);
 
 #endif // end Header Guard

@@ -31,82 +31,28 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
+
+#ifndef FIERRO_PARSE_Mesh_INPUTS_H
+#define FIERRO_PARSE_Mesh_INPUTS_H
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <string>
 #include <stdio.h>
-#include <math.h>
 #include <sys/stat.h>
-#include <vector>
-#include <variant>
-#include <algorithm>
-#include <map>
-
-#include "string_utils.h"
 
 #include "matar.h"
 
-#include "parse_yaml.hpp"
+#include "Yaml.hpp"
 
-#include "parse_tools.hpp"
-#include "parse_regions.hpp"
-#include "parse_mesh_inputs.hpp"
-#include "parse_solver_inputs.hpp"
-#include "parse_material_inputs.hpp"
-#include "parse_bdy_conds_inputs.hpp"
-#include "parse_dynamic_inputs.hpp"
-#include "parse_output_options.hpp"
-
-// simulation parameters contains:
-//   mesh_input
-//   output_options
-//   dynamic_options
-//   solver_inputs
-//   region_setups
-#include "simulation_parameters.h"
+struct mesh_input_t;
 
 
+using namespace mtr;
 
 
+// Parse the mesh related data
+void parse_mesh_inputs(Yaml::Node& root, mesh_input_t& mesh_input);
 
-// ==============================================================================
-//   Function Definitions
-// ==============================================================================
-
-
-
-// =================================================================================
-//    Parse YAML file
-// =================================================================================
-void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary)
-{
-
-    parse_mesh_inputs(root, SimulationParamaters.mesh_input);
-
-    parse_dynamic_options(root, SimulationParamaters.dynamic_options);
-
-    parse_output_options(root, SimulationParamaters.output_options);
-
-    parse_solver_input(root, SimulationParamaters.solver_inputs);
-
-    // parse the region yaml text into a vector of boundary conditions
-    size_t num_solvers = SimulationParamaters.solver_inputs.size();
-    parse_bcs(root, Boundary, num_solvers);
-
-
-    // parse the region yaml text into a vector of region_fills
-    parse_regions(root, 
-                  SimulationParamaters.region_setups.reg_fills_in_solver,
-                  SimulationParamaters.region_setups.num_reg_fills_in_solver,
-                  SimulationParamaters.region_setups.region_fills,
-                  SimulationParamaters.region_setups.region_fills_host,
-                  num_solvers);
-
-    // parse the material yaml text into a vector of materials
-    parse_materials(root, Materials, SimulationParamaters.mesh_input.num_dims);
-}
-
-
-
-
+#endif // end Header Guard
