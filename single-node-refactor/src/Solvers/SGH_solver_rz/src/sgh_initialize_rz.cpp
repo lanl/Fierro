@@ -43,11 +43,11 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters,
                 	   BoundaryCondition_t& Boundary,
                 	   State_t& State) const
 {
-	int num_nodes = mesh.num_nodes;
-    int num_gauss_pts = mesh.num_elems;
-    int num_corners = mesh.num_corners;
-    int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
-    int num_dim = mesh.num_dims;
+	size_t num_nodes = mesh.num_nodes;
+    size_t num_gauss_pts = mesh.num_elems;
+    size_t num_corners = mesh.num_corners;
+    size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+    size_t num_dim = mesh.num_dims;
 
     // save the solver_id, which is a pravate class variable
     //this->solver_id = solver_id_inp;
@@ -65,5 +65,37 @@ void SGHRZ::initialize_material_state(SimulationParameters_t& SimulationParamate
                 	                  BoundaryCondition_t& Boundary,
                 	                  State_t& State) const
 {
+    const size_t num_nodes = mesh.num_nodes;
+    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+
+    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
+
+    // -----
+    //  Allocation of state must include a buffer with ALE
+    // -----
+
+    // IMPORTANT, make buffer a parser input variable
+    // for ALE, add a buffer to num_elems_for_mat, like 10% of num_elems up to num_elems.
+    const size_t buffer = 0; // memory buffer to push back into
+
+    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+        const size_t num_mat_pts_in_elem = mesh.num_leg_gauss_in_elem; 
+
+        size_t num_elems_for_mat = State.MaterialToMeshMaps(mat_id).num_material_elems + buffer; // has a memory buffer for ALE
+
+        size_t num_points_for_mat  = num_elems_for_mat * num_mat_pts_in_elem;
+        size_t num_corners_for_mat = num_elems_for_mat * mesh.num_nodes_in_elem;
+
+        State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat); 
+        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3, SGHRZ_State::required_material_pt_state); // aways 3D, even for 2D-RZ calcs
+        State.MaterialCorners(mat_id).initialize(num_corners_for_mat, mesh.num_dims, SGHRZ_State::required_material_corner_state); 
+        // zones are not used with solver
+
+    } // end for mat_id
+    
+    // NOTE: Material points are populated in the material_state_setup funcion
+    
     return;
+
 }

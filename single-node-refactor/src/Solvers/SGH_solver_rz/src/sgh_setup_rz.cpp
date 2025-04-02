@@ -300,6 +300,8 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
                 State_t& State)
 {
 
+
+/*
     size_t num_fills_in_solver = SimulationParamaters.region_setups.num_reg_fills_in_solver.host(this->solver_id);
     printf("Num fills's = %zu\n in solver = %zu", num_fills_in_solver, this->solver_id);
 
@@ -520,7 +522,12 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
         State.MaterialToMeshMaps(mat_id).elem.update_device();
     } // end for
     Kokkos::fence();
+*/
 
+    // add a flag on whether SGH was set up, if(SGH_setup_already==false)
+    
+    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
+    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
 
     // calculate pressure, sound speed, and stress for each material
     for(int mat_id=0; mat_id<num_mats; mat_id++){

@@ -147,7 +147,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fill_node_states,
                  rk_num_bins);
 
-std::cout << "regions are filled \n";
+
 
     // note: the device and host side are updated in the above function
     // ---------------------------------------------
@@ -230,7 +230,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
 
     // short hand names
-    const size_t num_dims  = mesh.num_dims;
+    //const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
     const size_t num_nodes = mesh.num_nodes;
     const size_t num_gauss_points = mesh.num_leg_gauss_in_elem*mesh.num_elems;  
@@ -284,9 +284,6 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 // --- density and mass ---
                 if( State.MaterialPoints(mat_id).den.host.size()>0 ){
 
-std::cout << "setting den = " <<  fillGaussState.den.host(gauss_gid,a_mat_in_elem) << "\n";
-std::cout << "setting volfrac = " <<  fillElemState.volfrac.host(elem_gid,a_mat_in_elem) << "\n";
-std::cout << "setting vol = " <<  State.GaussPoints.vol.host(gauss_gid) << "\n";
                     // add an array that we set to true or false if we set this state here
                     State.MaterialPoints(mat_id).den.host(mat_point_lid)  = fillGaussState.den.host(gauss_gid,a_mat_in_elem);
                     State.MaterialPoints(mat_id).mass.host(mat_point_lid) = fillGaussState.den.host(gauss_gid,a_mat_in_elem) * 
@@ -471,8 +468,6 @@ void fill_regions(
     // loop over all fill instructions 
     for (size_t fill_id = 0; fill_id < num_fills_total; fill_id++) {
 
-std::cout << "fill loop \n";
-
         // ----
         // voxel mesh setup
         if (read_voxel_file.host(fill_id) == region::readVoxelFile) {
@@ -545,8 +540,7 @@ std::cout << "fill loop \n";
                 
                 // calculate volume fraction of the region intersecting the element
                 double geo_volfrac = 1.0; 
-
-std::cout << " getting vfrac \n";                
+             
                 // get the volfrac for the region
                 double vfrac = get_region_scalar(coords,
                                                  region_fills(fill_id).volfrac,
@@ -563,7 +557,6 @@ std::cout << " getting vfrac \n";
                 // if this fill is to add a material to existing ones, do so
                 if (combined_volfrac < 1.0 - 1.0e-8){
 
-std::cout << "appending mat in the elem \n\n";  
                     // append the fill id in this element and
                     // append the elem_volfrac value too
                     append_fills_in_elem(elem_volfrac,
@@ -579,13 +572,13 @@ std::cout << "appending mat in the elem \n\n";
                     // maybe add a check here if the other material has volfrac=0, then append it?
 
                     // --- this logic makes it a single material element with volfrac=1 ---
-std::cout << " elem_fill_ids \n"; 
+
                     // save and overwrite any prior fills
                     elem_fill_ids(elem_gid, 0) = fill_id;
-std::cout << " elem_vol_frac \n"; 
+ 
                     // save volume fraction
                     elem_volfrac(elem_gid, 0) = 1.0;
-std::cout << " elem_num_mats_saved \n"; 
+
                     elem_num_mats_saved_in_elem(elem_gid) = 1;
                 } // end of 
 
@@ -595,7 +588,6 @@ std::cout << " elem_num_mats_saved \n";
 
     } // end for loop over fills
 
-std::cout << "done with loop over fills \n";
 
     //---------
     // parallel loop over elements in the mesh and set specified state

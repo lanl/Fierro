@@ -161,6 +161,7 @@ void Driver::initialize()
                      fillGaussState,
                      fillElemState);
 
+std::cout << "problem setup done \n";
 
     // Allocate material state
     for (auto& solver : solvers) {
@@ -172,6 +173,7 @@ void Driver::initialize()
     } // end for over solvers
 
 
+std::cout << "done calling init mat state \n";
 
     // populate the material point state
     material_state_setup(SimulationParamaters, 
@@ -181,6 +183,9 @@ void Driver::initialize()
                          State,
                          fillGaussState,
                          fillElemState);
+
+
+std::cout << "material state is setup \n";
 
 }
 

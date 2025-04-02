@@ -69,7 +69,7 @@ void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParamate
 {
 	const size_t num_nodes = mesh.num_nodes;
     const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
-    const size_t num_dims = mesh.num_dims;
+    const size_t num_dims = 3;
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
@@ -91,12 +91,12 @@ void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParamate
         size_t num_corners_for_mat = num_elems_for_mat * mesh.num_nodes_in_elem;
 
         State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat);
-        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, num_dims, SGH3D_State::required_material_pt_state);
-        State.MaterialCorners(mat_id).initialize(num_corners_for_mat, num_dims, SGH3D_State::required_material_corner_state);
+        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3, SGH3D_State::required_material_pt_state); // note: dims is always 3 
+        State.MaterialCorners(mat_id).initialize(num_corners_for_mat, 3, SGH3D_State::required_material_corner_state);
         // zones are not used with solver
 
     } // end for mat_id
     
-    // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
+    // NOTE: Material points are populated in the material_state_setup funcion
 
 } // end solver initialization
