@@ -317,12 +317,19 @@ struct Mesh_t
     {
         num_dims = num_dims_inp;
         num_nodes_in_elem = 1;
+        
         for (int dim = 0; dim < num_dims; dim++) {
             num_nodes_in_elem *= 2;
         }
         num_elems       = num_elems_inp;
         nodes_in_elem   = DCArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.nodes_in_elem");
         corners_in_elem = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
+
+        // 1 Gauss point per element
+        num_leg_gauss_in_elem = 1;
+
+        // 1 zone per element
+        num_zones_in_elem = 1;
 
         return;
     }; // end method

@@ -125,7 +125,7 @@ struct RegionFill_t
     init_conds::init_scalar_conds specific_heat_field= init_conds::noICsScalar;
 
     // initial condition for volume fraction distribution
-    init_conds::init_scalar_conds volfrac_field = init_conds::noICsScalar;
+    init_conds::init_scalar_conds volfrac_field = init_conds::uniform;
 
     // velocity coefficients by component
     double u = 0.0; ///< U component of velocity
@@ -310,7 +310,6 @@ static std::vector<std::string> str_region_volfrac_inps
 // ----------------------------------
 static std::vector<std::string> region_required_inps
 {
-    "solver_id",
     "material_id",
     "volume"
 };

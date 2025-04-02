@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "sgh_solver_rz.h"
 #include "sgtm_solver_3D.h"
 
+#include "region_fill.h"
 
 // Initialize driver data.  Solver type, number of solvers
 // Will be parsed from YAML input
@@ -91,7 +92,8 @@ void Driver::initialize()
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
     build_boundry_node_sets(mesh);
 
-    // Setup Solvers
+
+    // Setup the Solvers
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
@@ -143,6 +145,42 @@ void Driver::initialize()
         }
 
     } // end for loop over solvers
+
+
+    // ----
+    // setup the simulation by applying all the fills to the mesh
+
+    fillGaussState_t fillGaussState;
+    fillElemState_t  fillElemState;
+
+    simulation_setup(SimulationParamaters, 
+                     Materials, 
+                     mesh, 
+                     BoundaryConditions,
+                     State,
+                     fillGaussState,
+                     fillElemState);
+
+
+    // Allocate material state
+    for (auto& solver : solvers) {
+        solver->initialize_material_state(SimulationParamaters, 
+                      Materials, 
+                      mesh, 
+                      BoundaryConditions,
+                      State);
+    } // end for over solvers
+
+
+
+    // populate the material point state
+    material_state_setup(SimulationParamaters, 
+                         Materials, 
+                         mesh, 
+                         BoundaryConditions,
+                         State,
+                         fillGaussState,
+                         fillElemState);
 
 }
 

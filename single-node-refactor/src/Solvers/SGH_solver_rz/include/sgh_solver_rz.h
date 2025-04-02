@@ -132,6 +132,12 @@ public:
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
 
+    void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+                	               Material_t& Materials, 
+                	               Mesh_t& mesh, 
+                	               BoundaryCondition_t& Boundary,
+                	               State_t& State) const override;
+                                   
     /////////////////////////////////////////////////////////////////////////////
     ///
     /// \fn setup

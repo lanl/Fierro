@@ -58,3 +58,12 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters,
     
     // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
 }
+
+void SGHRZ::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+                	                  Material_t& Materials, 
+                	                  Mesh_t& mesh, 
+                	                  BoundaryCondition_t& Boundary,
+                	                  State_t& State) const
+{
+    return;
+}

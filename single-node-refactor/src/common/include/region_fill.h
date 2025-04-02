@@ -37,10 +37,68 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 #include "region.h"
 
-struct Mesh_t;
+#include "simulation_parameters.h"
+#include "material.h"
+#include "boundary_conditions.h"
+#include "state.h"
+
+#include "geometry_new.h"
+
+struct SimulationParamaters_t;
 struct Material_t;
+struct Mesh_t;
+struct BoundaryCondition_t;
+struct State_t;
+struct fillGaussState_t;
+struct fillElemState_t;
 
 using namespace mtr;
+
+
+
+void simulation_setup(SimulationParameters_t& SimulationParamaters, 
+                      Material_t& Materials, 
+                      Mesh_t& mesh, 
+                      BoundaryCondition_t& Boundary,
+                      State_t& State,
+                      fillGaussState_t& fillGaussState,
+                      fillElemState_t&  fillElemState);
+
+void fill_regions(
+        const Material_t& Materials,
+        const Mesh_t& mesh,
+        const DCArrayKokkos <double>& node_coords,
+        DCArrayKokkos <double>& node_vel,
+        DCArrayKokkos <double>& node_temp,
+        DCArrayKokkos <double>& gauss_den,
+        DCArrayKokkos <double>& gauss_sie,
+        DCArrayKokkos <bool>& gauss_use_sie,
+        DCArrayKokkos <double>& gauss_ie,
+        DCArrayKokkos <double>& gauss_stress,
+        DCArrayKokkos <double>& gauss_conductivity,
+        DCArrayKokkos <double>& gauss_specific_heat,
+        DCArrayKokkos <double>& gauss_elastic_modulii,
+        DCArrayKokkos <double>& gauss_shear_modulii,
+        DCArrayKokkos <double>& gauss_poisson_ratios,
+        DCArrayKokkos <double>& elem_volfrac,
+        DCArrayKokkos <size_t>& elem_mat_id,
+        DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
+        DCArrayKokkos <size_t>& voxel_elem_mat_id,
+        const DCArrayKokkos <int>& object_ids,
+        const CArrayKokkos <RegionFill_t>& region_fills,
+        const CArray <RegionFill_host_t>& region_fills_host,
+        std::vector <fill_gauss_state> fill_gauss_states,
+        std::vector <fill_node_state> fill_node_states,
+        const size_t rk_num_bins);
+
+
+void material_state_setup(SimulationParameters_t& SimulationParamaters, 
+                          Material_t& Materials, 
+                          Mesh_t& mesh, 
+                          BoundaryCondition_t& Boundary,
+                          State_t& State,
+                          fillGaussState_t& fillGaussState,
+                          fillElemState_t&  fillElemState);
 
 // -----------------------------------------------------------------------------
 // The function to read a voxel vtk file from Dream3d and intialize the mesh
@@ -361,5 +419,11 @@ void calc_node_mass(const Mesh_t& mesh,
                     const DCArrayKokkos<double>& corner_mass);
 
 
+
+
+void init_corner_node_masses_zero(
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>& node_mass,
+        const DCArrayKokkos<double>& corner_mass);
 
 #endif

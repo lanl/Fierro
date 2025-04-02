@@ -118,12 +118,25 @@ public:
 
     ~SGH3D() = default;
 
-    // Initialize data specific to the SGH3D solver
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn Initialize
+    ///
+    /// \brief Initializes data associated with the SGH3D solver
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
+
+
+    void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+                	               Material_t& Materials, 
+                	               Mesh_t& mesh, 
+                	               BoundaryCondition_t& Boundary,
+                	               State_t& State) const override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -175,29 +188,7 @@ public:
         // Any finalize goes here, remove allocated memory, etc
     }
 
-    // **** Functions defined in sgh_setup.cpp **** //
-    void fill_regions_sgh(
-        const Material_t& Materials,
-        const Mesh_t& mesh,
-        const DCArrayKokkos <double>& node_coords,
-        DCArrayKokkos <double>& node_vel,
-        DCArrayKokkos <double>& GaussPoint_den,
-        DCArrayKokkos <double>& GaussPoint_sie,
-        DCArrayKokkos <double>& GaussPoint_volfrac,
-        DCArrayKokkos <size_t>& elem_mat_id,
-        DCArrayKokkos <size_t>& num_mats_saved_in_elem,
-        DCArrayKokkos <size_t>& voxel_elem_mat_id,
-        const DCArrayKokkos <int>& object_ids,
-        const DCArrayKokkos<size_t>& reg_fills_in_solver,
-        const CArrayKokkos <RegionFill_t>& region_fills,
-        const CArray <RegionFill_host_t>& region_fills_host,
-        const size_t num_fills_in_solver,
-        const size_t rk_num_bins) const;
-
-    void init_corner_node_masses_zero(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& corner_mass) const;
+   
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(

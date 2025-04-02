@@ -37,22 +37,66 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mesh.h"
 #include "simulation_parameters.h"
 
+
 void SGH3D::initialize(SimulationParameters_t& SimulationParamaters, 
                 	   Material_t& Materials, 
                 	   Mesh_t& mesh, 
                 	   BoundaryCondition_t& Boundary,
                 	   State_t& State) const
 {
-	int num_nodes = mesh.num_nodes;
-    int num_gauss_pts = mesh.num_elems;
-    int num_corners = mesh.num_corners;
-    int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
-    int num_dim = mesh.num_dims;
-    
-    State.node.initialize(rk_num_bins, num_nodes, num_dim, SGH3D_State::required_node_state);
-    State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, num_dim, SGH3D_State::required_gauss_pt_state);
-    State.corner.initialize(num_corners, num_dim, SGH3D_State::required_corner_state);
+	const size_t num_nodes = mesh.num_nodes;
+    const size_t num_gauss_pts = mesh.num_elems;
+    const size_t num_corners = mesh.num_corners;
+    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+    const size_t num_dims = mesh.num_dims;
+
+
+    // mesh state
+    State.node.initialize(rk_num_bins, num_nodes, num_dims, SGH3D_State::required_node_state);
+    State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, num_dims, SGH3D_State::required_gauss_pt_state);
+    State.corner.initialize(num_corners, num_dims, SGH3D_State::required_corner_state);
+
+
+} // end solver initialization
+
+
+
+void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+                	                  Material_t& Materials, 
+                	                  Mesh_t& mesh, 
+                	                  BoundaryCondition_t& Boundary,
+                	                  State_t& State) const
+{
+	const size_t num_nodes = mesh.num_nodes;
+    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+    const size_t num_dims = mesh.num_dims;
+
+    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
+
+    // -----
+    //  Allocation of state must include a buffer with ALE
+    // -----
+
+    // IMPORTANT, make buffer a parser input variable
+    // for ALE, add a buffer to num_elems_for_mat, like 10% of num_elems up to num_elems.
+    const size_t buffer = 0; // memory buffer to push back into
+
+    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+        const size_t num_mat_pts_in_elem = mesh.num_leg_gauss_in_elem; 
+
+        size_t num_elems_for_mat = State.MaterialToMeshMaps(mat_id).num_material_elems + buffer; // has a memory buffer for ALE
+
+        size_t num_points_for_mat  = num_elems_for_mat * num_mat_pts_in_elem;
+        size_t num_corners_for_mat = num_elems_for_mat * mesh.num_nodes_in_elem;
+
+        State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat);
+        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, num_dims, SGH3D_State::required_material_pt_state);
+        State.MaterialCorners(mat_id).initialize(num_corners_for_mat, num_dims, SGH3D_State::required_material_corner_state);
+        // zones are not used with solver
+
+    } // end for mat_id
     
     // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
 
-}
+} // end solver initialization

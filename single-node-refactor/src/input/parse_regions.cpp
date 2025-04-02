@@ -351,21 +351,21 @@ void parse_regions(Yaml::Node& root,
                             switch(scalar_ics_type_map[type]){
 
                                 case init_conds::uniform:
-                                    std::cout << "Setting internal_energy initial conditions type to uniform " << std::endl;
+                                    std::cout << "Setting extensive internal energy initial conditions type to uniform " << std::endl;
                                     RUN({
                                         region_fills(reg_id).ie_field = init_conds::uniform;
                                     });
                                     break;
 
                                 case init_conds::tgVortexScalar:
-                                    std::cout << "Setting internal_energy initial conditions type to TG Vortex " << std::endl;
+                                    std::cout << "Setting extensive  internal energy initial conditions type to TG Vortex " << std::endl;
                                     RUN({
                                         region_fills(reg_id).ie_field = init_conds::tgVortexScalar;
                                     });
                                     break;
 
                                 case init_conds::noICsScalar:
-                                    std::cout << "Setting internal_energy initial conditions type to no internal_energy" << std::endl;
+                                    std::cout << "Setting extensive internal energy initial conditions type to no internal energy" << std::endl;
                                     RUN({ 
                                         region_fills(reg_id).ie_field = init_conds::noICsScalar;
                                     });
@@ -377,31 +377,31 @@ void parse_regions(Yaml::Node& root,
                                         region_fills(reg_id).ie_field = init_conds::noICsScalar;
                                     });
 
-                                    std::cout << "ERROR: No valid internal_energy intial conditions type input " << std::endl;
+                                    std::cout << "ERROR: No valid extensive internal energy intial conditions type input " << std::endl;
                                     std::cout << "Valid IC types are: " << std::endl;
                                     
                                     for (const auto& pair : scalar_ics_type_map) {
                                         std::cout << pair.second << std::endl;
                                     }
 
-                                    throw std::runtime_error("**** internal_energy Initial Conditions Type Not Understood ****");
+                                    throw std::runtime_error("**** internal energy Initial Conditions Type Not Understood ****");
                                     break;
                             } // end switch
                         }
                         else{
                             std::cout << "ERROR: invalid input: " << type << std::endl;
-                            throw std::runtime_error("**** internal_energy IC Not Understood ****");
-                        } // end if on internal_energy type
+                            throw std::runtime_error("**** internal energy IC Not Understood ****");
+                        } // end if on internal energy type
                         
-                    } // end if on internal_energy type
+                    } // end if on internal energy type
                     else {
                         std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
                         std::cout << "Valid options are: " << std::endl;
                         for (const auto& element : str_region_ie_inps) {
                             std::cout << element << std::endl;
                         }
-                        throw std::runtime_error("**** Region internal_energy Inputs Not Understood ****");
-                    } // end if on all subfields under internal_energy
+                        throw std::runtime_error("**** Region internal energy Inputs Not Understood ****");
+                    } // end if on all subfields under internal energy
 
                 } // end for loop over text
 
@@ -671,9 +671,10 @@ void parse_regions(Yaml::Node& root,
                                     break;
 
                                 case init_conds::noICsScalar:
-                                    std::cout << "Setting volfrac initial conditions type to no volfrac" << std::endl;
+                                    std::cout << "Default Volume Fraction Used:" << std::endl;
+                                    std::cout << "Setting volume fraction set to uniform and is equal to 1" << std::endl;
                                     RUN({ 
-                                        region_fills(reg_id).volfrac_field = init_conds::noICsScalar;
+                                        region_fills(reg_id).volfrac_field = init_conds::uniform;
                                     });
                                     break;
 
