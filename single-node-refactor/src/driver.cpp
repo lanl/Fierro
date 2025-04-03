@@ -94,6 +94,8 @@ void Driver::initialize()
 
 
     // Setup the Solvers
+    bool missing_state = false;
+    bool unsupported_state = false;
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
@@ -110,6 +112,10 @@ void Driver::initialize()
             sgh_solver->solver_id = solver_id;
 
             solvers.push_back(sgh_solver);
+
+            // build vector to verify state
+            
+
         } // end if SGH solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGHRZ) {
 
@@ -180,8 +186,6 @@ void Driver::initialize()
                          State,
                          fillGaussState,
                          fillElemState);
-
-
 }
 
 /////////////////////////////////////////////////////////////////////////////

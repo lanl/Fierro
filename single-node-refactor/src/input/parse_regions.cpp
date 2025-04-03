@@ -51,6 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simulation_parameters.h"
 #include "parse_regions.hpp"
 
+#include "state.h"
 
 
 
@@ -63,6 +64,8 @@ void parse_regions(Yaml::Node& root,
                    DCArrayKokkos<size_t>& num_reg_fills_in_solver,
                    CArrayKokkos<RegionFill_t>& region_fills, 
                    CArray<RegionFill_host_t>&  region_fills_host,
+                   std::vector <fill_gauss_state>& fill_gauss_states,
+                   std::vector <fill_node_state>& fill_node_states,
                    const size_t num_solvers)
 
 {
@@ -72,9 +75,26 @@ void parse_regions(Yaml::Node& root,
     Kokkos::fence();
     num_reg_fills_in_solver.update_host(); // initiallizing host side to 0
 
-    // vector of enums for the variables set on the mesh
-    auto init_mat_pt_vars = std::vector<init_conds::initMaterialPointVarsNames>(0);
-    auto init_node_vars = std::vector<init_conds::initNodeVarsNames>(0);
+
+    // node state to setup, this array is built based on the fills
+    // possible node states:
+    //     fill_node_state::velocity,
+    //     fill_node_state::temperature
+    //  ...
+    fill_node_states = std::vector <fill_node_state> (0);
+
+    // mat_pt state to setup, this array is built based on the fills
+    // possible gauss states:
+    //    fill_gauss_state::density
+    //    fill_gauss_state::specific_internal_energy
+    //    fill_gauss_state::thermal_conductivity
+    //    fill_gauss_state::specific_heat
+    // ...
+    fill_gauss_states = std::vector <fill_gauss_state> (0);
+
+    // the above fill state vectors are also used with checking solver allocations
+
+
 
     Yaml::Node& region_yaml = root["regions"];
 
@@ -126,7 +146,15 @@ void parse_regions(Yaml::Node& root,
             } // mat_id
             else if (a_word.compare("density") == 0) {
 
-                init_mat_pt_vars.push_back(init_conds::density);
+                // check to see if density enum was saved
+                bool store = true;
+                for (auto field : fill_gauss_states){
+                    if (field == fill_gauss_state::density){store = false;}
+                }
+                // store density name if it has not been stored already
+                if(store){
+                    fill_gauss_states.push_back(fill_gauss_state::density);
+                }
                 
                 // -----
                 // loop over the sub fields under den
@@ -225,7 +253,15 @@ void parse_regions(Yaml::Node& root,
             else if (a_word.compare("specific_internal_energy") == 0) {
                 // specific internal energy
 
-                init_mat_pt_vars.push_back(init_conds::specificInternalEnergy);
+                // check to see if specific_internal_energy enum was saved
+                bool store = true;
+                for (auto field : fill_gauss_states){
+                    if (field == fill_gauss_state::specific_internal_energy){store = false;}
+                }
+                // store specific_internal_energy name if it has not been stored already
+                if(store){
+                    fill_gauss_states.push_back(fill_gauss_state::specific_internal_energy);
+                }
 
                 // -----
                 // loop over the sub fields under sie
@@ -317,7 +353,15 @@ void parse_regions(Yaml::Node& root,
             else if (a_word.compare("internal_energy") == 0) {
                 // extensive internal energy
 
-                init_mat_pt_vars.push_back(init_conds::internalEnergy);
+                // check to see if internal_energy enum was saved
+                bool store = true;
+                for (auto field : fill_gauss_states){
+                    if (field == fill_gauss_state::internal_energy){store = false;}
+                }
+                // store internal_energy name if it has not been stored already
+                if(store){
+                    fill_gauss_states.push_back(fill_gauss_state::internal_energy);
+                }
 
                 // -----
                 // loop over the sub fields under internal_energy
@@ -408,7 +452,15 @@ void parse_regions(Yaml::Node& root,
             } // ie            
             else if (a_word.compare("specific_heat") == 0) {
 
-                init_mat_pt_vars.push_back(init_conds::specificHeat);
+                // check to see if specific_heat enum was saved
+                bool store = true;
+                for (auto field : fill_gauss_states){
+                    if (field == fill_gauss_state::specific_heat){store = false;}
+                }
+                // store specific_heat name if it has not been stored already
+                if(store){
+                    fill_gauss_states.push_back(fill_gauss_state::specific_heat);
+                }
 
                 // -----
                 // loop over the sub fields under specific_heat
@@ -500,7 +552,15 @@ void parse_regions(Yaml::Node& root,
             } // specific_heat
             else if (a_word.compare("thermal_conductivity") == 0) {
 
-                init_mat_pt_vars.push_back(init_conds::thermalConductivity);
+                // check to see if thermal_conductivity enum was saved
+                bool store = true;
+                for (auto field : fill_gauss_states){
+                    if (field == fill_gauss_state::thermal_conductivity){store = false;}
+                }
+                // store thermal_conductivity name if it has not been stored already
+                if(store){
+                    fill_gauss_states.push_back(fill_gauss_state::thermal_conductivity);
+                }
 
                 // -----
                 // loop over the sub fields under thermal_conductivity
@@ -593,7 +653,7 @@ void parse_regions(Yaml::Node& root,
             } // thermal_conductivity
             else if (a_word.compare("volume_fraction") == 0){
 
-                // always built, so no need to add this varname to init_mat_pt_vars
+                // always built, so no need to add this varname to guass_point
 
                 // -----
                 // loop over the sub fields under volfrac
@@ -672,7 +732,7 @@ void parse_regions(Yaml::Node& root,
 
                                 case init_conds::noICsScalar:
                                     std::cout << "Default Volume Fraction Used:" << std::endl;
-                                    std::cout << "Setting volume fraction set to uniform and is equal to 1" << std::endl;
+                                    std::cout << "Setting volume fraction to uniform field with a value equal to 1" << std::endl;
                                     RUN({ 
                                         region_fills(reg_id).volfrac_field = init_conds::uniform;
                                     });
@@ -716,7 +776,15 @@ void parse_regions(Yaml::Node& root,
             // ----------  nodal variables ----------
             else if (a_word.compare("temperature") == 0) {
 
-                init_node_vars.push_back(init_conds::temperature);
+                // check to see if temperature enum was saved
+                bool store = true;
+                for (auto field : fill_node_states){
+                    if (field == fill_node_state::temperature){store = false;}
+                }
+                // store temperature name if it has not been stored already
+                if(store){
+                    fill_node_states.push_back(fill_node_state::temperature);
+                }
 
                 // -----
                 // loop over the sub fields under temperature
@@ -727,7 +795,8 @@ void parse_regions(Yaml::Node& root,
                 std::vector<std::string> user_region_temperature_inputs;
                 
                 // extract words from the input file and validate they are correct
-                validate_inputs(inps_subfields_yaml, user_region_temperature_inputs, str_region_temperature_inps, region_temperature_required_inps);
+                validate_inputs(inps_subfields_yaml, user_region_temperature_inputs, 
+                                str_region_temperature_inps, region_temperature_required_inps);
 
                 // loop over the subfield words
                 for(auto& a_subfield_word : user_region_temperature_inputs){ 
@@ -808,7 +877,15 @@ void parse_regions(Yaml::Node& root,
             } // temperature
             else if (a_word.compare("velocity") == 0) {
 
-                init_node_vars.push_back(init_conds::velocity);
+                // check to see if velocity enum was saved
+                bool store = true;
+                for (auto field : fill_node_states){
+                    if (field == fill_node_state::velocity){store = false;}
+                }
+                // store velocity name if it has not been stored already
+                if(store){
+                    fill_node_states.push_back(fill_node_state::velocity);
+                }
 
                 // -----
                 // loop over the sub fields under velocity
@@ -1220,6 +1297,16 @@ void parse_regions(Yaml::Node& root,
 
         // -----------------------------------------------
         // check for consistency in input settings
+
+        if(fill_gauss_states.size() == 0){
+            throw std::runtime_error("**** No Initial Conditions Set, Please Specify Fields in the Region Fills ****");
+        }
+
+        // NOTE:
+        // A check that solvers exist to accept the fill states specified by the user is
+        // performed after the solvers are intialized, in simulation_setup(...) function 
+        // that is implemented in the region_fill.cpp file.
+
 
         // check to see if a file path is empty
         if(region_fills_host(reg_id).file_path.empty()){

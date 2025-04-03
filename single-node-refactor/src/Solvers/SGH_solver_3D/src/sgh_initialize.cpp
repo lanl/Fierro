@@ -56,6 +56,17 @@ void SGH3D::initialize(SimulationParameters_t& SimulationParamaters,
     State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, num_dims, SGH3D_State::required_gauss_pt_state);
     State.corner.initialize(num_corners, num_dims, SGH3D_State::required_corner_state);
 
+    // check that the fills specify the required nodal fields
+    bool filled_nodal_state =
+        check_fill_node_states(SGH3D_State::required_fill_node_state,
+                               SimulationParamaters.region_setups.fill_node_states);
+    
+    if (filled_nodal_state == false){
+        std::cout <<" Missing required nodal state in the fill instructions for the dynx_FE solver \n";
+        std::cout <<" The nodal velocity must be specified. \n" << std::endl;
+        throw std::runtime_error("**** Provide fill instructions for all required nodal variables ****");
+    }
+
 
 } // end solver initialization
 
@@ -96,6 +107,28 @@ void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParamate
         // zones are not used with solver
 
     } // end for mat_id
+
+    // check that the fills specify the required material point state fields
+    bool filled_material_state_A =
+        check_fill_mat_states(SGH3D_State::required_optA_fill_material_pt_state,
+                              SimulationParamaters.region_setups.fill_gauss_states);
+    bool filled_material_state_B =
+        check_fill_mat_states(SGH3D_State::required_optB_fill_material_pt_state,
+                              SimulationParamaters.region_setups.fill_gauss_states);
+    
+    // --- full stress tensor is not yet supported in region_fill ---
+    //bool filled_material_state_C =
+    //    check_fill_mat_states(SGH3D_State::required_optC_fill_material_pt_state,
+    //                                 SimulationParamaters.region_setups.fill_gauss_states);
+
+    if (filled_material_state_A == false &&
+        filled_material_state_B == false){
+        std::cout <<" Missing required material state in the fill instructions for the dynx_FE solver \n";
+        std::cout <<" The required state: \n";
+        std::cout <<"  - density \n";
+        std::cout <<"  - specific or extensive internal energy \n" << std::endl;
+        throw std::runtime_error("**** Provide fill instructions for all required material point variables ****");
+    }
     
     // NOTE: Material points are populated in the material_state_setup funcion
 

@@ -45,6 +45,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 #include "Yaml.hpp"
 
+#include "state.h"
+
 struct RegionFill_t;
 struct RegionFill_host_t;
 
@@ -56,6 +58,8 @@ void parse_regions(Yaml::Node& root,
                    DCArrayKokkos<size_t>& num_reg_fills_in_solver,
                    CArrayKokkos<RegionFill_t>& region_fills, 
                    CArray<RegionFill_host_t>&  region_fills_host,
+                   std::vector <fill_gauss_state>& fill_gauss_states,
+                   std::vector <fill_node_state>& fill_node_states,
                    const size_t num_solvers);
 
 #endif // end Header Guard

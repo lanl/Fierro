@@ -39,6 +39,210 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace mtr;
 
 
+enum class fill_node_state
+{
+    velocity,
+    temperature
+};
+
+enum class fill_gauss_state
+{
+    density,
+    stress,
+    specific_internal_energy,
+    internal_energy,
+    elastic_modulii,
+    shear_modulii,
+    poisson_ratios,
+    thermal_conductivity,
+    specific_heat
+};
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct fillGaussState_t
+///
+/// \brief Stores state to setup of a problem
+///
+/////////////////////////////////////////////////////////////////////////////
+// Possible states, used to initialize fillState_t
+struct fillGaussState_t
+{
+    size_t max_mats_in_elem;    ///< the max number of materials possible per element
+
+    DCArrayKokkos<double> den;    ///< Gauss Point density
+    DCArrayKokkos<double> sie;    ///< Gauss Point specific internal energy
+    DCArrayKokkos<double> ie;     ///< Gauss Point extensive internal energy
+    DCArrayKokkos<bool> use_sie;  ///< use sie to set sie, else use ie
+
+    DCArrayKokkos<double> stress; ///< Gauss Point stress
+
+    DCArrayKokkos<double> thermal_conductivity;  ///< Thermal conductivity
+    DCArrayKokkos<double> specific_heat; ///< Specific Heat
+
+    DCArrayKokkos<double> elastic_modulii;  ///<  Gauss Point elastic modulii Exx, Eyy, Ezz
+    DCArrayKokkos<double> shear_modulii;    ///<  Gauss Point shear modulii Gxy, Gxz, Gyz
+    DCArrayKokkos<double> poisson_ratios;   ///<  Gauss Point poisson ratios nu_xy, nu_xz, nu_yz
+
+
+    // initialization method 
+    void initialize(size_t num_gauss_points, 
+                    size_t max_mat_storage_in_elem, 
+                    size_t num_dims, 
+                    std::vector<fill_gauss_state> fill_gauss_states)
+    {           
+
+        max_mats_in_elem = max_mat_storage_in_elem;
+
+        for (auto field : fill_gauss_states){
+            switch(field){
+                case fill_gauss_state::density:
+                    if (den.size() == 0) this->den = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_density");
+                    break;
+                case fill_gauss_state::stress:
+                    if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, num_dims, num_dims, "gauss_point_stress");
+                    break;
+                case fill_gauss_state::elastic_modulii:
+                    if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "gauss_point_elastic_modulii");
+                    break;
+                case fill_gauss_state::shear_modulii:
+                    if (shear_modulii.size() == 0) this->shear_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "gauss_point_shear_modulii");
+                    break;
+                case fill_gauss_state::poisson_ratios:
+                    if (poisson_ratios.size() == 0) this->poisson_ratios = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "gauss_point_poisson_ratios");
+                    break;
+                case fill_gauss_state::specific_internal_energy:
+                    if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_sie");
+                    if (use_sie.size() == 0){ 
+                        this->use_sie = DCArrayKokkos<bool>(num_gauss_points, max_mats_in_elem, "gauss_point_use_sie");
+                        use_sie.set_values(false);
+                    }
+                    break;
+                case fill_gauss_state::internal_energy:
+                    if (sie.size() == 0) this->ie = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_ie");
+                    if (use_sie.size() == 0){ 
+                        this->use_sie = DCArrayKokkos<bool>(num_gauss_points, max_mats_in_elem, "gauss_point_use_sie");
+                        use_sie.set_values(false);
+                    }
+                    break;
+                case fill_gauss_state::thermal_conductivity:
+                    if (thermal_conductivity.size() == 0) this->thermal_conductivity = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_thermal_conductivity");
+                    break;
+                case fill_gauss_state::specific_heat:
+                    if (specific_heat.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_specific_heat");
+                    break;
+                default:
+                    std::cout<<"Desired Gauss point fill state not understood in initialize"<<std::endl;
+                    throw std::runtime_error("**** Error in State Field Name ****");
+            } // end switch
+        }
+    } // end method
+}; // end Gauss fill states
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct fillElemState_t
+///
+/// \brief Stores state to setup of a problem
+///
+/////////////////////////////////////////////////////////////////////////////
+// Possible states, used to initialize fillState_t
+struct fillElemState_t
+{
+    size_t max_mats_in_elem;    ///< the max number of materials possible per element
+
+    DCArrayKokkos<double> volfrac;  ///< element volume fraction
+
+    // arrays for building material index space
+    DCArrayKokkos <size_t> mat_id;            ///< material ids in the element (num_elems, num_mats_saved)
+    DCArrayKokkos <size_t> num_mats_saved_in_elem; ///< material ids in the element (num_elems,num_mats_saved)
+    DCArrayKokkos <size_t> num_elems_saved_for_mat;///< the number of elements the material resides in, (num_mats)
+   
+    
+    // initialization method 
+    void initialize(size_t num_elems, 
+                    size_t max_mat_storage_in_elem,
+                    size_t num_mats)
+    {
+        this-> max_mats_in_elem = max_mat_storage_in_elem;
+
+        if (volfrac.size() == 0) this->volfrac = DCArrayKokkos<double>(num_elems, max_mats_in_elem, "elem_volfrac");
+
+        if (mat_id.size() == 0) this->mat_id = DCArrayKokkos <size_t> (num_elems, max_mats_in_elem, "elem_mat_id");
+        
+        if (num_mats_saved_in_elem.size() == 0){
+            this->num_mats_saved_in_elem = DCArrayKokkos <size_t> (num_elems, "num_mats_saved_in_elem"); 
+            num_mats_saved_in_elem.set_values(0); // initialize all elems to storing 0 materials
+            num_mats_saved_in_elem.update_host(); // copy from GPU to CPU
+        }
+
+        if (num_elems_saved_for_mat.size() == 0){
+            num_elems_saved_for_mat = DCArrayKokkos <size_t> (num_mats, "num_elems_saved_for_mat");
+        }
+
+        // voxel_elem_mat_id is allocated in the voxel file read
+        
+    } // end method
+
+}; // end fill elem states
+
+// a function to verify that the required nodal state has initial conditions (i.e., fill values)
+static bool check_fill_node_states(
+        const std::vector<fill_node_state>& required_fill_node_states,
+        const std::vector<fill_node_state>& fill_node_states){
+    
+    bool states_filled = false;
+    size_t count = 0;
+
+    // check if all required fields were set
+    for (auto required_field : required_fill_node_states){
+        
+        for (auto field : fill_node_states){
+            if (field == required_field){
+                count++;  // it has the required field
+            }
+        } // end user specified fields loop
+
+    } // end for required field
+    
+    if (count == required_fill_node_states.size()){
+        states_filled = true;
+    }
+
+    return states_filled;
+} // end check_fill_states
+
+
+// a function to verify that the required matpt state has initial conditions (i.e., fill values)
+// fills occure on gauss points, where matpts live on top of those gauss points
+static bool check_fill_mat_states(
+        const std::vector<fill_gauss_state>& required_fill_matpt_states,
+        const std::vector<fill_gauss_state>& fill_gauss_states){
+    
+    bool states_filled = false;
+    size_t count = 0;
+
+    // check if all required fields were set
+    for (auto required_field : required_fill_matpt_states){
+        
+        for (auto field : fill_gauss_states){
+            if (field == required_field){
+                count++;  // it has the required field
+            }
+        } // end user specified fields loop
+
+    } // end for required field
+    
+    if (count == required_fill_matpt_states.size()){
+        states_filled = true;
+    }
+
+    return states_filled;
+} // end check_fill_states
+
+
 
 
 // Possible node states, used to initialize node_t
@@ -51,6 +255,7 @@ enum class node_state
     heat_transfer,
     force,
 };
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -67,7 +272,6 @@ struct node_t
     DCArrayKokkos<double> force; ///< Nodal force
     DCArrayKokkos<double> temp; ///< Nodal temperature
     DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
-
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims, state to allocate)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
@@ -98,6 +302,7 @@ struct node_t
             }
         }
     }; // end method
+
 }; // end node_t
 
 
@@ -276,6 +481,7 @@ struct MaterialPoint_t
             }
         }
     }; // end method
+
 }; // end MaterialPoint
 
 
@@ -594,151 +800,6 @@ struct State_t
 
 
 
-enum class fill_node_state
-{
-    velocity,
-    temperature
-};
 
-enum class fill_gauss_state
-{
-    density,
-    stress,
-    specific_internal_energy,
-    internal_energy,
-    elastic_modulii,
-    shear_modulii,
-    poisson_ratios,
-    thermal_conductivity,
-    specific_heat
-};
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \struct fillGaussState_t
-///
-/// \brief Stores state to setup of a problem
-///
-/////////////////////////////////////////////////////////////////////////////
-// Possible states, used to initialize fillState_t
-struct fillGaussState_t
-{
-    size_t max_mats_in_elem;    ///< the max number of materials possible per element
-
-    DCArrayKokkos<double> den;    ///< Gauss Point density
-    DCArrayKokkos<double> sie;    ///< Gauss Point specific internal energy
-    DCArrayKokkos<double> ie;     ///< Gauss Point extensive internal energy
-    DCArrayKokkos<bool> use_sie;  ///< use sie to set sie, else use ie
-
-    DCArrayKokkos<double> stress; ///< Gauss Point stress
-
-    DCArrayKokkos<double> thermal_conductivity;  ///< Thermal conductivity
-    DCArrayKokkos<double> specific_heat; ///< Specific Heat
-
-    DCArrayKokkos<double> elastic_modulii;  ///<  Gauss Point elastic modulii Exx, Eyy, Ezz
-    DCArrayKokkos<double> shear_modulii;    ///<  Gauss Point shear modulii Gxy, Gxz, Gyz
-    DCArrayKokkos<double> poisson_ratios;   ///<  Gauss Point poisson ratios nu_xy, nu_xz, nu_yz
-
-
-    // initialization method 
-    void initialize(size_t num_gauss_points, 
-                    size_t max_mat_storage_in_elem, 
-                    size_t num_dims, 
-                    std::vector<fill_gauss_state> fill_gauss_states)
-    {           
-
-        max_mats_in_elem = max_mat_storage_in_elem;
-
-        for (auto field : fill_gauss_states){
-            switch(field){
-                case fill_gauss_state::density:
-                    if (den.size() == 0) this->den = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_density");
-                    break;
-                case fill_gauss_state::stress:
-                    if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, num_dims, num_dims, "gauss_point_stress");
-                    break;
-                case fill_gauss_state::elastic_modulii:
-                    if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "gauss_point_elastic_modulii");
-                    break;
-                case fill_gauss_state::shear_modulii:
-                    if (shear_modulii.size() == 0) this->shear_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "gauss_point_shear_modulii");
-                    break;
-                case fill_gauss_state::poisson_ratios:
-                    if (poisson_ratios.size() == 0) this->poisson_ratios = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "gauss_point_poisson_ratios");
-                    break;
-                case fill_gauss_state::specific_internal_energy:
-                    if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_sie");
-                    if (use_sie.size() == 0){ 
-                        this->use_sie = DCArrayKokkos<bool>(num_gauss_points, max_mats_in_elem, "gauss_point_use_sie");
-                        use_sie.set_values(false);
-                    }
-                    break;
-                case fill_gauss_state::internal_energy:
-                    if (sie.size() == 0) this->ie = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_ie");
-                    if (use_sie.size() == 0){ 
-                        this->use_sie = DCArrayKokkos<bool>(num_gauss_points, max_mats_in_elem, "gauss_point_use_sie");
-                        use_sie.set_values(false);
-                    }
-                    break;
-                case fill_gauss_state::thermal_conductivity:
-                    if (thermal_conductivity.size() == 0) this->thermal_conductivity = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_thermal_conductivity");
-                    break;
-                case fill_gauss_state::specific_heat:
-                    if (specific_heat.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_specific_heat");
-                    break;
-                default:
-                    std::cout<<"Desired Gauss point fill state not understood in initialize"<<std::endl;
-                    throw std::runtime_error("**** Error in State Field Name ****");
-            } // end switch
-        }
-    } // end method
-}; // end Gauss fill states
-
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \struct fillElemState_t
-///
-/// \brief Stores state to setup of a problem
-///
-/////////////////////////////////////////////////////////////////////////////
-// Possible states, used to initialize fillState_t
-struct fillElemState_t
-{
-    size_t max_mats_in_elem;    ///< the max number of materials possible per element
-
-    DCArrayKokkos<double> volfrac;  ///< element volume fraction
-
-    // arrays for building material index space
-    DCArrayKokkos <size_t> mat_id;            ///< material ids in the element (num_elems, num_mats_saved)
-    DCArrayKokkos <size_t> num_mats_saved_in_elem; ///< material ids in the element (num_elems,num_mats_saved)
-    DCArrayKokkos <size_t> num_elems_saved_for_mat;///< the number of elements the material resides in, (num_mats)
-   
-    
-    // initialization method 
-    void initialize(size_t num_elems, 
-                    size_t max_mat_storage_in_elem,
-                    size_t num_mats)
-    {
-        this-> max_mats_in_elem = max_mat_storage_in_elem;
-
-        if (volfrac.size() == 0) this->volfrac = DCArrayKokkos<double>(num_elems, max_mats_in_elem, "elem_volfrac");
-
-        if (mat_id.size() == 0) this->mat_id = DCArrayKokkos <size_t> (num_elems, max_mats_in_elem, "elem_mat_id");
-        
-        if (num_mats_saved_in_elem.size() == 0){
-            this->num_mats_saved_in_elem = DCArrayKokkos <size_t> (num_elems, "num_mats_saved_in_elem"); 
-            num_mats_saved_in_elem.set_values(0); // initialize all elems to storing 0 materials
-            num_mats_saved_in_elem.update_host(); // copy from GPU to CPU
-        }
-
-        if (num_elems_saved_for_mat.size() == 0){
-            num_elems_saved_for_mat = DCArrayKokkos <size_t> (num_mats, "num_elems_saved_for_mat");
-        }
-
-        // voxel_elem_mat_id is allocated in the voxel file read
-        
-    } // end method
-
-}; // end fill elem states
 
 #endif

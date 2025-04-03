@@ -71,54 +71,29 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     // Calculate element volume
     geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
-    // create fill state fields
 
     // --- move to parsing ---
-    // allowing for up to 3 materials in an element, this is set by the user
+    // allowing for up to 3 materials in an element, this needs to be set by the user with 3 as default
     const size_t num_mats_per_elem = 3;
+    // -----------------------
 
 
-    // node state to setup, this array is built in the input parser based on fills
-    std::vector <fill_node_state> fill_node_states
-    {
-        fill_node_state::velocity,
-        fill_node_state::temperature
-    };
-    // Remember, the solver is initialized prior to this function, creating nodal state
-
-    // matpt state to setup, this array is built in the input parser based on fills
-    std::vector <fill_gauss_state> fill_gauss_states
-    {
-        fill_gauss_state::density,
-        fill_gauss_state::specific_internal_energy,
-        fill_gauss_state::thermal_conductivity,
-        fill_gauss_state::specific_heat
-    };
-    
-    if(fill_gauss_states.size() == 0){
-        throw std::runtime_error("**** No Initial Conditions Set, Please Specify Fields in the Region Fills ****");
-    }
-    // ------------------------
-
-    
     // GaussState initialized based on fill instructions
-
     fillGaussState.initialize(num_gauss_points, 
                               num_mats_per_elem, 
                               num_dims,
-                              fill_gauss_states);
-
-
+                              SimulationParamaters.region_setups.fill_gauss_states);
 
     // the elem state is always used, thus always initialized
-
     fillElemState.initialize(num_elems,
                              num_mats_per_elem,
                              num_mats);
 
+    // Remember, the solver is initialized prior to this function, creating nodal state
 
-    // a local array for reading the values on a voxel mesh file
-    DCArrayKokkos <size_t> voxel_elem_mat_id;       // 1 or 0 if material exist, or it is the material_id
+    // a local array for reading the values on a voxel mesh file, it's allocated in the mesh file read
+    DCArrayKokkos <size_t> voxel_elem_mat_id; // 1 or 0 if material exist, or it is the material_id
+
 
     // ---------------------------------------------
     // fill guass point state (den, sie, ...) and nodal state (velocity, temperature, ...) on the mesh
@@ -146,8 +121,8 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  SimulationParamaters.mesh_input.object_ids,
                  SimulationParamaters.region_setups.region_fills,
                  SimulationParamaters.region_setups.region_fills_host,
-                 fill_gauss_states,
-                 fill_node_states,
+                 SimulationParamaters.region_setups.fill_gauss_states,
+                 SimulationParamaters.region_setups.fill_node_states,
                  rk_num_bins,
                  num_mats_per_elem);
 
@@ -274,8 +249,8 @@ void fill_regions(
         const DCArrayKokkos <int>& object_ids,
         const CArrayKokkos <RegionFill_t>& region_fills,
         const CArray <RegionFill_host_t>& region_fills_host,
-        std::vector <fill_gauss_state> fill_gauss_states,
-        std::vector <fill_node_state> fill_node_states,
+        std::vector <fill_gauss_state>& fill_gauss_states,
+        std::vector <fill_node_state>& fill_node_states,
         const size_t rk_num_bins,
         const size_t num_mats_per_elem)
 {
@@ -543,26 +518,32 @@ void fill_regions(
                 ViewCArrayKokkos <double> a_node_coords(&node_coords(0,node_gid,0), 3);
 
                 // paint the velocity onto the nodes of the mesh
-                paint_vector_rk(node_vel,
-                                a_node_coords,
-                                region_fills(fill_id).u,
-                                region_fills(fill_id).v,
-                                region_fills(fill_id).w,
-                                region_fills(fill_id).speed,
-                                node_gid,
-                                mesh.num_dims,
-                                rk_num_bins,
-                                region_fills(fill_id).vel_field);
+                if(node_vel.size()>0){
+                    // if check is needed as solver state might not match fill instructions
+                    paint_vector_rk(node_vel,
+                                    a_node_coords,
+                                    region_fills(fill_id).u,
+                                    region_fills(fill_id).v,
+                                    region_fills(fill_id).w,
+                                    region_fills(fill_id).speed,
+                                    node_gid,
+                                    mesh.num_dims,
+                                    rk_num_bins,
+                                    region_fills(fill_id).vel_field);
+                }
              
                 // paint nodal temperature
-                paint_scalar_rk(node_temp,
-                                a_node_coords,
-                                region_fills(fill_id).temperature,
-                                0.0,
-                                node_gid,
-                                mesh.num_dims,
-                                rk_num_bins,
-                                region_fills(fill_id).temperature_field);
+                if (node_temp.size()>0){
+                    // if check is needed as solver state might not match fill instructions
+                    paint_scalar_rk(node_temp,
+                                    a_node_coords,
+                                    region_fills(fill_id).temperature,
+                                    0.0,
+                                    node_gid,
+                                    mesh.num_dims,
+                                    rk_num_bins,
+                                    region_fills(fill_id).temperature_field);
+                }
 
             } // end loop over the nodes in elem
 
@@ -620,10 +601,12 @@ void fill_regions(
     for (auto field : fill_node_states){
         switch(field){
             case fill_node_state::velocity:
-                node_vel.update_host();
+                // if check is needed as solver state might not match fill instructions
+                if(node_vel.size()>0){node_vel.update_host();}
                 break;
             case fill_node_state::temperature:
-                node_temp.update_host();
+                // if check is needed as solver state might not match fill instructions
+                if (node_temp.size()>0){node_temp.update_host();}
                 break;
         } // end switch
     } // end for

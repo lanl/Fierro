@@ -89,8 +89,8 @@ void fill_regions(
         const DCArrayKokkos <int>& object_ids,
         const CArrayKokkos <RegionFill_t>& region_fills,
         const CArray <RegionFill_host_t>& region_fills_host,
-        std::vector <fill_gauss_state> fill_gauss_states,
-        std::vector <fill_node_state> fill_node_states,
+        std::vector <fill_gauss_state>& fill_gauss_states,
+        std::vector <fill_node_state>& fill_node_states,
         const size_t rk_num_bins,
         const size_t num_mats_per_elem);
 

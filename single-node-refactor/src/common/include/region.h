@@ -39,6 +39,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "matar.h"
 
+#include "state.h"
+
 #include "initial_conditions.h"
 
 // ==============================================================================
@@ -182,8 +184,12 @@ struct SolverRegionSetup_t
     mtr::DCArrayKokkos<size_t> reg_fills_in_solver;     // (solver_id, fill_lid)
     mtr::DCArrayKokkos<size_t> num_reg_fills_in_solver; // (solver_id)
 
-    mtr::CArrayKokkos<RegionFill_t> region_fills;  ///< Region data for simulation mesh, set the initial conditions
+    mtr::CArrayKokkos<RegionFill_t> region_fills;      ///< Region data for simulation mesh, set the initial conditions
     mtr::CArray<RegionFill_host_t> region_fills_host;  ///< Region data on CPU, set the initial conditions
+
+    // vectors storing what state is to be filled on the mesh
+    std::vector <fill_gauss_state> fill_gauss_states; ///< Enums for the state at guass_pts, which live under the mat_pts
+    std::vector <fill_node_state>  fill_node_states;  ///< Enums for the state at nodes
 };
 
 
