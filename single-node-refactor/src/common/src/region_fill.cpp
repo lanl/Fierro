@@ -124,7 +124,6 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     // fill guass point state (den, sie, ...) and nodal state (velocity, temperature, ...) on the mesh
     // ---------------------------------------------
 
-std::cout << "calling fill_regions \n";
     fill_regions(Materials,
                  mesh,
                  State.node.coords,
@@ -152,7 +151,6 @@ std::cout << "calling fill_regions \n";
                  rk_num_bins,
                  num_mats_per_elem);
 
-std::cout << "fills are done \n";
 
     // note: the device and host side are updated in the above function
     // ---------------------------------------------
@@ -510,7 +508,6 @@ void fill_regions(
                                 bin,
                                 region_fills(fill_id).ie_field);
                
-std::cout << "applying guass_thermal_conductivity \n";
                 // painting thermal conductivity
                 paint_multi_scalar(gauss_thermal_conductivity,
                                 coords,
@@ -521,7 +518,6 @@ std::cout << "applying guass_thermal_conductivity \n";
                                 bin,
                                 region_fills(fill_id).thermal_conductivity_field);
 
-std::cout << "applying guass_specific_heat \n";
                 // painting specific heat
                 paint_multi_scalar(gauss_specific_heat,
                                 coords,
@@ -557,8 +553,7 @@ std::cout << "applying guass_specific_heat \n";
                                 mesh.num_dims,
                                 rk_num_bins,
                                 region_fills(fill_id).vel_field);
-
-std::cout << "applying node temperature \n";                
+             
                 // paint nodal temperature
                 paint_scalar_rk(node_temp,
                                 a_node_coords,
@@ -575,7 +570,6 @@ std::cout << "applying node temperature \n";
     }); // end FOR_ALL node loop
     Kokkos::fence();
 
-std::cout << "done filling guass state \n";
 
     //---------
     // Elem Fill state

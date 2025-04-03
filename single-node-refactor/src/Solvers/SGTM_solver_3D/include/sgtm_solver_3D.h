@@ -191,36 +191,6 @@ public:
         // Any finalize goes here, remove allocated memory, etc
     }
 
-    // Helper setup routine that unpacks SimulationParameters to fix GPU compile warnings
-    //void setup_sgtm(
-    //    SimulationParameters_t& SimulationParamaters,
-    //    CArrayKokkos<RegionFill_t>& region_fills,
-    //    Material_t& Materials,
-    //    Mesh_t& mesh, 
-    //    BoundaryCondition_t& Boundary,
-    //    State_t& State) const;
-
-    // **** Functions defined in sgtm_setup.cpp **** //
-    /*
-    void tag_regions(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos <size_t>& elem_mat_id,
-        DCArrayKokkos <size_t>& voxel_elem_mat_id,
-        DCArrayKokkos <size_t>& elem_region_id,
-        DCArrayKokkos <size_t>& node_region_id,
-        const DCArrayKokkos<int>& object_ids,
-        const DCArrayKokkos<size_t>& reg_fills_in_solver,
-        const CArrayKokkos<RegionFill_t>& region_fills,
-        const CArray<RegionFill_host_t>&  region_fills_host,
-        size_t num_fills_in_solver) const;
-
-    void init_corner_node_masses_zero(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& corner_mass) const;
-    */
-    
     // **** Functions defined in boundary.cpp **** //
     void boundary_temperature(
         const Mesh_t& mesh,

@@ -85,7 +85,7 @@ void Driver::initialize()
 
     // Build boundary conditions
     int num_bcs = BoundaryConditions.num_bcs;
-    printf("Num BC's = %d\n", num_bcs);
+    printf("Number of boundary conditions = %d\n", num_bcs);
 
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
@@ -149,7 +149,6 @@ void Driver::initialize()
 
     // ----
     // setup the simulation by applying all the fills to the mesh
-std::cout << "setting up simulation using fills \n";
 
     fillGaussState_t fillGaussState;
     fillElemState_t  fillElemState;
@@ -162,7 +161,6 @@ std::cout << "setting up simulation using fills \n";
                      fillGaussState,
                      fillElemState);
 
-std::cout << "problem setup done \n";
 
     // Allocate material state
     for (auto& solver : solvers) {
@@ -174,8 +172,6 @@ std::cout << "problem setup done \n";
     } // end for over solvers
 
 
-std::cout << "done calling init mat state \n";
-
     // populate the material point state
     material_state_setup(SimulationParamaters, 
                          Materials, 
@@ -185,8 +181,6 @@ std::cout << "done calling init mat state \n";
                          fillGaussState,
                          fillElemState);
 
-
-std::cout << "material state is setup \n";
 
 }
 
