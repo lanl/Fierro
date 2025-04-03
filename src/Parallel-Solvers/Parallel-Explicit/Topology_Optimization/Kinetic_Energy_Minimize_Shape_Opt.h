@@ -489,7 +489,114 @@ public:
         auto corners_in_node = FEM_SGH_->corners_in_node;
         auto num_corners_in_node = FEM_SGH_->num_corners_in_node;
         auto relative_element_densities = FEM_SGH_->relative_element_densities;
+        double volume_gradients_array[max_nodes_per_element * num_dim];
+        ViewCArrayKokkos<double> volume_gradients(volume_gradients_array, max_nodes_per_element, num_dim);
+        // view scope
+        {
+            if(optimization_objective_regions.size()){
+                int nobj_volumes = optimization_objective_regions.size();
+                const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                    size_t node_id;
+                    size_t corner_id;
+                    real_t inner_product;
+                    // std::cout << elem_mass(elem_id) <<std::endl;
 
+                    // current_nodal_velocities
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                        node_id = nodes_in_elem(elem_id, inode);
+                        
+                        for (int idim = 0; idim < num_dim; idim++) {
+                        // midpoint rule for integration being used; add velocities and divide by 2
+                        current_element_velocities(inode, idim) = node_vel(rk_level, node_id, idim);
+                        }
+                    }
+
+                    inner_product = 0;
+                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                        double current_node_coords[3];
+                        bool contained = false;
+                        node_id = nodes_in_elem(elem_id, ifill);
+                        current_node_coords[0] = all_initial_node_coords(node_id, 0);
+                        current_node_coords[1] = all_initial_node_coords(node_id, 1);
+                        current_node_coords[2] = all_initial_node_coords(node_id, 2);
+                        for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                            if(optimization_objective_regions(ivolume).contains(current_node_coords)){
+                                contained = true;
+                            }
+                        }
+                        if(contained){
+                            for (int idim = 0; idim < num_dim; idim++) {
+                                inner_product += elem_den(elem_id) * current_element_velocities(ifill, idim) * current_element_velocities(ifill, idim);
+                            }
+                        }
+                    }
+
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                        for(int idim = 0; idim < num_dim; idim++){
+                            // compute gradient of local element contribution to v^t*M*v product
+                            corner_id = elem_id * num_nodes_in_elem + inode;
+                            // division by design ratio recovers nominal element mass used in the gradient operator
+                            corner_value_storage(corner_id, idim) = inner_product * volume_gradients(inode, idim) * global_dt;
+                        }
+                    }
+                }); // end parallel for
+                Kokkos::fence();
+            }
+            else{
+                FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                    size_t node_id;
+                    size_t corner_id;
+                    real_t inner_product;
+                    // std::cout << elem_mass(elem_id) <<std::endl;
+
+                    // current_nodal_velocities
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                        node_id = nodes_in_elem(elem_id, inode);
+                        
+                        for (int idim = 0; idim < num_dim; idim++) {
+                        // midpoint rule for integration being used; add velocities and divide by 2
+                        current_element_velocities(inode, idim) = node_vel(rk_level, node_id, idim);
+                        }
+                    }
+
+                    // cut out the node_gids for this element
+                    ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
+
+                    // gradients of the element volume
+                    get_vol_hex_ugradient(volume_gradients, elem_gid, node_coords, elem_node_gids, rk_level);
+
+                    inner_product = 0;
+                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                        for (int idim = 0; idim < num_dim; idim++) {
+                            inner_product += elem_den(elem_id) * current_element_velocities(ifill, idim) * current_element_velocities(ifill, idim);
+                        }
+                    }
+
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                        for(int idim = 0; idim < num_dim; idim++){
+                            // compute gradient of local element contribution to v^t*M*v product
+                            corner_id = elem_id * num_nodes_in_elem + inode;
+                            // division by design ratio recovers nominal element mass used in the gradient operator
+                            corner_value_storage(corner_id, idim) = inner_product * volume_gradients(inode, idim) * global_dt;
+                        }
+                    }
+                }); // end parallel for
+                Kokkos::fence();
+            }
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    for(int idim = 0; idim < num_dim; idim++){
+                        corner_id = corners_in_node(node_id, icorner);
+                        gradient_vector(node_id, idim) += 0.5 * corner_value_storage(corner_id, idim) / (double)num_nodes_in_elem;
+                    }
+                }
+            }); // end parallel for
+            Kokkos::fence();
+        }
     }
 
 };
