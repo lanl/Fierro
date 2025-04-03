@@ -99,7 +99,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     size_t num_bcs = bc_yaml.Size();
 
-    std::cout<<"num_bcs = " << num_bcs << std::endl;
+    std::cout<<"Number of boundary conditions = " << num_bcs << std::endl;
 
     BoundaryConditions.num_bcs = num_bcs;
 

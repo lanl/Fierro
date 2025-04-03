@@ -723,7 +723,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     // initialize the number of bdy patches in a set to zero
     mesh.num_bdy_patches_in_set.set_values(0.0); // array length is num_bdy_sets
 
-    std::cout<<"NUM BOUNDARY SETS = "<<mesh.num_bdy_sets<<std::endl;
+    std::cout<<"Number of boundary sets = "<<mesh.num_bdy_sets<<std::endl;
 
     // If no boundaries, return
     if(mesh.num_bdy_sets == 0) return;

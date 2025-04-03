@@ -55,8 +55,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     Mesh_t& mesh, 
                     State_t& State)
 {
-    std::cout << "In execute function in SGH3D solver" << std::endl;
-
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
     // double tiny  = SimulationParamaters.dynamic_options.tiny;

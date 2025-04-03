@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "sgh_solver_rz.h"
 #include "sgtm_solver_3D.h"
 
+#include "region_fill.h"
 
 // Initialize driver data.  Solver type, number of solvers
 // Will be parsed from YAML input
@@ -83,19 +84,22 @@ void Driver::initialize()
     }
 
     // Build boundary conditions
-    int num_bcs = BoundaryConditions.num_bcs;
-    printf("Num BC's = %d\n", num_bcs);
+    const int num_bcs = BoundaryConditions.num_bcs;
 
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
     build_boundry_node_sets(mesh);
 
-    // Setup Solvers
+
+    // Setup the Solvers
+    bool missing_state = false;
+    bool unsupported_state = false;
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
 
+            std::cout << "Initializing dynx_FE solver" << std::endl;
             SGH3D* sgh_solver = new SGH3D(); 
 
             sgh_solver->initialize(SimulationParamaters, 
@@ -108,9 +112,14 @@ void Driver::initialize()
             sgh_solver->solver_id = solver_id;
 
             solvers.push_back(sgh_solver);
+
+            // build vector to verify state
+
+
         } // end if SGH solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGHRZ) {
 
+            std::cout << "Initializing dynx_FE_RZ solver" << std::endl;
             SGHRZ* sgh_solver_rz = new SGHRZ(); 
 
             sgh_solver_rz->initialize(SimulationParamaters, 
@@ -126,7 +135,7 @@ void Driver::initialize()
         } // end if SGHRZ solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
 
-            std::cout << "Initializing SGTM3D solver" << std::endl;
+            std::cout << "Initializing thrmex_FE solver" << std::endl;
             SGTM3D* sgtm_solver_3d = new SGTM3D(); 
         
             sgtm_solver_3d->initialize(SimulationParamaters, 
@@ -144,6 +153,40 @@ void Driver::initialize()
 
     } // end for loop over solvers
 
+
+    // ----
+    // setup the simulation by applying all the fills to the mesh
+
+    fillGaussState_t fillGaussState;
+    fillElemState_t  fillElemState;
+
+    simulation_setup(SimulationParamaters, 
+                     Materials, 
+                     mesh, 
+                     BoundaryConditions,
+                     State,
+                     fillGaussState,
+                     fillElemState);
+
+
+    // Allocate material state
+    for (auto& solver : solvers) {
+        solver->initialize_material_state(SimulationParamaters, 
+                      Materials, 
+                      mesh, 
+                      BoundaryConditions,
+                      State);
+    } // end for over solvers
+
+
+    // populate the material point state
+    material_state_setup(SimulationParamaters, 
+                         Materials, 
+                         mesh, 
+                         BoundaryConditions,
+                         State,
+                         fillGaussState,
+                         fillElemState);
 }
 
 /////////////////////////////////////////////////////////////////////////////

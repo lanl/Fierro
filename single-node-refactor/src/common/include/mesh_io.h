@@ -430,7 +430,7 @@ public:
         size_t num_nodes = 0;
 
         fscanf(in, "%lu", &num_nodes);
-        printf("Number if nodes read in %lu\n", num_nodes);
+        printf("Number of nodes read in %lu\n", num_nodes);
 
         
         mesh.initialize_nodes(num_nodes);
@@ -657,7 +657,7 @@ public:
 
         size_t num_nodes = nodes.size();
 
-        printf("Number if nodes read in %lu\n", num_nodes);
+        printf("Number of nodes read in %lu\n", num_nodes);
 
         // initialize node variables
         mesh.initialize_nodes(num_nodes);
@@ -774,7 +774,7 @@ public:
             //      POINTS %d float
             if(v[0] == "POINTS"){
                 size_t num_nodes = std::stoi(v[1]);
-                printf("Num nodes read in %zu\n", num_nodes);
+                printf("Number of nodes read in %zu\n", num_nodes);
                 mesh.initialize_nodes(num_nodes);
 
                 std::vector<node_state> required_node_state = { node_state::coords };
@@ -840,7 +840,7 @@ public:
             //      CELLS num_elem size
             if(v[0] == "CELLS"){
                 num_elem = std::stoi(v[1]);
-                printf("Num elements read in %zu\n", num_elem);
+                printf("Number of elements read in %zu\n", num_elem);
 
                 // initialize elem variables
                 mesh.initialize_elems(num_elem, num_dims);
@@ -943,14 +943,14 @@ public:
             
             i++;
         } // end while
-        printf("elem type = %zu \n", elem_type);
+        printf("Element type = %zu \n", elem_type);
         // elem types:
         // linear hex = 12, linear quad = 9
         found=false;
         
         
         if(num_nodes_in_elem==8 & elem_type != 12) {
-            printf("wrong elem type of %zu \n", elem_type);
+            printf("Wrong element type of %zu \n", elem_type);
             std::cerr << "ERROR: incorrect element type in VTK file" << std::endl;
         }
         
@@ -1365,7 +1365,7 @@ public:
         corner_t& corner,
         SimulationParameters_t& SimulationParamaters) const
     {
-        printf(" Creating a 2D box mesh \n");
+        printf("Creating a 2D box mesh \n");
 
         const int num_dim = 2;
 
@@ -1498,7 +1498,7 @@ public:
         corner_t& corner,
         SimulationParameters_t& SimulationParamaters) const
     {
-        printf(" Creating a 2D polar mesh \n");
+        printf("Creating a 2D polar mesh \n");
 
         int num_dim     = 2;
         int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
@@ -1639,7 +1639,7 @@ public:
         corner_t& corner,
         SimulationParameters_t& SimulationParamaters) const
     {
-        printf(" Creating a 3D box mesh \n");
+        printf("Creating a 3D box mesh \n");
 
         const int num_dim = 3;
 
@@ -1799,7 +1799,7 @@ public:
         const int Pn_order = SimulationParamaters.mesh_input.p_order;
         
         if (Pn_order > 19) {
-            printf(" Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
+            printf("Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
             return;
         }
 

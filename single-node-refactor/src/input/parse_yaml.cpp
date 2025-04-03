@@ -101,6 +101,8 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
                   SimulationParamaters.region_setups.num_reg_fills_in_solver,
                   SimulationParamaters.region_setups.region_fills,
                   SimulationParamaters.region_setups.region_fills_host,
+                  SimulationParamaters.region_setups.fill_gauss_states,
+                  SimulationParamaters.region_setups.fill_node_states,
                   num_solvers);
 
     // parse the material yaml text into a vector of materials
