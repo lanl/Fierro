@@ -773,8 +773,8 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     // copy the state to the device
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
-        std::cout << "Number of material elems = " << 
-        State.MaterialToMeshMaps(mat_id).num_material_elems  << "\n"<< std::endl;
+        std::cout << "Number of elements = " << 
+            State.MaterialToMeshMaps(mat_id).num_material_elems << " for material " << mat_id << "\n";
         
         State.MaterialPoints(mat_id).volfrac.update_device();
         State.MaterialToMeshMaps(mat_id).elem.update_device();

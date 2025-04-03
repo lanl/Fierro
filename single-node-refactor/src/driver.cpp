@@ -84,8 +84,7 @@ void Driver::initialize()
     }
 
     // Build boundary conditions
-    int num_bcs = BoundaryConditions.num_bcs;
-    printf("Number of boundary conditions = %d\n", num_bcs);
+    const int num_bcs = BoundaryConditions.num_bcs;
 
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
@@ -100,6 +99,7 @@ void Driver::initialize()
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
 
+            std::cout << "Initializing dynx_FE solver" << std::endl;
             SGH3D* sgh_solver = new SGH3D(); 
 
             sgh_solver->initialize(SimulationParamaters, 
@@ -114,11 +114,12 @@ void Driver::initialize()
             solvers.push_back(sgh_solver);
 
             // build vector to verify state
-            
+
 
         } // end if SGH solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGHRZ) {
 
+            std::cout << "Initializing dynx_FE_RZ solver" << std::endl;
             SGHRZ* sgh_solver_rz = new SGHRZ(); 
 
             sgh_solver_rz->initialize(SimulationParamaters, 
@@ -134,7 +135,7 @@ void Driver::initialize()
         } // end if SGHRZ solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
 
-            std::cout << "Initializing SGTM3D solver" << std::endl;
+            std::cout << "Initializing thrmex_FE solver" << std::endl;
             SGTM3D* sgtm_solver_3d = new SGTM3D(); 
         
             sgtm_solver_3d->initialize(SimulationParamaters, 

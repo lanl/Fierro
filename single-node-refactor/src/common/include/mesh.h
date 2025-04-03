@@ -542,7 +542,7 @@ struct Mesh_t
 
         // DCArrayKokkos <size_t> legendre_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_legendre_in_patch);
 
-        printf("num_dims = %zu \n", num_dims);
+        printf("Number of dimensions = %zu \n", num_dims);
 
         if (num_dims == 3) {
             // num_patches_in_surf = [1^2, 2^2, 3^2, 4^2, ... , Pn^2]
@@ -562,7 +562,7 @@ struct Mesh_t
             // printf("num_nodes_in_patch = %zu \n", num_nodes_in_patch);
             // printf("num_lobatto_in_patch = %zu \n", num_lobatto_in_patch);
             // printf("num_legendre_in_patch = %zu \n", num_legendre_in_patch);
-            printf("num_surfaces = %zu \n", num_surfs_in_elem);
+            // printf("Number of surfaces = %zu \n", num_surfs_in_elem);
         }
         else {
             num_patches_in_surf = Pn;
@@ -965,7 +965,7 @@ struct Mesh_t
         node_ordering_in_elem.update_device();
         Kokkos::fence();
 
-        printf("done building node ordering \n");
+        printf("Built node ordering \n");
 
         // for saving the hash keys of the patches and then the neighboring elem_gid
         CArrayKokkos<int> hash_keys_in_elem(num_elems, num_patches_in_elem, num_nodes_in_patch, "hash_keys_in_elem"); // always 4 ids in 3D
@@ -1437,16 +1437,16 @@ struct Mesh_t
     void build_connectivity()
     {
         build_corner_connectivity();
-        printf("done building corner connectivity \n");
+        printf("Built corner connectivity \n");
 
         build_elem_elem_connectivity();
-        printf("done building elem elem connectivity \n");
+        printf("Built element-element connectivity \n");
 
         build_patch_connectivity();
-        printf("done building patch connectivity \n");
+        printf("Built patch connectivity \n");
 
         build_node_node_connectivity();
-        printf("done building node node connectivity \n");
+        printf("Built node-node connectivity \n");
     }
 
     /////////////////////////////////////////////////////////////////////////////

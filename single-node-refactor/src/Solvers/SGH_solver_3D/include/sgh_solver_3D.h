@@ -62,12 +62,6 @@ namespace SGH3D_State
         node_state::force,
     };
 
-    // Node state that must be filled (setup) for the SGH solver
-    static const std::vector<fill_node_state> required_fill_node_state = 
-    { 
-        fill_node_state::velocity
-    };
-
     // Gauss point state to be initialized for the SGH solver
     static const std::vector<gauss_pt_state> required_gauss_pt_state = 
     { 
@@ -89,7 +83,26 @@ namespace SGH3D_State
         material_pt_state::shear_modulii
     };
 
+    // Material corner state to be initialized for the SGH solver
+    static const std::vector<material_corner_state> required_material_corner_state = 
+    { 
+        material_corner_state::force
+    };
+
+    // Corner state to be initialized for the SGH solver
+    static const std::vector<corner_state> required_corner_state = 
+    { 
+        corner_state::force,
+        corner_state::mass
+    };
+
     // --- checks on fill instructions ---
+    // Node state that must be filled (setup) for the SGH solver
+    static const std::vector<fill_node_state> required_fill_node_state = 
+    { 
+        fill_node_state::velocity
+    };
+
     // Material point state that must be filled (setup) for the SGH solver
     // option A
     static const std::vector<fill_gauss_state> required_optA_fill_material_pt_state = 
@@ -110,20 +123,6 @@ namespace SGH3D_State
        fill_gauss_state::stress
     };
     // -------------------------------------
-
-
-    // Material corner state to be initialized for the SGH solver
-    static const std::vector<material_corner_state> required_material_corner_state = 
-    { 
-        material_corner_state::force
-    };
-
-    // Corner state to be initialized for the SGH solver
-    static const std::vector<corner_state> required_corner_state = 
-    { 
-        corner_state::force,
-        corner_state::mass
-    };
 }
 
 /////////////////////////////////////////////////////////////////////////////
