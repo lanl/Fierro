@@ -130,6 +130,6 @@ void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParamate
         throw std::runtime_error("**** Provide fill instructions for all required material point variables ****");
     }
     
-    // NOTE: Material points are populated in the material_state_setup funcion
+    // NOTE: Material points are populated in the material_state_setup function
 
 } // end solver initialization

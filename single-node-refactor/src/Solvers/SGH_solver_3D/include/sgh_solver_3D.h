@@ -89,6 +89,7 @@ namespace SGH3D_State
         material_pt_state::shear_modulii
     };
 
+    // --- checks on fill instructions ---
     // Material point state that must be filled (setup) for the SGH solver
     // option A
     static const std::vector<fill_gauss_state> required_optA_fill_material_pt_state = 
@@ -108,6 +109,8 @@ namespace SGH3D_State
        fill_gauss_state::density,
        fill_gauss_state::stress
     };
+    // -------------------------------------
+
 
     // Material corner state to be initialized for the SGH solver
     static const std::vector<material_corner_state> required_material_corner_state = 

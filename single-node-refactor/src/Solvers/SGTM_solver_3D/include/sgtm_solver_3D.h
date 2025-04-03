@@ -99,6 +99,41 @@ namespace SGTM3D_State
         corner_state::mass,
         corner_state::heat_transfer
     };
+
+    // --- checks on fill instructions ---
+    // Node state that must be filled (setup) for the SGTM solver
+    static const std::vector<fill_node_state> required_fill_node_state = 
+    { 
+        fill_node_state::velocity,
+        fill_node_state::temperature
+    };
+
+    // Material point state that must be filled (setup) for the SGTM solver
+    // option A
+    static const std::vector<fill_gauss_state> required_optA_fill_material_pt_state = 
+    { 
+       fill_gauss_state::density,
+       fill_gauss_state::specific_internal_energy,
+       fill_gauss_state::thermal_conductivity,
+       fill_gauss_state::specific_heat
+    };
+    // option B
+    static const std::vector<fill_gauss_state> required_optB_fill_material_pt_state = 
+    { 
+       fill_gauss_state::density,
+       fill_gauss_state::internal_energy,
+       fill_gauss_state::thermal_conductivity,
+       fill_gauss_state::specific_heat
+    };
+    // option C
+    static const std::vector<fill_gauss_state> required_optC_fill_material_pt_state = 
+    { 
+       fill_gauss_state::density,
+       fill_gauss_state::stress,
+       fill_gauss_state::thermal_conductivity,
+       fill_gauss_state::specific_heat
+    };
+    // -------------------------------------
 }
 
 /////////////////////////////////////////////////////////////////////////////

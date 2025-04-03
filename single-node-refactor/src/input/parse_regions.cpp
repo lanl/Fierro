@@ -1303,9 +1303,8 @@ void parse_regions(Yaml::Node& root,
         }
 
         // NOTE:
-        // A check that solvers exist to accept the fill states specified by the user is
-        // performed after the solvers are intialized, in simulation_setup(...) function 
-        // that is implemented in the region_fill.cpp file.
+        // Each solver checks to in the intiialize function to see if the fills specified 
+        // are sufficient for setting up the fields in the simulation
 
 
         // check to see if a file path is empty
