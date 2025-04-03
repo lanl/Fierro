@@ -84,12 +84,15 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
         fill_node_state::velocity,
         fill_node_state::temperature
     };
+    // Remember, the solver is initialized prior to this function, creating nodal state
 
     // matpt state to setup, this array is built in the input parser based on fills
     std::vector <fill_gauss_state> fill_gauss_states
     {
         fill_gauss_state::density,
-        fill_gauss_state::specific_internal_energy
+        fill_gauss_state::specific_internal_energy,
+        fill_gauss_state::thermal_conductivity,
+        fill_gauss_state::specific_heat
     };
     
     if(fill_gauss_states.size() == 0){
@@ -118,9 +121,10 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     DCArrayKokkos <size_t> voxel_elem_mat_id;       // 1 or 0 if material exist, or it is the material_id
 
     // ---------------------------------------------
-    // fill den, sie, and velocity on the mesh
+    // fill guass point state (den, sie, ...) and nodal state (velocity, temperature, ...) on the mesh
     // ---------------------------------------------
 
+std::cout << "calling fill_regions \n";
     fill_regions(Materials,
                  mesh,
                  State.node.coords,
@@ -131,7 +135,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fillGaussState.use_sie,
                  fillGaussState.ie,
                  fillGaussState.stress,
-                 fillGaussState.conductivity,
+                 fillGaussState.thermal_conductivity,
                  fillGaussState.specific_heat,
                  fillGaussState.elastic_modulii,
                  fillGaussState.shear_modulii,
@@ -145,9 +149,10 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  SimulationParamaters.region_setups.region_fills_host,
                  fill_gauss_states,
                  fill_node_states,
-                 rk_num_bins);
+                 rk_num_bins,
+                 num_mats_per_elem);
 
-
+std::cout << "fills are done \n";
 
     // note: the device and host side are updated in the above function
     // ---------------------------------------------
@@ -218,164 +223,6 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
 
 
-
-void material_state_setup(SimulationParameters_t& SimulationParamaters, 
-                          Material_t& Materials, 
-                          Mesh_t& mesh, 
-                          BoundaryCondition_t& Boundary,
-                          State_t& State,
-                          fillGaussState_t& fillGaussState,
-                          fillElemState_t&  fillElemState)
-{
-
-
-    // short hand names
-    //const size_t num_dims  = mesh.num_dims;
-    const size_t num_elems = mesh.num_elems;
-    const size_t num_nodes = mesh.num_nodes;
-    const size_t num_gauss_points = mesh.num_leg_gauss_in_elem*mesh.num_elems;  
-    const size_t num_gauss_points_in_elem = mesh.num_leg_gauss_in_elem;  
-
-    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
-
-    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
-
-    // a counter for the Material index spaces
-    DCArrayKokkos<size_t> num_elems_saved_for_mat(num_mats, "setup_num_elems_saved_for_mat");
-
-    // a counter for how many elems have been saved for the material
-    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-        num_elems_saved_for_mat.host(mat_id) = 0; // initializing to zero
-    }
-
-    // ---------------------------------------
-    //  save data, maps, and state
-    // ---------------------------------------
-    State.GaussPoints.vol.update_host();
-    Kokkos::fence();
-
-    // the following loop is not thread safe
-    for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-        for (size_t a_mat_in_elem=0; a_mat_in_elem < fillElemState.num_mats_saved_in_elem.host(elem_gid); a_mat_in_elem++){
-
-            // get the material_id in this element
-            size_t mat_id = fillElemState.mat_id.host(elem_gid,a_mat_in_elem);
-
-            // mat elem lid (compressed storage) to save the data to, for this material mat_id
-            size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
-
-            // --- mapping from material elem lid to elem ---
-            State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
-
-            // -----------------------
-            // Save MaterialPoints
-            // -----------------------
-
-            // loop over Guass points in the element
-            for(size_t gauss_lid=0; gauss_lid<num_gauss_points_in_elem; gauss_lid++) {
-
-                size_t gauss_gid = elem_gid + gauss_lid;  // gauss_gid in the element
-
-                size_t mat_point_lid = mat_elem_lid + gauss_lid; // for more than 1 gauss point, this increments
-
-                // --- volume fraction ---
-                State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
-
-                // --- density and mass ---
-                if( State.MaterialPoints(mat_id).den.host.size()>0 ){
-
-                    // add an array that we set to true or false if we set this state here
-                    State.MaterialPoints(mat_id).den.host(mat_point_lid)  = fillGaussState.den.host(gauss_gid,a_mat_in_elem);
-                    State.MaterialPoints(mat_id).mass.host(mat_point_lid) = fillGaussState.den.host(gauss_gid,a_mat_in_elem) * 
-                                                                            State.GaussPoints.vol.host(gauss_gid) * fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
-                }
-
-                // --- set eroded flag to false ---
-                if( State.MaterialPoints(mat_id).eroded.host.size()>0 ){
-                    State.MaterialPoints(mat_id).eroded.host(mat_point_lid) = false; // set to default
-                }
-
-                // --- specific internal energy ---
-                if( State.MaterialPoints(mat_id).sie.host.size()>0 ){
-                    // save state, that is integrated in time, at the RK levels
-                    for (size_t rk_level = 0; rk_level < rk_num_bins; rk_level++) {
-                        if(fillGaussState.use_sie(gauss_gid,a_mat_in_elem)){
-                            State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = fillGaussState.sie.host(gauss_gid,a_mat_in_elem);
-                        }
-                        else {
-                            State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = fillGaussState.ie.host(gauss_gid,a_mat_in_elem)/State.MaterialPoints(mat_id).mass.host(mat_point_lid);
-                        }
-                    }
-                }
-
-                // --- other state is here ---
-
-
-
-
-            } // end loop over gauss points in element
-
-
-            // -----------------------
-            // Save MaterialZones
-            // -----------------------
-
-            if( State.MaterialZones(mat_id).sie.host.size()>0 ){
-                // IMPORTANT:
-                // For higher-order FE, least squares fit the sie at gauss points to get zone values
-                //for(gauss_lid in elem){ 
-                //  fit the sie values, for ie, convert to sie in this loop and fit it
-                //}
-
-                // save state, that is integrated in time, at the RK levels
-                for (size_t rk_level = 0; rk_level < rk_num_bins; rk_level++) {
-                    State.MaterialZones(mat_id).sie.host(rk_level, elem_gid) = 0.0;  // a place holder, make least squares fit value
-                }
-
-            } // 
-
-
-            // update counter for how many mat_elem_lid values have been saved
-            num_elems_saved_for_mat.host(mat_id)++;
-
-        } // end loop over materials in this element
-    } // end serial for loop over all elements
-    
-
-    // copy the state to the device
-    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-
-        std::cout << "Number of material elems = " << 
-        State.MaterialToMeshMaps(mat_id).num_material_elems  << "\n"<< std::endl;
-        
-        State.MaterialPoints(mat_id).volfrac.update_device();
-        State.MaterialToMeshMaps(mat_id).elem.update_device();
-
-        if( State.MaterialPoints(mat_id).den.host.size()>0 ){
-            State.MaterialPoints(mat_id).den.update_device();
-            State.MaterialPoints(mat_id).mass.update_device();
-        }
-
-        if( State.MaterialPoints(mat_id).sie.host.size()>0 ){
-            State.MaterialPoints(mat_id).sie.update_device();
-        }
-        if( State.MaterialZones(mat_id).sie.host.size()>0 ){
-            State.MaterialZones(mat_id).sie.update_device();
-        }
-        
-        if( State.MaterialPoints(mat_id).eroded.host.size()>0 ){
-            State.MaterialPoints(mat_id).eroded.update_device();
-        }
-
-        // add other state here
-
-    } // end for
-    Kokkos::fence();
-
- 
-} // end fill
-
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn fill_regions
@@ -417,7 +264,7 @@ void fill_regions(
         DCArrayKokkos <bool>&   gauss_use_sie,
         DCArrayKokkos <double>& gauss_ie,
         DCArrayKokkos <double>& gauss_stress,
-        DCArrayKokkos <double>& gauss_conductivity,
+        DCArrayKokkos <double>& gauss_thermal_conductivity,
         DCArrayKokkos <double>& gauss_specific_heat,
         DCArrayKokkos <double>& gauss_elastic_modulii,
         DCArrayKokkos <double>& gauss_shear_modulii,
@@ -431,7 +278,8 @@ void fill_regions(
         const CArray <RegionFill_host_t>& region_fills_host,
         std::vector <fill_gauss_state> fill_gauss_states,
         std::vector <fill_node_state> fill_node_states,
-        const size_t rk_num_bins)
+        const size_t rk_num_bins,
+        const size_t num_mats_per_elem)
 {
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
@@ -440,8 +288,8 @@ void fill_regions(
     size_t num_fills_total = region_fills.size();  // the total number of fills in the input file
 
     // local variables to this routine
-    DCArrayKokkos<double> elem_coords(mesh.num_elems, 3);
-    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, 3);  // assumes 3 MATS in an element
+    DCArrayKokkos<double> elem_coords(mesh.num_elems, num_mats_per_elem); // 2nd dim is max mats per elem
+    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, num_mats_per_elem);  
 
     // Important:
     //  Remember that num_fills_saved_in_elem = num_mats_saved_in_elem
@@ -594,7 +442,6 @@ void fill_regions(
     //---------
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
-
         // verify that all geometric volfracs sum to 1
 
 
@@ -603,32 +450,30 @@ void fill_regions(
             // get the region fill id
             size_t fill_id = elem_fill_ids(elem_gid, bin);
 
-            // saving mat_ids if den || sie are set
-            if(region_fills(fill_id).den_field != init_conds::noICsScalar ||
-               region_fills(fill_id).sie_field != init_conds::noICsScalar ||
-               region_fills(fill_id).ie_field != init_conds::noICsScalar){ 
-                
-                // save mat_ids to element, its a uniform field
-                elem_mat_id(elem_gid,bin) = region_fills(fill_id).material_id;
 
-            } // end if setting volfrac and mat_id
+            // save mat_ids to element, its a uniform field
+            elem_mat_id(elem_gid,bin) = region_fills(fill_id).material_id;
 
 
-            // --------
+            //---------
             // for high-order, we loop over gauss points in element
             // gauss_gid = elem_gid for low-order solvers
+            //---------
             for (size_t gauss_lid=0; gauss_lid<mesh.num_leg_gauss_in_elem; gauss_lid++){
 
                 // get gauss git using elem and gauss_lid in the element
                 size_t gauss_gid = elem_gid + gauss_lid;
 
+                // HIGH ORDER UPDATE THIS
                 // NOTE: gauss_coords=elem_coords, needs to be updated for high-order elements
+                //       Will need to be the gauss_coords, it is current element coords
                 ViewCArrayKokkos <double> coords(&elem_coords(elem_gid,0), 3);
 
-
-                // ----------
-                // Important:
-                //   all paints have an if check inside, painting happens only if the user said to
+                //---------
+                // Remember:
+                //   all paints have an if check inside, painting happens only if the user said
+                //   to paint a variable in the yaml input file
+                //---------
 
                 // paint the den on the gauss pts of the mesh
                 paint_multi_scalar(gauss_den,
@@ -665,11 +510,27 @@ void fill_regions(
                                 bin,
                                 region_fills(fill_id).ie_field);
                
-
+std::cout << "applying guass_thermal_conductivity \n";
                 // painting thermal conductivity
+                paint_multi_scalar(gauss_thermal_conductivity,
+                                coords,
+                                region_fills(fill_id).thermal_conductivity,
+                                0.0,
+                                gauss_gid,
+                                mesh.num_dims,
+                                bin,
+                                region_fills(fill_id).thermal_conductivity_field);
 
+std::cout << "applying guass_specific_heat \n";
                 // painting specific heat
-
+                paint_multi_scalar(gauss_specific_heat,
+                                coords,
+                                region_fills(fill_id).specific_heat,
+                                0.0,
+                                gauss_gid,
+                                mesh.num_dims,
+                                bin,
+                                region_fills(fill_id).specific_heat_field);
             
             } // end loop over gauss points
 
@@ -697,7 +558,16 @@ void fill_regions(
                                 rk_num_bins,
                                 region_fills(fill_id).vel_field);
 
+std::cout << "applying node temperature \n";                
                 // paint nodal temperature
+                paint_scalar_rk(node_temp,
+                                a_node_coords,
+                                region_fills(fill_id).temperature,
+                                0.0,
+                                node_gid,
+                                mesh.num_dims,
+                                rk_num_bins,
+                                region_fills(fill_id).temperature_field);
 
             } // end loop over the nodes in elem
 
@@ -705,12 +575,16 @@ void fill_regions(
     }); // end FOR_ALL node loop
     Kokkos::fence();
 
+std::cout << "done filling guass state \n";
+
+    //---------
     // Elem Fill state
     // update host side for elem fill states
     elem_mat_id.update_host();
     elem_volfrac.update_host();
     elem_num_mats_saved_in_elem.update_host();
 
+    //---------
     // Gauss Fill state
     // update the host side for gauss states, if the variable was set on the mesh
     for (auto field : fill_gauss_states){
@@ -737,7 +611,7 @@ void fill_regions(
                 gauss_ie.update_host();
                 break;
             case fill_gauss_state::thermal_conductivity:
-                gauss_conductivity.update_host();
+                gauss_thermal_conductivity.update_host();
                 break;
             case fill_gauss_state::specific_heat:
                 gauss_specific_heat.update_host();
@@ -746,6 +620,8 @@ void fill_regions(
         } // end switch
     } // end for
 
+    //---------
+    // node state
     // update host side for node states set on the mesh
     for (auto field : fill_node_states){
         switch(field){
@@ -757,13 +633,207 @@ void fill_regions(
                 break;
         } // end switch
     } // end for
-
     
 
     Kokkos::fence();
 } // end fill regions
 
 
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn material_state_setup
+///
+/// \brief a function to setup the material point and zone state 
+///
+/// \param SimulationParamaters holds the simulation parameters
+/// \param Materials is the material object
+/// \param mesh is the mesh object
+/// \param Boundary is the boundary condition object
+/// \param State contains all state, which is evolved by the solvers
+/// \param fillGaussState is a vector of enums telling what guass state to set
+/// \param fillElemState is a vector of enums telling what elem state to set
+///
+/////////////////////////////////////////////////////////////////////////////
+void material_state_setup(SimulationParameters_t& SimulationParamaters, 
+                          Material_t& Materials, 
+                          Mesh_t& mesh, 
+                          BoundaryCondition_t& Boundary,
+                          State_t& State,
+                          fillGaussState_t& fillGaussState,
+                          fillElemState_t&  fillElemState)
+{
+
+
+    // short hand names
+    //const size_t num_dims  = mesh.num_dims;
+    const size_t num_elems = mesh.num_elems;
+    const size_t num_nodes = mesh.num_nodes;
+    const size_t num_gauss_points = mesh.num_leg_gauss_in_elem*mesh.num_elems;  
+    const size_t num_gauss_points_in_elem = mesh.num_leg_gauss_in_elem;  
+
+    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
+
+    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
+
+    // a counter for the Material index spaces
+    DCArrayKokkos<size_t> num_elems_saved_for_mat(num_mats, "setup_num_elems_saved_for_mat");
+
+    // a counter for how many elems have been saved for the material
+    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+        num_elems_saved_for_mat.host(mat_id) = 0; // initializing to zero
+    }
+
+    // ---------------------------------------
+    //  save data, maps, and state
+    // ---------------------------------------
+    State.GaussPoints.vol.update_host();
+    Kokkos::fence();
+
+    // the following loop is not thread safe
+    for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+        for (size_t a_mat_in_elem=0; a_mat_in_elem < fillElemState.num_mats_saved_in_elem.host(elem_gid); a_mat_in_elem++){
+
+            // get the material_id in this element
+            size_t mat_id = fillElemState.mat_id.host(elem_gid,a_mat_in_elem);
+
+            // mat elem lid (compressed storage) to save the data to, for this material mat_id
+            size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
+
+            // --- mapping from material elem lid to elem ---
+            State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
+
+            // -----------------------
+            // Save MaterialPoints
+            // -----------------------
+
+            // loop over Guass points in the element
+            for (size_t gauss_lid=0; gauss_lid<num_gauss_points_in_elem; gauss_lid++) {
+
+                size_t gauss_gid = elem_gid + gauss_lid;  // gauss_gid in the element
+
+                size_t mat_point_lid = mat_elem_lid + gauss_lid; // for more than 1 gauss point, this increments
+
+                // --- volume fraction ---
+                State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+
+                // --- density and mass ---
+                if( State.MaterialPoints(mat_id).den.host.size()>0 ){
+
+                    // add an array that we set to true or false if we set this state here
+                    State.MaterialPoints(mat_id).den.host(mat_point_lid)  = 
+                            fillGaussState.den.host(gauss_gid,a_mat_in_elem);
+                    State.MaterialPoints(mat_id).mass.host(mat_point_lid) = 
+                            fillGaussState.den.host(gauss_gid,a_mat_in_elem) * 
+                            State.GaussPoints.vol.host(gauss_gid) * fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+                }
+
+                // --- set eroded flag to false ---
+                if( State.MaterialPoints(mat_id).eroded.host.size()>0 ){
+                    State.MaterialPoints(mat_id).eroded.host(mat_point_lid) = false; // set to default
+                }
+
+                // --- specific internal energy ---
+                if( State.MaterialPoints(mat_id).sie.host.size()>0 ){
+                    // save state, that is integrated in time, at the RK levels
+                    for (size_t rk_level = 0; rk_level < rk_num_bins; rk_level++) {
+                        if(fillGaussState.use_sie(gauss_gid,a_mat_in_elem)){
+                            State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = 
+                                fillGaussState.sie.host(gauss_gid,a_mat_in_elem);
+                        }
+                        else {
+                            State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = 
+                                fillGaussState.ie.host(gauss_gid,a_mat_in_elem)/State.MaterialPoints(mat_id).mass.host(mat_point_lid);
+                        }
+                    }
+                }
+
+                // --- thermal conductivity ---
+                if( State.MaterialPoints(mat_id).conductivity.host.size()>0 ){
+                    State.MaterialPoints(mat_id).conductivity.host(mat_point_lid) = 
+                                fillGaussState.thermal_conductivity.host(gauss_gid,a_mat_in_elem); 
+                }
+
+                // --- specific heat ---
+                if( State.MaterialPoints(mat_id).specific_heat.host.size()>0 ){
+                    State.MaterialPoints(mat_id).specific_heat.host(mat_point_lid) = 
+                                fillGaussState.specific_heat.host(gauss_gid,a_mat_in_elem); 
+                }
+
+                // --- other material point state here ---
+
+
+            } // end loop over gauss points in element
+
+
+            // -----------------------
+            // Save MaterialZones
+            // -----------------------
+
+            if( State.MaterialZones(mat_id).sie.host.size()>0 ){
+                // IMPORTANT:
+                // For higher-order FE, least squares fit the sie at gauss points to get zone values
+                //for(gauss_lid in elem){ 
+                //  fit the sie values, for ie, convert to sie in this loop and fit it
+                //}
+
+                // save state, that is integrated in time, at the RK levels
+                for (size_t rk_level = 0; rk_level < rk_num_bins; rk_level++) {
+                    State.MaterialZones(mat_id).sie.host(rk_level, elem_gid) = 0.0;  // a place holder, make least squares fit value
+                }
+
+            } // 
+
+
+            // update counter for how many mat_elem_lid values have been saved
+            num_elems_saved_for_mat.host(mat_id)++;
+
+        } // end loop over materials in this element
+    } // end serial for loop over all elements
+    
+
+    // copy the state to the device
+    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+        std::cout << "Number of material elems = " << 
+        State.MaterialToMeshMaps(mat_id).num_material_elems  << "\n"<< std::endl;
+        
+        State.MaterialPoints(mat_id).volfrac.update_device();
+        State.MaterialToMeshMaps(mat_id).elem.update_device();
+
+        if (State.MaterialPoints(mat_id).den.host.size()>0){
+            State.MaterialPoints(mat_id).den.update_device();
+            State.MaterialPoints(mat_id).mass.update_device();
+        }
+
+        if (State.MaterialPoints(mat_id).sie.host.size()>0){
+            State.MaterialPoints(mat_id).sie.update_device();
+        }
+        if (State.MaterialZones(mat_id).sie.host.size()>0){
+            State.MaterialZones(mat_id).sie.update_device();
+        }
+        
+        if (State.MaterialPoints(mat_id).eroded.host.size()>0){
+            State.MaterialPoints(mat_id).eroded.update_device();
+        }
+
+        if (State.MaterialPoints(mat_id).conductivity.host.size()>0){
+            State.MaterialPoints(mat_id).conductivity.update_device();
+        }
+
+        if (State.MaterialPoints(mat_id).specific_heat.host.size()>0){
+            State.MaterialPoints(mat_id).specific_heat.update_device();
+        }
+
+        // -----
+        // add other state here
+
+    } // end for
+    Kokkos::fence();
+
+ 
+} // end fill
 
 
 
@@ -1460,7 +1530,7 @@ double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
 
     return value_out;
 
-}  // end function paint_scalar
+}  // end function get region scalar value
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -1591,6 +1661,139 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 }  // end function paint_multi_scalar
 
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn paint_scalar_rk
+///
+/// \brief a function to paint a scalar on the mesh
+///
+/// \param field_scalar is the field (in/out)
+/// \param mesh_coords are the coordinates of the elem/gauss/nodes
+/// \param mesh_gid is the elem/gauss/nodes global mesh index
+/// \param num_dims is dimensions
+/// \param rk_num_bins is time integration storage level
+/// \param scalarFieldType is enum for setting the field
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
+                     const ViewCArrayKokkos <double> mesh_coords,
+                     const double scalar,
+                     const double slope,
+                     const size_t mesh_gid,
+                     const size_t num_dims,
+                     const size_t rk_num_bins,
+                     const init_conds::init_scalar_conds scalarFieldType)
+{
+
+    // save temperature field at all rk_levels
+    for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){
+
+        // --- scalar field ---
+        switch (scalarFieldType) {
+            case init_conds::uniform:
+                {
+                    field_scalar(rk_level,mesh_gid) = scalar;
+                    break;
+                }
+            // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+            case init_conds::radialScalar:
+                {
+                    // Setting up radial
+                    double dir[2];
+                    dir[0] = 0.0;
+                    dir[1] = 0.0;
+                    double radius_val = 0.0;
+
+                    for (int dim = 0; dim < 2; dim++) {
+                        dir[dim]    = mesh_coords(dim);
+                        radius_val += mesh_coords(dim) * mesh_coords(dim);
+                    } // end for
+                    radius_val = sqrt(radius_val);
+
+                    for (int dim = 0; dim < 2; dim++) {
+                        if (radius_val > 1.0e-14) {
+                            dir[dim] /= (radius_val);
+                        }
+                        else{
+                            dir[dim] = 0.0;
+                        }
+                    } // end for
+
+                    field_scalar(rk_level,mesh_gid) = scalar * dir[0];
+                    field_scalar(rk_level,mesh_gid) = scalar * dir[1];
+
+                    break;
+                }
+            case init_conds::sphericalScalar:
+                {
+                    // Setting up spherical
+                    double dir[3];
+                    dir[0] = 0.0;
+                    dir[1] = 0.0;
+                    dir[2] = 0.0;
+                    double radius_val = 0.0;
+
+                    for (int dim = 0; dim < 3; dim++) {
+                        dir[dim]    = mesh_coords(dim);
+                        radius_val += mesh_coords(dim) * mesh_coords(dim);
+                    } // end for
+                    radius_val = sqrt(radius_val);
+
+                    for (int dim = 0; dim < 3; dim++) {
+                        if (radius_val > 1.0e-14) {
+                            dir[dim] /= (radius_val);
+                        }
+                        else{
+                            dir[dim] = 0.0;
+                        }
+                    } // end for
+
+                    field_scalar(rk_level,mesh_gid) = scalar * radius_val;
+                    break;
+                }
+            case init_conds::xlinearScalar:
+                {
+                    // scalar_field = slope*x + value
+                    field_scalar(rk_level,mesh_gid) = slope*mesh_coords(0) + scalar;
+                    break;
+                }
+            case init_conds::ylinearScalar:
+                {
+                    // scalar_field = slope*y + value
+                    field_scalar(rk_level,mesh_gid) = slope*mesh_coords(1) + scalar;
+                    break;
+                }
+            case init_conds::zlinearScalar:
+                {
+                    // scalar_field = slope*z + value
+                    field_scalar(rk_level,mesh_gid) = slope*mesh_coords(2) + scalar;
+                    break;
+                }
+            case init_conds::tgVortexScalar:
+                {
+                    printf("**** TG Vortex not supported for general scalar initial conditions ****\n");
+
+                    break;
+                }
+            case init_conds::noICsScalar:
+                {
+                    // nothing is done
+
+                    break;
+                }
+            default:
+                {
+                    // do nothing
+
+                    break;
+                }
+        } // end of switch
+
+    } // end for rk level
+
+}  // end function paint_scalar_rk
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -1598,14 +1801,15 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /// \brief a function to paint a vector fields on the mesh 
 ///
-/// \param vector is the vector field on elem/gauss/node
+/// \param vector is the vector field on elem/gauss/node (in/out)
 /// \param coords are the coordinates of the mesh elem/guass/node
 /// \param u is the x-comp
 /// \param v is the y-comp
 /// \param w is the z-comp
 /// \param scalar is the magnitude
 /// \param mesh_gid is the node global mesh index
-/// \param rk_num_bins is time integration storage level
+/// \param rk_num_bins is the number of time integration storage levels
+/// \param scalarFieldType is enum for how to sett the field
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -1872,228 +2076,7 @@ void paint_node_scalar(const double scalar,
 
 }  // end function paint_node_scalar
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn paint_gauss_den_sie
-///
-/// \brief a function to paint den and sie on the Gauss points of the mesh 
-///
-/// \param Materials holds the material models and global parameters
-/// \param mesh is the simulation mesh
-/// \param node_coords are the node coordinates of the element
-/// \param GaussPoint_den is density at the GaussPoints on the mesh
-/// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
-/// \param elem_mat_id is the material id in an element
-/// \param region_fills are the instructions to paint state on the mesh
-/// \param elem_coords is the geometric center of the element
-/// \param elem_gid is the element global mesh index
-/// \param f_id is fill instruction
-///
-/////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-void paint_gauss_den_sie(const Material_t& Materials,
-                         const Mesh_t& mesh,
-                         const DCArrayKokkos <double>& node_coords,
-                         const DCArrayKokkos <double>& GaussPoint_den,
-                         const DCArrayKokkos <double>& GaussPoint_sie,
-                         const DCArrayKokkos <double>& GaussPoint_volfrac,
-                         const DCArrayKokkos <size_t>& elem_mat_id,
-                         const DCArrayKokkos <size_t>& num_mats_saved_in_elem,
-                         const CArrayKokkos<RegionFill_t>& region_fills,
-                         const ViewCArrayKokkos <double> elem_coords,
-                         const double elem_gid,
-                         const size_t f_id)
-{
-    const double fuzzy_zero = 1.e-14;
-    const double fuzzy_one = 1.0 - 1.e-14;
 
-    // the number of materials saved to this element, initialized to 0 at start of code
-    size_t mat_storage_lid = num_mats_saved_in_elem(elem_gid);
-
-
-    // check on exceeding 3 materials per element
-    if (num_mats_saved_in_elem(elem_gid) > 3){
-        Kokkos::abort("ERROR: exceeded 3 materials in an element when painting regions on the mesh \n");
-    } // end if check
-
-
-    // material id
-    const size_t mat_id = region_fills(f_id).material_id;
-
-
-    // check to see if the material already exists
-    bool check_mat_exists = false;
-    for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
-        if(mat_id == elem_mat_id(elem_gid, a_mat_in_elem)){
-            mat_storage_lid = a_mat_in_elem;  // set storage lid to the existing material lid
-            check_mat_exists = true;
-        } // end if check on mat_id existing alrady
-    } // end for a_mat
-
-
-    // There will now be at least 1 material so we want
-    // num_mats_saved_in_elem >= 1, and it is intialized at 0 
-    if(check_mat_exists == false){
-        // we are adding a new material, so increment the number of saved
-        num_mats_saved_in_elem(elem_gid) += 1;
-    } // end check
-
-    // check to see if the volfrac paint is equal to 1
-    bool eraise_mats = false;
-    size_t num_mats_previously_saved;
-    if(region_fills(f_id).volfrac >= fuzzy_one){
-        // this is used to wipe away materials later in this routine
-        num_mats_previously_saved = num_mats_saved_in_elem(elem_gid);
-
-        // if the volume fraction is >=1, reset the counter, deleting all prior materials
-        num_mats_saved_in_elem(elem_gid) = 1;
-
-        mat_storage_lid = 0; // save state to the zero index of the gauss point arrays
-        eraise_mats = true;  
-    } // end if volfrac >= 1
-
-
-
-    // --- material_id in elem ---
-    elem_mat_id(elem_gid, mat_storage_lid) = mat_id; // 
-
-
-    // loop over the Gauss points in the element and save region initial conditions
-    {
-        
-        const size_t gauss_gid = elem_gid;  // 1 gauss point per element
-
-
-        // add test problem state setups here
-        if (region_fills(f_id).vel_field == init_conds::tgVortexVec) {
-
-            GaussPoint_den(gauss_gid, mat_storage_lid) = 1.0;    
-
-            // note: elem_coords are the gauss_coords, higher quadrature requires ref elem data
-            double pres = 0.25 * (cos(2.0 * PI * elem_coords(0)) + 
-                                  cos(2.0 * PI * elem_coords(1)) ) + 1.0;
-
-            // p = rho*ie*(gamma - 1)
-            // makes sure index 0 matches the gamma in the gamma law function 
-            double gamma  = Materials.eos_global_vars(mat_id,0); 
-            GaussPoint_sie(gauss_gid, mat_storage_lid) =
-                pres / (GaussPoint_den(gauss_gid, mat_storage_lid) * (gamma - 1.0));
-
-            GaussPoint_volfrac(gauss_gid, mat_storage_lid) = region_fills(f_id).volfrac;
-        } // end
-        // *****
-        // add user initialization here
-        // *****
-        else {
-            
-            // --- density ---
-            GaussPoint_den(gauss_gid, mat_storage_lid) = region_fills(f_id).den;
-
-            // --- specific internal energy ---
-            GaussPoint_sie(gauss_gid, mat_storage_lid) = region_fills(f_id).sie;
-
-            // --- volume fraction ---
-            GaussPoint_volfrac(gauss_gid, mat_storage_lid) = region_fills(f_id).volfrac;
-
-        }  // end if 
-
-        //printf("volfrac in elem = %f \n",GaussPoint_volfrac(gauss_gid, mat_storage_lid));
-
-        if(eraise_mats == true){
-            // remove materials after mat_stroage_lid=0 by seting volfrac=0
-            for (size_t a_mat_in_elem=1; a_mat_in_elem < num_mats_previously_saved; a_mat_in_elem++){
-                GaussPoint_volfrac(gauss_gid, a_mat_in_elem) = 0.0;
-            }
-        } // end check on eraising mats
-
-        //printf("volfrac in elem after eraise = %f \n",GaussPoint_volfrac(gauss_gid, mat_storage_lid));
-
-
-
-        // ----- 
-        // ensure volume fraction is bounded between 0 and 1 for all materials
-        // ----- 
-        double vol_frac_total = 0.0;
-        for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
-            vol_frac_total += GaussPoint_volfrac(gauss_gid, a_mat_in_elem);
-        }
-
-        //printf("volfrac total = %f \n",vol_frac_total);
-        
-        // squish material out if vol fraction in element is > 1
-        if (vol_frac_total > 1.0){
-
-            double vol_error = vol_frac_total - 1.0;
-
-            // squish out material
-            for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
-                double vol_removed = fmin(GaussPoint_volfrac(gauss_gid, a_mat_in_elem), vol_error);
-                GaussPoint_volfrac(gauss_gid, a_mat_in_elem) -= vol_removed;
-                vol_error -= fmax(0.0, vol_removed);  // once error =0, no more material removed
-            } // end for squishing out material
-
-            // verify that every volume fraction is bounded 0:1
-            for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
-                double volfracfloor = fmax(0.0, GaussPoint_volfrac(gauss_gid, a_mat_in_elem));
-                GaussPoint_volfrac(gauss_gid, a_mat_in_elem) = fmin(1.0, volfracfloor);
-            } // end loop on bounded volfracs
-
-            //for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
-            //    printf("volfrac in elem after squishing = %f \n",GaussPoint_volfrac(gauss_gid, a_mat_in_elem));
-            //}
-
-        } // end if too much material in an element
-
-         //printf("volfrac in elem after squishing = %f \n",GaussPoint_volfrac(gauss_gid, mat_storage_lid));
-
-        // ----- 
-        // remove all materials that have a zero vol fraction
-        // ----- 
-        size_t num_actual_mats = 0;
-        for (size_t a_mat_in_elem=0; a_mat_in_elem < num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
-            
-            // if volfraction is greater than zero, them material is hear
-             if( GaussPoint_volfrac(gauss_gid, a_mat_in_elem) >= fuzzy_zero ){
-                num_actual_mats++;
-             } // end if
-
-        } // end loop over mats in this elem
-
-        //printf("num actual mats = %zu \n",num_actual_mats);
-
-
-        size_t shift = num_mats_saved_in_elem(elem_gid)-num_actual_mats;
-        num_mats_saved_in_elem(elem_gid) = num_actual_mats;
-        for (size_t a_mat_in_elem=0; a_mat_in_elem < num_actual_mats; a_mat_in_elem++){
-
-            // if nothing is at this gauss point, remove it, compressing out the zero volfracs
-            if( GaussPoint_volfrac(gauss_gid, a_mat_in_elem) <= fuzzy_zero ){
-                
-                // move density up in the storage
-                GaussPoint_den(gauss_gid, a_mat_in_elem) = GaussPoint_den(gauss_gid, a_mat_in_elem+shift);  // material density
-
-                // move specific internal energy up in the storage
-                GaussPoint_sie(gauss_gid, a_mat_in_elem) = GaussPoint_sie(gauss_gid, a_mat_in_elem+shift);  // material sie
-
-                // move volume fraction up in the storage
-                GaussPoint_volfrac(gauss_gid, a_mat_in_elem) = GaussPoint_volfrac(gauss_gid, a_mat_in_elem+shift);
-
-            }; // end check on volfrac being zero
-
-        } // end loop over materials
-
-
-
-       // printf("volfrac in elem end = %f \n",GaussPoint_volfrac(gauss_gid, mat_storage_lid));
-
-        
-
-    } // end loop over gauss points in element
-
-    // done setting the element state
-
-
-} // end function
 
 /////////////////////////////////////////////////////////////////////////////
 ///

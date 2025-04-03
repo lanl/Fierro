@@ -149,6 +149,7 @@ void Driver::initialize()
 
     // ----
     // setup the simulation by applying all the fills to the mesh
+std::cout << "setting up simulation using fills \n";
 
     fillGaussState_t fillGaussState;
     fillElemState_t  fillElemState;

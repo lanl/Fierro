@@ -41,6 +41,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simulation_parameters.h"
 #include "geometry_new.h"
 
+/*
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn init_corner_node_masses_zero
@@ -65,8 +66,10 @@ void SGTM3D::init_corner_node_masses_zero(const Mesh_t& mesh,
         corner_mass(corner_gid) = 0.0;
     });  // end parallel over corners
 } // end setting masses equal to zero
+*/
 
 
+/*
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn tag_regions
@@ -252,6 +255,8 @@ void SGTM3D::tag_regions(
 
     Kokkos::fence();
 } // end SGH tag regions
+*/
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -267,32 +272,10 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                 State_t& State)
 {
     
-    setup_sgtm(SimulationParamaters,
-        SimulationParamaters.region_setups.region_fills,
-        Materials,
-        mesh, 
-        Boundary,
-        State);
-    
-} // end SGH setup
+    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
+    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
 
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn setup the SGH method
-///
-/// \brief Allocate state, setup models, and fill mesh regions per the YAML input
-///
-/////////////////////////////////////////////////////////////////////////////
-void SGTM3D::setup_sgtm(
-        SimulationParameters_t& SimulationParamaters,
-        CArrayKokkos<RegionFill_t>& region_fills,
-        Material_t& Materials,
-        Mesh_t& mesh, 
-        BoundaryCondition_t& Boundary,
-        State_t& State) const
-{
-
+/*
     size_t num_fills_in_solver = SimulationParamaters.region_setups.num_reg_fills_in_solver.host(this->solver_id);
     printf("Num fills's = %zu\n in solver = %zu", num_fills_in_solver, this->solver_id);
 
@@ -544,8 +527,9 @@ void SGTM3D::setup_sgtm(
     } // end for
     Kokkos::fence();
     std::cout << "after updating device" << std::endl;
+*/
 
-    std::cout << "Before calculating pressure, sound speed, and stress" << std::endl;
+    std::cout << "Calculating pressure, sound speed, and stress" << std::endl;
     // calculate pressure, sound speed, and stress for each material
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
         size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
@@ -565,7 +549,7 @@ void SGTM3D::setup_sgtm(
                             mat_id);
 
     } // for loop over mat_id
-    std::cout << "after calculating pressure, sound speed, and stress" << std::endl;
+    
     // set corner and node masses to zero
     init_corner_node_masses_zero(mesh, State.node.mass, State.corner.mass);
 
@@ -587,4 +571,5 @@ void SGTM3D::setup_sgtm(
                    State.node.coords,
                    State.node.mass,
                    State.corner.mass);
-}
+
+}  // end of setup function

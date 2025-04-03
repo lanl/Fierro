@@ -55,7 +55,9 @@ struct fillElemState_t;
 using namespace mtr;
 
 
-
+// -----------------------------------------------------------------------------
+// The functions to setup fields on a mesh
+// ------------------------------------------------------------------------------
 void simulation_setup(SimulationParameters_t& SimulationParamaters, 
                       Material_t& Materials, 
                       Mesh_t& mesh, 
@@ -89,9 +91,13 @@ void fill_regions(
         const CArray <RegionFill_host_t>& region_fills_host,
         std::vector <fill_gauss_state> fill_gauss_states,
         std::vector <fill_node_state> fill_node_states,
-        const size_t rk_num_bins);
+        const size_t rk_num_bins,
+        const size_t num_mats_per_elem);
 
 
+// -----------------------------------------------------------------------------
+// A function to populate the material point and material zone state
+// ------------------------------------------------------------------------------
 void material_state_setup(SimulationParameters_t& SimulationParamaters, 
                           Material_t& Materials, 
                           Mesh_t& mesh, 
@@ -196,7 +202,8 @@ double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
                          const size_t mesh_gid,
                          const size_t num_dims,
                          const init_conds::init_scalar_conds scalarFieldType);
-                
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn paint_multi_scalar
@@ -225,18 +232,43 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
+/// \fn paint_scalar_rk
+///
+/// \brief a function to paint a scalar on the mesh
+///
+/// \param field_scalar is the field (in/out)
+/// \param mesh_coords are the coordinates of the elem/gauss/nodes
+/// \param mesh_gid is the elem/gauss/nodes global mesh index
+/// \param num_dims is dimensions
+/// \param rk_num_bins is the number of time integration storage levels
+/// \param scalarFieldType is enum for how to sett the field
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
+                        const ViewCArrayKokkos <double> mesh_coords,
+                        const double scalar,
+                        const double slope,
+                        const size_t mesh_gid,
+                        const size_t num_dims,
+                        const size_t rk_num_bins,
+                        const init_conds::init_scalar_conds scalarFieldType);
+
+/////////////////////////////////////////////////////////////////////////////
+///
 /// \fn paint_vector_rk
 ///
 /// \brief a function to paint a vector fields on the mesh 
 ///
-/// \param vector is the vector field on elem/gauss/node
+/// \param vector is the vector field on elem/gauss/node (in/out)
 /// \param coords are the coordinates of the mesh elem/guass/node
 /// \param u is the x-comp
 /// \param v is the y-comp
 /// \param w is the z-comp
 /// \param scalar is the magnitude
 /// \param mesh_gid is the node global mesh index
-/// \param rk_num_bins is time integration storage level
+/// \param rk_num_bins is the number of time integration storage levels
+/// \param vectorFieldType is enum for setting the field
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -250,39 +282,6 @@ void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
                      const size_t num_dims,
                      const size_t rk_num_bins,
                      const init_conds::init_vector_conds vectorFieldType);
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn paint_gauss_den_sie
-///
-/// \brief a function to paint den and sie on the Gauss points of the mesh
-///
-/// \param Materials holds the material models and global parameters
-/// \param mesh is the simulation mesh
-/// \param node_coords are the node coordinates of the element
-/// \param GaussPoint_den is density at the GaussPoints on the mesh
-/// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
-/// \param elem_mat_id is the material id in an element
-/// \param region_fills are the instructures to paint state on the mesh
-/// \param elem_coords is the geometric center of the element
-/// \param elem_gid is the element global mesh index
-/// \param f_id is fill instruction
-///
-/////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-void paint_gauss_den_sie(const Material_t& Materials,
-                         const Mesh_t& mesh,
-                         const DCArrayKokkos <double>& node_coords,
-                         const DCArrayKokkos <double>& GaussPoint_den,
-                         const DCArrayKokkos <double>& GaussPoint_sie,
-                         const DCArrayKokkos <double>& GaussPoint_vofrac,
-                         const DCArrayKokkos <size_t>& elem_mat_id,
-                         const DCArrayKokkos <size_t>& num_mats_saved_in_elem,
-                         const CArrayKokkos<RegionFill_t>& region_fills,
-                         const ViewCArrayKokkos <double> elem_coords,
-                         const double elem_gid,
-                         const size_t f_id);
-
 
 
 

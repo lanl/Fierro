@@ -631,7 +631,7 @@ struct fillGaussState_t
 
     DCArrayKokkos<double> stress; ///< Gauss Point stress
 
-    DCArrayKokkos<double> conductivity;  ///< Thermal conductivity
+    DCArrayKokkos<double> thermal_conductivity;  ///< Thermal conductivity
     DCArrayKokkos<double> specific_heat; ///< Specific Heat
 
     DCArrayKokkos<double> elastic_modulii;  ///<  Gauss Point elastic modulii Exx, Eyy, Ezz
@@ -680,7 +680,7 @@ struct fillGaussState_t
                     }
                     break;
                 case fill_gauss_state::thermal_conductivity:
-                    if (conductivity.size() == 0) this->conductivity = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_thermal_conductivity");
+                    if (thermal_conductivity.size() == 0) this->thermal_conductivity = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_thermal_conductivity");
                     break;
                 case fill_gauss_state::specific_heat:
                     if (specific_heat.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_specific_heat");
