@@ -1061,8 +1061,13 @@ void Explicit_Solver::init_state_vectors(){
   if(simparam.topology_optimization_on){
     test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   }
-  if(simparam.topology_optimization_on || simparam.shape_optimization_on){
+  if(simparam.topology_optimization_on){
     corner_value_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element);
+    corner_vector_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element,num_dim);
+    corner_gradient_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element, num_dim, max_nodes_per_element, num_dim);
+  }
+  if(simparam.shape_optimization_on){
+    corner_value_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element, num_dim);
     corner_vector_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element,num_dim);
     corner_gradient_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element, num_dim, max_nodes_per_element, num_dim);
   }
