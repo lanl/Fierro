@@ -260,7 +260,7 @@ void EVPFFT::calc_Goperr0()
       for (int i = 1; i <= 3; i++) {
         for (int j = 1; j <= 3; j++) {
           ic = ic + 1;
-          Goperr0(i,ii,j,jj) = all_reduce.array[ic];
+          Goperr0.host(i,ii,j,jj) = all_reduce.array[ic];
           // printf(" g0 %d %d %d %d  = %24.14E \n", i,ii,j,jj,Goperr0(i,ii,j,jj));
         }
       }
