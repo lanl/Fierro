@@ -489,7 +489,9 @@ public:
         auto corners_in_node = FEM_SGH_->corners_in_node;
         auto num_corners_in_node = FEM_SGH_->num_corners_in_node;
         auto relative_element_densities = FEM_SGH_->relative_element_densities;
+        int max_nodes_per_element = FEM_SGH_->max_nodes_per_element;
         double volume_gradients_array[max_nodes_per_element * num_dim];
+        auto elem_den = FEM_SGH_->elem_den;
         ViewCArrayKokkos<double> volume_gradients(volume_gradients_array, max_nodes_per_element, num_dim);
         // view scope
         {
@@ -531,6 +533,12 @@ public:
                             }
                         }
                     }
+                    
+                    // cut out the node_gids for this element
+                    ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), 8);
+
+                    // gradients of the element volume
+                    FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, rk_level);
 
                     for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         for(int idim = 0; idim < num_dim; idim++){
@@ -561,10 +569,10 @@ public:
                     }
 
                     // cut out the node_gids for this element
-                    ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
+                    ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), 8);
 
                     // gradients of the element volume
-                    get_vol_hex_ugradient(volume_gradients, elem_gid, node_coords, elem_node_gids, rk_level);
+                    FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, rk_level);
 
                     inner_product = 0;
                     for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
