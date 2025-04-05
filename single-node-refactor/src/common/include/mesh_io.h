@@ -2704,88 +2704,95 @@ public:
 
 
             // note: the file path and folder was created in the elem and node outputs
-
+            size_t num_mat_files_written = 0;
             if(num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars >0){
 
                 for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
                     size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
-                    // set the nodal vars to zero size, we don't write these fields again
-                    node_scalar_var_names.clear();
-                    node_vector_var_names.clear();
+                    // only save material data if the mat lives on the mesh, ie. has state allocated
+                    if (num_mat_elems>0){
 
-                    // the arrays storing all the material field data
-                    DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
-                    DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
+                        // set the nodal vars to zero size, we don't write these fields again
+                        node_scalar_var_names.clear();
+                        node_vector_var_names.clear();
 
-                    // concatenate material fields into a single array
-                    concatenate_mat_fields(State.MaterialPoints(mat_id),
-                                        mat_elem_scalar_fields,
-                                        mat_elem_tensor_fields,
-                                        State.MaterialToMeshMaps(mat_id).elem,
-                                        SimulationParamaters.output_options.output_mat_pt_state,
-                                        num_mat_elems,
-                                        mat_den_id,
-                                        mat_pres_id,
-                                        mat_sie_id,
-                                        mat_sspd_id,
-                                        mat_mass_id,
-                                        mat_volfrac_id,  
-                                        mat_eroded_id,
-                                        mat_stress_id,
-                                        mat_conductivity_id,
-                                        mat_specific_heat_id);
-                    Kokkos::fence();
-                    mat_elem_scalar_fields.update_host();
-                    mat_elem_tensor_fields.update_host();
+                        // the arrays storing all the material field data
+                        DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
+                        DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
 
-                    std::string str_mat_val = std::to_string(mat_id);                       
-                    std::string mat_fields_name = "mat";
-                    mat_fields_name += str_mat_val;  // add the mat number
+                        // concatenate material fields into a single array
+                        concatenate_mat_fields(State.MaterialPoints(mat_id),
+                                            mat_elem_scalar_fields,
+                                            mat_elem_tensor_fields,
+                                            State.MaterialToMeshMaps(mat_id).elem,
+                                            SimulationParamaters.output_options.output_mat_pt_state,
+                                            num_mat_elems,
+                                            mat_den_id,
+                                            mat_pres_id,
+                                            mat_sie_id,
+                                            mat_sspd_id,
+                                            mat_mass_id,
+                                            mat_volfrac_id,  
+                                            mat_eroded_id,
+                                            mat_stress_id,
+                                            mat_conductivity_id,
+                                            mat_specific_heat_id);
+                        Kokkos::fence();
+                        mat_elem_scalar_fields.update_host();
+                        mat_elem_tensor_fields.update_host();
 
-                    // save the nodes belonging to this part (i.e., the material)
-                    DCArrayKokkos <double> mat_node_coords(num_nodes,3, "mat_node_coords");
-                    DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem, "mat_nodes_in_mat_elem");
+                        std::string str_mat_val = std::to_string(mat_id);                       
+                        std::string mat_fields_name = "mat";
+                        mat_fields_name += str_mat_val;  // add the mat number
 
-                    // the number of actual nodes belonging to the part (i.e., the material)
-                    size_t num_mat_nodes = 0;
+                        // save the nodes belonging to this part (i.e., the material)
+                        DCArrayKokkos <double> mat_node_coords(num_nodes,num_dims, "mat_node_coords");
+                        DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem, "mat_nodes_in_mat_elem");
 
-                    // build a unique mesh (element and nodes) for the material (i.e., the part)
-                    build_material_elem_node_lists(mesh,
-                                                State.node.coords,
-                                                mat_node_coords,
-                                                mat_nodes_in_mat_elem,
-                                                State.MaterialToMeshMaps(mat_id).elem,
-                                                num_mat_nodes,
-                                                num_mat_elems,
-                                                num_nodes_in_elem,
-                                                num_dims);
+                        // the number of actual nodes belonging to the part (i.e., the material)
+                        size_t num_mat_nodes = 0;
 
-                    ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
-                    ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
-                    
-                    // write out a vtu file this 
-                    write_vtu(mat_node_coords_host,
-                            mat_nodes_in_elem_host,
-                            mat_elem_scalar_fields,
-                            mat_elem_tensor_fields,
-                            node_scalar_fields,
-                            node_vector_fields,
-                            mat_elem_scalar_var_names,
-                            mat_elem_tensor_var_names,
-                            node_scalar_var_names,
-                            node_vector_var_names,
-                            mat_fields_name,
-                            graphics_id,
-                            num_mat_nodes,
-                            num_mat_elems,
-                            num_nodes_in_elem,
-                            Pn_order,
-                            num_dims);
+                        // build a unique mesh (element and nodes) for the material (i.e., the part)
+                        build_material_elem_node_lists(mesh,
+                                                    State.node.coords,
+                                                    mat_node_coords,
+                                                    mat_nodes_in_mat_elem,
+                                                    State.MaterialToMeshMaps(mat_id).elem,
+                                                    num_mat_nodes,
+                                                    num_mat_elems,
+                                                    num_nodes_in_elem,
+                                                    num_dims);
 
-                } // end for mat_id
-                
+                        ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
+                        ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
+                        
+                        // write out a vtu file this 
+                        write_vtu(mat_node_coords_host,
+                                mat_nodes_in_elem_host,
+                                mat_elem_scalar_fields,
+                                mat_elem_tensor_fields,
+                                node_scalar_fields,
+                                node_vector_fields,
+                                mat_elem_scalar_var_names,
+                                mat_elem_tensor_var_names,
+                                node_scalar_var_names,
+                                node_vector_var_names,
+                                mat_fields_name,
+                                graphics_id,
+                                num_mat_nodes,
+                                num_mat_elems,
+                                num_nodes_in_elem,
+                                Pn_order,
+                                num_dims);
+
+                        num_mat_files_written++;
+
+                    } // end for mat_id
+
+                } // end if material is on the mesh
+
             } // end if mat variables are to be written
 
 
@@ -2821,7 +2828,7 @@ public:
                     mat_fields_name,
                     time_value,
                     graphics_id,
-                    num_mats,
+                    num_mat_files_written,
                     write_mesh_state,
                     write_mat_pt_state);
 
@@ -3478,8 +3485,8 @@ public:
 
         // snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
 
-        //sprintf(filename, "vtk/meshHexPn.%05d.vtk", graphics_id);  // mesh file
-        str_output_len = snprintf(filename, max_len, "vtk/meshHexPn.%05d.vtk", graphics_id);
+        //sprintf(filename, "vtk/Fierro.%05d.vtk", graphics_id);  // mesh file
+        str_output_len = snprintf(filename, max_len, "vtk/Fierro.%05d.vtk", graphics_id);
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
          // mesh file
         
@@ -3596,8 +3603,8 @@ public:
         graphics_times(graphics_id) = time_value;
 
         // Write time series metadata
-        //sprintf(filename, "vtk/meshHexPn.vtk.series", graphics_id);  // mesh file
-        str_output_len = snprintf(filename, max_len, "vtk/meshHexPn.vtk.series"); 
+        //sprintf(filename, "vtk/Fierro.vtk.series", graphics_id);  // mesh file
+        str_output_len = snprintf(filename, max_len, "vtk/Fierro.vtk.series"); 
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
         // mesh file
 
@@ -3608,7 +3615,7 @@ public:
         fprintf(out[0], "  \"files\" : [\n");
 
         for (int i = 0; i <= graphics_id; i++) {
-            fprintf(out[0], "    { \"name\" : \"meshHexPn.%05d.vtk\", \"time\" : %12.5e },\n", i, graphics_times(i) );
+            fprintf(out[0], "    { \"name\" : \"Fierro.%05d.vtk\", \"time\" : %12.5e },\n", i, graphics_times(i) );
         }
 
         // fprintf(out[0], "%12.5e\n", graphics_times(i));
@@ -4135,7 +4142,7 @@ public:
 
 
         // create filename
-        str_output_len = snprintf(filename, max_len, "vtk/data/meshHexPn.%s.%05d.vtu", partname.c_str(), graphics_id);
+        str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.%s.%05d.vtu", partname.c_str(), graphics_id);
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
         // mesh file
         
@@ -4193,15 +4200,31 @@ public:
         // write all global point numbers for this elem
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             fprintf(out[0], "          ");  // adding indentation before printing nodes in element
-            for (int k = 0; k <= Pn_order_z; k++) {
-                for (int j = 0; j <= Pn_order; j++) {
-                    for (int i = 0; i <= Pn_order; i++) {
-                        size_t node_lid = PointIndexFromIJK(i, j, k, order);
-                        fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
+            if (num_dims==3 && Pn_order>1){
+                for (int k = 0; k <= Pn_order_z; k++) {
+                    for (int j = 0; j <= Pn_order; j++) {
+                        for (int i = 0; i <= Pn_order; i++) {
+                            size_t node_lid = PointIndexFromIJK(i, j, k, order);
+                            fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
+                        }
                     }
-                }
-            } // end for
-
+                } // end for
+            }
+            else if (num_dims == 3 && Pn_order == 1){
+               // 3D linear hexahedral elements
+                for (int node_lid = 0; node_lid < 8; node_lid++) {
+                    fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
+                } // end for
+            }
+            else if (num_dims == 2){
+                // 2D linear is the only supported option
+                for (int node_lid = 0; node_lid < 4; node_lid++) {
+                    fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
+                } // end for
+            }
+            else {
+                std::cout << "ERROR: outputs failed, dimensions and element types are not compatible \n";
+            } // end if
             fprintf(out[0], "\n");
         } // end for
         fprintf(out[0], "        </DataArray>\n");
@@ -4218,14 +4241,31 @@ public:
 
         // Write the element types
         fprintf(out[0], "        <DataArray type=\"Int8\" Name=\"types\" format=\"ascii\">\n"); 
-        // VTK_LAGRANGE_HEXAHEDRON: 72,
-        // VTK_HIGHER_ORDER_HEXAHEDRON: 67
-        // VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON = 33
+        // ----
+        // linear element types
+        //   VTK_PIXEL = 8,   linear 2D quad with i,j,k indexing (future format for 2D solver)
+        //   VTK_Quad = 9,    linear 2D quad with ensight index ordering (current 2D rz convention)
+        //   VTK_VOXEL = 11,  linear 3D hex with i,j,k indexing (current format)
+        // arbitrary order types
+        //   VTK_LAGRANGE_QUADRILATERAL = 70, use this type when a 2D high-order scheme exists
+        //   VTK_LAGRANGE_HEXAHEDRON: 72, this is the current 3D high-order 
+        //   VTK_HIGHER_ORDER_HEXAHEDRON: 67
+        //   VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON = 33
         // element types: https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
         // element types: https://kitware.github.io/vtk-js/api/Common_DataModel_CellTypes.html
         // vtk format: https://www.kitware.com//modeling-arbitrary-order-lagrange-finite-elements-in-the-visualization-toolkit/
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-            fprintf(out[0], "          %d \n", 72);
+            if (num_dims==3 && Pn_order>1){
+                fprintf(out[0], "          %d \n", 72);
+            }
+            else if (num_dims == 3 && Pn_order == 1){
+                // 3D linear hex
+                fprintf(out[0], "          %d \n", 11);
+            }
+            else {
+                // 2D ensight mesh ordering
+                fprintf(out[0], "          %d \n", 9);
+            }
         }
         fprintf(out[0], "        </DataArray>\n");
         fprintf(out[0], "      </Cells>\n");
@@ -4348,7 +4388,7 @@ public:
         int   str_output_len;
 
         // Write time series metadata
-        str_output_len = snprintf(filename, max_len, "vtk/meshHexPn.pvd"); 
+        str_output_len = snprintf(filename, max_len, "vtk/Fierro.pvd"); 
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
         // mesh file
 
@@ -4359,7 +4399,7 @@ public:
         fprintf(out[0], "  <Collection>\n");
 
         for (int i = 0; i <= graphics_id; i++) {
-            fprintf(out[0], "    <DataSet timestep=\"%d\" file=\"data/meshHexPn.%05d.vtm\" time= \"%12.5e\" />\n", i, i, graphics_times(i) );
+            fprintf(out[0], "    <DataSet timestep=\"%d\" file=\"data/Fierro.%05d.vtm\" time= \"%12.5e\" />\n", i, i, graphics_times(i) );
         }
 
         fprintf(out[0], "  </Collection>\n");
@@ -4401,7 +4441,7 @@ public:
 
 
             // Write time series metadata to the data file
-            str_output_len = snprintf(filename, max_len, "vtk/data/meshHexPn.%05d.vtm", file_id); 
+            str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.%05d.vtm", file_id); 
             if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
             // mesh file
 
@@ -4414,14 +4454,14 @@ public:
             
             // Average mesh fields -- node and elem state written
             size_t block_id = 0;  // this will need to be incremented based on the number of mesh fields written
-            if(write_mesh_state){
+            if (write_mesh_state){
                 fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
                 {
                     block_id++;  // increment block id for material outputs that follow the element avg block
 
                     // elem and nodal fields are in this file
                     fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"meshHexPn.%s.%05d.vtu\" time= \"%12.5e\" />\n", file_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
+                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.%s.%05d.vtu\" time= \"%12.5e\" />\n", file_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
                     fprintf(out[0], "      </Piece>\n");
 
                     // add other Mesh average output Pieces here
@@ -4430,13 +4470,13 @@ public:
             } // end if write elem and node state is true
 
             // note: the block_id was incremented if an element average field output was made
-            if(write_mat_pt_state){
+            if (write_mat_pt_state){
                 fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
                 for (size_t mat_id=0; mat_id<num_mats; mat_id++){
                     
                     // output the material specific fields
                     fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"meshHexPn.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", file_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
+                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", file_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
                     fprintf(out[0], "      </Piece>\n");
 
                 } // end for loop mat_id
@@ -4513,10 +4553,7 @@ public:
             if (dummy_counter.host(node_gid)>0){
                 mat_node_coords.host(mat_node_gid, 0) = state_node_coords.host(1, node_gid, 0);
                 mat_node_coords.host(mat_node_gid, 1) = state_node_coords.host(1, node_gid, 1);
-                if (num_dims == 2) {
-                    mat_node_coords.host(mat_node_gid, 2) = 0.0;
-                }
-                else{
+                if (num_dims == 3){ 
                     mat_node_coords.host(mat_node_gid, 2) = state_node_coords.host(1, node_gid, 2);
                 } // end if on dims
 
