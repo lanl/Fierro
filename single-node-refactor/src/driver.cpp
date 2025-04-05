@@ -93,8 +93,7 @@ void Driver::initialize()
 
 
     // Setup the Solvers
-    bool missing_state = false;
-    bool unsupported_state = false;
+    double time_final = SimulationParamaters.dynamic_options.time_final;
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
@@ -110,10 +109,32 @@ void Driver::initialize()
 
             // save the solver_id
             sgh_solver->solver_id = solver_id;
+            
+            // set the start and ending times
+            double t_end = SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
+            if(solver_id==0){
+                sgh_solver->time_start = 0.0;
+
+                if(t_end <= 1.0e-14){
+                    // time wasn't set so end the solver at the final time of the calculation
+                    sgh_solver->time_end = time_final;
+                }
+                else {
+                    // use the specified time in the input file
+                    sgh_solver->time_end = t_end;
+                } // end if time was set
+            }
+            else {
+                // this is not the first solver run
+                double time_prior_solver_ends = SimulationParamaters.solver_inputs[solver_id-1].time_end;
+
+                sgh_solver->time_start = time_prior_solver_ends;
+
+                double t_end_min = fmax(time_prior_solver_ends, t_end); // must end after the prior solver
+                sgh_solver->time_end = fmin(t_end_min, time_final); // must end before the final time
+            } // end if solver=0
 
             solvers.push_back(sgh_solver);
-
-            // build vector to verify state
 
 
         } // end if SGH solver

@@ -53,6 +53,9 @@ public:
 
     size_t solver_id;
 
+    size_t time_start;
+    size_t time_end;
+
     Solver();
     virtual ~Solver();
 
