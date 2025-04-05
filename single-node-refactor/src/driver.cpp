@@ -161,6 +161,39 @@ void Driver::initialize()
             // save the solver_id
             sgh_solver_rz->solver_id = solver_id;
 
+            // set the start and ending times
+            double t_end = SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
+            if(solver_id==0){
+                sgh_solver_rz->time_start = 0.0;
+
+                if(t_end <= 1.0e-14){
+                    // time wasn't set so end the solver at the final time of the calculation
+                    sgh_solver_rz->time_end = fmax(0.0, time_final);
+                }
+                else {
+                    // use the specified time in the input file
+                    sgh_solver_rz->time_end = t_end;
+                } // end if time was set
+            }
+            else {
+                // this is not the first solver run
+                double time_prior_solver_ends = solvers[solver_id-1]->time_end;
+
+                sgh_solver_rz->time_start = time_prior_solver_ends;
+
+                if (t_end <= 1.0e-14){
+                    // time wasn't set so end the solver at the final time of the calculation
+                    sgh_solver_rz->time_end = time_final;
+                }
+                else {
+                    // use the specified time in the input file
+                    sgh_solver_rz->time_end = fmin(t_end, time_final); // ensure t_end is bounded by final time
+                } // end if time was set
+                
+            } // end if solver=0
+
+            std::cout << "Solver " << solver_id << " start time = " << sgh_solver_rz->time_start << ", ending time = " << sgh_solver_rz->time_end << "\n";
+
             solvers.push_back(sgh_solver_rz);
         } // end if SGHRZ solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
@@ -173,6 +206,42 @@ void Driver::initialize()
                                        mesh, 
                                        BoundaryConditions,
                                        State);
+
+                                                   // save the solver_id
+            sgtm_solver_3d->solver_id = solver_id;
+
+            // set the start and ending times
+            double t_end = SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
+            if(solver_id==0){
+                sgtm_solver_3d->time_start = 0.0;
+
+                if(t_end <= 1.0e-14){
+                    // time wasn't set so end the solver at the final time of the calculation
+                    sgtm_solver_3d->time_end = fmax(0.0, time_final);
+                }
+                else {
+                    // use the specified time in the input file
+                    sgtm_solver_3d->time_end = t_end;
+                } // end if time was set
+            }
+            else {
+                // this is not the first solver run
+                double time_prior_solver_ends = solvers[solver_id-1]->time_end;
+
+                sgtm_solver_3d->time_start = time_prior_solver_ends;
+
+                if (t_end <= 1.0e-14){
+                    // time wasn't set so end the solver at the final time of the calculation
+                    sgtm_solver_3d->time_end = time_final;
+                }
+                else {
+                    // use the specified time in the input file
+                    sgtm_solver_3d->time_end = fmin(t_end, time_final); // ensure t_end is bounded by final time
+                } // end if time was set
+                
+            } // end if solver=0
+
+            std::cout << "Solver " << solver_id << " start time = " << sgtm_solver_3d->time_start << ", ending time = " << sgtm_solver_3d->time_end << "\n";
         
            solvers.push_back(sgtm_solver_3d);
         } // end if SGTM solver
