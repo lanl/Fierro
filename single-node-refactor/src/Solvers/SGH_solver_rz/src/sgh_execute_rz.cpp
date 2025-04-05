@@ -164,7 +164,9 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         graphics_times,
         SGHRZ_State::required_node_state,
         SGHRZ_State::required_gauss_pt_state,
-        SGHRZ_State::required_material_pt_state);
+        SGHRZ_State::required_material_pt_state,
+        this->solver_id);
+
     graphics_time = time_value + graphics_dt_ival;
 
 
@@ -435,7 +437,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                    graphics_times,
                                    SGHRZ_State::required_node_state,
                                    SGHRZ_State::required_gauss_pt_state,
-                                   SGHRZ_State::required_material_pt_state);
+                                   SGHRZ_State::required_material_pt_state,
+                                   this->solver_id);
 
             graphics_time = time_value + graphics_dt_ival;
 

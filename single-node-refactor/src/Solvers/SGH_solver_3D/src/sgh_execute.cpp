@@ -152,7 +152,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         graphics_times,
         SGH3D_State::required_node_state,
         SGH3D_State::required_gauss_pt_state,
-        SGH3D_State::required_material_pt_state);
+        SGH3D_State::required_material_pt_state,
+        this->solver_id);
     
 
 
@@ -425,7 +426,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                    graphics_times,
                                    SGH3D_State::required_node_state,
                                    SGH3D_State::required_gauss_pt_state,
-                                   SGH3D_State::required_material_pt_state);
+                                   SGH3D_State::required_material_pt_state,
+                                   this->solver_id);
 
             graphics_time = time_value + graphics_dt_ival;
 

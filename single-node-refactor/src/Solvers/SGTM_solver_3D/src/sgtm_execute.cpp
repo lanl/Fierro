@@ -125,7 +125,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         graphics_times,
         SGTM3D_State::required_node_state,
         SGTM3D_State::required_gauss_pt_state,
-        SGTM3D_State::required_material_pt_state);
+        SGTM3D_State::required_material_pt_state,
+        this->solver_id);
     
     graphics_time = time_value + graphics_dt_ival;
 
@@ -372,7 +373,8 @@ std::cout << "update temperature \n";
                                    graphics_times,
                                    SGTM3D_State::required_node_state,
                                    SGTM3D_State::required_gauss_pt_state,
-                                   SGTM3D_State::required_material_pt_state);
+                                   SGTM3D_State::required_material_pt_state,
+                                   this->solver_id);
 
             graphics_time = time_value + graphics_dt_ival;
         } // end if
