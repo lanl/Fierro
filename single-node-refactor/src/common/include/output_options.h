@@ -75,6 +75,7 @@ static std::map<std::string, node_state> node_outputs_map
 {
     { "coords", node_state::coords },
     { "vel",    node_state::velocity },
+    { "temp",   node_state::temp },
     { "mass",   node_state::mass },
     { "force",  node_state::force }
 };
