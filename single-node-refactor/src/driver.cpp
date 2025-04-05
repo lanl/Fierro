@@ -117,7 +117,7 @@ void Driver::initialize()
 
                 if(t_end <= 1.0e-14){
                     // time wasn't set so end the solver at the final time of the calculation
-                    sgh_solver->time_end = time_final;
+                    sgh_solver->time_end = fmax(0.0, time_final);
                 }
                 else {
                     // use the specified time in the input file
@@ -126,13 +126,22 @@ void Driver::initialize()
             }
             else {
                 // this is not the first solver run
-                double time_prior_solver_ends = SimulationParamaters.solver_inputs[solver_id-1].time_end;
+                double time_prior_solver_ends = solvers[solver_id-1]->time_end;
 
                 sgh_solver->time_start = time_prior_solver_ends;
 
-                double t_end_min = fmax(time_prior_solver_ends, t_end); // must end after the prior solver
-                sgh_solver->time_end = fmin(t_end_min, time_final); // must end before the final time
+                if (t_end <= 1.0e-14){
+                    // time wasn't set so end the solver at the final time of the calculation
+                    sgh_solver->time_end = time_final;
+                }
+                else {
+                    // use the specified time in the input file
+                    sgh_solver->time_end = fmin(t_end, time_final); // ensure t_end is bounded by final time
+                } // end if time was set
+                
             } // end if solver=0
+
+            std::cout << "Solver " << solver_id << " start time = " << sgh_solver->time_start << ", ending time = " << sgh_solver->time_end << "\n";
 
             solvers.push_back(sgh_solver);
 
