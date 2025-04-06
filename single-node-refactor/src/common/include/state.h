@@ -341,7 +341,7 @@ struct GaussPoint_t
                     if (div.size() == 0) this->div = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_div");
                     break;
                 case gauss_pt_state::gradient_velocity:
-                    if (div.size() == 0) this->vel_grad = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_vel_grad");
+                    if (vel_grad.size() == 0) this->vel_grad = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_vel_grad");
                     break;
                 default:
                     std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;

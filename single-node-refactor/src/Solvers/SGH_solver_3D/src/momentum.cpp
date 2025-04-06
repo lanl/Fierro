@@ -136,7 +136,6 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
 
         // --- calculate the velocity gradient terms ---
         double inverse_vol = 1.0 / elem_vol(elem_gid);
-
         // x-dir
         vel_grad(elem_gid, 0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
             + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)

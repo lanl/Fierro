@@ -224,6 +224,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.MaterialPoints(mat_id).num_material_points);
         } // end for mat_id
 
+
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
             // ---- RK coefficient ----
@@ -243,7 +244,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
                 size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
 
                 get_force(Materials,
                           mesh,
