@@ -147,6 +147,13 @@ struct Simulation_Parameters
                 add_optimization_module(OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_ShapeOpt, FUNCTION_TYPE::OBJECTIVE, {});
                 optimization_options.maximize_flag = true;
                 break;
+            case OPTIMIZATION_OBJECTIVE::minimize_kinetic_energy:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_ShapeOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                break;
+            case OPTIMIZATION_OBJECTIVE::maximize_kinetic_energy:
+                add_optimization_module(OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_ShapeOpt, FUNCTION_TYPE::OBJECTIVE, {});
+                optimization_options.maximize_flag = true;
+                break;
             case OPTIMIZATION_OBJECTIVE::multi_objective:
                 add_optimization_module(OPTIMIZATION_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});
                 derive_multi_objectives();
