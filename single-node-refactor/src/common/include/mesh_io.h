@@ -2790,6 +2790,7 @@ public:
                                 num_dims,
                                 solver_id);
 
+
                         num_mat_files_written++;
 
                     } // end for mat_id
@@ -4150,6 +4151,7 @@ public:
         // create filename
         str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%s.%05d.vtu", 
                                                                  solver_id, partname.c_str(), graphics_id);
+
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
         // mesh file
         
@@ -4397,6 +4399,7 @@ public:
 
         // Write time series metadata
         str_output_len = snprintf(filename, max_len, "vtk/Fierro.solver%zu.pvd", solver_id); 
+
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
         // mesh file
 
@@ -4452,6 +4455,7 @@ public:
 
             // Write time series metadata to the data file
             str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id); 
+
             if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
             // mesh file
 
