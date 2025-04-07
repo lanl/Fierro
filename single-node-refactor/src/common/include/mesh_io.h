@@ -2669,9 +2669,21 @@ public:
             if (stat("vtk", &st) != 0) {
                 system("mkdir vtk");
             }
+            else{
+                if(solver_id==0){
+                    // delete the files inside
+                    system("rm vtk/Fierro*");
+                }
+            }
 
             if (stat("vtk/data", &st) != 0) {
                 system("mkdir vtk/data");
+            }
+            else{
+                if(solver_id==0){
+                    // delete the files inside the folder
+                    system("rm vtk/data/Fierro*");
+                }
             }
             
             // call the .vtu writer for element fields
