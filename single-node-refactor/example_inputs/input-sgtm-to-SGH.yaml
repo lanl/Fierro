@@ -23,18 +23,43 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: state
-    graphics_time_step: 1.0
+    output_file_format: viz
+    graphics_time_step: 0.25
     # graphics_iteration_step: 1
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+    node_field_outputs:
+        - vel
+        - temp
+        - mass
 
 solver_options:
   - solver:
         method: thrmex_FE
         id: 0
+        time_end: 0.5
         # solver_vars:
         #  - blah
         #  - blah
         #  - blah
+  - solver:
+        method: dynx_FE
+        id: 1
+
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+
 
 
 boundary_conditions:

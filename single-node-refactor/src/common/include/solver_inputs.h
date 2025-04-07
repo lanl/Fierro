@@ -55,10 +55,10 @@ static std::map<std::string, solver_input::method> solver_map
     { "dynx_FE_rz", solver_input::SGHRZ },
     { "thrmex_FE", solver_input::SGTM3D }
 };
-// quasi-static mechanics FE
-// quasi-static thermal-mechanical FE
-// quasi-static mechanical GF
-// quasi-static mechanical large-strain GF
+// quasi-static mechanics FE (qz-FE)
+// quasi-static thermal-mechanical FE  (qz-thmec-FE)
+// quasi-static mechanical GF (qz-GF)
+// quasi-static mechanical large-strain GF 
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -70,6 +70,8 @@ static std::map<std::string, solver_input::method> solver_map
 struct solver_input_t
 {
     solver_input::method method = solver_input::NONE;
+
+    double time_end = 0.0;
 }; // solver_input_t
 
 // ----------------------------------
@@ -78,7 +80,8 @@ struct solver_input_t
 static std::vector<std::string> str_solver_inps
 {
     "method",
-    "id"
+    "id",
+    "time_end"
 };
 
 // ----------------------------------

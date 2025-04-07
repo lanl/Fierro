@@ -67,13 +67,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // =================================================================================
 //    Parse Solver options
 // =================================================================================
-void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_input)
+void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_inputs)
 {
     Yaml::Node& solver_yaml = root["solver_options"];
 
     size_t num_solvers = solver_yaml.Size();
 
-    solver_input = std::vector<solver_input_t>(num_solvers);
+    solver_inputs = std::vector<solver_input_t>(num_solvers);
 
     // a check on solverl_id not being specified more than once or not at all
     CArray <bool> check_solver_ids(num_solvers);
@@ -138,7 +138,7 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
 
                 // set the method
                 if (map.find(method) != map.end()) {
-                    solver_input[solver_id].method = map[method];  // save it to solver_id value, input order may differ
+                    solver_inputs[solver_id].method = map[method];  // save it to solver_id value, input order may differ
                 }
                 else{
                     std::cout << "ERROR: invalid method option input in YAML file: " << method << std::endl;
@@ -152,6 +152,18 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
             } // method
             else if (a_word.compare("id") == 0) {
                 // do nothing, we already got the id
+            }
+            else if (a_word.compare("time_end") == 0){
+                // read input using s_id, save info to solver_id 
+                double t_end = root["solver_options"][s_id]["solver"]["time_end"].As<double>();
+
+                if (t_end<0){
+                    std::cout << "ERROR: invalid ending time specified in the solver definition " << std::endl;
+            
+                    throw std::runtime_error("**** Solver time is negative ****");
+                } // end check on time range
+
+                solver_inputs[solver_id].time_end = t_end;
             }
             // add solver_vars parsing here
             else {

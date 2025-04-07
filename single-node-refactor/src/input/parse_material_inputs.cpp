@@ -148,9 +148,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
         // read the variables names
         Yaml::Node& inps_yaml = root["materials"][m_id]["material"];
 
-        size_t num_vars_set = inps_yaml.Size();
-
-        std::cout << "Number of vars set =  "<< num_vars_set << std::endl;
 
         // get the material variables names set by the user
         std::vector<std::string> user_str_material_inps;

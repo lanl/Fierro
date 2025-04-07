@@ -430,7 +430,7 @@ public:
         size_t num_nodes = 0;
 
         fscanf(in, "%lu", &num_nodes);
-        printf("Number if nodes read in %lu\n", num_nodes);
+        printf("Number of nodes read in %lu\n", num_nodes);
 
         
         mesh.initialize_nodes(num_nodes);
@@ -657,7 +657,7 @@ public:
 
         size_t num_nodes = nodes.size();
 
-        printf("Number if nodes read in %lu\n", num_nodes);
+        printf("Number of nodes read in %lu\n", num_nodes);
 
         // initialize node variables
         mesh.initialize_nodes(num_nodes);
@@ -774,7 +774,7 @@ public:
             //      POINTS %d float
             if(v[0] == "POINTS"){
                 size_t num_nodes = std::stoi(v[1]);
-                printf("Num nodes read in %zu\n", num_nodes);
+                printf("Number of nodes read in %zu\n", num_nodes);
                 mesh.initialize_nodes(num_nodes);
 
                 std::vector<node_state> required_node_state = { node_state::coords };
@@ -840,7 +840,7 @@ public:
             //      CELLS num_elem size
             if(v[0] == "CELLS"){
                 num_elem = std::stoi(v[1]);
-                printf("Num elements read in %zu\n", num_elem);
+                printf("Number of elements read in %zu\n", num_elem);
 
                 // initialize elem variables
                 mesh.initialize_elems(num_elem, num_dims);
@@ -943,14 +943,14 @@ public:
             
             i++;
         } // end while
-        printf("elem type = %zu \n", elem_type);
+        printf("Element type = %zu \n", elem_type);
         // elem types:
         // linear hex = 12, linear quad = 9
         found=false;
         
         
         if(num_nodes_in_elem==8 & elem_type != 12) {
-            printf("wrong elem type of %zu \n", elem_type);
+            printf("Wrong element type of %zu \n", elem_type);
             std::cerr << "ERROR: incorrect element type in VTK file" << std::endl;
         }
         
@@ -1365,7 +1365,7 @@ public:
         corner_t& corner,
         SimulationParameters_t& SimulationParamaters) const
     {
-        printf(" Creating a 2D box mesh \n");
+        printf("Creating a 2D box mesh \n");
 
         const int num_dim = 2;
 
@@ -1498,7 +1498,7 @@ public:
         corner_t& corner,
         SimulationParameters_t& SimulationParamaters) const
     {
-        printf(" Creating a 2D polar mesh \n");
+        printf("Creating a 2D polar mesh \n");
 
         int num_dim     = 2;
         int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
@@ -1639,7 +1639,7 @@ public:
         corner_t& corner,
         SimulationParameters_t& SimulationParamaters) const
     {
-        printf(" Creating a 3D box mesh \n");
+        printf("Creating a 3D box mesh \n");
 
         const int num_dim = 3;
 
@@ -1799,7 +1799,7 @@ public:
         const int Pn_order = SimulationParamaters.mesh_input.p_order;
         
         if (Pn_order > 19) {
-            printf(" Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
+            printf("Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
             return;
         }
 
@@ -1985,7 +1985,8 @@ public:
         CArray<double> graphics_times,
         std::vector<node_state> node_states,
         std::vector<gauss_pt_state> gauss_pt_states,
-        std::vector<material_pt_state> material_pt_states)
+        std::vector<material_pt_state> material_pt_states,
+        const size_t solver_id)
     {
 
 
@@ -2668,9 +2669,21 @@ public:
             if (stat("vtk", &st) != 0) {
                 system("mkdir vtk");
             }
+            else{
+                if(solver_id==0){
+                    // delete the files inside
+                    system("rm vtk/Fierro*");
+                }
+            }
 
             if (stat("vtk/data", &st) != 0) {
                 system("mkdir vtk/data");
+            }
+            else{
+                if(solver_id==0){
+                    // delete the files inside the folder
+                    system("rm vtk/data/Fierro*");
+                }
             }
             
             // call the .vtu writer for element fields
@@ -2695,7 +2708,8 @@ public:
                     num_elems,
                     num_nodes_in_elem,
                     Pn_order,
-                    num_dims);
+                    num_dims,
+                    solver_id);
 
 
             // ********************************
@@ -2785,7 +2799,9 @@ public:
                                 num_mat_elems,
                                 num_nodes_in_elem,
                                 Pn_order,
-                                num_dims);
+                                num_dims,
+                                solver_id);
+
 
                         num_mat_files_written++;
 
@@ -2830,12 +2846,14 @@ public:
                     graphics_id,
                     num_mat_files_written,
                     write_mesh_state,
-                    write_mat_pt_state);
+                    write_mat_pt_state,
+                    solver_id);
 
             // call the pvd file writer
             write_pvd(graphics_times,
                     time_value,
-                    graphics_id);
+                    graphics_id,
+                    solver_id);
 
 
             // increment graphics id counter
@@ -4126,7 +4144,8 @@ public:
         const size_t num_elems,
         const size_t num_nodes_in_elem,
         const int Pn_order,
-        const size_t num_dims
+        const size_t num_dims,
+        const size_t solver_id
         )
     {
         FILE* out[20];   // the output files that are written to
@@ -4142,7 +4161,9 @@ public:
 
 
         // create filename
-        str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.%s.%05d.vtu", partname.c_str(), graphics_id);
+        str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%s.%05d.vtu", 
+                                                                 solver_id, partname.c_str(), graphics_id);
+
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
         // mesh file
         
@@ -4380,7 +4401,8 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void write_pvd(CArray<double>& graphics_times,
                    double time_value,
-                   int graphics_id){
+                   int graphics_id,
+                   const size_t solver_id){
 
         FILE* out[20];   // the output files that are written to
         char  filename[100]; // char string
@@ -4388,7 +4410,8 @@ public:
         int   str_output_len;
 
         // Write time series metadata
-        str_output_len = snprintf(filename, max_len, "vtk/Fierro.pvd"); 
+        str_output_len = snprintf(filename, max_len, "vtk/Fierro.solver%zu.pvd", solver_id); 
+
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
         // mesh file
 
@@ -4399,7 +4422,8 @@ public:
         fprintf(out[0], "  <Collection>\n");
 
         for (int i = 0; i <= graphics_id; i++) {
-            fprintf(out[0], "    <DataSet timestep=\"%d\" file=\"data/Fierro.%05d.vtm\" time= \"%12.5e\" />\n", i, i, graphics_times(i) );
+            fprintf(out[0], "    <DataSet timestep=\"%d\" file=\"data/Fierro.solver%zu.%05d.vtm\" time= \"%12.5e\" />\n", 
+                                                     i, solver_id, i, graphics_times(i) );
         }
 
         fprintf(out[0], "  </Collection>\n");
@@ -4429,7 +4453,8 @@ public:
                    int graphics_id,
                    int num_mats,
                    bool write_mesh_state,
-                   bool write_mat_pt_state)
+                   bool write_mat_pt_state,
+                   const size_t solver_id)
     {
         // loop over all the files that were written 
         for(int file_id=0; file_id<=graphics_id; file_id++){
@@ -4441,7 +4466,8 @@ public:
 
 
             // Write time series metadata to the data file
-            str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.%05d.vtm", file_id); 
+            str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id); 
+
             if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
             // mesh file
 
@@ -4461,7 +4487,8 @@ public:
 
                     // elem and nodal fields are in this file
                     fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.%s.%05d.vtu\" time= \"%12.5e\" />\n", file_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
+                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s.%05d.vtu\" time= \"%12.5e\" />\n", 
+                                                              file_id, solver_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
                     fprintf(out[0], "      </Piece>\n");
 
                     // add other Mesh average output Pieces here
@@ -4476,7 +4503,8 @@ public:
                     
                     // output the material specific fields
                     fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", file_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
+                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", 
+                                                               file_id, solver_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
                     fprintf(out[0], "      </Piece>\n");
 
                 } // end for loop mat_id

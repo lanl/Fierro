@@ -55,4 +55,84 @@ void SGTM3D::initialize(SimulationParameters_t& SimulationParamaters,
     State.corner.initialize(num_corners, num_dim, SGTM3D_State::required_corner_state);
     
     // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
+
+        // check that the fills specify the required nodal fields
+    bool filled_nodal_state =
+        check_fill_node_states(SGTM3D_State::required_fill_node_state,
+                               SimulationParamaters.region_setups.fill_node_states);
+    
+    if (filled_nodal_state == false){
+        std::cout <<" Missing required nodal state in the fill instructions for the thrmex_FE solver \n";
+        std::cout <<" The required nodal state: \n";
+        std::cout <<"  - velocity \n";
+        std::cout <<"  - temperature \n";
+        throw std::runtime_error("**** Provide fill instructions for all required nodal variables ****");
+    }
+} // end solver initialization
+
+
+void SGTM3D::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+                	                  Material_t& Materials, 
+                	                  Mesh_t& mesh, 
+                	                  BoundaryCondition_t& Boundary,
+                	                  State_t& State) const
+{
+
+    const size_t num_nodes = mesh.num_nodes;
+    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+    const size_t num_dims = 3;
+
+    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
+
+    // -----
+    //  Allocation of state must include a buffer with ALE
+    // -----
+
+    // IMPORTANT, make buffer a parser input variable
+    // for ALE, add a buffer to num_elems_for_mat, like 10% of num_elems up to num_elems.
+    const size_t buffer = 0; // memory buffer to push back into
+
+    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+        const size_t num_mat_pts_in_elem = mesh.num_leg_gauss_in_elem; 
+
+        size_t num_elems_for_mat = State.MaterialToMeshMaps(mat_id).num_material_elems + buffer; // has a memory buffer for ALE
+
+        size_t num_points_for_mat  = num_elems_for_mat * num_mat_pts_in_elem;
+        size_t num_corners_for_mat = num_elems_for_mat * mesh.num_nodes_in_elem;
+
+        State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat);
+        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3, SGTM3D_State::required_material_pt_state); // aways 3D, even for 2D-RZ calcs
+        State.MaterialCorners(mat_id).initialize(num_corners_for_mat, mesh.num_dims, SGTM3D_State::required_material_corner_state);
+        // zones are not used
+
+    } // end for mat_id
+
+    // check that the fills specify the required material point state fields
+    bool filled_material_state_A =
+        check_fill_mat_states(SGTM3D_State::required_optA_fill_material_pt_state,
+                              SimulationParamaters.region_setups.fill_gauss_states);
+    bool filled_material_state_B =
+        check_fill_mat_states(SGTM3D_State::required_optB_fill_material_pt_state,
+                              SimulationParamaters.region_setups.fill_gauss_states);
+    
+    // --- full stress tensor is not yet supported in region_fill ---
+    //bool filled_material_state_C =
+    //    check_fill_mat_states(SGTM3D_State::required_optC_fill_material_pt_state,
+    //                                 SimulationParamaters.region_setups.fill_gauss_states);
+
+    if (filled_material_state_A == false &&
+        filled_material_state_B == false){
+        std::cout <<" Missing required material state in the fill instructions for the thrmex_FE solver \n";
+        std::cout <<" The required state: \n";
+        std::cout <<"  - density \n";
+        std::cout <<"  - thermal conductivity \n";
+        std::cout <<"  - specific heat \n";
+        std::cout <<"  - specific or extensive internal energy \n" << std::endl;
+        throw std::runtime_error("**** Provide fill instructions for all required material point variables ****");
+    }
+    
+    // NOTE: Material points are populated in the material_state_setup function
+
+    return;
 }
