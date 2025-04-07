@@ -55,7 +55,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     Mesh_t& mesh, 
                     State_t& State)
 {
-    std::cout << "In execute function in SGHTM solver" << std::endl;
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
     // double tiny  = SimulationParamaters.dynamic_options.tiny;
@@ -65,7 +64,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
 
     // double time_initial = SimulationParamaters.dynamic_options.time_initial;
-    double time_final   = SimulationParamaters.dynamic_options.time_final;
+    double time_final = this->time_end; // SimulationParamaters.dynamic_options.time_final;
     double dt_min   = SimulationParamaters.dynamic_options.dt_min;
     double dt_max   = SimulationParamaters.dynamic_options.dt_max;
     double dt_start = SimulationParamaters.dynamic_options.dt_start;
@@ -75,7 +74,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     int cycle_stop    = SimulationParamaters.dynamic_options.cycle_stop;
 
     // initialize time, time_step, and cycles
-    double time_value = 0.0;
+    double time_value = this->time_start; // 0.0;
     double dt = dt_start;
 
     // Create mesh writer
@@ -83,8 +82,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // --- Graphics vars ----
     CArray<double> graphics_times = CArray<double>(20000);
-    graphics_times(0) = 0.0;
-    double graphics_time = 0.0; // the times for writing graphics dump
+    graphics_times(0) = this->time_start; // was zero
+    double graphics_time = this->time_start; // the times for writing graphics dump, was zero
 
     std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value); // Time value = 0.0;
@@ -126,7 +125,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         graphics_times,
         SGTM3D_State::required_node_state,
         SGTM3D_State::required_gauss_pt_state,
-        SGTM3D_State::required_material_pt_state);
+        SGTM3D_State::required_material_pt_state,
+        this->solver_id);
     
     graphics_time = time_value + graphics_dt_ival;
 
@@ -156,7 +156,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // sphere_position.host(1) = 0.05;
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        State.node.q_flux(node_gid) = 0.0;
+        State.node.q_transfer(node_gid) = 0.0;
     }); // end for parallel for over nodes
     sphere_position.update_device();
 
@@ -219,12 +219,13 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // ---- Initialize the state for the RK integration scheme ---- //
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-            
+
+std::cout << "checking: rk_init \n";
             // save the values at t = n
             rk_init(State.node.coords,
                     State.node.vel,
                     State.node.temp,
-                    State.node.q_flux,
+                    State.node.q_transfer,
                     State.MaterialPoints(mat_id).stress,
                     mesh.num_dims,
                     mesh.num_elems,
@@ -239,7 +240,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- Initialize the nodal flux to zero for this RK stage ---- //
             FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                State.node.q_flux(node_gid) = 0.0;
+                State.node.q_transfer(node_gid) = 0.0;
             }); // end for parallel for over nodes
 
             // ---- Calculate the corner heat flux from conduction per material ---- //
@@ -247,6 +248,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
+std::cout << "checking: get_heat_flux \n";
                 get_heat_flux(
                     Materials,
                     mesh,
@@ -256,7 +258,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.MaterialPoints(mat_id).q_flux,
                     State.MaterialPoints(mat_id).conductivity,
                     State.MaterialPoints(mat_id).temp_grad,
-                    State.corner.q_flux,
+                    State.corner.q_transfer,
                     State.corners_in_mat_elem,
                     State.MaterialPoints(mat_id).eroded,
                     State.MaterialToMeshMaps(mat_id).elem,
@@ -268,12 +270,13 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     rk_alpha);
 
                 // ---- Calculate the corner heat flux from moving volumetric heat source ----
+std::cout << "checking: moving_flux \n";
                 moving_flux(
                     Materials,
                     mesh,
                     State.GaussPoints.vol,
                     State.node.coords,
-                    State.corner.q_flux,
+                    State.corner.q_transfer,
                     sphere_position,
                     State.corners_in_mat_elem,
                     State.MaterialToMeshMaps(mat_id).elem,
@@ -288,16 +291,18 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             } // end for mat_id
 
             // ---- apply flux boundary conditions (convection/radiation)  ---- //
-            boundary_convection(mesh, BoundaryConditions, State.node.temp, State.node.q_flux, State.node.coords, time_value);
-            boundary_radiation(mesh, BoundaryConditions, State.node.temp, State.node.q_flux, State.node.coords, time_value);
+std::cout << "checking: applying BCs \n";
+            boundary_convection(mesh, BoundaryConditions, State.node.temp, State.node.q_transfer, State.node.coords, time_value);
+            boundary_radiation(mesh, BoundaryConditions, State.node.temp, State.node.q_transfer, State.node.coords, time_value);
 
+std::cout << "update temperature \n";
             // ---- Update nodal temperature ---- //
             update_temperature(
                 mesh,
-                State.corner.q_flux,
+                State.corner.q_transfer,
                 State.node.temp,
                 State.node.mass,
-                State.node.q_flux,
+                State.node.q_transfer,
                 State.MaterialPoints(0).specific_heat, // Note: Need to make this a node field, and calculate in the material loop
                 rk_alpha,
                 dt);
@@ -368,7 +373,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                                    graphics_times,
                                    SGTM3D_State::required_node_state,
                                    SGTM3D_State::required_gauss_pt_state,
-                                   SGTM3D_State::required_material_pt_state);
+                                   SGTM3D_State::required_material_pt_state,
+                                   this->solver_id);
 
             graphics_time = time_value + graphics_dt_ival;
         } // end if

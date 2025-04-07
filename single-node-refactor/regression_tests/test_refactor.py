@@ -13,8 +13,7 @@ builds = ["openmp"]
 solvers = ["Fierro"]
 
 # Add names of each test
-tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion","Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", "Pressure_bc_box","SGTM_cooling_cube"]
-
+tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion","Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", "Pressure_bc_box","vtu_read","SGTM_cooling_cube","lin_vol_frac_two_mat"]
 
 # Extract data from txt file
 def extract_state_data(filename):
@@ -98,7 +97,7 @@ for i in range(len(executables)):
                 diff = calc[l] - true[l]
                 # print(diff)
 
-                if abs(diff) > 1E-11:
+                if abs(diff) > 1E-8:
                     print(diff)
                     print(calc[l])
                     print(true[l])

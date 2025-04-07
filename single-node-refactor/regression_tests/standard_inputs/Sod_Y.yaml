@@ -22,7 +22,7 @@ output_options:
 
 solver_options:
     - solver:
-        method: SGH3D
+        method: dynx_FE
         id: 0
 
 boundary_conditions:
@@ -124,9 +124,14 @@ regions:
     - region:
         volume:
             type: global
+        solver_id: 0
         material_id: 0
-        den: 1.0
-        sie: 2.5
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 2.5
         velocity: 
             type: cartesian
             u: 0.0
@@ -142,6 +147,11 @@ regions:
             y2: 1.0
             z1: 0.0
             z2: 0.01
+        solver_id: 0
         material_id: 0
-        den: 0.125
-        sie: 2
+        density: 
+            type: uniform
+            value: 0.125
+        specific_internal_energy: 
+            type: uniform
+            value: 2

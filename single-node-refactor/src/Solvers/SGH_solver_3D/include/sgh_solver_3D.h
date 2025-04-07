@@ -60,7 +60,6 @@ namespace SGH3D_State
         node_state::velocity,
         node_state::mass,
         node_state::force,
-        node_state::temp // Note, remove this, unused WIP
     };
 
     // Gauss point state to be initialized for the SGH solver
@@ -76,10 +75,10 @@ namespace SGH3D_State
         material_pt_state::density,
         material_pt_state::pressure,
         material_pt_state::stress,
+        material_pt_state::specific_internal_energy,
         material_pt_state::sound_speed,
         material_pt_state::mass,
         material_pt_state::volume_fraction,
-        material_pt_state::specific_internal_energy,
         material_pt_state::eroded_flag,
         material_pt_state::shear_modulii
     };
@@ -96,6 +95,34 @@ namespace SGH3D_State
         corner_state::force,
         corner_state::mass
     };
+
+    // --- checks on fill instructions ---
+    // Node state that must be filled (setup) for the SGH solver
+    static const std::vector<fill_node_state> required_fill_node_state = 
+    { 
+        fill_node_state::velocity
+    };
+
+    // Material point state that must be filled (setup) for the SGH solver
+    // option A
+    static const std::vector<fill_gauss_state> required_optA_fill_material_pt_state = 
+    { 
+       fill_gauss_state::density,
+       fill_gauss_state::specific_internal_energy
+    };
+    // option B
+    static const std::vector<fill_gauss_state> required_optB_fill_material_pt_state = 
+    { 
+       fill_gauss_state::density,
+       fill_gauss_state::internal_energy
+    };
+    // option C
+    static const std::vector<fill_gauss_state> required_optC_fill_material_pt_state = 
+    { 
+       fill_gauss_state::density,
+       fill_gauss_state::stress
+    };
+    // -------------------------------------
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -119,12 +146,25 @@ public:
 
     ~SGH3D() = default;
 
-    // Initialize data specific to the SGH3D solver
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn Initialize
+    ///
+    /// \brief Initializes data associated with the SGH3D solver
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
+
+
+    void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+                	               Material_t& Materials, 
+                	               Mesh_t& mesh, 
+                	               BoundaryCondition_t& Boundary,
+                	               State_t& State) const override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -176,27 +216,7 @@ public:
         // Any finalize goes here, remove allocated memory, etc
     }
 
-    // **** Functions defined in sgh_setup.cpp **** //
-    void fill_regions_sgh(
-        const Material_t& Materials,
-        const Mesh_t&     mesh,
-        const DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& GaussPoint_den,
-        DCArrayKokkos<double>& GaussPoint_sie,
-        DCArrayKokkos<size_t>& elem_mat_id,
-        DCArrayKokkos<size_t>& voxel_elem_mat_id,
-        const CArrayKokkos<RegionFill_t>& region_fills,
-        const CArray<RegionFill_host_t>&  region_fills_host,
-        const size_t num_fills,
-        const size_t num_elems,
-        const size_t num_nodes,
-        const size_t rk_num_bins) const;
-
-    void init_corner_node_masses_zero(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& corner_mass) const;
+   
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(
@@ -308,6 +328,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,

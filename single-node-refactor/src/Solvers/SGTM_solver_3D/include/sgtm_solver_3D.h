@@ -60,7 +60,7 @@ namespace SGTM3D_State
         node_state::velocity,
         node_state::mass,
         node_state::temp,
-        node_state::q_flux
+        node_state::heat_transfer
     };
 
     // Gauss point state to be initialized for the SGH solver
@@ -89,7 +89,7 @@ namespace SGTM3D_State
     // Material corner state to be initialized for the SGH solver
     static const std::vector<material_corner_state> required_material_corner_state = 
     { 
-        material_corner_state::force,
+        material_corner_state::force
     };
 
     // Corner state to be initialized for the SGH solver
@@ -97,8 +97,43 @@ namespace SGTM3D_State
     { 
         corner_state::force,
         corner_state::mass,
-        corner_state::heat_flux
+        corner_state::heat_transfer
     };
+
+    // --- checks on fill instructions ---
+    // Node state that must be filled (setup) for the SGTM solver
+    static const std::vector<fill_node_state> required_fill_node_state = 
+    { 
+        fill_node_state::velocity,
+        fill_node_state::temperature
+    };
+
+    // Material point state that must be filled (setup) for the SGTM solver
+    // option A
+    static const std::vector<fill_gauss_state> required_optA_fill_material_pt_state = 
+    { 
+       fill_gauss_state::density,
+       fill_gauss_state::specific_internal_energy,
+       fill_gauss_state::thermal_conductivity,
+       fill_gauss_state::specific_heat
+    };
+    // option B
+    static const std::vector<fill_gauss_state> required_optB_fill_material_pt_state = 
+    { 
+       fill_gauss_state::density,
+       fill_gauss_state::internal_energy,
+       fill_gauss_state::thermal_conductivity,
+       fill_gauss_state::specific_heat
+    };
+    // option C
+    static const std::vector<fill_gauss_state> required_optC_fill_material_pt_state = 
+    { 
+       fill_gauss_state::density,
+       fill_gauss_state::stress,
+       fill_gauss_state::thermal_conductivity,
+       fill_gauss_state::specific_heat
+    };
+    // -------------------------------------
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -122,12 +157,24 @@ public:
 
     ~SGTM3D() = default;
 
-    // Initialize data specific to the SGTM3D solver
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn Initialize
+    ///
+    /// \brief Initializes data associated with the SGTM solver
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
+
+    void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+                	               Material_t& Materials, 
+                	               Mesh_t& mesh, 
+                	               BoundaryCondition_t& Boundary,
+                	               State_t& State) const override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -178,31 +225,6 @@ public:
     {
         // Any finalize goes here, remove allocated memory, etc
     }
-
-    // Helper setup routine that unpacks SimulationParameters to fix GPU compile warnings
-    void setup_sgtm(
-        SimulationParameters_t& SimulationParamaters,
-        CArrayKokkos<RegionFill_t>& region_fills,
-        Material_t& Materials,
-        Mesh_t& mesh, 
-        BoundaryCondition_t& Boundary,
-        State_t& State) const;
-
-    // **** Functions defined in sgtm_setup.cpp **** //
-    void tag_regions(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos <size_t>& elem_mat_id,
-        DCArrayKokkos <size_t>& voxel_elem_mat_id,
-        DCArrayKokkos <size_t>& elem_region_id,
-        DCArrayKokkos <size_t>& node_region_id,
-        const CArrayKokkos<RegionFill_t>& region_fills,
-        const CArray<RegionFill_host_t>&  region_fills_host) const;
-
-    void init_corner_node_masses_zero(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& corner_mass) const;
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_temperature(

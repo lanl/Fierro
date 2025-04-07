@@ -55,8 +55,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     Mesh_t& mesh, 
                     State_t& State)
 {
-    std::cout << "In execute function in SGH3D solver" << std::endl;
-
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
     // double tiny  = SimulationParamaters.dynamic_options.tiny;
@@ -66,7 +64,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
 
     // double time_initial = SimulationParamaters.dynamic_options.time_initial;
-    double time_final   = SimulationParamaters.dynamic_options.time_final;
+    double time_final   = this->time_end; //SimulationParamaters.dynamic_options.time_final;
     double dt_min   = SimulationParamaters.dynamic_options.dt_min;
     double dt_max   = SimulationParamaters.dynamic_options.dt_max;
     double dt_start = SimulationParamaters.dynamic_options.dt_start;
@@ -76,7 +74,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     int cycle_stop    = SimulationParamaters.dynamic_options.cycle_stop;
 
     // initialize time, time_step, and cycles
-    double time_value = 0.0;
+    double time_value = this->time_start;  // was 0.0
     double dt = dt_start;
 
     // Create mesh writer
@@ -84,8 +82,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // --- Graphics vars ----
     CArray<double> graphics_times = CArray<double>(20000);
-    graphics_times(0) = 0.0;
-    double graphics_time = 0.0; // the times for writing graphics dump
+    graphics_times(0) = this->time_start; // was zero
+    double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
 
     std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
@@ -154,7 +152,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         graphics_times,
         SGH3D_State::required_node_state,
         SGH3D_State::required_gauss_pt_state,
-        SGH3D_State::required_material_pt_state);
+        SGH3D_State::required_material_pt_state,
+        this->solver_id);
     
 
 
@@ -225,6 +224,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.MaterialPoints(mat_id).num_material_points);
         } // end for mat_id
 
+
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
             // ---- RK coefficient ----
@@ -244,7 +244,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
                 size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
 
                 get_force(Materials,
                           mesh,
@@ -375,6 +374,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                              State.MaterialPoints(mat_id).stress,
                              State.MaterialPoints(mat_id).sspd,
                              State.MaterialPoints(mat_id).sie,
+                             State.MaterialPoints(mat_id).volfrac,
                              State.GaussPoints.vol,
                              State.MaterialPoints(mat_id).mass,
                              State.MaterialPoints(mat_id).eos_state_vars,
@@ -426,7 +426,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                    graphics_times,
                                    SGH3D_State::required_node_state,
                                    SGH3D_State::required_gauss_pt_state,
-                                   SGH3D_State::required_material_pt_state);
+                                   SGH3D_State::required_material_pt_state,
+                                   this->solver_id);
 
             graphics_time = time_value + graphics_dt_ival;
 

@@ -1,0 +1,51 @@
+{% set version = "1.0.0" %}
+{% set linux_compiler_version = "10.4.0" %}
+{% set macos_compiler_version = "16" %}
+
+package:
+  name: fierro-ls-evpfft-j2-cuda
+  version: {{ version }}
+
+source:
+  git_url: https://github.com/lanl/Fierro.git
+  git_depth: 1
+
+build:
+  number: 1
+  noarch: False
+  script_env:
+    - PLATFORM={{ target_platform }}
+  skip: True  # [osx]
+  skip: False # [linux]
+
+requirements:
+  build:
+    - cmake >=3.17.0
+    - {{ compiler('c') }}={{ linux_compiler_version }}
+    - {{ compiler('cxx') }}={{ linux_compiler_version }}
+    - cuda-compiler
+    - openmpi
+  host:
+    - cuda-toolkit
+    - openmpi >=4.1.6,<5.0a0
+    - heffte-cuda
+    - hdf5=*=mpi_openmpi_h457a7a6_3
+    - elements
+  run:
+    - openmpi >=4.1.6,<5.0a0
+    - heffte-cuda
+    - hdf5=*=mpi_openmpi_h457a7a6_3
+    - elements
+
+about:
+  home: https://github.com/lanl/Fierro
+  license: BSD-3-Clause
+  license_family: BSD
+  license_file: LICENSE
+  summary:
+  description:
+  dev_url: https://github.com/lanl/Fierro
+
+extra:
+  recipe-maintainers:
+    - fierromechanics

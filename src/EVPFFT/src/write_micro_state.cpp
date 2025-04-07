@@ -1060,7 +1060,7 @@ void EVPFFT::write_micro_state_pvtu()
     }
   }
   //  VM stress
-  calculate_vm_field(sg, vm_field, 1);
+  calculate_vm_field(sg, vm_field, 0);
   data_block_size = num_cells*sizeof(double);
   out.write((char *) &data_block_size,block_header_size);
   for (int kz = 1; kz <= npts3; kz++){

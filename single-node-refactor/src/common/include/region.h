@@ -37,6 +37,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <map>
 
+#include "matar.h"
+
+#include "state.h"
+
 #include "initial_conditions.h"
 
 // ==============================================================================
@@ -44,19 +48,20 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ==============================================================================
 namespace region
 {
-// for tagging volumes to paint material onto the mesh
-enum vol_tag
-{
-    no_volume = 0,
-    global = 1,             ///< tag every elements in the mesh
-    box = 2,                ///< tag all elements inside a box
-    cylinder = 3,           ///< tag all elements inside a cylinder
-    sphere = 4,             ///< tag all elements inside a sphere
-    readVoxelFile = 5,      ///< tag all elements in a voxel mesh (structured VTK)
-    readPolycrystalFile = 6,///< tag all elements in a polycrystallince voxel mesh (structured VTK)
-    readSTLFile = 7,        ///< read a STL file and voxelize it
-    readVTKFile = 8,        ///< tag all elements in a VTK mesh (unstructured mesh)
-};
+    // for tagging volumes to paint material onto the mesh
+    enum vol_tag
+    {
+        no_volume = 0,
+        global = 1,             ///< tag every elements in the mesh
+        box = 2,                ///< tag all elements inside a box
+        cylinder = 3,           ///< tag all elements inside a cylinder
+        sphere = 4,             ///< tag all elements inside a sphere
+        readVoxelFile = 5,      ///< tag all elements in a voxel mesh (structured VTK)
+        readPolycrystalFile = 6,///< tag all elements in a polycrystallince voxel mesh (structured VTK)
+        readSTLFile = 7,        ///< read a STL file and voxelize it
+        readVTUFile = 8,        ///< tag elements in an unstructured .vtu mesh with object_ids
+    };
+    
 } // end of namespace
 
 static std::map<std::string, region::vol_tag> region_type_map
@@ -65,8 +70,10 @@ static std::map<std::string, region::vol_tag> region_type_map
     { "box", region::box },
     { "sphere", region::sphere },
     { "cylinder", region::cylinder },
-    { "voxel_file", region::readVoxelFile }
+    { "voxel_file", region::readVoxelFile },
+    { "vtu_file", region::readVTUFile}
 };
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -79,6 +86,9 @@ struct RegionFill_t
 {
     // type
     region::vol_tag volume; ///< Type of volume for this region eg. global, box, sphere, planes, etc.
+
+    // solver id
+    size_t solver_id; ///< solver ID for this region
 
     // material id
     size_t material_id; ///< Material ID for this region
@@ -95,11 +105,29 @@ struct RegionFill_t
     double radius1 = 0.0;   ///< Inner radius to fill for sphere
     double radius2 = 0.0;   ///< Outer radius to fill for sphere
 
-    // initial condition velocity distribution
-    init_conds::init_velocity_conds velocity;  ///< Initial conditions for this region
+    // initial condition for velocity 
+    init_conds::init_vector_conds vel_field = init_conds::noICsVec;  ///< ICs for velocity in this region
 
-    // initial condition temperature distribution
-    init_conds::init_velocity_conds temp_distribution;
+    // initial conditions for density
+    init_conds::init_scalar_conds den_field = init_conds::noICsScalar;
+
+    // initial conditions for specific internal energy
+    init_conds::init_scalar_conds sie_field = init_conds::noICsScalar;
+
+    // initial conditions for specific internal energy
+    init_conds::init_scalar_conds ie_field = init_conds::noICsScalar;
+
+    // initial condition for temperature distribution
+    init_conds::init_scalar_conds temperature_field= init_conds::noICsScalar;
+
+    // initial condition for thermal conductivity distribution
+    init_conds::init_scalar_conds thermal_conductivity_field= init_conds::noICsScalar;
+
+    // initial condition for specific heat distribution
+    init_conds::init_scalar_conds specific_heat_field= init_conds::noICsScalar;
+
+    // initial condition for volume fraction distribution
+    init_conds::init_scalar_conds volfrac_field = init_conds::uniform;
 
     // velocity coefficients by component
     double u = 0.0; ///< U component of velocity
@@ -108,15 +136,22 @@ struct RegionFill_t
 
     double speed = 0.0; ///< velocity magnitude for radial velocity initialization
 
-    double temperature = 0.0; ///< temperature magnitude for radial velocity initialization
+    double temperature = 0.0; ///< temperature magnitude for initialization
 
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
-    double specific_heat = 0.0;
-    double thermal_conductivity = 0.0;
+
+    // note: setup applies min and max fcns, making it [0:1]
+    double volfrac = 1.0; ///< volume fraction of material field
+    double volfrac_slope = 0.0; ///< slope of volume fraction field
+
+    double specific_heat = 0.0; ///< specific heat
+    double thermal_conductivity = 0.0; ///< thermal conductivity
 
     double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region
+
+    int part_id = 1; // object_id in the .vtu file, starts at 1 and goes to N parts
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -136,20 +171,44 @@ struct RegionFill_host_t
     double scale_z = 1.0;
 };
 
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct SolverRegionSetup_t
+///
+/// \brief Contains kokkos arrays of fill instructions for the regions
+///
+/////////////////////////////////////////////////////////////////////////////
+struct SolverRegionSetup_t
+{
+    mtr::DCArrayKokkos<size_t> reg_fills_in_solver;     // (solver_id, fill_lid)
+    mtr::DCArrayKokkos<size_t> num_reg_fills_in_solver; // (solver_id)
+
+    mtr::CArrayKokkos<RegionFill_t> region_fills;      ///< Region data for simulation mesh, set the initial conditions
+    mtr::CArray<RegionFill_host_t> region_fills_host;  ///< Region data on CPU, set the initial conditions
+
+    // vectors storing what state is to be filled on the mesh
+    std::vector <fill_gauss_state> fill_gauss_states; ///< Enums for the state at guass_pts, which live under the mat_pts
+    std::vector <fill_node_state>  fill_node_states;  ///< Enums for the state at nodes
+};
+
+
 // ----------------------------------
 // valid inputs for a material fill
 // ----------------------------------
 static std::vector<std::string> str_region_inps
 {
     "volume",
+    "solver_id",
     "material_id",
+    "volume_fraction",
     "velocity",
     "temperature",
+    "density",
     "specific_heat",
     "thermal_conductivity",
-    "sie",
-    "ie",
-    "den",
+    "specific_internal_energy",
+    "internal_energy"
 };
 
 // ---------------------------------------------------------
@@ -170,7 +229,8 @@ static std::vector<std::string> str_region_volume_inps
     "scale_x",
     "scale_y",
     "scale_z",
-    "origin"
+    "origin",
+    "part_id"
 };
 
 // ---------------------------------------------------------------------
@@ -183,6 +243,72 @@ static std::vector<std::string> str_region_vel_inps
     "v",
     "w",
     "speed"
+};
+
+// ---------------------------------------------------------------------
+// valid inputs for filling den, these are subfields under den
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_den_inps
+{
+    "type",
+    "value"
+};
+
+// ---------------------------------------------------------------------
+// valid inputs for filling sie, these are subfields under sie
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_sie_inps
+{
+    "type",
+    "value"
+};
+
+// ---------------------------------------------------------------------
+// valid inputs for filling ie, these are subfields under ie
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_ie_inps
+{
+    "type",
+    "value"
+};
+
+// ---------------------------------------------------------------------
+// valid inputs for filling temperature, these are subfields under tempature
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_temperature_inps
+{
+    "type",
+    "value"
+};
+
+// ---------------------------------------------------------------------
+// valid inputs for filling specific heat, these are subfields under specific heat
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_specific_heat_inps
+{
+    "type",
+    "value"
+};
+
+// ---------------------------------------------------------------------
+// valid inputs for filling thermal conductivity, these are subfields under thermal conductivity
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_thermal_conductivity_inps
+{
+    "type",
+    "value"
+};
+
+
+// ---------------------------------------------------------------------
+// valid inputs for filling volfrac, these are subfields under volume fuction
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_volfrac_inps
+{
+    "type",
+    "value",
+    "slope",
+    "origin"
 };
 
 // ----------------------------------
@@ -207,6 +333,62 @@ static std::vector<std::string> region_volume_required_inps
 // required inputs for filling velocity
 // -------------------------------------
 static std::vector<std::string> region_vel_required_inps
+{
+    "type"
+};
+
+// -------------------------------------
+// required inputs for filling density
+// -------------------------------------
+static std::vector<std::string> region_den_required_inps
+{
+    "type"
+};
+
+// -------------------------------------
+// required inputs for filling sie
+// -------------------------------------
+static std::vector<std::string> region_sie_required_inps
+{
+    "type"
+};
+
+// -------------------------------------
+// required inputs for filling ie
+// -------------------------------------
+static std::vector<std::string> region_ie_required_inps
+{
+    "type"
+};
+
+// -------------------------------------
+// required inputs for filling temperature
+// -------------------------------------
+static std::vector<std::string> region_temperature_required_inps
+{
+    "type"
+};
+
+// -------------------------------------
+// required inputs for filling specific heat
+// -------------------------------------
+static std::vector<std::string> region_specific_heat_required_inps
+{
+    "type"
+};
+
+// -------------------------------------
+// required inputs for filling thermal conductivity
+// -------------------------------------
+static std::vector<std::string> region_thermal_conductivity_required_inps
+{
+    "type"
+};
+
+// -------------------------------------
+// required inputs for filling volume fraction
+// -------------------------------------
+static std::vector<std::string> region_volfrac_required_inps
 {
     "type"
 };

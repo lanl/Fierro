@@ -1,4 +1,4 @@
-{% set version = "1.0.0" %}
+{% set version = "2.0.0" %}
 {% set linux_compiler_version = "10.4.0" %}
 {% set macos_compiler_version = "16" %}
 # We need the same MPI version in build + host. 
@@ -13,6 +13,7 @@ package:
 source:
   git_url: https://github.com/lanl/Fierro.git
   git_depth: 1
+  git_submodules: false # don't need submodules 
 
 build:
   number: 2
@@ -28,15 +29,16 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('fortran') }}
     - openmpi
+    #- elements-cpu
   host:
     - _openmp_mutex # [linux]
     - llvm-openmp   # [osx]
-    - fierro-trilinos-cpu
-    - elements
-    - openmpi
+    - trilinos-cpu
+    #- elements-cpu
+    - openmpi >=4.1.6,<5.0a0
   run:
-    - fierro-trilinos-cpu
-    - openmpi
+    - trilinos-cpu
+    - openmpi >=4.1.6,<5.0a0
 
 about:
   home: https://github.com/lanl/Fierro

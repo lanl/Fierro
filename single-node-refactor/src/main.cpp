@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -39,6 +39,8 @@
 
 #include "matar.h"
 #include "driver.h"
+#include "parse_tools.hpp"
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -55,10 +57,17 @@ int main(int argc, char* argv[])
         std::cout << "\n\n**********************************\n\n";
         std::cout << " ERROR:\n";
         std::cout << " Please supply a YAML input, \n";
-        std::cout << "   ./mesh-builder input.yaml \n\n";
+        std::cout << "   ./Fierro input.yaml \n\n";
         std::cout << "**********************************\n\n" << std::endl;
         return 0;
     } // end if
+
+    if (std::string(argv[1]) == "--help"){
+
+        print_inputs();
+
+        return 0;
+    }
 
     Kokkos::initialize();
     {

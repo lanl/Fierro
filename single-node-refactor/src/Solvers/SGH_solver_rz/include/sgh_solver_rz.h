@@ -59,8 +59,7 @@ namespace SGHRZ_State
     { 
         node_state::coords,
         node_state::velocity,
-        node_state::mass,
-        node_state::temp // Note, remove this, unused WIP
+        node_state::mass
     };
 
     // Gauss point state to be initialized for the SGH solver
@@ -132,6 +131,12 @@ public:
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
 
+    void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+                	               Material_t& Materials, 
+                	               Mesh_t& mesh, 
+                	               BoundaryCondition_t& Boundary,
+                	               State_t& State) const override;
+                                   
     /////////////////////////////////////////////////////////////////////////////
     ///
     /// \fn setup
@@ -182,22 +187,6 @@ public:
         // Any finalize goes here, remove allocated memory, etc
     }
 
-    // **** Functions defined in SGHRZ_setup.cpp **** //
-    void fill_regions_sgh_rz(
-        const Material_t& Materials,
-        const Mesh_t& mesh,
-        const DCArrayKokkos <double>& node_coords,
-        DCArrayKokkos <double>& node_vel,
-        DCArrayKokkos <double>& GaussPoint_den,
-        DCArrayKokkos <double>& GaussPoint_sie,
-        DCArrayKokkos <size_t>& elem_mat_id,
-        DCArrayKokkos <size_t>& voxel_elem_mat_id,
-        const CArrayKokkos <RegionFill_t>& region_fills,
-        const CArray <RegionFill_host_t>& region_fills_host,
-        const size_t num_fills,
-        const size_t num_elems,
-        const size_t num_nodes,
-        const size_t rk_num_bins) const;
                         
     void init_corner_node_masses_zero_rz(
         const Mesh_t& mesh,

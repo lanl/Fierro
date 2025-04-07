@@ -45,6 +45,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.h"
 #include "dynamic_options.h"
 
+using namespace mtr;
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \struct simulation_parameters_t
@@ -62,9 +64,8 @@ struct SimulationParameters_t
 
     std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
 
-    CArrayKokkos<RegionFill_t> region_fills;  ///< Region data for simulation mesh, set the initial conditions
+    SolverRegionSetup_t region_setups;  ///< region fills across all solvers
 
-    CArray<RegionFill_host_t> region_fills_host;  ///< Region data on CPU, set the initial conditions
 }; // simulation_parameters_t
 
 #endif // end Header Guard

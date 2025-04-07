@@ -134,7 +134,7 @@ static std::map<std::string, boundary_conditions::BCTemperatureModels> bc_temper
     { "none", boundary_conditions::noTemperatureBC },
     { "constant", boundary_conditions::constantTemperatureBC },
     { "convection", boundary_conditions::convectionTemperatureBC },
-    { "radiation", boundary_conditions::radiationTemperatureBC },
+    { "radiation", boundary_conditions::radiationTemperatureBC }
     //{ "time_varying", boundary_conditions::timeVaryingTemperatureBC },
     //{ "adiabatic", boundary_conditions::adiabaticBC },
     //{ "user_defined", boundary_conditions::userDefinedTemperatureBC }
@@ -145,7 +145,7 @@ static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_mode
     { "none", boundary_conditions::noStressBC },
     { "constant", boundary_conditions::constantStressBC },
     { "time_varying", boundary_conditions::timeVaringStressBC },
-    { "user_defined", boundary_conditions::userDefinedStressBC },
+    { "user_defined", boundary_conditions::userDefinedStressBC }
 };
 
 
@@ -265,15 +265,15 @@ struct BoundaryCondition_t
     size_t num_bcs; // the number of boundary conditions
 
     // making a psuedo dual ragged right
-    DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver, bc_ids)
-    DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver)
+    DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver_id, bc_lid)
+    DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver_id)
 
-    DCArrayKokkos<size_t> stress_bdy_sets_in_solver;     // (solver, bc_ids)
-    DCArrayKokkos<size_t> num_stress_bdy_sets_in_solver; // (solver)
+    DCArrayKokkos<size_t> stress_bdy_sets_in_solver;     // (solver_id, bc_lid)
+    DCArrayKokkos<size_t> num_stress_bdy_sets_in_solver; // (solver_id)
 
     // keep adding ragged storage for the other BC models -- temp, displacement, etc.
-    DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver, ids)
-    DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver)
+    DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver_id, lids)
+    DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver_id)
 
 
     CArrayKokkos<BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs, accessed using (bc_id)
@@ -309,16 +309,15 @@ struct BoundaryCondition_t
 static std::vector<std::string> str_bc_inps
 {
     "solver_id",
-    "velocity_model",
-    "stress_model",
     "surface",
+    "velocity_model",
     "velocity_bc_global_vars",
+    "stress_model",
+    "stress_bc_global_vars",
     "temperature_model",
     "temperature_bc_global_vars",
     "heat_flux_model",
-    "heat_flux_bc_global_vars",
-    "stress_bc_global_vars"
-
+    "heat_flux_bc_global_vars"
 };
 
 // subfields under surface

@@ -29,7 +29,7 @@ output_options:
 
 solver_options:
   - solver:
-        method: SGH3D
+        method: dynx_FE
         id: 0
         # solver_vars:
         #  - blah
@@ -103,13 +103,13 @@ materials:
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         # strength_model: none
-        dissipation_global_vars:
-            - 1.0   # q1
-            - 1.0   # q1ex
-            - 1.333 # q2
-            - 1.333 # q2ex
-            - 0.0   # phi_min
-            - 1.0   # phi_min_curl
+        #dissipation_global_vars:
+        #    - 1.0   # q1
+        #    - 1.0   # q1ex
+        #    - 1.333 # q2
+        #    - 1.333 # q2ex
+        #    - 0.0   # phi_min
+        #    - 1.0   # phi_min_curl
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14
@@ -119,9 +119,14 @@ regions:
     - region:
         volume:
             type: global
+        solver_id: 0
         material_id: 0
-        den: 1.0
-        sie: 0.001
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 0.001
         velocity: 
             type: cartesian
             u: 0.0
@@ -137,10 +142,15 @@ regions:
             origin: [0.0, 0.0, 0.0]
             radius1: 0.0
             radius2: 0.1
+        solver_id: 0
         material_id: 0
-        den: 1.0
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 61.67375002 # 963.652344
         # ie: 0.25833839995946534
-        sie: 61.67375002 # 963.652344
         velocity: 
             type: cartesian
             u: 0.0
