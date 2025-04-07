@@ -581,9 +581,11 @@ void fill_regions(
                 break;
             case fill_gauss_state::specific_internal_energy:
                 gauss_sie.update_host();
+                gauss_use_sie.update_host();
                 break;
             case fill_gauss_state::internal_energy:
                 gauss_ie.update_host();
+                gauss_use_sie.update_host();
                 break;
             case fill_gauss_state::thermal_conductivity:
                 gauss_thermal_conductivity.update_host();
@@ -715,7 +717,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 if( State.MaterialPoints(mat_id).sie.host.size()>0 ){
                     // save state, that is integrated in time, at the RK levels
                     for (size_t rk_level = 0; rk_level < rk_num_bins; rk_level++) {
-                        if(fillGaussState.use_sie(gauss_gid,a_mat_in_elem)){
+                        if(fillGaussState.use_sie.host(gauss_gid,a_mat_in_elem)){
                             State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = 
                                 fillGaussState.sie.host(gauss_gid,a_mat_in_elem);
                         }
