@@ -12,7 +12,6 @@ void EVPFFT::update_el_stiff()
   Profiler profiler(__FUNCTION__);
 
   DViewFMatrixKokkos <real_t> cc_kokkos(&cc(1,1,1,1,1),3,3,3,3,NPHMX);
-  cc_kokkos.update_device();
 
   FOR_ALL_CLASS(k, 1, npts3+1,
                 j, 1, npts2+1,

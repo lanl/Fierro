@@ -409,8 +409,6 @@ void EVPFFT::init_defgrad() {
 
   DViewFMatrixKokkos <real_t> defgradavg_kokkos(&defgradavg(1,1),3,3);
   DViewFMatrixKokkos <real_t> delt_kokkos(&delt(1),3);
-  defgradavg_kokkos.update_device();
-  delt_kokkos.update_device();
 
   FOR_ALL_CLASS(k, 1, npts3+1,
                 j, 1, npts2+1,
