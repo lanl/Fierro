@@ -2670,8 +2670,8 @@ public:
                 system("mkdir vtk");
             }
             else{
-                if(solver_id==0){
-                    // delete the files inside
+                if(solver_id==0 && graphics_id==0){
+                    // delete the existing files inside
                     system("rm vtk/Fierro*");
                 }
             }
@@ -2680,8 +2680,8 @@ public:
                 system("mkdir vtk/data");
             }
             else{
-                if(solver_id==0){
-                    // delete the files inside the folder
+                if(solver_id==0 && graphics_id==0){
+                    // delete the existing files inside the folder
                     system("rm vtk/data/Fierro*");
                 }
             }
