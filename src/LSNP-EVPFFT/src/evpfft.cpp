@@ -434,6 +434,11 @@ void EVPFFT::init_defgrad() {
     defgradinvavgc_inv(jj,jj) = delt(jj);
   } 
 
+  DViewFMatrixKokkos <real_t> defgradavg_kokkos(&defgradavg(1,1),3,3);
+  DViewFMatrixKokkos <real_t> delt_kokkos(&delt(1),3);
+  defgradavg_kokkos.update_device();
+  delt_kokkos.update_device();
+
   FOR_ALL_CLASS(k, 1, npts3+1,
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
@@ -448,11 +453,11 @@ void EVPFFT::init_defgrad() {
       }
       defgradp (jj,jj,i,j,k) = 1.0;
       defgrade (jj,jj,i,j,k) = 1.0;
-      defgrad (jj,jj,i,j,k) = defgradavg(jj,jj);
-      defgradinv (jj,jj,i,j,k) = 1.0/defgradavg(jj,jj);
-      defgradini (jj,jj,i,j,k) = defgradavg(jj,jj);
+      defgrad (jj,jj,i,j,k) = defgradavg_kokkos(jj,jj);
+      defgradinv (jj,jj,i,j,k) = 1.0/defgradavg_kokkos(jj,jj);
+      defgradini (jj,jj,i,j,k) = defgradavg_kokkos(jj,jj);
     }
-    detF(i,j,k) = delt(1)*delt(2)*delt(3);
+    detF(i,j,k) = delt_kokkos(1)*delt_kokkos(2)*delt_kokkos(3);
 
     wgtc(i,j,k) = wgt;
   }); // end FOR_ALL_CLASS
@@ -479,7 +484,7 @@ void EVPFFT::init_defgrad() {
     for (int ii = 1; ii <= 3; ii++) {
       x_grid(ii,i,j,k) = 0.0;
       for (int jj = 1; jj <= 3; jj++) {
-        x_grid(ii,i,j,k) = x_grid(ii,i,j,k) + defgradavg(ii,jj)*x(jj);
+        x_grid(ii,i,j,k) = x_grid(ii,i,j,k) + defgradavg_kokkos(ii,jj)*x(jj);
       }
     }
 
@@ -502,7 +507,7 @@ void EVPFFT::init_defgrad() {
     for (int ii = 1; ii <= 3; ii++) {
       xnode(ii,i,j,k) = 0.0;
       for (int jj = 1; jj <= 3; jj++) {
-        xnode(ii,i,j,k) = xnode(ii,i,j,k) + defgradavg(ii,jj)*x(jj);
+        xnode(ii,i,j,k) = xnode(ii,i,j,k) + defgradavg_kokkos(ii,jj)*x(jj);
       }
     }
 

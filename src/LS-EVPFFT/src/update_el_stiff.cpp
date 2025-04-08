@@ -11,6 +11,8 @@ void EVPFFT::update_el_stiff()
 {
   Profiler profiler(__FUNCTION__);
 
+  DViewFMatrixKokkos <real_t> cc_kokkos(&cc(1,1,1,1,1),3,3,3,3,NPHMX);
+
   FOR_ALL_CLASS(k, 1, npts3+1,
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
@@ -84,7 +86,7 @@ void EVPFFT::update_el_stiff()
                     
                       dum += aa(i1,i2) *
                              aa(j1,j2) *
-                             cc(i2,j2,k2,l2,iph) * 
+                             cc_kokkos(i2,j2,k2,l2,iph) * 
                              aat(k2,k1) * 
                              aat(l2,l1);
                              

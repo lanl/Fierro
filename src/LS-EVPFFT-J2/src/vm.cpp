@@ -1,12 +1,14 @@
 #include "vm.h"
 
-
+KOKKOS_FUNCTION
 real_t vm(real_t *dtensor_)
 {
   /* Returens VonMises strain */
 
+  real_t dt_[3*3];
+
   ViewMatrixTypeReal dtensor(dtensor_,3,3);
-  MatrixTypeRealHost dt(3,3);
+  ViewMatrixTypeReal dt(dt_,3,3);
 
   real_t trace;
   real_t result;
@@ -31,6 +33,7 @@ real_t vm(real_t *dtensor_)
   return result;
 }
 
+KOKKOS_FUNCTION
 real_t vm_stress(real_t *stress) {
     /* Returns VonMises stress */
 
