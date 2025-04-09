@@ -49,29 +49,29 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::execute(SimulationParameters_t& SimulationParamaters, 
+void SGHRZ::execute(SimulationParameters_t& SimulationParameters, 
                   Material_t& Materials, 
                   BoundaryCondition_t& BoundaryConditions, 
                   Mesh_t& mesh, 
                   State_t& State)
 {
 
-    double fuzz  = SimulationParamaters.dynamic_options.fuzz;
-    double tiny  = SimulationParamaters.dynamic_options.tiny;
-    double small = SimulationParamaters.dynamic_options.small;
+    double fuzz  = SimulationParameters.dynamic_options.fuzz;
+    double tiny  = SimulationParameters.dynamic_options.tiny;
+    double small = SimulationParameters.dynamic_options.small;
 
-    double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
-    int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
+    double graphics_dt_ival  = SimulationParameters.output_options.graphics_time_step;
+    int    graphics_cyc_ival = SimulationParameters.output_options.graphics_iteration_step;
 
-    // double time_initial = SimulationParamaters.dynamic_options.time_initial;
-    double time_final = this->time_end; //SimulationParamaters.dynamic_options.time_final;
-    double dt_min   = SimulationParamaters.dynamic_options.dt_min;
-    double dt_max   = SimulationParamaters.dynamic_options.dt_max;
-    double dt_start = SimulationParamaters.dynamic_options.dt_start;
-    double dt_cfl   = SimulationParamaters.dynamic_options.dt_cfl;
+    // double time_initial = SimulationParameters.dynamic_options.time_initial;
+    double time_final = this->time_end; //SimulationParameters.dynamic_options.time_final;
+    double dt_min   = SimulationParameters.dynamic_options.dt_min;
+    double dt_max   = SimulationParameters.dynamic_options.dt_max;
+    double dt_start = SimulationParameters.dynamic_options.dt_start;
+    double dt_cfl   = SimulationParameters.dynamic_options.dt_cfl;
 
-    int rk_num_stages = SimulationParamaters.dynamic_options.rk_num_stages;
-    int cycle_stop    = SimulationParamaters.dynamic_options.cycle_stop;
+    int rk_num_stages = SimulationParameters.dynamic_options.rk_num_stages;
+    int cycle_stop    = SimulationParameters.dynamic_options.cycle_stop;
 
     // initialize time, time_step, and cycles
     double time_value = this->time_start; // 0.0;
@@ -158,7 +158,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     mesh_writer.write_mesh(
         mesh, 
         State, 
-        SimulationParamaters, 
+        SimulationParameters, 
         dt,
         time_value, 
         graphics_times,
@@ -431,7 +431,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
             printf("Writing outputs to file at %f \n", graphics_time);
             mesh_writer.write_mesh(mesh, 
                                    State, 
-                                   SimulationParamaters, 
+                                   SimulationParameters, 
                                    dt,
                                    time_value, 
                                    graphics_times,

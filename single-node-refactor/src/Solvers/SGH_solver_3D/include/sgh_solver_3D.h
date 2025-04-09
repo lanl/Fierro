@@ -153,14 +153,14 @@ public:
     /// \brief Initializes data associated with the SGH3D solver
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void initialize(SimulationParameters_t& SimulationParamaters, 
+    void initialize(SimulationParameters_t& SimulationParameters, 
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
 
 
-    void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+    void initialize_material_state(SimulationParameters_t& SimulationParameters, 
                 	               Material_t& Materials, 
                 	               Mesh_t& mesh, 
                 	               BoundaryCondition_t& Boundary,
@@ -173,7 +173,7 @@ public:
     /// \brief Calls setup_sgh, which initializes state and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void setup(SimulationParameters_t& SimulationParamaters,
+    void setup(SimulationParameters_t& SimulationParameters,
         Material_t& Materials,
         Mesh_t&     mesh,
         BoundaryCondition_t& Boundary,
@@ -187,7 +187,7 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void execute(SimulationParameters_t& SimulationParamaters,
+    void execute(SimulationParameters_t& SimulationParameters,
         Material_t& Materials,
         BoundaryCondition_t& Boundary,
         Mesh_t&  mesh,
@@ -209,7 +209,7 @@ public:
     /// \return <return type and definition description if not void>
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void finalize(SimulationParameters_t& SimulationParamaters,
+    void finalize(SimulationParameters_t& SimulationParameters,
         Material_t& Materials,
         BoundaryCondition_t& Boundary) const override
     {

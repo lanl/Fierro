@@ -58,25 +58,25 @@ void Driver::initialize()
         exit(0);
     }
 
-    parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
+    parse_yaml(root, SimulationParameters, Materials, BoundaryConditions);
     std::cout << "Finished  parsing YAML file" << std::endl;
 
-    if (SimulationParamaters.mesh_input.source == mesh_input::file) {
+    if (SimulationParameters.mesh_input.source == mesh_input::file) {
         // Create and/or read mesh
-        std::cout << "Mesh file path: " << SimulationParamaters.mesh_input.file_path << std::endl;
-        mesh_reader.set_mesh_file(SimulationParamaters.mesh_input.file_path.data());
+        std::cout << "Mesh file path: " << SimulationParameters.mesh_input.file_path << std::endl;
+        mesh_reader.set_mesh_file(SimulationParameters.mesh_input.file_path.data());
         mesh_reader.read_mesh(mesh, 
                               State,
-                              SimulationParamaters.mesh_input, 
+                              SimulationParameters.mesh_input, 
                               num_dims, 
-                              SimulationParamaters.dynamic_options.rk_num_bins);
+                              SimulationParameters.dynamic_options.rk_num_bins);
     }
-    else if (SimulationParamaters.mesh_input.source == mesh_input::generate) {
+    else if (SimulationParameters.mesh_input.source == mesh_input::generate) {
         mesh_builder.build_mesh(mesh, 
                                 State.GaussPoints, 
                                 State.node, 
                                 State.corner, 
-                                SimulationParamaters);
+                                SimulationParameters);
     }
     else{
         throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
@@ -93,15 +93,15 @@ void Driver::initialize()
 
 
     // Setup the Solvers
-    double time_final = SimulationParamaters.dynamic_options.time_final;
-    for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
+    double time_final = SimulationParameters.dynamic_options.time_final;
+    for (size_t solver_id = 0; solver_id < SimulationParameters.solver_inputs.size(); solver_id++) {
 
-        if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
+        if (SimulationParameters.solver_inputs[solver_id].method == solver_input::SGH3D) {
 
             std::cout << "Initializing dynx_FE solver" << std::endl;
             SGH3D* sgh_solver = new SGH3D(); 
 
-            sgh_solver->initialize(SimulationParamaters, 
+            sgh_solver->initialize(SimulationParameters, 
                                    Materials, 
                                    mesh, 
                                    BoundaryConditions,
@@ -111,7 +111,7 @@ void Driver::initialize()
             sgh_solver->solver_id = solver_id;
             
             // set the start and ending times
-            double t_end = SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
+            double t_end = SimulationParameters.solver_inputs[solver_id].time_end;  // default is t=0
             if(solver_id==0){
                 sgh_solver->time_start = 0.0;
 
@@ -147,12 +147,12 @@ void Driver::initialize()
 
 
         } // end if SGH solver
-        else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGHRZ) {
+        else if (SimulationParameters.solver_inputs[solver_id].method == solver_input::SGHRZ) {
 
             std::cout << "Initializing dynx_FE_RZ solver" << std::endl;
             SGHRZ* sgh_solver_rz = new SGHRZ(); 
 
-            sgh_solver_rz->initialize(SimulationParamaters, 
+            sgh_solver_rz->initialize(SimulationParameters, 
                                    Materials, 
                                    mesh, 
                                    BoundaryConditions,
@@ -162,7 +162,7 @@ void Driver::initialize()
             sgh_solver_rz->solver_id = solver_id;
 
             // set the start and ending times
-            double t_end = SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
+            double t_end = SimulationParameters.solver_inputs[solver_id].time_end;  // default is t=0
             if(solver_id==0){
                 sgh_solver_rz->time_start = 0.0;
 
@@ -196,12 +196,12 @@ void Driver::initialize()
 
             solvers.push_back(sgh_solver_rz);
         } // end if SGHRZ solver
-        else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
+        else if (SimulationParameters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
 
             std::cout << "Initializing thrmex_FE solver" << std::endl;
             SGTM3D* sgtm_solver_3d = new SGTM3D(); 
         
-            sgtm_solver_3d->initialize(SimulationParamaters, 
+            sgtm_solver_3d->initialize(SimulationParameters, 
                                        Materials, 
                                        mesh, 
                                        BoundaryConditions,
@@ -211,7 +211,7 @@ void Driver::initialize()
             sgtm_solver_3d->solver_id = solver_id;
 
             // set the start and ending times
-            double t_end = SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
+            double t_end = SimulationParameters.solver_inputs[solver_id].time_end;  // default is t=0
             if(solver_id==0){
                 sgtm_solver_3d->time_start = 0.0;
 
@@ -259,7 +259,7 @@ void Driver::initialize()
     fillGaussState_t fillGaussState;
     fillElemState_t  fillElemState;
 
-    simulation_setup(SimulationParamaters, 
+    simulation_setup(SimulationParameters, 
                      Materials, 
                      mesh, 
                      BoundaryConditions,
@@ -270,7 +270,7 @@ void Driver::initialize()
 
     // Allocate material state
     for (auto& solver : solvers) {
-        solver->initialize_material_state(SimulationParamaters, 
+        solver->initialize_material_state(SimulationParameters, 
                       Materials, 
                       mesh, 
                       BoundaryConditions,
@@ -279,7 +279,7 @@ void Driver::initialize()
 
 
     // populate the material point state
-    material_state_setup(SimulationParamaters, 
+    material_state_setup(SimulationParameters, 
                          Materials, 
                          mesh, 
                          BoundaryConditions,
@@ -301,7 +301,7 @@ void Driver::setup()
 
     // allocate state, setup models, and apply fill instructions
     for (auto& solver : solvers) {
-        solver->setup(SimulationParamaters, 
+        solver->setup(SimulationParameters, 
                       Materials, 
                       mesh, 
                       BoundaryConditions,
@@ -322,7 +322,7 @@ void Driver::execute()
 {
     std::cout << "Inside driver execute" << std::endl;
     for (auto& solver : solvers) {
-        solver->execute(SimulationParamaters, 
+        solver->execute(SimulationParameters, 
                         Materials, 
                         BoundaryConditions, 
                         mesh, 
@@ -345,7 +345,7 @@ void Driver::finalize()
     std::cout << "Inside driver finalize" << std::endl;
     for (auto& solver : solvers) {
         if (solver->finalize_flag) {
-            solver->finalize(SimulationParamaters, 
+            solver->finalize(SimulationParameters, 
                              Materials, 
                              BoundaryConditions);
         }

@@ -47,7 +47,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-void simulation_setup(SimulationParameters_t& SimulationParamaters, 
+void simulation_setup(SimulationParameters_t& SimulationParameters, 
                       Material_t& Materials, 
                       Mesh_t& mesh, 
                       BoundaryCondition_t& Boundary,
@@ -65,7 +65,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
-    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
+    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
 
 
     // Calculate element volume
@@ -82,7 +82,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     fillGaussState.initialize(num_gauss_points, 
                               num_mats_per_elem, 
                               num_dims,
-                              SimulationParamaters.region_setups.fill_gauss_states);
+                              SimulationParameters.region_setups.fill_gauss_states);
 
     // the elem state is always used, thus always initialized
     fillElemState.initialize(num_elems,
@@ -118,11 +118,11 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fillElemState.mat_id,
                  fillElemState.num_mats_saved_in_elem,
                  voxel_elem_mat_id,
-                 SimulationParamaters.mesh_input.object_ids,
-                 SimulationParamaters.region_setups.region_fills,
-                 SimulationParamaters.region_setups.region_fills_host,
-                 SimulationParamaters.region_setups.fill_gauss_states,
-                 SimulationParamaters.region_setups.fill_node_states,
+                 SimulationParameters.mesh_input.object_ids,
+                 SimulationParameters.region_setups.region_fills,
+                 SimulationParameters.region_setups.region_fills_host,
+                 SimulationParameters.region_setups.fill_gauss_states,
+                 SimulationParameters.region_setups.fill_node_states,
                  rk_num_bins,
                  num_mats_per_elem);
 
@@ -626,7 +626,7 @@ void fill_regions(
 ///
 /// \brief a function to setup the material point and zone state 
 ///
-/// \param SimulationParamaters holds the simulation parameters
+/// \param SimulationParameters holds the simulation parameters
 /// \param Materials is the material object
 /// \param mesh is the mesh object
 /// \param Boundary is the boundary condition object
@@ -635,7 +635,7 @@ void fill_regions(
 /// \param fillElemState is a vector of enums telling what elem state to set
 ///
 /////////////////////////////////////////////////////////////////////////////
-void material_state_setup(SimulationParameters_t& SimulationParamaters, 
+void material_state_setup(SimulationParameters_t& SimulationParameters, 
                           Material_t& Materials, 
                           Mesh_t& mesh, 
                           BoundaryCondition_t& Boundary,
@@ -654,7 +654,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
-    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
+    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
 
     // a counter for the Material index spaces
     DCArrayKokkos<size_t> num_elems_saved_for_mat(num_mats, "setup_num_elems_saved_for_mat");

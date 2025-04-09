@@ -1319,14 +1319,14 @@ public:
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
-        SimulationParameters_t& SimulationParamaters)
+        SimulationParameters_t& SimulationParameters)
     {
-        if (SimulationParamaters.mesh_input.num_dims == 2) {
-            if (SimulationParamaters.mesh_input.type == mesh_input::Polar) {
-                build_2d_polar(mesh, GaussPoints, node, corner, SimulationParamaters);
+        if (SimulationParameters.mesh_input.num_dims == 2) {
+            if (SimulationParameters.mesh_input.type == mesh_input::Polar) {
+                build_2d_polar(mesh, GaussPoints, node, corner, SimulationParameters);
             }
-            else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {
-                build_2d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+            else if (SimulationParameters.mesh_input.type == mesh_input::Box) {
+                build_2d_box(mesh, GaussPoints, node, corner, SimulationParameters);
             }
             else{
                 std::cout << "**** 2D MESH TYPE NOT SUPPORTED **** " << std::endl;
@@ -1338,8 +1338,8 @@ public:
                 throw std::runtime_error("**** 2D MESH TYPE NOT SUPPORTED ****");
             }
         }
-        else if (SimulationParamaters.mesh_input.num_dims == 3) {
-            build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+        else if (SimulationParameters.mesh_input.num_dims == 3) {
+            build_3d_box(mesh, GaussPoints, node, corner, SimulationParameters);
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
@@ -1363,17 +1363,17 @@ public:
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+        SimulationParameters_t& SimulationParameters) const
     {
         printf("Creating a 2D box mesh \n");
 
         const int num_dim = 2;
 
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
+        const double lx = SimulationParameters.mesh_input.length[0];
+        const double ly = SimulationParameters.mesh_input.length[1];
 
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
+        const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+        const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -1386,8 +1386,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        // SimulationParameters.mesh_input.origin.update_host();
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -1404,7 +1404,7 @@ public:
         convert_point_number_in_quad(2) = 3;
         convert_point_number_in_quad(3) = 2;
 
-        int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
+        int rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
 
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
@@ -1496,21 +1496,21 @@ public:
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+        SimulationParameters_t& SimulationParameters) const
     {
         printf("Creating a 2D polar mesh \n");
 
         int num_dim     = 2;
-        int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
+        int rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
 
-        const double inner_radius = SimulationParamaters.mesh_input.inner_radius;
-        const double outer_radius = SimulationParamaters.mesh_input.outer_radius;
+        const double inner_radius = SimulationParameters.mesh_input.inner_radius;
+        const double outer_radius = SimulationParameters.mesh_input.outer_radius;
 
-        const double start_angle = PI / 180.0 * SimulationParamaters.mesh_input.starting_angle;
-        const double end_angle   = PI / 180.0 * SimulationParamaters.mesh_input.ending_angle;
+        const double start_angle = PI / 180.0 * SimulationParameters.mesh_input.starting_angle;
+        const double end_angle   = PI / 180.0 * SimulationParameters.mesh_input.ending_angle;
 
-        const int num_elems_i = SimulationParamaters.mesh_input.num_radial_elems;
-        const int num_elems_j = SimulationParamaters.mesh_input.num_angular_elems;
+        const int num_elems_i = SimulationParameters.mesh_input.num_radial_elems;
+        const int num_elems_j = SimulationParameters.mesh_input.num_angular_elems;
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -1524,7 +1524,7 @@ public:
 
         std::vector<double> origin(num_dim);
 
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -1637,21 +1637,21 @@ public:
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+        SimulationParameters_t& SimulationParameters) const
     {
         printf("Creating a 3D box mesh \n");
 
         const int num_dim = 3;
 
-        // SimulationParamaters.mesh_input.length.update_host();
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
-        const double lz = SimulationParamaters.mesh_input.length[2];
+        // SimulationParameters.mesh_input.length.update_host();
+        const double lx = SimulationParameters.mesh_input.length[0];
+        const double ly = SimulationParameters.mesh_input.length[1];
+        const double lz = SimulationParameters.mesh_input.length[2];
 
-        // SimulationParamaters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
+        // SimulationParameters.mesh_input.num_elems.update_host();
+        const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+        const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
+        const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -1666,8 +1666,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j * num_elems_k;
 
         std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        // SimulationParameters.mesh_input.origin.update_host();
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
         // --- 3D parameters ---
         // const int num_faces_in_elem  = 6;  // number of faces in elem
@@ -1676,7 +1676,7 @@ public:
         // const int num_edges_in_elem  = 12; // number of edges in a elem
 
 
-        int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
+        int rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
 
         // initialize mesh node variables
         mesh.initialize_nodes(num_nodes);
@@ -1778,25 +1778,25 @@ public:
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+        SimulationParameters_t& SimulationParameters) const
     {
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
         const int num_dim = 3;
 
-        const int rk_num_bins = SimulationParamaters.dynamic_options.rk_num_bins;
+        const int rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
 
-        // SimulationParamaters.mesh_input.length.update_host();
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
-        const double lz = SimulationParamaters.mesh_input.length[2];
+        // SimulationParameters.mesh_input.length.update_host();
+        const double lx = SimulationParameters.mesh_input.length[0];
+        const double ly = SimulationParameters.mesh_input.length[1];
+        const double lz = SimulationParameters.mesh_input.length[2];
 
-        // SimulationParamaters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
+        // SimulationParameters.mesh_input.num_elems.update_host();
+        const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+        const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
+        const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
 
         // creating zones for the Pn order
-        const int Pn_order = SimulationParamaters.mesh_input.p_order;
+        const int Pn_order = SimulationParameters.mesh_input.p_order;
         
         if (Pn_order > 19) {
             printf("Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
@@ -1820,7 +1820,7 @@ public:
         // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
 
         std::vector<double> origin(num_dim);
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
         // --- 3D parameters ---
         // const int num_faces_in_zone = 6;   // number of faces in zone
@@ -1979,7 +1979,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void write_mesh(Mesh_t& mesh,
         State_t& State,
-        SimulationParameters_t& SimulationParamaters,
+        SimulationParameters_t& SimulationParameters,
         double dt,
         double time_value,
         CArray<double> graphics_times,
@@ -2120,7 +2120,7 @@ public:
         size_t num_mat_pt_tensor_vars = 0;
             
         // count the number of material point state vars to write out
-        for (auto field : SimulationParamaters.output_options.output_mat_pt_state){
+        for (auto field : SimulationParameters.output_options.output_mat_pt_state){
             switch(field){
                 // scalar vars to write out
                 case material_pt_state::density:
@@ -2180,7 +2180,7 @@ public:
         size_t num_elem_tensor_vars = 0;
 
         // count the number of element average fields to write out
-        for (auto field : SimulationParamaters.output_options.output_elem_state){
+        for (auto field : SimulationParameters.output_options.output_elem_state){
             switch(field){
                 // scalar vars to write out
                 case material_pt_state::density:
@@ -2236,7 +2236,7 @@ public:
         size_t num_gauss_pt_tensor_vars = 0;
 
         // gauss point values to ouptput
-        for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
+        for (auto field : SimulationParameters.output_options.output_gauss_pt_state){
             switch(field){
                 // scalar vars to write out
                 case gauss_pt_state::volume:
@@ -2288,7 +2288,7 @@ public:
         size_t tensor_var = 0;
 
         // material point state to output
-        for (auto field : SimulationParamaters.output_options.output_mat_pt_state){
+        for (auto field : SimulationParameters.output_options.output_mat_pt_state){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
@@ -2382,7 +2382,7 @@ public:
         tensor_var = 0;
 
         // element state to output
-        for (auto field : SimulationParamaters.output_options.output_elem_state){
+        for (auto field : SimulationParameters.output_options.output_elem_state){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
@@ -2453,7 +2453,7 @@ public:
         int div_id = -1;
         int vel_grad_id = -1;
 
-        for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
+        for (auto field : SimulationParameters.output_options.output_gauss_pt_state){
             switch(field){
                 // scalars
                 case gauss_pt_state::volume:
@@ -2485,7 +2485,7 @@ public:
         size_t num_node_scalar_vars = 0;
         size_t num_node_vector_vars = 0;
 
-        for (auto field : SimulationParamaters.output_options.output_node_state){
+        for (auto field : SimulationParameters.output_options.output_node_state){
             switch(field){
                 case node_state::mass:
                     num_node_scalar_vars ++;
@@ -2527,7 +2527,7 @@ public:
         vector_var = 0;
         tensor_var = 0;
 
-        for (auto field : SimulationParamaters.output_options.output_node_state){
+        for (auto field : SimulationParameters.output_options.output_node_state){
             switch(field){
                 // scalars
                 case node_state::mass:
@@ -2599,8 +2599,8 @@ public:
                                     elem_scalar_fields,
                                     elem_tensor_fields,
                                     State.MaterialToMeshMaps(mat_id).elem,
-                                    SimulationParamaters.output_options.output_elem_state,
-                                    SimulationParamaters.output_options.output_gauss_pt_state,
+                                    SimulationParameters.output_options.output_elem_state,
+                                    SimulationParameters.output_options.output_gauss_pt_state,
                                     num_mat_elems,
                                     num_elems,
                                     den_id,
@@ -2641,7 +2641,7 @@ public:
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
                                  node_vector_fields,
-                                 SimulationParamaters.output_options.output_node_state,
+                                 SimulationParameters.output_options.output_node_state,
                                  dt,
                                  num_nodes,
                                  num_dims,
@@ -2660,8 +2660,8 @@ public:
         //  Write the nodal and elem fields 
         // ********************************
 
-        if (SimulationParamaters.output_options.format == output_options::viz ||
-            SimulationParamaters.output_options.format == output_options::viz_and_state) {
+        if (SimulationParameters.output_options.format == output_options::viz ||
+            SimulationParameters.output_options.format == output_options::viz_and_state) {
 
             // create the folder structure if it does not exist
             struct stat st;
@@ -2741,7 +2741,7 @@ public:
                                             mat_elem_scalar_fields,
                                             mat_elem_tensor_fields,
                                             State.MaterialToMeshMaps(mat_id).elem,
-                                            SimulationParamaters.output_options.output_mat_pt_state,
+                                            SimulationParameters.output_options.output_mat_pt_state,
                                             num_mat_elems,
                                             mat_den_id,
                                             mat_pres_id,
@@ -2863,12 +2863,12 @@ public:
 
 
         // STATE
-        if (SimulationParamaters.output_options.format == output_options::state ||
-            SimulationParamaters.output_options.format == output_options::viz_and_state) {
+        if (SimulationParameters.output_options.format == output_options::state ||
+            SimulationParameters.output_options.format == output_options::viz_and_state) {
 
             write_material_point_state(mesh,
                                       State,
-                                      SimulationParamaters,
+                                      SimulationParameters,
                                       time_value,
                                       graphics_times,
                                       node_states,
@@ -2879,10 +2879,10 @@ public:
 
 
         // will drop ensight outputs in the near future
-        if (SimulationParamaters.output_options.format == output_options::ensight){
+        if (SimulationParameters.output_options.format == output_options::ensight){
            write_ensight(mesh,
                          State,
-                         SimulationParamaters,
+                         SimulationParameters,
                          dt,
                          time_value,
                          graphics_times,
@@ -2908,7 +2908,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void write_ensight(Mesh_t& mesh,
         State_t& State,
-        SimulationParameters_t& SimulationParamaters,
+        SimulationParameters_t& SimulationParameters,
         double dt,
         double time_value,
         CArray<double> graphics_times,
@@ -3319,7 +3319,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void write_vtk_old(Mesh_t& mesh,
         State_t& State,
-        SimulationParameters_t& SimulationParamaters,
+        SimulationParameters_t& SimulationParameters,
         double dt,
         double time_value,
         CArray<double> graphics_times,
@@ -4640,7 +4640,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void write_material_point_state(Mesh_t& mesh,
         State_t& State,
-        SimulationParameters_t& SimulationParamaters,
+        SimulationParameters_t& SimulationParameters,
         double time_value,
         CArray<double> graphics_times,
         std::vector<node_state> node_states,

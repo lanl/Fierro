@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \brief Calls setup_sgtm to unpack SimulationParameters for GPU access
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::setup(SimulationParameters_t& SimulationParamaters, 
+void SGTM3D::setup(SimulationParameters_t& SimulationParameters, 
                 Material_t& Materials, 
                 Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
@@ -58,7 +58,7 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
 {
     
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
-    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
 
 
     std::cout << "Calculating pressure, sound speed, and stress" << std::endl;

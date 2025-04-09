@@ -78,7 +78,7 @@ void SGHRZ::init_corner_node_masses_zero_rz(const Mesh_t& mesh,
 /// \brief Allocate state, setup models, and fill mesh regions per the YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::setup(SimulationParameters_t& SimulationParamaters, 
+void SGHRZ::setup(SimulationParameters_t& SimulationParameters, 
                 Material_t& Materials, 
                 Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
@@ -88,7 +88,7 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
     // add a flag on whether SGHRZ was set up, if(SGHRZ_setup_already==false)
     
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
-    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
 
     // calculate pressure, sound speed, and stress for each material
     for(int mat_id=0; mat_id<num_mats; mat_id++){

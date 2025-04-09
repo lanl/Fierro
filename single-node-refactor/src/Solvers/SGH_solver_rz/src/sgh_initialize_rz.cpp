@@ -37,7 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mesh.h"
 #include "simulation_parameters.h"
 
-void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters, 
+void SGHRZ::initialize(SimulationParameters_t& SimulationParameters, 
                 	   Material_t& Materials, 
                 	   Mesh_t& mesh, 
                 	   BoundaryCondition_t& Boundary,
@@ -46,7 +46,7 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters,
 	size_t num_nodes = mesh.num_nodes;
     size_t num_gauss_pts = mesh.num_elems;
     size_t num_corners = mesh.num_corners;
-    size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+    size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
     size_t num_dim = mesh.num_dims;
 
     // save the solver_id, which is a pravate class variable
@@ -59,14 +59,14 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters,
     // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
 }
 
-void SGHRZ::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+void SGHRZ::initialize_material_state(SimulationParameters_t& SimulationParameters, 
                 	                  Material_t& Materials, 
                 	                  Mesh_t& mesh, 
                 	                  BoundaryCondition_t& Boundary,
                 	                  State_t& State) const
 {
     const size_t num_nodes = mesh.num_nodes;
-    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
+    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 

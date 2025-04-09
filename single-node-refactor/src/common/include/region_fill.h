@@ -44,7 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "geometry_new.h"
 
-struct SimulationParamaters_t;
+struct SimulationParameters_t;
 struct Material_t;
 struct Mesh_t;
 struct BoundaryCondition_t;
@@ -58,7 +58,7 @@ using namespace mtr;
 // -----------------------------------------------------------------------------
 // The functions to setup fields on a mesh
 // ------------------------------------------------------------------------------
-void simulation_setup(SimulationParameters_t& SimulationParamaters, 
+void simulation_setup(SimulationParameters_t& SimulationParameters, 
                       Material_t& Materials, 
                       Mesh_t& mesh, 
                       BoundaryCondition_t& Boundary,
@@ -98,7 +98,7 @@ void fill_regions(
 // -----------------------------------------------------------------------------
 // A function to populate the material point and material zone state
 // ------------------------------------------------------------------------------
-void material_state_setup(SimulationParameters_t& SimulationParamaters, 
+void material_state_setup(SimulationParameters_t& SimulationParameters, 
                           Material_t& Materials, 
                           Mesh_t& mesh, 
                           BoundaryCondition_t& Boundary,
