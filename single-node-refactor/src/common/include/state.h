@@ -58,6 +58,12 @@ enum class fill_gauss_state
     specific_heat
 };
 
+//distributed vector type in use
+using DistributedMap = TpetraPartitionMap<>;
+template <typename T>
+using DistributedDFArray = TpetraDFArray<T>;
+template <typename T>
+using DistributedDCArray = TpetraDCArray<T>;
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -266,12 +272,12 @@ enum class node_state
 /////////////////////////////////////////////////////////////////////////////
 struct node_t
 {
-    DCArrayKokkos<double> coords; ///< Nodal coordinates
-    DCArrayKokkos<double> vel;  ///< Nodal velocity
-    DCArrayKokkos<double> mass; ///< Nodal mass
-    DCArrayKokkos<double> force; ///< Nodal force
-    DCArrayKokkos<double> temp; ///< Nodal temperature
-    DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
+    DistributedDCArray<double> coords; ///< Nodal coordinates
+    DistributedDCArray<double> vel;  ///< Nodal velocity
+    DistributedDCArray<double> mass; ///< Nodal mass
+    DistributedDCArray<double> force; ///< Nodal force
+    DistributedDCArray<double> temp; ///< Nodal temperature
+    DistributedDCArray<double> q_transfer; ///< Nodal heat flux
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims, state to allocate)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
@@ -279,22 +285,22 @@ struct node_t
         for (auto field : node_states){
             switch(field){
                 case node_state::coords:
-                    if (coords.size() == 0) this->coords = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_coordinates");
+                    if (coords.size() == 0) this->coords = DistributedDCArray<double>(num_rk, num_nodes, num_dims, "node_coordinates");
                     break;
                 case node_state::velocity:
-                    if (vel.size() == 0) this->vel = DCArrayKokkos<double>(num_rk, num_nodes, num_dims, "node_velocity");
+                    if (vel.size() == 0) this->vel = DistributedDCArray<double>(num_rk, num_nodes, num_dims, "node_velocity");
                     break;
                 case node_state::force:
-                    if (force.size() == 0) this->force = DCArrayKokkos<double>(num_nodes, num_dims, "node_force");
+                    if (force.size() == 0) this->force = DistributedDCArray<double>(num_nodes, num_dims, "node_force");
                     break;
                 case node_state::mass:
-                    if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
+                    if (mass.size() == 0) this->mass = DistributedDCArray<double>(num_nodes, "node_mass");
                     break;
                 case node_state::temp:
-                    if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_rk, num_nodes, "node_temp");
+                    if (temp.size() == 0) this->temp = DistributedDCArray<double>(num_rk, num_nodes, "node_temp");
                     break;
                 case node_state::heat_transfer:
-                    if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_nodes, "node_q_transfer");
+                    if (q_transfer.size() == 0) this->q_transfer = DistributedDCArray<double>(num_nodes, "node_q_transfer");
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;

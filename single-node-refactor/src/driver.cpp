@@ -41,12 +41,19 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "sgtm_solver_3D.h"
 
 #include "region_fill.h"
+#include <mpi.h>
 
 // Initialize driver data.  Solver type, number of solvers
 // Will be parsed from YAML input
 void Driver::initialize()
 {
-	std::cout << "Initializing Driver" << std::endl;
+    
+    MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+    MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+    
+    if(myrank == 0){
+	    std::cout << "Initializing Driver" << std::endl;
+    }
     Yaml::Node root;
     try
     {
@@ -54,16 +61,26 @@ void Driver::initialize()
     }
     catch (const Yaml::Exception e)
     {
-        std::cout << "Exception " << e.Type() << ": " << e.what() << std::endl;
+        if(myrank == 0){
+            std::cout << "Exception " << e.Type() << ": " << e.what() << std::endl;
+        }
+        
+        MPI_Finalize();
+        MPI_Barrier(MPI_COMM_WORLD);
         exit(0);
     }
 
     parse_yaml(root, SimulationParameters, Materials, BoundaryConditions);
-    std::cout << "Finished  parsing YAML file" << std::endl;
+    
+    if(myrank == 0){
+        std::cout << "Finished  parsing YAML file" << std::endl;
+    }
 
     if (SimulationParameters.mesh_input.source == mesh_input::file) {
         // Create and/or read mesh
-        std::cout << "Mesh file path: " << SimulationParameters.mesh_input.file_path << std::endl;
+        if(myrank == 0){
+            std::cout << "Mesh file path: " << SimulationParameters.mesh_input.file_path << std::endl;
+        }
         mesh_reader.set_mesh_file(SimulationParameters.mesh_input.file_path.data());
         mesh_reader.read_mesh(mesh, 
                               State,
@@ -80,7 +97,9 @@ void Driver::initialize()
     }
     else{
         throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
-        return;
+        MPI_Finalize();
+        MPI_Barrier(MPI_COMM_WORLD);
+        exit(0);
     }
 
     // Build boundary conditions
@@ -97,8 +116,10 @@ void Driver::initialize()
     for (size_t solver_id = 0; solver_id < SimulationParameters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParameters.solver_inputs[solver_id].method == solver_input::SGH3D) {
-
-            std::cout << "Initializing dynx_FE solver" << std::endl;
+            
+            if(myrank == 0){
+                std::cout << "Initializing dynx_FE solver" << std::endl;
+            }
             SGH3D* sgh_solver = new SGH3D(); 
 
             sgh_solver->initialize(SimulationParameters, 
@@ -140,16 +161,20 @@ void Driver::initialize()
                 } // end if time was set
                 
             } // end if solver=0
-
-            std::cout << "Solver " << solver_id << " start time = " << sgh_solver->time_start << ", ending time = " << sgh_solver->time_end << "\n";
+            
+            if(myrank == 0){
+                std::cout << "Solver " << solver_id << " start time = " << sgh_solver->time_start << ", ending time = " << sgh_solver->time_end << "\n";
+            }
 
             solvers.push_back(sgh_solver);
 
 
         } // end if SGH solver
         else if (SimulationParameters.solver_inputs[solver_id].method == solver_input::SGHRZ) {
-
-            std::cout << "Initializing dynx_FE_RZ solver" << std::endl;
+            
+            if(myrank == 0){
+                std::cout << "Initializing dynx_FE_RZ solver" << std::endl;
+            }
             SGHRZ* sgh_solver_rz = new SGHRZ(); 
 
             sgh_solver_rz->initialize(SimulationParameters, 
@@ -191,14 +216,18 @@ void Driver::initialize()
                 } // end if time was set
                 
             } // end if solver=0
-
-            std::cout << "Solver " << solver_id << " start time = " << sgh_solver_rz->time_start << ", ending time = " << sgh_solver_rz->time_end << "\n";
+            
+            if(myrank == 0){
+                std::cout << "Solver " << solver_id << " start time = " << sgh_solver_rz->time_start << ", ending time = " << sgh_solver_rz->time_end << "\n";
+            }
 
             solvers.push_back(sgh_solver_rz);
         } // end if SGHRZ solver
         else if (SimulationParameters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
-
-            std::cout << "Initializing thrmex_FE solver" << std::endl;
+            
+            if(myrank == 0){
+                std::cout << "Initializing thrmex_FE solver" << std::endl;
+            }
             SGTM3D* sgtm_solver_3d = new SGTM3D(); 
         
             sgtm_solver_3d->initialize(SimulationParameters, 
@@ -240,14 +269,18 @@ void Driver::initialize()
                 } // end if time was set
                 
             } // end if solver=0
-
-            std::cout << "Solver " << solver_id << " start time = " << sgtm_solver_3d->time_start << ", ending time = " << sgtm_solver_3d->time_end << "\n";
+            
+            if(myrank == 0){
+                std::cout << "Solver " << solver_id << " start time = " << sgtm_solver_3d->time_start << ", ending time = " << sgtm_solver_3d->time_end << "\n";
+            }
         
            solvers.push_back(sgtm_solver_3d);
         } // end if SGTM solver
         else {
             throw std::runtime_error("**** NO SOLVER INPUT OPTIONS PROVIDED IN YAML, OR OPTION NOT UNDERSTOOD ****");
-            return;
+            MPI_Finalize();
+            MPI_Barrier(MPI_COMM_WORLD);
+            exit(0);
         }
 
     } // end for loop over solvers
@@ -296,8 +329,10 @@ void Driver::initialize()
 ///
 /////////////////////////////////////////////////////////////////////////////
 void Driver::setup()
-{
-    std::cout << "Inside driver setup" << std::endl;
+{   
+    if(myrank == 0){
+        std::cout << "Inside driver setup" << std::endl;
+    }
 
     // allocate state, setup models, and apply fill instructions
     for (auto& solver : solvers) {
@@ -319,8 +354,10 @@ void Driver::setup()
 ///
 /////////////////////////////////////////////////////////////////////////////
 void Driver::execute()
-{
-    std::cout << "Inside driver execute" << std::endl;
+{   
+    if(myrank == 0){
+        std::cout << "Inside driver execute" << std::endl;
+    }
     for (auto& solver : solvers) {
         solver->execute(SimulationParameters, 
                         Materials, 
@@ -341,8 +378,10 @@ void Driver::execute()
 ///
 /////////////////////////////////////////////////////////////////////////////
 void Driver::finalize()
-{
-    std::cout << "Inside driver finalize" << std::endl;
+{   
+    if(myrank == 0){
+        std::cout << "Inside driver finalize" << std::endl;
+    }
     for (auto& solver : solvers) {
         if (solver->finalize_flag) {
             solver->finalize(SimulationParameters, 
@@ -352,7 +391,9 @@ void Driver::finalize()
     }
     // destroy FEA modules
     for (auto& solver : solvers) {
-        std::cout << "Deleting solver" << std::endl;
+        if(myrank == 0){
+            std::cout << "Deleting solver" << std::endl;
+        }
         delete solver;
     }
 }

@@ -91,6 +91,9 @@ public:
     // set of enabled solvers
     std::vector<Solver*> solvers;
 
+    //MPI data
+    int myrank, nranks;
+
     Driver(char* YAML)
     {
         yaml_file = YAML;
