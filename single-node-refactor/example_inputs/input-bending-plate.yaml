@@ -133,7 +133,14 @@ regions:
         specific_internal_energy: 
             type: uniform
             value: 1.e-10
-
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
 
     
 
