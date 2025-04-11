@@ -149,9 +149,9 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
             int node_c_gid = mesh.nodes_in_patch(patch_gid, 2);
 
             for(int dim = 0; dim < 3; dim++){
-                a(dim) = node_coords(0, node_a_gid, dim);
-                b(dim) = node_coords(0, node_b_gid, dim);
-                c(dim) = node_coords(0, node_c_gid, dim);
+                a(dim) = node_coords(node_a_gid, dim);
+                b(dim) = node_coords(node_b_gid, dim);
+                c(dim) = node_coords(node_c_gid, dim);
             }
 
             double A = 0.0;
@@ -173,9 +173,9 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
             node_c_gid = mesh.nodes_in_patch(patch_gid, 0);
 
             for(int dim = 0; dim < mesh.num_dims; dim++){
-                a(dim) = node_coords(0, node_a_gid, dim);
-                b(dim) = node_coords(0, node_b_gid, dim);
-                c(dim) = node_coords(0, node_c_gid, dim);
+                a(dim) = node_coords(node_a_gid, dim);
+                b(dim) = node_coords(node_b_gid, dim);
+                c(dim) = node_coords(node_c_gid, dim);
             }
 
             A = 0;
@@ -208,7 +208,7 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
                 
                 int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
 
-                double patch_flux = -1.0*h_film * (node_temp(0, node_gid) - ref_temp) * patch_area;
+                double patch_flux = -1.0*h_film * (node_temp(node_gid) - ref_temp) * patch_area;
 
                 // std::cout << "Patch flux for node " << node_gid << " = " << patch_flux << std::endl;
 
@@ -286,9 +286,9 @@ void SGTM3D::boundary_radiation(const Mesh_t& mesh,
             int node_c_gid = mesh.nodes_in_patch(patch_gid, 2);
 
             for(int dim = 0; dim < 3; dim++){
-                a(dim) = node_coords(0, node_a_gid, dim);
-                b(dim) = node_coords(0, node_b_gid, dim);
-                c(dim) = node_coords(0, node_c_gid, dim);
+                a(dim) = node_coords(node_a_gid, dim);
+                b(dim) = node_coords(node_b_gid, dim);
+                c(dim) = node_coords(node_c_gid, dim);
             }
 
             double A = 0.0;
@@ -310,9 +310,9 @@ void SGTM3D::boundary_radiation(const Mesh_t& mesh,
             node_c_gid = mesh.nodes_in_patch(patch_gid, 0);
 
             for(int dim = 0; dim < mesh.num_dims; dim++){
-                a(dim) = node_coords(0, node_a_gid, dim);
-                b(dim) = node_coords(0, node_b_gid, dim);
-                c(dim) = node_coords(0, node_c_gid, dim);
+                a(dim) = node_coords(node_a_gid, dim);
+                b(dim) = node_coords(node_b_gid, dim);
+                c(dim) = node_coords(node_c_gid, dim);
             }
 
             A = 0;
@@ -345,10 +345,10 @@ void SGTM3D::boundary_radiation(const Mesh_t& mesh,
                 
                 int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
 
-                double tmp1 = (node_temp(0, node_gid)-ref_zero_temp)*
-                              (node_temp(0, node_gid)-ref_zero_temp)*
-                              (node_temp(0, node_gid)-ref_zero_temp)*
-                              (node_temp(0, node_gid)-ref_zero_temp);
+                double tmp1 = (node_temp(node_gid)-ref_zero_temp)*
+                              (node_temp(node_gid)-ref_zero_temp)*
+                              (node_temp(node_gid)-ref_zero_temp)*
+                              (node_temp(node_gid)-ref_zero_temp);
 
                 double tmp2 = (ref_ambient_temp - ref_zero_temp)*
                               (ref_ambient_temp - ref_zero_temp)*

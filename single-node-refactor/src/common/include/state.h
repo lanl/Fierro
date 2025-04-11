@@ -297,7 +297,7 @@ struct node_t
                     break;
                 case node_state::temp:
                     if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_nodes, "node_temp");
-                    if (temp_n0.size() == 0) this->temp = DCArrayKokkos<double>(num_nodes, "node_temp_n0");
+                    if (temp_n0.size() == 0) this->temp_n0 = DCArrayKokkos<double>(num_nodes, "node_temp_n0");
                     break;
                 case node_state::heat_transfer:
                     if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_nodes, "node_q_transfer");

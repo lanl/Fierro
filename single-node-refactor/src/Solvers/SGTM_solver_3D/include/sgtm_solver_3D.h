@@ -258,14 +258,31 @@ public:
 
     // **** Functions defined in energy_sgtm.cpp **** //
     void update_temperature(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& corner_flux,
-        const DCArrayKokkos<double>& node_temp,
-        const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& node_flux,
-        const DCArrayKokkos<double>& mat_pt_sepcific_heat,
         const double rk_alpha,
-        const double dt) const;
+        const double dt,
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& node_vel_n0,
+        const DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& node_coords_n0,
+        const DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_sie_n0,
+        const DCArrayKokkos<double>& MaterialPoints_mass,
+        const DCArrayKokkos<double>& MaterialCorners_force,
+        const corners_in_mat_t corners_in_mat_elem,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t num_mat_elems) const;
+
+    void update_temperature(
+            const Mesh_t& mesh,
+            const DCArrayKokkos<double>& corner_q_transfer,
+            const DCArrayKokkos<double>& node_temp,
+            const DCArrayKokkos<double>& node_temp_n0,
+            const DCArrayKokkos<double>& node_mass,
+            const DCArrayKokkos<double>& node_q_transfer,
+            const DCArrayKokkos<double>& mat_pt_sepcific_heat,
+            const double rk_alpha,
+            const double dt) const;
 
     // **** Functions defined in heat_flux.cpp **** //
     void get_heat_flux(
@@ -311,7 +328,9 @@ public:
         const size_t num_dims,
         const size_t num_nodes,
         DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel) const;
+        const DCArrayKokkos<double>& node_coords_n0,
+        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& node_vel_n0) const;
 
 
     // **** Functions defined in momentum.cpp **** //
@@ -348,8 +367,11 @@ public:
     // NOTE: Consider pulling up
     void rk_init(
         DCArrayKokkos<double>& node_coords,
+        DCArrayKokkos<double>& node_coords_n0,
         DCArrayKokkos<double>& node_vel,
+        DCArrayKokkos<double>& node_vel_n0,
         DCArrayKokkos<double>& node_temp,
+        DCArrayKokkos<double>& node_temp_n0,
         DCArrayKokkos<double>& MaterialPoints_q_flux,
         DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,
