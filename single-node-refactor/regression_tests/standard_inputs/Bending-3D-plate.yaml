@@ -1,0 +1,147 @@
+# num_dims: 3
+
+dynamic_options:
+    time_final: 5.0
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 300000
+
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [10.0, 10.0, 1.0]
+    num_elems: [40, 40, 4]
+
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: state
+    graphics_time_step: 5.0
+    # graphics_iteration_step: 10
+
+solver_options:
+  - solver:
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 10.0
+        velocity_model: fixed
+
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 10.0
+        velocity_model: fixed
+
+
+    # Tag Z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+        stress_model: time_varying
+        #simga(t) = simga0 exp(-varDecay*(time - time_start) )
+        stress_bc_global_vars:
+            - -0.01   # press, stress(0,0)
+            - -0.01   # press, stress(1,1)
+            - -0.01   # press, stress(2,2)
+            - 0   # stress(1,2)
+            - 0   # stress(0,2)
+            - 0   # stress(0,1)
+            - 0.01   # decay rate
+            - 0   # time start
+            - 30   # time end
+
+
+
+  
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.1     # phi_min
+            - 1.0   # phi_curl
+        eos_global_vars:
+            - 10 #1.666666666666667
+            - 1.0E-14
+            - 1.0
+
+
+regions:
+    - region:
+        volume:
+            type: global
+        material_id: 0
+        solver_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    
+
+
