@@ -60,7 +60,6 @@ struct dynamic_options_t
     double small = 1e-8;        ///< single precision
 
     int rk_num_stages = 2;      ///< Number of RK stages
-    int rk_num_bins   = 2;      ///< Number of memory bins for time integration
 
     // Unparsed internal variables
 }; // output_options_t
@@ -80,8 +79,7 @@ static std::vector<std::string> str_dyn_opts_inps
     "fuzz",
     "tiny",
     "small",
-    "rk_num_stages",
-    "rk_num_bins",
+    "rk_num_stages"
 };
 
 // ----------------------------------

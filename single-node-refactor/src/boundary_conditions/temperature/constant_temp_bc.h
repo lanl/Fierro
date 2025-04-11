@@ -72,7 +72,7 @@ static void temperature(const Mesh_t& mesh,
 
     // Temperature to set the boundary to = bc_global_vars(4)
     // Set velocity to zero in the specified direction
-    node_temp(rk_stage, bdy_node_gid) = temp_bc_global_vars(bdy_set,0); // bc_global_vars(4);
+    node_temp(bdy_node_gid) = temp_bc_global_vars(bdy_set,0); // bc_global_vars(4);
 
     return;
 } // end func

@@ -105,7 +105,6 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
                             State.MaterialPoints(mat_id).eos_state_vars,
                             State.MaterialPoints(mat_id).strength_state_vars,
                             State.MaterialPoints(mat_id).shear_modulii,
-                            rk_num_bins,
                             num_mat_points,
                             mat_id);
 

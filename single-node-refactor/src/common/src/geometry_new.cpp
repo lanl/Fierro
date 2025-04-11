@@ -77,9 +77,9 @@ void geometry::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
-        z(node_lid) = node_coords(1, elem_node_gids(node_lid), 2);
+        x(node_lid) = node_coords(elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(elem_node_gids(node_lid), 1);
+        z(node_lid) = node_coords(elem_node_gids(node_lid), 2);
     }     // end for
 
 
@@ -285,8 +285,8 @@ void geometry::get_vol_quad(const DCArrayKokkos<double>& elem_vol,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        x(node_lid) = node_coords(elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(elem_node_gids(node_lid), 1);
     }     // end for
 
     /* ensight node order   0 1 2 3
@@ -331,9 +331,9 @@ void geometry::get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
-        z(node_lid) = node_coords(1, elem_node_gids(node_lid), 2);
+        x(node_lid) = node_coords(elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(elem_node_gids(node_lid), 1);
+        z(node_lid) = node_coords(elem_node_gids(node_lid), 2);
     }     // end for
 
     double twelth = 1. / 12.;
@@ -420,8 +420,8 @@ void geometry::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        x(node_lid) = node_coords(elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(elem_node_gids(node_lid), 1);
     }     // end for
 
     /* ensight node order   0 1 2 3
@@ -497,8 +497,8 @@ double geometry::get_area_quad(const size_t   elem_gid,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        x(node_lid) = node_coords(elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(elem_node_gids(node_lid), 1);
     }     // end for
 
     /* ensight node order   0 1 2 3
@@ -585,8 +585,8 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     // get the coordinates of the nodes(rk,elem,node) in this element
     rc = zc = 0.0;
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        x(node_lid) = node_coords(elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(elem_node_gids(node_lid), 1);
         rc += 0.25 * y(node_lid);
         zc += 0.25 * x(node_lid);
     }     // end for
@@ -647,7 +647,7 @@ size_t check_bdy(const size_t patch_gid,
         size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
 
         for (size_t dim = 0; dim < num_dims; dim++) {
-            these_patch_coords[dim] = node_coords(1, node_gid, dim);  // (rk, node_gid, dim)
+            these_patch_coords[dim] = node_coords(node_gid, dim);  // (rk, node_gid, dim)
         } // end for dim
 
         // a x-plane
