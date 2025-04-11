@@ -49,10 +49,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param View of the corner forces
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::update_velocity_rz(double rk_alpha,
+void SGHRZ::update_velocity_rz(
+    double rk_alpha,
     double dt,
     const Mesh_t& mesh,
     DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_vel_n0,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& corner_force) const
 {
@@ -78,7 +80,7 @@ void SGHRZ::update_velocity_rz(double rk_alpha,
 
         // update the velocity
         for (int dim = 0; dim < num_dims; dim++) {
-            node_vel(1, node_gid, dim) = node_vel(0, node_gid, dim) +
+            node_vel(node_gid, dim) = node_vel_n0(node_gid, dim) +
                                          rk_alpha * dt * node_force[dim] / node_mass(node_gid);
         } // end for dim
     }); // end for parallel for over nodes
@@ -137,10 +139,10 @@ void SGHRZ::get_velgrad_rz(
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
 
-            u(node_lid) = node_vel(1, node_gid, 0);
-            v(node_lid) = node_vel(1, node_gid, 1);
+            u(node_lid) = node_vel(node_gid, 0);
+            v(node_lid) = node_vel(node_gid, 1);
 
-            // r(node_lid) = node_coords(1, node_gid, 1); // true volume RZ
+            // r(node_lid) = node_coords(node_gid, 1); // true volume RZ
         } // end for
 
 
@@ -193,8 +195,8 @@ void SGHRZ::get_velgrad_rz(ViewCArrayKokkos<double>& vel_grad,
         // Get node gid
         size_t node_gid = elem_node_gids(node_lid);
 
-        u(node_lid) = node_vel(1, node_gid, 0); // x-comp
-        v(node_lid) = node_vel(1, node_gid, 1); // y-comp
+        u(node_lid) = node_vel(node_gid, 0); // x-comp
+        v(node_lid) = node_vel(node_gid, 1); // y-comp
     } // end for
 
     // initialize to zero
@@ -280,10 +282,10 @@ void SGHRZ::get_divergence_rz(DCArrayKokkos<double>& elem_div,
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
 
-            u(node_lid) = node_vel(1, node_gid, 0);
-            v(node_lid) = node_vel(1, node_gid, 1);
+            u(node_lid) = node_vel(node_gid, 0);
+            v(node_lid) = node_vel(node_gid, 1);
 
-            // r(node_lid) = node_coords(1, node_gid, 1); // true volume RZ
+            // r(node_lid) = node_coords(node_gid, 1); // true volume RZ
         } // end for
 
         // --- calculate the velocity divergence terms ---

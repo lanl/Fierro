@@ -212,13 +212,17 @@ public:
         const double dt,
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& node_vel_n0,
         const DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& node_coords_n0,
         const DCArrayKokkos<double>& MaterialPoints_sie,
+        const DCArrayKokkos<double>& MaterialPoints_sie_n0,
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialCorners_force,
         const corners_in_mat_t corners_in_mat_elem,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems) const;
+
 
     void get_force_rz(
         const Material_t& Materials,
@@ -253,7 +257,9 @@ public:
         const size_t num_dims,
         const size_t num_nodes,
         DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel) const;
+        const DCArrayKokkos<double>& node_coords_n0,
+        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& node_vel_n0) const;
 
     // **** Functions defined in momentum.cpp **** //
     void update_velocity_rz(
@@ -261,6 +267,7 @@ public:
         double dt,
         const Mesh_t& mesh,
         DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& node_vel_n0,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
 
@@ -339,9 +346,13 @@ public:
     // NOTE: Consider pulling up
     void rk_init_rz(
         DCArrayKokkos<double>& node_coords,
+        DCArrayKokkos<double>& node_coords_n0,
         DCArrayKokkos<double>& node_vel,
+        DCArrayKokkos<double>& node_vel_n0,
         DCArrayKokkos<double>& MaterialPoints_sie,
+        DCArrayKokkos<double>& MaterialPoints_sie_n0,
         DCArrayKokkos<double>& MaterialPoints_stress,
+        DCArrayKokkos<double>& MaterialPoints_stress_n0,
         const size_t num_dims,
         const size_t num_elems,
         const size_t num_nodes,
