@@ -2517,6 +2517,7 @@ public:
         elem_scalar_fields.set_values(0.0);
         elem_tensor_fields.set_values(0.0);
 
+
         // -----------------------------------------------------------------------
         // save the output fields to a single element average array for all state
         // -----------------------------------------------------------------------
@@ -2567,7 +2568,7 @@ public:
         // save the nodal fields to an array for exporting to graphics files
         DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
-        
+      
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
                                  node_vector_fields,
@@ -2622,6 +2623,7 @@ public:
             // make a view of node coords for passing into functions
             ViewCArray <double> node_coords_host(&State.node.coords.host(0,0), num_nodes, num_dims);
             ViewCArray <size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0,0), num_elems, num_nodes_in_elem);
+
             write_vtu(node_coords_host,
                     nodes_in_elem_host,
                     elem_scalar_fields,
@@ -2821,7 +2823,9 @@ public:
                          material_pt_states);
         }
 
-    }
+        return;
+
+    } // end write_mesh
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -3001,6 +3005,7 @@ public:
 
 
         } // end for loop over vertices
+
 
         //  ---------------------------------------------------------------------------
         //  Setup of file and directoring for exporting
@@ -3230,6 +3235,7 @@ public:
         graphics_id++;
 
         delete[] name;
+
 
         return;
     }

@@ -452,8 +452,8 @@ struct MaterialPoint_t
                     if (pres.size() == 0) this->pres = DCArrayKokkos<double>(num_pts_max, "material_point_pressure");
                     break;
                 case material_pt_state::stress:
-                    if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_pts_max, num_dims, num_dims, "material_point_stress");
-                    if (stress_n0.size() == 0) this->stress_n0 = DCArrayKokkos<double>(num_pts_max, num_dims, num_dims, "material_point_stress_n0");
+                    if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_pts_max, num_dims, num_dims, "material_point_stress");  
+                    if (stress_n0.size() == 0) this->stress_n0 = DCArrayKokkos<double>(num_pts_max, num_dims, num_dims, "material_point_stress_n0"); 
                     break;
                 case material_pt_state::elastic_modulii:
                     if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<double>(num_pts_max, 3, "material_elastic_modulii");

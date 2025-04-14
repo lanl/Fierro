@@ -166,8 +166,10 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         SGHRZ_State::required_gauss_pt_state,
         SGHRZ_State::required_material_pt_state,
         this->solver_id);
-
+    std::cout << "here after writing outputs \n";
+    
     graphics_time = time_value + graphics_dt_ival;
+
 
 
     // loop over the max number of time integration cycles
