@@ -72,7 +72,7 @@ static void velocity(const Mesh_t& mesh,
 {
     // Set velocity to zero in all directions
     for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-        node_vel(1, bdy_node_gid, dim) = 0.0;
+        node_vel(bdy_node_gid, dim) = 0.0;
     }
 
     return;

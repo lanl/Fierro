@@ -60,7 +60,6 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // add a flag on whether SGH was set up, if(SGH_setup_already==false)
     
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
-    const size_t rk_num_bins = SimulationParamaters.dynamic_options.rk_num_stages;
 
     // calculate pressure, sound speed, and stress for each material
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
@@ -72,7 +71,6 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                         State.MaterialPoints(mat_id).eos_state_vars,
                         State.MaterialPoints(mat_id).strength_state_vars,
                         State.MaterialToMeshMaps(mat_id).elem,
-                        rk_num_bins,
                         num_mat_points,
                         mat_id);
 
@@ -87,7 +85,6 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                                State.MaterialPoints(mat_id).eos_state_vars,
                                State.MaterialPoints(mat_id).strength_state_vars,
                                State.MaterialPoints(mat_id).shear_modulii,
-                               rk_num_bins,
                                num_mat_points,
                                mat_id);
     } // for loop over mat_id

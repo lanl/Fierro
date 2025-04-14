@@ -123,7 +123,7 @@ void SGTM3D::get_heat_flux(
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
-            avg_temp += node_temp(0, node_gid) / (double)num_nodes_in_elem;
+            avg_temp += node_temp(node_gid) / (double)num_nodes_in_elem;
         } // end for
 
 
@@ -145,7 +145,7 @@ void SGTM3D::get_heat_flux(
                 // Get node gid
                 size_t node_gid = elem_node_gids(node_lid);
 
-                temp_grad(dim) += node_temp(0, node_gid) * b_matrix(node_lid, dim); // Note: B matrix is outward normals from cell center
+                temp_grad(dim) += node_temp(node_gid) * b_matrix(node_lid, dim); // Note: B matrix is outward normals from cell center
             }
         }
         for(int dim = 0; dim < mesh.num_dims; dim++){
@@ -258,9 +258,9 @@ void SGTM3D::moving_flux(
 
         // get the coordinates of the element center (using rk_level=1 or node coords)
         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-            elem_coords(0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-            elem_coords(1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
-            elem_coords(2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+            elem_coords(0) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 0);
+            elem_coords(1) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 1);
+            elem_coords(2) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 2);
         } // end loop over nodes in element
         elem_coords(0) = (elem_coords(0) / mesh.num_nodes_in_elem);
         elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
@@ -296,8 +296,8 @@ void SGTM3D::moving_flux(
 
 
                 // Get the value of the normalized bump function at this point in space
-                double x = node_coords(1, node_gid, 0);
-                double y = node_coords(1, node_gid, 1);
+                double x = node_coords(node_gid, 0);
+                double y = node_coords(node_gid, 1);
 
                 double denomx = (scale*x - scale*sphere_position(0))*(scale*x - scale*sphere_position(0));
                 double denomy = (scale*y - scale*sphere_position(1))*(scale*y - scale*sphere_position(1));

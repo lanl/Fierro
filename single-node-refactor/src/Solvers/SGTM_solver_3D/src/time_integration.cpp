@@ -50,9 +50,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Number of nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::rk_init(DCArrayKokkos<double>& node_coords,
+void SGTM3D::rk_init(
+    DCArrayKokkos<double>& node_coords,
+    DCArrayKokkos<double>& node_coords_n0,
     DCArrayKokkos<double>& node_vel,
+    DCArrayKokkos<double>& node_vel_n0,
     DCArrayKokkos<double>& node_temp,
+    DCArrayKokkos<double>& node_temp_n0,
     DCArrayKokkos<double>& MaterialPoints_q_flux,
     DCArrayKokkos<double>& MaterialPoints_stress,
     const size_t num_dims,
@@ -61,15 +65,16 @@ void SGTM3D::rk_init(DCArrayKokkos<double>& node_coords,
     const size_t num_mat_points) const
 {
     // save elem quantities
-
+std::cout << "here in rk_int \n ";
     // save nodal quantities
     FOR_ALL(node_gid, 0, num_nodes, {
         for (size_t i = 0; i < num_dims; i++) {
-            node_coords(0, node_gid, i) = node_coords(1, node_gid, i);
-            // node_vel(0, node_gid, i) = node_vel(1, node_gid, i);
+            node_coords_n0(node_gid, i) = node_coords(node_gid, i);
+            // node_vel(node_gid, i) = node_vel(node_gid, i);
         }
-        node_temp(0, node_gid) = node_temp(1, node_gid);
+        node_temp_n0(node_gid) = node_temp(node_gid);
     }); // end parallel for
+std::cout << "done with rk_int \n ";
 
     Kokkos::fence();
 
@@ -131,7 +136,7 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
         // Getting the coordinates of the element
         for (size_t node_lid = 0; node_lid < 8; node_lid++) {
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-                coords(node_lid, dim) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), dim);
+                coords(node_lid, dim) = node_coords(mesh.nodes_in_elem(elem_gid, node_lid), dim);
             } // end for dim
         } // end for loop over node_lid
 

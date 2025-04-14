@@ -123,10 +123,10 @@ namespace MARSDissipationModel {
             // Get node global index and create view of nodal velocity
             int node_gid = elem_node_gids(node_lid);
 
-            //ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
-            vel_star(0) += 0.125 * node_vel(1, node_gid, 0);
-            vel_star(1) += 0.125 * node_vel(1, node_gid, 1);
-            vel_star(2) += 0.125 * node_vel(1, node_gid, 2);
+            //ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
+            vel_star(0) += 0.125 * node_vel(node_gid, 0);
+            vel_star(1) += 0.125 * node_vel(node_gid, 1);
+            vel_star(2) += 0.125 * node_vel(node_gid, 2);
         } // end for loop over nodes
 
         // find shock direction and shock impedance associated with each node
@@ -145,7 +145,7 @@ namespace MARSDissipationModel {
             size_t node_gid = elem_node_gids(node_lid);
 
             // Create view of nodal velocity
-            ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
 
             // Get an estimate of the shock direction.
             mag_vel = sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
@@ -283,7 +283,7 @@ namespace MARSDissipationModel {
 
             for (size_t dim = 0; dim < num_dims; dim++){
                 disp_corner_forces(corner_lid, dim) += 
-                        phi * muc(corner_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
+                        phi * muc(corner_lid) * (vel_star(dim) - node_vel(node_gid, dim));
             } // end for
             
         } // end for corners in element
@@ -461,10 +461,10 @@ namespace DirMARSDissipationModel {
             // Get node global index and create view of nodal velocity
             int node_gid = elem_node_gids(node_lid);
 
-            //ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
-            vel_star(0) += 0.125 * node_vel(1, node_gid, 0);
-            vel_star(1) += 0.125 * node_vel(1, node_gid, 1);
-            vel_star(2) += 0.125 * node_vel(1, node_gid, 2);
+            //ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
+            vel_star(0) += 0.125 * node_vel(node_gid, 0);
+            vel_star(1) += 0.125 * node_vel(node_gid, 1);
+            vel_star(2) += 0.125 * node_vel(node_gid, 2);
         } // end for loop over nodes
 
         // find shock direction and shock impedance associated with each node
@@ -483,7 +483,7 @@ namespace DirMARSDissipationModel {
             size_t node_gid = elem_node_gids(node_lid);
 
             // Create view of nodal velocity
-            ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
 
             // Get an estimate of the shock direction.
             mag_vel = sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
@@ -636,7 +636,7 @@ namespace DirMARSDissipationModel {
 
             for (size_t dim = 0; dim < num_dims; dim++){
                 disp_corner_forces(corner_lid, dim) += 
-                        phi * muc(corner_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
+                        phi * muc(corner_lid) * (vel_star(dim) - node_vel(node_gid, dim));
             } // end for
             
         } // end for corners in element
@@ -730,7 +730,7 @@ namespace MARSRZDissipationModel {
         // Get node global index and create view of nodal velocity
         int node_gid = elem_node_gids(node_lid);
 
-        ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
+        ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
 
         vel_star(0) += 0.25 * vel(0);
         vel_star(1) += 0.25 * vel(1);
@@ -752,7 +752,7 @@ namespace MARSRZDissipationModel {
         size_t node_gid = elem_node_gids(node_lid);
 
         // Create view of nodal velocity
-        ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
+        ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
 
         // Get an estimate of the shock direction.
         mag_vel = sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
@@ -885,7 +885,7 @@ namespace MARSRZDissipationModel {
 
         for (size_t dim = 0; dim < num_dims; dim++){
             disp_corner_forces(corner_lid, dim) += 
-                    phi * muc(corner_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
+                    phi * muc(corner_lid) * (vel_star(dim) - node_vel(node_gid, dim));
         } // end for
         
     } // end for corners in element        
@@ -1025,7 +1025,7 @@ namespace DirMARSRZDissipationModel {
         // Get node global index and create view of nodal velocity
         int node_gid = elem_node_gids(node_lid);
 
-        ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
+        ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
 
         vel_star(0) += 0.25 * vel(0);
         vel_star(1) += 0.25 * vel(1);
@@ -1047,7 +1047,7 @@ namespace DirMARSRZDissipationModel {
         size_t node_gid = elem_node_gids(node_lid);
 
         // Create view of nodal velocity
-        ViewCArrayKokkos<double> vel(&node_vel(1, node_gid, 0), num_dims);
+        ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
 
         // Get an estimate of the shock direction.
         mag_vel = sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
@@ -1186,7 +1186,7 @@ namespace DirMARSRZDissipationModel {
 
         for (size_t dim = 0; dim < num_dims; dim++){
             disp_corner_forces(corner_lid, dim) += 
-                    phi * muc(corner_lid) * (vel_star(dim) - node_vel(1, node_gid, dim));
+                    phi * muc(corner_lid) * (vel_star(dim) - node_vel(node_gid, dim));
         } // end for
         
     } // end for corners in element        

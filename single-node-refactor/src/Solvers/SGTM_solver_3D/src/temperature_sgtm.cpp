@@ -55,6 +55,7 @@ void SGTM3D::update_temperature(
     const Mesh_t& mesh,
     const DCArrayKokkos<double>& corner_q_transfer,
     const DCArrayKokkos<double>& node_temp,
+    const DCArrayKokkos<double>& node_temp_n0,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& node_q_transfer,
     const DCArrayKokkos<double>& mat_pt_sepcific_heat,
@@ -70,8 +71,6 @@ void SGTM3D::update_temperature(
             // Get corner gid
             size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
             node_q_transfer(node_gid) += corner_q_transfer(corner_gid);
-            // BUG HERE: corner_q_flux has num_dims and an rk level
-            // q_flux = DCArrayKokkos<double>(2, num_corners, num_dims, "corner_heat_flux"); // WARNING: hard coding rk2
 
         } // end for corner_lid
 
@@ -83,7 +82,7 @@ void SGTM3D::update_temperature(
         }
 
         // ---- Update the nodal temperature ---- //
-        node_temp(1, node_gid) = node_temp(0, node_gid) + rk_alpha * dt * node_q_transfer(node_gid) / (node_mass(node_gid)*Cp);
+        node_temp(node_gid) = node_temp_n0(node_gid) + rk_alpha * dt * node_q_transfer(node_gid) / (node_mass(node_gid)*Cp);
 
     }); // end for parallel for over nodes
 

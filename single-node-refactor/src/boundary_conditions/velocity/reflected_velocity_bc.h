@@ -77,7 +77,7 @@ static void velocity(const Mesh_t& mesh,
 
     // Remove the velocity in the specified direction
     for (size_t dim = 0; dim<mesh.num_dims; dim++){
-        node_vel(1, bdy_node_gid, dim) -= node_vel(1, bdy_node_gid, dim)*vel_bc_global_vars(bdy_set,dim)/mag;
+        node_vel(bdy_node_gid, dim) -= node_vel(bdy_node_gid, dim)*vel_bc_global_vars(bdy_set,dim)/mag;
     }
 
     return;

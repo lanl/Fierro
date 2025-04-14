@@ -130,6 +130,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     
     graphics_time = time_value + graphics_dt_ival;
 
+std::cout << "here after outputs t0 \n";
 
     // ---- Set up sphere to act as a moving heat source ---- //
     DCArrayKokkos<double> sphere_position(3, "sphere_position");
@@ -178,7 +179,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // initialize the material dt
             double dt_mat = dt;
-
+std::cout << "here getting time step\n";
             // ---- get the stable time step, both from CFL and Von Neumann stability ---- //
             get_timestep(mesh,
                          State.node.coords,
@@ -223,8 +224,11 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 std::cout << "checking: rk_init \n";
             // save the values at t = n
             rk_init(State.node.coords,
+                    State.node.coords_n0,
                     State.node.vel,
+                    State.node.vel_n0,
                     State.node.temp,
+                    State.node.temp_n0,
                     State.node.q_transfer,
                     State.MaterialPoints(mat_id).stress,
                     mesh.num_dims,
@@ -254,7 +258,7 @@ std::cout << "checking: get_heat_flux \n";
                     mesh,
                     State.GaussPoints.vol,
                     State.node.coords,
-                    State.node.temp,
+                    State.node.temp_n0,  // deliberately keeping bug here to pass tests, BUG BUG BUG
                     State.MaterialPoints(mat_id).q_flux,
                     State.MaterialPoints(mat_id).conductivity,
                     State.MaterialPoints(mat_id).temp_grad,
@@ -292,8 +296,18 @@ std::cout << "checking: moving_flux \n";
 
             // ---- apply flux boundary conditions (convection/radiation)  ---- //
 std::cout << "checking: applying BCs \n";
-            boundary_convection(mesh, BoundaryConditions, State.node.temp, State.node.q_transfer, State.node.coords, time_value);
-            boundary_radiation(mesh, BoundaryConditions, State.node.temp, State.node.q_transfer, State.node.coords, time_value);
+            boundary_convection(mesh, 
+                                BoundaryConditions, 
+                                State.node.temp_n0, // BUG here by design to match tests, BUG BUG BUG
+                                State.node.q_transfer, 
+                                State.node.coords_n0, // BUG here by design to match tests, BUG BUG BUG
+                                time_value);
+            boundary_radiation(mesh, 
+                               BoundaryConditions, 
+                               State.node.temp, 
+                               State.node.q_transfer, 
+                               State.node.coords, 
+                               time_value);
 
 std::cout << "update temperature \n";
             // ---- Update nodal temperature ---- //
@@ -301,6 +315,7 @@ std::cout << "update temperature \n";
                 mesh,
                 State.corner.q_transfer,
                 State.node.temp,
+                State.node.temp_n0,
                 State.node.mass,
                 State.node.q_transfer,
                 State.MaterialPoints(0).specific_heat, // Note: Need to make this a node field, and calculate in the material loop

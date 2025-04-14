@@ -70,7 +70,7 @@ static void velocity(const Mesh_t& mesh,
 {
     for (size_t dim = 0; dim < mesh.num_dims; dim++) {
         // Set velocity to zero
-        node_vel(1, bdy_node_gid, dim) = vel_bc_global_vars(bdy_set, dim);
+        node_vel(bdy_node_gid, dim) = vel_bc_global_vars(bdy_set, dim);
     }
 
     return;

@@ -50,10 +50,15 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Number of nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::rk_init(DCArrayKokkos<double>& node_coords,
+void SGH3D::rk_init(
+    DCArrayKokkos<double>& node_coords,
+    DCArrayKokkos<double>& node_coords_n0,
     DCArrayKokkos<double>& node_vel,
+    DCArrayKokkos<double>& node_vel_n0,
     DCArrayKokkos<double>& MaterialPoints_sie,
+    DCArrayKokkos<double>& MaterialPoints_sie_n0,
     DCArrayKokkos<double>& MaterialPoints_stress,
+    DCArrayKokkos<double>& MaterialPoints_stress_n0,
     const size_t num_dims,
     const size_t num_elems,
     const size_t num_nodes,
@@ -64,18 +69,18 @@ void SGH3D::rk_init(DCArrayKokkos<double>& node_coords,
         // stress is always 3D even with 2D-RZ
         for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 3; j++) {
-                MaterialPoints_stress(0, matpt_lid, i, j) = MaterialPoints_stress(1, matpt_lid, i, j);
+                MaterialPoints_stress_n0(matpt_lid, i, j) = MaterialPoints_stress(matpt_lid, i, j);
             }
         }  // end for
 
-        MaterialPoints_sie(0, matpt_lid) = MaterialPoints_sie(1, matpt_lid);
+        MaterialPoints_sie_n0(matpt_lid) = MaterialPoints_sie(matpt_lid);
     }); // end parallel for
 
     // save nodal quantities
     FOR_ALL(node_gid, 0, num_nodes, {
         for (size_t i = 0; i < num_dims; i++) {
-            node_coords(0, node_gid, i) = node_coords(1, node_gid, i);
-            node_vel(0, node_gid, i)    = node_vel(1, node_gid, i);
+            node_coords_n0(node_gid, i) = node_coords(node_gid, i);
+            node_vel_n0(node_gid, i)    = node_vel(node_gid, i);
         }
     }); // end parallel for
     Kokkos::fence();
@@ -135,7 +140,7 @@ void SGH3D::get_timestep(Mesh_t& mesh,
         // Getting the coordinates of the element
         for (size_t node_lid = 0; node_lid < 8; node_lid++) {
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-                coords(node_lid, dim) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), dim);
+                coords(node_lid, dim) = node_coords(mesh.nodes_in_elem(elem_gid, node_lid), dim);
             } // end for dim
         } // end for loop over node_lid
 

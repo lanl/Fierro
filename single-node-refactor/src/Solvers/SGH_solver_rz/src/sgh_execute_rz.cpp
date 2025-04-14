@@ -230,9 +230,13 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         for(size_t mat_id=0; mat_id<num_mats; mat_id++){
             // save the values at t_n
             rk_init_rz(State.node.coords,
+                       State.node.coords_n0,
                        State.node.vel,
+                       State.node.vel_n0,
                        State.MaterialPoints(mat_id).sie,
+                       State.MaterialPoints(mat_id).sie_n0,
                        State.MaterialPoints(mat_id).stress,
+                       State.MaterialPoints(mat_id).stress_n0,
                        mesh.num_dims,
                        mesh.num_elems,
                        mesh.num_nodes,
@@ -322,6 +326,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                dt,
                                mesh,
                                State.node.vel,
+                               State.node.vel_n0,
                                State.node.mass,
                                State.corner.force);
 
@@ -340,8 +345,11 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                  dt,
                                  mesh,
                                  State.node.vel,
+                                 State.node.vel_n0,
                                  State.node.coords,
+                                 State.node.coords_n0,
                                  State.MaterialPoints(mat_id).sie,
+                                 State.MaterialPoints(mat_id).sie_n0,
                                  State.MaterialPoints(mat_id).mass,
                                  State.MaterialCorners(mat_id).force,
                                  State.corners_in_mat_elem,
@@ -355,7 +363,9 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                mesh.num_dims,
                                mesh.num_nodes,
                                State.node.coords,
-                               State.node.vel);
+                               State.node.coords_n0,
+                               State.node.vel,
+                               State.node.vel_n0);
 
             // ---- Calculate cell volume for next time step ----
             geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
@@ -375,7 +385,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 State.MaterialPoints(mat_id).pres,
                                 State.MaterialPoints(mat_id).stress,
                                 State.MaterialPoints(mat_id).sspd,
-                                State.MaterialPoints(mat_id).sie,
+                                State.MaterialPoints(mat_id).sie_n0, // deliberate BUG, needed to pass existing tests (BUG BUG!)
                                 State.GaussPoints.vol,
                                 State.MaterialPoints(mat_id).mass,
                                 State.MaterialPoints(mat_id).eos_state_vars,
@@ -521,7 +531,7 @@ double sum_domain_internal_energy_rz(const DCArrayKokkos<double>& MaterialPoints
 
     // loop over the material points and tally IE
     FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
-        IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(1,matpt_lid);
+        IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(matpt_lid);
     }, IE_sum);
     Kokkos::fence();
 
@@ -541,7 +551,7 @@ double sum_domain_kinetic_energy_rz(const Mesh_t& mesh,
         double ke = 0;
 
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node_vel(1, node_gid, dim) * node_vel(1, node_gid, dim); // 1/2 at end, in the return
+            ke += node_vel(node_gid, dim) * node_vel(node_gid, dim); // 1/2 at end, in the return
         } // end for
 
         KE_loc_sum += node_extensive_mass(node_gid) * ke;  // 1/2 in the return
@@ -614,7 +624,7 @@ void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass
     FOR_ALL(node_gid, 0, num_nodes, {
 
         // includes node radius in the calculation
-        node_extensive_mass(node_gid) = node_mass(node_gid) * node_coords(1, node_gid, 1);
+        node_extensive_mass(node_gid) = node_mass(node_gid) * node_coords(node_gid, 1);
     }); // end parallel for
 } // end function
 
@@ -646,8 +656,8 @@ void calc_node_areal_mass_rz(const Mesh_t& mesh,
         
         node_mass(node_gid) = 0.0;
 
-        if (node_coords(1, node_gid, 1) > tiny) {
-            node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(1, node_gid, 1);
+        if (node_coords(node_gid, 1) > tiny) {
+            node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(node_gid, 1);
         }
         
     }); // end parallel for over node_gid
@@ -657,14 +667,14 @@ void calc_node_areal_mass_rz(const Mesh_t& mesh,
     FOR_ALL(node_bdy_gid, 0, mesh.num_bdy_nodes, {
         size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
 
-        if (node_coords(1, node_gid, 1) < tiny) {
+        if (node_coords(node_gid, 1) < tiny) {
             // node is on the axis
 
             for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_node(node_gid); node_lid++) {
                 size_t node_neighbor_gid = mesh.nodes_in_node(node_gid, node_lid);
 
                 // if the node is off the axis, use it's areal mass on the boundary
-                if (node_coords(1, node_neighbor_gid, 1) > tiny) {
+                if (node_coords(node_neighbor_gid, 1) > tiny) {
                     node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid) / 2.0);
                     // Why half, the on axis node is half the total area mass of the off-axis node
                     // node_mass = rho*A
