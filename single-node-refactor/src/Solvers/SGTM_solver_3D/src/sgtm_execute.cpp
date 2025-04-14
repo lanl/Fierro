@@ -258,7 +258,7 @@ std::cout << "checking: get_heat_flux \n";
                     mesh,
                     State.GaussPoints.vol,
                     State.node.coords,
-                    State.node.temp_n0,  // deliberately keeping bug here to pass tests, BUG BUG BUG
+                    State.node.temp,  // fixed to use current time level
                     State.MaterialPoints(mat_id).q_flux,
                     State.MaterialPoints(mat_id).conductivity,
                     State.MaterialPoints(mat_id).temp_grad,
@@ -298,9 +298,9 @@ std::cout << "checking: moving_flux \n";
 std::cout << "checking: applying BCs \n";
             boundary_convection(mesh, 
                                 BoundaryConditions, 
-                                State.node.temp_n0, // BUG here by design to match tests, BUG BUG BUG
+                                State.node.temp, // fixed to use current time level
                                 State.node.q_transfer, 
-                                State.node.coords_n0, // BUG here by design to match tests, BUG BUG BUG
+                                State.node.coords, // fixed to use current time level
                                 time_value);
             boundary_radiation(mesh, 
                                BoundaryConditions, 
