@@ -639,7 +639,6 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                           fillElemState_t&  fillElemState)
 {
 
-
     // short hand names
     //const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;

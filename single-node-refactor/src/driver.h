@@ -132,5 +132,23 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void finalize();
 
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn setup_solver_vars
+    ///
+    /// \brief a function to set the solver variables based on user yaml inputs
+    ///
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    template <typename T>
+    void setup_solver_vars(T& a_solver, 
+                           const size_t solver_id);
+
+
 }; // end driver class
+
+
+
+
 
