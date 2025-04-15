@@ -254,6 +254,8 @@ enum class node_state
     temp,
     heat_transfer,
     force,
+    gradient_level_set,
+    volume
 };
 
 
@@ -266,15 +268,17 @@ enum class node_state
 /////////////////////////////////////////////////////////////////////////////
 struct node_t
 {
-    DCArrayKokkos<double> coords;    ///< Nodal coordinates
-    DCArrayKokkos<double> coords_n0; ///< Nodal coordinates at tn=0 of time integration
-    DCArrayKokkos<double> vel;       ///< Nodal velocity
-    DCArrayKokkos<double> vel_n0;    ///< Nodal velocity at tn=0 of time integration
-    DCArrayKokkos<double> mass;      ///< Nodal mass
-    DCArrayKokkos<double> force;     ///< Nodal force
-    DCArrayKokkos<double> temp;      ///< Nodal temperature
-    DCArrayKokkos<double> temp_n0;   ///< Nodal temperature at tn=0 of time integration
+    DCArrayKokkos<double> coords;     ///< Nodal coordinates
+    DCArrayKokkos<double> coords_n0;  ///< Nodal coordinates at tn=0 of time integration
+    DCArrayKokkos<double> vel;        ///< Nodal velocity
+    DCArrayKokkos<double> vel_n0;     ///< Nodal velocity at tn=0 of time integration
+    DCArrayKokkos<double> mass;       ///< Nodal mass
+    DCArrayKokkos<double> force;      ///< Nodal force
+    DCArrayKokkos<double> temp;       ///< Nodal temperature
+    DCArrayKokkos<double> temp_n0;    ///< Nodal temperature at tn=0 of time integration
     DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
+    DCArrayKokkos<double> gradient_level_set;   ///< Nodal gradient of the level set function
+    DCArrayKokkos<double> volume;     ///< Nodal volume
 
     // initialization method (num_nodes, num_dims, state to allocate)
     void initialize(size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
@@ -302,6 +306,12 @@ struct node_t
                 case node_state::heat_transfer:
                     if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_nodes, "node_q_transfer");
                     break;
+                case node_state::gradient_level_set:
+                    if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<double>(num_nodes, num_dims, "node_grad_levelset");
+                    break;
+                case node_state::volume:
+                    if (volume.size() == 0) this->volume = DCArrayKokkos<double>(num_nodes, "node_volume");
+                    break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
                     throw std::runtime_error("**** Error in State Field Name ****");
@@ -318,6 +328,7 @@ enum class gauss_pt_state
     volume,
     divergence_velocity,
     gradient_velocity,
+    level_set
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -334,6 +345,8 @@ struct GaussPoint_t
     DCArrayKokkos<double> div;  ///< GaussPoint divergence of velocity
     DCArrayKokkos<double> vel_grad;  ///< GaussPoint velocity gradient tensor
 
+    DCArrayKokkos<double> level_set;  ///< GaussPoint level set field
+
     // initialization method (num_cells, num_dims)
     void initialize(size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
     {
@@ -348,6 +361,9 @@ struct GaussPoint_t
                     break;
                 case gauss_pt_state::gradient_velocity:
                     if (vel_grad.size() == 0) this->vel_grad = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_vel_grad");
+                    break;
+                case gauss_pt_state::level_set:
+                    if (level_set.size() == 0) this->level_set = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set");
                     break;
                 default:
                     std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;
