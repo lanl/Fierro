@@ -78,9 +78,10 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
 
     // GaussState initialized based on fill instructions
+    //   aways 3D
     fillGaussState.initialize(num_gauss_points, 
                               num_mats_per_elem, 
-                              num_dims,
+                              3,
                               SimulationParamaters.region_setups.fill_gauss_states);
 
     // the elem state is always used, thus always initialized

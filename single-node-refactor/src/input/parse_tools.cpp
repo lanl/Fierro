@@ -364,7 +364,7 @@ void print_inputs()
         }
     } // end mats
 // ---
-    std::cout << "    region: \n";
+    std::cout << "    regions: \n";
     std::cout << "       #...as many regions as you need... \n";
     std::cout << "       - region: \n";
     for (auto field : str_region_inps){

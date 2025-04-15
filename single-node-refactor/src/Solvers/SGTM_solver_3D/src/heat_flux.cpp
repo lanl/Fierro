@@ -180,9 +180,6 @@ void SGTM3D::get_heat_flux(
             // Dot the flux into the corner normal
             for(int dim = 0; dim < mesh.num_dims; dim++){
                 corner_q_transfer(corner_gid) += MaterialPoints_q_flux(mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
-                // BUG WAS HERE: corner_q_flux had num_dims and an rk level
-                // q_flux = DCArrayKokkos<double>(2, num_corners, num_dims, "corner_heat_flux"); // WARNING: hard coding rk2
-                // new coding fixed the excess memory allocation
             }
         }
     }); // end parallel for loop over elements associated with the given material

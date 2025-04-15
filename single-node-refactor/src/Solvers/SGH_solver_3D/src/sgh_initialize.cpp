@@ -49,6 +49,10 @@ void SGH3D::initialize(SimulationParameters_t& SimulationParamaters,
     const size_t num_corners = mesh.num_corners;
     const size_t num_dims = mesh.num_dims;
 
+    if (num_dims != 3){
+        std::cout << "Wrong dimensions of " << num_dims << "\n";
+        throw std::runtime_error("**** Solver is for 3D coordinates, wrong dimensions specified in input ****");
+    }
 
     // mesh state
     State.node.initialize(num_nodes, num_dims, SGH3D_State::required_node_state);

@@ -48,6 +48,11 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters,
     size_t num_corners = mesh.num_corners;
     size_t num_dim = mesh.num_dims;
 
+    if (num_dim != 2){
+        std::cout << "Wrong dimensions of " << num_dim << "\n";
+        throw std::runtime_error("**** Solver is for 2D RZ coordinates, wrong dimensions specified in input ****");
+    }
+
     // save the solver_id, which is a pravate class variable
     //this->solver_id = solver_id_inp;
 

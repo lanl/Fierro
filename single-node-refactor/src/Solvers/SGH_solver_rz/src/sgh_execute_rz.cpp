@@ -166,8 +166,10 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         SGHRZ_State::required_gauss_pt_state,
         SGHRZ_State::required_material_pt_state,
         this->solver_id);
+    std::cout << "here after writing outputs \n";
 
     graphics_time = time_value + graphics_dt_ival;
+
 
 
     // loop over the max number of time integration cycles
@@ -304,6 +306,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                   State.MaterialPoints(mat_id).sie,
                                   State.MaterialPoints(mat_id).pres,
                                   State.MaterialPoints(mat_id).stress,
+                                  State.MaterialPoints(mat_id).stress_n0,
                                   State.MaterialPoints(mat_id).sspd,
                                   State.MaterialPoints(mat_id).eos_state_vars,
                                   State.MaterialPoints(mat_id).strength_state_vars,
@@ -384,8 +387,9 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 State.MaterialPoints(mat_id).den,
                                 State.MaterialPoints(mat_id).pres,
                                 State.MaterialPoints(mat_id).stress,
+                                State.MaterialPoints(mat_id).stress_n0,
                                 State.MaterialPoints(mat_id).sspd,
-                                State.MaterialPoints(mat_id).sie_n0, // deliberate BUG, needed to pass existing tests (BUG BUG!)
+                                State.MaterialPoints(mat_id).sie, // fixed to use current value
                                 State.GaussPoints.vol,
                                 State.MaterialPoints(mat_id).mass,
                                 State.MaterialPoints(mat_id).eos_state_vars,
