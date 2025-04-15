@@ -65,7 +65,6 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
-    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
 
 
     // Calculate element volume
@@ -79,9 +78,10 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
 
 
     // GaussState initialized based on fill instructions
+    //   aways 3D
     fillGaussState.initialize(num_gauss_points, 
                               num_mats_per_elem, 
-                              num_dims,
+                              3,
                               SimulationParameters.region_setups.fill_gauss_states);
 
     // the elem state is always used, thus always initialized
@@ -123,7 +123,6 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
                  SimulationParameters.region_setups.region_fills_host,
                  SimulationParameters.region_setups.fill_gauss_states,
                  SimulationParameters.region_setups.fill_node_states,
-                 rk_num_bins,
                  num_mats_per_elem);
 
 
@@ -223,7 +222,6 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
 /// \param region_fills_host are the instructures on the host side to paint state on the mesh
 /// \param fill_gauss_states a vector of enums for gauss state to allocate based on yaml input file
 /// \param fill_nodes_states a vector of enums for node state to allocated based on yaml input file
-/// \param rk_num_bins is number of time integration storage bins
 ///
 /////////////////////////////////////////////////////////////////////////////
 void fill_regions(
@@ -251,7 +249,6 @@ void fill_regions(
         const CArray <RegionFill_host_t>& region_fills_host,
         std::vector <fill_gauss_state>& fill_gauss_states,
         std::vector <fill_node_state>& fill_node_states,
-        const size_t rk_num_bins,
         const size_t num_mats_per_elem)
 {
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
@@ -321,12 +318,12 @@ void fill_regions(
             elem_coords(elem_gid, 1) = 0.0;
             elem_coords(elem_gid, 2) = 0.0;
 
-            // get the coordinates of the element center (using rk_level=1 or node coords)
+            // get the coordinates of the element center 
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_coords(elem_gid, 0) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_coords(elem_gid, 1) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                elem_coords(elem_gid, 0) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_coords(elem_gid, 1) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3) {
-                    elem_coords(elem_gid, 2) += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_coords(elem_gid, 2) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 2);
                 }
                 else{
                     elem_coords(elem_gid, 2) = 0.0;
@@ -514,8 +511,8 @@ void fill_regions(
                 // get the mesh node index
                 size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
-                // node coords(rk,node_gid,dim), using the first rk level in the view
-                ViewCArrayKokkos <double> a_node_coords(&node_coords(0,node_gid,0), 3);
+                // node coords(node_gid,dim)
+                ViewCArrayKokkos <double> a_node_coords(&node_coords(node_gid,0), 3);
 
                 // paint the velocity onto the nodes of the mesh
                 if(node_vel.size()>0){
@@ -528,7 +525,6 @@ void fill_regions(
                                     region_fills(fill_id).speed,
                                     node_gid,
                                     mesh.num_dims,
-                                    rk_num_bins,
                                     region_fills(fill_id).vel_field);
                 }
              
@@ -541,7 +537,6 @@ void fill_regions(
                                     0.0,
                                     node_gid,
                                     mesh.num_dims,
-                                    rk_num_bins,
                                     region_fills(fill_id).temperature_field);
                 }
 
@@ -654,7 +649,6 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
-    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
 
     // a counter for the Material index spaces
     DCArrayKokkos<size_t> num_elems_saved_for_mat(num_mats, "setup_num_elems_saved_for_mat");
@@ -715,17 +709,17 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
 
                 // --- specific internal energy ---
                 if( State.MaterialPoints(mat_id).sie.host.size()>0 ){
-                    // save state, that is integrated in time, at the RK levels
-                    for (size_t rk_level = 0; rk_level < rk_num_bins; rk_level++) {
+                    // save state, that is integrated in time
+                    
                         if(fillGaussState.use_sie.host(gauss_gid,a_mat_in_elem)){
-                            State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = 
+                            State.MaterialPoints(mat_id).sie.host(mat_point_lid) = 
                                 fillGaussState.sie.host(gauss_gid,a_mat_in_elem);
                         }
                         else {
-                            State.MaterialPoints(mat_id).sie.host(rk_level, mat_point_lid) = 
+                            State.MaterialPoints(mat_id).sie.host(mat_point_lid) = 
                                 fillGaussState.ie.host(gauss_gid,a_mat_in_elem)/State.MaterialPoints(mat_id).mass.host(mat_point_lid);
                         }
-                    }
+                    
                 }
 
                 // --- thermal conductivity ---
@@ -757,10 +751,9 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
                 //  fit the sie values, for ie, convert to sie in this loop and fit it
                 //}
 
-                // save state, that is integrated in time, at the RK levels
-                for (size_t rk_level = 0; rk_level < rk_num_bins; rk_level++) {
-                    State.MaterialZones(mat_id).sie.host(rk_level, elem_gid) = 0.0;  // a place holder, make least squares fit value
-                }
+                // save state
+                State.MaterialZones(mat_id).sie.host(elem_gid) = 0.0;  // a place holder, make least squares fit value
+   
 
             } // 
 
@@ -1650,7 +1643,6 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 /// \param mesh_coords are the coordinates of the elem/gauss/nodes
 /// \param mesh_gid is the elem/gauss/nodes global mesh index
 /// \param num_dims is dimensions
-/// \param rk_num_bins is time integration storage level
 /// \param scalarFieldType is enum for setting the field
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -1661,18 +1653,14 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
                      const double slope,
                      const size_t mesh_gid,
                      const size_t num_dims,
-                     const size_t rk_num_bins,
                      const init_conds::init_scalar_conds scalarFieldType)
 {
-
-    // save temperature field at all rk_levels
-    for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){
 
         // --- scalar field ---
         switch (scalarFieldType) {
             case init_conds::uniform:
                 {
-                    field_scalar(rk_level,mesh_gid) = scalar;
+                    field_scalar(mesh_gid) = scalar;
                     break;
                 }
             // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
@@ -1699,8 +1687,8 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
                         }
                     } // end for
 
-                    field_scalar(rk_level,mesh_gid) = scalar * dir[0];
-                    field_scalar(rk_level,mesh_gid) = scalar * dir[1];
+                    field_scalar(mesh_gid) = scalar * dir[0];
+                    field_scalar(mesh_gid) = scalar * dir[1];
 
                     break;
                 }
@@ -1728,25 +1716,25 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
                         }
                     } // end for
 
-                    field_scalar(rk_level,mesh_gid) = scalar * radius_val;
+                    field_scalar(mesh_gid) = scalar * radius_val;
                     break;
                 }
             case init_conds::xlinearScalar:
                 {
                     // scalar_field = slope*x + value
-                    field_scalar(rk_level,mesh_gid) = slope*mesh_coords(0) + scalar;
+                    field_scalar(mesh_gid) = slope*mesh_coords(0) + scalar;
                     break;
                 }
             case init_conds::ylinearScalar:
                 {
                     // scalar_field = slope*y + value
-                    field_scalar(rk_level,mesh_gid) = slope*mesh_coords(1) + scalar;
+                    field_scalar(mesh_gid) = slope*mesh_coords(1) + scalar;
                     break;
                 }
             case init_conds::zlinearScalar:
                 {
                     // scalar_field = slope*z + value
-                    field_scalar(rk_level,mesh_gid) = slope*mesh_coords(2) + scalar;
+                    field_scalar(mesh_gid) = slope*mesh_coords(2) + scalar;
                     break;
                 }
             case init_conds::tgVortexScalar:
@@ -1769,8 +1757,6 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
                 }
         } // end of switch
 
-    } // end for rk level
-
 }  // end function paint_scalar_rk
 
 
@@ -1787,7 +1773,6 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
 /// \param w is the z-comp
 /// \param scalar is the magnitude
 /// \param mesh_gid is the node global mesh index
-/// \param rk_num_bins is the number of time integration storage levels
 /// \param scalarFieldType is enum for how to sett the field
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -1800,21 +1785,17 @@ void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
                      const double scalar,
                      const size_t mesh_gid,
                      const size_t num_dims,
-                     const size_t rk_num_bins,
                      const init_conds::init_vector_conds vectorFieldType)
 {
-
-    // save vector field at all rk_levels
-    for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){
 
         // --- vector ---
         switch (vectorFieldType) {
             case init_conds::cartesian:
                 {
-                    vector_field(rk_level, mesh_gid, 0) = u;
-                    vector_field(rk_level, mesh_gid, 1) = v;
+                    vector_field(mesh_gid, 0) = u;
+                    vector_field(mesh_gid, 1) = v;
                     if (num_dims == 3) {
-                        vector_field(rk_level, mesh_gid, 2) = w;
+                        vector_field(mesh_gid, 2) = w;
                     }
 
                     break;
@@ -1843,10 +1824,10 @@ void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
                         }
                     } // end for
 
-                    vector_field(rk_level, mesh_gid, 0) = scalar * dir[0];
-                    vector_field(rk_level, mesh_gid, 1) = scalar * dir[1];
+                    vector_field(mesh_gid, 0) = scalar * dir[0];
+                    vector_field(mesh_gid, 1) = scalar * dir[1];
                     if (num_dims == 3) {
-                        vector_field(rk_level, mesh_gid, 2) = 0.0;
+                        vector_field(mesh_gid, 2) = 0.0;
                     }
 
                     break;
@@ -1875,10 +1856,10 @@ void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
                         }
                     } // end for
 
-                    vector_field(rk_level, mesh_gid, 0) = scalar * dir[0];
-                    vector_field(rk_level, mesh_gid, 1) = scalar * dir[1];
+                    vector_field(mesh_gid, 0) = scalar * dir[0];
+                    vector_field(mesh_gid, 1) = scalar * dir[1];
                     if (num_dims == 3) {
-                        vector_field(rk_level, mesh_gid, 2) = scalar * dir[2];
+                        vector_field(mesh_gid, 2) = scalar * dir[2];
                     }
 
                     break;
@@ -1895,12 +1876,12 @@ void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
                 }
             case init_conds::tgVortexVec:
                 {
-                    vector_field(rk_level, mesh_gid, 0) = sin(PI * mesh_coords(0)) * 
+                    vector_field(mesh_gid, 0) = sin(PI * mesh_coords(0)) * 
                                                         cos(PI * mesh_coords(1));
-                    vector_field(rk_level, mesh_gid, 1) = -1.0 * cos(PI * mesh_coords(0)) * 
+                    vector_field(mesh_gid, 1) = -1.0 * cos(PI * mesh_coords(0)) * 
                                                         sin(PI * mesh_coords(1));
                     if (num_dims == 3) {
-                        vector_field(rk_level, mesh_gid, 2) = 0.0;
+                        vector_field(mesh_gid, 2) = 0.0;
                     }
 
                     break;
@@ -1908,10 +1889,10 @@ void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
             case init_conds::stationary:
                 {
                     // no velocity
-                    vector_field(rk_level, mesh_gid, 0) = 0.0;
-                    vector_field(rk_level, mesh_gid, 1) = 0.0;
+                    vector_field(mesh_gid, 0) = 0.0;
+                    vector_field(mesh_gid, 1) = 0.0;
                     if (num_dims == 3) {
-                        vector_field(rk_level, mesh_gid, 2) = 0.0;
+                        vector_field(mesh_gid, 2) = 0.0;
                     }
 
                     break;
@@ -1929,8 +1910,6 @@ void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
                     break;
                 }
         } // end of switch
-
-    } // end loop over rk_num_bins
 
 
     // done setting the velocity
@@ -1951,7 +1930,6 @@ void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
 /// \param f_id is fill instruction
 /// \param Number of dimensions of the mesh
 /// \param The ID of the fill instruction
-/// \param rk_num_bins is time integration storage level
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -1961,18 +1939,15 @@ void paint_node_scalar(const double scalar,
                        const DCArrayKokkos<double>& node_coords,
                        const double node_gid,
                        const double num_dims,
-                       const size_t f_id,
-                       const size_t rk_num_bins)
+                       const size_t f_id)
 {
-    // save velocity at all rk_levels
-    for(size_t rk_level = 0; rk_level < rk_num_bins; rk_level++){
 
         // --- scalar field ---
         switch (region_fills(f_id).temperature_field) {
             case init_conds::uniform:
                 {
 
-                    node_scalar(rk_level, node_gid) = scalar;
+                    node_scalar(node_gid) = scalar;
                     break;
                 }
             // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
@@ -1985,8 +1960,8 @@ void paint_node_scalar(const double scalar,
                     double radius_val = 0.0;
 
                     for (int dim = 0; dim < 2; dim++) {
-                        dir[dim]    = node_coords(rk_level, node_gid, dim);
-                        radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
+                        dir[dim]    = node_coords(node_gid, dim);
+                        radius_val += node_coords(node_gid, dim) * node_coords(node_gid, dim);
                     } // end for
                     radius_val = sqrt(radius_val);
 
@@ -1999,8 +1974,8 @@ void paint_node_scalar(const double scalar,
                         }
                     } // end for
 
-                    node_scalar(rk_level, node_gid) = scalar * dir[0];
-                    node_scalar(rk_level, node_gid) = scalar * dir[1];
+                    node_scalar(node_gid) = scalar * dir[0];
+                    node_scalar(node_gid) = scalar * dir[1];
 
                     break;
                 }
@@ -2014,8 +1989,8 @@ void paint_node_scalar(const double scalar,
                     double radius_val = 0.0;
 
                     for (int dim = 0; dim < 3; dim++) {
-                        dir[dim]    = node_coords(rk_level, node_gid, dim);
-                        radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
+                        dir[dim]    = node_coords(node_gid, dim);
+                        radius_val += node_coords(node_gid, dim) * node_coords(node_gid, dim);
                     } // end for
                     radius_val = sqrt(radius_val);
 
@@ -2028,7 +2003,7 @@ void paint_node_scalar(const double scalar,
                         }
                     } // end for
 
-                    node_scalar(rk_level, node_gid) = scalar * radius_val;
+                    node_scalar(node_gid) = scalar * radius_val;
                     break;
                 }
             case init_conds::tgVortexScalar:
@@ -2051,8 +2026,6 @@ void paint_node_scalar(const double scalar,
                 }
         } // end of switch
 
-    } // end loop over rk_num_bins
-
 }  // end function paint_node_scalar
 
 
@@ -2067,7 +2040,6 @@ void paint_node_scalar(const double scalar,
 /// \param mesh is the simulation mesh
 /// \param DualArrays for the material point eos state vars
 /// \param DualArrays for the material point strength state vars
-/// \param rk_num_bins is number of time integration storage bins
 /// \param num_mat_pts is the number of material points for mat_id
 /// \param mat_id is material id
 ///
@@ -2077,7 +2049,6 @@ void init_state_vars(const Material_t& Materials,
                      const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                      const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
                      const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                     const size_t rk_num_bins,
                      const size_t num_mat_pts,
                      const size_t mat_id)
 {
@@ -2130,7 +2101,6 @@ void init_state_vars(const Material_t& Materials,
 /// \param DualArrays for the material point strength state vars
 /// \param num_mat_pts is the number of material points for mat_id
 /// \param mat_id is material id
-/// \param rk_num_bins is number of time integration storage bins
 ///
 /////////////////////////////////////////////////////////////////////////////
 void init_press_sspd_stress(const Material_t& Materials,
@@ -2143,7 +2113,6 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                             const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
                             const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-                            const size_t rk_num_bins,
                             const size_t num_mat_pts,
                             const size_t mat_id)
 {
@@ -2164,24 +2133,21 @@ void init_press_sspd_stress(const Material_t& Materials,
 
     
     // --- stress tensor ---
-    for(size_t rk_level=0; rk_level<rk_num_bins; rk_level++){                
+    FOR_ALL(mat_point_lid, 0, num_mat_pts, {
 
-        FOR_ALL(mat_point_lid, 0, num_mat_pts, {
+        // always 3D even for 2D-RZ
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
 
-            // always 3D even for 2D-RZ
-            for (size_t i = 0; i < 3; i++) {
-                for (size_t j = 0; j < 3; j++) {
+                // ===============
+                //  Call the strength model here
+                // ===============
+                MaterialPoints_stress(mat_point_lid, i, j) = 0.0;
+            }
+        }  // end for i,j
+                            
+    }); // end parallel for over matpt storage
 
-                    // ===============
-                    //  Call the strength model here
-                    // ===============
-                    MaterialPoints_stress(rk_level, mat_point_lid, i, j) = 0.0;
-                }
-            }  // end for i,j
-                             
-        }); // end parallel for over matpt storage
-
-    }// end for rk_level
 
 
     // --- pressure and sound speed ---
@@ -2197,7 +2163,7 @@ void init_press_sspd_stress(const Material_t& Materials,
                                         MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(0, mat_point_lid),
+                                        MaterialPoints_sie(mat_point_lid),
                                         Materials.eos_global_vars);   
 
         // --- Sound Speed ---                               
@@ -2209,7 +2175,7 @@ void init_press_sspd_stress(const Material_t& Materials,
                                         MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(0, mat_point_lid),
+                                        MaterialPoints_sie(mat_point_lid),
                                         MaterialPoints_shear_modulii,
                                         Materials.eos_global_vars);
     }); // end pressure and sound speed

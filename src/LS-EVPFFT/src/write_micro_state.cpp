@@ -227,7 +227,6 @@ void calc_IPF_colors(
   size_t npts1 = ag.dims(3);
   size_t npts2 = ag.dims(4);
   size_t npts3 = ag.dims(5);
-  MatrixTypeRealDevice eulers(3);
 
   FOR_ALL(
         k, 1, npts3+1,
@@ -235,10 +234,12 @@ void calc_IPF_colors(
         i, 1, npts1+1, {
       double pi = 3.141592653589793;
       real_t aa_[3*3];
+      real_t eulers_[3];
       real_t Fe_local_[3*3];
       real_t V_[3*3]; 
       real_t R_[3*3];
       ViewMatrixTypeReal aa(aa_,3,3);
+      ViewMatrixTypeReal eulers(eulers_,3);
       ViewMatrixTypeReal Fe_local(Fe_local_,3,3);
       ViewMatrixTypeReal V(V_,3,3);
       ViewMatrixTypeReal R(R_,3,3);
@@ -499,6 +500,7 @@ void EVPFFT::write_micro_state_pvtu()
 
   // Calculate point positions
   MatrixTypeRealDual defgradavg_dual(3,3);
+  MatrixTypeRealDual delt_dual(3);
   MatrixTypeRealDual uf(3,npts1_g,npts2_g,npts3_g);
   MatrixTypeRealDual ufintp(3,npts1+1,npts2+1,npts3+1);
   MatrixTypeRealDual xintp(3,npts1+1,npts2+1,npts3+1);
@@ -508,8 +510,10 @@ void EVPFFT::write_micro_state_pvtu()
     for (int jj = 1; jj <= 3; jj++) {
       defgradavg_dual.host(ii,jj) = defgradavg(ii,jj);
     }
+    delt_dual.host(ii) = delt(3);
   }
   defgradavg_dual.update_device();
+  delt_dual.update_device();
   
   FOR_ALL_CLASS(
           kz, 1, npts3+1,
@@ -599,7 +603,7 @@ void EVPFFT::write_micro_state_pvtu()
           for (int jj = 1; jj <= 3; jj++) {
             dum += defgradavg_dual(ii,jj)*xtmp[jj-1];
           }
-          xintp(ii,kx,ky,kz) = (dum + ufintp(ii,kx,ky,kz))*delt(ii);
+          xintp(ii,kx,ky,kz) = (dum + ufintp(ii,kx,ky,kz))*delt_dual(ii);
         }
   }); // end FOR_ALL_CLASS
   Kokkos::fence();

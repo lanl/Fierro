@@ -73,6 +73,7 @@ void SGHRZ::update_state_rz(
     const DCArrayKokkos<double>& MaterialPoints_den,
     const DCArrayKokkos<double>& MaterialPoints_pres,
     const DCArrayKokkos<double>& MaterialPoints_stress,
+    const DCArrayKokkos<double>& MaterialPoints_stress_n0,
     const DCArrayKokkos<double>& MaterialPoints_sspd,
     const DCArrayKokkos<double>& MaterialPoints_sie,
     const DCArrayKokkos<double>& GaussPoints_vol,
@@ -140,7 +141,7 @@ void SGHRZ::update_state_rz(
                                         MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(0, mat_point_lid),
+                                        MaterialPoints_sie(mat_point_lid), 
                                         Materials.eos_global_vars); 
 
             // --- Sound Speed ---                               
@@ -152,7 +153,7 @@ void SGHRZ::update_state_rz(
                                         MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(0, mat_point_lid),
+                                        MaterialPoints_sie(mat_point_lid), 
                                         MaterialPoints_shear_modulii,
                                         Materials.eos_global_vars);
 
@@ -197,11 +198,12 @@ void SGHRZ::update_state_rz(
                                     mesh.nodes_in_elem,
                                     MaterialPoints_pres,
                                     MaterialPoints_stress,
+                                    MaterialPoints_stress_n0,
                                     MaterialPoints_sspd,
                                     MaterialPoints_eos_state_vars,
                                     MaterialPoints_strength_state_vars,
                                     MaterialPoints_den(mat_point_lid),
-                                    MaterialPoints_sie(1,mat_point_lid),
+                                    MaterialPoints_sie(mat_point_lid),
                                     MaterialPoints_shear_modulii,
                                     MaterialToMeshMaps_elem,
                                     Materials.eos_global_vars,
@@ -240,7 +242,7 @@ void SGHRZ::update_state_rz(
                                    MaterialPoints_stress,
                                    MaterialPoints_pres(mat_point_lid),
                                    MaterialPoints_den(mat_point_lid),
-                                   MaterialPoints_sie(1, mat_point_lid),
+                                   MaterialPoints_sie(mat_point_lid),
                                    MaterialPoints_sspd(mat_point_lid),
                                    Materials.MaterialFunctions(mat_id).erode_tension_val,
                                    Materials.MaterialFunctions(mat_id).erode_density_val,
@@ -254,7 +256,7 @@ void SGHRZ::update_state_rz(
 
                 for (size_t i = 0; i < 3; i++) {
                     for (size_t j = 0; j < 3; j++) {
-                        MaterialPoints_stress(1, mat_point_lid, i, j) = 0.0;
+                        MaterialPoints_stress(mat_point_lid, i, j) = 0.0;
                     }
                 }  // end for i,j
             } // end if on eroded
@@ -306,6 +308,7 @@ void SGHRZ::update_stress(const Material_t& Materials,
                           const DCArrayKokkos<double>& MaterialPoints_sie,
                           const DCArrayKokkos<double>& MaterialPoints_pres,
                           const DCArrayKokkos<double>& MaterialPoints_stress,
+                          const DCArrayKokkos<double>& MaterialPoints_stress_n0,
                           const DCArrayKokkos<double>& MaterialPoints_sspd,
                           const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                           const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
@@ -366,11 +369,12 @@ void SGHRZ::update_stress(const Material_t& Materials,
                                             mesh.nodes_in_elem,
                                             MaterialPoints_pres,
                                             MaterialPoints_stress,
+                                            MaterialPoints_stress_n0,
                                             MaterialPoints_sspd,
                                             MaterialPoints_eos_state_vars,
                                             MaterialPoints_strength_state_vars,
                                             MaterialPoints_den(mat_point_lid),
-                                            MaterialPoints_sie(1,mat_point_lid),
+                                            MaterialPoints_sie(mat_point_lid),
                                             MaterialPoints_shear_modulii,
                                             MaterialToMeshMaps_elem,
                                             Materials.eos_global_vars,

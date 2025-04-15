@@ -46,14 +46,18 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParameters,
 	size_t num_nodes = mesh.num_nodes;
     size_t num_gauss_pts = mesh.num_elems;
     size_t num_corners = mesh.num_corners;
-    size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
     size_t num_dim = mesh.num_dims;
+
+    if (num_dim != 2){
+        std::cout << "Wrong dimensions of " << num_dim << "\n";
+        throw std::runtime_error("**** Solver is for 2D RZ coordinates, wrong dimensions specified in input ****");
+    }
 
     // save the solver_id, which is a pravate class variable
     //this->solver_id = solver_id_inp;
 
-    State.node.initialize(rk_num_bins, num_nodes, num_dim, SGHRZ_State::required_node_state);
-    State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, 3, SGHRZ_State::required_gauss_pt_state);  // note: dims is always 3 
+    State.node.initialize(num_nodes, num_dim, SGHRZ_State::required_node_state);
+    State.GaussPoints.initialize(num_gauss_pts, 3, SGHRZ_State::required_gauss_pt_state);  // note: dims is always 3 
     State.corner.initialize(num_corners, num_dim, SGHRZ_State::required_corner_state);
     
     // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
@@ -66,7 +70,6 @@ void SGHRZ::initialize_material_state(SimulationParameters_t& SimulationParamete
                 	                  State_t& State) const
 {
     const size_t num_nodes = mesh.num_nodes;
-    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
@@ -88,7 +91,7 @@ void SGHRZ::initialize_material_state(SimulationParameters_t& SimulationParamete
         size_t num_corners_for_mat = num_elems_for_mat * mesh.num_nodes_in_elem;
 
         State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat); 
-        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3, SGHRZ_State::required_material_pt_state); // aways 3D, even for 2D-RZ calcs
+        State.MaterialPoints(mat_id).initialize(num_points_for_mat, 3, SGHRZ_State::required_material_pt_state); // aways 3D, even for 2D-RZ calcs
         State.MaterialCorners(mat_id).initialize(num_corners_for_mat, mesh.num_dims, SGHRZ_State::required_material_corner_state); 
         // zones are not used with solver
 

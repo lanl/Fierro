@@ -222,7 +222,6 @@ void calc_IPF_colors(
   size_t npts1 = ag.dims(3);
   size_t npts2 = ag.dims(4);
   size_t npts3 = ag.dims(5);
-  MatrixTypeRealDevice eulers(3);
 
   FOR_ALL(
         k, 1, npts3+1,
@@ -230,7 +229,9 @@ void calc_IPF_colors(
         i, 1, npts1+1, {
       double pi = 3.141592653589793;
       real_t aa_[3*3];
+      real_t eulers_[3];
       ViewMatrixTypeReal aa(aa_,3,3);
+      ViewMatrixTypeReal eulers(eulers_,3);
 
       for (int ii = 1; ii <= 3; ii++) {
         for (int jj = 1; jj <= 3; jj++) {
@@ -244,19 +245,19 @@ void calc_IPF_colors(
       hkl[1] = 0.;
       hkl[2] = 1.;
       for (int ii=0;ii<3;ii++){
-          hkl[ii] = hkl[ii]/sqrt(pow(hkl[0],2.)+pow(hkl[1],2.)+pow(hkl[2],2.));
+          hkl[ii] = hkl[ii]/SQRT(POW2(hkl[0])+POW2(hkl[1])+POW2(hkl[2]));
       }
 
       //quatB convert Bunge Euler angles (radian) to quaternion
       double q[4];
-      q[0] = sin(0.5*eulers(2))*cos(0.5*(eulers(1)-eulers(3)));
-      q[1] = sin(0.5*eulers(2))*sin(0.5*(eulers(1)-eulers(3)));
-      q[2] = cos(0.5*eulers(2))*sin(0.5*(eulers(1)+eulers(3)));
-      q[3] = cos(0.5*eulers(2))*cos(0.5*(eulers(1)+eulers(3)));
+      q[0] = SIN(0.5*eulers(2))*COS(0.5*(eulers(1)-eulers(3)));
+      q[1] = SIN(0.5*eulers(2))*SIN(0.5*(eulers(1)-eulers(3)));
+      q[2] = COS(0.5*eulers(2))*SIN(0.5*(eulers(1)+eulers(3)));
+      q[3] = COS(0.5*eulers(2))*COS(0.5*(eulers(1)+eulers(3)));
 
       double dout[3];
       //invqrvec use quaterion to rotate vector in inverse sense, so is in reference to crystal system
-      double t1 = pow(q[3],2.) - pow(q[0],2.) - pow(q[1],2.) - pow(q[2],2.);
+      double t1 = POW2(q[3]) - POW2(q[0]) - POW2(q[1]) - POW2(q[2]);
 
       for (int ii=0;ii<3;ii++){
           dout[ii] = t1*hkl[ii];
@@ -277,15 +278,15 @@ void calc_IPF_colors(
                   if (kl==2) {kl = -1;}
                   if (kl==-2) {kl = 1;}
 
-                  dout[ii] = dout[ii] + 2.*q[kk]*q[3]*float(kl)*hkl[jj];
+                  dout[ii] = dout[ii] + 2.*q[kk]*q[3]*((double) kl)*hkl[jj];
               }
           }
       }
 
       // Calculate RGB values from dout according to Groever's alg to get TSL color scheme
-      dout[0] = fabs(dout[0]);
-      dout[1] = fabs(dout[1]);
-      dout[2] = fabs(dout[2]);
+      dout[0] = ABS(dout[0]);
+      dout[1] = ABS(dout[1]);
+      dout[2] = ABS(dout[2]);
       double dmax = 0.;
       double dmin = 9999.;
       int bottom = 0;
@@ -307,15 +308,15 @@ void calc_IPF_colors(
       }
 
       if (dout[top] > 1.){dout[top] = 1.;}
-      double phi = fmin(pi/4.,acos(dout[top]));
-      double thett = atan2(dout[bottom],dout[middle]);
+      double phi = fmin(pi/4.,ACOS(dout[top]));
+      double thett = ATAN2(dout[bottom],dout[middle]);
 
       double red;
       double blue;
       double green;
-      red = 1. - sin(1.6 * phi);
-      green = (1. - red) * cos(2.*thett);
-      blue = (1. - red) * sin(2.*thett);
+      red = 1. - SIN(1.6 * phi);
+      green = (1. - red) * COS(2.*thett);
+      blue = (1. - red) * SIN(2.*thett);
 
       double drmax = fmax(red,fmax(green,blue));
       double correct = 1./drmax;
@@ -475,6 +476,7 @@ void EVPFFT::write_micro_state_pvtu()
 
   // Calculate point positions
   MatrixTypeRealDual defgradavg(3,3);
+  MatrixTypeRealDual delt_dual(3);
   MatrixTypeRealDual xintp(3,npts1+1,npts2+1,npts3+1);
   MatrixTypeIntHost pid(npts1+1,npts2+1,npts3+1);
 
@@ -487,8 +489,10 @@ void EVPFFT::write_micro_state_pvtu()
       }
       if (ii==jj) {defgradavg.host(ii,jj) += 1.0;}
     }
+    delt_dual.host(ii) = delt(ii);
   }
   defgradavg.update_device();
+  delt_dual.update_device();
 
   FOR_ALL_CLASS(
           kz, 1, npts3+2,
@@ -505,7 +509,7 @@ void EVPFFT::write_micro_state_pvtu()
           for (int jj = 1; jj <= 3; jj++) {
             dum += defgradavg(ii,jj)*xtmp[jj-1];
           }
-          xintp(ii,kx,ky,kz) = dum*delt(ii);
+          xintp(ii,kx,ky,kz) = dum*delt_dual(ii);
         }
   }); // end FOR_ALL_CLASS
   Kokkos::fence();

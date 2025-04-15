@@ -76,7 +76,7 @@ static void velocity(const Mesh_t& mesh,
     // z_plane  = 2,
 
     // Set velocity to the specified value
-    node_vel(1, bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) =
+    node_vel(bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) =
         vel_bc_global_vars(bdy_set, BoundaryConditionEnums(bdy_set).Direction);
 
     return;

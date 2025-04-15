@@ -91,7 +91,6 @@ void fill_regions(
         const CArray <RegionFill_host_t>& region_fills_host,
         std::vector <fill_gauss_state>& fill_gauss_states,
         std::vector <fill_node_state>& fill_node_states,
-        const size_t rk_num_bins,
         const size_t num_mats_per_elem);
 
 
@@ -240,7 +239,6 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 /// \param mesh_coords are the coordinates of the elem/gauss/nodes
 /// \param mesh_gid is the elem/gauss/nodes global mesh index
 /// \param num_dims is dimensions
-/// \param rk_num_bins is the number of time integration storage levels
 /// \param scalarFieldType is enum for how to sett the field
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -251,7 +249,6 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
                         const double slope,
                         const size_t mesh_gid,
                         const size_t num_dims,
-                        const size_t rk_num_bins,
                         const init_conds::init_scalar_conds scalarFieldType);
 
 /////////////////////////////////////////////////////////////////////////////
@@ -267,7 +264,6 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
 /// \param w is the z-comp
 /// \param scalar is the magnitude
 /// \param mesh_gid is the node global mesh index
-/// \param rk_num_bins is the number of time integration storage levels
 /// \param vectorFieldType is enum for setting the field
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -280,7 +276,6 @@ void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
                      const double scalar,
                      const size_t mesh_gid,
                      const size_t num_dims,
-                     const size_t rk_num_bins,
                      const init_conds::init_vector_conds vectorFieldType);
 
 
@@ -300,7 +295,6 @@ void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
 /// \param f_id is fill instruction
 /// \param Number of dimensions of the mesh
 /// \param The ID of the fill instruction
-/// \param rk_num_bins is time integration storage level
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
@@ -310,8 +304,7 @@ void paint_node_scalar(const double scalar,
                        const DCArrayKokkos<double>& node_coords,
                        const double node_gid,
                        const double num_dims,
-                       const size_t f_id,
-                       const size_t rk_num_bins);
+                       const size_t f_id);
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -324,7 +317,6 @@ void paint_node_scalar(const double scalar,
 /// \param mesh is the simulation mesh
 /// \param DualArrays for the material point eos state vars
 /// \param DualArrays for the material point strength state vars
-/// \param rk_num_bins is number of time integration storage bins
 /// \param num_mat_pts is the number of material points for mat_id
 /// \param mat_id is material id
 ///
@@ -334,7 +326,6 @@ void init_state_vars(const Material_t& Materials,
                      const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                      const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
                      const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                     const size_t rk_num_bins,
                      const size_t num_mat_pts,
                      const size_t mat_id);
 
@@ -355,7 +346,6 @@ void init_state_vars(const Material_t& Materials,
 /// \param DualArrays for the material point strength state vars
 /// \param num_mat_pts is the number of material points for mat_id
 /// \param mat_id is material id
-/// \param rk_num_bins is number of time integration storage bins
 ///
 /////////////////////////////////////////////////////////////////////////////
 void init_press_sspd_stress(const Material_t& Materials,
@@ -368,7 +358,6 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                             const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
                             const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-                            const size_t rk_num_bins,
                             const size_t num_mat_pts,
                             const size_t mat_id);
 

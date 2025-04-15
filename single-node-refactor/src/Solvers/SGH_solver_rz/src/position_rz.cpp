@@ -47,23 +47,26 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param View of nodal velocity data
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::update_position_rz(double rk_alpha,
+void SGHRZ::update_position_rz(
+    double rk_alpha,
     double dt,
     const size_t num_dims,
     const size_t num_nodes,
     DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel) const
+    const DCArrayKokkos<double>& node_coords_n0,
+    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_vel_n0) const
 {
     // loop over all the nodes in the mesh
     FOR_ALL(node_gid, 0, num_nodes, {
 
         for (int dim = 0; dim < num_dims; dim++) {
-            double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
-            node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha * dt * half_vel;
+            double half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * 0.5;
+            node_coords(node_gid, dim) = node_coords_n0(node_gid, dim) + rk_alpha * dt * half_vel;
         }
 
         // radius must always be positive in RZ coordinates, the coords are (z,r)
-        node_coords(1, node_gid, 1) = fmax(0.0, node_coords(1, node_gid, 1));
+        node_coords(node_gid, 1) = fmax(0.0, node_coords(node_gid, 1));
 
     }); // end parallel for over nodes
 } // end subroutine

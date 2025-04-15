@@ -272,23 +272,28 @@ enum class node_state
 /////////////////////////////////////////////////////////////////////////////
 struct node_t
 {
-    DistributedDCArray<double> coords; ///< Nodal coordinates
-    DistributedDCArray<double> vel;  ///< Nodal velocity
-    DistributedDCArray<double> mass; ///< Nodal mass
-    DistributedDCArray<double> force; ///< Nodal force
-    DistributedDCArray<double> temp; ///< Nodal temperature
+    DistributedDCArray<double> coords;    ///< Nodal coordinates
+    DistributedDCArray<double> coords_n0; ///< Nodal coordinates at tn=0 of time integration
+    DistributedDCArray<double> vel;       ///< Nodal velocity
+    DistributedDCArray<double> vel_n0;    ///< Nodal velocity at tn=0 of time integration
+    DistributedDCArray<double> mass;      ///< Nodal mass
+    DistributedDCArray<double> force;     ///< Nodal force
+    DistributedDCArray<double> temp;      ///< Nodal temperature
+    DistributedDCArray<double> temp_n0;   ///< Nodal temperature at tn=0 of time integration
     DistributedDCArray<double> q_transfer; ///< Nodal heat flux
 
-    // initialization method (num_rk_storage_bins, num_nodes, num_dims, state to allocate)
-    void initialize(size_t num_rk, size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
+    // initialization method (num_nodes, num_dims, state to allocate)
+    void initialize(size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
     {
         for (auto field : node_states){
             switch(field){
                 case node_state::coords:
-                    if (coords.size() == 0) this->coords = DistributedDCArray<double>(num_rk, num_nodes, num_dims, "node_coordinates");
+                    if (coords.size() == 0) this->coords = DistributedDCArray<double>(num_nodes, num_dims, "node_coordinates");
+                    if (coords_n0.size() == 0) this->coords_n0 = DistributedDCArray<double>(num_nodes, num_dims, "node_coordinates_n0");
                     break;
                 case node_state::velocity:
-                    if (vel.size() == 0) this->vel = DistributedDCArray<double>(num_rk, num_nodes, num_dims, "node_velocity");
+                    if (vel.size() == 0) this->vel = DistributedDCArray<double>(num_nodes, num_dims, "node_velocity");
+                    if (vel_n0.size() == 0) this->vel_n0 = DistributedDCArray<double>(num_nodes, num_dims, "node_velocity_n0");
                     break;
                 case node_state::force:
                     if (force.size() == 0) this->force = DistributedDCArray<double>(num_nodes, num_dims, "node_force");
@@ -297,7 +302,8 @@ struct node_t
                     if (mass.size() == 0) this->mass = DistributedDCArray<double>(num_nodes, "node_mass");
                     break;
                 case node_state::temp:
-                    if (temp.size() == 0) this->temp = DistributedDCArray<double>(num_rk, num_nodes, "node_temp");
+                    if (temp.size() == 0) this->temp = DistributedDCArray<double>(num_nodes, "node_temp");
+                    if (temp_n0.size() == 0) this->temp_n0 = DistributedDCArray<double>(num_nodes, "node_temp_n0");
                     break;
                 case node_state::heat_transfer:
                     if (q_transfer.size() == 0) this->q_transfer = DistributedDCArray<double>(num_nodes, "node_q_transfer");
@@ -334,8 +340,8 @@ struct GaussPoint_t
     DCArrayKokkos<double> div;  ///< GaussPoint divergence of velocity
     DCArrayKokkos<double> vel_grad;  ///< GaussPoint velocity gradient tensor
 
-    // initialization method (num_rk_storage_bins, num_cells, num_dims)
-    void initialize(size_t num_rk, size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
+    // initialization method (num_cells, num_dims)
+    void initialize(size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
     {
 
         for (auto field : gauss_pt_states){
@@ -410,10 +416,16 @@ struct MaterialPoint_t
 
     DCArrayKokkos<double> den;    ///< MaterialPoint density
     DCArrayKokkos<double> pres;   ///< MaterialPoint pressure
-    DCArrayKokkos<double> stress; ///< MaterialPoint stress
+
+    DCArrayKokkos<double> stress;    ///< MaterialPoint stress
+    DCArrayKokkos<double> stress_n0; ///< MaterialPoint stress at t=n0 of time integration
+
+    DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
+    DCArrayKokkos<double> sie_n0; ///< coefficients for the sie in strong form at t=n0 of time integration
+
     DCArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
     DCArrayKokkos<double> mass;   ///< MaterialPoint mass
-    DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
+
     DCArrayKokkos<double> q_flux; ///< Divergence of heat flux
     DCArrayKokkos<double> conductivity; ///< Thermal conductivity
     DCArrayKokkos<double> specific_heat; ///< Specific Heat
@@ -431,8 +443,8 @@ struct MaterialPoint_t
     DCArrayKokkos<double> volfrac;   ///< MaterialPoint volume fraction
     DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
 
-    // initialization method (num_rk_storage_bins, num_pts_max, num_dims)
-    void initialize(size_t num_rk, size_t num_pts_max, size_t num_dims, std::vector<material_pt_state> material_pt_states)
+    // initialization method (num_pts_max, num_dims)
+    void initialize(size_t num_pts_max, size_t num_dims, std::vector<material_pt_state> material_pt_states)
     {
 
         this->temp_grad = DCArrayKokkos<double>(num_pts_max, 3, "material_point_temperature_gradient"); //WARNING: Bug here, WIP
@@ -446,7 +458,8 @@ struct MaterialPoint_t
                     if (pres.size() == 0) this->pres = DCArrayKokkos<double>(num_pts_max, "material_point_pressure");
                     break;
                 case material_pt_state::stress:
-                    if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_rk, num_pts_max, num_dims, num_dims, "material_point_stress");
+                    if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_pts_max, num_dims, num_dims, "material_point_stress");  
+                    if (stress_n0.size() == 0) this->stress_n0 = DCArrayKokkos<double>(num_pts_max, num_dims, num_dims, "material_point_stress_n0"); 
                     break;
                 case material_pt_state::elastic_modulii:
                     if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<double>(num_pts_max, 3, "material_elastic_modulii");
@@ -467,7 +480,8 @@ struct MaterialPoint_t
                     if (volfrac.size() == 0) this->volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac");
                     break;
                 case material_pt_state::specific_internal_energy:
-                    if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_rk, num_pts_max, "material_point_sie");
+                    if (sie.size() == 0)  this->sie = DCArrayKokkos<double>(num_pts_max, "material_point_sie");
+                    if (sie_n0.size() == 0) this->sie_n0 = DCArrayKokkos<double>(num_pts_max, "material_point_sie_n0");
                     break;
                 case material_pt_state::heat_flux:
                     if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_pts_max, num_dims, "material_point_q_flux");
@@ -509,15 +523,17 @@ struct MaterialZone_t
 {
     size_t num_material_zones;    ///< the actual number of material zones, omitting the buffer
 
-    DCArrayKokkos<double> sie;      ///< coefficients for the sie polynomial field
+    DCArrayKokkos<double> sie;     ///< coefficients for the sie polynomial field
+    DCArrayKokkos<double> sie_n0;  ///< coefficients for the sie polynomial field at t=n0 of time integration
 
-    // initialization method for arbitrary-order FE (num_rk_storage_bins, num_zones)
-    void initialize_Pn(size_t num_rk, size_t num_zones_max, std::vector<material_zone_state> material_zone_states)
+    // initialization method for arbitrary-order FE (num_zones)
+    void initialize_Pn(size_t num_zones_max, std::vector<material_zone_state> material_zone_states)
     {
         for (auto field : material_zone_states){
             switch(field){
                 case material_zone_state::specific_internal_energy:
-                    if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_rk, num_zones_max, "material_zone_sie");
+                    if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_zones_max, "material_zone_sie");
+                    if (sie_n0.size() == 0) this->sie_n0 = DCArrayKokkos<double>(num_zones_max, "material_zone_sie_n0");
                     break;
                 default:
                     std::cout<<"Desired material zone state not understood in MaterialZone_t initialize"<<std::endl;

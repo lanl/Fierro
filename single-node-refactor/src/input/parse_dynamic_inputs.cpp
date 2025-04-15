@@ -136,11 +136,6 @@ void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options)
             int rk_num_stages = yaml[a_word].As<int>();
             dynamic_options.rk_num_stages = rk_num_stages;
         }
-        //  Number of RK bins
-        else if (a_word.compare("rk_num_bins") == 0) {
-            int rk_num_bins = yaml[a_word].As<int>();
-            dynamic_options.rk_num_bins = rk_num_bins;
-        }
         else {
             std::cout << "ERROR: invalid input: " << a_word << std::endl;
             std::cout << "Valid options are: " << std::endl;

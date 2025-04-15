@@ -241,7 +241,6 @@ void calc_IPF_colors(
   size_t npts1 = ag.dims(3);
   size_t npts2 = ag.dims(4);
   size_t npts3 = ag.dims(5);
-  MatrixTypeRealDevice eulers(3);
 
   FOR_ALL(
         k, 1, npts3+1,
@@ -249,10 +248,12 @@ void calc_IPF_colors(
         i, 1, npts1+1, {
       double pi = 3.141592653589793;
       real_t aa_[3*3];
+      real_t eulers_[3];
       real_t Fe_local_[3*3];
       real_t V_[3*3]; 
       real_t R_[3*3];
       ViewMatrixTypeReal aa(aa_,3,3);
+      ViewMatrixTypeReal eulers(eulers_,3);
       ViewMatrixTypeReal Fe_local(Fe_local_,3,3);
       ViewMatrixTypeReal V(V_,3,3);
       ViewMatrixTypeReal R(R_,3,3);

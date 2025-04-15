@@ -292,6 +292,7 @@ struct MaterialFunctions_t
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DCArrayKokkos<double>  &MaterialPoints_pres,
         const DCArrayKokkos<double>  &MaterialPoints_stress,
+        const DCArrayKokkos<double>  &MaterialPoints_stress_n0,
         const DCArrayKokkos<double>  &MaterialPoints_sspd,
         const DCArrayKokkos<double>  &MaterialPoints_eos_state_vars,
         const DCArrayKokkos<double>  &MaterialPoints_strength_state_vars,

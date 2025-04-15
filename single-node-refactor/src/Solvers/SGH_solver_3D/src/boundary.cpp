@@ -151,7 +151,7 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
 
 
                 for (size_t dim=0; dim<mesh.num_dims; dim++){
-                    avg_coords[dim] += node_coords(1, node_gid, dim);
+                    avg_coords[dim] += node_coords(node_gid, dim);
                 } // end for dim
 
             } // end for
@@ -188,8 +188,8 @@ void SGH3D::boundary_stress(const Mesh_t&      mesh,
                 } // end if
            
                 for (size_t dim=0; dim<mesh.num_dims; dim++){
-                    vec_a[dim] = node_coords(1, node_gid_0, dim) - avg_coords[dim];
-                    vec_b[dim] = node_coords(1, node_gid_1, dim) - avg_coords[dim];
+                    vec_a[dim] = node_coords(node_gid_0, dim) - avg_coords[dim];
+                    vec_b[dim] = node_coords(node_gid_1, dim) - avg_coords[dim];
                 } // end for dim
 
                 // calculating the cross product of the 2 vectors, 1/2 multiply is later

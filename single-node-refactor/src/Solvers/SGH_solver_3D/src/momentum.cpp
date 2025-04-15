@@ -53,6 +53,7 @@ void SGH3D::update_velocity(double rk_alpha,
     double dt,
     const Mesh_t& mesh,
     DCArrayKokkos<double>& node_vel,
+    DCArrayKokkos<double>& node_vel_n0,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& node_force,
     const DCArrayKokkos<double>& corner_force) const
@@ -75,7 +76,7 @@ void SGH3D::update_velocity(double rk_alpha,
 
         // update the velocity
         for (int dim = 0; dim < num_dims; dim++) {
-            node_vel(1, node_gid, dim) = node_vel(0, node_gid, dim) +
+            node_vel(node_gid, dim) = node_vel_n0(node_gid, dim) +
                     rk_alpha * dt * node_force(node_gid,dim) / node_mass(node_gid);
         } // end for dim
     }); // end for parallel for over nodes
@@ -129,9 +130,9 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
 
-            u(node_lid) = node_vel(1, node_gid, 0);
-            v(node_lid) = node_vel(1, node_gid, 1);
-            w(node_lid) = node_vel(1, node_gid, 2);
+            u(node_lid) = node_vel(node_gid, 0);
+            v(node_lid) = node_vel(node_gid, 1);
+            w(node_lid) = node_vel(node_gid, 2);
         } // end for
 
         // --- calculate the velocity gradient terms ---
@@ -232,9 +233,9 @@ void SGH3D::get_divergence(DCArrayKokkos<double>& elem_div,
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
 
-            u(node_lid) = node_vel(1, node_gid, 0);
-            v(node_lid) = node_vel(1, node_gid, 1);
-            w(node_lid) = node_vel(1, node_gid, 2);
+            u(node_lid) = node_vel(node_gid, 0);
+            v(node_lid) = node_vel(node_gid, 1);
+            w(node_lid) = node_vel(node_gid, 2);
         } // end for
 
         // --- calculate the velocity divergence terms ---

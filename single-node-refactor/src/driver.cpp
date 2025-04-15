@@ -85,8 +85,7 @@ void Driver::initialize()
         mesh_reader.read_mesh(mesh, 
                               State,
                               SimulationParameters.mesh_input, 
-                              num_dims, 
-                              SimulationParameters.dynamic_options.rk_num_bins);
+                              num_dims);
     }
     else if (SimulationParameters.mesh_input.source == mesh_input::generate) {
         mesh_builder.build_mesh(mesh, 

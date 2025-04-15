@@ -88,7 +88,6 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParameters,
     // add a flag on whether SGHRZ was set up, if(SGHRZ_setup_already==false)
     
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
-    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
 
     // calculate pressure, sound speed, and stress for each material
     for(int mat_id=0; mat_id<num_mats; mat_id++){
@@ -105,7 +104,6 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParameters,
                             State.MaterialPoints(mat_id).eos_state_vars,
                             State.MaterialPoints(mat_id).strength_state_vars,
                             State.MaterialPoints(mat_id).shear_modulii,
-                            rk_num_bins,
                             num_mat_points,
                             mat_id);
 
@@ -219,7 +217,7 @@ void calc_node_mass_rz(const Mesh_t& mesh,
 
             node_mass(node_gid) += corner_mass(corner_gid);  // sans the radius so it is areal node mass
 
-            corner_mass(corner_gid) *= node_coords(1, node_gid, 1); // true corner mass now
+            corner_mass(corner_gid) *= node_coords(node_gid, 1); // true corner mass now
         } // end for elem_lid
     });
 

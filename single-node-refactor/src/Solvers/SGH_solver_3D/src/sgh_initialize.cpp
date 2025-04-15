@@ -47,13 +47,16 @@ void SGH3D::initialize(SimulationParameters_t& SimulationParameters,
 	const size_t num_nodes = mesh.num_nodes;
     const size_t num_gauss_pts = mesh.num_elems;
     const size_t num_corners = mesh.num_corners;
-    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
     const size_t num_dims = mesh.num_dims;
 
+    if (num_dims != 3){
+        std::cout << "Wrong dimensions of " << num_dims << "\n";
+        throw std::runtime_error("**** Solver is for 3D coordinates, wrong dimensions specified in input ****");
+    }
 
     // mesh state
-    State.node.initialize(rk_num_bins, num_nodes, num_dims, SGH3D_State::required_node_state);
-    State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, num_dims, SGH3D_State::required_gauss_pt_state);
+    State.node.initialize(num_nodes, num_dims, SGH3D_State::required_node_state);
+    State.GaussPoints.initialize(num_gauss_pts, num_dims, SGH3D_State::required_gauss_pt_state);
     State.corner.initialize(num_corners, num_dims, SGH3D_State::required_corner_state);
 
     // check that the fills specify the required nodal fields
@@ -79,7 +82,6 @@ void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParamete
                 	                  State_t& State) const
 {
 	const size_t num_nodes = mesh.num_nodes;
-    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
     const size_t num_dims = 3;
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
@@ -102,7 +104,7 @@ void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParamete
         size_t num_corners_for_mat = num_elems_for_mat * mesh.num_nodes_in_elem;
 
         State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat);
-        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3, SGH3D_State::required_material_pt_state); // note: dims is always 3 
+        State.MaterialPoints(mat_id).initialize(num_points_for_mat, 3, SGH3D_State::required_material_pt_state); // note: dims is always 3 
         State.MaterialCorners(mat_id).initialize(num_corners_for_mat, 3, SGH3D_State::required_material_corner_state);
         // zones are not used with solver
 

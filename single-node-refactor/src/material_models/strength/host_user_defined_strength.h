@@ -99,6 +99,7 @@ namespace HostUserDefinedStrengthModel {
         const ViewCArrayKokkos<size_t>& elem_node_gids,
         const DCArrayKokkos<double>& MaterialPoints_pres,
         const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DCArrayKokkos<double>& MaterialPoints_stress_n0,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,

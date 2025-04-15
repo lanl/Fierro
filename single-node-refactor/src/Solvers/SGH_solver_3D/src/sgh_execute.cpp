@@ -209,15 +209,20 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
 
+
         // ---------------------------------------------------------------------
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
         // ---------------------------------------------------------------------
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
             // save the values at t_n
             rk_init(State.node.coords,
+                    State.node.coords_n0,
                     State.node.vel,
+                    State.node.vel_n0,
                     State.MaterialPoints(mat_id).sie,
+                    State.MaterialPoints(mat_id).sie_n0,
                     State.MaterialPoints(mat_id).stress,
+                    State.MaterialPoints(mat_id).stress_n0,
                     mesh.num_dims,
                     mesh.num_elems,
                     mesh.num_nodes,
@@ -239,6 +244,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                         State.GaussPoints.vol);
 
             set_corner_force_zero(mesh, State.corner.force);
+
 
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -280,6 +286,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                                   State.MaterialPoints(mat_id).sie,
                                   State.MaterialPoints(mat_id).pres,
                                   State.MaterialPoints(mat_id).stress,
+                                  State.MaterialPoints(mat_id).stress_n0,
                                   State.MaterialPoints(mat_id).sspd,
                                   State.MaterialPoints(mat_id).eos_state_vars,
                                   State.MaterialPoints(mat_id).strength_state_vars,
@@ -315,12 +322,12 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
             // call body forces routine
 
 
-
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
                             dt,
                             mesh,
                             State.node.vel,
+                            State.node.vel_n0,
                             State.node.mass,
                             State.node.force,
                             State.corner.force);
@@ -339,8 +346,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                               dt,
                               mesh,
                               State.node.vel,
-                              State.node.coords,
+                              State.node.vel_n0,
                               State.MaterialPoints(mat_id).sie,
+                              State.MaterialPoints(mat_id).sie_n0,
                               State.MaterialPoints(mat_id).mass,
                               State.MaterialCorners(mat_id).force,
                               State.corners_in_mat_elem,
@@ -354,7 +362,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                             mesh.num_dims,
                             mesh.num_nodes,
                             State.node.coords,
-                            State.node.vel);
+                            State.node.coords_n0,
+                            State.node.vel,
+                            State.node.vel_n0);
 
             // ---- Calculate cell volume for next time step ----
             geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
@@ -372,6 +382,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                              State.MaterialPoints(mat_id).den,
                              State.MaterialPoints(mat_id).pres,
                              State.MaterialPoints(mat_id).stress,
+                             State.MaterialPoints(mat_id).stress_n0,
                              State.MaterialPoints(mat_id).sspd,
                              State.MaterialPoints(mat_id).sie,
                              State.MaterialPoints(mat_id).volfrac,
@@ -395,6 +406,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
             //    1) hyper-elastic strength models are called in update_state
             //    2) hypo-elastic strength models are called in get_force
             //    3) strength models must be added by the user in user_mat.cpp
+
 
         } // end of RK loop
 
@@ -583,7 +595,7 @@ double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_ma
 
     // loop over the material points and tally IE
     FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
-        IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(1, matpt_lid);
+        IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(matpt_lid);
     }, IE_sum);
     Kokkos::fence();
 
@@ -619,7 +631,7 @@ double sum_domain_kinetic_energy(const Mesh_t& mesh,
         double ke = 0;
 
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node_vel(1, node_gid, dim) * node_vel(1, node_gid, dim); // 1/2 at end
+            ke += node_vel(node_gid, dim) * node_vel(node_gid, dim); // 1/2 at end
         } // end for
 
         KE_loc_sum += node_mass(node_gid) * ke;
@@ -670,7 +682,7 @@ double sum_domain_node_mass(const Mesh_t& mesh,
 
     FOR_REDUCE_SUM(node_gid, 0, mesh.num_nodes, mass_loc_domain, {
         if (mesh.num_dims == 2) {
-            mass_loc_domain += node_mass(node_gid) * node_coords(1, node_gid, 1);
+            mass_loc_domain += node_mass(node_gid) * node_coords(node_gid, 1);
         }
         else{
             mass_loc_domain += node_mass(node_gid);

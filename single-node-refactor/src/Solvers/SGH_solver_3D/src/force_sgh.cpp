@@ -126,7 +126,7 @@ void SGH3D::get_force(const Material_t& Materials,
 
 
         // create a view of the stress_matrix
-        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(1, mat_point_lid, 0, 0), 3, 3);
+        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(mat_point_lid, 0, 0), 3, 3);
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);

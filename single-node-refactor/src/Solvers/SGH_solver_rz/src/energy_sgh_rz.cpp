@@ -52,12 +52,16 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param A view into the corner force data
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::update_energy_rz(const double rk_alpha,
+void SGHRZ::update_energy_rz(
+      const double rk_alpha,
       const double dt,
       const Mesh_t& mesh,
       const DCArrayKokkos<double>& node_vel,
+      const DCArrayKokkos<double>& node_vel_n0,
       const DCArrayKokkos<double>& node_coords,
+      const DCArrayKokkos<double>& node_coords_n0,
       const DCArrayKokkos<double>& MaterialPoints_sie,
+      const DCArrayKokkos<double>& MaterialPoints_sie_n0,
       const DCArrayKokkos<double>& MaterialPoints_mass,
       const DCArrayKokkos<double>& MaterialCorners_force,
       const corners_in_mat_t corners_in_mat_elem,
@@ -97,20 +101,20 @@ void SGHRZ::update_energy_rz(const double rk_alpha,
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
 
             // 2D RZ needs node radius
-            double node_radius = node_coords(1, node_gid, 1);
+            double node_radius = node_coords(node_gid, 1);
 
 
             // calculate the Power=F dot V for this corner
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
 
-                double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
+                double half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * 0.5;
                 MaterialPoints_power += MaterialCorners_force(mat_corner_lid, dim) * node_radius * half_vel;
 
             } // end for dim
         } // end for node_lid
 
         // update the specific energy
-        MaterialPoints_sie(1, mat_point_lid) = MaterialPoints_sie(0, mat_point_lid) -
+        MaterialPoints_sie(mat_point_lid) = MaterialPoints_sie_n0(mat_point_lid) -
                                 rk_alpha * dt / MaterialPoints_mass(mat_point_lid) * MaterialPoints_power;
 
        

@@ -3,7 +3,7 @@
 dynamic_options:
     time_final: 10.0
     dt_min: 1.e-8
-    dt_max: 1.e-2
+    dt_max: 1.e-3
     dt_start: 1.e-5
     cycle_stop: 300000
 
@@ -76,14 +76,14 @@ materials:
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.0   # phi_min
+            - 0.1   # phi_min
             - 1.0   # phi_curl_min
         eos_global_vars:
-            - 3.0
+            - 1.666666666666667
             - 1.0E-4
             - 1.0
 
-
+    #plate
     - material:
         id: 1
         eos_model_type: decoupled
@@ -95,7 +95,7 @@ materials:
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.0   # phi_min
+            - 0.1   # phi_min
             - 1.0   # phi_curl_min
         eos_global_vars:
             - 1.666666666666667
@@ -103,7 +103,7 @@ materials:
             - 1.0
         erosion_model: basic
         erode_tension_val: 2.0e-7
-        erode_density_val: 0.01
+        erode_density_val: 0.02
     
 
     # background air
@@ -118,7 +118,7 @@ materials:
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.0   # phi_min
+            - 0.1   # phi_min
             - 1.0   # phi_curl_min
         eos_global_vars:
             - 1.666666666666667
@@ -137,7 +137,7 @@ regions:
             value: 0.010
         specific_internal_energy: 
             type: uniform
-            value: 3.0e-4
+            value: 1.0e-6
         velocity: 
             type: cartesian
             u: 0.0

@@ -330,15 +330,13 @@ public:
     /// \param Simulation mesh
     /// \param Simulation state
     /// \param Number of dimensions
-    /// \param Number of RK bins
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_mesh(Mesh_t& mesh,
                    State_t& State,
                    mesh_input_t& mesh_inps,
-                   int      num_dims,
-                   int      rk_num_bins)
+                   int      num_dims)
     {
         if (mesh_file_ == NULL) {
             throw std::runtime_error("**** No mesh path given for read_mesh ****");
@@ -367,16 +365,16 @@ public:
         std::cout << "File extension is: " << extension << std::endl;
 
         if(extension == "geo"){ // Ensight meshfile extension
-            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims, rk_num_bins);
+            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
         }
         else if(extension == "inp"){ // Abaqus meshfile extension
-            read_Abaqus_mesh(mesh, State, num_dims, rk_num_bins);
+            read_Abaqus_mesh(mesh, State, num_dims);
         }
         else if(extension == "vtk"){ // vtk file format
-            read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims, rk_num_bins);
+            read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
         }
         else if(extension == "vtu"){ // vtu file format
-            read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims, rk_num_bins);
+            read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
         }
         else{
             throw std::runtime_error("**** Mesh file extension not understood ****");
@@ -395,7 +393,6 @@ public:
     /// \param Node state struct
     /// \param Corner state struct
     /// \param Number of dimensions
-    /// \param Number of RK bins
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_ensight_mesh(Mesh_t& mesh,
@@ -403,8 +400,7 @@ public:
                            node_t&   node,
                            corner_t& corner,
                            mesh_input_t& mesh_inps,
-                           int num_dims,
-                           int rk_num_bins)
+                           int num_dims)
     {
         FILE* in;
         char  ch;
@@ -437,26 +433,26 @@ public:
 
         // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
         std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
+        node.initialize(num_nodes, num_dims, required_node_state);
 
         // read the initial mesh coordinates
         // x-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords.host(0, node_id, 0));
-            node.coords.host(0, node_id, 0)*= mesh_inps.scale_x;
+            fscanf(in, "%le", &node.coords.host(node_id, 0));
+            node.coords.host(node_id, 0)*= mesh_inps.scale_x;
         }
 
         // y-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords.host(0, node_id, 1));
-            node.coords.host(0, node_id, 1)*= mesh_inps.scale_y;
+            fscanf(in, "%le", &node.coords.host(node_id, 1));
+            node.coords.host(node_id, 1)*= mesh_inps.scale_y;
         }
 
         // z-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
             if (num_dims == 3) {
-                fscanf(in, "%le", &node.coords.host(0, node_id, 2));
-                node.coords.host(0, node_id, 2)*= mesh_inps.scale_z;
+                fscanf(in, "%le", &node.coords.host(node_id, 2));
+                node.coords.host(node_id, 2)*= mesh_inps.scale_z;
             }
             else{
                 double dummy;
@@ -464,14 +460,6 @@ public:
             }
         } // end for
 
-        // save the node coords to the current RK value
-        for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-            for (int rk = 1; rk < rk_num_bins; rk++) {
-                for (int dim = 0; dim < num_dims; dim++) {
-                    node.coords.host(rk, node_gid, dim) = node.coords.host(0, node_gid, dim);
-                } // end for dim
-            } // end for rk
-        } // end parallel for
 
         // Update device nodal positions
         node.coords.update_device();
@@ -494,7 +482,7 @@ public:
 
         // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
-        // GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
+        // GaussPoints.initialize(num_elem, 3); // always 3D here, even for 2D
 
         
         // for each cell read the list of associated nodes
@@ -556,13 +544,11 @@ public:
     /// \param Simulation state
     /// \param Node state struct
     /// \param Number of dimensions
-    /// \param Number of RK bins
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_Abaqus_mesh(Mesh_t& mesh,
                           State_t& State,
-                          int      num_dims,
-                          int      rk_num_bins)
+                          int num_dims)
     {
 
         std::cout<<"Reading abaqus input file for mesh"<<std::endl;
@@ -665,24 +651,15 @@ public:
         // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
         std::vector<node_state> required_node_state = { node_state::coords };
 
-        State.node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
+        State.node.initialize(num_nodes, num_dims, required_node_state);
 
 
         // Copy nodes to mesh
         for(int node_gid = 0; node_gid < num_nodes; node_gid++){
-            State.node.coords.host(0, node_gid, 0) = nodes[node_gid].x;
-            State.node.coords.host(0, node_gid, 1) = nodes[node_gid].y;
-            State.node.coords.host(0, node_gid, 2) = nodes[node_gid].z;
+            State.node.coords.host(node_gid, 0) = nodes[node_gid].x;
+            State.node.coords.host(node_gid, 1) = nodes[node_gid].y;
+            State.node.coords.host(node_gid, 2) = nodes[node_gid].z;
         }
-
-        // save the node coords to the current RK value
-        for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-            for (int rk = 1; rk < rk_num_bins; rk++) {
-                for (int dim = 0; dim < num_dims; dim++) {
-                    State.node.coords.host(rk, node_gid, dim) = State.node.coords.host(0, node_gid, dim);
-                } // end for dim
-            } // end for rk
-        } // end parallel for
 
         // Update device nodal positions
         State.node.coords.update_device();
@@ -694,7 +671,6 @@ public:
 
         // initialize elem variables
         mesh.initialize_elems(num_elem, num_dims);
-        // State.GaussPoints.initialize(rk_num_bins, num_elem, 3); // always 3D here, even for 2D
 
 
         // for each cell read the list of associated nodes
@@ -730,7 +706,6 @@ public:
     /// \param Simulation state
     /// \param Node state struct
     /// \param Number of dimensions
-    /// \param Number of RK bins
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_vtk_mesh(Mesh_t& mesh,
@@ -738,8 +713,7 @@ public:
                     node_t&   node,
                     corner_t& corner,
                     mesh_input_t& mesh_inps,
-                    int num_dims,
-                    int rk_num_bins)
+                    int num_dims)
     {
 
         std::cout<<"Reading VTK mesh"<<std::endl;
@@ -778,7 +752,7 @@ public:
                 mesh.initialize_nodes(num_nodes);
 
                 std::vector<node_state> required_node_state = { node_state::coords };
-                node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
+                node.initialize(num_nodes, num_dims, required_node_state);
                 
                 found=true;
             } // end if
@@ -802,22 +776,14 @@ public:
             std::vector<std::string> v = split (str, delimiter);
             
             // save the nodal coordinates
-            node.coords.host(0, node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
-            node.coords.host(0, node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
+            node.coords.host(node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
+            node.coords.host(node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
             if(num_dims==3){
-                node.coords.host(0, node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
+                node.coords.host(node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
             }
             
         } // end for nodes
 
-        // save the node coords to the current RK value
-        for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
-            for (int rk = 1; rk < rk_num_bins; rk++) {
-                for (int dim = 0; dim < num_dims; dim++) {
-                    node.coords.host(rk, node_gid, dim) = node.coords.host(0, node_gid, dim);
-                } // end for dim
-            } // end for rk
-        } // end parallel for
 
         // Update device nodal positions
         node.coords.update_device();
@@ -969,7 +935,6 @@ public:
     /// \param Simulation state
     /// \param Node state struct
     /// \param Number of dimensions
-    /// \param Number of RK bins
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_vtu_mesh(Mesh_t& mesh,
@@ -977,8 +942,7 @@ public:
                     node_t&   node,
                     corner_t& corner,
                     mesh_input_t& mesh_inps,
-                    int num_dims,
-                    int rk_num_bins)
+                    int num_dims)
     {
 
         std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
@@ -1022,7 +986,7 @@ public:
         //------------------------------------
         // allocate node coordinate state
         std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(rk_num_bins, num_nodes, num_dims, required_node_state);
+        node.initialize(num_nodes, num_dims, required_node_state);
 
         //------------------------------------
         // allocate the elem object id array
@@ -1098,17 +1062,13 @@ public:
         // save the node coordinates to the state array
         FOR_ALL(node_gid, 0, mesh.num_nodes, {
             
-            for (int rk = 0; rk < rk_num_bins; rk++) {
+            // save the nodal coordinates
+            node.coords(node_gid, 0) = scl_x*node_coords(node_gid, 0); // double
+            node.coords(node_gid, 1) = scl_y*node_coords(node_gid, 1); // double
+            if(num_dims==3){
+                node.coords(node_gid, 2) = scl_z*node_coords(node_gid, 2); // double
+            }
 
-                // save the nodal coordinates
-                node.coords(rk, node_gid, 0) = scl_x*node_coords(node_gid, 0); // double
-                node.coords(rk, node_gid, 1) = scl_y*node_coords(node_gid, 1); // double
-                if(num_dims==3){
-                    node.coords(rk, node_gid, 2) = scl_z*node_coords(node_gid, 2); // double
-                }
-
-            } // end for
-            
         }); // end for parallel nodes
         node.coords.update_host();
 
@@ -1404,14 +1364,12 @@ public:
         convert_point_number_in_quad(2) = 3;
         convert_point_number_in_quad(3) = 2;
 
-        int rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
-
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
 
         // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
         std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(rk_num_bins, num_nodes, num_dim, required_node_state);
+        node.initialize(num_nodes, num_dim, required_node_state);
 
         // --- Build nodes ---
 
@@ -1422,17 +1380,12 @@ public:
                 int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
 
                 // store the point coordinates
-                node.coords.host(0, node_gid, 0) = origin[0] + (double)i * dx;
-                node.coords.host(0, node_gid, 1) = origin[1] + (double)j * dy;
+                node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
             } // end for i
         } // end for j
 
-        for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
-            for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                node.coords.host(rk_level, node_gid, 0) = node.coords.host(0, node_gid, 0);
-                node.coords.host(rk_level, node_gid, 1) = node.coords.host(0, node_gid, 1);
-            }
-        }
+
         node.coords.update_device();
 
         // initialize elem variables
@@ -1501,7 +1454,6 @@ public:
         printf("Creating a 2D polar mesh \n");
 
         int num_dim     = 2;
-        int rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
 
         const double inner_radius = SimulationParameters.mesh_input.inner_radius;
         const double outer_radius = SimulationParameters.mesh_input.outer_radius;
@@ -1546,7 +1498,7 @@ public:
 
         // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
         std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(rk_num_bins, num_nodes, num_dim, required_node_state);
+        node.initialize(num_nodes, num_dim, required_node_state);
 
         // populate the point data structures
         for (int j = 0; j < num_points_j; j++) {
@@ -1558,22 +1510,17 @@ public:
                 double theta_j = start_angle + (double)j * dy;
 
                 // store the point coordinates
-                node.coords.host(0, node_gid, 0) = origin[0] + r_i * cos(theta_j);
-                node.coords.host(0, node_gid, 1) = origin[1] + r_i * sin(theta_j);
+                node.coords.host(node_gid, 0) = origin[0] + r_i * cos(theta_j);
+                node.coords.host(node_gid, 1) = origin[1] + r_i * sin(theta_j);
 
-                if(node.coords.host(0, node_gid, 0) < 0.0){
+                if(node.coords.host(node_gid, 0) < 0.0){
                     throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
                 }
 
             } // end for i
         } // end for j
 
-        for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
-            for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                node.coords.host(rk_level, node_gid, 0) = node.coords.host(0, node_gid, 0);
-                node.coords.host(rk_level, node_gid, 1) = node.coords.host(0, node_gid, 1);
-            }
-        }
+
         node.coords.update_device();
 
         // initialize elem variables
@@ -1676,14 +1623,12 @@ public:
         // const int num_edges_in_elem  = 12; // number of edges in a elem
 
 
-        int rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
-
         // initialize mesh node variables
         mesh.initialize_nodes(num_nodes);
 
          // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
         std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(rk_num_bins, num_nodes, num_dim, required_node_state);
+        node.initialize(num_nodes, num_dim, required_node_state);
 
         // --- Build nodes ---
 
@@ -1695,20 +1640,14 @@ public:
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
                     // store the point coordinates
-                    node.coords.host(0, node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(0, node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(0, node_gid, 2) = origin[2] + (double)k * dz;
+                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
                 } // end for i
             } // end for j
         } // end for k
 
-        for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
-            for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                node.coords.host(rk_level, node_gid, 0) = node.coords.host(0, node_gid, 0);
-                node.coords.host(rk_level, node_gid, 1) = node.coords.host(0, node_gid, 1);
-                node.coords.host(rk_level, node_gid, 2) = node.coords.host(0, node_gid, 2);
-            }
-        }
+
         node.coords.update_device();
 
         // initialize elem variables
@@ -1783,8 +1722,6 @@ public:
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
         const int num_dim = 3;
 
-        const int rk_num_bins = SimulationParameters.dynamic_options.rk_num_bins;
-
         // SimulationParameters.mesh_input.length.update_host();
         const double lx = SimulationParameters.mesh_input.length[0];
         const double ly = SimulationParameters.mesh_input.length[1];
@@ -1850,7 +1787,7 @@ public:
 
         // 
         std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(rk_num_bins, num_points, num_dim, required_node_state);
+        node.initialize(num_points, num_dim, required_node_state);
         // populate the point data structures
         for (int k = 0; k < num_points_k; k++){
             for (int j = 0; j < num_points_j; j++){
@@ -1861,21 +1798,14 @@ public:
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
                     // store the point coordinates
-                    node.coords.host(0, node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(0, node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(0, node_gid, 2) = origin[2] + (double)k * dz;
+                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
                     
                 } // end for k
             } // end for i
         } // end for j
 
-        for (int rk_level = 1; rk_level < rk_num_bins; rk_level++) {
-            for (int node_gid = 0; node_gid < num_points; node_gid++) {
-                node.coords.host(rk_level, node_gid, 0) = node.coords.host(0, node_gid, 0);
-                node.coords.host(rk_level, node_gid, 1) = node.coords.host(0, node_gid, 1);
-                node.coords.host(rk_level, node_gid, 2) = node.coords.host(0, node_gid, 2);
-            }
-        }
 
         node.coords.update_device();
 
@@ -2587,6 +2517,7 @@ public:
         elem_scalar_fields.set_values(0.0);
         elem_tensor_fields.set_values(0.0);
 
+
         // -----------------------------------------------------------------------
         // save the output fields to a single element average array for all state
         // -----------------------------------------------------------------------
@@ -2637,7 +2568,7 @@ public:
         // save the nodal fields to an array for exporting to graphics files
         DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
-        
+      
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
                                  node_vector_fields,
@@ -2670,8 +2601,8 @@ public:
                 system("mkdir vtk");
             }
             else{
-                if(solver_id==0){
-                    // delete the files inside
+                if(solver_id==0 && graphics_id==0){
+                    // delete the existing files inside
                     system("rm vtk/Fierro*");
                 }
             }
@@ -2680,8 +2611,8 @@ public:
                 system("mkdir vtk/data");
             }
             else{
-                if(solver_id==0){
-                    // delete the files inside the folder
+                if(solver_id==0 && graphics_id==0){
+                    // delete the existing files inside the folder
                     system("rm vtk/data/Fierro*");
                 }
             }
@@ -2690,8 +2621,9 @@ public:
             std::string elem_fields_name = "fields";
 
             // make a view of node coords for passing into functions
-            ViewCArray <double> node_coords_host(&State.node.coords.host(1,0,0), num_nodes, num_dims);
+            ViewCArray <double> node_coords_host(&State.node.coords.host(0,0), num_nodes, num_dims);
             ViewCArray <size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0,0), num_elems, num_nodes_in_elem);
+
             write_vtu(node_coords_host,
                     nodes_in_elem_host,
                     elem_scalar_fields,
@@ -2891,7 +2823,9 @@ public:
                          material_pt_states);
         }
 
-    }
+        return;
+
+    } // end write_mesh
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -2978,10 +2912,10 @@ public:
             elem_vel[2] = 0.0;
             // get the coordinates of the element center
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_vel[0] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_vel[1] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                elem_vel[0] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_vel[1] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3) {
-                    elem_vel[2] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_vel[2] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 2);
                 }
                 else{
                     elem_vel[2] = 0.0;
@@ -3015,7 +2949,7 @@ public:
                 // save outputs
                 elem_fields(elem_gid, 0) = State.MaterialPoints(mat_id).den.host(mat_elem_lid);
                 elem_fields(elem_gid, 1) = State.MaterialPoints(mat_id).pres.host(mat_elem_lid);
-                elem_fields(elem_gid, 2) = State.MaterialPoints(mat_id).sie.host(1, mat_elem_lid);
+                elem_fields(elem_gid, 2) = State.MaterialPoints(mat_id).sie.host(mat_elem_lid);
                 // 3 is guass point vol
                 elem_fields(elem_gid, 4) = State.MaterialPoints(mat_id).mass.host(mat_elem_lid);
                 elem_fields(elem_gid, 5) = State.MaterialPoints(mat_id).sspd.host(mat_elem_lid);
@@ -3040,37 +2974,38 @@ public:
 
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             // position, var 0
-            vec_fields(node_gid, 0, 0) = State.node.coords.host(1, node_gid, 0);
-            vec_fields(node_gid, 0, 1) = State.node.coords.host(1, node_gid, 1);
+            vec_fields(node_gid, 0, 0) = State.node.coords.host(node_gid, 0);
+            vec_fields(node_gid, 0, 1) = State.node.coords.host(node_gid, 1);
             if (num_dims == 2) {
                 vec_fields(node_gid, 0, 2) = 0.0;
             }
             else{
-                vec_fields(node_gid, 0, 2) = State.node.coords.host(1, node_gid, 2);
+                vec_fields(node_gid, 0, 2) = State.node.coords.host(node_gid, 2);
             }
 
             // velocity, var 1
-            vec_fields(node_gid, 1, 0) = State.node.vel.host(1, node_gid, 0);
-            vec_fields(node_gid, 1, 1) = State.node.vel.host(1, node_gid, 1);
+            vec_fields(node_gid, 1, 0) = State.node.vel.host(node_gid, 0);
+            vec_fields(node_gid, 1, 1) = State.node.vel.host(node_gid, 1);
             if (num_dims == 2) {
                 vec_fields(node_gid, 1, 2) = 0.0;
             }
             else{
-                vec_fields(node_gid, 1, 2) = State.node.vel.host(1, node_gid, 2);
+                vec_fields(node_gid, 1, 2) = State.node.vel.host(node_gid, 2);
             }
 
             // accelleration, var 2
-            vec_fields(node_gid, 2, 0) = (State.node.vel.host(1, node_gid, 0) - State.node.vel.host(0, node_gid, 0))/dt;
-            vec_fields(node_gid, 2, 1) = (State.node.vel.host(1, node_gid, 1) - State.node.vel.host(0, node_gid, 1))/dt;
+            vec_fields(node_gid, 2, 0) = (State.node.vel.host(node_gid, 0) - State.node.vel.host(node_gid, 0))/dt;
+            vec_fields(node_gid, 2, 1) = (State.node.vel.host(node_gid, 1) - State.node.vel.host(node_gid, 1))/dt;
             if (num_dims == 2) {
                 vec_fields(node_gid, 2, 2) = 0.0;
             }
             else{
-                vec_fields(node_gid, 2, 2) = (State.node.vel.host(1, node_gid, 2) - State.node.vel.host(0, node_gid, 2))/dt;
+                vec_fields(node_gid, 2, 2) = (State.node.vel.host(node_gid, 2) - State.node.vel.host(node_gid, 2))/dt;
             }
 
 
         } // end for loop over vertices
+
 
         //  ---------------------------------------------------------------------------
         //  Setup of file and directoring for exporting
@@ -3116,16 +3051,16 @@ public:
 
         // write all components of the point coordinates
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            fprintf(out[0], "%12.5e\n", State.node.coords.host(1, node_gid, 0));
+            fprintf(out[0], "%12.5e\n", State.node.coords.host(node_gid, 0));
         }
 
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            fprintf(out[0], "%12.5e\n", State.node.coords.host(1, node_gid, 1));
+            fprintf(out[0], "%12.5e\n", State.node.coords.host(node_gid, 1));
         }
 
         for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
             if (num_dims == 3) {
-                fprintf(out[0], "%12.5e\n", State.node.coords.host(1, node_gid, 2));
+                fprintf(out[0], "%12.5e\n", State.node.coords.host(node_gid, 2));
             }
             else{
                 fprintf(out[0], "%12.5e\n", 0.0);
@@ -3301,6 +3236,7 @@ public:
 
         delete[] name;
 
+
         return;
     }
 
@@ -3400,10 +3336,10 @@ public:
             elem_vel[2] = 0.0;
             // get the coordinates of the element center
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_vel[0] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_vel[1] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                elem_vel[0] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_vel[1] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3) {
-                    elem_vel[2] += State.node.vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_vel[2] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 2);
                 }
                 else{
                     elem_vel[2] = 0.0;
@@ -3438,7 +3374,7 @@ public:
                 // save outputs
                 elem_fields(elem_gid, 0) = State.MaterialPoints(mat_id).den.host(mat_elem_lid);
                 elem_fields(elem_gid, 1) = State.MaterialPoints(mat_id).pres.host(mat_elem_lid);
-                elem_fields(elem_gid, 2) = State.MaterialPoints(mat_id).sie.host(1, mat_elem_lid);
+                elem_fields(elem_gid, 2) = State.MaterialPoints(mat_id).sie.host(mat_elem_lid);
                 // 3 is guass point vol
                 elem_fields(elem_gid, 4) = State.MaterialPoints(mat_id).mass.host(mat_elem_lid);
                 elem_fields(elem_gid, 5) = State.MaterialPoints(mat_id).sspd.host(mat_elem_lid);
@@ -3467,26 +3403,26 @@ public:
 
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             // position, var 0
-            vec_fields(node_gid, 0, 0) = State.node.coords.host(1, node_gid, 0);
-            vec_fields(node_gid, 0, 1) = State.node.coords.host(1, node_gid, 1);
+            vec_fields(node_gid, 0, 0) = State.node.coords.host(node_gid, 0);
+            vec_fields(node_gid, 0, 1) = State.node.coords.host(node_gid, 1);
             if (num_dims == 2) {
                 vec_fields(node_gid, 0, 2) = 0.0;
             }
             else{
-                vec_fields(node_gid, 0, 2) = State.node.coords.host(1, node_gid, 2);
+                vec_fields(node_gid, 0, 2) = State.node.coords.host(node_gid, 2);
             }
 
             // position, var 1
-            vec_fields(node_gid, 1, 0) = State.node.vel.host(1, node_gid, 0);
-            vec_fields(node_gid, 1, 1) = State.node.vel.host(1, node_gid, 1);
+            vec_fields(node_gid, 1, 0) = State.node.vel.host(node_gid, 0);
+            vec_fields(node_gid, 1, 1) = State.node.vel.host(node_gid, 1);
             if (num_dims == 2) {
                 vec_fields(node_gid, 1, 2) = 0.0;
             }
             else{
-                vec_fields(node_gid, 1, 2) = State.node.vel.host(1, node_gid, 2);
+                vec_fields(node_gid, 1, 2) = State.node.vel.host(node_gid, 2);
             }
 
-            point_scalar_fields(node_gid, 0) = State.node.temp.host(1,node_gid);
+            point_scalar_fields(node_gid, 0) = State.node.temp.host(node_gid);
         } // end for loop over vertices
 
 
@@ -3521,9 +3457,9 @@ public:
         for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
             fprintf(out[0],
                     "%f %f %f\n",
-                    State.node.coords.host(1, node_gid, 0),
-                    State.node.coords.host(1, node_gid, 1),
-                    State.node.coords.host(1, node_gid, 2));
+                    State.node.coords.host(node_gid, 0),
+                    State.node.coords.host(node_gid, 1),
+                    State.node.coords.host(node_gid, 2));
         } // end for
 
         /*
@@ -3723,7 +3659,7 @@ public:
                         // field
                         // extensive ie here, but after this function, it will become specific ie
                         elem_scalar_fields(sie_id, elem_gid) += MaterialPointsOfMatID.mass(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.sie(1, mat_elem_lid);
+                                                                MaterialPointsOfMatID.sie(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::sound_speed:
@@ -3764,7 +3700,7 @@ public:
 
                                 // stress tensor 
                                 elem_tensor_fields(stress_id, elem_gid, i, j) +=
-                                                MaterialPointsOfMatID.stress(1,mat_elem_lid,i,j) *
+                                                MaterialPointsOfMatID.stress(mat_elem_lid,i,j) *
                                                 MaterialPointsOfMatID.volfrac(mat_elem_lid);
                             } // end for
                         } // end for
@@ -3914,7 +3850,7 @@ public:
 
                         // field
                         // extensive ie here, but after this function, it will become specific ie
-                        mat_elem_scalar_fields(mat_sie_id, mat_elem_lid) = MaterialPointsOfMatID.sie(1,mat_elem_lid);
+                        mat_elem_scalar_fields(mat_sie_id, mat_elem_lid) = MaterialPointsOfMatID.sie(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::sound_speed:
@@ -3960,7 +3896,7 @@ public:
 
                                 // stress tensor 
                                 mat_elem_tensor_fields(mat_stress_id, mat_elem_lid, i, j) =
-                                                MaterialPointsOfMatID.stress(1,mat_elem_lid,i,j);
+                                                MaterialPointsOfMatID.stress(mat_elem_lid,i,j);
                             } // end for
                         } // end for
                     });
@@ -4047,7 +3983,7 @@ public:
                     break;
                 case node_state::temp:
                     FOR_ALL(node_gid, 0, num_nodes, {
-                        node_scalar_fields(node_temp_id, node_gid) = Node.temp(1,node_gid);
+                        node_scalar_fields(node_temp_id, node_gid) = Node.temp(node_gid);
                     });
 
                     break;
@@ -4058,13 +3994,13 @@ public:
 
                     FOR_ALL(node_gid, 0, num_nodes, {
 
-                        node_vector_fields(node_coord_id, node_gid, 0) = Node.coords(1, node_gid, 0);
-                        node_vector_fields(node_coord_id, node_gid, 1) = Node.coords(1, node_gid, 1);
+                        node_vector_fields(node_coord_id, node_gid, 0) = Node.coords(node_gid, 0);
+                        node_vector_fields(node_coord_id, node_gid, 1) = Node.coords(node_gid, 1);
                         if (num_dims == 2) {
                             node_vector_fields(node_coord_id, node_gid, 2) = 0.0;
                         }
                         else{
-                            node_vector_fields(node_coord_id, node_coord_id, 2) = Node.coords(1, node_gid, 2);
+                            node_vector_fields(node_coord_id, node_coord_id, 2) = Node.coords(node_gid, 2);
                         } // end if
 
                     }); // end parallel for
@@ -4075,23 +4011,23 @@ public:
                     FOR_ALL(node_gid, 0, num_nodes, {
 
                         // velocity, var is node_vel_id 
-                        node_vector_fields(node_vel_id, node_gid, 0) = Node.vel(1, node_gid, 0);
-                        node_vector_fields(node_vel_id, node_gid, 1) = Node.vel(1, node_gid, 1);
+                        node_vector_fields(node_vel_id, node_gid, 0) = Node.vel(node_gid, 0);
+                        node_vector_fields(node_vel_id, node_gid, 1) = Node.vel(node_gid, 1);
                         if (num_dims == 2) {
                             node_vector_fields(node_vel_id, node_gid, 2) = 0.0;
                         }
                         else{
-                            node_vector_fields(node_vel_id, node_gid, 2) = Node.vel(1, node_gid, 2);
+                            node_vector_fields(node_vel_id, node_gid, 2) = Node.vel(node_gid, 2);
                         } // end if
 
                         // accelerate, var is node_accel_id            
-                        node_vector_fields(node_accel_id, node_gid, 0) = (Node.vel(1, node_gid, 0) - Node.vel(0, node_gid, 0))/dt;
-                        node_vector_fields(node_accel_id, node_gid, 1) = (Node.vel(1, node_gid, 1) - Node.vel(0, node_gid, 1))/dt;
+                        node_vector_fields(node_accel_id, node_gid, 0) = (Node.vel(node_gid, 0) - Node.vel(node_gid, 0))/dt;
+                        node_vector_fields(node_accel_id, node_gid, 1) = (Node.vel(node_gid, 1) - Node.vel(node_gid, 1))/dt;
                         if (num_dims == 2) {
                             node_vector_fields(node_accel_id, node_gid, 2) = 0.0;
                         }
                         else{
-                            node_vector_fields(node_accel_id, node_gid, 2) = (Node.vel(1, node_gid, 2) - Node.vel(0, node_gid, 2))/dt;
+                            node_vector_fields(node_accel_id, node_gid, 2) = (Node.vel(node_gid, 2) - Node.vel(node_gid, 2))/dt;
                         } // end if
 
                     }); // end parallel for
@@ -4422,8 +4358,10 @@ public:
         fprintf(out[0], "  <Collection>\n");
 
         for (int i = 0; i <= graphics_id; i++) {
-            fprintf(out[0], "    <DataSet timestep=\"%d\" file=\"data/Fierro.solver%zu.%05d.vtm\" time= \"%12.5e\" />\n", 
-                                                     i, solver_id, i, graphics_times(i) );
+            fprintf(out[0], "    <DataSet timestep=\"%12.5e\" file=\"data/Fierro.solver%zu.%05d.vtm\" time= \"%12.5e\" />\n", 
+                                                     graphics_times(i), solver_id, i, graphics_times(i) );
+            //fprintf(out[0], "    <DataSet timestep=\"%d\" file=\"data/Fierro.solver%zu.%05d.vtm\" time= \"%12.5e\" />\n", 
+            //                                         i, solver_id, i, graphics_times(i) );
         }
 
         fprintf(out[0], "  </Collection>\n");
@@ -4579,10 +4517,10 @@ public:
             
             // save the nodes on the part (i.e., that belong to the material)
             if (dummy_counter.host(node_gid)>0){
-                mat_node_coords.host(mat_node_gid, 0) = state_node_coords.host(1, node_gid, 0);
-                mat_node_coords.host(mat_node_gid, 1) = state_node_coords.host(1, node_gid, 1);
+                mat_node_coords.host(mat_node_gid, 0) = state_node_coords.host(node_gid, 0);
+                mat_node_coords.host(mat_node_gid, 1) = state_node_coords.host(node_gid, 1);
                 if (num_dims == 3){ 
-                    mat_node_coords.host(mat_node_gid, 2) = state_node_coords.host(1, node_gid, 2);
+                    mat_node_coords.host(mat_node_gid, 2) = state_node_coords.host(node_gid, 2);
                 } // end if on dims
 
                 access_mat_node_gids.host(node_gid) = mat_node_gid; // the part node id
@@ -4715,10 +4653,10 @@ public:
 
                 // get the coordinates of the element center
                 for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                    elem_coords[0] += State.node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
-                    elem_coords[1] += State.node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
+                    elem_coords[0] += State.node.coords.host(mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
+                    elem_coords[1] += State.node.coords.host(mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
                     if (num_dims == 3) {
-                        elem_coords[2] += State.node.coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
+                        elem_coords[2] += State.node.coords.host(mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
                     }
                     else{
                         elem_coords[2] = 0.0;
@@ -4744,7 +4682,7 @@ public:
                          rad3,
                          State.MaterialPoints(mat_id).den.host(elem_gid),
                          State.MaterialPoints(mat_id).pres.host(elem_gid),
-                         State.MaterialPoints(mat_id).sie.host(1, elem_gid),
+                         State.MaterialPoints(mat_id).sie.host(elem_gid),
                          State.MaterialPoints(mat_id).sspd.host(elem_gid),
                          State.GaussPoints.vol.host(elem_gid),
                          State.MaterialPoints(mat_id).mass.host(elem_gid) );
@@ -4771,10 +4709,10 @@ public:
 
             double node_coords[3];
 
-            node_coords[0] = State.node.coords.host(1, node_gid, 0);
-            node_coords[1] = State.node.coords.host(1, node_gid, 1);
+            node_coords[0] = State.node.coords.host(node_gid, 0);
+            node_coords[1] = State.node.coords.host(node_gid, 1);
             if (num_dims == 3) {
-                node_coords[2] = State.node.coords.host(1, node_gid, 2);
+                node_coords[2] = State.node.coords.host(node_gid, 2);
             }
             else{
                 node_coords[2] = 0.0;
@@ -4788,10 +4726,10 @@ public:
 
             double node_vel[3];
 
-           node_vel[0] = State.node.vel.host(1, node_gid, 0);
-           node_vel[1] = State.node.vel.host(1, node_gid, 1);
+           node_vel[0] = State.node.vel.host(node_gid, 0);
+           node_vel[1] = State.node.vel.host(node_gid, 1);
             if (num_dims == 3) {
-               node_vel[2] = State.node.vel.host(1, node_gid, 2);
+               node_vel[2] = State.node.vel.host(node_gid, 2);
             }
             else{
                node_vel[2] = 0.0;

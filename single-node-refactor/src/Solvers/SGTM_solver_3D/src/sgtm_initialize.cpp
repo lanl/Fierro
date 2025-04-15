@@ -46,12 +46,11 @@ void SGTM3D::initialize(SimulationParameters_t& SimulationParameters,
 	int num_nodes = mesh.num_nodes;
     int num_gauss_pts = mesh.num_elems;
     int num_corners = mesh.num_corners;
-    int rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
     int num_dim = mesh.num_dims;
 
 
-    State.node.initialize(rk_num_bins, num_nodes, num_dim, SGTM3D_State::required_node_state);
-    State.GaussPoints.initialize(rk_num_bins, num_gauss_pts, num_dim, SGTM3D_State::required_gauss_pt_state);
+    State.node.initialize(num_nodes, num_dim, SGTM3D_State::required_node_state);
+    State.GaussPoints.initialize(num_gauss_pts, num_dim, SGTM3D_State::required_gauss_pt_state);
     State.corner.initialize(num_corners, num_dim, SGTM3D_State::required_corner_state);
     
     // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
@@ -79,7 +78,6 @@ void SGTM3D::initialize_material_state(SimulationParameters_t& SimulationParamet
 {
 
     const size_t num_nodes = mesh.num_nodes;
-    const size_t rk_num_bins = SimulationParameters.dynamic_options.rk_num_stages;
     const size_t num_dims = 3;
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
@@ -102,7 +100,7 @@ void SGTM3D::initialize_material_state(SimulationParameters_t& SimulationParamet
         size_t num_corners_for_mat = num_elems_for_mat * mesh.num_nodes_in_elem;
 
         State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat);
-        State.MaterialPoints(mat_id).initialize(rk_num_bins, num_points_for_mat, 3, SGTM3D_State::required_material_pt_state); // aways 3D, even for 2D-RZ calcs
+        State.MaterialPoints(mat_id).initialize(num_points_for_mat, 3, SGTM3D_State::required_material_pt_state); // aways 3D, even for 2D-RZ calcs
         State.MaterialCorners(mat_id).initialize(num_corners_for_mat, mesh.num_dims, SGTM3D_State::required_material_corner_state);
         // zones are not used
 
