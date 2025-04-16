@@ -13,7 +13,10 @@ builds = ["openmp"]
 solvers = ["Fierro"]
 
 # Add names of each test
-tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion","Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", "Pressure_bc_box","vtu_read","SGTM_cooling_cube","lin_vol_frac_two_mat", "Bending-3D-plate"]
+tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
+        "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
+        "Pressure_bc_box","vtu_read","SGTM_cooling_cube", \
+        "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box"]
 
 # Extract data from txt file
 def extract_state_data(filename):
