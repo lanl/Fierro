@@ -56,7 +56,6 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                       fillElemState_t&  fillElemState)
 {
 
-
     // the number of elems and nodes in the mesh
     const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
@@ -64,8 +63,6 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     const size_t num_gauss_points = mesh.num_leg_gauss_in_elem*mesh.num_elems;  
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
-
-
 
     // Calculate element volume
     geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
@@ -75,7 +72,6 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     // allowing for up to 3 materials in an element, this needs to be set by the user with 3 as default
     const size_t num_mats_per_elem = 3;
     // -----------------------
-
 
     // GaussState initialized based on fill instructions
     //   aways 3D
@@ -98,7 +94,6 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     // ---------------------------------------------
     // fill guass point state (den, sie, ...) and nodal state (velocity, temperature, ...) on the mesh
     // ---------------------------------------------
-
     fill_regions(Materials,
                  mesh,
                  State.node.coords,
@@ -114,6 +109,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fillGaussState.elastic_modulii,
                  fillGaussState.shear_modulii,
                  fillGaussState.poisson_ratios,
+                 fillGaussState.level_set,
                  fillElemState.volfrac,
                  fillElemState.mat_id,
                  fillElemState.num_mats_saved_in_elem,
@@ -240,6 +236,7 @@ void fill_regions(
         DCArrayKokkos <double>& gauss_elastic_modulii,
         DCArrayKokkos <double>& gauss_shear_modulii,
         DCArrayKokkos <double>& gauss_poisson_ratios,
+        DCArrayKokkos <double>& gauss_level_set,
         DCArrayKokkos <double>& elem_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
@@ -256,6 +253,7 @@ void fill_regions(
     size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
 
     size_t num_fills_total = region_fills.size();  // the total number of fills in the input file
+
 
     // local variables to this routine
     DCArrayKokkos<double> elem_coords(mesh.num_elems, num_mats_per_elem); // 2nd dim is max mats per elem
@@ -499,7 +497,17 @@ void fill_regions(
                                 mesh.num_dims,
                                 bin,
                                 region_fills(fill_id).specific_heat_field);
-            
+          
+                // paint the level set field on the gauss pts of the mesh
+                paint_multi_scalar(gauss_level_set,
+                    coords,
+                    region_fills(fill_id).level_set,
+                    0.0,
+                    gauss_gid,
+                    mesh.num_dims,
+                    bin,
+                    region_fills(fill_id).level_set_field);
+
             } // end loop over gauss points
 
 
@@ -517,27 +525,27 @@ void fill_regions(
                 // paint the velocity onto the nodes of the mesh
                 if(node_vel.size()>0){
                     // if check is needed as solver state might not match fill instructions
-                    paint_vector_rk(node_vel,
-                                    a_node_coords,
-                                    region_fills(fill_id).u,
-                                    region_fills(fill_id).v,
-                                    region_fills(fill_id).w,
-                                    region_fills(fill_id).speed,
-                                    node_gid,
-                                    mesh.num_dims,
-                                    region_fills(fill_id).vel_field);
+                    paint_vector(node_vel,
+                                 a_node_coords,
+                                 region_fills(fill_id).u,
+                                 region_fills(fill_id).v,
+                                 region_fills(fill_id).w,
+                                 region_fills(fill_id).speed,
+                                 node_gid,
+                                 mesh.num_dims,
+                                 region_fills(fill_id).vel_field);
                 }
              
                 // paint nodal temperature
                 if (node_temp.size()>0){
                     // if check is needed as solver state might not match fill instructions
-                    paint_scalar_rk(node_temp,
-                                    a_node_coords,
-                                    region_fills(fill_id).temperature,
-                                    0.0,
-                                    node_gid,
-                                    mesh.num_dims,
-                                    region_fills(fill_id).temperature_field);
+                    paint_scalar(node_temp,
+                                 a_node_coords,
+                                 region_fills(fill_id).temperature,
+                                 0.0,
+                                 node_gid,
+                                 mesh.num_dims,
+                                 region_fills(fill_id).temperature_field);
                 }
 
             } // end loop over the nodes in elem
@@ -588,7 +596,9 @@ void fill_regions(
             case fill_gauss_state::specific_heat:
                 gauss_specific_heat.update_host();
                 break;
-                
+            case fill_gauss_state::level_set:
+                gauss_level_set.update_host(); 
+                break;    
         } // end switch
     } // end for
 
@@ -639,6 +649,8 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                           fillElemState_t&  fillElemState)
 {
 
+std::cout << "material fill \n";
+
     // short hand names
     //const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
@@ -662,6 +674,14 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     // ---------------------------------------
     State.GaussPoints.vol.update_host();
     Kokkos::fence();
+
+    // --- set the level set field ---
+    if( State.GaussPoints.level_set.host.size()>0 ){
+        State.GaussPoints.level_set.set_values(1.0e32); // make level set have a default huge
+    }
+    Kokkos::fence();
+    State.GaussPoints.level_set.update_host();
+
 
     // the following loop is not thread safe
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
@@ -734,6 +754,18 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 }
 
                 // --- other material point state here ---
+
+
+                // ------------------
+                // guass point state
+                // ------------------
+
+                // --- set the level set field ---
+                if( State.GaussPoints.level_set.host.size()>0 ){
+                    State.GaussPoints.level_set.host(gauss_gid) = 
+                           fmin(State.GaussPoints.level_set.host(gauss_gid), 
+                                fillGaussState.level_set.host(gauss_gid,a_mat_in_elem)); // use the min level set field
+                }
 
 
             } // end loop over gauss points in element
@@ -1634,7 +1666,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn paint_scalar_rk
+/// \fn paint_scalar
 ///
 /// \brief a function to paint a scalar on the mesh
 ///
@@ -1646,13 +1678,13 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
-                     const ViewCArrayKokkos <double> mesh_coords,
-                     const double scalar,
-                     const double slope,
-                     const size_t mesh_gid,
-                     const size_t num_dims,
-                     const init_conds::init_scalar_conds scalarFieldType)
+void paint_scalar(const DCArrayKokkos<double>& field_scalar,
+                  const ViewCArrayKokkos <double> mesh_coords,
+                  const double scalar,
+                  const double slope,
+                  const size_t mesh_gid,
+                  const size_t num_dims,
+                  const init_conds::init_scalar_conds scalarFieldType)
 {
 
         // --- scalar field ---
@@ -1756,12 +1788,12 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
                 }
         } // end of switch
 
-}  // end function paint_scalar_rk
+}  // end function paint_scalar
 
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn paint_vector_rk
+/// \fn paint_vector
 ///
 /// \brief a function to paint a vector fields on the mesh 
 ///
@@ -1776,15 +1808,15 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
-                     const ViewCArrayKokkos <double>& mesh_coords,
-                     const double u,
-                     const double v,
-                     const double w,
-                     const double scalar,
-                     const size_t mesh_gid,
-                     const size_t num_dims,
-                     const init_conds::init_vector_conds vectorFieldType)
+void paint_vector(const DCArrayKokkos<double>& vector_field,
+                  const ViewCArrayKokkos <double>& mesh_coords,
+                  const double u,
+                  const double v,
+                  const double w,
+                  const double scalar,
+                  const size_t mesh_gid,
+                  const size_t num_dims,
+                  const init_conds::init_vector_conds vectorFieldType)
 {
 
         // --- vector ---

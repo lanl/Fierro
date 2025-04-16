@@ -117,6 +117,9 @@ struct RegionFill_t
     // initial conditions for specific internal energy
     init_conds::init_scalar_conds ie_field = init_conds::noICsScalar;
 
+    // initial conditions for level set field
+    init_conds::init_scalar_conds level_set_field = init_conds::noICsScalar;
+
     // initial condition for temperature distribution
     init_conds::init_scalar_conds temperature_field= init_conds::noICsScalar;
 
@@ -141,6 +144,8 @@ struct RegionFill_t
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
     double den = 0.0;  ///< density
+
+    double level_set = 0.0; ///< level set field
 
     // note: setup applies min and max fcns, making it [0:1]
     double volfrac = 1.0; ///< volume fraction of material field
@@ -208,7 +213,8 @@ static std::vector<std::string> str_region_inps
     "specific_heat",
     "thermal_conductivity",
     "specific_internal_energy",
-    "internal_energy"
+    "internal_energy",
+    "level_set"
 };
 
 // ---------------------------------------------------------
@@ -299,6 +305,15 @@ static std::vector<std::string> str_region_thermal_conductivity_inps
     "value"
 };
 
+// ---------------------------------------------------------------------
+// valid inputs for filling level set, these are subfields under level_set
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_level_set_inps
+{
+    "type",
+    "value"
+};
+
 
 // ---------------------------------------------------------------------
 // valid inputs for filling volfrac, these are subfields under volume fuction
@@ -381,6 +396,14 @@ static std::vector<std::string> region_specific_heat_required_inps
 // required inputs for filling thermal conductivity
 // -------------------------------------
 static std::vector<std::string> region_thermal_conductivity_required_inps
+{
+    "type"
+};
+
+// -------------------------------------
+// required inputs for filling level set
+// -------------------------------------
+static std::vector<std::string> region_level_set_required_inps
 {
     "type"
 };

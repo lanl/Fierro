@@ -58,9 +58,9 @@ enum timer_output_level
 
 static std::map<std::string, output_options::format> output_format_map
 {
-    { "viz", output_options::viz },
+    { "viz",     output_options::viz },
     { "ensight", output_options::ensight },
-    { "state", output_options::state },
+    { "state",   output_options::state },
     { "viz_and_state", output_options::viz_and_state }
 };
 
@@ -83,32 +83,33 @@ static std::map<std::string, node_state> node_outputs_map
 // gauss point state variables writen to file
 static std::map<std::string, gauss_pt_state> gauss_pt_outputs_map
 {
-    { "volume",   gauss_pt_state::volume },
-    { "vel_grad", gauss_pt_state::gradient_velocity }
+    { "volume",    gauss_pt_state::volume },
+    { "level_set", gauss_pt_state::level_set },
+    { "vel_grad",  gauss_pt_state::gradient_velocity }
 };
 
 // material point state variables writen to file
 static std::map<std::string, material_pt_state> mat_pt_outputs_map
 {
-    { "den", material_pt_state::density},
-    { "pres", material_pt_state::pressure},
-    { "stress", material_pt_state::stress},
-    { "sie", material_pt_state::specific_internal_energy},
-    { "sspd", material_pt_state::sound_speed},
-    { "mass", material_pt_state::mass},
+    { "den",     material_pt_state::density},
+    { "pres",    material_pt_state::pressure},
+    { "stress",  material_pt_state::stress},
+    { "sie",     material_pt_state::specific_internal_energy},
+    { "sspd",    material_pt_state::sound_speed},
+    { "mass",    material_pt_state::mass},
     { "volfrac", material_pt_state::volume_fraction},
-    { "eroded", material_pt_state::eroded_flag}
+    { "eroded",  material_pt_state::eroded_flag}
 };
 
 // element average state variables writen to file
 static std::map<std::string, material_pt_state> elem_outputs_map
 {
-    { "den", material_pt_state::density},
-    { "pres", material_pt_state::pressure},
+    { "den",    material_pt_state::density},
+    { "pres",   material_pt_state::pressure},
     { "stress", material_pt_state::stress},
-    { "sie", material_pt_state::specific_internal_energy},
-    { "sspd", material_pt_state::sound_speed},
-    { "mass", material_pt_state::mass}
+    { "sie",    material_pt_state::specific_internal_energy},
+    { "sspd",   material_pt_state::sound_speed},
+    { "mass",   material_pt_state::mass}
 };
 
 
