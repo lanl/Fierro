@@ -502,7 +502,7 @@ void fill_regions(
                 paint_multi_scalar(gauss_level_set,
                     coords,
                     region_fills(fill_id).level_set,
-                    0.0,
+                    region_fills(fill_id).level_set_slope,
                     gauss_gid,
                     mesh.num_dims,
                     bin,
@@ -648,8 +648,6 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                           fillGaussState_t& fillGaussState,
                           fillElemState_t&  fillElemState)
 {
-
-std::cout << "material fill \n";
 
     // short hand names
     //const size_t num_dims  = mesh.num_dims;

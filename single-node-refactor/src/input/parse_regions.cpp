@@ -909,6 +909,14 @@ void parse_regions(Yaml::Node& root,
                             region_fills(reg_id).level_set = value;
                         });
                     } // value
+                    else if (a_subfield_word.compare("slope") == 0) {
+                        // volfrac slope
+                        double slope = root["regions"][reg_id]["region"]["level_set"]["slope"].As<double>();
+        
+                        RUN({
+                            region_fills(reg_id).level_set_slope = slope;
+                        });
+                    } // slope
                     else if (a_subfield_word.compare("type") == 0){
 
                         std::string type = root["regions"][reg_id]["region"]["level_set"]["type"].As<std::string>();
@@ -925,7 +933,26 @@ void parse_regions(Yaml::Node& root,
                                         region_fills(reg_id).level_set_field = init_conds::uniform;
                                     });
                                     break;
-
+                                    case init_conds::xlinearScalar:
+                                    std::cout << "Setting volfrac initial conditions type to xlinearScalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::xlinearScalar;
+                                    });
+                                    break;
+                                
+                                case init_conds::ylinearScalar:
+                                    std::cout << "Setting volfrac initial conditions type to ylinearScalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::ylinearScalar;
+                                    });
+                                    break;
+                                
+                                case init_conds::zlinearScalar:
+                                    std::cout << "Setting volfrac initial conditions type to zlinearScalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::zlinearScalar;
+                                    });
+                                    break;
                                 case init_conds::tgVortexScalar:
                                     std::cout << "Setting level set initial conditions type to TG Vortex " << std::endl;
                                     RUN({

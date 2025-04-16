@@ -146,6 +146,7 @@ struct RegionFill_t
     double den = 0.0;  ///< density
 
     double level_set = 0.0; ///< level set field
+    double level_set_slope = 0.0; ///< slope of level_set field
 
     // note: setup applies min and max fcns, making it [0:1]
     double volfrac = 1.0; ///< volume fraction of material field

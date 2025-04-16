@@ -58,10 +58,10 @@ enum BCVars
 /// \fn velocity
 ///
 /// \brief This is a function to force the boundary to move with a specified
-///        velocity that varies in time.  The function form is an exponential
-///        decay, given by:
+///        velocity that varies in time as a function of polynomial given by:
 ///         if (t_end > time > t_start) then
-///              v(t) = v0 exp(-v1*(time - time_start) )
+///           v(t) = v0 + v1*(time - time_start) + 
+///                         0.5*v2*(time - time_start)*(time - time_start) 
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
@@ -107,10 +107,12 @@ static void velocity(const Mesh_t& mesh,
         // the desired velocity
         const double vel = hydro_bc_vel_0 * exp(-hydro_bc_vel_1 * time_delta);
 
+        // magnitude of the normal in the specified direction
         double mag = 0.0;
         for (size_t dim = 0; dim<mesh.num_dims; dim++){
             mag += vel_bc_global_vars(bdy_set,dim)*vel_bc_global_vars(bdy_set,dim);
         } // will make sure it's a unit vector
+        mag = sqrt(mag);
 
         for (size_t dim = 0; dim<mesh.num_dims; dim++){
             // remove the velocity in the specified direction

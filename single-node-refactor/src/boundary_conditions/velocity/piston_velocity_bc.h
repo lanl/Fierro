@@ -32,8 +32,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_VEL_CONST_H
-#define BOUNDARY_VEL_CONST_H
+#ifndef BOUNDARY_VEL_PISTON_H
+#define BOUNDARY_VEL_PISTON_H
 
 #include "boundary_conditions.h"
 
@@ -41,6 +41,20 @@ struct BoundaryConditionEnums_t;
 
 namespace PistonVelocityBC
 {
+
+    // add an enum for boundary statevars and global vars
+    enum BCVars
+    {
+        x_comp = 0,
+        y_comp = 1,
+        z_comp = 2,
+        hydro_bc_vel_0 = 3,
+        hydro_bc_vel_1 = 4,
+        hydro_bc_vel_2 = 5,
+        hydro_bc_vel_t_start = 6,
+        hydro_bc_vel_t_end = 7
+    };
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn velocity
@@ -70,14 +84,49 @@ static void velocity(const Mesh_t& mesh,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
+
+
     // directions are:
     // x_plane  = 0,
     // y_plane  = 1,
     // z_plane  = 2,
 
-    // Set velocity to the specified value
-    node_vel(bdy_node_gid, BoundaryConditionEnums(bdy_set).Direction) =
-        vel_bc_global_vars(bdy_set, BoundaryConditionEnums(bdy_set).Direction);
+    const double x_comp = vel_bc_global_vars(bdy_set, BCVars::x_comp);
+    const double y_comp = vel_bc_global_vars(bdy_set, BCVars::y_comp);
+    const double z_comp = vel_bc_global_vars(bdy_set, BCVars::z_comp);
+    const double hydro_bc_vel_0 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_0);
+    const double hydro_bc_vel_1 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_1);
+    const double hydro_bc_vel_2 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_2);
+    const double hydro_bc_vel_t_start = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_start);
+    const double hydro_bc_vel_t_end   = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_end);
+
+    // Set velocity to that direction to specified value
+    // if t_end > time > t_start
+    // v(t) = v0 exp(-v1*(time - time_start) )
+    if (time_value >= hydro_bc_vel_t_start && time_value <= hydro_bc_vel_t_end) {
+        // the time difference
+        const double time_delta = time_value - hydro_bc_vel_t_start;
+
+        // the desired velocity
+        const double vel = hydro_bc_vel_0 + hydro_bc_vel_1*time_delta + 0.5*hydro_bc_vel_2*time_delta*time_delta;
+
+        // magnitude of the normal in the specified direction
+        double mag = 0.0;
+        for (size_t dim = 0; dim<mesh.num_dims; dim++){
+            mag += vel_bc_global_vars(bdy_set,dim)*vel_bc_global_vars(bdy_set,dim);
+        } // will make sure it's a unit vector
+        mag = sqrt(mag);
+
+        for (size_t dim = 0; dim<mesh.num_dims; dim++){
+            // remove the velocity in the specified direction
+            //  direction normal = vel_bc_global_vars(bdy_set,dim)/mag
+            node_vel(bdy_node_gid, dim) -= node_vel(bdy_node_gid, dim) * (vel_bc_global_vars(bdy_set,dim)/mag);
+
+            // add the desired velocity in the specified direction
+            node_vel(bdy_node_gid, dim) += vel * (vel_bc_global_vars(bdy_set,dim)/mag);
+        }
+        
+    } // end if on time
 
     return;
 }     // end func
