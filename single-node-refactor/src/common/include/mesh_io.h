@@ -2994,13 +2994,13 @@ public:
             }
 
             // accelleration, var 2
-            vec_fields(node_gid, 2, 0) = (State.node.vel.host(node_gid, 0) - State.node.vel.host(node_gid, 0))/dt;
-            vec_fields(node_gid, 2, 1) = (State.node.vel.host(node_gid, 1) - State.node.vel.host(node_gid, 1))/dt;
+            vec_fields(node_gid, 2, 0) = (State.node.vel.host(node_gid, 0) - State.node.vel_n0.host(node_gid, 0))/dt;
+            vec_fields(node_gid, 2, 1) = (State.node.vel.host(node_gid, 1) - State.node.vel_n0.host(node_gid, 1))/dt;
             if (num_dims == 2) {
                 vec_fields(node_gid, 2, 2) = 0.0;
             }
             else{
-                vec_fields(node_gid, 2, 2) = (State.node.vel.host(node_gid, 2) - State.node.vel.host(node_gid, 2))/dt;
+                vec_fields(node_gid, 2, 2) = (State.node.vel.host(node_gid, 2) - State.node.vel_n0.host(node_gid, 2))/dt;
             }
 
 
@@ -4020,14 +4020,14 @@ public:
                             node_vector_fields(node_vel_id, node_gid, 2) = Node.vel(node_gid, 2);
                         } // end if
 
-                        // accelerate, var is node_accel_id            
-                        node_vector_fields(node_accel_id, node_gid, 0) = (Node.vel(node_gid, 0) - Node.vel(node_gid, 0))/dt;
-                        node_vector_fields(node_accel_id, node_gid, 1) = (Node.vel(node_gid, 1) - Node.vel(node_gid, 1))/dt;
+                        // accellerate, var is node_accel_id            
+                        node_vector_fields(node_accel_id, node_gid, 0) = (Node.vel(node_gid, 0) - Node.vel_n0(node_gid, 0))/dt;
+                        node_vector_fields(node_accel_id, node_gid, 1) = (Node.vel(node_gid, 1) - Node.vel_n0(node_gid, 1))/dt;
                         if (num_dims == 2) {
                             node_vector_fields(node_accel_id, node_gid, 2) = 0.0;
                         }
                         else{
-                            node_vector_fields(node_accel_id, node_gid, 2) = (Node.vel(node_gid, 2) - Node.vel(node_gid, 2))/dt;
+                            node_vector_fields(node_accel_id, node_gid, 2) = (Node.vel(node_gid, 2) - Node.vel_n0(node_gid, 2))/dt;
                         } // end if
 
                     }); // end parallel for
