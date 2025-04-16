@@ -708,221 +708,1139 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
+    // void read_vtk_mesh(Mesh_t& mesh,
+    //                 GaussPoint_t& GaussPoints,
+    //                 node_t&   node,
+    //                 corner_t& corner,
+    //                 mesh_input_t& mesh_inps,
+    //                 int num_dims)
+    // {
+
+    //     std::cout<<"Reading VTK mesh"<<std::endl;
+    
+    //     int i;           // used for writing information to file
+    //     int node_gid;    // the global id for the point
+    //     int elem_gid;     // the global id for the elem
+    //     int myrank, nranks;
+    //     MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+    //     MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+
+    //     size_t num_nodes_in_elem = 1;
+    //     for (int dim = 0; dim < num_dims; dim++) {
+    //         num_nodes_in_elem *= 2;
+    //     }
+        
+
+    //     std::string token;
+        
+    //     bool found = false;
+    //     std::ifstream in;  // FILE *in;
+    //     if(myrank==0){
+    //         in.open(mesh_file_);
+            
+
+    //         // look for POINTS
+    //         i = 0;
+    //         while (found==false) {
+    //             std::string str;
+    //             std::string delimiter = " ";
+    //             std::getline(in, str);
+    //             std::vector<std::string> v = split (str, delimiter);
+                
+    //             // looking for the following text:
+    //             //      POINTS %d float
+    //             if(v[0] == "POINTS"){
+    //                 size_t num_nodes = std::stoi(v[1]);
+    //                 printf("Number of nodes read in %zu\n", num_nodes);
+    //                 mesh.initialize_nodes(num_nodes);
+
+    //                 std::vector<node_state> required_node_state = { node_state::coords };
+    //                 node.initialize(num_nodes, num_dims, required_node_state);
+                    
+    //                 found=true;
+    //             } // end if
+                
+                
+    //             if (i>1000){
+    //                 std::cerr << "ERROR: Failed to find POINTS in file" << std::endl;
+    //                 break;
+    //             } // end if
+                
+    //             i++;
+    //         } // end while
+    //     }
+
+        
+    //     if(myrank==0){
+    //         // read the node coordinates
+    //         for (node_gid=0; node_gid<mesh.num_nodes; node_gid++){
+                
+    //             std::string str;
+    //             std::getline(in, str);
+                
+    //             std::string delimiter = " ";
+    //             std::vector<std::string> v = split (str, delimiter);
+                
+    //             // save the nodal coordinates
+    //             node.coords.host(node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
+    //             node.coords.host(node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
+    //             if(num_dims==3){
+    //                 node.coords.host(node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
+    //             }
+                
+    //         } // end for nodes
+    //     }
+
+    //     // Update device nodal positions
+    //     node.coords.update_device();
+        
+    //     if(myrank==0){
+    //         found=false;
+
+    //         // look for CELLS
+    //         i = 0;
+    //         size_t num_elem = 0;
+    //         while (found==false) {
+    //             std::string str;
+    //             std::getline(in, str);
+                
+    //             std::string delimiter = " ";
+    //             std::vector<std::string> v = split (str, delimiter);
+    //             std::cout << v[0] << std::endl; // printing
+                
+    //             // looking for the following text:
+    //             //      CELLS num_elem size
+    //             if(v[0] == "CELLS"){
+    //                 num_elem = std::stoi(v[1]);
+    //                 printf("Number of elements read in %zu\n", num_elem);
+
+    //                 // initialize elem variables
+    //                 mesh.initialize_elems(num_elem, num_dims);
+                    
+    //                 found=true;
+    //             } // end if
+                
+                
+    //             if (i>1000){
+    //                 printf("ERROR: Failed to find CELLS \n");
+    //                 break;
+    //             } // end if
+                
+    //             i++;
+    //         } // end while
+    //     }
+        
+    //     if(myrank==0){
+    //         // read the node ids in the element
+    //         for (elem_gid=0; elem_gid<num_elem; elem_gid++) {
+                
+    //             std::string str;
+    //             std::getline(in, str);
+                
+    //             std::string delimiter = " ";
+    //             std::vector<std::string> v = split (str, delimiter);
+    //             num_nodes_in_elem = std::stoi(v[0]);
+                
+    //             for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+    //                 mesh.nodes_in_elem.host(elem_gid, node_lid) = std::stod(v[node_lid+1]);
+    //                 //printf(" %zu ", elem_point_list(elem_gid,node_lid) ); // printing
+    //             }
+    //             //printf("\n"); // printing
+                
+    //         } // end for
+    //     }
+
+    //     // Convert from ensight to IJK mesh
+    //     size_t convert_ensight_to_ijk[8];
+    //     convert_ensight_to_ijk[0] = 0;
+    //     convert_ensight_to_ijk[1] = 1;
+    //     convert_ensight_to_ijk[2] = 3;
+    //     convert_ensight_to_ijk[3] = 2;
+    //     convert_ensight_to_ijk[4] = 4;
+    //     convert_ensight_to_ijk[5] = 5;
+    //     convert_ensight_to_ijk[6] = 7;
+    //     convert_ensight_to_ijk[7] = 6;
+
+    //     size_t tmp_ijk_indx[8];
+
+    //     for (size_t elem_gid = 0; elem_gid < num_elem; elem_gid++) {
+    //         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+    //             tmp_ijk_indx[node_lid] = mesh.nodes_in_elem.host(elem_gid, convert_ensight_to_ijk[node_lid]);
+    //         }
+
+    //         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+    //             mesh.nodes_in_elem.host(elem_gid, node_lid) = tmp_ijk_indx[node_lid];
+    //         }
+    //     }
+    //     // update device side
+    //     mesh.nodes_in_elem.update_device();
+
+
+    //     // initialize corner variables
+    //     size_t num_corners = num_elem * num_nodes_in_elem;
+    //     mesh.initialize_corners(num_corners);
+
+
+    //     // Build connectivity
+    //     mesh.build_connectivity();
+
+
+    //     found=false;
+
+    //     printf("\n");
+        
+        
+    //     // look for CELL_TYPE
+    //     if(myrank==0){
+    //         i = 0;
+    //         size_t elem_type = 0;
+    //         while (found==false) {
+    //             std::string str;
+    //             std::string delimiter = " ";
+    //             std::getline(in, str);
+    //             std::vector<std::string> v = split (str, delimiter);
+                
+    //             // looking for the following text:
+    //             //      CELLS num_elem size
+    //             if(v[0] == "CELL_TYPES"){
+
+    //                 std::getline(in, str);
+    //                 elem_type = std::stoi(str);
+                    
+    //                 found=true;
+    //             } // end if
+                
+                
+    //             if (i>1000){
+    //                 printf("ERROR: Failed to find elem_TYPE \n");
+    //                 break;
+    //             } // end if
+                
+    //             i++;
+    //         } // end while
+    //         printf("Element type = %zu \n", elem_type);
+    //         // elem types:
+    //         // linear hex = 12, linear quad = 9
+    //         found=false;
+            
+            
+    //         if(num_nodes_in_elem==8 & elem_type != 12) {
+    //             printf("Wrong element type of %zu \n", elem_type);
+    //             std::cerr << "ERROR: incorrect element type in VTK file" << std::endl;
+    //         }
+            
+    //         in.close();
+    //     }
+        
+    // } // end of VTKread function
+
     void read_vtk_mesh(Mesh_t& mesh,
-                    GaussPoint_t& GaussPoints,
-                    node_t&   node,
-                    corner_t& corner,
-                    mesh_input_t& mesh_inps,
-                    int num_dims)
+                            GaussPoint_t& GaussPoints,
+                            node_t&   node,
+                            corner_t& corner,
+                            mesh_input_t& mesh_inps,
+                            int num_dims)
     {
+        char ch;
+        std::string skip_line, read_line, substring;
+        std::stringstream line_parse;
 
         std::cout<<"Reading VTK mesh"<<std::endl;
     
-        int i;           // used for writing information to file
-        int node_gid;    // the global id for the point
-        int elem_gid;     // the global id for the elem
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
 
-        size_t num_nodes_in_elem = 1;
-        for (int dim = 0; dim < num_dims; dim++) {
-            num_nodes_in_elem *= 2;
+        int p_order = input_options.p_order;
+        int local_node_index, current_column_index;
+        int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
+        int negative_index_found = 0;
+        int global_negative_index_found = 0;
+
+        size_t read_index_start, node_rid, elem_gid;
+        long long int node_gid;
+
+        real_t dof_value;
+
+        CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
+
+
+        // read the mesh
+        // --- Read the number of nodes in the mesh --- //
+        num_nodes = 0;
+        if (myrank == 0)
+        {
+            std::cout << " NUM DIM is " << num_dims << std::endl;
+            in = new std::ifstream();
+            in->open(MESH);
+            bool found = false;
+
+            while (found == false&&in->good()) {
+                std::getline(*in, read_line);
+                line_parse.str("");
+                line_parse.clear();
+                line_parse << read_line;
+                line_parse >> substring;
+
+                // looking for the following text:
+                //      POINTS %d float
+                if (substring == "POINTS")
+                {
+                    line_parse >> num_nodes;
+                    std::cout << "declared node count: " << num_nodes << std::endl;
+                    if (num_nodes <= 0)
+                    {
+                        throw std::runtime_error("ERROR, NO NODES IN MESH");
+                    }
+                    found = true;
+                } // end if
+            } // end while
+
+            if (!found){
+                throw std::runtime_error("ERROR: Failed to find POINTS");
+            } // end if
+
+        } // end if(myrank==0)
+
+        // broadcast number of nodes
+        MPI_Bcast(&num_nodes, 1, MPI_LONG_LONG_INT, 0, world);
+
+        //allocate pre-partition node coords using contiguous decomposition
+        //FArray type used since CArray type still doesnt support zoltan2 decomposition
+        DistributedDFArray node_coords_distributed(num_nodes, num_dims);
+
+        // construct contiguous parallel row map now that we know the number of nodes
+        DistributedMap map = node_coords_distributed.pmap;
+        // map->describe(*fos,Teuchos::VERB_EXTREME);
+
+        // set the vertices in the mesh read in
+        size_t nlocal_nodes = map.size();
+
+        // scope ensures view is destroyed for now to avoid calling a device view with an active host view later
+        {
+            host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+            // host_vec_array node_coords = dual_node_coords.view_host();
+            // notify that the host view is going to be modified in the file readin
+            // dual_node_coords.modify_host();
+
+            // old swage method
+            // mesh->init_nodes(local_nrows); // add 1 for index starting at 1
+
+            //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+
+            // read the initial mesh coordinates
+            // x-coords
+            /*only task 0 reads in nodes and elements from the input file
+            stores node data in a buffer and communicates once the buffer cap is reached
+            or the data ends*/
+
+            words_per_line = input_options.words_per_line;
+            elem_words_per_line = input_options.elem_words_per_line;
+
+            // allocate read buffer
+            read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES, words_per_line, MAX_WORD);
+
+            dof_limit = num_nodes;
+            buffer_iterations = dof_limit / BUFFER_LINES;
+            if (dof_limit % BUFFER_LINES != 0)
+            {
+                buffer_iterations++;
+            }
+
+            // read coords
+            read_index_start = 0;
+            for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+            {
+                // pack buffer on rank 0
+                if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+                {
+                    for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                    {
+                        getline(*in, read_line);
+                        line_parse.clear();
+                        line_parse.str(read_line);
+
+                        for (int iword = 0; iword < words_per_line; iword++)
+                        {
+                            // read portions of the line into the substring variable
+                            line_parse >> substring;
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                        }
+                    }
+                }
+                else if (myrank == 0)
+                {
+                    buffer_loop = 0;
+                    while (buffer_iteration * BUFFER_LINES + buffer_loop < num_nodes) {
+                        getline(*in, read_line);
+                        line_parse.clear();
+                        line_parse.str(read_line);
+                        for (int iword = 0; iword < words_per_line; iword++)
+                        {
+                            // read portions of the line into the substring variable
+                            line_parse >> substring;
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                        }
+                        buffer_loop++;
+                    }
+                }
+
+                // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+                MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * words_per_line * MAX_WORD, MPI_CHAR, 0, world);
+                // broadcast how many nodes were read into this buffer iteration
+                MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, world);
+
+                // debug_print
+                // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+                // for(int iprint=0; iprint < buffer_loop; iprint++)
+                // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+                // return;
+
+                // determine which data to store in the swage mesh members (the local node data)
+                // loop through read buffer
+                for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+                {
+                    // set global node id (ensight specific order)
+                    node_gid = read_index_start + scan_loop;
+                    // let map decide if this node id belongs locally; if yes store data
+                    if (map->isNodeGlobalElement(node_gid))
+                    {
+                        // set local node index in this mpi rank
+                        node_rid = map->getLocalElement(node_gid);
+                        // extract nodal position from the read buffer
+                        // for tecplot format this is the three coords in the same line
+                        dof_value = atof(&read_buffer(scan_loop, 0, 0));
+                        node_coords(node_rid, 0) = dof_value * unit_scaling;
+                        dof_value = atof(&read_buffer(scan_loop, 1, 0));
+                        node_coords(node_rid, 1) = dof_value * unit_scaling;
+                        if (num_dim == 3)
+                        {
+                            dof_value = atof(&read_buffer(scan_loop, 2, 0));
+                            node_coords(node_rid, 2) = dof_value * unit_scaling;
+                        }
+                    }
+                }
+                read_index_start += BUFFER_LINES;
+            }
+        } // end of coordinate readin
+        // repartition node distribution
+        repartition_nodes(false);
+        
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.post_repartition_initialize(partitioned_node_map, num_dims, required_node_state);
+
+        // synchronize device data
+        // dual_node_coords.sync_device();
+        // dual_node_coords.modify_device();
+
+        // debug print of nodal data
+
+        // debug print nodal positions and indices
+        /*
+        std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
+        for (int inode = 0; inode < local_nrows; inode++){
+            std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
+        for (int istride = 0; istride < num_dim; istride++){
+            std::cout << node_coords(inode,istride) << " , ";
         }
-        
+        std::cout << " }"<< std::endl;
+        }
+        */
 
-        std::string token;
-        
-        bool found = false;
-        
-        std::ifstream in;  // FILE *in;
-        in.open(mesh_file_);
-        
+        // check that local assignments match global total
 
-        // look for POINTS
-        i = 0;
-        while (found==false) {
-            std::string str;
-            std::string delimiter = " ";
-            std::getline(in, str);
-            std::vector<std::string> v = split (str, delimiter);
-            
-            // looking for the following text:
-            //      POINTS %d float
-            if(v[0] == "POINTS"){
-                size_t num_nodes = std::stoi(v[1]);
-                printf("Number of nodes read in %zu\n", num_nodes);
-                mesh.initialize_nodes(num_nodes);
+        // read in element info (ensight file format is organized in element type sections)
+        // loop over this later for several element type sections
 
-                std::vector<node_state> required_node_state = { node_state::coords };
-                node.initialize(num_nodes, num_dims, required_node_state);
-                
-                found=true;
+        num_elem  = 0;
+        rnum_elem = 0;
+        CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(elem_words_per_line);
+
+        // --- read the number of cells in the mesh ---
+        // --- Read the number of vertices in the mesh --- //
+        if (myrank == 0)
+        {
+            bool found = false;
+            while (found == false&&in->good()) {
+                std::getline(*in, read_line);
+                line_parse.str("");
+                line_parse.clear();
+                line_parse << read_line;
+                line_parse >> substring;
+
+                // looking for the following text:
+                //      CELLS num_cells size
+                if (substring == "CELLS")
+                {
+                    line_parse >> num_elem;
+                    std::cout << "declared element count: " << num_elem << std::endl;
+                    if (num_elem <= 0)
+                    {
+                        throw std::runtime_error("ERROR, NO ELEMENTS IN MESH");
+                    }
+                    found = true;
+                } // end if
+            } // end while
+
+            if (!found){
+                throw std::runtime_error("ERROR: Failed to find CELLS");
             } // end if
-            
-            
-            if (i>1000){
-                std::cerr << "ERROR: Failed to find POINTS in file" << std::endl;
-                break;
-            } // end if
-            
-            i++;
-        } // end while
-        
-        // read the node coordinates
-        for (node_gid=0; node_gid<mesh.num_nodes; node_gid++){
-            
-            std::string str;
-            std::getline(in, str);
-            
-            std::string delimiter = " ";
-            std::vector<std::string> v = split (str, delimiter);
-            
-            // save the nodal coordinates
-            node.coords.host(node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
-            node.coords.host(node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
-            if(num_dims==3){
-                node.coords.host(node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
+        } // end if(myrank==0)
+
+        // broadcast number of elements
+        MPI_Bcast(&num_elem, 1, MPI_LONG_LONG_INT, 0, world);
+
+        if (myrank == 0)
+        {
+            std::cout << "before mesh initialization" << std::endl;
+        }
+
+        // read in element connectivity
+        // we're gonna reallocate for the words per line expected for the element connectivity
+        read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES, elem_words_per_line, MAX_WORD);
+
+        // calculate buffer iterations to read number of lines
+        buffer_iterations = num_elem / BUFFER_LINES;
+        int assign_flag;
+
+        // dynamic buffer used to store elements before we know how many this rank needs
+        std::vector<size_t> element_temp(BUFFER_LINES * elem_words_per_line);
+        std::vector<size_t> global_indices_temp(BUFFER_LINES);
+        size_t buffer_max = BUFFER_LINES * elem_words_per_line;
+        size_t indices_buffer_max = BUFFER_LINES;
+
+        if (num_elem % BUFFER_LINES != 0)
+        {
+            buffer_iterations++;
+        }
+        read_index_start = 0;
+        // std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
+        rnum_elem = 0;
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+        {
+            // pack buffer on rank 0
+            if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+            {
+                for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                {
+                    getline(*in, read_line);
+                    line_parse.clear();
+                    line_parse.str(read_line);
+                    // disregard node count line since we're using one element type per mesh
+                    line_parse >> substring;
+                    for (int iword = 0; iword < elem_words_per_line; iword++)
+                    {
+                        // read portions of the line into the substring variable
+                        line_parse >> substring;
+                        // debug print
+                        // std::cout<<" "<< substring;
+                        // assign the substring variable as a word of the read buffer
+                        strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                    }
+                    // std::cout <<std::endl;
+                }
             }
-            
-        } // end for nodes
-
-
-        // Update device nodal positions
-        node.coords.update_device();
-        
-
-        found=false;
-
-        // look for CELLS
-        i = 0;
-        size_t num_elem = 0;
-        while (found==false) {
-            std::string str;
-            std::getline(in, str);
-            
-            std::string delimiter = " ";
-            std::vector<std::string> v = split (str, delimiter);
-            std::cout << v[0] << std::endl; // printing
-            
-            // looking for the following text:
-            //      CELLS num_elem size
-            if(v[0] == "CELLS"){
-                num_elem = std::stoi(v[1]);
-                printf("Number of elements read in %zu\n", num_elem);
-
-                // initialize elem variables
-                mesh.initialize_elems(num_elem, num_dims);
-                
-                found=true;
-            } // end if
-            
-            
-            if (i>1000){
-                printf("ERROR: Failed to find CELLS \n");
-                break;
-            } // end if
-            
-            i++;
-        } // end while
-        
-        
-        // read the node ids in the element
-        for (elem_gid=0; elem_gid<num_elem; elem_gid++) {
-            
-            std::string str;
-            std::getline(in, str);
-            
-            std::string delimiter = " ";
-            std::vector<std::string> v = split (str, delimiter);
-            num_nodes_in_elem = std::stoi(v[0]);
-            
-            for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
-                mesh.nodes_in_elem.host(elem_gid, node_lid) = std::stod(v[node_lid+1]);
-                //printf(" %zu ", elem_point_list(elem_gid,node_lid) ); // printing
-            }
-            //printf("\n"); // printing
-            
-        } // end for
-
-        // Convert from ensight to IJK mesh
-        size_t convert_ensight_to_ijk[8];
-        convert_ensight_to_ijk[0] = 0;
-        convert_ensight_to_ijk[1] = 1;
-        convert_ensight_to_ijk[2] = 3;
-        convert_ensight_to_ijk[3] = 2;
-        convert_ensight_to_ijk[4] = 4;
-        convert_ensight_to_ijk[5] = 5;
-        convert_ensight_to_ijk[6] = 7;
-        convert_ensight_to_ijk[7] = 6;
-
-        size_t tmp_ijk_indx[8];
-
-        for (size_t elem_gid = 0; elem_gid < num_elem; elem_gid++) {
-            for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-                tmp_ijk_indx[node_lid] = mesh.nodes_in_elem.host(elem_gid, convert_ensight_to_ijk[node_lid]);
+            else if (myrank == 0)
+            {
+                buffer_loop = 0;
+                while (buffer_iteration * BUFFER_LINES + buffer_loop < num_elem) {
+                    getline(*in, read_line);
+                    line_parse.clear();
+                    line_parse.str(read_line);
+                    line_parse >> substring;
+                    for (int iword = 0; iword < elem_words_per_line; iword++)
+                    {
+                        // read portions of the line into the substring variable
+                        line_parse >> substring;
+                        // debug print
+                        // std::cout<<" "<< substring;
+                        // assign the substring variable as a word of the read buffer
+                        strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                    }
+                    // std::cout <<std::endl;
+                    buffer_loop++;
+                    // std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
+                }
             }
 
-            for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-                mesh.nodes_in_elem.host(elem_gid, node_lid) = tmp_ijk_indx[node_lid];
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * elem_words_per_line * MAX_WORD, MPI_CHAR, 0, world);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, world);
+
+            // store element connectivity that belongs to this rank
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                // add this element to the local list if any of its nodes belong to this rank according to the map
+                // get list of nodes for each element line and check if they belong to the map
+                assign_flag = 0;
+                for (int inode = 0; inode < elem_words_per_line; inode++)
+                {
+                    // as we loop through the nodes belonging to this element we store them
+                    // if any of these nodes belongs to this rank this list is used to store the element locally
+                    node_gid = atoi(&read_buffer(scan_loop, inode, 0));
+                    if (zero_index_base)
+                    {
+                        node_store(inode) = node_gid; // subtract 1 since file index start is 1 but code expects 0
+                    }
+                    else
+                    {
+                        node_store(inode) = node_gid - 1; // subtract 1 since file index start is 1 but code expects 0
+                    }
+                    if (node_store(inode) < 0)
+                    {
+                        negative_index_found = 1;
+                    }
+                    // first we add the elements to a dynamically allocated list
+                    if (zero_index_base)
+                    {
+                        if (map->isNodeGlobalElement(node_gid) && !assign_flag)
+                        {
+                            assign_flag = 1;
+                            rnum_elem++;
+                        }
+                    }
+                    else
+                    {
+                        if (map->isNodeGlobalElement(node_gid - 1) && !assign_flag)
+                        {
+                            assign_flag = 1;
+                            rnum_elem++;
+                        }
+                    }
+                }
+
+                if (assign_flag)
+                {
+                    for (int inode = 0; inode < elem_words_per_line; inode++)
+                    {
+                        if ((rnum_elem - 1) * elem_words_per_line + inode >= buffer_max)
+                        {
+                            element_temp.resize((rnum_elem - 1) * elem_words_per_line + inode + BUFFER_LINES * elem_words_per_line);
+                            buffer_max = (rnum_elem - 1) * elem_words_per_line + inode + BUFFER_LINES * elem_words_per_line;
+                        }
+                        element_temp[(rnum_elem - 1) * elem_words_per_line + inode] = node_store(inode);
+                        // std::cout << "VECTOR STORAGE FOR ELEM " << rnum_elem << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
+                    }
+                    // assign global element id to temporary list
+                    if (rnum_elem - 1 >= indices_buffer_max)
+                    {
+                        global_indices_temp.resize(rnum_elem - 1 + BUFFER_LINES);
+                        indices_buffer_max = rnum_elem - 1 + BUFFER_LINES;
+                    }
+                    global_indices_temp[rnum_elem - 1] = elem_gid;
+                }
+            }
+            read_index_start += BUFFER_LINES;
+        }
+
+        // std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
+
+        Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
+
+        elements::elem_types::elem_type mesh_element_type;
+
+        if (simparam.num_dims == 2)
+        {
+            if (input_options.element_type == ELEMENT_TYPE::quad4)
+            {
+                mesh_element_type   = elements::elem_types::Quad4;
+                max_nodes_per_patch = 2;
+            }
+            else if (input_options.element_type == ELEMENT_TYPE::quad8)
+            {
+                mesh_element_type   = elements::elem_types::Quad8;
+                max_nodes_per_patch = 3;
+            }
+            else if (input_options.element_type == ELEMENT_TYPE::quad12)
+            {
+                mesh_element_type   = elements::elem_types::Quad12;
+                max_nodes_per_patch = 4;
+            }
+            else
+            {
+                if (myrank == 0)
+                {
+                    std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
+                }
+                exit_solver(0);
+            }
+            element_select->choose_2Delem_type(mesh_element_type, elem2D);
+            max_nodes_per_element = elem2D->num_nodes();
+        }
+
+        if (simparam.num_dims == 3)
+        {
+            if (input_options.element_type == ELEMENT_TYPE::hex8)
+            {
+                mesh_element_type   = elements::elem_types::Hex8;
+                max_nodes_per_patch = 4;
+            }
+            else if (input_options.element_type == ELEMENT_TYPE::hex20)
+            {
+                mesh_element_type   = elements::elem_types::Hex20;
+                max_nodes_per_patch = 8;
+            }
+            else if (input_options.element_type == ELEMENT_TYPE::hex32)
+            {
+                mesh_element_type   = elements::elem_types::Hex32;
+                max_nodes_per_patch = 12;
+            }
+            else
+            {
+                if (myrank == 0)
+                {
+                    std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
+                }
+                exit_solver(0);
+            }
+            element_select->choose_3Delem_type(mesh_element_type, elem);
+            max_nodes_per_element = elem->num_nodes();
+        }
+
+        // 1 type per mesh for now
+        for (int ielem = 0; ielem < rnum_elem; ielem++)
+        {
+            Element_Types(ielem) = mesh_element_type;
+        }
+
+        // copy temporary element storage to multivector storage
+        dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
+        host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
+        dual_nodes_in_elem.modify_host();
+
+        for (int ielem = 0; ielem < rnum_elem; ielem++)
+        {
+            for (int inode = 0; inode < elem_words_per_line; inode++)
+            {
+                nodes_in_elem(ielem, inode) = element_temp[ielem * elem_words_per_line + inode];
             }
         }
-        // update device side
-        mesh.nodes_in_elem.update_device();
 
-
-        // initialize corner variables
-        size_t num_corners = num_elem * num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-
-
-        // Build connectivity
-        mesh.build_connectivity();
-
-
-        found=false;
-
-        printf("\n");
-        
-        
-        // look for CELL_TYPE
-        i = 0;
-        size_t elem_type = 0;
-        while (found==false) {
-            std::string str;
-            std::string delimiter = " ";
-            std::getline(in, str);
-            std::vector<std::string> v = split (str, delimiter);
-            
-            // looking for the following text:
-            //      CELLS num_elem size
-            if(v[0] == "CELL_TYPES"){
-
-                std::getline(in, str);
-                elem_type = std::stoi(str);
-                
-                found=true;
-            } // end if
-            
-            
-            if (i>1000){
-                printf("ERROR: Failed to find elem_TYPE \n");
-                break;
-            } // end if
-            
-            i++;
-        } // end while
-        printf("Element type = %zu \n", elem_type);
-        // elem types:
-        // linear hex = 12, linear quad = 9
-        found=false;
-        
-        
-        if(num_nodes_in_elem==8 & elem_type != 12) {
-            printf("Wrong element type of %zu \n", elem_type);
-            std::cerr << "ERROR: incorrect element type in VTK file" << std::endl;
+        // view storage for all local elements connected to local nodes on this rank
+        // DCArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
+        Kokkos::DualView<GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices", rnum_elem);
+        // copy temporary global indices storage to view storage
+        for (int ielem = 0; ielem < rnum_elem; ielem++)
+        {
+            All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
+            if (global_indices_temp[ielem] < 0)
+            {
+                negative_index_found = 1;
+            }
         }
-        
-        in.close();
-        
-    } // end of VTKread function
+
+        MPI_Allreduce(&negative_index_found, &global_negative_index_found, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        if (global_negative_index_found)
+        {
+            if (myrank == 0)
+            {
+                std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+            }
+            exit_solver(0);
+        }
+
+        // delete temporary element connectivity and index storage
+        std::vector<size_t>().swap(element_temp);
+        std::vector<size_t>().swap(global_indices_temp);
+
+        All_Element_Global_Indices.modify_host();
+        All_Element_Global_Indices.sync_device();
+
+        // debug print
+        /*
+        Kokkos::View <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices_pass("All_Element_Global_Indices_pass",rnum_elem);
+        deep_copy(All_Element_Global_Indices_pass, All_Element_Global_Indices.h_view);
+        std::cout << " ------------ELEMENT GLOBAL INDICES ON TASK " << myrank << " --------------"<<std::endl;
+        for (int ielem = 0; ielem < rnum_elem; ielem++){
+        std::cout << "elem: " << All_Element_Global_Indices_pass(ielem) + 1;
+        std::cout << std::endl;
+        }
+        */
+
+        // construct overlapping element map (since different ranks can own the same elements due to the local node map)
+        all_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), All_Element_Global_Indices.d_view, 0, comm));
+
+        // element type selection (subject to change)
+        // ---- Set Element Type ---- //
+        // allocate element type memory
+        // elements::elem_type_t* elem_choice;
+
+        int NE = 1; // number of element types in problem
+
+        // Convert ensight index system to the ijk finite element numbering convention
+        // for vertices in cell
+        if (active_node_ordering_convention == IJK)
+        {
+            CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
+            CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
+            convert_ensight_to_ijk(0) = 0;
+            convert_ensight_to_ijk(1) = 1;
+            convert_ensight_to_ijk(2) = 3;
+            convert_ensight_to_ijk(3) = 2;
+            convert_ensight_to_ijk(4) = 4;
+            convert_ensight_to_ijk(5) = 5;
+            convert_ensight_to_ijk(6) = 7;
+            convert_ensight_to_ijk(7) = 6;
+
+            int nodes_per_element;
+
+            if (num_dim == 2)
+            {
+                for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++)
+                {
+                    // set nodes per element
+                    element_select->choose_2Delem_type(Element_Types(cell_rid), elem2D);
+                    nodes_per_element = elem2D->num_nodes();
+                    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
+                    {
+                        tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
+                    }
+
+                    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
+                    {
+                        nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
+                    }
+                }
+            }
+
+            if (num_dim == 3)
+            {
+                for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++)
+                {
+                    // set nodes per element
+                    element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
+                    nodes_per_element = elem->num_nodes();
+                    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
+                    {
+                        tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
+                    }
+
+                    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
+                    {
+                        nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
+                    }
+                }
+            }
+        }
+
+        //If restarting a topology optimization run, obtain nodal design density data here
+        if(topology_optimization_restart){
+            design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+            host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+            if (myrank == 0)
+            {
+                bool found = false;
+                while (found == false&&in->good()) {
+                    std::getline(*in, read_line);
+                    //std::cout << read_line << std::endl;
+                    line_parse.clear();
+                    line_parse.str(read_line);
+
+                    //stop when the design_density string is reached
+                    while (!line_parse.eof()){
+                        line_parse >> substring;
+                        //std::cout << substring << std::endl;
+                        if(!substring.compare("design_density")){
+                            found = true;
+                        }
+                    } //while
+
+                } // end while
+
+                if (!found){
+                    throw std::runtime_error("ERROR: Failed to find design_density");
+                } // end if
+
+                //skip "LOOKUP_TABLE default" line
+                std::getline(*in, read_line);
+            } // end if(myrank==0)
+            
+            //read in density of each node
+            // allocate read buffer
+            words_per_line = 1;
+            read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES, words_per_line, MAX_WORD);
+
+            dof_limit = num_nodes;
+            buffer_iterations = dof_limit / BUFFER_LINES;
+            if (dof_limit % BUFFER_LINES != 0)
+            {
+                buffer_iterations++;
+            }
+
+            // read densities
+            read_index_start = 0;
+            for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+            {
+                // pack buffer on rank 0
+                if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+                {
+                    for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                    {
+                        getline(*in, read_line);
+                        line_parse.clear();
+                        line_parse.str(read_line);
+
+                        for (int iword = 0; iword < words_per_line; iword++)
+                        {
+                            // read portions of the line into the substring variable
+                            line_parse >> substring;
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                        }
+                    }
+                }
+                else if (myrank == 0)
+                {
+                    buffer_loop = 0;
+                    while (buffer_iteration * BUFFER_LINES + buffer_loop < num_nodes) {
+                        getline(*in, read_line);
+                        line_parse.clear();
+                        line_parse.str(read_line);
+                        for (int iword = 0; iword < words_per_line; iword++)
+                        {
+                            // read portions of the line into the substring variable
+                            line_parse >> substring;
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                        }
+                        buffer_loop++;
+                    }
+                }
+
+                // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+                MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * words_per_line * MAX_WORD, MPI_CHAR, 0, world);
+                // broadcast how many nodes were read into this buffer iteration
+                MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, world);
+
+                // debug_print
+                // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+                // for(int iprint=0; iprint < buffer_loop; iprint++)
+                // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+                // return;
+
+                // determine which data to store in the swage mesh members (the local node data)
+                // loop through read buffer
+                for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+                {
+                    // set global node id (ensight specific order)
+                    node_gid = read_index_start + scan_loop;
+                    // let map decide if this node id belongs locally; if yes store data
+                    if (map->isNodeGlobalElement(node_gid))
+                    {
+                        // set local node index in this mpi rank
+                        node_rid = map->getLocalElement(node_gid);
+                        // extract nodal position from the read buffer
+                        // for tecplot format this is the three coords in the same line
+                        dof_value = atof(&read_buffer(scan_loop, 0, 0));
+                        node_densities(node_rid, 0) = dof_value;
+                    }
+                }
+                read_index_start += BUFFER_LINES;
+            }
+
+            //Find initial objective value to normalize by
+            if (myrank == 0 && simparam.optimization_options.normalized_objective)
+            {
+                bool found = false;
+                while (found == false&&in->good()) {
+                    std::getline(*in, read_line);
+                    //std::cout << read_line << std::endl;
+                    line_parse.clear();
+                    line_parse.str(read_line);
+
+                    //stop when the design_density string is reached
+                    while (!line_parse.eof()){
+                        line_parse >> substring;
+                        //std::cout << substring << std::endl;
+                        if(!substring.compare("Objective_Normalization_Constant")){
+                            found = true;
+                            line_parse >> substring;
+                            simparam.optimization_options.objective_normalization_constant = stod(substring);
+                        }
+                    } //while
+
+                } // end while
+
+                if (!found){
+                    throw std::runtime_error("ERROR: Failed to find initial objective value for restart");
+                } // end if
+            } // end if(myrank==0)
+        }
+
+        //If restarting a topology optimization run, obtain nodal design density data here
+        if(shape_optimization_restart){
+            design_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+            host_vec_array design_node_coords = design_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+            if (myrank == 0)
+            {
+                bool found = false;
+                while (found == false&&in->good()) {
+                    std::getline(*in, read_line);
+                    //std::cout << read_line << std::endl;
+                    line_parse.clear();
+                    line_parse.str(read_line);
+
+                    //stop when the design_density string is reached
+                    while (!line_parse.eof()){
+                        line_parse >> substring;
+                        //std::cout << substring << std::endl;
+                        if(!substring.compare("design_coordinates")){
+                            found = true;
+                        }
+                    } //while
+
+                } // end while
+
+                if (!found){
+                    throw std::runtime_error("ERROR: Failed to find design_coordinates");
+                } // end if
+
+                //skip "LOOKUP_TABLE default" line
+                std::getline(*in, read_line);
+            } // end if(myrank==0)
+            
+            //read in density of each node
+            // allocate read buffer
+            words_per_line = num_dim;
+            read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES, words_per_line, MAX_WORD);
+
+            dof_limit = num_nodes;
+            buffer_iterations = dof_limit / BUFFER_LINES;
+            if (dof_limit % BUFFER_LINES != 0)
+            {
+                buffer_iterations++;
+            }
+
+            // read densities
+            read_index_start = 0;
+            for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+            {
+                // pack buffer on rank 0
+                if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+                {
+                    for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                    {
+                        getline(*in, read_line);
+                        line_parse.clear();
+                        line_parse.str(read_line);
+
+                        for (int iword = 0; iword < words_per_line; iword++)
+                        {
+                            // read portions of the line into the substring variable
+                            line_parse >> substring;
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                        }
+                    }
+                }
+                else if (myrank == 0)
+                {
+                    buffer_loop = 0;
+                    while (buffer_iteration * BUFFER_LINES + buffer_loop < num_nodes) {
+                        getline(*in, read_line);
+                        line_parse.clear();
+                        line_parse.str(read_line);
+                        for (int iword = 0; iword < words_per_line; iword++)
+                        {
+                            // read portions of the line into the substring variable
+                            line_parse >> substring;
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                        }
+                        buffer_loop++;
+                    }
+                }
+
+                // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+                MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * words_per_line * MAX_WORD, MPI_CHAR, 0, world);
+                // broadcast how many nodes were read into this buffer iteration
+                MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, world);
+
+                // debug_print
+                // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+                // for(int iprint=0; iprint < buffer_loop; iprint++)
+                // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+                // return;
+
+                // determine which data to store in the swage mesh members (the local node data)
+                // loop through read buffer
+                for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+                {
+                    // set global node id (ensight specific order)
+                    node_gid = read_index_start + scan_loop;
+                    // let map decide if this node id belongs locally; if yes store data
+                    if (map->isNodeGlobalElement(node_gid))
+                    {
+                        // set local node index in this mpi rank
+                        node_rid = map->getLocalElement(node_gid);
+                        // extract nodal position from the read buffer
+                        // for tecplot format this is the three coords in the same line
+                        dof_value = atof(&read_buffer(scan_loop, 0, 0));
+                        design_node_coords(node_rid, 0) = dof_value * unit_scaling;
+                        dof_value = atof(&read_buffer(scan_loop, 1, 0));
+                        design_node_coords(node_rid, 1) = dof_value * unit_scaling;
+                        if(num_dim==3){
+                            dof_value = atof(&read_buffer(scan_loop, 2, 0));
+                            design_node_coords(node_rid, 2) = dof_value * unit_scaling; 
+                        }
+                    }
+                }
+                read_index_start += BUFFER_LINES;
+            }
+
+            //Find initial objective value to normalize by
+            if (myrank == 0 && simparam.optimization_options.normalized_objective)
+            {
+                bool found = false;
+                while (found == false&&in->good()) {
+                    std::getline(*in, read_line);
+                    //std::cout << read_line << std::endl;
+                    line_parse.clear();
+                    line_parse.str(read_line);
+
+                    //stop when the design_density string is reached
+                    while (!line_parse.eof()){
+                        line_parse >> substring;
+                        //std::cout << substring << std::endl;
+                        if(!substring.compare("Objective_Normalization_Constant")){
+                            found = true;
+                            line_parse >> substring;
+                            simparam.optimization_options.objective_normalization_constant = stod(substring);
+                        }
+                    } //while
+
+                } // end while
+
+                if (!found){
+                    throw std::runtime_error("ERROR: Failed to find initial objective value for restart");
+                } // end if
+            } // end if(myrank==0)
+        }
+
+        // Close mesh input file
+        if (myrank == 0)
+        {
+            in->close();
+        }
+    } // end read_mesh
 
 
     /////////////////////////////////////////////////////////////////////////////

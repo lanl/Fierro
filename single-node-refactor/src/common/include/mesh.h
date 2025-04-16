@@ -253,7 +253,18 @@ struct Mesh_t
     legendre_in_elem_t legendre_in_elem; ///< Gauss Legendre points in an element
 
     // ---- Node Data Definitions ---- //
-    size_t num_nodes; ///< Number of nodes in the mesh
+    size_t num_nodes; ///< Global Number of nodes in the mesh
+    size_t nlocal_nodes; ///< number of nodes local to this process
+    size_t nall_nodes; ///< number of local + ghost nodes on this process
+    size_t nghost_nodes; ///< number of ghost nodes on this process
+
+    //distributed map definitions
+    DistributedMap node_map; ///< partition of local nodes (stores global node IDs on each process)
+    DistributedMap all_node_map; ///< partition of local + ghost nodes (stores global node IDs on each process)
+    DistributedMap ghost_node_map; ///< partition of local + ghost nodes (stores global node IDs on each process)
+    DistributedMap element_map; ///< partition of uniquely owned elements (stores global node IDs on each process)
+    DistributedMap all_element_map; ///< partition of uniquely owned + shared elements (stores global node IDs on each process)
+    DistributedMap nonoverlap_element_node_map; // map of node indices belonging to unique element map
 
     RaggedRightArrayKokkos<size_t> corners_in_node; ///< Corners connected to a node
     CArrayKokkos<size_t> num_corners_in_node;       ///< Number of corners connected to a node

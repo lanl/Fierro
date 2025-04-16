@@ -315,6 +315,38 @@ struct node_t
         }
     }; // end method
 
+    void post_repartition_initialize(DistributedMap partitioned_map, size_t num_dims, std::vector<node_state> node_states)
+    {
+        for (auto field : node_states){
+            switch(field){
+                case node_state::coords:
+                    if (coords.size() == 0) this->coords = DistributedDCArray<double>(partitioned_map, num_dims, "node_coordinates");
+                    if (coords_n0.size() == 0) this->coords_n0 = DistributedDCArray<double>(partitioned_map, num_dims, "node_coordinates_n0");
+                    break;
+                case node_state::velocity:
+                    if (vel.size() == 0) this->vel = DistributedDCArray<double>(partitioned_map, num_dims, "node_velocity");
+                    if (vel_n0.size() == 0) this->vel_n0 = DistributedDCArray<double>(partitioned_map, num_dims, "node_velocity_n0");
+                    break;
+                case node_state::force:
+                    if (force.size() == 0) this->force = DistributedDCArray<double>(partitioned_map, num_dims, "node_force");
+                    break;
+                case node_state::mass:
+                    if (mass.size() == 0) this->mass = DistributedDCArray<double>(partitioned_map, "node_mass");
+                    break;
+                case node_state::temp:
+                    if (temp.size() == 0) this->temp = DistributedDCArray<double>(partitioned_map, "node_temp");
+                    if (temp_n0.size() == 0) this->temp_n0 = DistributedDCArray<double>(partitioned_map, "node_temp_n0");
+                    break;
+                case node_state::heat_transfer:
+                    if (q_transfer.size() == 0) this->q_transfer = DistributedDCArray<double>(partitioned_map, "node_q_transfer");
+                    break;
+                default:
+                    std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
+                    throw std::runtime_error("**** Error in State Field Name ****");
+            }
+        }
+    }; // end method
+
 }; // end node_t
 
 
