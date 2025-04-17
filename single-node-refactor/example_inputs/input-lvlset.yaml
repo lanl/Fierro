@@ -109,9 +109,10 @@ regions:
         solver_id: 0
         material_id: 0
         level_set: 
-            type: x_linear
-            value: 0.0
+            type: spherical
+            value: 0.5
             slope: 1.0
+            origin: [0.2, 0.0, 0.0]
         volume_fraction:
             type: uniform
             value: 1.0

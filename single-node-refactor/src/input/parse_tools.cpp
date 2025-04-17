@@ -399,8 +399,15 @@ void print_inputs()
                 if(subfield.compare("type") == 0){
 
                     std::cout << "             type:";
+                    size_t count = 0;
                     for (const auto& pair : scalar_ics_type_map) {
+                        if(count==5){
+                            std::cout << "\n"; // new line
+                            std::cout << "                  "; // tab in
+                            count=0;
+                        }
                         std::cout << " <" << pair.first << ">";
+                        count ++;
                     }
                     std::cout << "\n";
 
@@ -422,8 +429,15 @@ void print_inputs()
                 if(subfield.compare("type") == 0){
 
                     std::cout << "             type:";
+                    size_t count = 0;
                     for (const auto& pair : scalar_ics_type_map) {
+                        if(count==5){
+                            std::cout << "\n"; // new line
+                            std::cout << "                  "; // tab in
+                            count=0;
+                        }
                         std::cout << " <" << pair.first << ">";
+                        count ++;
                     }
                     std::cout << "\n";
 
@@ -445,8 +459,15 @@ void print_inputs()
                 if(subfield.compare("type") == 0){
 
                     std::cout << "             type:";
+                    size_t count = 0;
                     for (const auto& pair : scalar_ics_type_map) {
+                        if(count==5){
+                            std::cout << "\n"; // new line
+                            std::cout << "                  "; // tab in
+                            count=0;
+                        }
                         std::cout << " <" << pair.first << ">";
+                        count ++;
                     }
                     std::cout << "\n";
 
@@ -468,8 +489,15 @@ void print_inputs()
                 if(subfield.compare("type") == 0){
 
                     std::cout << "             type:";
+                    size_t count = 0;
                     for (const auto& pair : scalar_ics_type_map) {
+                        if(count==5){
+                            std::cout << "\n"; // new line
+                            std::cout << "                  "; // tab in
+                            count=0;
+                        }
                         std::cout << " <" << pair.first << ">";
+                        count++;
                     }
                     std::cout << "\n";
 
@@ -491,8 +519,15 @@ void print_inputs()
                 if(subfield.compare("type") == 0){
 
                     std::cout << "             type:";
+                    size_t count = 0;
                     for (const auto& pair : scalar_ics_type_map) {
+                        if(count==5){
+                            std::cout << "\n"; // new line
+                            std::cout << "                  "; // tab in
+                            count=0;
+                        }
                         std::cout << " <" << pair.first << ">";
+                        count++;
                     }
                     std::cout << "\n";
 
@@ -514,8 +549,15 @@ void print_inputs()
                 if(subfield.compare("type") == 0){
 
                     std::cout << "             type:";
+                    size_t count = 0;
                     for (const auto& pair : scalar_ics_type_map) {
+                        if(count==5){
+                            std::cout << "\n"; // new line
+                            std::cout << "                  "; // tab in
+                            count=0;
+                        }
                         std::cout << " <" << pair.first << ">";
+                        count ++;
                     }
                     std::cout << "\n";
 
@@ -537,8 +579,15 @@ void print_inputs()
                 if(subfield.compare("type") == 0){
 
                     std::cout << "             type:";
+                    size_t count = 0;
                     for (const auto& pair : scalar_ics_type_map) {
+                        if(count==5){
+                            std::cout << "\n"; // new line
+                            std::cout << "                  "; // tab in
+                            count=0;
+                        }
                         std::cout << " <" << pair.first << ">";
+                        count++;
                     }
                     std::cout << "\n";
 
@@ -560,8 +609,15 @@ void print_inputs()
                 if(subfield.compare("type") == 0){
 
                     std::cout << "             type:";
+                    size_t count=0;
                     for (const auto& pair : scalar_ics_type_map) {
+                        if(count==5){
+                            std::cout << "\n"; // new line
+                            std::cout << "                  "; // tab in
+                            count=0;
+                        }
                         std::cout << " <" << pair.first << ">";
+                        count++;
                     }
                     std::cout << "\n";
 

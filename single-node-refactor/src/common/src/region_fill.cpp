@@ -361,6 +361,7 @@ void fill_regions(
                 double vfrac = get_region_scalar(coords,
                                                  region_fills(fill_id).volfrac,
                                                  region_fills(fill_id).volfrac_slope,
+                                                 region_fills(fill_id).volfrac_origin,
                                                  elem_gid,
                                                  mesh.num_dims,
                                                  region_fills(fill_id).volfrac_field);
@@ -448,6 +449,7 @@ void fill_regions(
                                 coords,
                                 region_fills(fill_id).den,
                                 0.0,
+                                region_fills(fill_id).den_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
@@ -458,6 +460,7 @@ void fill_regions(
                                 coords,
                                 region_fills(fill_id).sie,
                                 0.0,
+                                region_fills(fill_id).sie_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
@@ -473,6 +476,7 @@ void fill_regions(
                                 coords,
                                 region_fills(fill_id).ie,
                                 0.0,
+                                region_fills(fill_id).sie_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
@@ -483,6 +487,7 @@ void fill_regions(
                                 coords,
                                 region_fills(fill_id).thermal_conductivity,
                                 0.0,
+                                region_fills(fill_id).thermal_conductivity_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
@@ -493,6 +498,7 @@ void fill_regions(
                                 coords,
                                 region_fills(fill_id).specific_heat,
                                 0.0,
+                                region_fills(fill_id).specific_heat_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
@@ -503,6 +509,7 @@ void fill_regions(
                     coords,
                     region_fills(fill_id).level_set,
                     region_fills(fill_id).level_set_slope,
+                    region_fills(fill_id).level_set_origin,
                     gauss_gid,
                     mesh.num_dims,
                     bin,
@@ -1422,6 +1429,7 @@ KOKKOS_FUNCTION
 double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
                          const double scalar,
                          const double slope,
+                         const double orig[3],
                          const size_t mesh_gid,
                          const size_t num_dims,
                          const init_conds::init_scalar_conds scalarFieldType)
@@ -1439,34 +1447,27 @@ double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
         case init_conds::radialScalar:
             {
                 // Setting up radial
+                //   vol = slope*sqrt( dx^2 + dy^2 - value )
                 double dir[2];
                 dir[0] = 0.0;
                 dir[1] = 0.0;
                 double radius_val = 0.0;
 
                 for (int dim = 0; dim < 2; dim++) {
-                    dir[dim]    = mesh_coords(dim);
+                    dir[dim]    = (mesh_coords(dim) - orig[dim]);
                     radius_val += mesh_coords(dim) * mesh_coords(dim);
                 } // end for
+                radius_val -= scalar; 
                 radius_val = sqrt(radius_val);
 
-                for (int dim = 0; dim < 2; dim++) {
-                    if (radius_val > 1.0e-14) {
-                        dir[dim] /= (radius_val);
-                    }
-                    else{
-                        dir[dim] = 0.0;
-                    }
-                } // end for
-
-                value_out = scalar * dir[0];
-                value_out = scalar * dir[1];
+                value_out = slope * radius_val;
 
                 break;
             }
         case init_conds::sphericalScalar:
             {
                 // Setting up spherical
+                //   val_out = slope*sqrt( dx^2 + dy^2 + dz^2 - value )
                 double dir[3];
                 dir[0] = 0.0;
                 dir[1] = 0.0;
@@ -1474,21 +1475,14 @@ double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
                 double radius_val = 0.0;
 
                 for (int dim = 0; dim < 3; dim++) {
-                    dir[dim]    = mesh_coords(dim);
+                    dir[dim]    = (mesh_coords(dim) - orig[dim]);
                     radius_val += mesh_coords(dim) * mesh_coords(dim);
                 } // end for
+                radius_val -= scalar; 
                 radius_val = sqrt(radius_val);
 
-                for (int dim = 0; dim < 3; dim++) {
-                    if (radius_val > 1.0e-14) {
-                        dir[dim] /= (radius_val);
-                    }
-                    else{
-                        dir[dim] = 0.0;
-                    }
-                } // end for
+                value_out = slope*radius_val;
 
-                value_out = scalar * radius_val;
                 break;
             }
         case init_conds::xlinearScalar:
@@ -1552,6 +1546,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
                         const ViewCArrayKokkos <double> mesh_coords,
                         const double scalar,
                         const double slope,
+                        const double orig[3],
                         const size_t mesh_gid,
                         const size_t num_dims,
                         const size_t bin,
@@ -1568,57 +1563,38 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
         // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
         case init_conds::radialScalar:
             {
-                // Setting up radial
-                double dir[2];
-                dir[0] = 0.0;
-                dir[1] = 0.0;
+                 // Setting up radial
+                //   vol = slope*(dx^2 + dy^2)- value^2
+                double delta = 0.0;
                 double radius_val = 0.0;
 
                 for (int dim = 0; dim < 2; dim++) {
-                    dir[dim]    = mesh_coords(dim);
-                    radius_val += mesh_coords(dim) * mesh_coords(dim);
+                    delta    = (mesh_coords(dim) - orig[dim]);
+                    radius_val += delta*delta;
                 } // end for
-                radius_val = sqrt(radius_val);
+                radius_val *= slope;
+                radius_val -= scalar*scalar; 
 
-                for (int dim = 0; dim < 2; dim++) {
-                    if (radius_val > 1.0e-14) {
-                        dir[dim] /= (radius_val);
-                    }
-                    else{
-                        dir[dim] = 0.0;
-                    }
-                } // end for
-
-                field_scalar(mesh_gid,bin) = scalar * dir[0];
-                field_scalar(mesh_gid,bin) = scalar * dir[1];
+                field_scalar(mesh_gid,bin) = radius_val;
 
                 break;
             }
         case init_conds::sphericalScalar:
             {
                 // Setting up spherical
-                double dir[3];
-                dir[0] = 0.0;
-                dir[1] = 0.0;
-                dir[2] = 0.0;
+                //   val_out = slope*( dx^2 + dy^2 + dz^2 ) - value^2
+                double delta = 0.0;
                 double radius_val = 0.0;
 
-                for (int dim = 0; dim < 3; dim++) {
-                    dir[dim]    = mesh_coords(dim);
-                    radius_val += mesh_coords(dim) * mesh_coords(dim);
+                for (int dim = 0; dim < num_dims; dim++) {
+                    delta    = (mesh_coords(dim) - orig[dim]);
+                    radius_val += delta*delta;
                 } // end for
-                radius_val = sqrt(radius_val);
+                radius_val *= slope;
+                radius_val -= scalar*scalar; 
 
-                for (int dim = 0; dim < 3; dim++) {
-                    if (radius_val > 1.0e-14) {
-                        dir[dim] /= (radius_val);
-                    }
-                    else{
-                        dir[dim] = 0.0;
-                    }
-                } // end for
+                field_scalar(mesh_gid,bin) = radius_val;
 
-                field_scalar(mesh_gid,bin) = scalar * radius_val;
                 break;
             }
         case init_conds::xlinearScalar:

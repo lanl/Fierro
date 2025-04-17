@@ -685,6 +685,32 @@ void parse_regions(Yaml::Node& root,
                             region_fills(reg_id).volfrac_slope = slope;
                         });
                     } // slope
+                    else if (a_subfield_word.compare("origin") == 0) {
+                        std::string origin = root["regions"][reg_id]["region"]["volume_fraction"]["origin"].As<std::string>();
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(origin, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        // storing the origin values as (x1,y1,z1)
+                        RUN({
+                            region_fills(reg_id).volfrac_origin[0] = x1;
+                            region_fills(reg_id).volfrac_origin[1] = y1;
+                            region_fills(reg_id).volfrac_origin[2] = z1;
+                        });
+                    } // origin
                     else if (a_subfield_word.compare("type") == 0){
 
                         std::string type = root["regions"][reg_id]["region"]["volume_fraction"]["type"].As<std::string>();
@@ -699,6 +725,20 @@ void parse_regions(Yaml::Node& root,
                                     std::cout << "Setting volfrac initial conditions type to uniform " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volfrac_field = init_conds::uniform;
+                                    });
+                                    break;
+
+                                case init_conds::radialScalar:
+                                    std::cout << "Setting volfrac initial conditions type to radial scalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volfrac_field = init_conds::radialScalar;
+                                    });
+                                    break;
+
+                                case init_conds::sphericalScalar:
+                                    std::cout << "Setting volfrac initial conditions type to spherical scalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volfrac_field = init_conds::sphericalScalar;
                                     });
                                     break;
 
@@ -917,6 +957,32 @@ void parse_regions(Yaml::Node& root,
                             region_fills(reg_id).level_set_slope = slope;
                         });
                     } // slope
+                    else if (a_subfield_word.compare("origin") == 0) {
+                        std::string origin = root["regions"][reg_id]["region"]["level_set"]["origin"].As<std::string>();
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(origin, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        // storing the origin values as (x1,y1,z1)
+                        RUN({
+                            region_fills(reg_id).level_set_origin[0] = x1;
+                            region_fills(reg_id).level_set_origin[1] = y1;
+                            region_fills(reg_id).level_set_origin[2] = z1;
+                        });
+                    } // origin
                     else if (a_subfield_word.compare("type") == 0){
 
                         std::string type = root["regions"][reg_id]["region"]["level_set"]["type"].As<std::string>();
@@ -933,7 +999,19 @@ void parse_regions(Yaml::Node& root,
                                         region_fills(reg_id).level_set_field = init_conds::uniform;
                                     });
                                     break;
-                                    case init_conds::xlinearScalar:
+                                case init_conds::radialScalar:
+                                    std::cout << "Setting level set initial conditions type to radial scalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::radialScalar;
+                                    });
+                                    break;
+                                case init_conds::sphericalScalar:
+                                    std::cout << "Setting level set initial conditions type to spherical scalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::sphericalScalar;
+                                    });
+                                    break;
+                                case init_conds::xlinearScalar:
                                     std::cout << "Setting volfrac initial conditions type to xlinearScalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).level_set_field = init_conds::xlinearScalar;
