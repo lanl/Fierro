@@ -617,7 +617,20 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     Materials.MaterialFunctions(mat_id).erode_density_val = erode_density_val;
                 });
             } // erode_density_val
-            
+            else if (a_word.compare("normal_velocity") == 0) {
+                double normal_velocity = root["materials"][m_id]["material"]["normal_velocity"].As<double>();
+
+                RUN({
+                    Materials.MaterialFunctions(mat_id).normal_velocity = normal_velocity;
+                });
+            } // normal velocity to level set front
+            else if (a_word.compare("curvature_velocity") == 0) {
+                double curvature_velocity = root["materials"][m_id]["material"]["curvature_velocity"].As<double>();
+
+                RUN({
+                    Materials.MaterialFunctions(mat_id).curvature_velocity = curvature_velocity;
+                });
+            } // curvature_velocity            
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
                 Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];

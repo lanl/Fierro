@@ -360,6 +360,12 @@ struct MaterialFunctions_t
         const size_t mat_id) = NULL;
         // in 2D, in place of vol, the elem facial area is passed
 
+
+    // -- level set --
+    // front_velocity = (normal_velocity - curvature*Kappa)
+    double normal_velocity=0.0;    ///< level set velocity in normal direction
+    double curvature_velocity=0.0; ///< level set velocity contribution from curvature
+
 }; // end material_t
 
 /////////////////////////////////////////////////////////////////////////////
@@ -421,6 +427,8 @@ static std::vector<std::string> str_material_inps
     "erosion_model",
     "erode_tension_val",
     "erode_density_val",
+    "normal_velocity",
+    "curvature_velocity"
 };
 
 // ---------------------------------------------------------------
