@@ -256,8 +256,8 @@ void fill_regions(
 
 
     // local variables to this routine
-    DCArrayKokkos<double> elem_coords(mesh.num_elems, num_mats_per_elem); // 2nd dim is max mats per elem
-    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, num_mats_per_elem);  
+    DCArrayKokkos<double> elem_coords(mesh.num_elems, 3); // aways 3D
+    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, num_mats_per_elem);  // 2nd dim is max mats per elem
 
     // Important:
     //  Remember that num_fills_saved_in_elem = num_mats_saved_in_elem

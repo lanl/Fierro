@@ -17,7 +17,7 @@ mesh_options:
     num_dims: 3
     type: box
     origin: [0.0, 0.0, 0.0]
-    length: [1.2, 1.2, 1.2]
+    length: [1.0, 1.0, 1.0]
     num_elems: [12, 12, 12]
 
 
@@ -110,11 +110,49 @@ regions:
         material_id: 0
         level_set: 
             type: spherical
-            value: 0.5
+            value: 0.1
             slope: 1.0
-            origin: [0.2, 0.0, 0.0]
+            origin: [0.0, 0.0, 0.0]
         volume_fraction:
             type: uniform
             value: 1.0
 
+    - region:
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.5
+            y2: 1.0
+            z1: 0.5
+            z2: 1.0
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            type: spherical
+            value: 0.0
+            slope: 1.0
+            origin: [1.0, 1.0, 1.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
 
+    - region:
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.0
+            y2: 0.5
+            z1: 0.5
+            z2: 1.0
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            type: spherical
+            value: 0.0
+            slope: 1.0
+            origin: [1.0, 0.0, 1.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
