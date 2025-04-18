@@ -137,22 +137,27 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             // initialize the material dt
             double dt_mat = dt;
 
-            // get the stable time step
-            get_timestep(mesh,
-                         State.node.coords,
-                         State.GaussPoints.vol,
-                         State.MaterialToMeshMaps(mat_id).elem,
-                         State.MaterialToMeshMaps(mat_id).num_material_elems,
-                         Materials.MaterialFunctions(mat_id).normal_velocity,
-                         Materials.MaterialFunctions(mat_id).curvature_velocity,
-                         time_value,
-                         graphics_time,
-                         time_final,
-                         dt_max,
-                         dt_min,
-                         dt_cfl,
-                         dt_mat,
-                         fuzz);
+            // only solve level set on the materials that have it
+            if( Materials.MaterialEnums.host(mat_id).levelSetType != model::noLevelSet){
+
+                // get the stable time step
+                get_timestep(mesh,
+                            State.node.coords,
+                            State.GaussPoints.vol,
+                            State.MaterialToMeshMaps(mat_id).elem,
+                            State.MaterialToMeshMaps(mat_id).num_material_elems,
+                            Materials.MaterialFunctions(mat_id).normal_velocity,
+                            Materials.MaterialFunctions(mat_id).curvature_velocity,
+                            time_value,
+                            graphics_time,
+                            time_final,
+                            dt_max,
+                            dt_min,
+                            dt_cfl,
+                            dt_mat,
+                            fuzz);
+
+            }
 
             // save the smallest dt of all materials
             min_dt_calc = fmin(dt_mat, min_dt_calc);
@@ -174,13 +179,17 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------------
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-            // save the values at t_n
-            rk_init(State.GaussPoints.level_set,
-                    State.GaussPoints.level_set_n0,
-                    State.MaterialToMeshMaps(mat_id).elem,
-                    mesh.num_dims,
-                    State.MaterialPoints(mat_id).num_material_points);
-                    
+            // only solve level set on the materials that have it
+            if( Materials.MaterialEnums.host(mat_id).levelSetType != model::noLevelSet){
+
+                // save the values at t_n
+                rk_init(State.GaussPoints.level_set,
+                        State.GaussPoints.level_set_n0,
+                        State.MaterialToMeshMaps(mat_id).elem,
+                        mesh.num_dims,
+                        State.MaterialPoints(mat_id).num_material_points);
+            }
+
         } // end for mat_id
 
 
