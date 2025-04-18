@@ -85,23 +85,9 @@ boundary_conditions:
 materials:
     - material:
         id: 0
-        eos_model_type: decoupled
-        eos_model: gamma_law_gas
-        eos_global_vars:
-            - 1.666666666666667
-            - 1.0E-14
-            - 1.0
-        # strength_model: none
-        dissipation_model: MARS
-        dissipation_global_vars:
-            - 1.0   # q1
-            - 1.0   # q1ex
-            - 1.333 # q2
-            - 1.333 # q2ex
-            - 0.0   # phi_min
-            - 1.0   # pin_curl_min
-            
+
         # level set
+        level_set_type: evolve_front
         normal_velocity: 0.5
         curvature_velocity: 0.1
 

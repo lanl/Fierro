@@ -173,12 +173,14 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
         // ---------------------------------------------------------------------
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+
             // save the values at t_n
             rk_init(State.GaussPoints.level_set,
                     State.GaussPoints.level_set_n0,
                     State.MaterialToMeshMaps(mat_id).elem,
                     mesh.num_dims,
                     State.MaterialPoints(mat_id).num_material_points);
+                    
         } // end for mat_id
 
 
@@ -187,6 +189,14 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
+
+            
+            // calculate the gradient at the node
+
+
+            // update level set
+            
+
 
 
         } // end of RK loop
