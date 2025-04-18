@@ -352,6 +352,7 @@ struct GaussPoint_t
     DCArrayKokkos<double> vel_grad;  ///< GaussPoint velocity gradient tensor
 
     DCArrayKokkos<double> level_set;  ///< GaussPoint level set field
+    DCArrayKokkos<double> level_set_n0;  ///< GaussPoint level set field
 
     // initialization method (num_cells, num_dims)
     void initialize(size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
@@ -370,6 +371,7 @@ struct GaussPoint_t
                     break;
                 case gauss_pt_state::level_set:
                     if (level_set.size() == 0) this->level_set = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set");
+                    if (level_set_n0.size() == 0) this->level_set_n0 = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set_n0");
                     break;
                 default:
                     std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;

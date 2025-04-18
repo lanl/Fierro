@@ -113,6 +113,14 @@ namespace model
         dual = 2,       ///<  multi-scale solver, solver is on cpu and solver calls model on device
     };
 
+    // level set 
+    enum levelSetType
+    {
+        noLevelSetType = 0, ///<  No level set model used
+        hamiltonJacobi = 1, ///<  evolve the front in the normal directdion
+        advectFront = 2,    ///<  advect the front using prescribed velocity
+    };
+
 } // end model namespace
 
 

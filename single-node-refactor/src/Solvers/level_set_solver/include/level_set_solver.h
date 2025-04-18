@@ -64,7 +64,7 @@ namespace LevelSet_State
     static const std::vector<gauss_pt_state> required_gauss_pt_state = 
     { 
         gauss_pt_state::level_set,
-        gauss_pt_state::volume,
+        gauss_pt_state::volume
     };
 
     // Material point state to be initialized for the SGH solver
@@ -200,31 +200,23 @@ public:
 
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
-    void rk_init_rz(
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_coords_n0,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_vel_n0,
-        DCArrayKokkos<double>& MaterialPoints_sie,
-        DCArrayKokkos<double>& MaterialPoints_sie_n0,
-        DCArrayKokkos<double>& MaterialPoints_stress,
-        DCArrayKokkos<double>& MaterialPoints_stress_n0,
+    void rk_init(
+        DCArrayKokkos<double>& GaussPoints_level_set,
+        DCArrayKokkos<double>& GaussPoints_level_set_n0,
+        DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_dims,
-        const size_t num_elems,
-        const size_t num_nodes,
         const size_t num_mat_points) const;
 
 
-    void get_timestep_rz(
+    void get_timestep(
         Mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
-        DCArrayKokkos<double>& MaterialPoints_sspd,
-        DCArrayKokkos<bool>&   MaterialPoints_eroded,
         DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        size_t num_mat_elems,
-        double time_value,
+        const size_t num_mat_elems,
+        const double normal_velocity,
+        const double curvature_velocity,
+        const double time_value,
         const double graphics_time,
         const double time_final,
         const double dt_max,
