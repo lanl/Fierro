@@ -2598,22 +2598,35 @@ public:
             struct stat st;
 
             if (stat("vtk", &st) != 0) {
-                system("mkdir vtk");
+                int returnCode = system("mkdir vtk");
+
+                if (returnCode == 1) {
+                    std::cout << "Unable to make vtk directory" << std::endl;
+                }
             }
             else{
                 if(solver_id==0 && graphics_id==0){
                     // delete the existing files inside
-                    system("rm vtk/Fierro*");
+                    int returnCode = system("rm vtk/Fierro*");
+                    if (returnCode == 1) {
+                        std::cout << "Unable to clear vtk/Fierro directory" << std::endl;
+                    }
                 }
             }
 
             if (stat("vtk/data", &st) != 0) {
-                system("mkdir vtk/data");
+                int returnCode = system("mkdir vtk/data");
+                if (returnCode == 1) {
+                    std::cout << "Unable to make vtk/data directory" << std::endl;
+                }
             }
             else{
                 if(solver_id==0 && graphics_id==0){
                     // delete the existing files inside the folder
-                    system("rm vtk/data/Fierro*");
+                    int returnCode = system("rm vtk/data/Fierro*");
+                    if (returnCode == 1) {
+                        std::cout << "Unable to clear vtk/data directory" << std::endl;
+                    }
                 }
             }
             

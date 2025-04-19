@@ -84,6 +84,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was zero
+    size_t output_id=0; // the id for the outputs written
 
 
     double cached_pregraphics_dt = dt_start;
@@ -166,7 +167,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         SGHRZ_State::required_gauss_pt_state,
         SGHRZ_State::required_material_pt_state,
         this->solver_id);
-    std::cout << "here after writing outputs \n";
+    
+    output_id++; // saved an output file
 
     graphics_time = time_value + graphics_dt_ival;
 
@@ -207,7 +209,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                             dt_min,
                             dt_cfl,
                             dt_mat,
-                            fuzz);
+                            fuzz,
+                            tiny);
             
 
             // save the smallest dt of all materials
@@ -454,7 +457,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                    SGHRZ_State::required_material_pt_state,
                                    this->solver_id);
 
-            graphics_time = time_value + graphics_dt_ival;
+            output_id++;
+            graphics_time = (double)(output_id) * graphics_dt_ival;
 
             dt = cached_pregraphics_dt;
         } // end if
