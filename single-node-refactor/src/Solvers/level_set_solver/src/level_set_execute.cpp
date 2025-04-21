@@ -57,7 +57,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 {
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
-    // double tiny  = SimulationParamaters.dynamic_options.tiny;
+    double tiny  = SimulationParamaters.dynamic_options.tiny;
     double small = SimulationParamaters.dynamic_options.small;
 
     double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
@@ -155,7 +155,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                             dt_min,
                             dt_cfl,
                             dt_mat,
-                            fuzz);
+                            fuzz,
+                            tiny);
 
             }
 

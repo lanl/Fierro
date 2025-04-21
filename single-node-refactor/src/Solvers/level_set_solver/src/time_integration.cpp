@@ -104,7 +104,8 @@ void LevelSet::get_timestep(Mesh_t& mesh,
                        const double dt_min,
                        const double dt_cfl,
                        double&      dt,
-                       const double fuzz) const
+                       const double fuzz,
+                       const double tiny) const
 {
 
     // increase dt by 10%, that is the largest dt value
@@ -186,11 +187,11 @@ void LevelSet::get_timestep(Mesh_t& mesh,
         dt = min_dt_calc;
     }
 
-    // ensure time step hits the graphics time intervals
-    dt = fmin(dt, (graphics_time - time_value) + fuzz);
+    // ensure time step hits the graphics time intervals, adding tiny to ensure dt passes graphics time
+    dt = fmin(dt, fmax(fuzz,(graphics_time - time_value)) + tiny);
 
-    // make dt be exact for final time
-    dt = fmin(dt, time_final - time_value);
+    // make dt hit final time, adding tiny to ensure dt passes it by a little bit
+    dt = fmin(dt, time_final - time_value + tiny);
 
     return;
 } // end get_timestep

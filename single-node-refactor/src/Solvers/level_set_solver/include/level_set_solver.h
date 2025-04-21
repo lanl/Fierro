@@ -223,7 +223,8 @@ public:
         const double dt_min,
         const double dt_cfl,
         double&      dt,
-        const double fuzz) const;
+        const double fuzz,
+        const double tiny) const;
 
 
 }; // end class
