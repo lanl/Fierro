@@ -53,7 +53,7 @@
      // mesh state
      State.node.initialize(num_nodes, num_dims, LevelSet_State::required_node_state);
      State.GaussPoints.initialize(num_gauss_pts, num_dims, LevelSet_State::required_gauss_pt_state);
- 
+     State.corner.initialize(num_corners, num_dims, LevelSet_State::required_corner_state);
  
  } // end solver initialization
  

@@ -70,9 +70,17 @@ namespace LevelSet_State
     // Material point state to be initialized for the SGH solver
     static const std::vector<material_pt_state> required_material_pt_state =
     {
-        material_pt_state::volume_fraction,
+        material_pt_state::volume_fraction
     }; 
     // nothing is needed on material pt state index space
+
+
+    // Corner state to be initialized for the SGH solver
+    static const std::vector<corner_state> required_corner_state = 
+    { 
+        corner_state::normal,
+        corner_state::volume
+    };
 
 } // end namespace
 
@@ -165,10 +173,17 @@ public:
         // Any finalize goes here, remove allocated memory, etc
     }
 
-                        
+    // **** Functions defined in solver_functions.cpp **** //
+    void nodal_gradient(
+        const Mesh_t mesh,
+        const DCArrayKokkos<double>& Node_coords,
+        DCArrayKokkos<double>& Node_grad_level_set,
+        DCArrayKokkos<double>& Corner_normal,
+        DCArrayKokkos<double>& Corner_volume,
+        const DCArrayKokkos<double>& GaussPoints_level_set,
+        const DCArrayKokkos<double>& GaussPoints_vol) const;                   
 
 
-    // **** Functions defined in properties.cpp **** //
     void update_lvlset(
         const Material_t& Materials,
         const Mesh_t& mesh,

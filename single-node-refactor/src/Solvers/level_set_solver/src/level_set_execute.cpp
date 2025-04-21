@@ -202,12 +202,10 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 
             
             // calculate the gradient at the node
-
+            
 
             // update level set
             
-
-
 
         } // end of RK loop
 

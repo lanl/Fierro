@@ -612,7 +612,9 @@ enum class corner_state
 {
     force, 
     mass,
-    heat_transfer
+    heat_transfer,
+    normal,
+    volume
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -623,9 +625,11 @@ enum class corner_state
 /////////////////////////////////////////////////////////////////////////////
 struct corner_t
 {
-    DCArrayKokkos<double> force; ///< Corner force
-    DCArrayKokkos<double> mass; ///< Corner mass
+    DCArrayKokkos<double> force;  ///< Corner force
+    DCArrayKokkos<double> mass;   ///< Corner mass
     DCArrayKokkos<double> q_transfer;  ///< Corner heat transfer
+    DCArrayKokkos<double> normal; ///< Corner normal
+    DCArrayKokkos<double> volume; ///< Corner volume
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims, std::vector<corner_state> corner_states)
@@ -641,6 +645,12 @@ struct corner_t
                     break;
                 case corner_state::heat_transfer:
                     if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_corners, "corner_q_transfer"); 
+                    break;
+                case corner_state::normal:
+                    if (normal.size() == 0) this->normal = DCArrayKokkos<double>(num_corners, num_dims, "corner_normal");
+                    break;
+                case corner_state::volume:
+                    if (volume.size() == 0) this->volume  = DCArrayKokkos<double>(num_corners, "corner_volume");
                     break;
                 default:
                     std::cout<<"Desired corner state not understood in corner_t initialize"<<std::endl;
