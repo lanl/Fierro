@@ -84,7 +84,7 @@ enum BCStressModels
 {
     noStressBC = 0,
     constantStressBC = 1,
-    timeVaringStressBC = 2,
+    timeVaryingStressBC = 2,
     userDefinedStressBC = 3,
 };
 // future model options:
@@ -144,7 +144,7 @@ static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_mode
 {
     { "none", boundary_conditions::noStressBC },
     { "constant", boundary_conditions::constantStressBC },
-    { "time_varying", boundary_conditions::timeVaringStressBC },
+    { "time_varying", boundary_conditions::timeVaryingStressBC },
     { "user_defined", boundary_conditions::userDefinedStressBC }
 };
 

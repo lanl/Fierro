@@ -2613,22 +2613,35 @@ public:
             struct stat st;
 
             if (stat("vtk", &st) != 0) {
-                system("mkdir vtk");
+                int returnCode = system("mkdir vtk");
+
+                if (returnCode == 1) {
+                    std::cout << "Unable to make vtk directory" << std::endl;
+                }
             }
             else{
                 if(solver_id==0 && graphics_id==0){
                     // delete the existing files inside
-                    system("rm vtk/Fierro*");
+                    int returnCode = system("rm vtk/Fierro*");
+                    if (returnCode == 1) {
+                        std::cout << "Unable to clear vtk/Fierro directory" << std::endl;
+                    }
                 }
             }
 
             if (stat("vtk/data", &st) != 0) {
-                system("mkdir vtk/data");
+                int returnCode = system("mkdir vtk/data");
+                if (returnCode == 1) {
+                    std::cout << "Unable to make vtk/data directory" << std::endl;
+                }
             }
             else{
                 if(solver_id==0 && graphics_id==0){
                     // delete the existing files inside the folder
-                    system("rm vtk/data/Fierro*");
+                    int returnCode = system("rm vtk/data/Fierro*");
+                    if (returnCode == 1) {
+                        std::cout << "Unable to clear vtk/data directory" << std::endl;
+                    }
                 }
             }
             
@@ -4052,7 +4065,7 @@ public:
                             node_vector_fields(node_vel_id, node_gid, 2) = Node.vel(node_gid, 2);
                         } // end if
 
-                        // accelerate, var is node_accel_id            
+                        // accellerate, var is node_accel_id            
                         node_vector_fields(node_accel_id, node_gid, 0) = (Node.vel(node_gid, 0) - Node.vel_n0(node_gid, 0))/dt;
                         node_vector_fields(node_accel_id, node_gid, 1) = (Node.vel(node_gid, 1) - Node.vel_n0(node_gid, 1))/dt;
                         if (num_dims == 2) {

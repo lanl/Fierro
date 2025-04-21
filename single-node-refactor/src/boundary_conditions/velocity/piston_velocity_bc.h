@@ -41,7 +41,6 @@ struct BoundaryConditionEnums_t;
 
 namespace PistonVelocityBC
 {
-
     // add an enum for boundary statevars and global vars
     enum BCVars
     {

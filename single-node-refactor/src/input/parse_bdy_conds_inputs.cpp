@@ -241,7 +241,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     switch(map[velocity_model]){
 
                         case boundary_conditions::constantVelocityBC :
-                            std::cout << "Setting velocity bc " << std::endl;
+                            std::cout << "Setting constant velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::constantVelocityBC ;
@@ -404,11 +404,11 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
 
-                        case boundary_conditions::timeVaringStressBC:
+                        case boundary_conditions::timeVaryingStressBC:
                             std::cout << "Setting stress bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::timeVaringStressBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::timeVaryingStressBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &TimeVaryingStressBC::stress;
                             });
                             break;
