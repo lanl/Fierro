@@ -2030,7 +2030,10 @@ public:
                 case node_state::velocity:
                     State.node.vel.update_host();
                     break;
-                
+                case node_state::gradient_level_set:
+                    State.node.gradient_level_set.update_host();
+                    break;  
+
                 case node_state::force:
                     break;
 
@@ -2431,12 +2434,14 @@ public:
 
         for (auto field : SimulationParamaters.output_options.output_node_state){
             switch(field){
+                // --- scalars
                 case node_state::mass:
                     num_node_scalar_vars ++;
                     break;
                 case node_state::temp:
                     num_node_scalar_vars ++;
                     break;
+                // -- vectors
                 case node_state::coords:
                     num_node_vector_vars ++;
                     break;
@@ -2444,6 +2449,9 @@ public:
                     num_node_vector_vars ++; // for velocity
                     num_node_vector_vars ++; // for acceleration
                     break;
+                case node_state::gradient_level_set:
+                    num_node_vector_vars ++;
+                    break;                    
                 case node_state::force:
                     break;
                 
@@ -2464,7 +2472,7 @@ public:
         int node_accel_id = -1;
         int node_coord_id = -1;
         int node_temp_id = -1;
-
+        int node_grad_level_set_id = -1;
 
         // reset counters for node fields
         var = 0;
@@ -2484,12 +2492,15 @@ public:
                     node_temp_id = var;
                     var++;
                     break;
+
                 // vector fields
+
                 case node_state::coords:
                     node_vector_var_names[vector_var] = "node_coords";
                     node_coord_id = vector_var;
                     vector_var++;
                     break;
+
                 case node_state::velocity:
                     node_vector_var_names[vector_var] = "node_vel";
                     node_vel_id = vector_var;
@@ -2497,6 +2508,12 @@ public:
 
                     node_vector_var_names[vector_var] = "node_accel";
                     node_accel_id = vector_var;
+                    vector_var++;
+                    break;
+
+                case node_state::gradient_level_set:
+                    node_vector_var_names[vector_var] = "node_grad_lvlset";
+                    node_grad_level_set_id = vector_var;
                     vector_var++;
                     break;
 
@@ -2594,6 +2611,7 @@ public:
                                  node_vel_id,
                                  node_accel_id,
                                  node_coord_id,
+                                 node_grad_level_set_id,
                                  node_temp_id);
                                  
 
@@ -4014,6 +4032,7 @@ public:
                                   const int node_vel_id,
                                   const int node_accel_id,
                                   const int node_coord_id,
+                                  const int node_grad_level_set_id,
                                   const int node_temp_id)
     {
         for (auto field : output_node_states){
@@ -4078,7 +4097,25 @@ public:
                     }); // end parallel for
 
                     break;
-                
+                    
+                    
+                case node_state::gradient_level_set:
+
+                    FOR_ALL(node_gid, 0, num_nodes, {
+
+                        // velocity, var is node_vel_id 
+                        node_vector_fields(node_grad_level_set_id, node_gid, 0) = Node.gradient_level_set(node_gid, 0);
+                        node_vector_fields(node_grad_level_set_id, node_gid, 1) = Node.gradient_level_set(node_gid, 1);
+                        if (num_dims == 2) {
+                            node_vector_fields(node_grad_level_set_id, node_gid, 2) = 0.0;
+                        }
+                        else{
+                            node_vector_fields(node_grad_level_set_id, node_gid, 2) = Node.gradient_level_set(node_gid, 2);
+                        } // end if
+
+                    }); // end parallel for
+
+                    break;                
                 
                 // -- not used vars
                 case node_state::force:

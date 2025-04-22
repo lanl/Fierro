@@ -18,6 +18,7 @@ include_directories(src)
 message("\n ****** ADDING Level Set SOURCE FILES ******** \n ")
 
 set(LVLSET_SRC_Files 
+${CMAKE_CURRENT_SOURCE_DIR}/src/level_set_boundary.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/solver_functions.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/time_integration.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/level_set_execute.cpp

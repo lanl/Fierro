@@ -53,12 +53,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::nodal_gradient(
         const Mesh_t mesh,
-        const DCArrayKokkos<double>& Node_coords,
-        DCArrayKokkos<double>& Node_grad_level_set,
-        DCArrayKokkos<double>& Corner_normal,
-        DCArrayKokkos<double>& Corner_volume,
+        const DCArrayKokkos<double>& node_coords,
+        DCArrayKokkos<double>& node_vel,
+        DCArrayKokkos<double>& node_grad_level_set,
+        DCArrayKokkos<double>& corner_normal,
+        DCArrayKokkos<double>& corner_volume,
         const DCArrayKokkos<double>& GaussPoints_level_set,
-        const DCArrayKokkos<double>& GaussPoints_vol) const
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const double fuzz) const
 {
     
     // walk over all mesh elements, calculate lvl set corner quantities 
@@ -71,18 +73,17 @@ void LevelSet::nodal_gradient(
         // element volume
         double elem_vol = GaussPoints_vol(gauss_pt);
 
-
         // corner area normals
         double area_normal_array[24];
         ViewCArrayKokkos<double> area_normal(&area_normal_array[0], mesh.num_nodes_in_elem, mesh.num_dims);
 
         // cut out the node_gids for this element
-        ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
+        ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), mesh.num_nodes_in_elem);
 
-        // get the B matrix which are the OUTWARD corner area normals or the elem
+        // get the B matrix which are the inward corner area normals or the elem
         geometry::get_bmatrix(area_normal,
                               elem_gid,
-                              Node_coords,
+                              node_coords,
                               elem_node_gids);
         
         // loop over the each corners in the elem
@@ -91,13 +92,13 @@ void LevelSet::nodal_gradient(
             // Get corner gid
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
 
-            // save the corner normal (outward pointing from the element)
+            // save the corner normal (inward pointing from the element)
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-                Corner_normal(corner_gid, dim) = area_normal(corner_lid, dim);
+                corner_normal(corner_gid, dim) = area_normal(corner_lid, dim);
             } // end loop over dimension
 
             // save the corner volume
-            Corner_volume(corner_gid) = 1.0/((double)mesh.num_nodes_in_elem)* elem_vol;
+            corner_volume(corner_gid) = 1.0/((double)mesh.num_nodes_in_elem)* elem_vol;
 
         } // end for loop over corners in elem
 
@@ -105,7 +106,7 @@ void LevelSet::nodal_gradient(
     Kokkos::fence();
 
     // initialize grad lvl set to zero
-    Node_grad_level_set.set_values(0.0);
+    node_grad_level_set.set_values(0.0);
 
     // walk over all mesh nodes, calculating gradient level set
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
@@ -125,22 +126,141 @@ void LevelSet::nodal_gradient(
             // loop over dimension
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 // remember, 1 gauss point per element, elem_gid = gauss_gid
-                // the minus is to make corner normal outwards relative to the node
-                Node_grad_level_set(node_gid, dim) -= Corner_normal(corner_gid, dim)*GaussPoints_level_set(elem_gid);
+                node_grad_level_set(node_gid, dim) += corner_normal(corner_gid, dim)*GaussPoints_level_set(elem_gid);
             } // end for dim
 
             // nodal volume
-            node_vol += Corner_volume(corner_gid);
+            node_vol += corner_volume(corner_gid);
 
         } // end for corner_lid
 
-        // divide by the nodal vol to get the nodal gradient
+        // divide by the nodal vol to get the nodal gradient, also calculate magnitude
+        double mag = 0.0;
         for (int dim = 0; dim < mesh.num_dims; dim++) {
-            Node_grad_level_set(node_gid, dim) /= node_vol;
+            node_grad_level_set(node_gid, dim) /= node_vol;
+
+            mag += node_grad_level_set(node_gid, dim)*node_grad_level_set(node_gid, dim);
+        } // end for dim
+        mag = sqrt(mag);
+
+
+        // if evolving front in the normal direction
+        for (int dim = 0; dim < mesh.num_dims; dim++) {
+            node_vel(node_gid, dim) = node_grad_level_set(node_gid, dim)/(mag+fuzz);
         } // end for dim
 
     }); // end for parallel for over nodes
     Kokkos::fence();
 
+
+
     return;
 } // end nodal level set gradient
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_level_set
+///
+/// \brief This function that calculates the nodal gradient of the level set field
+///
+/// \param mesh
+/// \param nodal Gradient levelset field
+/// \param Levelset field at Gauss points
+/// \param Material maps to mesh
+/// \param number of elements the material lives in
+/// \param material id
+/// \param fuzz is to prevent division by zero
+/// \param small is a small number, but larger than fuzz
+/// \param time step
+///
+/////////////////////////////////////////////////////////////////////////////
+void LevelSet::update_level_set(
+    const Mesh_t& mesh,
+    const Material_t& Materials,
+    const DCArrayKokkos<double>& node_grad_level_set,
+    const DCArrayKokkos<double>& GaussPoints_level_set,
+    const DCArrayKokkos<double>& GaussPoints_level_set_n0,
+    const DCArrayKokkos<double>& corner_normal,
+    const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const size_t num_mat_elems,
+    const size_t mat_id,
+    const double fuzz,
+    const double small,
+    const double dt,
+    const double rk_alpha) const
+{
+
+    // if evolve level set function in normal direction
+
+
+    // --- update the level set field ---
+    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+        // get elem gid
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
+        // it is a 1-point quadrature point element
+        size_t guass_point = elem_gid;
+
+        double elem_HJ = 0.0;  // the right hand side of level set equation, HJ
+
+        // loop over the each node in the elem
+        double sum_weights = 0.0;  // the sum of all corner weights in element
+        for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+
+            // Get node gid
+            size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+
+            // ---------------------
+            // calculate the norm
+
+            // nodal HJ = ||node grad phi||
+            double node_HJ = 0.0;
+            for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+                node_HJ = node_grad_level_set(node_gid, dim) * node_grad_level_set(node_gid, dim); // 
+            } // end for dim
+            node_HJ = sqrt(node_HJ);
+
+            // ---------------------------------
+            // calculate upwind corner weights
+
+            // elem_HJ is calculated by a weighted sum of the node_HJs, where the weights ensure upwinding
+
+            // Get corner gid
+            size_t corner_gid = mesh.corners_in_elem(elem_gid, node_lid);  // node_lid = corner_lid
+
+            double corner_weight = 0.0;  // weight = max(0, (vel dot normal)), here the normal is inward to the element
+
+            for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+                corner_weight += node_grad_level_set(node_gid, dim) * corner_normal(corner_gid, dim); 
+            } // end for dim
+            corner_weight = fmin(0.0, corner_weight); // upwind will be positive, downwind is negative
+
+            sum_weights += corner_weight; 
+
+            elem_HJ += corner_weight*node_HJ; // elem_HJ is a weighted sum of the node HJs
+
+        } // end loop over nodes
+
+        elem_HJ /= sum_weights;  // normalize the weights
+
+        double front_vel = Materials.MaterialFunctions(mat_id).normal_velocity;
+
+        // calculate curvature here
+        // kappa = blah
+        // front_vel -= Materials.MaterialFunctions(mat_id).curvature_velocity*kappa
+        
+        // update level set field
+        GaussPoints_level_set(guass_point) = GaussPoints_level_set_n0(guass_point) + rk_alpha*dt*front_vel*elem_HJ;  
+
+    }); // end parallel loop material elems
+
+
+
+    // if advect level set function using a nodal velocity
+
+
+
+} // end update level set field

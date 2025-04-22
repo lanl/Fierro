@@ -201,11 +201,47 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
             
-            // calculate the gradient at the node
+            // calculate the gradient at the node, its calculated across the whole mesh
+            nodal_gradient(
+                mesh,
+                State.node.coords,
+                State.node.vel,
+                State.node.gradient_level_set,
+                State.corner.normal,
+                State.corner.volume,
+                State.GaussPoints.level_set,
+                State.GaussPoints.vol,
+                fuzz);
+
+
+            // ---- apply velocity boundary conditions to the boundary patches----
+            boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);
             
 
-            // update level set
-            
+/*
+            // update level set field in material regions that have this solver
+            for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+
+                size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+                // update level set
+                update_level_set(
+                    mesh,
+                    Materials,
+                    State.node.gradient_level_set,
+                    State.GaussPoints.level_set,
+                    State.GaussPoints.level_set_n0,
+                    State.corner.normal,
+                    State.MaterialToMeshMaps(mat_id).elem,
+                    num_mat_elems,
+                    mat_id,
+                    fuzz,
+                    small,
+                    dt,
+                    rk_alpha);
+
+            } // end for mat_id
+ */           
 
         } // end of RK loop
 

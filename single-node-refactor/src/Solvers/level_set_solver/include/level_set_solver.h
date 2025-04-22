@@ -37,6 +37,7 @@
 
 #include "solver.h"
 #include "state.h"
+#include "material.h"
 
 // Forward declare structs
 struct SimulationParameters_t;
@@ -56,8 +57,7 @@ namespace LevelSet_State
     {
         node_state::coords, 
         node_state::gradient_level_set,
-        node_state::velocity,
-        node_state::volume
+        node_state::velocity
     };
 
     // Gauss point state to be initialized for the SGH solver
@@ -177,38 +177,29 @@ public:
     void nodal_gradient(
         const Mesh_t mesh,
         const DCArrayKokkos<double>& Node_coords,
+        DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& Node_grad_level_set,
         DCArrayKokkos<double>& Corner_normal,
         DCArrayKokkos<double>& Corner_volume,
         const DCArrayKokkos<double>& GaussPoints_level_set,
-        const DCArrayKokkos<double>& GaussPoints_vol) const;                   
-
-
-    void update_lvlset(
-        const Material_t& Materials,
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& GaussPoints_vel_grad,
-        const DCArrayKokkos<double>& MaterialPoints_den,
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const DCArrayKokkos<double>& MaterialPoints_stress_n0,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const double time_value,
-        const double dt,
-        const double rk_alpha,
-        const size_t cycle,
-        const size_t num_material_elems,
-        const size_t mat_id) const;
+        const double fuzz) const;                   
+
+
+    void update_level_set(
+            const Mesh_t& mesh,
+            const Material_t& Materials,
+            const DCArrayKokkos<double>& Node_grad_level_set,
+            const DCArrayKokkos<double>& GaussPoints_level_set,
+            const DCArrayKokkos<double>& GaussPoints_level_set_n,
+            const DCArrayKokkos<double>& Corner_normal,
+            const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+            const size_t num_mat_elems,
+            const size_t mat_id,
+            const double fuzz,
+            const double small,
+            const double dt,
+            const double rk_alpha) const;
 
 
 
@@ -221,7 +212,6 @@ public:
         DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_dims,
         const size_t num_mat_points) const;
-
 
     void get_timestep(
         Mesh_t& mesh,
@@ -241,6 +231,14 @@ public:
         const double fuzz,
         const double tiny) const;
 
+
+        // **** Functions defined in level_set_boundary.cpp **** //
+
+    void boundary_velocity(
+        const Mesh_t&  mesh,
+        const BoundaryCondition_t& BoundaryConditions,
+        DCArrayKokkos<double>& node_vel,
+        const double time_value) const;
 
 }; // end class
 

@@ -260,8 +260,7 @@ enum class node_state
     temp,
     heat_transfer,
     force,
-    gradient_level_set,
-    volume
+    gradient_level_set
 };
 
 
@@ -284,7 +283,6 @@ struct node_t
     DCArrayKokkos<double> temp_n0;    ///< Nodal temperature at tn=0 of time integration
     DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
     DCArrayKokkos<double> gradient_level_set;   ///< Nodal gradient of the level set function
-    DCArrayKokkos<double> volume;     ///< Nodal volume
 
     // initialization method (num_nodes, num_dims, state to allocate)
     void initialize(size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
@@ -314,9 +312,6 @@ struct node_t
                     break;
                 case node_state::gradient_level_set:
                     if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<double>(num_nodes, num_dims, "node_grad_levelset");
-                    break;
-                case node_state::volume:
-                    if (volume.size() == 0) this->volume = DCArrayKokkos<double>(num_nodes, "node_volume");
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;

@@ -5,7 +5,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 30
+    cycle_stop: 2
 
 
 # mesh_options:
@@ -18,17 +18,20 @@ mesh_options:
     type: box
     origin: [0.0, 0.0, 0.0]
     length: [1.0, 1.0, 1.0]
-    num_elems: [12, 12, 12]
+    num_elems: [20, 20, 20]
 
 
 output_options:
     timer_output_level: thorough
     output_file_format: viz #state
-    graphics_time_step: 1.0
-    # graphics_iteration_step: 10
+    graphics_time_step: 0.1
+    graphics_iteration_step: 1
     gauss_pt_field_outputs: 
         - level_set
         - volume
+    node_field_outputs:
+        - vel
+        - grad_level_set
 
 solver_options:
   - solver:
@@ -107,42 +110,42 @@ regions:
             type: uniform
             value: 1.0
 
-    - region:
-        volume:
-            type: box
-            x1: 0.5
-            x2: 1.0
-            y1: 0.5
-            y2: 1.0
-            z1: 0.5
-            z2: 1.0
-        solver_id: 0
-        material_id: 0
-        level_set: 
-            type: spherical
-            value: 0.0
-            slope: 1.0
-            origin: [1.0, 1.0, 1.0]
-        volume_fraction:
-            type: uniform
-            value: 1.0
-
-    - region:
-        volume:
-            type: box
-            x1: 0.5
-            x2: 1.0
-            y1: 0.0
-            y2: 0.5
-            z1: 0.5
-            z2: 1.0
-        solver_id: 0
-        material_id: 0
-        level_set: 
-            type: spherical
-            value: 0.0
-            slope: 1.0
-            origin: [1.0, 0.0, 1.0]
-        volume_fraction:
-            type: uniform
-            value: 1.0
+#    - region:
+#        volume:
+#            type: box
+#            x1: 0.5
+#            x2: 1.0
+#            y1: 0.5
+#            y2: 1.0
+#            z1: 0.5
+#            z2: 1.0
+#        solver_id: 0
+#        material_id: 0
+#        level_set: 
+#            type: spherical
+#            value: 0.0
+#            slope: 1.0
+#            origin: [1.0, 1.0, 1.0]
+#        volume_fraction:
+#            type: uniform
+#            value: 1.0
+#
+#    - region:
+#        volume:
+#            type: box
+#            x1: 0.5
+#            x2: 1.0
+#            y1: 0.0
+#            y2: 0.5
+#            z1: 0.5
+#            z2: 1.0
+#        solver_id: 0
+#        material_id: 0
+#        level_set: 
+#            type: spherical
+#            value: 0.0
+#            slope: 1.0
+#            origin: [1.0, 0.0, 1.0]
+#        volume_fraction:
+#            type: uniform
+#            value: 1.0
