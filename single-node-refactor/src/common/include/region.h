@@ -420,9 +420,9 @@ static std::vector<std::string> region_thermal_conductivity_required_inps
 // -------------------------------------
 static std::vector<std::string> region_level_set_required_inps
 {
-    "type",
-    "value",
-    "slope"
+    "type"
+//    "value",
+//    "slope"
 };
 
 // -------------------------------------

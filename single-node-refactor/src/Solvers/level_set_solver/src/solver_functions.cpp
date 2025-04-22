@@ -98,7 +98,8 @@ void LevelSet::nodal_gradient(
             } // end loop over dimension
 
             // save the corner volume
-            corner_volume(corner_gid) = 1.0/((double)mesh.num_nodes_in_elem)* elem_vol;
+            corner_volume(corner_gid) = (1.0/((double)mesh.num_nodes_in_elem))* elem_vol;
+
 
         } // end for loop over corners in elem
 
@@ -126,6 +127,7 @@ void LevelSet::nodal_gradient(
             // loop over dimension
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 // remember, 1 gauss point per element, elem_gid = gauss_gid
+                // corner_normal is pointing inwards
                 node_grad_level_set(node_gid, dim) += corner_normal(corner_gid, dim)*GaussPoints_level_set(elem_gid);
             } // end for dim
 
@@ -179,6 +181,7 @@ void LevelSet::nodal_gradient(
 void LevelSet::update_level_set(
     const Mesh_t& mesh,
     const Material_t& Materials,
+    const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_grad_level_set,
     const DCArrayKokkos<double>& GaussPoints_level_set,
     const DCArrayKokkos<double>& GaussPoints_level_set_n0,
@@ -219,9 +222,9 @@ void LevelSet::update_level_set(
             // nodal HJ = ||node grad phi||
             double node_HJ = 0.0;
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-                node_HJ = node_grad_level_set(node_gid, dim) * node_grad_level_set(node_gid, dim); // 
+                node_HJ += node_vel(node_gid, dim) * node_grad_level_set(node_gid, dim); // 
             } // end for dim
-            node_HJ = sqrt(node_HJ);
+            //node_HJ = sqrt(node_HJ) when node_vel = grad phi/||grad phi||;
 
             // ---------------------------------
             // calculate upwind corner weights
@@ -232,11 +235,10 @@ void LevelSet::update_level_set(
             size_t corner_gid = mesh.corners_in_elem(elem_gid, node_lid);  // node_lid = corner_lid
 
             double corner_weight = 0.0;  // weight = max(0, (vel dot normal)), here the normal is inward to the element
-
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 corner_weight += node_grad_level_set(node_gid, dim) * corner_normal(corner_gid, dim); 
             } // end for dim
-            corner_weight = fmin(0.0, corner_weight); // upwind will be positive, downwind is negative
+            corner_weight = fmax(0.0, corner_weight); // upwind will be positive, downwind is negative
 
             sum_weights += corner_weight; 
 
@@ -244,7 +246,8 @@ void LevelSet::update_level_set(
 
         } // end loop over nodes
 
-        elem_HJ /= sum_weights;  // normalize the weights
+
+        elem_HJ /= (sum_weights+fuzz);  // normalize the weights
 
         double front_vel = Materials.MaterialFunctions(mat_id).normal_velocity;
 
@@ -253,7 +256,7 @@ void LevelSet::update_level_set(
         // front_vel -= Materials.MaterialFunctions(mat_id).curvature_velocity*kappa
         
         // update level set field
-        GaussPoints_level_set(guass_point) = GaussPoints_level_set_n0(guass_point) + rk_alpha*dt*front_vel*elem_HJ;  
+        GaussPoints_level_set(guass_point) = GaussPoints_level_set_n0(guass_point) - rk_alpha*dt*front_vel*elem_HJ;  
 
     }); // end parallel loop material elems
 

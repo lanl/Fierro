@@ -189,6 +189,7 @@ public:
     void update_level_set(
             const Mesh_t& mesh,
             const Material_t& Materials,
+            const DCArrayKokkos<double>& node_vel,
             const DCArrayKokkos<double>& Node_grad_level_set,
             const DCArrayKokkos<double>& GaussPoints_level_set,
             const DCArrayKokkos<double>& GaussPoints_level_set_n,

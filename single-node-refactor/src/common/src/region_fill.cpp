@@ -1572,7 +1572,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
                     delta    = (mesh_coords(dim) - orig[dim]);
                     radius_val += delta*delta;
                 } // end for
-                radius_val *= slope;
+                radius_val = slope*sqrt(radius_val);
                 radius_val -= scalar*scalar; 
 
                 field_scalar(mesh_gid,bin) = radius_val;
@@ -1582,7 +1582,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
         case init_conds::sphericalScalar:
             {
                 // Setting up spherical
-                //   val_out = slope*( dx^2 + dy^2 + dz^2 ) - value^2
+                //   val_out = slope*sqrt( dx^2 + dy^2 + dz^2 ) - value
                 double delta = 0.0;
                 double radius_val = 0.0;
 
@@ -1590,8 +1590,8 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
                     delta    = (mesh_coords(dim) - orig[dim]);
                     radius_val += delta*delta;
                 } // end for
-                radius_val *= slope;
-                radius_val -= scalar*scalar; 
+                radius_val = slope*sqrt(radius_val);
+                radius_val -= scalar; 
 
                 field_scalar(mesh_gid,bin) = radius_val;
 

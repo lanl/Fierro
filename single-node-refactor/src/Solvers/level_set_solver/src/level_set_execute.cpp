@@ -218,7 +218,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);
             
 
-/*
+
             // update level set field in material regions that have this solver
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
@@ -228,6 +228,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                 update_level_set(
                     mesh,
                     Materials,
+                    State.node.vel,
                     State.node.gradient_level_set,
                     State.GaussPoints.level_set,
                     State.GaussPoints.level_set_n0,
@@ -241,7 +242,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                     rk_alpha);
 
             } // end for mat_id
- */           
+          
 
         } // end of RK loop
 
