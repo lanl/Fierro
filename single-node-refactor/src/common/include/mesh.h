@@ -229,7 +229,9 @@ struct Mesh_t
     size_t num_dims = 3; ///< Number of spatial dimension
 
     // ---- Element Data Definitions ---- //
-    size_t num_elems;   ///< Number of elements in the mesh
+    size_t global_num_elems;   ///< Global number of elements in the mesh
+    size_t num_elems;  ///< number of local+shared elements on this process (forces usually employ this)
+    size_t nlocal_elems; ///< number of local elements on this process (output and reductions for energy usually employ this)
     size_t num_nodes_in_elem;   ///< Number of nodes in an element
     size_t num_patches_in_elem; ///< Number of patches in an element
     size_t num_surfs_in_elem;   ///< Number of surfaces in an element
