@@ -90,22 +90,23 @@ void LevelSet::rk_init(
 /// REMOVE EXCESS TIME RELATED VARIABLES
 ///
 /////////////////////////////////////////////////////////////////////////////
-void LevelSet::get_timestep(Mesh_t& mesh,
-                       DCArrayKokkos<double>& node_coords,
-                       DCArrayKokkos<double>& GaussPoints_vol,
-                       DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                       const size_t num_mat_elems,
-                       const double normal_velocity,
-                       const double curvature_velocity,
-                       const double time_value,
-                       const double graphics_time,
-                       const double time_final,
-                       const double dt_max,
-                       const double dt_min,
-                       const double dt_cfl,
-                       double&      dt,
-                       const double fuzz,
-                       const double tiny) const
+void LevelSet::get_timestep(
+    const Mesh_t& mesh,
+    const Material_t& Materials,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& GaussPoints_vol,
+    const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const size_t num_mat_elems,
+    const size_t mat_id,
+    const double time_value,
+    const double graphics_time,
+    const double time_final,
+    const double dt_max,
+    const double dt_min,
+    const double dt_cfl,
+    double&      dt,
+    const double fuzz,
+    const double tiny) const
 {
 
     // increase dt by 10%, that is the largest dt value
@@ -165,6 +166,9 @@ void LevelSet::get_timestep(Mesh_t& mesh,
         }
 
         // get the velocity
+        const double normal_velocity = Materials.MaterialFunctions(mat_id).normal_velocity;
+        const double curvature_velocity = Materials.MaterialFunctions(mat_id).curvature_velocity;
+        
         double kappa = 1.0/(3.0*dist_min); // max curvature is around 3 DeltaX, curvature = 1/R
         double front_velocity = 1.5+normal_velocity + curvature_velocity*kappa;
         // the 1.5 is for redistancing velocity that has a value around 1.0, so using 1.5
@@ -214,13 +218,13 @@ void LevelSet::get_timestep(Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::get_timestep_2D(
-    Mesh_t& mesh,
-    DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& GaussPoints_vol,
-    DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const Mesh_t& mesh,
+    const Material_t& Materials,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& GaussPoints_vol,
+    const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const size_t num_mat_elems,
-    const double normal_velocity,
-    const double curvature_velocity,
+    const size_t mat_id,
     const double time_value,
     const double graphics_time,
     const double time_final,
@@ -274,6 +278,10 @@ void LevelSet::get_timestep_2D(
         }
 
         // get the velocity
+
+        const double normal_velocity = Materials.MaterialFunctions(mat_id).normal_velocity;
+        const double curvature_velocity = Materials.MaterialFunctions(mat_id).curvature_velocity;
+
         double kappa = 1.0/(3.0*dist_min); // max curvature is around 3 DeltaX, curvature = 1/R
         double front_velocity = 1.5+normal_velocity + curvature_velocity*kappa;
         // the 1.5 is for redistancing velocity that has a value around 1.0, so using 1.5

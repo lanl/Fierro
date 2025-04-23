@@ -216,13 +216,13 @@ public:
         const size_t num_mat_points) const;
 
     void get_timestep(
-        Mesh_t& mesh,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& GaussPoints_vol,
-        DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const Mesh_t& mesh,
+        const Material_t& Materials,
+        const DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
-        const double normal_velocity,
-        const double curvature_velocity,
+        const size_t mat_id,
         const double time_value,
         const double graphics_time,
         const double time_final,
@@ -234,22 +234,22 @@ public:
         const double tiny) const;
 
     void get_timestep_2D(
-            Mesh_t& mesh,
-            DCArrayKokkos<double>& node_coords,
-            DCArrayKokkos<double>& GaussPoints_vol,
-            DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-            const size_t num_mat_elems,
-            const double normal_velocity,
-            const double curvature_velocity,
-            const double time_value,
-            const double graphics_time,
-            const double time_final,
-            const double dt_max,
-            const double dt_min,
-            const double dt_cfl,
-            double&      dt,
-            const double fuzz,
-            const double tiny) const;
+        const Mesh_t& mesh,
+        const Material_t& Materials,
+        const DCArrayKokkos<double>& node_coords,
+        const DCArrayKokkos<double>& GaussPoints_vol,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t num_mat_elems,
+        const size_t mat_id,
+        const double time_value,
+        const double graphics_time,
+        const double time_final,
+        const double dt_max,
+        const double dt_min,
+        const double dt_cfl,
+        double&      dt,
+        const double fuzz,
+        const double tiny) const;
 
 
         // **** Functions defined in level_set_boundary.cpp **** //

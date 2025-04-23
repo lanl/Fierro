@@ -145,32 +145,34 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 
                 if(mesh.num_dims == 3){
                     // get the stable time step
-                    get_timestep(mesh,
-                                State.node.coords,
-                                State.GaussPoints.vol,
-                                State.MaterialToMeshMaps(mat_id).elem,
-                                State.MaterialToMeshMaps(mat_id).num_material_elems,
-                                Materials.MaterialFunctions(mat_id).normal_velocity,
-                                Materials.MaterialFunctions(mat_id).curvature_velocity,
-                                time_value,
-                                graphics_time,
-                                time_final,
-                                dt_max,
-                                dt_min,
-                                dt_cfl,
-                                dt_mat,
-                                fuzz,
-                                tiny);
-                }
-                else if (mesh.num_dims == 2){
-                    // get the stable time step
-                    get_timestep_2D(mesh,
+                    get_timestep(
+                        mesh,
+                        Materials,
                         State.node.coords,
                         State.GaussPoints.vol,
                         State.MaterialToMeshMaps(mat_id).elem,
                         State.MaterialToMeshMaps(mat_id).num_material_elems,
-                        Materials.MaterialFunctions(mat_id).normal_velocity,
-                        Materials.MaterialFunctions(mat_id).curvature_velocity,
+                        mat_id,
+                        time_value,
+                        graphics_time,
+                        time_final,
+                        dt_max,
+                        dt_min,
+                        dt_cfl,
+                        dt_mat,
+                        fuzz,
+                        tiny);
+                }
+                else if (mesh.num_dims == 2){
+                    // get the stable time step
+                    get_timestep_2D(
+                        mesh,
+                        Materials,
+                        State.node.coords,
+                        State.GaussPoints.vol,
+                        State.MaterialToMeshMaps(mat_id).elem,
+                        State.MaterialToMeshMaps(mat_id).num_material_elems,
+                        mat_id,
                         time_value,
                         graphics_time,
                         time_final,
