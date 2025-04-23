@@ -2129,7 +2129,7 @@ void init_press_sspd_stress(const Material_t& Materials,
         FOR_ALL(mat_point_lid, 0, num_mat_pts, {
 
             // setting shear modulii to zero, corresponds to a gas
-            for(size_t i; i<3; i++){
+            for(size_t i=0; i<3; i++){
                 MaterialPoints_shear_modulii(mat_point_lid,i) = 0.0;
             } // end for
 
