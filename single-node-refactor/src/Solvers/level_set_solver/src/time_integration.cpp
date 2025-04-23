@@ -166,7 +166,8 @@ void LevelSet::get_timestep(Mesh_t& mesh,
 
         // get the velocity
         double kappa = 1.0/(3.0*dist_min); // max curvature is around 3 DeltaX, curvature = 1/R
-        double front_velocity = normal_velocity + curvature_velocity*kappa;
+        double front_velocity = 1.5+normal_velocity + curvature_velocity*kappa;
+        // the 1.5 is for redistancing velocity that has a value around 1.0, so using 1.5
 
         // local dt calc based on CFL
         double dt_lcl_ = dt_cfl * dist_min / (front_velocity + fuzz);

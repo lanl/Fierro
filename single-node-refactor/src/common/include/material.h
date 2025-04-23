@@ -192,8 +192,8 @@ static std::map<std::string, model::DissipationModels> dissipation_model_map
 static std::map<std::string, model::levelSetType> level_set_type_map
 {
     { "no_level_set", model::noLevelSet },
-    { "evolve_front", model::evolveFront },
-    { "advect_front", model::advectFront }
+    { "evolve_front", model::evolveFront }
+    //{ "advect_front", model::advectFront }
 };
 
 namespace model_init

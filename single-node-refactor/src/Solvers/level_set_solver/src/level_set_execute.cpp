@@ -56,6 +56,9 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                     State_t& State)
 {
 
+    // arrays local to this solver
+    DCArrayKokkos <double> node_level_set_vel(mesh.num_nodes, mesh.num_dims);
+
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
     double tiny  = SimulationParamaters.dynamic_options.tiny;
     double small = SimulationParamaters.dynamic_options.small;
@@ -86,7 +89,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
 
     std::cout << "Applying initial boundary conditions" << std::endl;
-    //boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
+    //boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, time_value); // Time value = 0.0;
 
     
     double cached_pregraphics_dt = fuzz;
@@ -138,7 +141,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             double dt_mat = dt;
 
             // only solve level set on the materials that have it
-            if( Materials.MaterialEnums.host(mat_id).levelSetType != model::noLevelSet){
+            if (Materials.MaterialEnums.host(mat_id).levelSetType == model::evolveFront){
 
                 // get the stable time step
                 get_timestep(mesh,
@@ -158,7 +161,13 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                             fuzz,
                             tiny);
 
-            }
+            } 
+            else if (Materials.MaterialEnums.host(mat_id).levelSetType == model::advectFront){
+
+                // ADD advect front time step option, it uses nodal velocity
+
+            } // end if on level set options
+
 
             // save the smallest dt of all materials
             min_dt_calc = fmin(dt_mat, min_dt_calc);
@@ -178,6 +187,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------------
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
         // ---------------------------------------------------------------------
+
+        // save the values at RK n0
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
             // only solve level set on the materials that have it
@@ -193,7 +204,6 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 
         } // end for mat_id
 
-
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
             
@@ -205,7 +215,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             nodal_gradient(
                 mesh,
                 State.node.coords,
-                State.node.vel,
+                node_level_set_vel,
                 State.node.gradient_level_set,
                 State.corner.normal,
                 State.corner.volume,
@@ -215,31 +225,52 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 
 
             // ---- apply velocity boundary conditions to the boundary patches----
-            boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);
-            
+            for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
+                if (Materials.MaterialEnums.host(mat_id).levelSetType == model::evolveFront){
+                    boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, time_value);
+                } //
+                else if (Materials.MaterialEnums.host(mat_id).levelSetType == model::advectFront){
+                    
+                    // ADD BC option on grad phi
+
+                }
+
+            } // end for mat_id
+            
 
             // update level set field in material regions that have this solver
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-                size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+                if (Materials.MaterialEnums.host(mat_id).levelSetType == model::evolveFront){
 
-                // update level set
-                update_level_set(
-                    mesh,
-                    Materials,
-                    State.node.vel,
-                    State.node.gradient_level_set,
-                    State.GaussPoints.level_set,
-                    State.GaussPoints.level_set_n0,
-                    State.corner.normal,
-                    State.MaterialToMeshMaps(mat_id).elem,
-                    num_mat_elems,
-                    mat_id,
-                    fuzz,
-                    small,
-                    dt,
-                    rk_alpha);
+                    size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+
+                    // update level set
+                    update_level_set(
+                        mesh,
+                        Materials,
+                        node_level_set_vel,
+                        State.node.gradient_level_set,
+                        State.GaussPoints.level_set,
+                        State.GaussPoints.level_set_n0,
+                        State.GaussPoints.vol,
+                        State.corner.normal,
+                        State.MaterialToMeshMaps(mat_id).elem,
+                        num_mat_elems,
+                        mat_id,
+                        fuzz,
+                        small,
+                        dt,
+                        rk_alpha);
+
+
+                } // end if this material is evolving the level set field
+                else if (Materials.MaterialEnums.host(mat_id).levelSetType == model::advectFront){
+                    
+                    // ADD update level set function, it will use nodal velocity
+
+                } // end if advecting level set field
 
             } // end for mat_id
           

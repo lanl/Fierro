@@ -177,10 +177,10 @@ public:
     void nodal_gradient(
         const Mesh_t mesh,
         const DCArrayKokkos<double>& Node_coords,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& Node_grad_level_set,
-        DCArrayKokkos<double>& Corner_normal,
-        DCArrayKokkos<double>& Corner_volume,
+        const DCArrayKokkos<double>& node_level_set_vel,
+        const DCArrayKokkos<double>& Node_grad_level_set,
+        const DCArrayKokkos<double>& Corner_normal,
+        const DCArrayKokkos<double>& Corner_volume,
         const DCArrayKokkos<double>& GaussPoints_level_set,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const double fuzz) const;                   
@@ -189,10 +189,11 @@ public:
     void update_level_set(
             const Mesh_t& mesh,
             const Material_t& Materials,
-            const DCArrayKokkos<double>& node_vel,
+            const DCArrayKokkos<double>& node_level_set_vel,
             const DCArrayKokkos<double>& Node_grad_level_set,
             const DCArrayKokkos<double>& GaussPoints_level_set,
             const DCArrayKokkos<double>& GaussPoints_level_set_n,
+            const DCArrayKokkos<double>& GaussPoints_vol,
             const DCArrayKokkos<double>& Corner_normal,
             const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
             const size_t num_mat_elems,
