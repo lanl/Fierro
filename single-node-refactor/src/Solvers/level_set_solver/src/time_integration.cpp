@@ -196,3 +196,112 @@ void LevelSet::get_timestep(Mesh_t& mesh,
 
     return;
 } // end get_timestep
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_timestep_2D
+///
+/// \brief This function calculates the time step by finding the shortest distance
+///        between any two nodes in the mesh.
+///
+/// WARNING WARNING :  Only works for 2D, 4 node elements
+///
+/// \param Simulation mesh
+/// \param View of nodal position data
+/// \param View of nodal velocity data
+/// \param View of element sound speed
+/// \param View of element volume
+///
+/////////////////////////////////////////////////////////////////////////////
+void LevelSet::get_timestep_2D(
+    Mesh_t& mesh,
+    DCArrayKokkos<double>& node_coords,
+    DCArrayKokkos<double>& GaussPoints_vol,
+    DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const size_t num_mat_elems,
+    const double normal_velocity,
+    const double curvature_velocity,
+    const double time_value,
+    const double graphics_time,
+    const double time_final,
+    const double dt_max,
+    const double dt_min,
+    const double dt_cfl,
+    double&      dt,
+    const double fuzz,
+    const double tiny) const
+{
+    // increase dt by 10%, that is the largest dt value
+    dt = dt * 1.1;
+
+    double dt_lcl;
+    double min_dt_calc;
+    FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
+
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+
+        double coords0[8];  // element coords
+        ViewCArrayKokkos<double> coords(coords0, 4, 2);
+
+        double distance0[6];  // array for holding distances between each node
+        ViewCArrayKokkos<double> dist(distance0, 6);
+
+        // Getting the coordinates of the nodes of the element
+        for (size_t node_lid = 0; node_lid < 4; node_lid++) {
+            for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+                coords(node_lid, dim) = node_coords(mesh.nodes_in_elem(elem_gid, node_lid), dim);
+            } // end for dim
+        } // end for loop over node_lid
+
+        // Only works for 2D
+        // Solving for the magnitude of distance between each node
+        size_t count = 0;
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = i + 1; j <= 3; j++) {
+                // returns magnitude of distance between each node, 6 total options
+                dist(count) = fabs(
+                        sqrt(pow((coords(i, 0) - coords(j, 0)), 2.0)
+                + pow((coords(i, 1) - coords(j, 1)), 2.0) )
+                );
+                count++;
+            } // end for j
+        } // end for i
+
+        double dist_min = dist(0);
+
+        for (int i = 0; i < 6; ++i) {
+        dist_min = fmin(dist(i), dist_min);
+        }
+
+        // get the velocity
+        double kappa = 1.0/(3.0*dist_min); // max curvature is around 3 DeltaX, curvature = 1/R
+        double front_velocity = 1.5+normal_velocity + curvature_velocity*kappa;
+        // the 1.5 is for redistancing velocity that has a value around 1.0, so using 1.5
+
+        // local dt calc based on CFL
+        double dt_lcl_ = dt_cfl * dist_min / (front_velocity + fuzz);
+
+
+        // make dt be in bounds
+        dt_lcl_ = fmin(dt_lcl_, dt_max);    // make dt small than dt_max
+        dt_lcl_ = fmax(dt_lcl_, dt_min);    // make dt larger than dt_min
+
+        if (dt_lcl_ < dt_lcl) {
+        dt_lcl = dt_lcl_;
+        }
+    }, min_dt_calc);  // end parallel reduction
+    Kokkos::fence();
+
+    // save the min dt
+    if (min_dt_calc < dt) {
+        dt = min_dt_calc;
+    }
+
+    // ensure time step hits the graphics time intervals, adding tiny to ensure dt passes graphics time
+    dt = fmin(dt, fmax(fuzz,(graphics_time - time_value)) + tiny);
+
+    // make dt hit final time, adding tiny to ensure dt passes it by a little bit
+    dt = fmin(dt, time_final - time_value + tiny);
+
+    return;
+} // end get_timestep_2D

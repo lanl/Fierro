@@ -70,8 +70,6 @@ void LevelSet::nodal_gradient(
         // loop gauss point, this method is for a single quadrature point element
         const size_t gauss_pt = elem_gid;
 
-        // element volume
-        double elem_vol = GaussPoints_vol(gauss_pt);
 
         // corner area normals
         double area_normal_array[24];
@@ -79,6 +77,16 @@ void LevelSet::nodal_gradient(
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), mesh.num_nodes_in_elem);
+
+        // element volume
+        double elem_vol;
+        if(mesh.num_dims==3){
+            elem_vol = GaussPoints_vol(gauss_pt);
+        } 
+        else {
+            // 2D vol = facial area of the quad
+            elem_vol = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
+        }
 
         if(mesh.num_dims==3){
             // get the B matrix which are the inward corner area normals or the elem
@@ -226,8 +234,11 @@ void LevelSet::update_level_set(
         const double front_vel = Materials.MaterialFunctions(mat_id).normal_velocity;
 
         // reinitialization velocity
-        double deltaX = 2.0*cbrt(GaussPoints_vol(gauss_point)); // length scale for smoothing signum function
-        if(mesh.num_dims == 2){
+        double deltaX;
+        if(mesh.num_dims == 3){
+            deltaX = 2.0*cbrt(GaussPoints_vol(gauss_point)); // length scale for smoothing signum function
+        }
+        else {
             deltaX = 2.0*sqrt(GaussPoints_vol(gauss_point));
         }
         const double signum = GaussPoints_level_set(gauss_point)/( sqrt(GaussPoints_level_set(gauss_point)*GaussPoints_level_set(gauss_point) + deltaX*deltaX));

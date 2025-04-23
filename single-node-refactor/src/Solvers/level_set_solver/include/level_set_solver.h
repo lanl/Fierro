@@ -233,6 +233,24 @@ public:
         const double fuzz,
         const double tiny) const;
 
+    void get_timestep_2D(
+            Mesh_t& mesh,
+            DCArrayKokkos<double>& node_coords,
+            DCArrayKokkos<double>& GaussPoints_vol,
+            DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+            const size_t num_mat_elems,
+            const double normal_velocity,
+            const double curvature_velocity,
+            const double time_value,
+            const double graphics_time,
+            const double time_final,
+            const double dt_max,
+            const double dt_min,
+            const double dt_cfl,
+            double&      dt,
+            const double fuzz,
+            const double tiny) const;
+
 
         // **** Functions defined in level_set_boundary.cpp **** //
 
@@ -240,7 +258,8 @@ public:
         const Mesh_t&  mesh,
         const BoundaryCondition_t& BoundaryConditions,
         DCArrayKokkos<double>& node_vel,
-        const double time_value) const;
+        const double time_value,
+        const double small) const;
 
 }; // end class
 

@@ -143,23 +143,47 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             // only solve level set on the materials that have it
             if (Materials.MaterialEnums.host(mat_id).levelSetType == model::evolveFront){
 
-                // get the stable time step
-                get_timestep(mesh,
-                            State.node.coords,
-                            State.GaussPoints.vol,
-                            State.MaterialToMeshMaps(mat_id).elem,
-                            State.MaterialToMeshMaps(mat_id).num_material_elems,
-                            Materials.MaterialFunctions(mat_id).normal_velocity,
-                            Materials.MaterialFunctions(mat_id).curvature_velocity,
-                            time_value,
-                            graphics_time,
-                            time_final,
-                            dt_max,
-                            dt_min,
-                            dt_cfl,
-                            dt_mat,
-                            fuzz,
-                            tiny);
+                if(mesh.num_dims == 3){
+                    // get the stable time step
+                    get_timestep(mesh,
+                                State.node.coords,
+                                State.GaussPoints.vol,
+                                State.MaterialToMeshMaps(mat_id).elem,
+                                State.MaterialToMeshMaps(mat_id).num_material_elems,
+                                Materials.MaterialFunctions(mat_id).normal_velocity,
+                                Materials.MaterialFunctions(mat_id).curvature_velocity,
+                                time_value,
+                                graphics_time,
+                                time_final,
+                                dt_max,
+                                dt_min,
+                                dt_cfl,
+                                dt_mat,
+                                fuzz,
+                                tiny);
+                }
+                else if (mesh.num_dims == 2){
+                    // get the stable time step
+                    get_timestep_2D(mesh,
+                        State.node.coords,
+                        State.GaussPoints.vol,
+                        State.MaterialToMeshMaps(mat_id).elem,
+                        State.MaterialToMeshMaps(mat_id).num_material_elems,
+                        Materials.MaterialFunctions(mat_id).normal_velocity,
+                        Materials.MaterialFunctions(mat_id).curvature_velocity,
+                        time_value,
+                        graphics_time,
+                        time_final,
+                        dt_max,
+                        dt_min,
+                        dt_cfl,
+                        dt_mat,
+                        fuzz,
+                        tiny);                    
+                }
+                else {
+                    std::cout << "ERROR: level set only works in 2D and 3D \n";
+                }
 
             } 
             else if (Materials.MaterialEnums.host(mat_id).levelSetType == model::advectFront){
@@ -193,7 +217,6 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 
             // only solve level set on the materials that have it
             if( Materials.MaterialEnums.host(mat_id).levelSetType != model::noLevelSet){
-
                 // save the values at t_n
                 rk_init(State.GaussPoints.level_set,
                         State.GaussPoints.level_set_n0,
@@ -209,8 +232,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
-
-            
+          
             // calculate the gradient at the node, its calculated across the whole mesh
             nodal_gradient(
                 mesh,
@@ -228,7 +250,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
                 if (Materials.MaterialEnums.host(mat_id).levelSetType == model::evolveFront){
-                    boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, time_value);
+                    boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, time_value, small);
                 } //
                 else if (Materials.MaterialEnums.host(mat_id).levelSetType == model::advectFront){
                     
