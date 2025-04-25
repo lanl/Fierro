@@ -240,7 +240,7 @@ struct Mesh_t
     size_t num_leg_gauss_in_elem; ///< Number of Gauss Legendre points in an element
     size_t num_lob_gauss_in_elem; ///< Number of Gauss Lobatto points in an element
 
-    DCArrayKokkos<size_t> nodes_in_elem; ///< Nodes in an element
+    DistributedDCArray<size_t> nodes_in_elem; ///< Nodes in an element
     CArrayKokkos<size_t> corners_in_elem; ///< Corners in an element -- this can just be a functor
 
     RaggedRightArrayKokkos<size_t> elems_in_elem; ///< Elements connected to an element
@@ -264,8 +264,8 @@ struct Mesh_t
     DistributedMap node_map; ///< partition of local nodes (stores global node IDs on each process)
     DistributedMap all_node_map; ///< partition of local + ghost nodes (stores global node IDs on each process)
     DistributedMap ghost_node_map; ///< partition of local + ghost nodes (stores global node IDs on each process)
-    DistributedMap element_map; ///< partition of uniquely owned elements (stores global node IDs on each process)
-    DistributedMap all_element_map; ///< partition of uniquely owned + shared elements (stores global node IDs on each process)
+    DistributedMap local_element_map; ///< partition of uniquely owned elements (stores global node IDs on each process)
+    DistributedMap element_map; ///< partition of uniquely owned + shared elements (stores global node IDs on each process)
     DistributedMap nonoverlap_element_node_map; // map of node indices belonging to unique element map
 
     RaggedRightArrayKokkos<size_t> corners_in_node; ///< Corners connected to a node
@@ -326,16 +326,11 @@ struct Mesh_t
     }; // end method
 
     // initialization methods
-    void initialize_elems(const size_t num_elems_inp, const size_t num_dims_inp)
+    void initialize_elems(const size_t num_elems_inp, const size_t num_nodes_in_elem, const DistributedMap input_element_map)
     {
-        num_dims = num_dims_inp;
-        num_nodes_in_elem = 1;
-        
-        for (int dim = 0; dim < num_dims; dim++) {
-            num_nodes_in_elem *= 2;
-        }
         num_elems       = num_elems_inp;
-        nodes_in_elem   = DCArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.nodes_in_elem");
+        element_map     = input_element_map;
+        nodes_in_elem   = DistributedDCArray<size_t>(element_map, num_nodes_in_elem, "mesh.nodes_in_elem");
         corners_in_elem = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
 
         // 1 Gauss point per element

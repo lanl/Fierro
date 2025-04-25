@@ -976,7 +976,7 @@ public:
             in.open(mesh_file_);
             bool found = false;
 
-            while (found == false&&in->good()) {
+            while (found == false&&in.good()) {
                 std::getline(in, read_line);
                 line_parse.str("");
                 line_parse.clear();
@@ -1167,16 +1167,16 @@ public:
         // read in element info (ensight file format is organized in element type sections)
         // loop over this later for several element type sections
 
-        size_t num_elems  = 0;
-        num_elems = 0;
-        CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(elem_words_per_line);
+        size_t global_num_elems  = 0;
+        size_t num_elems = 0;
+        CArrayKokkos<int, Kokkos::LayoutRight, Kokkos::HostSpace> node_store(elem_words_per_line);
 
         // --- read the number of cells in the mesh ---
         // --- Read the number of vertices in the mesh --- //
         if (myrank == 0)
         {
             bool found = false;
-            while (found == false&&in->good()) {
+            while (found == false&&in.good()) {
                 std::getline(in, read_line);
                 line_parse.str("");
                 line_parse.clear();
@@ -1187,9 +1187,9 @@ public:
                 //      CELLS num_cells size
                 if (substring == "CELLS")
                 {
-                    line_parse >> num_elems;
-                    std::cout << "declared element count: " << num_elems << std::endl;
-                    if (num_elems <= 0)
+                    line_parse >> global_num_elems;
+                    std::cout << "declared element count: " << global_num_elems << std::endl;
+                    if (global_num_elems <= 0)
                     {
                         throw std::runtime_error("ERROR, NO ELEMENTS IN MESH");
                     }
@@ -1203,7 +1203,7 @@ public:
         } // end if(myrank==0)
 
         // broadcast number of elements
-        MPI_Bcast(&num_elems, 1, MPI_LONG_LONG_INT, 0, world);
+        MPI_Bcast(&global_num_elems, 1, MPI_LONG_LONG_INT, 0, world);
 
         //initialize num elem in mesh struct
 
@@ -1214,10 +1214,10 @@ public:
 
         // read in element connectivity
         // we're gonna reallocate for the words per line expected for the element connectivity
-        read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES, elem_words_per_line, MAX_WORD);
+        read_buffer = CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_LINES, elem_words_per_line, MAX_WORD);
 
         // calculate buffer iterations to read number of lines
-        buffer_iterations = num_elems / BUFFER_LINES;
+        buffer_iterations = global_num_elems / BUFFER_LINES;
         int assign_flag;
 
         // dynamic buffer used to store elements before we know how many this rank needs
@@ -1226,7 +1226,7 @@ public:
         size_t buffer_max = BUFFER_LINES * elem_words_per_line;
         size_t indices_buffer_max = BUFFER_LINES;
 
-        if (num_elems % BUFFER_LINES != 0)
+        if (global_num_elems % BUFFER_LINES != 0)
         {
             buffer_iterations++;
         }
@@ -1259,7 +1259,7 @@ public:
             else if (myrank == 0)
             {
                 buffer_loop = 0;
-                while (buffer_iteration * BUFFER_LINES + buffer_loop < num_elems) {
+                while (buffer_iteration * BUFFER_LINES + buffer_loop < global_num_elems) {
                     getline(in, read_line);
                     line_parse.clear();
                     line_parse.str(read_line);
@@ -1353,103 +1353,15 @@ public:
             read_index_start += BUFFER_LINES;
         }
 
-        //initialize elem data structures on this process
-        mesh.initialize_elems(num_elems);
-
         //set global and local shared element counts
-        mesh.num_elems = num_elems;
-        mesh.num_elems = num_elems;
+        mesh.global_num_elems = global_num_elems;
 
-        // std::cout << "RNUM ELEMENTS IS: " << num_elems << std::endl;
-
-        Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(num_elems);
-
-        elements::elem_types::elem_type mesh_element_type;
-
-        if (simparam.num_dims == 2)
-        {
-            if (input_options.element_type == ELEMENT_TYPE::quad4)
-            {
-                mesh_element_type   = elements::elem_types::Quad4;
-                max_nodes_per_patch = 2;
-            }
-            else if (input_options.element_type == ELEMENT_TYPE::quad8)
-            {
-                mesh_element_type   = elements::elem_types::Quad8;
-                max_nodes_per_patch = 3;
-            }
-            else if (input_options.element_type == ELEMENT_TYPE::quad12)
-            {
-                mesh_element_type   = elements::elem_types::Quad12;
-                max_nodes_per_patch = 4;
-            }
-            else
-            {
-                if (myrank == 0)
-                {
-                    std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
-                }
-                exit_solver(0);
-            }
-            element_select->choose_2Delem_type(mesh_element_type, elem2D);
-            max_nodes_per_element = elem2D->num_nodes();
-        }
-
-        if (simparam.num_dims == 3)
-        {
-            if (input_options.element_type == ELEMENT_TYPE::hex8)
-            {
-                mesh_element_type   = elements::elem_types::Hex8;
-                max_nodes_per_patch = 4;
-            }
-            else if (input_options.element_type == ELEMENT_TYPE::hex20)
-            {
-                mesh_element_type   = elements::elem_types::Hex20;
-                max_nodes_per_patch = 8;
-            }
-            else if (input_options.element_type == ELEMENT_TYPE::hex32)
-            {
-                mesh_element_type   = elements::elem_types::Hex32;
-                max_nodes_per_patch = 12;
-            }
-            else
-            {
-                if (myrank == 0)
-                {
-                    std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
-                }
-                exit_solver(0);
-            }
-            element_select->choose_3Delem_type(mesh_element_type, elem);
-            max_nodes_per_element = elem->num_nodes();
-        }
-
-        // 1 type per mesh for now
-        for (int ielem = 0; ielem < num_elems; ielem++)
-        {
-            Element_Types(ielem) = mesh_element_type;
-        }
-
-        // copy temporary element storage to multivector storage
-        dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", num_elems, max_nodes_per_element);
-        host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
-        dual_nodes_in_elem.modify_host();
-
-        for (int ielem = 0; ielem < num_elems; ielem++)
-        {
-            for (int inode = 0; inode < elem_words_per_line; inode++)
-            {
-                nodes_in_elem(ielem, inode) = element_temp[ielem * elem_words_per_line + inode];
-            }
-        }
-
-        // view storage for all local elements connected to local nodes on this rank
-        // DCArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(num_elems);
-        Kokkos::DualView<GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices", num_elems);
+        // construct partition mapping for shared elements on each process
+        DCArrayKokkos<long long int> All_Element_Global_Indices(num_elems);
         // copy temporary global indices storage to view storage
         for (int ielem = 0; ielem < num_elems; ielem++)
         {
-            All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
+            All_Element_Global_Indices.host(ielem) = global_indices_temp[ielem];
             if (global_indices_temp[ielem] < 0)
             {
                 negative_index_found = 1;
@@ -1463,29 +1375,33 @@ public:
             {
                 std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
             }
-            exit_solver(0);
+            MPI_Barrier(MPI_COMM_WORLD);
+            MPI_Finalize();
+            exit(0);
         }
 
         // delete temporary element connectivity and index storage
         std::vector<size_t>().swap(element_temp);
         std::vector<size_t>().swap(global_indices_temp);
 
-        All_Element_Global_Indices.modify_host();
-        All_Element_Global_Indices.sync_device();
+        All_Element_Global_Indices.update_device();
 
-        // debug print
-        /*
-        Kokkos::View <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices_pass("All_Element_Global_Indices_pass",num_elems);
-        deep_copy(All_Element_Global_Indices_pass, All_Element_Global_Indices.h_view);
-        std::cout << " ------------ELEMENT GLOBAL INDICES ON TASK " << myrank << " --------------"<<std::endl;
-        for (int ielem = 0; ielem < num_elems; ielem++){
-        std::cout << "elem: " << All_Element_Global_Indices_pass(ielem) + 1;
-        std::cout << std::endl;
+        // construct global map of local and shared elements (since different ranks can own the same elements due to the local node map)
+        DistributedMap element_map = DistributedMap(All_Element_Global_Indices);
+
+        //initialize elem data structures
+        mesh.initialize_elems(num_elems, num_nodes_in_elem, element_map);
+
+        // copy temporary element storage to distributed storage
+        DistributedDCArray nodes_in_elem = mesh.nodes_in_elem;
+
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            for (int inode = 0; inode < elem_words_per_line; inode++)
+            {
+                nodes_in_elem.host(ielem, inode) = element_temp[ielem * elem_words_per_line + inode];
+            }
         }
-        */
-
-        // construct overlapping element map (since different ranks can own the same elements due to the local node map)
-        all_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), All_Element_Global_Indices.d_view, 0, comm));
 
         // element type selection (subject to change)
         // ---- Set Element Type ---- //
@@ -1496,64 +1412,44 @@ public:
 
         // Convert ensight index system to the ijk finite element numbering convention
         // for vertices in cell
-        if (active_node_ordering_convention == IJK)
+        CArrayKokkos<size_t, Kokkos::LayoutRight, Kokkos::HostSpace> convert_ensight_to_ijk(max_nodes_per_element);
+        CArrayKokkos<size_t, Kokkos::LayoutRight, Kokkos::HostSpace> tmp_ijk_indx(max_nodes_per_element);
+        convert_ensight_to_ijk(0) = 0;
+        convert_ensight_to_ijk(1) = 1;
+        convert_ensight_to_ijk(2) = 3;
+        convert_ensight_to_ijk(3) = 2;
+        convert_ensight_to_ijk(4) = 4;
+        convert_ensight_to_ijk(5) = 5;
+        convert_ensight_to_ijk(6) = 7;
+        convert_ensight_to_ijk(7) = 6;
+
+        for (int cell_rid = 0; cell_rid < num_elems; cell_rid++)
         {
-            CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
-            CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
-            convert_ensight_to_ijk(0) = 0;
-            convert_ensight_to_ijk(1) = 1;
-            convert_ensight_to_ijk(2) = 3;
-            convert_ensight_to_ijk(3) = 2;
-            convert_ensight_to_ijk(4) = 4;
-            convert_ensight_to_ijk(5) = 5;
-            convert_ensight_to_ijk(6) = 7;
-            convert_ensight_to_ijk(7) = 6;
-
-            int nodes_per_element;
-
-            if (num_dim == 2)
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
             {
-                for (int cell_rid = 0; cell_rid < num_elems; cell_rid++)
-                {
-                    // set nodes per element
-                    element_select->choose_2Delem_type(Element_Types(cell_rid), elem2D);
-                    nodes_per_element = elem2D->num_nodes();
-                    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
-                    {
-                        tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
-                    }
-
-                    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
-                    {
-                        nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
-                    }
-                }
+                tmp_ijk_indx(node_lid) = nodes_in_elem.host(cell_rid, convert_ensight_to_ijk(node_lid));
             }
 
-            if (num_dim == 3)
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
             {
-                for (int cell_rid = 0; cell_rid < num_elems; cell_rid++)
-                {
-                    // set nodes per element
-                    element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
-                    nodes_per_element = elem->num_nodes();
-                    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
-                    {
-                        tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
-                    }
-
-                    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
-                    {
-                        nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
-                    }
-                }
+                nodes_in_elem.host(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
             }
         }
+        
+
+        nodes_in_elem.update_device();
+
+        // initialize corner variables
+        size_t num_corners = num_elems * num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+
+        // Build connectivity
+        mesh.build_connectivity();
 
         // Close mesh input file
         if (myrank == 0)
         {
-            in->close();
+            in.close();
         }
     } // end read_mesh
 

@@ -135,6 +135,8 @@ int main(int argc, char* argv[])
     if(myrank == 0){
         std::cout << "**** End of main **** " << std::endl;
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
     return 0;
 }

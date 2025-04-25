@@ -65,8 +65,8 @@ void Driver::initialize()
             std::cout << "Exception " << e.Type() << ": " << e.what() << std::endl;
         }
         
-        MPI_Finalize();
         MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Finalize();
         exit(0);
     }
 
@@ -82,6 +82,7 @@ void Driver::initialize()
             std::cout << "Mesh file path: " << SimulationParameters.mesh_input.file_path << std::endl;
         }
         mesh_reader.set_mesh_file(SimulationParameters.mesh_input.file_path.data());
+        mesh.num_dims = num_dims;
         mesh_reader.read_mesh(mesh, 
                               State,
                               SimulationParameters.mesh_input, 
@@ -96,8 +97,8 @@ void Driver::initialize()
     }
     else{
         throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
-        MPI_Finalize();
         MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Finalize();
         exit(0);
     }
 
@@ -277,8 +278,8 @@ void Driver::initialize()
         } // end if SGTM solver
         else {
             throw std::runtime_error("**** NO SOLVER INPUT OPTIONS PROVIDED IN YAML, OR OPTION NOT UNDERSTOOD ****");
-            MPI_Finalize();
             MPI_Barrier(MPI_COMM_WORLD);
+            MPI_Finalize();
             exit(0);
         }
 
