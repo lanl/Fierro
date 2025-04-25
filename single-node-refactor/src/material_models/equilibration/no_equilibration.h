@@ -43,15 +43,23 @@ namespace NoEquilibrationModel {
 
         KOKKOS_FUNCTION
         static void equilibrate (
-                           const DCArrayKokkos<bool>& MaterialPoints_volfrac,
-                           const DCArrayKokkos<double>& MaterialPoints_stress,
-                           const DCArrayKokkos<double>& MaterialPoint_pres,
-                           const DCArrayKokkos<double>& MaterialPoint_den,
-                           const DCArrayKokkos<double>& MaterialPoint_sie,
-                           const double MaterialPoint_sspd,
-                           const RaggedRightArrayKokkos<double> &equilibration_global_vars,
-                           const size_t num_vars,
-                           const size_t mat_point_lid)
+            const DCArrayKokkos<bool>& MaterialPoints_volfrac,
+            const DCArrayKokkos<double>& MaterialPoints_stress,
+            const DCArrayKokkos<double>& MaterialPoint_pres,
+            const DCArrayKokkos<double>& MaterialPoint_den,
+            const DCArrayKokkos<double>& MaterialPoint_sie,
+            const double MaterialPoint_sspd,
+            const double GaussPoint_avg_press,
+            const double GaussPoint_vol,
+            double& de,
+            const double dt,
+            const double rk_alpha,
+            const double length,
+            const double fuzz,
+            const RaggedRightArrayKokkos<double> &equilibration_global_vars,
+            const size_t num_vars,
+            const size_t mat_point_lid,
+            const size_t mat_id)
         {
 
             return;
