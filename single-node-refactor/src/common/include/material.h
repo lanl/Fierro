@@ -104,6 +104,12 @@ namespace model
         directionalMARSRZ = 4   ///<  Directional MARS in RZ
     };
 
+    // erosion model
+    enum EquilibrationModels
+    {
+        noEquilibration = 0,    ///<  no equilibration
+        basicEquilibration = 1  ///< basic equilbration
+    };
 
     // Model run locations
     enum RunLocation
@@ -180,6 +186,12 @@ static std::map<std::string, model::ErosionModels> erosion_model_map
     { "basic", model::basicErosion },
 };
 
+static std::map<std::string, model::EquilibrationModels> equilibration_model_map
+{
+    { "no_Equilibration", model::noEquilibration },
+    { "basic", model::basicEquilibration },
+};
+
 static std::map<std::string, model::DissipationModels> dissipation_model_map
 {
     { "no_dissipation", model::noDissipation },
@@ -254,6 +266,8 @@ struct MaterialEnums_t
     // Erosion model type: none or basic
     model::ErosionModels ErosionModels = model::noErosion;
 
+    // -- equilibration --
+    model::EquilibrationModels EquilibrationModels = model::noEquilibration;
 
     // -- dissipation --
 
@@ -359,8 +373,22 @@ struct MaterialFunctions_t
         const double erode_density_val,
         const size_t mat_point_lid) = NULL;
 
+    // -- equilibration --
+
+    void (*equilibrate) (
+        const DCArrayKokkos<bool>& MaterialPoints_eroded,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const double MaterialPoint_pres,
+        const double MaterialPoint_den,
+        const double MaterialPoint_sie,
+        const double MaterialPoint_sspd,
+        const double erode_tension_val,
+        const double erode_density_val,
+        const size_t mat_point_lid) = NULL;
+
 
     // -- Dissipation --
+
     void (*calc_dissipation) (
         const ViewCArrayKokkos<size_t> elem_node_gids,
         const RaggedRightArrayKokkos <double>& dissipation_global_vars,

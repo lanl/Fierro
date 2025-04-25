@@ -86,6 +86,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // fracture files
 #include "user_defined_fracture.h"
 
+// equilibration files
+#include "basic_equilibration.h"
+#include "no_equilibration.h"
+
 
 
 // ==============================================================================
@@ -601,8 +605,43 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     break;
                 } // end if
 
-            } // erosion model variables
-            //extract erosion model
+            } // dissipation model 
+            //extract equilibration model
+             else if (a_word.compare("equilibration_model") == 0) {
+                std::string equilibration_model = root["materials"][m_id]["material"]["equilibration_model"].As<std::string>();
+
+                // set the equilibration model
+                if (equilibration_model_map.find(equilibration_model) != equilibration_model_map.end()) {
+
+                    // equilibration_model_map[equilibration_model] returns enum value, e.g., model::equilibration
+                    switch(equilibration_model_map[equilibration_model]){
+                        case model::basicEquilibration:
+                            Materials.MaterialEnums.host(mat_id).EquilibrationModels = model::basicEquilibration;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).EquilibrationModels = model::basicEquilibration;
+                                Materials.MaterialFunctions(mat_id).equilibrate = &BasicEquilibrationModel::equilibrate;
+                            });
+                            break;
+                        case model::noEquilibration:
+                            Materials.MaterialEnums.host(mat_id).EquilibrationModels = model::noEquilibration;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).EquilibrationModels = model::noEquilibration;
+                                Materials.MaterialFunctions(mat_id).equilibrate = &NoEquilibrationModel::equilibrate;
+                            });
+                            break;
+                        default:
+                            std::cout << "ERROR: invalid equilibration input: " << equilibration_model << std::endl;
+                            throw std::runtime_error("**** Equilibration Model Not Understood ****");
+                            break;
+                    } // end switch
+                } 
+                else{
+                    std::cout << "ERROR: invalid equilibration type input: " << equilibration_model<< std::endl;
+                    throw std::runtime_error("**** equilibration model Not Understood ****");
+                    break;
+                } // end if
+             } // end equilibration
+            // level set model
             else if (a_word.compare("level_set_type") == 0) {
                 std::string level_set_type = root["materials"][m_id]["material"]["level_set_type"].As<std::string>();
 
