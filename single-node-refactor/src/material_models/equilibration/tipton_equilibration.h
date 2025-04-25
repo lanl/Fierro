@@ -32,32 +32,33 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef NO_EQUILIBRATION_H
-#define NO_EQUILIBRATION_H
+#ifndef TIPTON_EQUILIBRATION_H
+#define TIPTON_EQUILIBRATION_H
 
 
 // -----------------------------------------------------------------------------
-// This does nothing
+// This is the Tipton material pt equilibration model
 // ------------------------------------------------------------------------------
-namespace NoEquilibrationModel {
+namespace TiptonEquilibrationModel {
+    
+    KOKKOS_FUNCTION
+    static void equilibrate (
+        const DCArrayKokkos<bool>& MaterialPoints_volfrac,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DCArrayKokkos<double>& MaterialPoint_pres,
+        const DCArrayKokkos<double>& MaterialPoint_den,
+        const DCArrayKokkos<double>& MaterialPoint_sie,
+        const double MaterialPoint_sspd,
+        const RaggedRightArrayKokkos<double> &equilibration_global_vars,
+        const size_t num_vars,
+        const size_t mat_point_lid)
+    {
 
-        KOKKOS_FUNCTION
-        static void equilibrate (
-                           const DCArrayKokkos<bool>& MaterialPoints_volfrac,
-                           const DCArrayKokkos<double>& MaterialPoints_stress,
-                           const DCArrayKokkos<double>& MaterialPoint_pres,
-                           const DCArrayKokkos<double>& MaterialPoint_den,
-                           const DCArrayKokkos<double>& MaterialPoint_sie,
-                           const double MaterialPoint_sspd,
-                           const RaggedRightArrayKokkos<double> &equilibration_global_vars,
-                           const size_t num_vars,
-                           const size_t mat_point_lid)
-        {
-
-            return;
-        }
+        return;
+    }
 
 } // end namespace
+
 
 
 

@@ -87,9 +87,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "user_defined_fracture.h"
 
 // equilibration files
-#include "basic_equilibration.h"
+#include "tipton_equilibration.h"
 #include "no_equilibration.h"
-
+#include "user_defined_equilibration.h"
 
 
 // ==============================================================================
@@ -126,10 +126,12 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     DCArrayKokkos<double> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
     DCArrayKokkos<double> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
     DCArrayKokkos<double> tempGlobalDissipationVars(num_materials, 10, "temp_array_dissipation_vars");
+    DCArrayKokkos<double> tempGlobalEquilibrationVars(num_materials, 100, "temp_array_equilibration_vars");
 
     Materials.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials, "num_eos_global_vars");
     Materials.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials, "num_strength_global_vars");
-    Materials.num_dissipation_global_vars = CArrayKokkos <size_t> (num_materials, "num_dissipations_vars");
+    Materials.num_dissipation_global_vars   = CArrayKokkos <size_t> (num_materials, "num_dissipations_vars");
+    Materials.num_equilibration_global_vars = CArrayKokkos <size_t> (num_materials, "num_equilibration_vars");
 
     // initialize the num of global vars to 0 for all models
     FOR_ALL(mat_id, 0, num_materials, {
@@ -615,24 +617,39 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                     // equilibration_model_map[equilibration_model] returns enum value, e.g., model::equilibration
                     switch(equilibration_model_map[equilibration_model]){
-                        case model::basicEquilibration:
-                            Materials.MaterialEnums.host(mat_id).EquilibrationModels = model::basicEquilibration;
+                        case model::tiptonEquilibration:
+                        {
+                            Materials.MaterialEnums.host(mat_id).EquilibrationModels = model::tiptonEquilibration;
                             RUN({
-                                Materials.MaterialEnums(mat_id).EquilibrationModels = model::basicEquilibration;
-                                Materials.MaterialFunctions(mat_id).equilibrate = &BasicEquilibrationModel::equilibrate;
+                                Materials.MaterialEnums(mat_id).EquilibrationModels = model::tiptonEquilibration;
+                                Materials.MaterialFunctions(mat_id).equilibrate = &TiptonEquilibrationModel::equilibrate;
                             });
                             break;
+                        }
+                        case model::userDefinedEquilibration:
+                        {
+                            Materials.MaterialEnums.host(mat_id).EquilibrationModels = model::userDefinedEquilibration;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).EquilibrationModels = model::userDefinedEquilibration;
+                                Materials.MaterialFunctions(mat_id).equilibrate = &UserDefinedEquilibrationModel::equilibrate;
+                            });
+                            break;
+                        }
                         case model::noEquilibration:
+                        {
                             Materials.MaterialEnums.host(mat_id).EquilibrationModels = model::noEquilibration;
                             RUN({
                                 Materials.MaterialEnums(mat_id).EquilibrationModels = model::noEquilibration;
                                 Materials.MaterialFunctions(mat_id).equilibrate = &NoEquilibrationModel::equilibrate;
                             });
                             break;
+                        }
                         default:
+                        {
                             std::cout << "ERROR: invalid equilibration input: " << equilibration_model << std::endl;
                             throw std::runtime_error("**** Equilibration Model Not Understood ****");
                             break;
+                        }
                     } // end switch
                 } 
                 else{
@@ -640,7 +657,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     throw std::runtime_error("**** equilibration model Not Understood ****");
                     break;
                 } // end if
-             } // end equilibration
+            } // end equilibration
             // level set model
             else if (a_word.compare("level_set_type") == 0) {
                 std::string level_set_type = root["materials"][m_id]["material"]["level_set_type"].As<std::string>();
@@ -779,6 +796,31 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 } // end loop over global vars
 
             } // end else if
+            // exact the equilibration_global_vars
+            else if (a_word.compare("equilibration_global_vars") == 0) {
+                Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];
+
+                size_t num_global_vars = mat_global_vars_yaml.Size();
+                
+                RUN({ 
+                    Materials.num_equilibration_global_vars(mat_id) = num_global_vars;
+                });
+
+                if(num_global_vars>100){
+                    throw std::runtime_error("**** Per material, the code only supports up to 100 eos global vars in the input file ****");
+                } // end check on num_global_vars
+
+                // store the global eos model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double eos_var = root["materials"][m_id]["material"]["equilibration_global_vars"][global_var_id].As<double>();
+                    
+
+                    RUN({
+                        tempGlobalEquilibrationVars(mat_id, global_var_id) = eos_var;
+                    });
+
+                } // end loop over global vars
+            } // "equilibration_global_vars"
             //
             // print and error because text is unknown
             else {
@@ -797,7 +839,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     Materials.eos_global_vars = RaggedRightArrayKokkos <double> (Materials.num_eos_global_vars, "Materials.eos_global_vars");
     Materials.strength_global_vars = RaggedRightArrayKokkos <double> (Materials.num_strength_global_vars, "Materials.strength_global_vars");
     Materials.dissipation_global_vars = RaggedRightArrayKokkos <double> (Materials.num_dissipation_global_vars, "Materials.dissipation_global_vars");
-
+    Materials.equilibration_global_vars = RaggedRightArrayKokkos <double> (Materials.num_equilibration_global_vars, "Materials.equilibration_global_vars");
 
     // save the global variables
     FOR_ALL(mat_id, 0, num_materials, {
@@ -813,6 +855,11 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
         for (size_t var_lid=0; var_lid<Materials.num_dissipation_global_vars(mat_id); var_lid++){
             Materials.dissipation_global_vars(mat_id, var_lid) = tempGlobalDissipationVars(mat_id, var_lid);
+        } // end for strength var_lid
+
+
+        for (size_t var_lid=0; var_lid<Materials.num_equilibration_global_vars(mat_id); var_lid++){
+            Materials.equilibration_global_vars(mat_id, var_lid) = tempGlobalEquilibrationVars(mat_id, var_lid);
         } // end for strength var_lid
 
     }); // end for loop over materials

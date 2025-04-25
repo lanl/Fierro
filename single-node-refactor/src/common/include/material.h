@@ -108,7 +108,8 @@ namespace model
     enum EquilibrationModels
     {
         noEquilibration = 0,    ///<  no equilibration
-        basicEquilibration = 1  ///< basic equilbration
+        tiptonEquilibration = 1,  ///< Tipton equilbration
+        userDefinedEquilibration = 2  ///< user defined equilbration
     };
 
     // Model run locations
@@ -189,7 +190,8 @@ static std::map<std::string, model::ErosionModels> erosion_model_map
 static std::map<std::string, model::EquilibrationModels> equilibration_model_map
 {
     { "no_Equilibration", model::noEquilibration },
-    { "basic", model::basicEquilibration },
+    { "tipton", model::tiptonEquilibration },
+    { "user_defined", model::userDefinedEquilibration }
 };
 
 static std::map<std::string, model::DissipationModels> dissipation_model_map
@@ -266,7 +268,9 @@ struct MaterialEnums_t
     // Erosion model type: none or basic
     model::ErosionModels ErosionModels = model::noErosion;
 
+
     // -- equilibration --
+
     model::EquilibrationModels EquilibrationModels = model::noEquilibration;
 
     // -- dissipation --
@@ -376,14 +380,14 @@ struct MaterialFunctions_t
     // -- equilibration --
 
     void (*equilibrate) (
-        const DCArrayKokkos<bool>& MaterialPoints_eroded,
+        const DCArrayKokkos<bool>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& MaterialPoints_stress,
-        const double MaterialPoint_pres,
-        const double MaterialPoint_den,
-        const double MaterialPoint_sie,
+        const DCArrayKokkos<double>& MaterialPoint_pres,
+        const DCArrayKokkos<double>& MaterialPoint_den,
+        const DCArrayKokkos<double>& MaterialPoint_sie,
         const double MaterialPoint_sspd,
-        const double erode_tension_val,
-        const double erode_density_val,
+        const RaggedRightArrayKokkos<double> &equilibration_global_vars,
+        const size_t num_vars,
         const size_t mat_point_lid) = NULL;
 
 
@@ -455,6 +459,9 @@ struct Material_t
 
     RaggedRightArrayKokkos<double> dissipation_global_vars; ///< Array holding q1, q1ex, q2, ... for artificial viscosity
     CArrayKokkos<size_t> num_dissipation_global_vars;
+
+    RaggedRightArrayKokkos<double> equilibration_global_vars; ///< Array holding vars for equilibration models
+    CArrayKokkos<size_t> num_equilibration_global_vars;
 
     // ...
 }; // end MaterialModelVars_t

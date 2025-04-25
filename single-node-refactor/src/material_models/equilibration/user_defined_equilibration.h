@@ -32,33 +32,61 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BASIC_EQUILIBRATION_H
-#define BASIC_EQUILIBRATION_H
+#ifndef USER_DEFINED_EQUILIBRATION_H
+#define USER_DEFINED_EQUILIBRATION_H
 
 
-// -----------------------------------------------------------------------------
-// This is the basic material pt equilibration model
-// ------------------------------------------------------------------------------
-namespace BasicEquilibrationModel {
-    
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn UserDefinedEquilibrationModel
+///
+/// \brief user defined EOS model
+///
+/// This is the user material model function for the equation of state
+/// An eos function must be supplied or the code will fail to run.
+/// The pressure and sound speed can be calculated from an analytic eos.
+/// The pressure can also be calculated using p = -1/3 Trace(Stress)
+///
+/// \param Element pressure
+/// \param Element stress
+/// \param Global ID for the element
+/// \param Material ID for the element
+/// \param Element state variables
+/// \param Element Sound speed
+/// \param Material density
+/// \param Material specific internal energy
+///
+/////////////////////////////////////////////////////////////////////////////
+namespace UserDefinedEquilibrationModel
+{
+
     KOKKOS_FUNCTION
     static void equilibrate (
-                       const DCArrayKokkos<bool>&   MaterialPoints_volfrac,
-                       const DCArrayKokkos<double>& MaterialPoints_stress,
-                       const double MaterialPoint_pres,
-                       const double MaterialPoint_den,
-                       const double MaterialPoint_sie,
-                       const double MaterialPoint_sspd,
-                       const double erode_tension_val,
-                       const double erode_density_val,
-                       const size_t mat_point_lid)
+        const DCArrayKokkos<bool>& MaterialPoints_volfrac,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DCArrayKokkos<double>& MaterialPoint_pres,
+        const DCArrayKokkos<double>& MaterialPoint_den,
+        const DCArrayKokkos<double>& MaterialPoint_sie,
+        const double MaterialPoint_sspd,
+        const RaggedRightArrayKokkos<double> &equilibration_global_vars,
+        const size_t num_vars,
+        const size_t mat_point_lid)
     {
+        // -----------------------------------------------------------------------------
+        // Required variables are here
+        // ------------------------------------------------------------------------------
+
+        // -----------------------------------------------------------------------------
+        // The user coding goes here
+        // ------------------------------------------------------------------------------
 
         return;
-    }
+    } // end for user_eos_model
+
+  
 
 } // end namespace
-
 
 
 
