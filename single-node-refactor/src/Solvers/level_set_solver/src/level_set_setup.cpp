@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -32,67 +32,34 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_SOLVER_INPUT_OPTIONS_H
-#define FIERRO_SOLVER_INPUT_OPTIONS_H
-#include <stdio.h>
-#include "matar.h"
+#include "level_set_solver.h"
 
-namespace solver_input
-{
-    // solver method
-    enum method
-    {
-        NONE = 0,
-        SGH3D = 1,
-        SGHRZ = 2,
-        SGTM3D = 3,
-        levelSet = 4
-    };
-} // end of namespace
+#include "mesh.h"
+#include "region_fill.h"
+#include "material.h"
+#include "boundary_conditions.h"
+#include "state.h"
+#include "simulation_parameters.h"
+#include "geometry_new.h"
 
-static std::map<std::string, solver_input::method> solver_map
-{
-    { "dynx_FE",    solver_input::SGH3D },
-    { "dynx_FE_rz", solver_input::SGHRZ },
-    { "thrmex_FE",  solver_input::SGTM3D },
-    { "level_set",   solver_input::levelSet }
-};
-// quasi-static mechanics FE (qz-FE)
-// quasi-static thermal-mechanical FE  (qz-thmec-FE)
-// quasi-static mechanical GF (qz-GF)
-// quasi-static mechanical large-strain GF 
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \structsolver_input_t
+/// \fn setup the level set method
 ///
-/// \brief Struct for holding metadata on which solvers are used.
+/// \brief Allocate state, setup models, and fill mesh regions per the YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct solver_input_t
+void LevelSet::setup(SimulationParameters_t& SimulationParamaters, 
+                Material_t& Materials, 
+                Mesh_t& mesh, 
+                BoundaryCondition_t& Boundary,
+                State_t& State)
 {
-    solver_input::method method = solver_input::NONE;
-
-    double time_end = 0.0;
-}; // solver_input_t
-
-// ----------------------------------
-// valid inputs for solver options
-// ----------------------------------
-static std::vector<std::string> str_solver_inps
-{
-    "method",
-    "id",
-    "time_end"
-};
-
-// ----------------------------------
-// required inputs for solver options
-// ----------------------------------
-static std::vector<std::string> solver_required_inps
-{
-    "method",
-    "id"
-};
-
-#endif // end Header Guard
+    // add a flag on whether SGH was set up, if(SGH_setup_already==false)
+    
+    
+    
+} // end SGH setup

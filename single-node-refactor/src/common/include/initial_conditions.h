@@ -104,6 +104,8 @@ static std::map<std::string, init_conds::init_vector_conds> vector_ics_type_map
 static std::map<std::string, init_conds::init_scalar_conds> scalar_ics_type_map
 {
     { "uniform", init_conds::uniform },
+    { "radial", init_conds::radialScalar },
+    { "spherical", init_conds::sphericalScalar },
     { "x_linear", init_conds::xlinearScalar },
     { "y_linear", init_conds::ylinearScalar },
     { "z_linear", init_conds::zlinearScalar },

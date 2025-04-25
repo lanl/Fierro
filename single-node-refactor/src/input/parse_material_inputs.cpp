@@ -153,7 +153,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
         std::vector<std::string> user_str_material_inps;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_hydrodynamics_required_inps);
+        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_required_inps);
 
         // loop over the words in the material input definition and find the material id
         int mat_id = -1;
@@ -602,6 +602,37 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 } // end if
 
             } // erosion model variables
+            //extract erosion model
+            else if (a_word.compare("level_set_type") == 0) {
+                std::string level_set_type = root["materials"][m_id]["material"]["level_set_type"].As<std::string>();
+
+                // set the level set type
+                if (level_set_type_map.find(level_set_type) != level_set_type_map.end()) {
+
+                    // level_set_type_map[level_set_type] returns enum value, e.g., model::erosion
+                    switch(level_set_type_map[level_set_type]){
+                        case model::noLevelSet:
+                            Materials.MaterialEnums.host(mat_id).levelSetType = model::noLevelSet;
+                            break;
+                        case model::evolveFront:
+                            Materials.MaterialEnums.host(mat_id).levelSetType = model::evolveFront;
+                            break;
+                        case model::advectFront:
+                            Materials.MaterialEnums.host(mat_id).levelSetType = model::advectFront;
+                            break;                        
+                        default:
+                            std::cout << "ERROR: invalid level set input: " << level_set_type << std::endl;
+                            throw std::runtime_error("**** Level Set Type Not Understood ****");
+                            break;
+                    } // end switch
+                } 
+                else{
+                    std::cout << "ERROR: invalid erosion type input: " << level_set_type << std::endl;
+                    throw std::runtime_error("**** Erosion model Not Understood ****");
+                    break;
+                } // end if
+
+            } // level set solver type
             //
             else if (a_word.compare("erode_tension_val") == 0) {
                 double erode_tension_val = root["materials"][m_id]["material"]["erode_tension_val"].As<double>();
@@ -617,7 +648,20 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     Materials.MaterialFunctions(mat_id).erode_density_val = erode_density_val;
                 });
             } // erode_density_val
-            
+            else if (a_word.compare("normal_velocity") == 0) {
+                double normal_velocity = root["materials"][m_id]["material"]["normal_velocity"].As<double>();
+
+                RUN({
+                    Materials.MaterialFunctions(mat_id).normal_velocity = normal_velocity;
+                });
+            } // normal velocity to level set front
+            else if (a_word.compare("curvature_velocity") == 0) {
+                double curvature_velocity = root["materials"][m_id]["material"]["curvature_velocity"].As<double>();
+
+                RUN({
+                    Materials.MaterialFunctions(mat_id).curvature_velocity = curvature_velocity;
+                });
+            } // curvature_velocity            
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
                 Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];

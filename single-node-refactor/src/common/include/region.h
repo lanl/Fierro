@@ -117,6 +117,9 @@ struct RegionFill_t
     // initial conditions for specific internal energy
     init_conds::init_scalar_conds ie_field = init_conds::noICsScalar;
 
+    // initial conditions for level set field
+    init_conds::init_scalar_conds level_set_field = init_conds::noICsScalar;
+
     // initial condition for temperature distribution
     init_conds::init_scalar_conds temperature_field= init_conds::noICsScalar;
 
@@ -137,19 +140,34 @@ struct RegionFill_t
     double speed = 0.0; ///< velocity magnitude for radial velocity initialization
 
     double temperature = 0.0; ///< temperature magnitude for initialization
+    double temperature_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for temperature field
 
     double ie  = 0.0;  ///< extensive internal energy
     double sie = 0.0;  ///< specific internal energy
-    double den = 0.0;  ///< density
+    double sie_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for sie or ie field
 
+    double den = 0.0;  ///< density
+    double den_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for den field
+
+
+    double level_set = 0.0; ///< level set field
+    double level_set_slope = 0.0; ///< slope of level_set field
+    double level_set_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for level_set field
+    
     // note: setup applies min and max fcns, making it [0:1]
     double volfrac = 1.0; ///< volume fraction of material field
     double volfrac_slope = 0.0; ///< slope of volume fraction field
+    double volfrac_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for volume fraction field
 
     double specific_heat = 0.0; ///< specific heat
-    double thermal_conductivity = 0.0; ///< thermal conductivity
+    double specific_heat_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for specific heat field
 
-    double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region
+    double thermal_conductivity = 0.0; ///< thermal conductivity
+    double thermal_conductivity_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for thermal cond field
+
+
+    // the volume origin
+    double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region fill, its the volume origin
 
     int part_id = 1; // object_id in the .vtu file, starts at 1 and goes to N parts
 };
@@ -208,7 +226,8 @@ static std::vector<std::string> str_region_inps
     "specific_heat",
     "thermal_conductivity",
     "specific_internal_energy",
-    "internal_energy"
+    "internal_energy",
+    "level_set"
 };
 
 // ---------------------------------------------------------
@@ -299,6 +318,17 @@ static std::vector<std::string> str_region_thermal_conductivity_inps
     "value"
 };
 
+// ---------------------------------------------------------------------
+// valid inputs for filling level set, these are subfields under level_set
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_level_set_inps
+{
+    "type",
+    "value",
+    "slope",
+    "origin"
+};
+
 
 // ---------------------------------------------------------------------
 // valid inputs for filling volfrac, these are subfields under volume fuction
@@ -383,6 +413,16 @@ static std::vector<std::string> region_specific_heat_required_inps
 static std::vector<std::string> region_thermal_conductivity_required_inps
 {
     "type"
+};
+
+// -------------------------------------
+// required inputs for filling level set
+// -------------------------------------
+static std::vector<std::string> region_level_set_required_inps
+{
+    "type"
+//    "value",
+//    "slope"
 };
 
 // -------------------------------------

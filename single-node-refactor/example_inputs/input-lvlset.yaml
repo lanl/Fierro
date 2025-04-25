@@ -1,0 +1,371 @@
+# num_dims: 3
+
+dynamic_options:
+    time_final: 4.0
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 3000
+
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.0, 1.0, 1.0]
+    num_elems: [21, 21, 21]
+
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz #state
+    graphics_time_step: 0.1
+    #graphics_iteration_step: 100
+    gauss_pt_field_outputs: 
+        - level_set
+        - volume
+    node_field_outputs:
+        - vel
+        - grad_level_set
+
+solver_options:
+  - solver:
+        method: level_set
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # Tag z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
+
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 1.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 1.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # Tag z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
+  
+materials:
+    - material:
+        id: 0
+
+        # level set
+        level_set_type: evolve_front
+        normal_velocity: 0.1
+        curvature_velocity: 0.1
+
+
+regions:
+
+    - region:
+        volume:
+            type: box
+            x1: 0.0
+            x2: 0.5
+            y1: 0.0
+            y2: 0.5
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            value: 0.1
+            slope: 1.0
+            origin: [0.0, 0.0, 0.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
+    
+    - region:
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.0
+            y2: 0.5
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            value: 0.1
+            slope: 1.0
+            origin: [1.0, 0.0, 0.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.5
+            y2: 1.0
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            value: 0.1
+            slope: 1.0
+            origin: [1.0, 1.0, 0.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 0.0
+            x2: 0.5
+            y1: 0.5
+            y2: 1.0
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            value: 0.1
+            slope: 1.0
+            origin: [0.0, 1.0, 0.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 0.0
+            x2: 0.5
+            y1: 0.0
+            y2: 0.5
+            z1: 0.5
+            z2: 1.0
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            value: 0.1
+            slope: 1.0
+            origin: [0.0, 0.0, 1.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.0
+            y2: 0.5
+            z1: 0.5
+            z2: 1.0
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            value: 0.1
+            slope: 1.0
+            origin: [1.0, 0.0, 1.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+
+    - region:
+        volume:
+            type: box
+            x1: 0.0
+            x2: 0.5
+            y1: 0.5
+            y2: 1.0
+            z1: 0.5
+            z2: 1.0
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            value: 0.1
+            slope: 1.0
+            origin: [0.0, 1.0, 1.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.5
+            y2: 1.0
+            z1: 0.5
+            z2: 1.0
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            value: 0.1
+            slope: 1.0
+            origin: [1.0, 1.0, 1.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+#    - region:
+#        volume:
+#            type: global
+#        solver_id: 0
+#        material_id: 0
+#        level_set: 
+#            #type: uniform
+#            #value: 1.0
+#            type: spherical
+#            value: 0.1
+#            slope: 1.0
+#            origin: [0.5, 0.5, 0.5]
+#        volume_fraction:
+#            type: uniform
+#            value: 1.0
+
+#    - region:
+#        volume:
+#            type: box
+#            x1: 0.5
+#            x2: 1.0
+#            y1: 0.5
+#            y2: 1.0
+#            z1: 0.5
+#            z2: 1.0
+#        solver_id: 0
+#        material_id: 0
+#        level_set: 
+#            type: spherical
+#            value: 0.0
+#            slope: 1.0
+#            origin: [1.0, 1.0, 1.0]
+#        volume_fraction:
+#            type: uniform
+#            value: 1.0
+#
+#    - region:
+#        volume:
+#            type: box
+#            x1: 0.5
+#            x2: 1.0
+#            y1: 0.0
+#            y2: 0.5
+#            z1: 0.5
+#            z2: 1.0
+#        solver_id: 0
+#        material_id: 0
+#        level_set: 
+#            type: spherical
+#            value: 0.0
+#            slope: 1.0
+#            origin: [1.0, 0.0, 1.0]
+#        volume_fraction:
+#            type: uniform
+#            value: 1.0

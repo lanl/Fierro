@@ -181,6 +181,7 @@ struct BoundaryConditionSetup_t
 struct BoundaryConditionEnums_t
 {
     solver_input::method solver = solver_input::NONE; ///< Numerical solver method
+
     // BC model for velocity
     boundary_conditions::BCVelocityModels BCVelocityModel = boundary_conditions::noVelocityBC;    ///< Type of velocity boundary condition
 

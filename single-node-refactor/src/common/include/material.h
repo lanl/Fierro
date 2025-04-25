@@ -113,6 +113,14 @@ namespace model
         dual = 2,       ///<  multi-scale solver, solver is on cpu and solver calls model on device
     };
 
+    // level set 
+    enum levelSetType
+    {
+        noLevelSet  = 0, ///<  No level set model used
+        evolveFront = 1, ///<  evolve the front in the normal directdion
+        advectFront = 2,    ///<  advect the front using prescribed velocity
+    };
+
 } // end model namespace
 
 
@@ -181,6 +189,13 @@ static std::map<std::string, model::DissipationModels> dissipation_model_map
     { "directional_MARS_rz", model::directionalMARSRZ },
 };
 
+static std::map<std::string, model::levelSetType> level_set_type_map
+{
+    { "no_level_set", model::noLevelSet },
+    { "evolve_front", model::evolveFront }
+    //{ "advect_front", model::advectFront }
+};
+
 namespace model_init
 {
 // strength model setup
@@ -236,7 +251,7 @@ struct MaterialEnums_t
 
     // -- erosion --
 
-    // Erosion model type: none or basis
+    // Erosion model type: none or basic
     model::ErosionModels ErosionModels = model::noErosion;
 
 
@@ -244,6 +259,12 @@ struct MaterialEnums_t
 
     // dissipation model
     model::DissipationModels DissipationModels = model::noDissipation;
+
+
+    // -- level set --
+
+    // level set model type: none, evolve, or advect
+    model::levelSetType levelSetType = model::noLevelSet;
 
 }; // end boundary condition enums
 
@@ -360,6 +381,12 @@ struct MaterialFunctions_t
         const size_t mat_id) = NULL;
         // in 2D, in place of vol, the elem facial area is passed
 
+
+    // -- level set --
+    // front_velocity = (normal_velocity - curvature*Kappa)
+    double normal_velocity=0.0;    ///< level set velocity in normal direction
+    double curvature_velocity=0.0; ///< level set velocity contribution from curvature
+
 }; // end material_t
 
 /////////////////////////////////////////////////////////////////////////////
@@ -421,12 +448,20 @@ static std::vector<std::string> str_material_inps
     "erosion_model",
     "erode_tension_val",
     "erode_density_val",
+    "level_set_type",
+    "normal_velocity",
+    "curvature_velocity"
 };
 
 // ---------------------------------------------------------------
 // required inputs for material options are specified here.
 // The requirements vary depending on the problem type and solver
 // ---------------------------------------------------------------
+static std::vector<std::string> material_required_inps
+{
+    "id"
+};
+
 static std::vector<std::string> material_hydrodynamics_required_inps
 {
     "id",
@@ -452,6 +487,12 @@ static std::vector<std::string> material_thermal_statics_required_inps
 {
     "id",
     "thermal_global_vars"
+};
+
+static std::vector<std::string> material_level_set_required_inps
+{
+    "id",
+    "level_set_type"
 };
 
 #endif // end Header Guard

@@ -685,6 +685,32 @@ void parse_regions(Yaml::Node& root,
                             region_fills(reg_id).volfrac_slope = slope;
                         });
                     } // slope
+                    else if (a_subfield_word.compare("origin") == 0) {
+                        std::string origin = root["regions"][reg_id]["region"]["volume_fraction"]["origin"].As<std::string>();
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(origin, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        // storing the origin values as (x1,y1,z1)
+                        RUN({
+                            region_fills(reg_id).volfrac_origin[0] = x1;
+                            region_fills(reg_id).volfrac_origin[1] = y1;
+                            region_fills(reg_id).volfrac_origin[2] = z1;
+                        });
+                    } // origin
                     else if (a_subfield_word.compare("type") == 0){
 
                         std::string type = root["regions"][reg_id]["region"]["volume_fraction"]["type"].As<std::string>();
@@ -699,6 +725,20 @@ void parse_regions(Yaml::Node& root,
                                     std::cout << "Setting volfrac initial conditions type to uniform " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volfrac_field = init_conds::uniform;
+                                    });
+                                    break;
+
+                                case init_conds::radialScalar:
+                                    std::cout << "Setting volfrac initial conditions type to radial scalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volfrac_field = init_conds::radialScalar;
+                                    });
+                                    break;
+
+                                case init_conds::sphericalScalar:
+                                    std::cout << "Setting volfrac initial conditions type to spherical scalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volfrac_field = init_conds::sphericalScalar;
                                     });
                                     break;
 
@@ -875,6 +915,172 @@ void parse_regions(Yaml::Node& root,
                 } // end for loop over text
 
             } // temperature
+            else if (a_word.compare("level_set") == 0) {
+
+                // check to see if level set enum was saved
+                bool store = true;
+                for (auto field : fill_gauss_states){
+                    if (field == fill_gauss_state::level_set){store = false;}
+                }
+                // store level set name if it has not been stored already
+                if(store){
+                    fill_gauss_states.push_back(fill_gauss_state::level_set);
+                }
+                
+                // -----
+                // loop over the sub fields under level set
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["level_set"];
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_level_set_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_level_set_inputs, str_region_level_set_inps, region_level_set_required_inps);
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_level_set_inputs){ 
+
+                    if (a_subfield_word.compare("value") == 0) {
+                        // level set
+                        double value = root["regions"][reg_id]["region"]["level_set"]["value"].As<double>();
+
+                        RUN({
+                            region_fills(reg_id).level_set = value;
+                        });
+                    } // value
+                    else if (a_subfield_word.compare("slope") == 0) {
+                        // volfrac slope
+                        double slope = root["regions"][reg_id]["region"]["level_set"]["slope"].As<double>();
+        
+                        RUN({
+                            region_fills(reg_id).level_set_slope = slope;
+                        });
+                    } // slope
+                    else if (a_subfield_word.compare("origin") == 0) {
+                        std::string origin = root["regions"][reg_id]["region"]["level_set"]["origin"].As<std::string>();
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(origin, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        // storing the origin values as (x1,y1,z1)
+                        RUN({
+                            region_fills(reg_id).level_set_origin[0] = x1;
+                            region_fills(reg_id).level_set_origin[1] = y1;
+                            region_fills(reg_id).level_set_origin[2] = z1;
+                        });
+                    } // origin
+                    else if (a_subfield_word.compare("type") == 0){
+
+                        std::string type = root["regions"][reg_id]["region"]["level_set"]["type"].As<std::string>();
+
+                        // set the IC tag type
+                        if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
+                        
+                            // scalar_ics_type_map[type] returns enum value, e.g., init_conds::uniform 
+                            switch(scalar_ics_type_map[type]){
+
+                                case init_conds::uniform:
+                                    std::cout << "Setting level set initial conditions type to uniform " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::uniform;
+                                    });
+                                    break;
+                                case init_conds::radialScalar:
+                                    std::cout << "Setting level set initial conditions type to radial scalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::radialScalar;
+                                    });
+                                    break;
+                                case init_conds::sphericalScalar:
+                                    std::cout << "Setting level set initial conditions type to spherical scalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::sphericalScalar;
+                                    });
+                                    break;
+                                case init_conds::xlinearScalar:
+                                    std::cout << "Setting volfrac initial conditions type to xlinearScalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::xlinearScalar;
+                                    });
+                                    break;
+                                
+                                case init_conds::ylinearScalar:
+                                    std::cout << "Setting volfrac initial conditions type to ylinearScalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::ylinearScalar;
+                                    });
+                                    break;
+                                
+                                case init_conds::zlinearScalar:
+                                    std::cout << "Setting volfrac initial conditions type to zlinearScalar " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::zlinearScalar;
+                                    });
+                                    break;
+                                case init_conds::tgVortexScalar:
+                                    std::cout << "Setting level set initial conditions type to TG Vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).level_set_field = init_conds::tgVortexScalar;
+                                    });
+                                    break;
+
+                                case init_conds::noICsScalar:
+                                    std::cout << "Setting level set initial conditions type to no level set" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).level_set_field = init_conds::noICsScalar;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).level_set_field = init_conds::noICsScalar;
+                                    });
+
+                                    std::cout << "ERROR: No valid level set intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : scalar_ics_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** level set Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** level set IC Not Understood ****");
+                        } // end if on level set type
+                        
+                    } // end if on level set type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_level_set_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region level set Inputs Not Understood ****");
+                    } // end if on all subfields under level set
+
+                } // end for loop over text
+
+            } // level set
             else if (a_word.compare("velocity") == 0) {
 
                 // check to see if velocity enum was saved

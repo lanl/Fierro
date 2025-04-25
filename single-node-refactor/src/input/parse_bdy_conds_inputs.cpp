@@ -283,7 +283,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
                             });
                             break;
-                            case boundary_conditions::pistonVelocityBC:
+                        case boundary_conditions::pistonVelocityBC:
                             std::cout << "Setting piston velocity bc " << std::endl;
                             
                             RUN({
@@ -311,7 +311,6 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     throw std::runtime_error("**** Boundary Condition Velocity Model Not Understood ****");
                 } // end if
             } // type
-
 
             else if (a_word.compare("temperature_model") == 0) {
                 std::cout << "Inside temperature_model check" << std::endl;
@@ -444,9 +443,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     throw std::runtime_error("**** Boundary Condition Stress Model Not Understood ****");
                 } // end if
             } // type of stress model
-            // get boundary condition direction -- host or device
 
-            // get boundary condition location
+            // get boundary condition location -- host or device
             else if (a_word.compare("location") == 0) {
                 std::string location = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
