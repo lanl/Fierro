@@ -585,7 +585,7 @@ void EVPFFT::evolve()
         harden(imicro);
       }
 
-      calc_c0();
+      //calc_c0();
       deinit_c0_s0();
 
 #ifndef ABSOLUTE_NO_OUTPUT

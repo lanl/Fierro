@@ -89,7 +89,8 @@ void EVPFFT::calc_c0()
                   sch(3,is,i,j,k)*sg6(3) + 
                   sch(4,is,i,j,k)*sg6(4) + 
                   sch(5,is,i,j,k)*sg6(5);
-#endif      isign = 1;
+#endif
+        isign = 1;
         if ( (rss(is,i,j,k)-xkin(is,i,j,k)) < 0.0 ) {
           isign = 2;
         }
