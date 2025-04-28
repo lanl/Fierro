@@ -64,7 +64,7 @@ enum class fill_gauss_state
 ///
 /// \struct fillGaussState_t
 ///
-/// \brief Stores state to setup of a problem
+/// \brief Stores state to setup a problem
 ///
 /////////////////////////////////////////////////////////////////////////////
 // Possible states, used to initialize fillState_t
@@ -378,6 +378,36 @@ struct GaussPoint_t
 
 /////////////////////////////////////////////////////////////////////////////
 ///
+/// \struct MeshtoMaterialMap_t
+///
+/// \brief Stores state information associated with maps from material to mesh maps
+///
+/////////////////////////////////////////////////////////////////////////////
+struct MeshtoMaterialMap_t
+{
+    DCArrayKokkos<size_t> num_mats_in_elem; ///< returns the exact number of materials in elem
+    DCArrayKokkos<size_t> mat_id;           ///< returns the mat_id 
+    DCArrayKokkos<size_t> mat_storage_lid;  ///< returns the material storage local index
+
+    // initialization method for FE-SGH and MPM methods (max number of elems needed)
+    void initialize(size_t num_elem_max, size_t num_mats_per_elem_max)
+    {
+        if (num_mats_in_elem.size() == 0){
+            this->num_mats_in_elem = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "num_mats_in_elem");
+        }
+        if (mat_id.size() == 0){
+            this->mat_id = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_id_in_elem");
+        }
+        if (mat_storage_lid.size() == 0){
+            this->mat_storage_lid = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_storage_lid_in_elem");
+        }
+        
+    }; // end method
+}; // end MeshtoMaterialMaps_t
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
 /// \struct MaterialtoMeshMap_t
 ///
 /// \brief Stores state information associated with maps from material to mesh maps
@@ -392,7 +422,9 @@ struct MaterialToMeshMap_t
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize(size_t num_elem_max)
     {
-        if (elem.size() == 0) this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
+        if (elem.size() == 0){ 
+            this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
+        }
     }; // end method
 }; // end MaterialtoMeshMaps_t
 
