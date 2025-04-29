@@ -85,6 +85,9 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                              num_mats_per_elem,
                              num_mats);
 
+    // allocate memory for mat_ids, num_mats_in_elem, and mat_storage_lid 
+    State.MeshtoMaterialMaps.initialize(num_elems, num_mats_per_elem); 
+
     // Remember, the solver is initialized prior to this function, creating nodal state
 
     // a local array for reading the values on a voxel mesh file, it's allocated in the mesh file read
@@ -111,8 +114,8 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fillGaussState.poisson_ratios,
                  fillGaussState.level_set,
                  fillElemState.volfrac,
-                 fillElemState.mat_id,
-                 fillElemState.num_mats_saved_in_elem,
+                 State.MeshtoMaterialMaps.mat_id,
+                 State.MeshtoMaterialMaps.num_mats_in_elem,
                  voxel_elem_mat_id,
                  SimulationParamaters.mesh_input.object_ids,
                  SimulationParamaters.region_setups.region_fills,
@@ -140,10 +143,10 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
         FOR_REDUCE_SUM(elem_gid, 0, num_elems, sum_local, {
 
             // loop over the materials in the element
-            for (size_t a_mat_in_elem=0; a_mat_in_elem < fillElemState.num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
+            for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem(elem_gid); a_mat_in_elem++){
 
                 // check to see if it is mat_id
-                if (fillElemState.mat_id(elem_gid, a_mat_in_elem) == mat_id) {
+                if (State.MeshtoMaterialMaps.mat_id(elem_gid, a_mat_in_elem) == mat_id) {
                     // increment the number of elements the materials live in
                     sum_local++;
                 } // end if a_mat is equal to mat_id
@@ -689,21 +692,19 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
 
     // ------------------------------------------------------
-    // Allocate memory and populate the MeshtoMaterial space
+    // MeshtoMaterial space was allocated in simulations setup
+    // The mat_ids and num_mats_in_elem saved were populated
+    // in fill_regions
     // ------------------------------------------------------
-    State.MeshtoMaterialMaps.num_mats_in_elem = fillElemState.num_mats_saved_in_elem;
-    State.MeshtoMaterialMaps.mat_id = fillElemState.mat_id;
-    const size_t num_mats_in_elem_max = fillElemState.mat_id.dims(1);
-    State.MeshtoMaterialMaps.initialize(num_elems, num_mats_in_elem_max); // allocate memory for mat_storage_lid 
-
+     
 
     // the following loop is not thread safe
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
 
-        for (size_t a_mat_in_elem=0; a_mat_in_elem < fillElemState.num_mats_saved_in_elem.host(elem_gid); a_mat_in_elem++){
+        for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem.host(elem_gid); a_mat_in_elem++){
 
             // get the material_id in this element
-            size_t mat_id = fillElemState.mat_id.host(elem_gid,a_mat_in_elem);
+            size_t mat_id = State.MeshtoMaterialMaps.mat_id.host(elem_gid,a_mat_in_elem);
 
             // mat elem lid (compressed storage) to save the data to, for this material mat_id
             size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);

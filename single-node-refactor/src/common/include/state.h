@@ -161,10 +161,11 @@ struct fillElemState_t
 
     DCArrayKokkos<double> volfrac;  ///< element volume fraction
 
-    // arrays for building material index space
-    DCArrayKokkos <size_t> mat_id;            ///< material ids in the element (num_elems, num_mats_saved)
-    DCArrayKokkos <size_t> num_mats_saved_in_elem; ///< material ids in the element (num_elems,num_mats_saved)
-    DCArrayKokkos <size_t> num_elems_saved_for_mat;///< the number of elements the material resides in, (num_mats)
+    // arrays for building material index space:
+    //    mat_id                     material ids in the element (num_elems, num_mats_saved)
+    //    num_mats_saved_in_elem     material ids in the element (num_elems,num_mats_saved)
+    //    num_elems_saved_for_mat    the number of elements the material resides in, (num_mats)
+    // are in the MeshToMaterialMap struct
    
     
     // initialization method 
@@ -176,18 +177,6 @@ struct fillElemState_t
 
         if (volfrac.size() == 0){
             this->volfrac = DCArrayKokkos<double>(num_elems, max_mats_in_elem, "elem_volfrac");
-        }
-
-        if (mat_id.size() == 0) this->mat_id = DCArrayKokkos <size_t> (num_elems, max_mats_in_elem, "elem_mat_id");
-        
-        if (num_mats_saved_in_elem.size() == 0){
-            this->num_mats_saved_in_elem = DCArrayKokkos <size_t> (num_elems, "num_mats_saved_in_elem"); 
-            num_mats_saved_in_elem.set_values(0); // initialize all elems to storing 0 materials
-            num_mats_saved_in_elem.update_host(); // copy from GPU to CPU
-        }
-
-        if (num_elems_saved_for_mat.size() == 0){
-            num_elems_saved_for_mat = DCArrayKokkos <size_t> (num_mats, "num_elems_saved_for_mat");
         }
 
         // voxel_elem_mat_id is allocated in the voxel file read
