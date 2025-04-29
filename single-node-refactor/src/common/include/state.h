@@ -163,7 +163,7 @@ struct fillElemState_t
 
     // arrays for building material index space:
     //    mat_id                     material ids in the element (num_elems, num_mats_saved)
-    //    num_mats_saved_in_elem     material ids in the element (num_elems,num_mats_saved)
+    //    num_mats_saved_in_elem     material ids in the element (num_elems, num_mats_saved)
     //    num_elems_saved_for_mat    the number of elements the material resides in, (num_mats)
     // are in the MeshToMaterialMap struct
    
