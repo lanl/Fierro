@@ -174,7 +174,9 @@ struct fillElemState_t
     {
         this-> max_mats_in_elem = max_mat_storage_in_elem;
 
-        if (volfrac.size() == 0) this->volfrac = DCArrayKokkos<double>(num_elems, max_mats_in_elem, "elem_volfrac");
+        if (volfrac.size() == 0){
+            this->volfrac = DCArrayKokkos<double>(num_elems, max_mats_in_elem, "elem_volfrac");
+        }
 
         if (mat_id.size() == 0) this->mat_id = DCArrayKokkos <size_t> (num_elems, max_mats_in_elem, "elem_mat_id");
         
@@ -393,7 +395,9 @@ struct MeshtoMaterialMap_t
     void initialize(size_t num_elem_max, size_t num_mats_per_elem_max)
     {
         if (num_mats_in_elem.size() == 0){
-            this->num_mats_in_elem = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "num_mats_in_elem");
+            this->num_mats_in_elem = DCArrayKokkos<size_t>(num_elem_max, "num_mats_in_elem");
+            this->num_mats_in_elem.set_values(0); // initialize all elems to storing 0 materials
+            this->num_mats_in_elem.update_host(); // copy from GPU to CPU
         }
         if (mat_id.size() == 0){
             this->mat_id = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_id_in_elem");
@@ -851,28 +855,29 @@ struct State_t
     // ---------------------------------------------------------------------
     //    state data on mesh declarations
     // ---------------------------------------------------------------------
-    node_t node;
-    GaussPoint_t GaussPoints;
-    corner_t corner;
+    node_t node;              ///< access as node.coords(node_gid,dim)
+    GaussPoint_t GaussPoints; ///< access as GaussPoints.vol(gauss_pt_gid)
+    corner_t corner;          ///< access as corner.force(corner_gid,dim)
 
     // ---------------------------------------------------------------------
-    //    material to mesh maps
+    //    material to mesh maps and mesh to material maps
     // ---------------------------------------------------------------------
-    CArray<MaterialToMeshMap_t> MaterialToMeshMaps;   ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
+    CArray<MaterialToMeshMap_t> MaterialToMeshMaps; ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
+    MeshtoMaterialMap_t MeshtoMaterialMaps;          ///< acces as MeshtoMaterialMaps.mat_id(elem, mat_lid)
 
     // ---------------------------------------------------------------------
     //    material to material maps
     // ---------------------------------------------------------------------
     corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_lid, corn_lid)
-    points_in_mat_t points_in_mat_elem;  ///< for accessing e.g., gauss points mat lid with arbitrary-order FE
-    zones_in_mat_t zones_in_mat_elem;   ///< for accessing sub-zones mat lid with arbitrary-order FE
+    points_in_mat_t points_in_mat_elem;   ///< for accessing e.g., gauss points mat lid with arbitrary-order FE
+    zones_in_mat_t zones_in_mat_elem;     ///< for accessing sub-zones mat lid with arbitrary-order FE
 
     // ---------------------------------------------------------------------
     //    material state, compressed, and sequentially accessed
     // ---------------------------------------------------------------------
-    CArray<MaterialPoint_t> MaterialPoints;  ///< access as MaterialPoints(mat_id).var(mat_pt)
+    CArray<MaterialPoint_t> MaterialPoints;   ///< access as MaterialPoints(mat_id).var(mat_pt)
     CArray<MaterialCorner_t> MaterialCorners; ///< access as MaterialCorners(mat_id).var(mat_corner), not used with MPM
-    CArray<MaterialZone_t> MaterialZones;   ///< access as MaterialZones(mat_id).var(mat_zone), only used with arbitrary-order FE
+    CArray<MaterialZone_t> MaterialZones;     ///< access as MaterialZones(mat_id).var(mat_zone), only used with arbitrary-order FE
 }; // end state_t
 
 

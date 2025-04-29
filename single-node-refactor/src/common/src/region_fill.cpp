@@ -683,13 +683,23 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     // --- set the level set field ---
     if( State.GaussPoints.level_set.host.size()>0 ){
         State.GaussPoints.level_set.set_values(1.0e32); // make level set have a default huge
+        Kokkos::fence();
+        State.GaussPoints.level_set.update_host();
     }
-    Kokkos::fence();
-    State.GaussPoints.level_set.update_host();
+
+
+    // ------------------------------------------------------
+    // Allocate memory and populate the MeshtoMaterial space
+    // ------------------------------------------------------
+    State.MeshtoMaterialMaps.num_mats_in_elem = fillElemState.num_mats_saved_in_elem;
+    State.MeshtoMaterialMaps.mat_id = fillElemState.mat_id;
+    const size_t num_mats_in_elem_max = fillElemState.mat_id.dims(1);
+    State.MeshtoMaterialMaps.initialize(num_elems, num_mats_in_elem_max); // allocate memory for mat_storage_lid 
 
 
     // the following loop is not thread safe
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+
         for (size_t a_mat_in_elem=0; a_mat_in_elem < fillElemState.num_mats_saved_in_elem.host(elem_gid); a_mat_in_elem++){
 
             // get the material_id in this element
@@ -700,6 +710,10 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
             // --- mapping from material elem lid to elem ---
             State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
+
+            // --- mapping from elem to material index space ---
+            State.MeshtoMaterialMaps.mat_storage_lid(elem_gid, a_mat_in_elem) = mat_elem_lid;
+            
 
             // -----------------------
             // Save MaterialPoints
