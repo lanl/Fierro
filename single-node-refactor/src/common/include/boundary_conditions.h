@@ -65,7 +65,8 @@ enum BCVelocityModels
     reflectedVelocityBC = 3,
     zeroVelocityBC = 4,
     userDefinedVelocityBC = 5,
-    pistonVelocityBC = 6
+    pistonVelocityBC = 6,
+    reflectedRadialVelocityBC = 7
 };
 
 // types of temperature boundary conditions
@@ -124,7 +125,8 @@ static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_
     { "reflected", boundary_conditions::reflectedVelocityBC },
     { "fixed", boundary_conditions::zeroVelocityBC },
     { "user_defined", boundary_conditions::userDefinedVelocityBC },
-    { "piston", boundary_conditions::pistonVelocityBC }
+    { "piston", boundary_conditions::pistonVelocityBC },
+    { "reflected_radial", boundary_conditions::reflectedRadialVelocityBC },
 };
 
 
@@ -209,6 +211,7 @@ struct BoundaryConditionFunctions_t
         const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
         const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& node_coords,
         const double time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,

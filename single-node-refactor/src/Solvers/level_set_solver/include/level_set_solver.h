@@ -258,6 +258,7 @@ public:
         const Mesh_t&  mesh,
         const BoundaryCondition_t& BoundaryConditions,
         DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& node_coords,
         const double time_value,
         const double small) const;
 

@@ -65,6 +65,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "no_velocity_bc.h"
 #include "piston_velocity_bc.h"
 #include "reflected_velocity_bc.h"
+#include "reflected_radial_velocity_bc.h"
 #include "time_varying_velocity_bc.h"
 #include "user_defined_velocity_bc.h"
 #include "zero_velocity_bc.h"
@@ -266,7 +267,14 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ReflectedVelocityBC::velocity;
                             });
                             break;
-
+                        case boundary_conditions::reflectedRadialVelocityBC:
+                            std::cout << "Setting reflected radial velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::reflectedRadialVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ReflectedRadialVelocityBC::velocity;
+                            });
+                            break;
                         case boundary_conditions::zeroVelocityBC:
                             std::cout << "Setting zero velocity bc " << std::endl;
                             

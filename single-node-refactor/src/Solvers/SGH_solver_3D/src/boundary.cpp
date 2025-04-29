@@ -51,6 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH3D::boundary_velocity(const Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               DCArrayKokkos<double>& node_vel,
+                              const DCArrayKokkos<double>& node_coords,
                               const double time_value) const
 {
     size_t num_vel_bdy_sets = BoundaryConditions.num_vel_bdy_sets_in_solver.host(this->solver_id);
@@ -72,6 +73,7 @@ void SGH3D::boundary_velocity(const Mesh_t&      mesh,
                 BoundaryConditions.velocity_bc_global_vars,
                 BoundaryConditions.bc_state_vars,
                 node_vel,
+                node_coords,
                 time_value,
                 1, // rk_stage isn't used
                 bdy_node_gid,

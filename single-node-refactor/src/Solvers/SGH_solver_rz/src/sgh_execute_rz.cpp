@@ -98,7 +98,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 
     std::cout << "Applying initial boundary conditions" << std::endl;
-    boundary_velocity_rz(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
+    boundary_velocity_rz(mesh, BoundaryConditions, State.node.vel, State.node.coords, time_value); // Time value = 0.0;
 
 
 
@@ -337,7 +337,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                State.corner.force);
 
             // ---- apply velocity boundary conditions to the boundary patches----
-            boundary_velocity_rz(mesh, BoundaryConditions, State.node.vel, time_value);
+            boundary_velocity_rz(mesh, BoundaryConditions, State.node.vel, State.node.coords, time_value);
 
             // ---- apply contact boundary conditions to the boundary patches----
             //boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);

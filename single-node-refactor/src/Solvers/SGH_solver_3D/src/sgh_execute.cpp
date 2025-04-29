@@ -87,7 +87,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     size_t output_id=0; // the id for the outputs written
 
     std::cout << "Applying initial boundary conditions" << std::endl;
-    boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
+    boundary_velocity(mesh, BoundaryConditions, State.node.vel, State.node.coords, time_value); // Time value = 0.0;
 
     // extensive energy tallies over the entire mesh
     double IE_t0 = 0.0;
@@ -335,7 +335,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.corner.force);
 
             // ---- apply velocity boundary conditions to the boundary patches----
-            boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);
+            boundary_velocity(mesh, BoundaryConditions, State.node.vel, State.node.coords, time_value);
 
             // ---- apply contact boundary conditions to the boundary patches----
             boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);

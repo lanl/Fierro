@@ -1026,8 +1026,9 @@ public:
                                 in,
                                 size);
         if(found==false){
-            throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
-            //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
+            //throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
+            std::cout << "ObjectIDs were not found in the XML file, only a mesh will be read in." << std::endl;
+            std::cout << "This XML file cannot be used for region setup." << std::endl;
         }
         mesh_inps.object_ids.update_device();
 

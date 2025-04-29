@@ -51,6 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void LevelSet::boundary_velocity(const Mesh_t&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
                                  DCArrayKokkos<double>& node_level_set_vel,
+                                 const DCArrayKokkos<double>& node_coords,
                                  const double time_value,
                                  const double small) const
 {
@@ -73,6 +74,7 @@ void LevelSet::boundary_velocity(const Mesh_t&      mesh,
                 BoundaryConditions.velocity_bc_global_vars,
                 BoundaryConditions.bc_state_vars,
                 node_level_set_vel,
+                node_coords,
                 time_value,
                 1, // rk_stage isn't used
                 bdy_node_gid,

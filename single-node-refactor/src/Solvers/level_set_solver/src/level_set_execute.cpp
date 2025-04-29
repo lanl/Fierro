@@ -252,7 +252,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
                 if (Materials.MaterialEnums.host(mat_id).levelSetType == model::evolveFront){
-                    boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, time_value, small);
+                    boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, State.node.coords, time_value, small);
                 } //
                 else if (Materials.MaterialEnums.host(mat_id).levelSetType == model::advectFront){
                     

@@ -52,6 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
                                  DCArrayKokkos<double>& node_vel,
+                                 const DCArrayKokkos<double>& node_coords,
                                  const double time_value) const
 {
 
@@ -74,6 +75,7 @@ void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
                                                                   BoundaryConditions.velocity_bc_global_vars,
                                                                   BoundaryConditions.bc_state_vars,
                                                                   node_vel,
+                                                                  node_coords,
                                                                   time_value,
                                                                   1, // rk_stage
                                                                   bdy_node_gid,

@@ -56,6 +56,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                       fillElemState_t&  fillElemState)
 {
 
+
     // the number of elems and nodes in the mesh
     const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
@@ -89,7 +90,6 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
     // a local array for reading the values on a voxel mesh file, it's allocated in the mesh file read
     DCArrayKokkos <size_t> voxel_elem_mat_id; // 1 or 0 if material exist, or it is the material_id
-
 
     // ---------------------------------------------
     // fill guass point state (den, sie, ...) and nodal state (velocity, temperature, ...) on the mesh
@@ -187,6 +187,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
     // done, the solver init functions will be called after this function via the driver
 
+
 } // end of simulation_setup function
 
 
@@ -248,11 +249,36 @@ void fill_regions(
         std::vector <fill_node_state>& fill_node_states,
         const size_t num_mats_per_elem)
 {
+
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
     size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
 
     size_t num_fills_total = region_fills.size();  // the total number of fills in the input file
+
+
+    // ----------------------------
+    // setup checks
+    DCArrayKokkos <bool> error_check(1);
+    RUN({error_check(0) = false;});
+    for (size_t fill_id=0; fill_id<num_fills_total; fill_id++){
+        RUN({
+            if(region_fills(fill_id).volume == region::readVTUFile && object_ids.size() == 0){
+                error_check(0) = true;
+            }
+        });
+        Kokkos::fence();
+        error_check.update_host();
+
+        if(error_check.host(0) == true){
+            throw std::runtime_error("**** ObjectIDs Missing, Cannot Use .vtu Mesh File to Fill a Region ****");
+        }
+    } // end loop over 
+
+    // add more checks on setup here
+
+    // ----------------------------
+
 
 
     // local variables to this routine
@@ -317,6 +343,7 @@ void fill_regions(
             elem_coords(elem_gid, 2) = 0.0;
 
             // get the coordinates of the element center 
+
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
                 elem_coords(elem_gid, 0) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 0);
                 elem_coords(elem_gid, 1) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 1);
@@ -327,9 +354,10 @@ void fill_regions(
                     elem_coords(elem_gid, 2) = 0.0;
                 }
             } // end loop over nodes in element
-            elem_coords(elem_gid, 0) = (elem_coords(elem_gid, 0) / mesh.num_nodes_in_elem);
-            elem_coords(elem_gid, 1) = (elem_coords(elem_gid, 1) / mesh.num_nodes_in_elem);
-            elem_coords(elem_gid, 2) = (elem_coords(elem_gid, 2) / mesh.num_nodes_in_elem);
+
+            elem_coords(elem_gid, 0) = elem_coords(elem_gid, 0) / ((double)mesh.num_nodes_in_elem);
+            elem_coords(elem_gid, 1) = elem_coords(elem_gid, 1) / ((double)mesh.num_nodes_in_elem);
+            elem_coords(elem_gid, 2) = elem_coords(elem_gid, 2) / ((double)mesh.num_nodes_in_elem);
 
             ViewCArrayKokkos <double> coords(&elem_coords(elem_gid,0), 3);
 
@@ -353,10 +381,10 @@ void fill_regions(
 
             // paint the material state on the element if fill_this=1
             if (fill_this == 1) {
-                
+               
                 // calculate volume fraction of the region intersecting the element
                 double geo_volfrac = 1.0; 
-             
+              
                 // get the volfrac for the region
                 double vfrac = get_region_scalar(coords,
                                                  region_fills(fill_id).volfrac,
@@ -404,7 +432,6 @@ void fill_regions(
         Kokkos::fence();
 
     } // end for loop over fills
-
 
     //---------
     // parallel loop over elements in the mesh and set specified state
@@ -1216,7 +1243,6 @@ size_t fill_geometric_region(const Mesh_t& mesh,
 
     // default is not to fill the element
     size_t fill_this = 0;
-
 
     // for shapes with an origin (e.g., sphere and circle), accounting for the origin
     double dist_x = mesh_coords(0) - region_fills(f_id).origin[0];
