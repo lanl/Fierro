@@ -2583,7 +2583,7 @@ public:
         if (sie_id>=0){
             FOR_ALL(elem_gid, 0, num_elems, {
                 // get sie by dividing by the mass
-                elem_scalar_fields(sie_id, elem_gid) /= elem_scalar_fields(mass_id, elem_gid); 
+                elem_scalar_fields(sie_id, elem_gid) /= (elem_scalar_fields(mass_id, elem_gid)+1.e-20); 
             });
         } // end if
 
@@ -3888,7 +3888,7 @@ public:
                                 const int mat_conductivity_id,
                                 const int mat_specific_heat_id)
     {
-        
+      
         // --- loop over the material point states
 
         for (auto field : output_material_pt_states){

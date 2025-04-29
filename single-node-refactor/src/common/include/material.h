@@ -491,6 +491,8 @@ static std::vector<std::string> str_material_inps
     "erosion_model",
     "erode_tension_val",
     "erode_density_val",
+    "equilibration_model",
+    "equilibration_global_vars",
     "level_set_type",
     "normal_velocity",
     "curvature_velocity"
