@@ -57,4 +57,8 @@ using namespace mtr;
 // parse the material text
 void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims);
 
+
+// parse multimaterial test
+void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials);
+
 #endif // end Header Guard

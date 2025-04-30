@@ -269,10 +269,6 @@ struct MaterialEnums_t
     model::ErosionModels ErosionModels = model::noErosion;
 
 
-    // -- equilibration --
-
-    model::EquilibrationModels EquilibrationModels = model::noEquilibration;
-
     // -- dissipation --
 
     // dissipation model
@@ -377,27 +373,6 @@ struct MaterialFunctions_t
         const double erode_density_val,
         const size_t mat_point_lid) = NULL;
 
-    // -- equilibration --
-
-    void (*equilibrate) (
-        const DCArrayKokkos<bool>& MaterialPoints_volfrac,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const DCArrayKokkos<double>& MaterialPoint_pres,
-        const DCArrayKokkos<double>& MaterialPoint_den,
-        const DCArrayKokkos<double>& MaterialPoint_sie,
-        const double MaterialPoint_sspd,
-        const double GaussPoint_avg_press,
-        const double GaussPoint_vol,
-        double& de,
-        const double dt,
-        const double rk_alpha,
-        const double length,
-        const double fuzz,
-        const RaggedRightArrayKokkos<double> &equilibration_global_vars,
-        const size_t num_vars,
-        const size_t mat_point_lid,
-        const size_t mat_id) = NULL;
-
 
     // -- Dissipation --
 
@@ -468,10 +443,21 @@ struct Material_t
     RaggedRightArrayKokkos<double> dissipation_global_vars; ///< Array holding q1, q1ex, q2, ... for artificial viscosity
     CArrayKokkos<size_t> num_dissipation_global_vars;
 
-    RaggedRightArrayKokkos<double> equilibration_global_vars; ///< Array holding vars for equilibration models
-    CArrayKokkos<size_t> num_equilibration_global_vars;
 
     // ...
+
+
+    // ------------------------------------
+    // models that apply to all materials
+    // ------------------------------------
+
+    // -- material-material equilibration --
+    model::EquilibrationModels EquilibrationModels = model::noEquilibration;
+
+    CArrayKokkos<double> equilibration_global_vars; ///< Array holding vars for equilibration models
+    size_t num_equilibration_global_vars;
+
+
 }; // end MaterialModelVars_t
 
 // ----------------------------------
@@ -491,11 +477,18 @@ static std::vector<std::string> str_material_inps
     "erosion_model",
     "erode_tension_val",
     "erode_density_val",
-    "equilibration_model",
-    "equilibration_global_vars",
     "level_set_type",
     "normal_velocity",
     "curvature_velocity"
+};
+
+// ----------------------------------
+// valid inputs for material options
+// ----------------------------------
+static std::vector<std::string> str_multimat_inps
+{
+    "equilibration_model",
+    "equilibration_global_vars",
 };
 
 // ---------------------------------------------------------------
@@ -538,6 +531,11 @@ static std::vector<std::string> material_level_set_required_inps
 {
     "id",
     "level_set_type"
+};
+
+
+static std::vector<std::string> multimat_required_inps
+{
 };
 
 #endif // end Header Guard
