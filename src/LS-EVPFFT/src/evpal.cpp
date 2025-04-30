@@ -37,6 +37,8 @@ void EVPFFT::evpal(int imicro)
     real_t errald;
     real_t resn;
     real_t resoldn;
+    real_t sgvm;
+    real_t mag;
 
     // thread private arrays
     real_t xlambda_[3*3];
@@ -137,78 +139,111 @@ void EVPFFT::evpal(int imicro)
           resn = 2.0*resoldn;
           while (resn > resoldn && icut < 10) {
 
-            //     GET RESOLVED SHEAR STRESSES 'rss' AND SHEAR RATES 'gamdot'.
-            //     SIGN(GAMDOT)=SIGN(RSS).
-            //     NRS CAN BE EVEN OR ODD.
-            //     RSS1 IS ALWAYS > 0 AND IS USED TO CALCULATE VISCOUS COMPLIANCE.
+
+            if (iJ2(jph) == 0) { 
+
+
+              //     GET RESOLVED SHEAR STRESSES 'rss' AND SHEAR RATES 'gamdot'.
+              //     SIGN(GAMDOT)=SIGN(RSS).
+              //     NRS CAN BE EVEN OR ODD.
+              //     RSS1 IS ALWAYS > 0 AND IS USED TO CALCULATE VISCOUS COMPLIANCE.
   
-            for (int is = 1; is <= nsyst(jph); is++) {
+              for (int is = 1; is <= nsyst(jph); is++) {
 #ifdef NON_SCHMID_EFFECTS
-              rss(is,i,j,k) = schnon(1,is,,i,j,k)*sg6(1) + 
-                        schnon(2,is,i,j,k)*sg6(2) + 
-                        schnon(3,is,i,j,k)*sg6(3) + 
-                        schnon(4,is,i,j,k)*sg6(4) + 
-                        schnon(5,is,i,j,k)*sg6(5);
+                rss(is,i,j,k) = schnon(1,is,,i,j,k)*sg6(1) + 
+                          schnon(2,is,i,j,k)*sg6(2) + 
+                          schnon(3,is,i,j,k)*sg6(3) + 
+                          schnon(4,is,i,j,k)*sg6(4) + 
+                          schnon(5,is,i,j,k)*sg6(5);
 #else
-              rss(is,i,j,k) = sch(1,is,i,j,k)*sg6(1) +
-                        sch(2,is,i,j,k)*sg6(2) + 
-                        sch(3,is,i,j,k)*sg6(3) + 
-                        sch(4,is,i,j,k)*sg6(4) + 
-                        sch(5,is,i,j,k)*sg6(5);
+                rss(is,i,j,k) = sch(1,is,i,j,k)*sg6(1) +
+                          sch(2,is,i,j,k)*sg6(2) + 
+                          sch(3,is,i,j,k)*sg6(3) + 
+                          sch(4,is,i,j,k)*sg6(4) + 
+                          sch(5,is,i,j,k)*sg6(5);
 #endif
-              isign = 1;
-              if ( (rss(is,i,j,k)-xkin(is,i,j,k)) < 0.0 ) {
-                isign = 2;
-              }
+                isign = 1;
+                if ( (rss(is,i,j,k)-xkin(is,i,j,k)) < 0.0 ) {
+                  isign = 2;
+                }
      
-              rss(is,i,j,k) = (rss(is,i,j,k)-xkin(is,i,j,k))/crss(is,isign,i,j,k);
+                rss(is,i,j,k) = (rss(is,i,j,k)-xkin(is,i,j,k))/crss(is,isign,i,j,k);
   
 #ifdef TWO_SIGN_SLIP_SYSTEMS
-              if ( rss(is,i,j,k) < 0.0 ) {
-                rss(is,i,j,k) = 0.0;
-              }
+                if ( rss(is,i,j,k) < 0.0 ) {
+                  rss(is,i,j,k) = 0.0;
+                }
 #endif
   
 #ifdef TWO_SIGN_SLIP_SYSTEMS
-              rss1(is,i,j,k) = gamd0(is,jph) * nrs(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),(nrs(is,jph)-1))) / crss(is,isign,i,j,k);
-              rss2(is,i,j,k) = gamd0(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),nrs(is,jph))) * COPYSIGN(1.0,rss(is,i,j,k));
+                rss1(is,i,j,k) = gamd0(is,jph) * nrs(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),(nrs(is,jph)-1))) / crss(is,isign,i,j,k);
+                rss2(is,i,j,k) = gamd0(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),nrs(is,jph))) * COPYSIGN(1.0,rss(is,i,j,k));
 #else
-              rss1(is,i,j,k) = gamd0(is,jph) * nrs(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),(nrs(is,jph)-1))) / crss(is,isign,i,j,k);
-              rss2(is,i,j,k) = gamd0(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),nrs(is,jph))) * COPYSIGN(1.0,rss(is,i,j,k));
+                rss1(is,i,j,k) = gamd0(is,jph) * nrs(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),(nrs(is,jph)-1))) / crss(is,isign,i,j,k);
+                rss2(is,i,j,k) = gamd0(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),nrs(is,jph))) * COPYSIGN(1.0,rss(is,i,j,k));
 #endif
   
-              gamdot(is,i,j,k) = rss2(is,i,j,k);
-            } // end for is
+                gamdot(is,i,j,k) = rss2(is,i,j,k);
+              } // end for is
   
-            for (int ii = 1; ii <= 5; ii++) {
-              edotp6(ii) = 0.0;
-              for (int k1 = 1; k1 <= nsyst(jph); k1++) {
-                edotp6(ii) += sch(ii,k1,i,j,k) * rss2(k1,i,j,k);
-              }
-            }
-            edotp6(6) = 0.0;
-  
-            for (int jj = 1; jj <= 5; jj++) {
               for (int ii = 1; ii <= 5; ii++) {
+                edotp6(ii) = 0.0;
+                for (int k1 = 1; k1 <= nsyst(jph); k1++) {
+                  edotp6(ii) += sch(ii,k1,i,j,k) * rss2(k1,i,j,k);
+                }
+              }
+              edotp6(6) = 0.0;
   
-                dedotp66(ii,jj) = 0.0;
+              for (int jj = 1; jj <= 5; jj++) {
+                for (int ii = 1; ii <= 5; ii++) {
   
-                for (int k1 = 1; k1 <= nsyst(jph); k1++) {         
+                  dedotp66(ii,jj) = 0.0;
+  
+                  for (int k1 = 1; k1 <= nsyst(jph); k1++) {         
 #ifdef NON_SCHMID_EFFECTS   
-                  dedotp66(ii,jj) += sch(ii,k1,i,j,k)*schnon(jj,k1,i,j,k)*rss1(k1,i,j,k);
+                    dedotp66(ii,jj) += sch(ii,k1,i,j,k)*schnon(jj,k1,i,j,k)*rss1(k1,i,j,k);
 #else
-                  dedotp66(ii,jj) += sch(ii,k1,i,j,k)*sch(jj,k1,i,j,k)*rss1(k1,i,j,k);
+                    dedotp66(ii,jj) += sch(ii,k1,i,j,k)*sch(jj,k1,i,j,k)*rss1(k1,i,j,k);
 #endif
-                } // end for k1
+                  } // end for k1
   
+                } // end for ii
+              } // end for jj
+  
+              for (int ii = 1; ii <= 6; ii++) {
+                dedotp66(ii,6) = 0.0;
+                dedotp66(6,ii) = 0.0;
+              }
+  
+            } else { // else for if (iJ2(jph) == 0)
+
+              sgvm = 0.0;
+              for (int ii = 1; ii <= 5; ii++) {     
+                sgvm += POW2(sg6(ii));
               } // end for ii
-            } // end for jj
-  
-            for (int ii = 1; ii <= 6; ii++) {
-              dedotp66(ii,6) = 0.0;
-              dedotp66(6,ii) = 0.0;
-            }
-  
+              sgvm = sqrt(sgvm);
+
+              mag = 1.5*edotp0_j2(jph)/sigma0gr(i,j,k)*PowIntExpo(sgvm/sigma0gr(i,j,k),(nrs_j2(jph)-1));
+              for (int ii = 1; ii <= 5; ii++) {     
+                edotp6(ii) = mag*sg6(ii);
+              } // end for ii
+              edotp6(6) = 0.0;
+              
+              for (int jj = 1; jj <= 5; jj++) {
+                for (int ii = 1; ii <= 5; ii++) {
+    
+                  dedotp66(ii,jj) = mag*((nrs_j2(jph)-1)*sg6(ii)/sgvm*sg6(jj)/sgvm + (ii/jj)*(jj/ii));
+
+                } // end for ii
+              } // end for jj
+              
+              for (int ii = 1; ii <= 6; ii++) {
+                dedotp66(ii,6) = 0.0;
+                dedotp66(6,ii) = 0.0;
+              }
+
+            } // end if (iJ2(jph) == 0)
+
             // elastic strain rate
             for (int ii = 1; ii <= 6; ii++) {
               edote6(ii) = 0.0;
