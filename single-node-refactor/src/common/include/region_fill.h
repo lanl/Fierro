@@ -84,6 +84,7 @@ void fill_regions(
         DCArrayKokkos <double>& gauss_poisson_ratios,
         DCArrayKokkos <double>& gauss_level_set,
         DCArrayKokkos <double>& elem_volfrac,
+        DCArrayKokkos <double>& elem_geo_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
         DCArrayKokkos <size_t>& voxel_elem_mat_id,
@@ -173,10 +174,12 @@ size_t fill_geometric_region(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
+                          const DCArrayKokkos <double>& elem_geo_volfracs,
                           const CArrayKokkos <size_t>& elem_fill_ids,
                           const DCArrayKokkos <size_t>& num_fills_saved_in_elem,
                           const CArrayKokkos<RegionFill_t>& region_fills,
-                          const double combined_volfrac,
+                          const double volfrac,
+                          const double geo_volfrac,
                           const size_t elem_gid,
                           const size_t fill_id);
 

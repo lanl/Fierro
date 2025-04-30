@@ -858,8 +858,26 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 // =================================================================================
 void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
 {
+    
+    // check yaml file for multimaterial_options
+    std::string key_to_find = "multimaterial_options";
+    Yaml::Node& layer0_items = root;
+
+    bool found = false;
+    for (auto layer0_item = layer0_items.Begin(); layer0_item != layer0_items.End(); layer0_item++){  
+        if ((*layer0_item).first == key_to_find) {
+            found = true;
+            break;
+        }
+    } // end for over the items in layer0 of the yaml file
+
+    if(!found) {
+        return;
+    }
+    // file has the multimaterial options input
 
     Yaml::Node& multimat_yaml = root["multimaterial_options"];
+
 
     CArrayKokkos<double> tempGlobalEquilibrationVars(100, "temp_array_equilibration_vars");
 
@@ -922,7 +940,7 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
             
 
             if(num_global_vars>100){
-                throw std::runtime_error("**** Per material, the code only supports up to 100 eos global vars in the input file ****");
+                throw std::runtime_error("**** Per material, the code only supports up to 100 equilibration global vars in the input file ****");
             } // end check on num_global_vars
 
             // store the global eos model parameters

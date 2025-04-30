@@ -114,6 +114,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fillGaussState.poisson_ratios,
                  fillGaussState.level_set,
                  fillElemState.volfrac,
+                 fillElemState.geo_volfrac,
                  State.MeshtoMaterialMaps.mat_id,
                  State.MeshtoMaterialMaps.num_mats_in_elem,
                  voxel_elem_mat_id,
@@ -241,6 +242,7 @@ void fill_regions(
         DCArrayKokkos <double>& gauss_poisson_ratios,
         DCArrayKokkos <double>& gauss_level_set,
         DCArrayKokkos <double>& elem_volfrac,
+        DCArrayKokkos <double>& elem_geo_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
         DCArrayKokkos <size_t>& voxel_elem_mat_id,
@@ -378,12 +380,14 @@ void fill_regions(
                 if (combined_volfrac < 1.0 - 1.0e-8){
 
                     // append the fill id in this element and
-                    // append the elem_volfrac value too
+                    // append the elem_volfrac and elem_geo_volfrac values too
                     append_fills_in_elem(elem_volfrac,
+                                         elem_geo_volfrac,
                                          elem_fill_ids,
                                          elem_num_mats_saved_in_elem,
                                          region_fills,
-                                         combined_volfrac,
+                                         vfrac,
+                                         geo_volfrac,
                                          elem_gid,
                                          fill_id);
 
@@ -397,7 +401,8 @@ void fill_regions(
                     elem_fill_ids(elem_gid, 0) = fill_id;
  
                     // save volume fraction
-                    elem_volfrac(elem_gid, 0) = 1.0;
+                    elem_volfrac(elem_gid, 0) = 1.0;     // a single material in this element for this part
+                    elem_geo_volfrac(elem_gid, 0) = 1.0; // entire element is a part
 
                     elem_num_mats_saved_in_elem(elem_gid) = 1;
                 } // end of 
@@ -729,6 +734,8 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
                 // --- volume fraction ---
                 State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+                State.MaterialPoints(mat_id).geo_volfrac.host(mat_point_lid) = fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
+
 
                 // --- density and mass ---
                 if( State.MaterialPoints(mat_id).den.host.size()>0 ){
@@ -823,6 +830,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             State.MaterialToMeshMaps(mat_id).num_material_elems << " for material " << mat_id << "\n";
         
         State.MaterialPoints(mat_id).volfrac.update_device();
+        State.MaterialPoints(mat_id).geo_volfrac.update_device();
         State.MaterialToMeshMaps(mat_id).elem.update_device();
 
         if (State.MaterialPoints(mat_id).den.host.size()>0){
@@ -1370,10 +1378,12 @@ size_t fill_geometric_region(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
+                          const DCArrayKokkos <double>& elem_geo_volfracs,
                           const CArrayKokkos <size_t>& elem_fill_ids,
                           const DCArrayKokkos <size_t>& num_fills_saved_in_elem,
                           const CArrayKokkos<RegionFill_t>& region_fills,
-                          const double combined_volfrac,
+                          const double volfrac,
+                          const double geo_volfrac,
                           const size_t elem_gid,
                           const size_t fill_id)
 {
@@ -1418,7 +1428,8 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
 
     // --- append the volfracs and fill ids in elem ---
     elem_fill_ids(elem_gid, fill_storage_lid) = fill_id;
-    elem_volfracs(elem_gid, fill_storage_lid) = combined_volfrac;
+    elem_volfracs(elem_gid, fill_storage_lid) = volfrac;
+    elem_geo_volfracs(elem_gid, fill_storage_lid) = geo_volfrac;
 
     // done with calculating the fill instructions
 
