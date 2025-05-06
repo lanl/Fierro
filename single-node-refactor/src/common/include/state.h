@@ -865,7 +865,7 @@ struct State_t
     //    material to material maps
     // ---------------------------------------------------------------------
     corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_lid, corn_lid)
-    points_in_mat_t points_in_mat_elem;   ///< for accessing e.g., gauss points mat lid with arbitrary-order FE
+    points_in_mat_t points_in_mat_elem;   ///< for accessing e.g., gauss points mat lid with arbitrary-order FE (mat_elem_lid, gauss_lid)
     zones_in_mat_t zones_in_mat_elem;     ///< for accessing sub-zones mat lid with arbitrary-order FE
 
     // ---------------------------------------------------------------------

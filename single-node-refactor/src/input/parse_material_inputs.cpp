@@ -86,10 +86,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // fracture files
 #include "user_defined_fracture.h"
 
-// equilibration files
-#include "tipton_equilibration.h"
-#include "no_equilibration.h"
-#include "user_defined_equilibration.h"
 
 
 // ==============================================================================
