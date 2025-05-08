@@ -48,7 +48,6 @@ namespace TiptonEquilibrationModel {
         State_t& State);
 
     static void build_gauss_point_averages(
-            const mesh_t& mesh,
             const DCArrayKokkos<double>& GaussPoint_pres,
             const DCArrayKokkos<double>& GaussPoint_pres_denominator,
             const DCArrayKokkos<double>& MaterialPoints_volfrac,
@@ -62,7 +61,8 @@ namespace TiptonEquilibrationModel {
             const double rk_alpha,
             const double length,
             const double fuzz,
-            const size_t num_mat_elems);
+            const size_t num_mat_elems,
+            const size_t num_leg_gauss_in_elem);
 
     static void update_volfrac(
                 const mesh_t& mesh,

@@ -32,7 +32,11 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include tipton_equilibration.hpp
+//#include "tipton_equilibration.hpp"
+#include "matar.h"
+#include "mesh.h"
+#include "material.h"
+#include "state.h"
 
 
 // -----------------------------------------------------------------------------
@@ -42,7 +46,6 @@ namespace TiptonEquilibrationModel {
     
     static void equilbration(Material_t& Materials, 
                              Mesh_t& mesh, 
-                             BoundaryCondition_t& Boundary,
                              State_t& State)
     {
         DCArrayKokkos <double> GaussPoint_pres(mesh.num_elems*mesh.num_leg_gauss_in_elem);
@@ -53,12 +56,13 @@ namespace TiptonEquilibrationModel {
 
         // calculate weigted average pressure at gauss points
 
+
         // calculate volfrac change
 
     }
 
     static void build_gauss_point_averages (
-        const mesh_t& mesh,
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoint_pres,
         const DCArrayKokkos<double>& GaussPoint_pres_denominator,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
@@ -67,7 +71,7 @@ namespace TiptonEquilibrationModel {
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sspd,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const double GaussPoint_vol,
+        const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
         const double length,
@@ -85,15 +89,15 @@ namespace TiptonEquilibrationModel {
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
-                size_t gauss_gid = legendre_in_elem(elem_gid, gauss_pt_lid);
+                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
-                mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
+                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
 
                 // calculate average pressure
                 // GaussPoint_avg_press = sum_i(volfrac_i/K_i P_i)/ sum_i(volfrac_i/K_i)
                 // K_i = rho*c^2
-                const double bulk_mod = MaterialPoint_den*MaterialPoint_sspd*MaterialPoint_sspd + fuzz;
+                const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid) + fuzz;
 
                 // total volume fraction of the material in the element
                 const double volfrac_total = MaterialPoints_geo_volfrac(mat_point_storage_lid)*MaterialPoints_volfrac(mat_point_storage_lid);
@@ -109,18 +113,18 @@ namespace TiptonEquilibrationModel {
     } // end build average fields function
 
 
-    static void update_volfrac (
-        const mesh_t& mesh,
+    static void update_volfrac_sie (
+        const Mesh_t& mesh,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
         const DCArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoint_pres,
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sie,
+        const DCArrayKokkos<double>& MaterialPoint_sspd,
         const DCArrayKokkos<double>& GaussPoint_vol,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const double MaterialPoint_sspd,
-        const double GaussPoint_vol,
+        const points_in_mat_t& points_in_mat_elem,
         const double GaussPoint_vel_grad,
         const double dt,
         const double rk_alpha,
@@ -141,20 +145,17 @@ namespace TiptonEquilibrationModel {
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
-                size_t gauss_gid = legendre_in_elem(elem_gid, gauss_pt_lid);
+                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
-                mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
+                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
 
                 // calculate average pressure
-                const double bulk_mod = MaterialPoint_den*MaterialPoint_sspd*MaterialPoint_sspd + fuzz;
+                const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid) + fuzz;
 
                 // total volume fraction of the material in the element
                 const double volfrac_total = MaterialPoints_geo_volfrac(mat_point_storage_lid)*MaterialPoints_volfrac(mat_point_storage_lid);
 
-                GaussPoint_pres(gauss_gid) += (volfrac_total/bulk_mod) * MaterialPoint_pres(mat_point_storage_lid);
-
-                GaussPoint_pres_denominator(gauss_gid) += volfrac_total/bulk_mod;
 
             } // end for gauss point loop 
 

@@ -21,3 +21,4 @@ set(EQUILIBRATION_Files
 ${CMAKE_CURRENT_SOURCE_DIR}/src/tipton_equilibration.cpp
 PARENT_SCOPE
 )
+
