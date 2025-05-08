@@ -32,7 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-//#include "tipton_equilibration.hpp"
+#include "tipton_equilibration.hpp"
 #include "matar.h"
 #include "mesh.h"
 #include "material.h"

@@ -34,7 +34,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef TIPTON_EQUILIBRATION_H
 #define TIPTON_EQUILIBRATION_H
-
+#include "matar.h"
+#include "mesh.h"
+#include "material.h"
+#include "state.h"
 
 // -----------------------------------------------------------------------------
 // This is the Tipton material pt equilibration model
@@ -44,46 +47,47 @@ namespace TiptonEquilibrationModel {
     static void equilbration(
         Material_t& Materials, 
         Mesh_t& mesh, 
-        BoundaryCondition_t& Boundary,
         State_t& State);
 
-    static void build_gauss_point_averages(
-            const DCArrayKokkos<double>& GaussPoint_pres,
-            const DCArrayKokkos<double>& GaussPoint_pres_denominator,
-            const DCArrayKokkos<double>& MaterialPoints_volfrac,
-            const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
-            const DCArrayKokkos<double>& MaterialPoint_pres,
-            const DCArrayKokkos<double>& MaterialPoint_den,
-            const DCArrayKokkos<double>& MaterialPoint_sspd,
-            const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-            const double GaussPoint_vol,
-            const double dt,
-            const double rk_alpha,
-            const double length,
-            const double fuzz,
-            const size_t num_mat_elems,
-            const size_t num_leg_gauss_in_elem);
 
-    static void update_volfrac(
-                const mesh_t& mesh,
-                const DCArrayKokkos<double>& MaterialPoints_volfrac,
-                const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
-                const DCArrayKokkos<double>& MaterialPoints_stress,
-                const DCArrayKokkos<double>& MaterialPoint_pres,
-                const DCArrayKokkos<double>& MaterialPoint_den,
-                const DCArrayKokkos<double>& MaterialPoint_sie,
-                const DCArrayKokkos<double>& GaussPoint_vol,
-                const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                const double MaterialPoint_sspd,
-                const double GaussPoint_vol,
-                const double GaussPoint_vel_grad,
-                const double dt,
-                const double rk_alpha,
-                const double length,
-                const double fuzz,
-                const RaggedRightArrayKokkos<double> &equilibration_global_vars,
-                const size_t num_vars,
-                const size_t num_mat_elems);        
+    static void build_gauss_point_averages (
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>& GaussPoint_pres,
+        const DCArrayKokkos<double>& GaussPoint_pres_denominator,
+        const DCArrayKokkos<double>& MaterialPoints_volfrac,
+        const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
+        const DCArrayKokkos<double>& MaterialPoint_pres,
+        const DCArrayKokkos<double>& MaterialPoint_den,
+        const DCArrayKokkos<double>& MaterialPoint_sspd,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const points_in_mat_t& points_in_mat_elem,
+        const double dt,
+        const double rk_alpha,
+        const double length,
+        const double fuzz,
+        const size_t num_mat_elems);
+
+
+    static void update_volfrac_sie (
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>& MaterialPoints_volfrac,
+        const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
+        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DCArrayKokkos<double>& MaterialPoint_pres,
+        const DCArrayKokkos<double>& MaterialPoint_den,
+        const DCArrayKokkos<double>& MaterialPoint_sie,
+        const DCArrayKokkos<double>& MaterialPoint_sspd,
+        const DCArrayKokkos<double>& GaussPoint_vol,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const points_in_mat_t& points_in_mat_elem,
+        const double GaussPoint_vel_grad,
+        const double dt,
+        const double rk_alpha,
+        const double length,
+        const double fuzz,
+        const RaggedRightArrayKokkos<double> &equilibration_global_vars,
+        const size_t num_vars,
+        const size_t num_mat_elems);        
 
 } // end namespace
 

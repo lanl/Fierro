@@ -84,6 +84,7 @@ include_directories(src/material_models/erosion)
 include_directories(src/material_models/fracture)
 include_directories(src/material_models/strength)
 include_directories(src/material_models/equilibration)
+include_directories(src/material_models/equilibration/include)
 add_subdirectory(src/material_models/equilibration)
 
 include_directories(src/boundary_conditions/velocity)
