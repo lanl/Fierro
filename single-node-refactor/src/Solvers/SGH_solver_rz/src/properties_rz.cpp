@@ -76,6 +76,8 @@ void SGHRZ::update_state_rz(
     const DCArrayKokkos<double>& MaterialPoints_stress_n0,
     const DCArrayKokkos<double>& MaterialPoints_sspd,
     const DCArrayKokkos<double>& MaterialPoints_sie,
+    const DCArrayKokkos<double>& MaterialPoints_volfrac,
+    const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& MaterialPoints_mass,
     const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
@@ -112,7 +114,8 @@ void SGHRZ::update_state_rz(
 
 
         // --- Density ---
-        MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
+        MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) /
+           (GaussPoints_vol(gauss_gid)*MaterialPoints_volfrac(mat_point_lid)*MaterialPoints_geo_volfrac(mat_point_lid) + 1.0e-20);
 
     }); // end parallel for over mat elem lid
     Kokkos::fence();

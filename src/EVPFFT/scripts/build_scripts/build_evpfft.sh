@@ -26,7 +26,7 @@ build_hdf5=0
 
 # Define arrays of valid options
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
-valid_kokkos_build_types=("serial" "openmp" "cuda" "cuda-ampere" "hip")
+valid_kokkos_build_types=("serial" "openmp" "cuda" "cuda-ampere" "hip" "pthreads")
 valid_machines=("darwin" "chicoma" "linux" "mac")
 
 # Parse command line arguments

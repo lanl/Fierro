@@ -70,5 +70,5 @@ add_subdirectory(Solvers/SGTM_solver_3D)
 include_directories(Solvers/level_set_solver/include)
 add_subdirectory(Solvers/level_set_solver)
 
-add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files} ${SGTM_3D_SRC_Files} ${LVLSET_SRC_Files})
+add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${EQUILIBRATION_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files} ${SGTM_3D_SRC_Files} ${LVLSET_SRC_Files})
 target_link_libraries(Fierro PRIVATE matar Kokkos::kokkos) 

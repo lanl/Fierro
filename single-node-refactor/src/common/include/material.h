@@ -104,6 +104,13 @@ namespace model
         directionalMARSRZ = 4   ///<  Directional MARS in RZ
     };
 
+    // erosion model
+    enum EquilibrationModels
+    {
+        noEquilibration = 0,    ///<  no equilibration
+        tiptonEquilibration = 1,  ///< Tipton equilbration
+        userDefinedEquilibration = 2  ///< user defined equilbration
+    };
 
     // Model run locations
     enum RunLocation
@@ -178,6 +185,13 @@ static std::map<std::string, model::ErosionModels> erosion_model_map
 {
     { "no_erosion", model::noErosion },
     { "basic", model::basicErosion },
+};
+
+static std::map<std::string, model::EquilibrationModels> equilibration_model_map
+{
+    { "no_Equilibration", model::noEquilibration },
+    { "tipton", model::tiptonEquilibration },
+    { "user_defined", model::userDefinedEquilibration }
 };
 
 static std::map<std::string, model::DissipationModels> dissipation_model_map
@@ -361,6 +375,7 @@ struct MaterialFunctions_t
 
 
     // -- Dissipation --
+
     void (*calc_dissipation) (
         const ViewCArrayKokkos<size_t> elem_node_gids,
         const RaggedRightArrayKokkos <double>& dissipation_global_vars,
@@ -428,7 +443,21 @@ struct Material_t
     RaggedRightArrayKokkos<double> dissipation_global_vars; ///< Array holding q1, q1ex, q2, ... for artificial viscosity
     CArrayKokkos<size_t> num_dissipation_global_vars;
 
+
     // ...
+
+
+    // ------------------------------------
+    // models that apply to all materials
+    // ------------------------------------
+
+    // -- material-material equilibration --
+    model::EquilibrationModels EquilibrationModels = model::noEquilibration;
+
+    CArrayKokkos<double> equilibration_global_vars; ///< Array holding vars for equilibration models
+    size_t num_equilibration_global_vars;
+
+
 }; // end MaterialModelVars_t
 
 // ----------------------------------
@@ -451,6 +480,15 @@ static std::vector<std::string> str_material_inps
     "level_set_type",
     "normal_velocity",
     "curvature_velocity"
+};
+
+// ----------------------------------
+// valid inputs for material options
+// ----------------------------------
+static std::vector<std::string> str_multimat_inps
+{
+    "equilibration_model",
+    "equilibration_global_vars",
 };
 
 // ---------------------------------------------------------------
@@ -493,6 +531,11 @@ static std::vector<std::string> material_level_set_required_inps
 {
     "id",
     "level_set_type"
+};
+
+
+static std::vector<std::string> multimat_required_inps
+{
 };
 
 #endif // end Header Guard

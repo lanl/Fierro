@@ -41,6 +41,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.h"
 #include "geometry_new.h"
 #include "mesh_io.h"
+#include "tipton_equilibration.hpp"
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -268,6 +270,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                           State.MaterialPoints(mat_id).sspd,
                           State.MaterialCorners(mat_id).force,
                           State.MaterialPoints(mat_id).volfrac,
+                          State.MaterialPoints(mat_id).geo_volfrac,
                           State.corners_in_mat_elem,
                           State.MaterialToMeshMaps(mat_id).elem,
                           num_mat_elems,
@@ -371,6 +374,19 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- Calculate cell volume for next time step ----
             geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
+
+            // apply pressure relaxation
+            if(Materials.EquilibrationModels != model::noEquilibration){
+                TiptonEquilibrationModel::equilbration(Materials, 
+                    mesh, 
+                    State,
+                    dt,
+                    rk_alpha,
+                    fuzz,
+                    small);
+            } // end if on applying equilibration
+
+
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
@@ -388,6 +404,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                              State.MaterialPoints(mat_id).sspd,
                              State.MaterialPoints(mat_id).sie,
                              State.MaterialPoints(mat_id).volfrac,
+                             State.MaterialPoints(mat_id).geo_volfrac,
                              State.GaussPoints.vol,
                              State.MaterialPoints(mat_id).mass,
                              State.MaterialPoints(mat_id).eos_state_vars,

@@ -32,33 +32,69 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_PARSE_MATERIAL_INPUTS_H
-#define FIERRO_PARSE_MATERIAL_INPUTS_H
-
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <stdio.h>
-#include <sys/stat.h>
-
+#ifndef TIPTON_EQUILIBRATION_H
+#define TIPTON_EQUILIBRATION_H
 #include "matar.h"
+#include "mesh.h"
+#include "material.h"
+#include "state.h"
 
-#include "Yaml.hpp"
+// -----------------------------------------------------------------------------
+// This is the Tipton material pt equilibration model
+// ------------------------------------------------------------------------------
+namespace TiptonEquilibrationModel {
+    
+    void equilbration(
+        Material_t& Materials, 
+        Mesh_t& mesh, 
+        State_t& State,
+        double dt,
+        double rk_alpha,
+        double fuzz,
+        double small);
 
 
-struct Material_t;
-struct MaterialSetup_t;
-struct MaterialFunctions_t;
-struct MaterialEnums_t;
+    void build_gauss_point_averages (
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>& GaussPoint_pres,
+        const DCArrayKokkos<double>& GaussPoint_pres_denominator,
+        const DCArrayKokkos<double>& GaussPoint_volfrac_min,
+        const DCArrayKokkos<double>& MaterialPoints_volfrac,
+        const DCArrayKokkos<double>& MaterialPoint_pres,
+        const DCArrayKokkos<double>& MaterialPoint_den,
+        const DCArrayKokkos<double>& MaterialPoint_sspd,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const points_in_mat_t& points_in_mat_elem,
+        const double dt,
+        const double rk_alpha,
+        const double fuzz,
+        const size_t num_mat_elems);
 
-using namespace mtr;
 
-// parse the material text
-void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims);
+    void update_volfrac_sie (
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>& GaussPoint_pres,
+        const DCArrayKokkos<double>& GaussPoint_pres_denominator,
+        const DCArrayKokkos <double> GaussPoint_volfrac_min,
+        const DCArrayKokkos<double>& GaussPoint_vel_grad,
+        const DCArrayKokkos<double>& MaterialPoints_volfrac,
+        const DCArrayKokkos<double>& MaterialPoint_pres,
+        const DCArrayKokkos<double>& MaterialPoint_den,
+        const DCArrayKokkos<double>& MaterialPoint_sie,
+        const DCArrayKokkos<double>& MaterialPoint_sspd,
+        const DCArrayKokkos<double>& MaterialPoint_mass,
+        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const points_in_mat_t& points_in_mat_elem,
+        const double dt,
+        const double rk_alpha,
+        const double fuzz,
+        const CArrayKokkos<double> &equilibration_global_vars,
+        const size_t num_global_vars,
+        const size_t num_mat_elems);        
+
+} // end namespace
 
 
-// parse multimaterial test
-void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials);
+
 
 #endif // end Header Guard
