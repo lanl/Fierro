@@ -74,8 +74,7 @@ namespace TiptonEquilibrationModel {
                 GaussPoint_pres,
                 GaussPoint_pres_denominator,
                 GaussPoint_volfrac_min,
-                State.MaterialPoints(mat_id).volfrac,
-                State.MaterialPoints(mat_id).geo_volfrac,
+                State.MaterialPoints(mat_id).volfrac, // change to geo_volfrac to update it
                 State.MaterialPoints(mat_id).pres,
                 State.MaterialPoints(mat_id).den,
                 State.MaterialPoints(mat_id).sspd,
@@ -99,8 +98,7 @@ namespace TiptonEquilibrationModel {
                 GaussPoint_pres_denominator,
                 GaussPoint_volfrac_min,
                 State.GaussPoints.vel_grad,
-                State.MaterialPoints(mat_id).volfrac,
-                State.MaterialPoints(mat_id).geo_volfrac,
+                State.MaterialPoints(mat_id).volfrac, // change to geo_volfrac to update it
                 State.MaterialPoints(mat_id).pres,
                 State.MaterialPoints(mat_id).den,
                 State.MaterialPoints(mat_id).sie,
@@ -119,13 +117,16 @@ namespace TiptonEquilibrationModel {
 
     } // end equilibration function
 
+
+
+
+
     static void build_gauss_point_averages (
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoint_pres,
         const DCArrayKokkos<double>& GaussPoint_pres_denominator,
         const DCArrayKokkos<double>& GaussPoint_volfrac_min,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
-        const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
         const DCArrayKokkos<double>& MaterialPoint_pres,
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sspd,
@@ -152,17 +153,21 @@ namespace TiptonEquilibrationModel {
                 // get the mat_gauss_pt_storage_lid
                 size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
 
-                // calculate average pressure
-                // GaussPoint_avg_press = sum_i(volfrac_i/K_i P_i)/ sum_i(volfrac_i/K_i)
-                // K_i = rho*c^2
-                const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid) + fuzz;
+                // only do pressure relaxation on materials that have volfrac<1
+                if (MaterialPoints_volfrac(mat_point_storage_lid )<1.0){
 
-                GaussPoint_volfrac_min(gauss_gid) = fmin(MaterialPoints_volfrac(mat_point_storage_lid), GaussPoint_volfrac_min(gauss_gid)); // min volfrac
+                    // calculate average pressure
+                    // GaussPoint_avg_press = sum_i(volfrac_i/K_i P_i)/ sum_i(volfrac_i/K_i)
+                    // K_i = rho*c^2
+                    const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid) + fuzz;
 
-                const double R = MaterialPoints_volfrac(mat_point_storage_lid)/bulk_mod; // ratio
-                GaussPoint_pres(gauss_gid) += R * MaterialPoint_pres(mat_point_storage_lid);
+                    GaussPoint_volfrac_min(gauss_gid) = fmin(MaterialPoints_volfrac(mat_point_storage_lid), GaussPoint_volfrac_min(gauss_gid)); // min volfrac
 
-                GaussPoint_pres_denominator(gauss_gid) += R; // defined as R_bar
+                    const double R = MaterialPoints_volfrac(mat_point_storage_lid)/bulk_mod; // ratio
+                    GaussPoint_pres(gauss_gid) += R * MaterialPoint_pres(mat_point_storage_lid);
+
+                    GaussPoint_pres_denominator(gauss_gid) += R; // defined as R_bar
+                } // end if
 
             } // end for gauss point loop 
 
@@ -178,7 +183,6 @@ namespace TiptonEquilibrationModel {
         const DCArrayKokkos <double> GaussPoint_volfrac_min,
         const DCArrayKokkos<double>& GaussPoint_vel_grad,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
-        const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
         const DCArrayKokkos<double>& MaterialPoint_pres,
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sie,
@@ -209,38 +213,43 @@ namespace TiptonEquilibrationModel {
                 // get the mat_gauss_pt_storage_lid
                 size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
 
-                // calculate average pressure
-                const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid) + fuzz;
+
+                // only do pressure relaxation on materials that have volfrac<1
+                if (MaterialPoints_volfrac(mat_point_storage_lid )<1.0){
+
+                    // calculate average pressure
+                    const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid) + fuzz;
 
 
-                // volume fraction change, unlimited
-                const double R = MaterialPoints_volfrac(mat_point_storage_lid)/bulk_mod;
-                const double R_bar = GaussPoint_pres_denominator(gauss_gid);
-                const double term_1 = R*(MaterialPoint_pres(mat_point_storage_lid) - GaussPoint_pres(gauss_gid))/equilibration_global_vars(0);  // 0.25 is in Vince's paper
-                double div = 0.0;
-                for (size_t dim=0; dim<mesh.num_dims; dim++){
-                    div += GaussPoint_vel_grad(gauss_gid, dim, dim);
-                }
-                const double term_2 = (R/R_bar - MaterialPoints_volfrac(mat_point_storage_lid))*div*rk_alpha*dt;
+                    // volume fraction change, unlimited
+                    const double R = MaterialPoints_volfrac(mat_point_storage_lid)/bulk_mod;
+                    const double R_bar = GaussPoint_pres_denominator(gauss_gid);
+                    const double term_1 = R*(MaterialPoint_pres(mat_point_storage_lid) - GaussPoint_pres(gauss_gid))/equilibration_global_vars(0);  // 0.25 is in Vince's paper
+                    double div = 0.0;
+                    for (size_t dim=0; dim<mesh.num_dims; dim++){
+                        div += GaussPoint_vel_grad(gauss_gid, dim, dim);
+                    }
+                    const double term_2 = (R/R_bar - MaterialPoints_volfrac(mat_point_storage_lid))*div*rk_alpha*dt;
 
-                double delta_volfrac = term_1 + term_2;
+                    double delta_volfrac = term_1 + term_2;
 
-                // limit volume fraction change, ensuring positive volumes after relaxation
-                // coef*delta_vol <= param*smallest_volume
-                const double param = fmin(1.0, fmax(0.0, equilibration_global_vars(0)));
-                double limiter = fmin(1.0, param*GaussPoint_volfrac_min(gauss_gid)/fabs(delta_volfrac));
+                    // limit volume fraction change, ensuring positive volumes after relaxation
+                    // coef*delta_vol <= param*smallest_volume
+                    const double param = fmin(1.0, fmax(0.0, equilibration_global_vars(0)));
+                    double limiter = fmin(1.0, param*GaussPoint_volfrac_min(gauss_gid)/fabs(delta_volfrac));
 
-                // calculating volume fraction change 
-                double volfrac_new = MaterialPoints_volfrac(mat_point_storage_lid) + limiter*delta_volfrac;  // add the limiter
-                volfrac_new = fmin(1.0, fmax(0.0, volfrac_new));
-                
-                // updating geometric and material volume fractions
-                const double scale_factor = sqrt(volfrac_new/MaterialPoints_volfrac(mat_point_storage_lid));
-                MaterialPoints_geo_volfrac(mat_point_storage_lid) *= scale_factor;
-                MaterialPoints_volfrac(mat_point_storage_lid)     *= scale_factor;
+                    // calculating volume fraction change 
+                    double volfrac_new = MaterialPoints_volfrac(mat_point_storage_lid) + limiter*delta_volfrac;  // add the limiter
+                    volfrac_new = fmin(1.0, fmax(0.0, volfrac_new));
+                    
+                    // updating geometric and material volume fractions
+                    const double scale_factor = sqrt(volfrac_new/MaterialPoints_volfrac(mat_point_storage_lid));
+                    MaterialPoints_volfrac(mat_point_storage_lid) *= scale_factor;
 
-                // update energy
-                MaterialPoint_sie(mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*div*rk_alpha*dt/MaterialPoint_mass(mat_point_storage_lid);
+                    // update internal energy
+                    MaterialPoint_sie(mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*div*rk_alpha*dt/MaterialPoint_mass(mat_point_storage_lid);
+
+                } // end if volfrac<1
 
             } // end for gauss point loop 
 
