@@ -44,7 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ------------------------------------------------------------------------------
 namespace TiptonEquilibrationModel {
     
-    static void equilbration(
+    void equilbration(
         Material_t& Materials, 
         Mesh_t& mesh, 
         State_t& State,
@@ -54,7 +54,7 @@ namespace TiptonEquilibrationModel {
         double small);
 
 
-    static void build_gauss_point_averages (
+    void build_gauss_point_averages (
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoint_pres,
         const DCArrayKokkos<double>& GaussPoint_pres_denominator,
@@ -71,7 +71,7 @@ namespace TiptonEquilibrationModel {
         const size_t num_mat_elems);
 
 
-    static void update_volfrac_sie (
+    void update_volfrac_sie (
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoint_pres,
         const DCArrayKokkos<double>& GaussPoint_pres_denominator,

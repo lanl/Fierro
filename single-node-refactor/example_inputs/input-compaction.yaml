@@ -5,7 +5,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 300000
+    cycle_stop: 10000
 
 
 # mesh_options:
@@ -24,8 +24,8 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     output_file_format: viz #state
-    graphics_time_step: 0.1
-    # graphics_iteration_step: 10
+    graphics_time_step: 0.05
+    #graphics_iteration_step: 1
     elem_field_outputs:
         - den
         - pres
@@ -135,6 +135,7 @@ multimaterial_options:
     equilibration_model: tipton
     equilibration_global_vars:
         - 0.1   # max volume fraction change
+        - 1.0   # pressure relax coeff (delta P)/coef
 
     # geometric equilibrium model
     # --- will add this later ---
