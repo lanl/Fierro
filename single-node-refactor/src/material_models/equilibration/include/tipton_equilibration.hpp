@@ -47,13 +47,18 @@ namespace TiptonEquilibrationModel {
     static void equilbration(
         Material_t& Materials, 
         Mesh_t& mesh, 
-        State_t& State);
+        State_t& State,
+        double dt,
+        double rk_alpha,
+        double fuzz,
+        double small);
 
 
     static void build_gauss_point_averages (
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoint_pres,
         const DCArrayKokkos<double>& GaussPoint_pres_denominator,
+        const DCArrayKokkos<double>& GaussPoint_volfrac_min,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
         const DCArrayKokkos<double>& MaterialPoint_pres,
@@ -63,30 +68,30 @@ namespace TiptonEquilibrationModel {
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
-        const double length,
         const double fuzz,
         const size_t num_mat_elems);
 
 
     static void update_volfrac_sie (
         const Mesh_t& mesh,
+        const DCArrayKokkos<double>& GaussPoint_pres,
+        const DCArrayKokkos<double>& GaussPoint_pres_denominator,
+        const DCArrayKokkos <double> GaussPoint_volfrac_min,
+        const DCArrayKokkos<double>& GaussPoint_vel_grad,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoint_pres,
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sie,
         const DCArrayKokkos<double>& MaterialPoint_sspd,
-        const DCArrayKokkos<double>& GaussPoint_vol,
+        const DCArrayKokkos<double>& MaterialPoint_mass,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const points_in_mat_t& points_in_mat_elem,
-        const double GaussPoint_vel_grad,
         const double dt,
         const double rk_alpha,
-        const double length,
         const double fuzz,
-        const RaggedRightArrayKokkos<double> &equilibration_global_vars,
-        const size_t num_vars,
+        const CArrayKokkos<double> &equilibration_global_vars,
+        const size_t num_global_vars,
         const size_t num_mat_elems);        
 
 } // end namespace

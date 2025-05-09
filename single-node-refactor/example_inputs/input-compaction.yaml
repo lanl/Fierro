@@ -136,6 +136,9 @@ multimaterial_options:
     equilibration_global_vars:
         - 0.1   # max volume fraction change
 
+    # geometric equilibrium model
+    # --- will add this later ---
+
 regions:
     - region:
         volume:
