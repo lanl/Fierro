@@ -61,7 +61,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace UserDefinedEquilibrationModel
 {
 
-    KOKKOS_FUNCTION
     static void equilibrate (
         const DCArrayKokkos<bool>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& MaterialPoints_stress,

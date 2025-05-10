@@ -71,6 +71,11 @@ namespace TiptonEquilibrationModel {
         const size_t num_mat_elems);
 
 
+    void calc_gauss_point_averages( 
+            const Mesh_t& mesh,
+            const DCArrayKokkos<double>&  GaussPoint_pres,
+            const DCArrayKokkos<double>&  GaussPoint_pres_denominator);
+
     void update_volfrac_sie (
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoint_pres,

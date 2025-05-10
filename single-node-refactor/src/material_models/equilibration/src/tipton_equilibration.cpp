@@ -69,6 +69,7 @@ namespace TiptonEquilibrationModel {
 
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
+            // build numerator and denominator
             build_gauss_point_averages( 
                 mesh,
                 GaussPoint_pres,
@@ -86,6 +87,12 @@ namespace TiptonEquilibrationModel {
                 num_mat_elems);
 
         } // end for mat_id
+
+        // calculate the average pressure
+        calc_gauss_point_averages( 
+            mesh,
+            GaussPoint_pres,
+            GaussPoint_pres_denominator);
 
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -176,6 +183,30 @@ namespace TiptonEquilibrationModel {
     } // end build average fields function
 
 
+
+void  calc_gauss_point_averages( 
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>&  GaussPoint_pres,
+        const DCArrayKokkos<double>&  GaussPoint_pres_denominator){
+
+        // loop over all ellements in the mesh
+        FOR_ALL(elem_gid, 0, mesh.num_elems, {
+
+            // loop over gauss points in this element
+            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
+
+                // get the gauss gid for this point in the element
+                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
+
+                GaussPoint_pres(gauss_gid) /= GaussPoint_pres_denominator(gauss_gid); 
+
+            } // end for
+
+         });
+
+    } // end function
+
+
     void update_volfrac_sie(
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoint_pres,
@@ -229,6 +260,10 @@ std::cout << "bulk_mod = " << bulk_mod << "\n";
                     const double R_bar = GaussPoint_pres_denominator(gauss_gid);
                     const double term_1 = R*(MaterialPoint_pres(mat_point_storage_lid) - GaussPoint_pres(gauss_gid))/equilibration_global_vars(1);  // 0.25 is in Vince's paper
 std::cout << "term1 = " << term_1 << "\n";
+std::cout << "R = " << R<< "\n";
+std::cout << "delta P = " << MaterialPoint_pres(mat_point_storage_lid) - GaussPoint_pres(gauss_gid) << "\n";
+std::cout << "avg P = " << GaussPoint_pres(gauss_gid) << "\n";
+std::cout << "mat P = " << MaterialPoint_pres(mat_point_storage_lid) << "\n";
 
                     double div = 0.0;
                     for (size_t dim=0; dim<mesh.num_dims; dim++){
