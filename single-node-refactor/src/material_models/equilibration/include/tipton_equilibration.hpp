@@ -82,6 +82,7 @@ namespace TiptonEquilibrationModel {
         const DCArrayKokkos<double>& GaussPoint_pres_denominator,
         const DCArrayKokkos <double> GaussPoint_volfrac_min,
         const DCArrayKokkos<double>& GaussPoint_vel_grad,
+        const DCArrayKokkos<double>& GaussPoint_vol,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& MaterialPoint_pres,
         const DCArrayKokkos<double>& MaterialPoint_den,

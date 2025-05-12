@@ -105,6 +105,7 @@ namespace TiptonEquilibrationModel {
                 GaussPoint_pres_denominator,
                 GaussPoint_volfrac_min,
                 State.GaussPoints.vel_grad,
+                State.GaussPoints.vol,
                 State.MaterialPoints(mat_id).volfrac, // change to geo_volfrac to update it
                 State.MaterialPoints(mat_id).pres,
                 State.MaterialPoints(mat_id).den,
@@ -213,6 +214,7 @@ void  calc_gauss_point_averages(
         const DCArrayKokkos<double>& GaussPoint_pres_denominator,
         const DCArrayKokkos <double> GaussPoint_volfrac_min,
         const DCArrayKokkos<double>& GaussPoint_vel_grad,
+        const DCArrayKokkos<double>& GaussPoint_vol,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& MaterialPoint_pres,
         const DCArrayKokkos<double>& MaterialPoint_den,
@@ -231,46 +233,35 @@ void  calc_gauss_point_averages(
 
         // loop over all ellements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
-std::cout << "mat_elem_lid = " << mat_elem_lid << "\n";
 
             // get elem gid for this material at this lid
             size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
-std::cout << "elem_gid = " << elem_gid << "\n";
 
             // loop over gauss points in this element
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
                 size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
-std::cout << "gauss_gid = " << gauss_gid << "\n";
 
                 // get the mat_gauss_pt_storage_lid
                 size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
-std::cout << "mat_point_storage_lid = " << mat_point_storage_lid << "\n";
 
                 // only do pressure relaxation on materials that have volfrac<1
                 if (MaterialPoints_volfrac(mat_point_storage_lid )<1.0){
 
                     // calculate average pressure
                     const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid) + fuzz;
-std::cout << "bulk_mod = " << bulk_mod << "\n";
 
                     // volume fraction change, unlimited
                     const double R = MaterialPoints_volfrac(mat_point_storage_lid)/bulk_mod;
                     const double R_bar = GaussPoint_pres_denominator(gauss_gid);
                     const double term_1 = R*(MaterialPoint_pres(mat_point_storage_lid) - GaussPoint_pres(gauss_gid))/equilibration_global_vars(1);  // 0.25 is in Vince's paper
-std::cout << "term1 = " << term_1 << "\n";
-std::cout << "R = " << R<< "\n";
-std::cout << "delta P = " << MaterialPoint_pres(mat_point_storage_lid) - GaussPoint_pres(gauss_gid) << "\n";
-std::cout << "avg P = " << GaussPoint_pres(gauss_gid) << "\n";
-std::cout << "mat P = " << MaterialPoint_pres(mat_point_storage_lid) << "\n";
 
                     double div = 0.0;
                     for (size_t dim=0; dim<mesh.num_dims; dim++){
                         div += GaussPoint_vel_grad(gauss_gid, dim, dim);
                     }
                     const double term_2 = (R/R_bar - MaterialPoints_volfrac(mat_point_storage_lid))*div*rk_alpha*dt;
-std::cout << "term2 = " << term_2 << "\n";
 
                     double delta_volfrac = term_1 + term_2;
 
@@ -278,16 +269,17 @@ std::cout << "term2 = " << term_2 << "\n";
                     // coef*delta_vol <= param*smallest_volume
                     const double param = fmin(1.0, fmax(0.0, equilibration_global_vars(0)));
                     double limiter = fmin(1.0, param*GaussPoint_volfrac_min(gauss_gid)/fabs(delta_volfrac));
-std::cout << "limiter = " << limiter << "\n";
+                    limiter = 1.0;  // WARNING WARNING no limiting
 
                     // calculating volume fraction change 
                     double volfrac_new = MaterialPoints_volfrac(mat_point_storage_lid) + limiter*delta_volfrac;  // add the limiter
-                    MaterialPoints_volfrac(mat_point_storage_lid) = fmin(1.0, fmax(0.0, volfrac_new));
-std::cout << "volfrac = " << MaterialPoints_volfrac(mat_point_storage_lid) << "\n";                    
-
+                    MaterialPoints_volfrac(mat_point_storage_lid) = fmin(1.0, fmax(0.0, volfrac_new));                
 
                     // update internal energy
-                    //MaterialPoint_sie(mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*div*rk_alpha*dt/MaterialPoint_mass(mat_point_storage_lid);
+                    // dVol/dt = Vol*div
+                    double GaussPoint_deltaVol = div*rk_alpha*dt*GaussPoint_vol(gauss_gid);
+                    MaterialPoint_sie(mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*delta_volfrac*GaussPoint_deltaVol/MaterialPoint_mass(mat_point_storage_lid);
+                    MaterialPoint_sie(mat_point_storage_lid) = fmax(fuzz, MaterialPoint_sie(mat_point_storage_lid));
 
                 } // end if volfrac<1
 
