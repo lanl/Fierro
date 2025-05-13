@@ -1394,8 +1394,8 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
     size_t fill_storage_lid = num_fills_saved_in_elem(elem_gid);
 
     // check on exceeding 3 materials per element
-    if (num_fills_saved_in_elem(elem_gid) > max_num_mats_per_elem){
-        Kokkos::abort("ERROR: exceeded max number of materials in an element when painting regions on the mesh \n");
+    if (num_fills_saved_in_elem(elem_gid) > max_num_mats_per_elem-1){
+        Kokkos::abort("ERROR: exceeded max number of materials in an element when painting regions on the mesh \n Set max_num_mats_per_element to a larger value under multimaterial_options \n");
     } // end if check
 
 
