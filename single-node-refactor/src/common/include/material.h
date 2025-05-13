@@ -457,6 +457,8 @@ struct Material_t
     CArrayKokkos<double> equilibration_global_vars; ///< Array holding vars for equilibration models
     size_t num_equilibration_global_vars;
 
+    size_t max_num_mats_per_element = 3; ///< default is to allow up to 3 materials in an element in setup
+
 
 }; // end MaterialModelVars_t
 
@@ -489,6 +491,7 @@ static std::vector<std::string> str_multimat_inps
 {
     "equilibration_model",
     "equilibration_global_vars",
+    "max_num_mats_per_element"
 };
 
 // ---------------------------------------------------------------

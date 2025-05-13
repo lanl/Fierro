@@ -69,24 +69,24 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
 
     // --- move to parsing ---
-    // allowing for up to 3 materials in an element, this needs to be set by the user with 3 as default
-    const size_t num_mats_per_elem = 3;
+    // default allows for up to 3 materials in an element, can be changed in input under multimaterial options
+    const size_t max_num_mats_per_elem = Materials.max_num_mats_per_element;
     // -----------------------
 
     // GaussState initialized based on fill instructions
     //   aways 3D
     fillGaussState.initialize(num_gauss_points, 
-                              num_mats_per_elem, 
+                              max_num_mats_per_elem, 
                               3,
                               SimulationParamaters.region_setups.fill_gauss_states);
 
     // the elem state is always used, thus always initialized
     fillElemState.initialize(num_elems,
-                             num_mats_per_elem,
+                             max_num_mats_per_elem,
                              num_mats);
 
     // allocate memory for mat_ids, num_mats_in_elem, and mat_storage_lid 
-    State.MeshtoMaterialMaps.initialize(num_elems, num_mats_per_elem); 
+    State.MeshtoMaterialMaps.initialize(num_elems, max_num_mats_per_elem); 
 
     // Remember, the solver is initialized prior to this function, creating nodal state
 
@@ -123,7 +123,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  SimulationParamaters.region_setups.region_fills_host,
                  SimulationParamaters.region_setups.fill_gauss_states,
                  SimulationParamaters.region_setups.fill_node_states,
-                 num_mats_per_elem);
+                 max_num_mats_per_elem);
 
 
     // note: the device and host side are updated in the above function
@@ -251,7 +251,7 @@ void fill_regions(
         const CArray <RegionFill_host_t>& region_fills_host,
         std::vector <fill_gauss_state>& fill_gauss_states,
         std::vector <fill_node_state>& fill_node_states,
-        const size_t num_mats_per_elem)
+        const size_t max_num_mats_per_elem)
 {
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
@@ -262,7 +262,7 @@ void fill_regions(
 
     // local variables to this routine
     DCArrayKokkos<double> elem_coords(mesh.num_elems, 3); // aways 3D
-    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, num_mats_per_elem);  // 2nd dim is max mats per elem
+    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, max_num_mats_per_elem);  // 2nd dim is max mats per elem
 
     // Important:
     //  Remember that num_fills_saved_in_elem = num_mats_saved_in_elem
@@ -389,7 +389,8 @@ void fill_regions(
                                          vfrac,
                                          geo_volfrac,
                                          elem_gid,
-                                         fill_id);
+                                         fill_id,
+                                         max_num_mats_per_elem);
 
                 } else {
 
@@ -1385,15 +1386,16 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
                           const double volfrac,
                           const double geo_volfrac,
                           const size_t elem_gid,
-                          const size_t fill_id)
+                          const size_t fill_id,
+                          const size_t max_num_mats_per_elem)
 {
 
     // the number of materials saved to this element, initialized to 0 at start of code
     size_t fill_storage_lid = num_fills_saved_in_elem(elem_gid);
 
     // check on exceeding 3 materials per element
-    if (num_fills_saved_in_elem(elem_gid) > 3){
-        Kokkos::abort("ERROR: exceeded 3 materials in an element when painting regions on the mesh \n");
+    if (num_fills_saved_in_elem(elem_gid) > max_num_mats_per_elem){
+        Kokkos::abort("ERROR: exceeded max number of materials in an element when painting regions on the mesh \n");
     } // end if check
 
 

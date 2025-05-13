@@ -181,7 +181,8 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
                           const double volfrac,
                           const double geo_volfrac,
                           const size_t elem_gid,
-                          const size_t fill_id);
+                          const size_t fill_id,
+                          const size_t max_num_mats_per_elem);
 
 /////////////////////////////////////////////////////////////////////////////
 ///

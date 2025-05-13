@@ -889,7 +889,13 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
     for (auto& a_word : user_multimat_inputs) {
 
         //extract equilibration model
-        if (a_word.compare("equilibration_model") == 0) {
+        if (a_word.compare("max_num_mats_per_element") == 0) {
+            size_t max_num_mats = root["multimaterial_options"]["max_num_mats_per_element"].As<size_t>();
+
+            Materials.max_num_mats_per_element = max_num_mats;
+
+        } //max_num_mats_per_elem
+        else if (a_word.compare("equilibration_model") == 0) {
             std::string equilibration_model = root["multimaterial_options"]["equilibration_model"].As<std::string>();
 
             // set the equilibration model
@@ -919,7 +925,7 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
                         break;
                     }
                 } // end switch
-                
+
             } 
             else{
                 std::cout << "ERROR: invalid equilibration type input: " << equilibration_model<< std::endl;
