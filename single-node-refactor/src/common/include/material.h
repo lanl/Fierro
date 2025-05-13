@@ -189,7 +189,7 @@ static std::map<std::string, model::ErosionModels> erosion_model_map
 
 static std::map<std::string, model::EquilibrationModels> equilibration_model_map
 {
-    { "no_Equilibration", model::noEquilibration },
+    { "no_equilibration", model::noEquilibration },
     { "tipton", model::tiptonEquilibration },
     { "user_defined", model::userDefinedEquilibration }
 };

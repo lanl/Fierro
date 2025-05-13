@@ -482,10 +482,12 @@ struct MaterialPoint_t
     DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
     DCArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
 
-    DCArrayKokkos<double> temp_grad;   ///< Temperature gradient
-    DCArrayKokkos<double> volfrac;     ///< MaterialPoint volume fraction
-    DCArrayKokkos<double> geo_volfrac; ///< MaterialPoint geometric (part) volume fraction (interface reconstruction)
-    DCArrayKokkos<bool> eroded;        ///< MaterialPoint eroded or not flag
+    DCArrayKokkos<double> temp_grad;     ///< Temperature gradient
+    DCArrayKokkos<double> volfrac;       ///< MaterialPoint volume fraction
+    DCArrayKokkos<double> delta_volfrac; ///< change in MaterialPoint volume fraction
+    DCArrayKokkos<double> geo_volfrac;   ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
+    DCArrayKokkos<double> delta_geo_volfrac; ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
+    DCArrayKokkos<bool> eroded;              ///< MaterialPoint eroded or not flag
 
     // initialization method (num_pts_max, num_dims)
     void initialize(size_t num_pts_max, size_t num_dims, std::vector<material_pt_state> material_pt_states)
@@ -523,6 +525,9 @@ struct MaterialPoint_t
                 case material_pt_state::volume_fraction:
                     if (volfrac.size() == 0) this->volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac");
                     if (geo_volfrac.size() == 0) this->geo_volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_geo_volfrac");
+                    // changes in volume fraction
+                    if (delta_volfrac.size() == 0) this->delta_volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac_delta");
+                    if (delta_geo_volfrac.size() == 0) this->delta_geo_volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_geo_volfrac_delta");
                     break;
                 case material_pt_state::specific_internal_energy:
                     if (sie.size() == 0)  this->sie = DCArrayKokkos<double>(num_pts_max, "material_point_sie");

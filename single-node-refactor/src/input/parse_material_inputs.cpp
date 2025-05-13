@@ -919,6 +919,7 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
                         break;
                     }
                 } // end switch
+                
             } 
             else{
                 std::cout << "ERROR: invalid equilibration type input: " << equilibration_model<< std::endl;

@@ -375,17 +375,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
 
-            // apply pressure relaxation
-            if(Materials.EquilibrationModels != model::noEquilibration){
-                TiptonEquilibrationModel::equilbration(Materials, 
-                    mesh, 
-                    State,
-                    dt,
-                    rk_alpha,
-                    fuzz,
-                    small);
-            } // end if on applying equilibration
-
 
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -426,6 +415,18 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             //    2) hypo-elastic strength models are called in get_force
             //    3) strength models must be added by the user in user_mat.cpp
 
+
+            // apply pressure relaxation
+            if(Materials.EquilibrationModels != model::noEquilibration){
+                TiptonEquilibrationModel::equilbration(Materials, 
+                    mesh, 
+                    State,
+                    dt,
+                    rk_alpha,
+                    fuzz,
+                    small);
+            } // end if on applying equilibration
+            
 
         } // end of RK loop
 
