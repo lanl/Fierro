@@ -43,28 +43,24 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace TiptonEquilibrationModel {
     
     void equilbration(Material_t& Materials, 
-                             Mesh_t& mesh, 
-                             State_t& State,
-                             double dt,
-                             double rk_alpha,
-                             double fuzz,
-                             double small)
+                      Mesh_t& mesh, 
+                      State_t& State,
+                      CArrayKokkos <double>& GaussPoint_pres,
+                      CArrayKokkos <double>& GaussPoint_pres_denominator,
+                      CArrayKokkos <double>& GaussPoint_volfrac_min,
+                      CArrayKokkos <double>& GaussPoint_volfrac_limiter,
+                      double dt,
+                      double rk_alpha,
+                      double fuzz,
+                      double small)
     {
 
         const size_t num_mats = Materials.num_mats;
 
-        CArrayKokkos <double> GaussPoint_pres(mesh.num_elems*mesh.num_leg_gauss_in_elem);
         GaussPoint_pres.set_values(0.0);
-
-        CArrayKokkos <double> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_leg_gauss_in_elem);
         GaussPoint_pres_denominator.set_values(0.0);
-
-        CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_leg_gauss_in_elem);
         GaussPoint_volfrac_min.set_values(1.0);
-         
-        CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_leg_gauss_in_elem);
         GaussPoint_volfrac_limiter.set_values(1.0);
-
 
         // calculate weigted average pressure at gauss points
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){

@@ -895,8 +895,8 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
             Materials.max_num_mats_per_element = max_num_mats;
 
         } //max_num_mats_per_elem
-        else if (a_word.compare("equilibration_model") == 0) {
-            std::string equilibration_model = root["multimaterial_options"]["equilibration_model"].As<std::string>();
+        else if (a_word.compare("mat_equilibration_model") == 0) {
+            std::string equilibration_model = root["multimaterial_options"]["mat_equilibration_model"].As<std::string>();
 
             // set the equilibration model
             if (equilibration_model_map.find(equilibration_model) != equilibration_model_map.end()) {
@@ -935,8 +935,8 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
         } // end if equilibration model
         // -----
         // exact the equilibration_global_vars
-        else if (a_word.compare("equilibration_global_vars") == 0) {
-            Yaml::Node & mat_global_vars_yaml = root["multimaterial_options"]["equilibration_global_vars"];
+        else if (a_word.compare("mat_equilibration_global_vars") == 0) {
+            Yaml::Node & mat_global_vars_yaml = root["multimaterial_options"]["mat_equilibration_global_vars"];
 
             size_t num_global_vars = mat_global_vars_yaml.Size();
             Materials.num_equilibration_global_vars = num_global_vars;
@@ -948,7 +948,7 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
 
             // store the global eos model parameters
             for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                double equilibration_var = root["multimaterial_options"]["equilibration_global_vars"][global_var_id].As<double>();
+                double equilibration_var = root["multimaterial_options"]["mat_equilibration_global_vars"][global_var_id].As<double>();
                 
                 RUN({
                     tempGlobalEquilibrationVars(global_var_id) = equilibration_var;

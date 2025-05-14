@@ -489,8 +489,8 @@ static std::vector<std::string> str_material_inps
 // ----------------------------------
 static std::vector<std::string> str_multimat_inps
 {
-    "equilibration_model",
-    "equilibration_global_vars",
+    "mat_equilibration_model",
+    "mat_equilibration_global_vars",
     "max_num_mats_per_element"
 };
 
