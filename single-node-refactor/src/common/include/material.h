@@ -453,12 +453,15 @@ struct Material_t
 
     // -- material-material equilibration --
     model::EquilibrationModels EquilibrationModels = model::noEquilibration;
-
     CArrayKokkos<double> equilibration_global_vars; ///< Array holding vars for equilibration models
     size_t num_equilibration_global_vars;
 
-    size_t max_num_mats_per_element = 3; ///< default is to allow up to 3 materials in an element in setup
+    // -- geometric-material equilibration --
+    model::EquilibrationModels GeoEquilibrationModels = model::noEquilibration;
+    CArrayKokkos<double> geo_equilibration_global_vars; ///< Array holding vars for geo equilibration models
+    size_t num_geo_equilibration_global_vars;
 
+    size_t max_num_mats_per_element = 3; ///< default is to allow up to 3 materials in an element in setup
 
 }; // end MaterialModelVars_t
 

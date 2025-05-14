@@ -45,19 +45,30 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace TiptonEquilibrationModel {
 
     
-    void equilbration(
-        Material_t& Materials, 
-        Mesh_t& mesh, 
+    void mat_equilibration(
+        const Material_t& Materials, 
+        const Mesh_t& mesh, 
         State_t& State,
         CArrayKokkos <double>& GaussPoint_pres,
         CArrayKokkos <double>& GaussPoint_pres_denominator,
         CArrayKokkos <double>& GaussPoint_volfrac_min,
         CArrayKokkos <double>& GaussPoint_volfrac_limiter,
-        double dt,
-        double rk_alpha,
-        double fuzz,
-        double small);
+        const double dt,
+        const double rk_alpha,
+        const double fuzz,
+        const double small);
 
+    void geo_equilibration(const Material_t& Materials, 
+        const Mesh_t& mesh, 
+        State_t& State,
+        CArrayKokkos <double>& GaussPoint_pres,
+        CArrayKokkos <double>& GaussPoint_pres_denominator,
+        CArrayKokkos <double>& GaussPoint_volfrac_min,
+        CArrayKokkos <double>& GaussPoint_volfrac_limiter,
+        const double dt,
+        const double rk_alpha,
+        const double fuzz,
+        const double small);
 
     void build_gauss_point_averages (
         const Mesh_t& mesh,

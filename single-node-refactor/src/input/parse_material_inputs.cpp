@@ -875,9 +875,6 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
     Yaml::Node& multimat_yaml = root["multimaterial_options"];
 
 
-    CArrayKokkos<double> tempGlobalEquilibrationVars(100, "temp_array_equilibration_vars");
-
-
     // get the multimat variables names set by the user
     std::vector<std::string> user_multimat_inputs;
 
@@ -933,17 +930,55 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
                 break;
             } // end if
         } // end if equilibration model
+        else if (a_word.compare("geo_equilibration_model") == 0) {
+            std::string equilibration_model = root["multimaterial_options"]["geo_equilibration_model"].As<std::string>();
+
+            // set the equilibration model
+            if (equilibration_model_map.find(equilibration_model) != equilibration_model_map.end()) {
+
+                // equilibration_model_map[equilibration_model] returns enum value, e.g., model::equilibration
+                switch(equilibration_model_map[equilibration_model]){
+                    case model::tiptonEquilibration:
+                    {
+                        Materials.EquilibrationModels = model::tiptonEquilibration;
+                        break;
+                    }
+                    case model::userDefinedEquilibration:
+                    {
+                        Materials.EquilibrationModels = model::userDefinedEquilibration;
+                        break;
+                    }
+                    case model::noEquilibration:
+                    {
+                        Materials.EquilibrationModels = model::noEquilibration;
+                        break;
+                    }
+                    default:
+                    {
+                        std::cout << "ERROR: invalid equilibration input: " << equilibration_model << std::endl;
+                        throw std::runtime_error("**** Equilibration Model Not Understood ****");
+                        break;
+                    }
+                } // end switch
+
+            } 
+            else{
+                std::cout << "ERROR: invalid equilibration type input: " << equilibration_model<< std::endl;
+                throw std::runtime_error("**** equilibration model Not Understood ****");
+                break;
+            } // end if
+        } // end if geo_equilibration model
         // -----
-        // exact the equilibration_global_vars
+        // extract the equilibration_global_vars
         else if (a_word.compare("mat_equilibration_global_vars") == 0) {
             Yaml::Node & mat_global_vars_yaml = root["multimaterial_options"]["mat_equilibration_global_vars"];
 
             size_t num_global_vars = mat_global_vars_yaml.Size();
             Materials.num_equilibration_global_vars = num_global_vars;
-            
+            Materials.equilibration_global_vars = CArrayKokkos <double> (num_global_vars, "Materials.equilibration_global_vars");
 
-            if(num_global_vars>100){
-                throw std::runtime_error("**** Per material, the code only supports up to 100 equilibration global vars in the input file ****");
+            if(num_global_vars<2){
+                throw std::runtime_error("**** The Tipton material equilibration model requires 2 inputs ****");
             } // end check on num_global_vars
 
             // store the global eos model parameters
@@ -951,7 +986,30 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
                 double equilibration_var = root["multimaterial_options"]["mat_equilibration_global_vars"][global_var_id].As<double>();
                 
                 RUN({
-                    tempGlobalEquilibrationVars(global_var_id) = equilibration_var;
+                    Materials.equilibration_global_vars(global_var_id) = equilibration_var;
+                });
+
+            } // end loop over global vars
+        } // "equilibration_global_vars"
+        // -----
+        // extract the geo_equilibration_global_vars
+        else if (a_word.compare("geo_equilibration_global_vars") == 0) {
+            Yaml::Node & mat_global_vars_yaml = root["multimaterial_options"]["geo_equilibration_global_vars"];
+
+            size_t num_global_vars = mat_global_vars_yaml.Size();
+            Materials.num_geo_equilibration_global_vars = num_global_vars;
+            Materials.geo_equilibration_global_vars = CArrayKokkos <double> (num_global_vars, "Materials.geo_equilibration_global_vars");
+
+            if(num_global_vars<2){
+                throw std::runtime_error("**** The Tipton material geo equilibration model requires 2 inputs ****");
+            } // end check on num_global_vars
+
+            // store the global eos model parameters
+            for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                double equilibration_var = root["multimaterial_options"]["geo_equilibration_global_vars"][global_var_id].As<double>();
+                
+                RUN({
+                    Materials.geo_equilibration_global_vars(global_var_id) = equilibration_var;
                 });
 
             } // end loop over global vars
@@ -970,11 +1028,5 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
 
     } // end loop over words
 
-
-    Materials.equilibration_global_vars = CArrayKokkos <double> (Materials.num_equilibration_global_vars, "Materials.equilibration_global_vars");
-
-    for (size_t var_lid=0; var_lid<Materials.num_equilibration_global_vars; var_lid++){
-        Materials.equilibration_global_vars(var_lid) = tempGlobalEquilibrationVars(var_lid);
-    } // end for equilibration var_lid
 
 } // end of function to parse multimaterial information

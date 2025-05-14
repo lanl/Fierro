@@ -423,9 +423,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             //    3) strength models must be added by the user in user_mat.cpp
 
 
-            // apply pressure relaxation
+            // apply pressure relaxation on material volume fractions
             if(Materials.EquilibrationModels != model::noEquilibration){
-                TiptonEquilibrationModel::equilbration(
+                TiptonEquilibrationModel::mat_equilibration(
                     Materials, 
                     mesh, 
                     State,
@@ -439,6 +439,21 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     small);
             } // end if on applying equilibration
 
+            // apply pressure relaxation on geometric volume fractions
+            if(Materials.GeoEquilibrationModels != model::noEquilibration){
+                TiptonEquilibrationModel::geo_equilibration(
+                    Materials, 
+                    mesh, 
+                    State,
+                    GaussPoint_pres,
+                    GaussPoint_pres_denominator,
+                    GaussPoint_volfrac_min,
+                    GaussPoint_volfrac_limiter,
+                    dt,
+                    rk_alpha,
+                    fuzz,
+                    small);
+            } // end if on applying geometric equilibration
 
         } // end of RK loop
 
