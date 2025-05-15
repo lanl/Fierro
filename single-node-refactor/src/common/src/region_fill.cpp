@@ -737,6 +737,8 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
                 State.MaterialPoints(mat_id).geo_volfrac.host(mat_point_lid) = fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
+                const double mat_vol = State.GaussPoints.vol.host(gauss_gid) * 
+                             fillElemState.volfrac.host(elem_gid,a_mat_in_elem)*fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 // --- density and mass ---
                 if( State.MaterialPoints(mat_id).den.host.size()>0 ){
@@ -745,8 +747,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                     State.MaterialPoints(mat_id).den.host(mat_point_lid)  = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem);
                     State.MaterialPoints(mat_id).mass.host(mat_point_lid) = 
-                            fillGaussState.den.host(gauss_gid,a_mat_in_elem) * 
-                            State.GaussPoints.vol.host(gauss_gid) * fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+                            fillGaussState.den.host(gauss_gid,a_mat_in_elem) * mat_vol;
                 }
 
                 // --- set eroded flag to false ---
