@@ -79,6 +79,8 @@ namespace TiptonEquilibrationModel {
                       const double small)
     {
 
+        const double my_fuzz = 1.e-12;
+
         const size_t num_mats = Materials.num_mats;
 
         GaussPoint_pres.set_values(0.0);
@@ -105,7 +107,7 @@ namespace TiptonEquilibrationModel {
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
-                1e-12,
+                my_fuzz,
                 num_mat_elems);
 
         } // end for mat_id
@@ -115,7 +117,7 @@ namespace TiptonEquilibrationModel {
             mesh,
             GaussPoint_pres,
             GaussPoint_pres_denominator,
-            1e-12);
+            my_fuzz);
 
 
 
@@ -142,7 +144,7 @@ namespace TiptonEquilibrationModel {
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
-                1e-12,
+                my_fuzz,
                 Materials.equilibration_global_vars,
                 Materials.num_equilibration_global_vars,
                 num_mat_elems);
@@ -169,7 +171,7 @@ namespace TiptonEquilibrationModel {
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
-                1e-12,
+                my_fuzz,
                 num_mat_elems);
 
         } // end for mat_id
