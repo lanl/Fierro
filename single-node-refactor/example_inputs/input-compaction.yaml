@@ -133,8 +133,8 @@ materials:
             - 1.0   # pin_curl_min
 
 multimaterial_options:
-    equilibration_model: tipton
-    equilibration_global_vars:
+    mat_equilibration_model: tipton
+    mat_equilibration_global_vars:
         - 0.01   # max volume fraction change
         - 0.25  # pressure relax coeff (delta P)/coef
 
