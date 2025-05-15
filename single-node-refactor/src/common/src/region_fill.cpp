@@ -576,6 +576,7 @@ void fill_regions(
     // update host side for elem fill states
     elem_mat_id.update_host();
     elem_volfrac.update_host();
+    elem_geo_volfrac.update_host();
     elem_num_mats_saved_in_elem.update_host();
 
     //---------
@@ -738,7 +739,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 State.MaterialPoints(mat_id).geo_volfrac.host(mat_point_lid) = fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 const double mat_vol = State.GaussPoints.vol.host(gauss_gid) * 
-                             fillElemState.volfrac.host(elem_gid,a_mat_in_elem)*fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
+                            fillElemState.volfrac.host(elem_gid,a_mat_in_elem)*fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 // --- density and mass ---
                 if( State.MaterialPoints(mat_id).den.host.size()>0 ){
@@ -746,6 +747,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                     // add an array that we set to true or false if we set this state here
                     State.MaterialPoints(mat_id).den.host(mat_point_lid)  = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem);
+
                     State.MaterialPoints(mat_id).mass.host(mat_point_lid) = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem) * mat_vol;
                 }
