@@ -328,7 +328,7 @@ namespace TiptonEquilibrationModel {
                 size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
 
                 // only do pressure relaxation on materials that have volfrac<1
-                if (MaterialPoints_volfrac(mat_point_storage_lid )<1.0){
+                if (MaterialPoints_volfrac(mat_point_storage_lid )<1.0-fuzz){
 
                     // the smallest volume fraction is used for limiting volfrac changes
                     GaussPoint_volfrac_min(gauss_gid) = fmin(MaterialPoints_volfrac(mat_point_storage_lid), GaussPoint_volfrac_min(gauss_gid)); // min volfrac
@@ -351,6 +351,9 @@ namespace TiptonEquilibrationModel {
             } // end for gauss point loop 
 
         }); // end parallel loop over all material elems in the mesh
+        Kokkos::fence();
+
+        return;
 
     } // end build average fields function
 
@@ -376,6 +379,9 @@ namespace TiptonEquilibrationModel {
             } // end for
 
          });
+         Kokkos::fence();
+
+         return;
 
     } // end function
 
@@ -429,7 +435,7 @@ namespace TiptonEquilibrationModel {
 
 
                 // only do pressure relaxation on materials that have volfrac<1
-                if (MaterialPoints_volfrac(mat_point_storage_lid)<1.0){
+                if (MaterialPoints_volfrac(mat_point_storage_lid)<1.0-fuzz){
 
                     // volume fraction change, unlimited
                     const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid) + fuzz;
@@ -455,6 +461,7 @@ namespace TiptonEquilibrationModel {
             } // end for gauss point loop 
 
         }); // end parallel loop over all material elems in the mesh
+        Kokkos::fence();
 
         return;
 
