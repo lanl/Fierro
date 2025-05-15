@@ -521,7 +521,7 @@ namespace TiptonEquilibrationModel {
             } // end for gauss point loop 
 
         }); // end parallel loop over all material elems in the mesh
-
+        Kokkos::fence();
 
         return;
 
