@@ -4745,12 +4745,13 @@ public:
 
         // write out values for the elem
         for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
+
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-            for (size_t elem_lid = 0; elem_lid < num_mat_elems; elem_lid++)
+
+            for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++)
             {
 
-                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(elem_lid);
-
+                const size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid);
 
                 double elem_coords[3];
                 elem_coords[0] = 0.0;
@@ -4759,6 +4760,7 @@ public:
 
                 // get the coordinates of the element center
                 for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+
                     elem_coords[0] += State.node.coords.host(mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
                     elem_coords[1] += State.node.coords.host(mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
                     if (num_dims == 3) {
@@ -4769,9 +4771,9 @@ public:
                     }
                 } // end loop over nodes in element
 
-                elem_coords[0] = elem_coords[0] / mesh.num_nodes_in_elem;
-                elem_coords[1] = elem_coords[1] / mesh.num_nodes_in_elem;
-                elem_coords[2] = elem_coords[2] / mesh.num_nodes_in_elem;
+                elem_coords[0] = elem_coords[0] / ((double)mesh.num_nodes_in_elem);
+                elem_coords[1] = elem_coords[1] / ((double)mesh.num_nodes_in_elem);
+                elem_coords[2] = elem_coords[2] / ((double)mesh.num_nodes_in_elem);
 
                 double rad2 = sqrt(elem_coords[0] * elem_coords[0] +
                                    elem_coords[1] * elem_coords[1]);
@@ -4780,21 +4782,25 @@ public:
                                    elem_coords[1] * elem_coords[1] +
                                    elem_coords[2] * elem_coords[2]);
 
+
                 fprintf(out_elem_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t \n",
                          elem_coords[0],
                          elem_coords[1],
                          elem_coords[2],
                          rad2,
                          rad3,
-                         State.MaterialPoints(mat_id).den.host(elem_gid),
-                         State.MaterialPoints(mat_id).pres.host(elem_gid),
-                         State.MaterialPoints(mat_id).sie.host(elem_gid),
-                         State.MaterialPoints(mat_id).sspd.host(elem_gid),
+                         State.MaterialPoints(mat_id).den.host(mat_elem_lid),
+                         State.MaterialPoints(mat_id).pres.host(mat_elem_lid),
+                         State.MaterialPoints(mat_id).sie.host(mat_elem_lid),
+                         State.MaterialPoints(mat_id).sspd.host(mat_elem_lid),
                          State.GaussPoints.vol.host(elem_gid),
-                         State.MaterialPoints(mat_id).mass.host(elem_gid) );
+                         State.MaterialPoints(mat_id).mass.host(mat_elem_lid) );
+
             } // end for elements
+
         } // end for materials
         fclose(out_elem_state);
+
 
 
         // printing nodal state

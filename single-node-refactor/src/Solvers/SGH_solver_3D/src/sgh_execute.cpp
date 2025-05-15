@@ -169,6 +169,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     graphics_time = time_value + graphics_dt_ival;
 
+
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
         // stop calculation if flag
