@@ -105,7 +105,7 @@ namespace TiptonEquilibrationModel {
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
-                fuzz,
+                1e-12,
                 num_mat_elems);
 
         } // end for mat_id
@@ -115,7 +115,7 @@ namespace TiptonEquilibrationModel {
             mesh,
             GaussPoint_pres,
             GaussPoint_pres_denominator,
-            fuzz);
+            1e-12);
 
 
 
@@ -142,7 +142,7 @@ namespace TiptonEquilibrationModel {
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
-                fuzz,
+                1e-12,
                 Materials.equilibration_global_vars,
                 Materials.num_equilibration_global_vars,
                 num_mat_elems);
@@ -169,7 +169,7 @@ namespace TiptonEquilibrationModel {
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
-                fuzz,
+                1e-12,
                 num_mat_elems);
 
         } // end for mat_id
@@ -336,8 +336,8 @@ namespace TiptonEquilibrationModel {
                     // calculate average pressure
                     // GaussPoint_avg_press = sum_i(volfrac_i/K_i P_i)/ sum_i(volfrac_i/K_i)
                     // K_i = rho*c^2
-                    const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid) + fuzz;
-                    const double R = (MaterialPoints_volfrac(mat_point_storage_lid) + fuzz)/bulk_mod; // ratio
+                    const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid);
+                    const double R = MaterialPoints_volfrac(mat_point_storage_lid)/(bulk_mod+fuzz); // ratio
                     GaussPoint_pres(gauss_gid) += R * MaterialPoint_pres(mat_point_storage_lid);
                     GaussPoint_pres_denominator(gauss_gid) += R; // defined as R_bar
 
@@ -438,19 +438,22 @@ namespace TiptonEquilibrationModel {
                 if (MaterialPoints_volfrac(mat_point_storage_lid)<1.0-fuzz){
 
                     // volume fraction change, unlimited
-                    const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid) + fuzz;
-                    const double R = MaterialPoints_volfrac(mat_point_storage_lid)/bulk_mod;
+                    const double bulk_mod = MaterialPoint_den(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid)*MaterialPoint_sspd(mat_point_storage_lid);
+                    const double R = MaterialPoints_volfrac(mat_point_storage_lid)/(bulk_mod+fuzz);
                     const double R_bar = GaussPoint_pres_denominator(gauss_gid);
                     const double term_1 = R*(MaterialPoint_pres(mat_point_storage_lid) - GaussPoint_pres(gauss_gid))/(equilibration_global_vars(1)+fuzz);  // 0.25 is used in V. Chiravalle's IASSD paper
-                    const double term_2 = (R/R_bar - MaterialPoints_volfrac(mat_point_storage_lid))*div*rk_alpha*dt;
+                    const double term_2 = (R/(R_bar+fuzz) - MaterialPoints_volfrac(mat_point_storage_lid))*div*rk_alpha*dt;
 
                     MaterialPoints_delta_volfrac(mat_point_storage_lid) = term_1 + term_2;
 
                     // limit volume fraction change, ensuring positive volumes after relaxation
                     // coef*delta_vol <= param*smallest_volume
                     const double param = fmin(1.0, fmax(0.0, equilibration_global_vars(0)));  // ensuring it is bounded between 0:1
+
                     GaussPoint_volfrac_limiter(gauss_gid) = fmin(GaussPoint_volfrac_limiter(gauss_gid), 
-                                                                 param*GaussPoint_volfrac_min(gauss_gid)/fabs(MaterialPoints_delta_volfrac(mat_point_storage_lid) + fuzz));
+                                                                 param*GaussPoint_volfrac_min(gauss_gid)/(fabs(MaterialPoints_delta_volfrac(mat_point_storage_lid)) + fuzz));
+                    
+
                 } // end if volfrac<1
                 else {
                     // single material 

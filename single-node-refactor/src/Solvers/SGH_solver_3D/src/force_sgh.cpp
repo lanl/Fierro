@@ -237,6 +237,7 @@ void SGH3D::get_force(const Material_t& Materials,
         } // end for loop over nodes in elem
 
     }); // end parallel for loop over elements
+    Kokkos::fence();
 
     return;
 } // end of routine
