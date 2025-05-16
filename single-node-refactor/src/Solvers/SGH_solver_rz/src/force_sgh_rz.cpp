@@ -270,6 +270,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         } // end for loop over nodes in elem
 
     }); // end parallel for loop over elements
+    Kokkos::fence();
 
     return;
 } // end of routine for 2D force and stress update
