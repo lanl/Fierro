@@ -101,9 +101,9 @@ for i in range(len(executables)):
                 # print(diff)
 
                 if abs(diff) > 1E-8:
-                    print(diff)
-                    print(calc[l])
-                    print(true[l])
+                    print(f"{'Calculated Result:':<20} {calc[l]:.10e}")
+                    print(f"{'Expected Result:':<20} {true[l]:.10e}")
+                    print(f"{'Difference:':<20} {diff:.10e}")
                     raise Exception("Results do not match for "+header1[k]+" for the "+tests[j]+" test!")
 
         # Remove simulated state dump
