@@ -1955,6 +1955,7 @@ public:
                         break;
                     case material_pt_state::volume_fraction:
                         State.MaterialPoints(mat_id).volfrac.update_host();
+                        State.MaterialPoints(mat_id).geo_volfrac.update_host();
                         break;
                     case material_pt_state::eroded_flag:
                         State.MaterialPoints(mat_id).eroded.update_host();
@@ -2073,7 +2074,8 @@ public:
                     num_mat_pt_scalar_vars ++;
                     break;
                 case material_pt_state::volume_fraction:
-                    num_mat_pt_scalar_vars ++;
+                    num_mat_pt_scalar_vars ++; // mat volfrac
+                    num_mat_pt_scalar_vars ++; // geometric volfrac
                     break;
                 case material_pt_state::eroded_flag:
                     num_mat_pt_scalar_vars ++;
@@ -2216,6 +2218,7 @@ public:
         int mat_sspd_id = -1;
         int mat_mass_id = -1;
         int mat_volfrac_id = -1;  
+        int mat_geo_volfrac_id = -1;  // geometric volume fraction of part
         int mat_eroded_id = -1;
         int mat_stress_id = -1;
 
@@ -2259,6 +2262,10 @@ public:
                 case material_pt_state::volume_fraction:
                     mat_elem_scalar_var_names[var] = "mat_volfrac";
                     mat_volfrac_id = var; 
+                    var++;
+
+                    mat_elem_scalar_var_names[var] = "mat_geo_volfrac";
+                    mat_geo_volfrac_id = var; 
                     var++;
                     break;
                 case material_pt_state::eroded_flag:
@@ -2583,7 +2590,7 @@ public:
         if (sie_id>=0){
             FOR_ALL(elem_gid, 0, num_elems, {
                 // get sie by dividing by the mass
-                elem_scalar_fields(sie_id, elem_gid) /= elem_scalar_fields(mass_id, elem_gid); 
+                elem_scalar_fields(sie_id, elem_gid) /= (elem_scalar_fields(mass_id, elem_gid)+1.e-20); 
             });
         } // end if
 
@@ -2728,7 +2735,8 @@ public:
                                                mat_sie_id,
                                                mat_sspd_id,
                                                mat_mass_id,
-                                               mat_volfrac_id,  
+                                               mat_volfrac_id,
+                                               mat_geo_volfrac_id,  
                                                mat_eroded_id,
                                                mat_stress_id,
                                                mat_conductivity_id,
@@ -3686,7 +3694,8 @@ public:
 
                         // field
                         elem_scalar_fields(den_id, elem_gid) += MaterialPointsOfMatID.den(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                                                                MaterialPointsOfMatID.volfrac(mat_elem_lid)*
+                                                                MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::pressure:
@@ -3697,7 +3706,8 @@ public:
 
                         // field
                         elem_scalar_fields(pres_id, elem_gid) += MaterialPointsOfMatID.pres(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                                                                MaterialPointsOfMatID.volfrac(mat_elem_lid)*
+                                                                MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::specific_internal_energy:
@@ -3720,7 +3730,8 @@ public:
 
                         // field
                         elem_scalar_fields(sspd_id, elem_gid) += MaterialPointsOfMatID.sspd(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                                                                MaterialPointsOfMatID.volfrac(mat_elem_lid)*
+                                                                MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::mass:
@@ -3751,7 +3762,8 @@ public:
                                 // stress tensor 
                                 elem_tensor_fields(stress_id, elem_gid, i, j) +=
                                                 MaterialPointsOfMatID.stress(mat_elem_lid,i,j) *
-                                                MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                                                MaterialPointsOfMatID.volfrac(mat_elem_lid)*
+                                                MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
                             } // end for
                         } // end for
                     });
@@ -3766,7 +3778,8 @@ public:
 
                         // field
                         elem_scalar_fields(conductivity_id, elem_gid) += MaterialPointsOfMatID.conductivity(mat_elem_lid)*
-                                                                             MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                                                                             MaterialPointsOfMatID.volfrac(mat_elem_lid)*
+                                                                             MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
                     });
                     break;
 
@@ -3778,7 +3791,8 @@ public:
 
                         // field
                         elem_scalar_fields(specific_heat_id, elem_gid) += MaterialPointsOfMatID.specific_heat(mat_elem_lid)*
-                                                                              MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                                                                              MaterialPointsOfMatID.volfrac(mat_elem_lid)*
+                                                                              MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
                     });
                     break;
 
@@ -3883,12 +3897,13 @@ public:
                                 const int mat_sspd_id,
                                 const int mat_mass_id,
                                 const int mat_volfrac_id,  
+                                const int mat_geo_volfrac_id,  
                                 const int mat_eroded_id,
                                 const int mat_stress_id,
                                 const int mat_conductivity_id,
                                 const int mat_specific_heat_id)
     {
-        
+      
         // --- loop over the material point states
 
         for (auto field : output_material_pt_states){
@@ -3931,11 +3946,20 @@ public:
                     });
                     break;
                 case material_pt_state::volume_fraction:
+                    // material volume fraction
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        // this is the volume fraction
+                        // this is the volume fraction of a material within a part
                         mat_elem_scalar_fields(mat_volfrac_id, mat_elem_lid) = MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                    });
+
+                    // geometric volume fraction
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+
+                        // field
+                        // this is the geometric volume fraction (interface reconstruction)
+                        mat_elem_scalar_fields(mat_geo_volfrac_id, mat_elem_lid) = MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
                     });
                     break;
                 case material_pt_state::eroded_flag:
@@ -4721,12 +4745,13 @@ public:
 
         // write out values for the elem
         for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
+
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-            for (size_t elem_lid = 0; elem_lid < num_mat_elems; elem_lid++)
+
+            for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++)
             {
 
-                size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(elem_lid);
-
+                const size_t elem_gid = State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid);
 
                 double elem_coords[3];
                 elem_coords[0] = 0.0;
@@ -4735,6 +4760,7 @@ public:
 
                 // get the coordinates of the element center
                 for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+
                     elem_coords[0] += State.node.coords.host(mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
                     elem_coords[1] += State.node.coords.host(mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
                     if (num_dims == 3) {
@@ -4745,9 +4771,9 @@ public:
                     }
                 } // end loop over nodes in element
 
-                elem_coords[0] = elem_coords[0] / mesh.num_nodes_in_elem;
-                elem_coords[1] = elem_coords[1] / mesh.num_nodes_in_elem;
-                elem_coords[2] = elem_coords[2] / mesh.num_nodes_in_elem;
+                elem_coords[0] = elem_coords[0] / ((double)mesh.num_nodes_in_elem);
+                elem_coords[1] = elem_coords[1] / ((double)mesh.num_nodes_in_elem);
+                elem_coords[2] = elem_coords[2] / ((double)mesh.num_nodes_in_elem);
 
                 double rad2 = sqrt(elem_coords[0] * elem_coords[0] +
                                    elem_coords[1] * elem_coords[1]);
@@ -4756,21 +4782,25 @@ public:
                                    elem_coords[1] * elem_coords[1] +
                                    elem_coords[2] * elem_coords[2]);
 
+
                 fprintf(out_elem_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t \n",
                          elem_coords[0],
                          elem_coords[1],
                          elem_coords[2],
                          rad2,
                          rad3,
-                         State.MaterialPoints(mat_id).den.host(elem_gid),
-                         State.MaterialPoints(mat_id).pres.host(elem_gid),
-                         State.MaterialPoints(mat_id).sie.host(elem_gid),
-                         State.MaterialPoints(mat_id).sspd.host(elem_gid),
+                         State.MaterialPoints(mat_id).den.host(mat_elem_lid),
+                         State.MaterialPoints(mat_id).pres.host(mat_elem_lid),
+                         State.MaterialPoints(mat_id).sie.host(mat_elem_lid),
+                         State.MaterialPoints(mat_id).sspd.host(mat_elem_lid),
                          State.GaussPoints.vol.host(elem_gid),
-                         State.MaterialPoints(mat_id).mass.host(elem_gid) );
+                         State.MaterialPoints(mat_id).mass.host(mat_elem_lid) );
+
             } // end for elements
+
         } // end for materials
         fclose(out_elem_state);
+
 
 
         // printing nodal state

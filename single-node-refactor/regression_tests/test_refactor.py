@@ -13,7 +13,7 @@ builds = ["openmp"]
 solvers = ["Fierro"]
 
 # Add names of each test
-tests = ["Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
+tests = ["Compaction", "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
         "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
         "Pressure_bc_box","vtu_read","SGTM_cooling_cube", \
         "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box"]
@@ -101,9 +101,9 @@ for i in range(len(executables)):
                 # print(diff)
 
                 if abs(diff) > 1E-8:
-                    print(diff)
-                    print(calc[l])
-                    print(true[l])
+                    print(f"{'Calculated Result:':<20} {calc[l]:.10e}")
+                    print(f"{'Expected Result:':<20} {true[l]:.10e}")
+                    print(f"{'Difference:':<20} {diff:.10e}")
                     raise Exception("Results do not match for "+header1[k]+" for the "+tests[j]+" test!")
 
         # Remove simulated state dump

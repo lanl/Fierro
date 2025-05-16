@@ -69,4 +69,6 @@ void SGHRZ::update_position_rz(
         node_coords(node_gid, 1) = fmax(0.0, node_coords(node_gid, 1));
 
     }); // end parallel for over nodes
+    Kokkos::fence();
+    
 } // end subroutine

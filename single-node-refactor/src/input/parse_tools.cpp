@@ -363,7 +363,40 @@ void print_inputs()
             std::cout << "          "<< field << ":\n";
         }
     } // end mats
-// ---
+    // ---
+    std::cout << "    multimaterial_options: \n";
+    for (auto field : str_multimat_inps){
+        
+        if(field.compare("mat_equilibration_model") == 0){
+            std::cout << "       mat_equilibration_model:";
+            for (const auto& pair : equilibration_model_map) {
+                std::cout << " <" << pair.first << ">";
+            }
+            std::cout << "\n";
+        }
+        else if(field.compare("geo_equilibration_model") == 0){
+            std::cout << "       geo_equilibration_model:";
+            for (const auto& pair : equilibration_model_map) {
+                std::cout << " <" << pair.first << ">";
+            }
+            std::cout << "\n";
+        }
+        else if(contains_word(field, "global_vars")){
+            std::cout << "       " << field <<":\n";
+            std::cout << "          - double/int \n";
+            std::cout << "          - double/int \n";
+            std::cout << "          #...as many values as you need... \n";
+            std::cout << "          - double/int \n";
+        } 
+        else if(field.compare("max_num_mats_per_element") == 0){
+            std::cout << "       "<< field << ": double\n";
+        } // end if
+        else {
+            std::cout << "       "<< field << ":\n";
+        }
+
+    }
+    //------
     std::cout << "    regions: \n";
     std::cout << "       #...as many regions as you need... \n";
     std::cout << "       - region: \n";

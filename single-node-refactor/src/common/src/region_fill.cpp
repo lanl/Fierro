@@ -69,21 +69,24 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
 
     // --- move to parsing ---
-    // allowing for up to 3 materials in an element, this needs to be set by the user with 3 as default
-    const size_t num_mats_per_elem = 3;
+    // default allows for up to 3 materials in an element, can be changed in input under multimaterial options
+    const size_t max_num_mats_per_elem = Materials.max_num_mats_per_element;
     // -----------------------
 
     // GaussState initialized based on fill instructions
     //   aways 3D
     fillGaussState.initialize(num_gauss_points, 
-                              num_mats_per_elem, 
+                              max_num_mats_per_elem, 
                               3,
                               SimulationParamaters.region_setups.fill_gauss_states);
 
     // the elem state is always used, thus always initialized
     fillElemState.initialize(num_elems,
-                             num_mats_per_elem,
+                             max_num_mats_per_elem,
                              num_mats);
+
+    // allocate memory for mat_ids, num_mats_in_elem, and mat_storage_lid 
+    State.MeshtoMaterialMaps.initialize(num_elems, max_num_mats_per_elem); 
 
     // Remember, the solver is initialized prior to this function, creating nodal state
 
@@ -111,15 +114,16 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fillGaussState.poisson_ratios,
                  fillGaussState.level_set,
                  fillElemState.volfrac,
-                 fillElemState.mat_id,
-                 fillElemState.num_mats_saved_in_elem,
+                 fillElemState.geo_volfrac,
+                 State.MeshtoMaterialMaps.mat_id,
+                 State.MeshtoMaterialMaps.num_mats_in_elem,
                  voxel_elem_mat_id,
                  SimulationParamaters.mesh_input.object_ids,
                  SimulationParamaters.region_setups.region_fills,
                  SimulationParamaters.region_setups.region_fills_host,
                  SimulationParamaters.region_setups.fill_gauss_states,
                  SimulationParamaters.region_setups.fill_node_states,
-                 num_mats_per_elem);
+                 max_num_mats_per_elem);
 
 
     // note: the device and host side are updated in the above function
@@ -140,10 +144,10 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
         FOR_REDUCE_SUM(elem_gid, 0, num_elems, sum_local, {
 
             // loop over the materials in the element
-            for (size_t a_mat_in_elem=0; a_mat_in_elem < fillElemState.num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
+            for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem(elem_gid); a_mat_in_elem++){
 
                 // check to see if it is mat_id
-                if (fillElemState.mat_id(elem_gid, a_mat_in_elem) == mat_id) {
+                if (State.MeshtoMaterialMaps.mat_id(elem_gid, a_mat_in_elem) == mat_id) {
                     // increment the number of elements the materials live in
                     sum_local++;
                 } // end if a_mat is equal to mat_id
@@ -238,6 +242,7 @@ void fill_regions(
         DCArrayKokkos <double>& gauss_poisson_ratios,
         DCArrayKokkos <double>& gauss_level_set,
         DCArrayKokkos <double>& elem_volfrac,
+        DCArrayKokkos <double>& elem_geo_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
         DCArrayKokkos <size_t>& voxel_elem_mat_id,
@@ -246,7 +251,7 @@ void fill_regions(
         const CArray <RegionFill_host_t>& region_fills_host,
         std::vector <fill_gauss_state>& fill_gauss_states,
         std::vector <fill_node_state>& fill_node_states,
-        const size_t num_mats_per_elem)
+        const size_t max_num_mats_per_elem)
 {
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
@@ -257,7 +262,7 @@ void fill_regions(
 
     // local variables to this routine
     DCArrayKokkos<double> elem_coords(mesh.num_elems, 3); // aways 3D
-    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, num_mats_per_elem);  // 2nd dim is max mats per elem
+    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, max_num_mats_per_elem);  // 2nd dim is max mats per elem
 
     // Important:
     //  Remember that num_fills_saved_in_elem = num_mats_saved_in_elem
@@ -375,14 +380,17 @@ void fill_regions(
                 if (combined_volfrac < 1.0 - 1.0e-8){
 
                     // append the fill id in this element and
-                    // append the elem_volfrac value too
+                    // append the elem_volfrac and elem_geo_volfrac values too
                     append_fills_in_elem(elem_volfrac,
+                                         elem_geo_volfrac,
                                          elem_fill_ids,
                                          elem_num_mats_saved_in_elem,
                                          region_fills,
-                                         combined_volfrac,
+                                         vfrac,
+                                         geo_volfrac,
                                          elem_gid,
-                                         fill_id);
+                                         fill_id,
+                                         max_num_mats_per_elem);
 
                 } else {
 
@@ -394,7 +402,8 @@ void fill_regions(
                     elem_fill_ids(elem_gid, 0) = fill_id;
  
                     // save volume fraction
-                    elem_volfrac(elem_gid, 0) = 1.0;
+                    elem_volfrac(elem_gid, 0) = 1.0;     // a single material in this element for this part
+                    elem_geo_volfrac(elem_gid, 0) = 1.0; // entire element is a part
 
                     elem_num_mats_saved_in_elem(elem_gid) = 1;
                 } // end of 
@@ -567,6 +576,7 @@ void fill_regions(
     // update host side for elem fill states
     elem_mat_id.update_host();
     elem_volfrac.update_host();
+    elem_geo_volfrac.update_host();
     elem_num_mats_saved_in_elem.update_host();
 
     //---------
@@ -683,23 +693,35 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     // --- set the level set field ---
     if( State.GaussPoints.level_set.host.size()>0 ){
         State.GaussPoints.level_set.set_values(1.0e32); // make level set have a default huge
+        Kokkos::fence();
+        State.GaussPoints.level_set.update_host();
     }
-    Kokkos::fence();
-    State.GaussPoints.level_set.update_host();
 
+
+    // ------------------------------------------------------
+    // MeshtoMaterial space was allocated in simulations setup
+    // The mat_ids and num_mats_in_elem saved were populated
+    // in fill_regions
+    // ------------------------------------------------------
+     
 
     // the following loop is not thread safe
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-        for (size_t a_mat_in_elem=0; a_mat_in_elem < fillElemState.num_mats_saved_in_elem.host(elem_gid); a_mat_in_elem++){
+
+        for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem.host(elem_gid); a_mat_in_elem++){
 
             // get the material_id in this element
-            size_t mat_id = fillElemState.mat_id.host(elem_gid,a_mat_in_elem);
+            size_t mat_id = State.MeshtoMaterialMaps.mat_id.host(elem_gid,a_mat_in_elem);
 
             // mat elem lid (compressed storage) to save the data to, for this material mat_id
             size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
 
             // --- mapping from material elem lid to elem ---
             State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
+
+            // --- mapping from elem to material index space ---
+            State.MeshtoMaterialMaps.mat_storage_lid.host(elem_gid, a_mat_in_elem) = mat_elem_lid;
+            
 
             // -----------------------
             // Save MaterialPoints
@@ -714,6 +736,10 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
                 // --- volume fraction ---
                 State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+                State.MaterialPoints(mat_id).geo_volfrac.host(mat_point_lid) = fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
+
+                const double mat_vol = State.GaussPoints.vol.host(gauss_gid) * 
+                            fillElemState.volfrac.host(elem_gid,a_mat_in_elem)*fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 // --- density and mass ---
                 if( State.MaterialPoints(mat_id).den.host.size()>0 ){
@@ -721,9 +747,9 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                     // add an array that we set to true or false if we set this state here
                     State.MaterialPoints(mat_id).den.host(mat_point_lid)  = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem);
+
                     State.MaterialPoints(mat_id).mass.host(mat_point_lid) = 
-                            fillGaussState.den.host(gauss_gid,a_mat_in_elem) * 
-                            State.GaussPoints.vol.host(gauss_gid) * fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+                            fillGaussState.den.host(gauss_gid,a_mat_in_elem) * mat_vol;
                 }
 
                 // --- set eroded flag to false ---
@@ -808,6 +834,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             State.MaterialToMeshMaps(mat_id).num_material_elems << " for material " << mat_id << "\n";
         
         State.MaterialPoints(mat_id).volfrac.update_device();
+        State.MaterialPoints(mat_id).geo_volfrac.update_device();
         State.MaterialToMeshMaps(mat_id).elem.update_device();
 
         if (State.MaterialPoints(mat_id).den.host.size()>0){
@@ -1355,20 +1382,23 @@ size_t fill_geometric_region(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
+                          const DCArrayKokkos <double>& elem_geo_volfracs,
                           const CArrayKokkos <size_t>& elem_fill_ids,
                           const DCArrayKokkos <size_t>& num_fills_saved_in_elem,
                           const CArrayKokkos<RegionFill_t>& region_fills,
-                          const double combined_volfrac,
+                          const double volfrac,
+                          const double geo_volfrac,
                           const size_t elem_gid,
-                          const size_t fill_id)
+                          const size_t fill_id,
+                          const size_t max_num_mats_per_elem)
 {
 
     // the number of materials saved to this element, initialized to 0 at start of code
     size_t fill_storage_lid = num_fills_saved_in_elem(elem_gid);
 
     // check on exceeding 3 materials per element
-    if (num_fills_saved_in_elem(elem_gid) > 3){
-        Kokkos::abort("ERROR: exceeded 3 materials in an element when painting regions on the mesh \n");
+    if (num_fills_saved_in_elem(elem_gid) > max_num_mats_per_elem-1){
+        Kokkos::abort("ERROR: exceeded max number of materials in an element when painting regions on the mesh \n Set max_num_mats_per_element to a larger value under multimaterial_options \n");
     } // end if check
 
 
@@ -1403,7 +1433,8 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
 
     // --- append the volfracs and fill ids in elem ---
     elem_fill_ids(elem_gid, fill_storage_lid) = fill_id;
-    elem_volfracs(elem_gid, fill_storage_lid) = combined_volfrac;
+    elem_volfracs(elem_gid, fill_storage_lid) = volfrac;
+    elem_geo_volfracs(elem_gid, fill_storage_lid) = geo_volfrac;
 
     // done with calculating the fill instructions
 

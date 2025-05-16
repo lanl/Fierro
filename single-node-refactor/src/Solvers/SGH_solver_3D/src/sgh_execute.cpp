@@ -41,6 +41,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.h"
 #include "geometry_new.h"
 #include "mesh_io.h"
+#include "tipton_equilibration.hpp"
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -76,6 +78,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // initialize time, time_step, and cycles
     double time_value = this->time_start;  // was 0.0
     double dt = dt_start;
+
+    // local memory for this solver
+    CArrayKokkos <double> GaussPoint_pres(mesh.num_elems*mesh.num_leg_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_leg_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_leg_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_leg_gauss_in_elem);
+    
 
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
@@ -159,6 +168,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     output_id++; // saved an output file
 
     graphics_time = time_value + graphics_dt_ival;
+
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -268,6 +278,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                           State.MaterialPoints(mat_id).sspd,
                           State.MaterialCorners(mat_id).force,
                           State.MaterialPoints(mat_id).volfrac,
+                          State.MaterialPoints(mat_id).geo_volfrac,
                           State.corners_in_mat_elem,
                           State.MaterialToMeshMaps(mat_id).elem,
                           num_mat_elems,
@@ -371,6 +382,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- Calculate cell volume for next time step ----
             geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
+
+
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
@@ -388,6 +401,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                              State.MaterialPoints(mat_id).sspd,
                              State.MaterialPoints(mat_id).sie,
                              State.MaterialPoints(mat_id).volfrac,
+                             State.MaterialPoints(mat_id).geo_volfrac,
                              State.GaussPoints.vol,
                              State.MaterialPoints(mat_id).mass,
                              State.MaterialPoints(mat_id).eos_state_vars,
@@ -409,6 +423,38 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             //    2) hypo-elastic strength models are called in get_force
             //    3) strength models must be added by the user in user_mat.cpp
 
+
+            // apply pressure relaxation on material volume fractions
+            if(Materials.EquilibrationModels != model::noEquilibration){
+                TiptonEquilibrationModel::mat_equilibration(
+                    Materials, 
+                    mesh, 
+                    State,
+                    GaussPoint_pres,
+                    GaussPoint_pres_denominator,
+                    GaussPoint_volfrac_min,
+                    GaussPoint_volfrac_limiter,
+                    dt,
+                    rk_alpha,
+                    fuzz,
+                    small);
+            } // end if on applying equilibration
+
+            // apply pressure relaxation on geometric volume fractions
+            if(Materials.GeoEquilibrationModels != model::noEquilibration){
+                TiptonEquilibrationModel::geo_equilibration(
+                    Materials, 
+                    mesh, 
+                    State,
+                    GaussPoint_pres,
+                    GaussPoint_pres_denominator,
+                    GaussPoint_volfrac_min,
+                    GaussPoint_volfrac_limiter,
+                    dt,
+                    rk_alpha,
+                    fuzz,
+                    small);
+            } // end if on applying geometric equilibration
 
         } // end of RK loop
 

@@ -63,4 +63,6 @@ void SGH3D::update_position(double rk_alpha,
             node_coords(node_gid, dim) = node_coords_n0(node_gid, dim) + rk_alpha * dt * half_vel;
         }
     }); // end parallel for over nodes
+    Kokkos::fence();
+    
 } // end subroutine

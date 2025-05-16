@@ -32,33 +32,23 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_PARSE_MATERIAL_INPUTS_H
-#define FIERRO_PARSE_MATERIAL_INPUTS_H
-
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <stdio.h>
-#include <sys/stat.h>
-
-#include "matar.h"
-
-#include "Yaml.hpp"
+#ifndef NO_EQUILIBRATION_H
+#define NO_EQUILIBRATION_H
 
 
-struct Material_t;
-struct MaterialSetup_t;
-struct MaterialFunctions_t;
-struct MaterialEnums_t;
+// -----------------------------------------------------------------------------
+// This does nothing
+// ------------------------------------------------------------------------------
+namespace NoEquilibrationModel {
 
-using namespace mtr;
+    static void equilbration(Material_t& Materials, 
+        Mesh_t& mesh, 
+        State_t& State);
 
-// parse the material text
-void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims);
 
 
-// parse multimaterial test
-void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials);
+} // end namespace
+
+
 
 #endif // end Header Guard

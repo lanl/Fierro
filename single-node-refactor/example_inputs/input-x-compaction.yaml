@@ -1,0 +1,274 @@
+# num_dims: 3
+
+dynamic_options:
+    time_final: 10.0
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_cfl: 0.5
+    dt_start: 1.e-5
+    cycle_stop: 200000
+
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [3.0, 1., 1.]
+    num_elems: [60, 20, 20]
+
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz #state
+    graphics_time_step: 1.0
+    #graphics_iteration_step: 1
+    elem_field_outputs:
+        - den
+        - pres
+        - sie
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+        - volfrac
+    node_field_outputs:
+        - vel
+
+
+
+solver_options:
+  - solver:
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+
+
+boundary_conditions:
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 1.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # Tag z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
+    # Tag z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
+  
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-4
+            - 1.0
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 1.0   # phi_min
+            - 1.0   # pin_curl_min
+
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        eos_global_vars:
+            - 10 #1.666666666666667
+            - 1.0E-4
+            - 1.0
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 1.0   # phi_min
+            - 1.0   # pin_curl_min
+
+    - material:
+        id: 2
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        eos_global_vars:
+            - 5
+            - 1.0E-4
+            - 1.0
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 1.0   # phi_min
+            - 1.0   # pin_curl_min
+
+multimaterial_options:
+    max_num_mats_per_element: 3 # allow for up to 3 materials in an element during setup and for reverse map
+
+    mat_equilibration_model: tipton #no_equilibration #tipton
+    mat_equilibration_global_vars:
+        - 0.1   # max volume fraction change
+        - 0.25 # pressure relax coeff (delta P)/coef
+
+    # geometric equilibrium model
+    # --- will add this later ---
+
+regions:
+    - region:
+        volume:
+            type: global
+        material_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-16
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 0.5
+
+    - region:
+        volume:
+            type: global
+        material_id: 1
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-16
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 0.25
+
+    - region:
+        volume:
+            type: global
+        material_id: 2
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-16
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 0.25
+
+    # energy source initial conditions
+    - region:
+        volume:
+            type: box
+            x1: 0
+            x2: 0.05
+            y1: 0
+            y2: 10
+            z1: 0
+            z2: 10
+        solver_id: 0
+        material_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        # ie: 0.25833839995946534
+        specific_internal_energy: 
+            type: uniform
+            value: 1.0
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+    
+
