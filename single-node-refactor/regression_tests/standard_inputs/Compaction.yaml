@@ -177,10 +177,10 @@ materials:
 multimaterial_options:
     max_num_mats_per_element: 3 # allow for up to 3 materials in an element during setup and for reverse map
 
-    mat_equilibration_model: tipton #no_equilibration #tipton
-    mat_equilibration_global_vars:
-        - 0.1   # max volume fraction change
-        - 0.25 # pressure relax coeff (delta P)/coef
+    #mat_equilibration_model: tipton #no_equilibration #tipton
+    #mat_equilibration_global_vars:
+    #    - 0.1   # max volume fraction change
+    #    - 0.25 # pressure relax coeff (delta P)/coef
 
     # geometric equilibrium model
     # --- will add this later ---

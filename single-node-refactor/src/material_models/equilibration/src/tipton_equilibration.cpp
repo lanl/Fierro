@@ -79,7 +79,7 @@ namespace TiptonEquilibrationModel {
                       const double small)
     {
 
-        const double my_fuzz = 1.e-12;
+        const double my_fuzz = 1.e-13;
 
         const size_t num_mats = Materials.num_mats;
 
