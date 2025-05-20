@@ -84,7 +84,8 @@ void SGHRZ::update_velocity_rz(
                                          rk_alpha * dt * node_force[dim] / node_mass(node_gid);
         } // end for dim
     }); // end for parallel for over nodes
-
+    Kokkos::fence();
+    
     return;
 } // end subroutine update_velocity
 

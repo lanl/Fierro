@@ -39,9 +39,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "sgh_solver_3D.h"
 #include "sgh_solver_rz.h"
 #include "sgtm_solver_3D.h"
+#include "level_set_solver.h"
 
 #include "region_fill.h"
 #include <mpi.h>
+
+
+
 
 // Initialize driver data.  Solver type, number of solvers
 // Will be parsed from YAML input
@@ -127,43 +131,9 @@ void Driver::initialize()
                                    BoundaryConditions,
                                    State);
 
-            // save the solver_id
-            sgh_solver->solver_id = solver_id;
-            
-            // set the start and ending times
-            double t_end = SimulationParameters.solver_inputs[solver_id].time_end;  // default is t=0
-            if(solver_id==0){
-                sgh_solver->time_start = 0.0;
-
-                if(t_end <= 1.0e-14){
-                    // time wasn't set so end the solver at the final time of the calculation
-                    sgh_solver->time_end = fmax(0.0, time_final);
-                }
-                else {
-                    // use the specified time in the input file
-                    sgh_solver->time_end = t_end;
-                } // end if time was set
-            }
-            else {
-                // this is not the first solver run
-                double time_prior_solver_ends = solvers[solver_id-1]->time_end;
-
-                sgh_solver->time_start = time_prior_solver_ends;
-
-                if (t_end <= 1.0e-14){
-                    // time wasn't set so end the solver at the final time of the calculation
-                    sgh_solver->time_end = time_final;
-                }
-                else {
-                    // use the specified time in the input file
-                    sgh_solver->time_end = fmin(t_end, time_final); // ensure t_end is bounded by final time
-                } // end if time was set
-                
-            } // end if solver=0
-            
-            if(myrank == 0){
-                std::cout << "Solver " << solver_id << " start time = " << sgh_solver->time_start << ", ending time = " << sgh_solver->time_end << "\n";
-            }
+            // set the variables in the solver class
+            setup_solver_vars(sgh_solver, 
+                              solver_id);
 
             solvers.push_back(sgh_solver);
 
@@ -182,43 +152,9 @@ void Driver::initialize()
                                    BoundaryConditions,
                                    State);
 
-            // save the solver_id
-            sgh_solver_rz->solver_id = solver_id;
-
-            // set the start and ending times
-            double t_end = SimulationParameters.solver_inputs[solver_id].time_end;  // default is t=0
-            if(solver_id==0){
-                sgh_solver_rz->time_start = 0.0;
-
-                if(t_end <= 1.0e-14){
-                    // time wasn't set so end the solver at the final time of the calculation
-                    sgh_solver_rz->time_end = fmax(0.0, time_final);
-                }
-                else {
-                    // use the specified time in the input file
-                    sgh_solver_rz->time_end = t_end;
-                } // end if time was set
-            }
-            else {
-                // this is not the first solver run
-                double time_prior_solver_ends = solvers[solver_id-1]->time_end;
-
-                sgh_solver_rz->time_start = time_prior_solver_ends;
-
-                if (t_end <= 1.0e-14){
-                    // time wasn't set so end the solver at the final time of the calculation
-                    sgh_solver_rz->time_end = time_final;
-                }
-                else {
-                    // use the specified time in the input file
-                    sgh_solver_rz->time_end = fmin(t_end, time_final); // ensure t_end is bounded by final time
-                } // end if time was set
-                
-            } // end if solver=0
-            
-            if(myrank == 0){
-                std::cout << "Solver " << solver_id << " start time = " << sgh_solver_rz->time_start << ", ending time = " << sgh_solver_rz->time_end << "\n";
-            }
+            // set the variables in the solver class
+            setup_solver_vars(sgh_solver_rz, 
+                              solver_id);
 
             solvers.push_back(sgh_solver_rz);
         } // end if SGHRZ solver
@@ -235,46 +171,31 @@ void Driver::initialize()
                                        BoundaryConditions,
                                        State);
 
-                                                   // save the solver_id
-            sgtm_solver_3d->solver_id = solver_id;
+            // set the variables in the solver class
+            setup_solver_vars(sgtm_solver_3d, 
+                              solver_id);
 
-            // set the start and ending times
-            double t_end = SimulationParameters.solver_inputs[solver_id].time_end;  // default is t=0
-            if(solver_id==0){
-                sgtm_solver_3d->time_start = 0.0;
+            solvers.push_back(sgtm_solver_3d);
 
-                if(t_end <= 1.0e-14){
-                    // time wasn't set so end the solver at the final time of the calculation
-                    sgtm_solver_3d->time_end = fmax(0.0, time_final);
-                }
-                else {
-                    // use the specified time in the input file
-                    sgtm_solver_3d->time_end = t_end;
-                } // end if time was set
-            }
-            else {
-                // this is not the first solver run
-                double time_prior_solver_ends = solvers[solver_id-1]->time_end;
-
-                sgtm_solver_3d->time_start = time_prior_solver_ends;
-
-                if (t_end <= 1.0e-14){
-                    // time wasn't set so end the solver at the final time of the calculation
-                    sgtm_solver_3d->time_end = time_final;
-                }
-                else {
-                    // use the specified time in the input file
-                    sgtm_solver_3d->time_end = fmin(t_end, time_final); // ensure t_end is bounded by final time
-                } // end if time was set
-                
-            } // end if solver=0
-            
-            if(myrank == 0){
-                std::cout << "Solver " << solver_id << " start time = " << sgtm_solver_3d->time_start << ", ending time = " << sgtm_solver_3d->time_end << "\n";
-            }
-        
-           solvers.push_back(sgtm_solver_3d);
         } // end if SGTM solver
+        else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::levelSet) {
+
+            std::cout << "Initializing level set solver" << std::endl;
+            LevelSet* level_set_solver = new LevelSet(); 
+        
+            level_set_solver->initialize(SimulationParamaters, 
+                                         Materials, 
+                                         mesh, 
+                                         BoundaryConditions,
+                                         State);
+
+            // set the variables in the solver class
+            setup_solver_vars(level_set_solver, 
+                              solver_id);
+
+            solvers.push_back(level_set_solver);
+
+        } // end if level set solver
         else {
             throw std::runtime_error("**** NO SOLVER INPUT OPTIONS PROVIDED IN YAML, OR OPTION NOT UNDERSTOOD ****");
             MPI_Finalize();
@@ -396,3 +317,64 @@ void Driver::finalize()
         delete solver;
     }
 }
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn setup_solver_vars
+///
+/// \brief a function to set the solver variables based on user yaml inputs
+///
+///
+/////////////////////////////////////////////////////////////////////////////
+template <typename T>
+void Driver::setup_solver_vars(T& a_solver, 
+                               const size_t solver_id){
+
+
+    // the final time of the simulation
+    double time_final = this->SimulationParamaters.dynamic_options.time_final;
+
+    // save the solver_id
+    a_solver->solver_id = solver_id;
+
+    // add other solver vars here
+
+
+    // -------
+    // setting the ending times are tricky, requiring logic
+            
+    // set the start and ending times
+    double t_end = this->SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
+    if(solver_id==0){
+        a_solver->time_start = 0.0;
+
+        if(t_end <= 1.0e-14){
+            // time wasn't set so end the solver at the final time of the calculation
+            a_solver->time_end = fmax(0.0, time_final);
+        }
+        else {
+            // use the specified time in the input file
+            a_solver->time_end = t_end;
+        } // end if time was set
+    }
+    else {
+        // this is not the first solver run
+        double time_prior_solver_ends = this->solvers[solver_id-1]->time_end;
+
+        a_solver->time_start = time_prior_solver_ends;
+
+        if (t_end <= 1.0e-14){
+            // time wasn't set so end the solver at the final time of the calculation
+            a_solver->time_end = time_final;
+        }
+        else {
+            // use the specified time in the input file
+            a_solver->time_end = fmin(t_end, time_final); // ensure t_end is bounded by final time
+        } // end if time was set
+        
+    } // end if solver=0
+
+    std::cout << "Solver " << solver_id << " start time = " << a_solver->time_start << ", ending time = " << a_solver->time_end << "\n";
+
+    return;
+} // end setup solver vars function

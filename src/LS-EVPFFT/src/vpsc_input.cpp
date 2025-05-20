@@ -99,6 +99,14 @@ void EVPFFT::vpsc_input()
   dnca.update_device();
   dbca.update_device();
   schca.update_device();
+  // j2 variables from data_crystal
+  sigma0.update_device();
+  sigma1.update_device();
+  thet0_j2.update_device();
+  thet1_j2.update_device();
+  nrs_j2.update_device();
+  edotp0_j2.update_device();
+  iJ2.update_device();
 #ifdef NON_SCHMID_EFFECTS
   schcnon.update_device();
 #endif
@@ -107,7 +115,6 @@ void EVPFFT::vpsc_input()
   // READS INITIAL TEXTURE FROM FILETEXT
   // and calculates the local elastic stiffness
   data_grain(filetext);
- 
 
 // ****************************************************************************
 //     READ BOUNDARY CONDITIONS ON OVERALL STRESS AND STRAIN-RATE
@@ -324,12 +331,16 @@ void EVPFFT::init_crss_voce()
         int iph = jphase.host(ii,jj,kk);
 
         if (igas.host(iph) == 0) {
-          for (int i = 1; i <= nsyst.host(iph); i++) {
-            crss.host(i,1,ii,jj,kk) = tau.host(i,1,iph);
-            crss.host(i,2,ii,jj,kk) = tau.host(i,2,iph);
-            //trialtau.host(i,1,ii,jj,kk)  = tau.host(i,1,iph);
-            //trialtau.host(i,2,ii,jj,kk)  = tau.host(i,2,iph);
-          }
+          if (iJ2.host(iph) == 0) {
+            for (int i = 1; i <= nsyst.host(iph); i++) {
+              crss.host(i,1,ii,jj,kk) = tau.host(i,1,iph);
+              crss.host(i,2,ii,jj,kk) = tau.host(i,2,iph);
+              //trialtau.host(i,1,ii,jj,kk)  = tau.host(i,1,iph);
+              //trialtau.host(i,2,ii,jj,kk)  = tau.host(i,2,iph);
+            }
+          } else {
+            sigma0gr.host(ii,jj,kk) = sigma0.host(iph);
+          } // end if (iJ2.host(iph) == 0)
         } // end if (igas.host(iph) == 0)
 
       }  // end for ii
@@ -337,5 +348,6 @@ void EVPFFT::init_crss_voce()
   } // end for kk
 
   crss.update_device();
+  sigma0gr.update_device();
 }
 

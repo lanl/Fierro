@@ -55,7 +55,8 @@ enum class fill_gauss_state
     shear_modulii,
     poisson_ratios,
     thermal_conductivity,
-    specific_heat
+    specific_heat,
+    level_set
 };
 
 //distributed vector type in use
@@ -69,13 +70,13 @@ using DistributedDCArray = TpetraDCArray<T>;
 ///
 /// \struct fillGaussState_t
 ///
-/// \brief Stores state to setup of a problem
+/// \brief Stores state to setup a problem
 ///
 /////////////////////////////////////////////////////////////////////////////
 // Possible states, used to initialize fillState_t
 struct fillGaussState_t
 {
-    size_t max_mats_in_elem;    ///< the max number of materials possible per element
+    size_t max_mats_in_elem;      ///< the max number of materials possible per element
 
     DCArrayKokkos<double> den;    ///< Gauss Point density
     DCArrayKokkos<double> sie;    ///< Gauss Point specific internal energy
@@ -84,12 +85,14 @@ struct fillGaussState_t
 
     DCArrayKokkos<double> stress; ///< Gauss Point stress
 
-    DCArrayKokkos<double> thermal_conductivity;  ///< Thermal conductivity
-    DCArrayKokkos<double> specific_heat; ///< Specific Heat
+    DCArrayKokkos<double> thermal_conductivity; ///< Thermal conductivity
+    DCArrayKokkos<double> specific_heat;        ///< Specific Heat
 
     DCArrayKokkos<double> elastic_modulii;  ///<  Gauss Point elastic modulii Exx, Eyy, Ezz
     DCArrayKokkos<double> shear_modulii;    ///<  Gauss Point shear modulii Gxy, Gxz, Gyz
     DCArrayKokkos<double> poisson_ratios;   ///<  Gauss Point poisson ratios nu_xy, nu_xz, nu_yz
+
+    DCArrayKokkos<double> level_set;        ///< level set
 
 
     // initialization method 
@@ -104,43 +107,46 @@ struct fillGaussState_t
         for (auto field : fill_gauss_states){
             switch(field){
                 case fill_gauss_state::density:
-                    if (den.size() == 0) this->den = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_density");
+                    if (den.size() == 0) this->den = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_density");
                     break;
                 case fill_gauss_state::stress:
-                    if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, num_dims, num_dims, "gauss_point_stress");
+                    if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, num_dims, num_dims, "fill_gauss_point_stress");
                     break;
                 case fill_gauss_state::elastic_modulii:
-                    if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "gauss_point_elastic_modulii");
+                    if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "fill_gauss_point_elastic_modulii");
                     break;
                 case fill_gauss_state::shear_modulii:
-                    if (shear_modulii.size() == 0) this->shear_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "gauss_point_shear_modulii");
+                    if (shear_modulii.size() == 0) this->shear_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "fill_gauss_point_shear_modulii");
                     break;
                 case fill_gauss_state::poisson_ratios:
-                    if (poisson_ratios.size() == 0) this->poisson_ratios = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "gauss_point_poisson_ratios");
+                    if (poisson_ratios.size() == 0) this->poisson_ratios = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "fill_gauss_point_poisson_ratios");
                     break;
                 case fill_gauss_state::specific_internal_energy:
-                    if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_sie");
+                    if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_sie");
                     if (use_sie.size() == 0){ 
-                        this->use_sie = DCArrayKokkos<bool>(num_gauss_points, max_mats_in_elem, "gauss_point_use_sie");
+                        this->use_sie = DCArrayKokkos<bool>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_use_sie");
                         use_sie.set_values(false);
                     }
                     break;
                 case fill_gauss_state::internal_energy:
-                    if (sie.size() == 0) this->ie = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_ie");
+                    if (sie.size() == 0) this->ie = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_ie");
                     if (use_sie.size() == 0){ 
-                        this->use_sie = DCArrayKokkos<bool>(num_gauss_points, max_mats_in_elem, "gauss_point_use_sie");
+                        this->use_sie = DCArrayKokkos<bool>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_use_sie");
                         use_sie.set_values(false);
                     }
                     break;
                 case fill_gauss_state::thermal_conductivity:
-                    if (thermal_conductivity.size() == 0) this->thermal_conductivity = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_thermal_conductivity");
+                    if (thermal_conductivity.size() == 0) this->thermal_conductivity = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_thermal_conductivity");
                     break;
                 case fill_gauss_state::specific_heat:
-                    if (specific_heat.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "gauss_point_specific_heat");
+                    if (specific_heat.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_specific_heat");
+                    break;
+                case fill_gauss_state::level_set:
+                    if (level_set.size() == 0) this->level_set = DCArrayKokkos<double>(num_gauss_points,max_mats_in_elem, "fill_gauss_level_set");
                     break;
                 default:
                     std::cout<<"Desired Gauss point fill state not understood in initialize"<<std::endl;
-                    throw std::runtime_error("**** Error in State Field Name ****");
+                    throw std::runtime_error("**** Error in State Fill Field Name ****");
             } // end switch
         }
     } // end method
@@ -159,12 +165,14 @@ struct fillElemState_t
 {
     size_t max_mats_in_elem;    ///< the max number of materials possible per element
 
-    DCArrayKokkos<double> volfrac;  ///< element volume fraction
+    DCArrayKokkos<double> volfrac;     ///< element volume fraction
+    DCArrayKokkos<double> geo_volfrac;  ///< element geometric (the part) volume fraction
 
-    // arrays for building material index space
-    DCArrayKokkos <size_t> mat_id;            ///< material ids in the element (num_elems, num_mats_saved)
-    DCArrayKokkos <size_t> num_mats_saved_in_elem; ///< material ids in the element (num_elems,num_mats_saved)
-    DCArrayKokkos <size_t> num_elems_saved_for_mat;///< the number of elements the material resides in, (num_mats)
+    // arrays for building material index space:
+    //    mat_id                     material ids in the element (num_elems, num_mats_saved)
+    //    num_mats_saved_in_elem     material ids in the element (num_elems, num_mats_saved)
+    //    num_elems_saved_for_mat    the number of elements the material resides in, (num_mats)
+    // are in the MeshToMaterialMap struct
    
     
     // initialization method 
@@ -174,18 +182,12 @@ struct fillElemState_t
     {
         this-> max_mats_in_elem = max_mat_storage_in_elem;
 
-        if (volfrac.size() == 0) this->volfrac = DCArrayKokkos<double>(num_elems, max_mats_in_elem, "elem_volfrac");
-
-        if (mat_id.size() == 0) this->mat_id = DCArrayKokkos <size_t> (num_elems, max_mats_in_elem, "elem_mat_id");
-        
-        if (num_mats_saved_in_elem.size() == 0){
-            this->num_mats_saved_in_elem = DCArrayKokkos <size_t> (num_elems, "num_mats_saved_in_elem"); 
-            num_mats_saved_in_elem.set_values(0); // initialize all elems to storing 0 materials
-            num_mats_saved_in_elem.update_host(); // copy from GPU to CPU
+        if (volfrac.size() == 0){
+            this->volfrac = DCArrayKokkos<double>(num_elems, max_mats_in_elem, "elem_volfrac");
         }
 
-        if (num_elems_saved_for_mat.size() == 0){
-            num_elems_saved_for_mat = DCArrayKokkos <size_t> (num_mats, "num_elems_saved_for_mat");
+        if (geo_volfrac.size() == 0){
+            this->geo_volfrac = DCArrayKokkos<double>(num_elems, max_mats_in_elem, "elem_geo_volfrac");
         }
 
         // voxel_elem_mat_id is allocated in the voxel file read
@@ -260,6 +262,7 @@ enum class node_state
     temp,
     heat_transfer,
     force,
+    gradient_level_set
 };
 
 
@@ -281,6 +284,7 @@ struct node_t
     DistributedDCArray<double> temp;      ///< Nodal temperature
     DistributedDCArray<double> temp_n0;   ///< Nodal temperature at tn=0 of time integration
     DistributedDCArray<double> q_transfer; ///< Nodal heat flux
+    DistributedDCArray<double> gradient_level_set;   ///< Nodal gradient of the level set function
 
     // initialization method (num_nodes, num_dims, state to allocate)
     void initialize(size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
@@ -340,6 +344,9 @@ struct node_t
                 case node_state::heat_transfer:
                     if (q_transfer.size() == 0) this->q_transfer = DistributedDCArray<double>(partitioned_map, "node_q_transfer");
                     break;
+                case node_state::gradient_level_set:
+                    if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<double>(num_nodes, num_dims, "node_grad_levelset");
+                    break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
                     throw std::runtime_error("**** Error in State Field Name ****");
@@ -356,6 +363,7 @@ enum class gauss_pt_state
     volume,
     divergence_velocity,
     gradient_velocity,
+    level_set
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -372,6 +380,9 @@ struct GaussPoint_t
     DCArrayKokkos<double> div;  ///< GaussPoint divergence of velocity
     DCArrayKokkos<double> vel_grad;  ///< GaussPoint velocity gradient tensor
 
+    DCArrayKokkos<double> level_set;  ///< GaussPoint level set field
+    DCArrayKokkos<double> level_set_n0;  ///< GaussPoint level set field
+
     // initialization method (num_cells, num_dims)
     void initialize(size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
     {
@@ -387,6 +398,10 @@ struct GaussPoint_t
                 case gauss_pt_state::gradient_velocity:
                     if (vel_grad.size() == 0) this->vel_grad = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_vel_grad");
                     break;
+                case gauss_pt_state::level_set:
+                    if (level_set.size() == 0) this->level_set = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set");
+                    if (level_set_n0.size() == 0) this->level_set_n0 = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set_n0");
+                    break;
                 default:
                     std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;
                     throw std::runtime_error("**** Error in State Field Name ****");
@@ -394,6 +409,38 @@ struct GaussPoint_t
         }
     }; // end method
 };  // end GaussPoint_t
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct MeshtoMaterialMap_t
+///
+/// \brief Stores state information associated with maps from material to mesh maps
+///
+/////////////////////////////////////////////////////////////////////////////
+struct MeshtoMaterialMap_t
+{
+    DCArrayKokkos<size_t> num_mats_in_elem; ///< returns the exact number of materials in elem
+    DCArrayKokkos<size_t> mat_id;           ///< returns the mat_id 
+    DCArrayKokkos<size_t> mat_storage_lid;  ///< returns the material storage local index
+
+    // initialization method for FE-SGH and MPM methods (max number of elems needed)
+    void initialize(size_t num_elem_max, size_t num_mats_per_elem_max)
+    {
+        if (num_mats_in_elem.size() == 0){
+            this->num_mats_in_elem = DCArrayKokkos<size_t>(num_elem_max, "num_mats_in_elem");
+            this->num_mats_in_elem.set_values(0); // initialize all elems to storing 0 materials
+            this->num_mats_in_elem.update_host(); // copy from GPU to CPU
+        }
+        if (mat_id.size() == 0){
+            this->mat_id = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_id_in_elem");
+        }
+        if (mat_storage_lid.size() == 0){
+            this->mat_storage_lid = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_storage_lid_in_elem");
+        }
+        
+    }; // end method
+}; // end MeshtoMaterialMaps_t
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -411,7 +458,9 @@ struct MaterialToMeshMap_t
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize(size_t num_elem_max)
     {
-        if (elem.size() == 0) this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
+        if (elem.size() == 0){ 
+            this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
+        }
     }; // end method
 }; // end MaterialtoMeshMaps_t
 
@@ -471,9 +520,12 @@ struct MaterialPoint_t
     DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
     DCArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
 
-    DCArrayKokkos<double> temp_grad; ///< Temperature gradient
-    DCArrayKokkos<double> volfrac;   ///< MaterialPoint volume fraction
-    DCArrayKokkos<bool> eroded;   ///< MaterialPoint eroded or not flag
+    DCArrayKokkos<double> temp_grad;     ///< Temperature gradient
+    DCArrayKokkos<double> volfrac;       ///< MaterialPoint volume fraction
+    DCArrayKokkos<double> delta_volfrac; ///< change in MaterialPoint volume fraction
+    DCArrayKokkos<double> geo_volfrac;   ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
+    DCArrayKokkos<double> delta_geo_volfrac; ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
+    DCArrayKokkos<bool> eroded;              ///< MaterialPoint eroded or not flag
 
     // initialization method (num_pts_max, num_dims)
     void initialize(size_t num_pts_max, size_t num_dims, std::vector<material_pt_state> material_pt_states)
@@ -510,6 +562,10 @@ struct MaterialPoint_t
                     break;
                 case material_pt_state::volume_fraction:
                     if (volfrac.size() == 0) this->volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac");
+                    if (geo_volfrac.size() == 0) this->geo_volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_geo_volfrac");
+                    // changes in volume fraction
+                    if (delta_volfrac.size() == 0) this->delta_volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac_delta");
+                    if (delta_geo_volfrac.size() == 0) this->delta_geo_volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_geo_volfrac_delta");
                     break;
                 case material_pt_state::specific_internal_energy:
                     if (sie.size() == 0)  this->sie = DCArrayKokkos<double>(num_pts_max, "material_point_sie");
@@ -626,7 +682,9 @@ enum class corner_state
 {
     force, 
     mass,
-    heat_transfer
+    heat_transfer,
+    normal,
+    volume
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -637,9 +695,11 @@ enum class corner_state
 /////////////////////////////////////////////////////////////////////////////
 struct corner_t
 {
-    DCArrayKokkos<double> force; ///< Corner force
-    DCArrayKokkos<double> mass; ///< Corner mass
+    DCArrayKokkos<double> force;  ///< Corner force
+    DCArrayKokkos<double> mass;   ///< Corner mass
     DCArrayKokkos<double> q_transfer;  ///< Corner heat transfer
+    DCArrayKokkos<double> normal; ///< Corner normal
+    DCArrayKokkos<double> volume; ///< Corner volume
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims, std::vector<corner_state> corner_states)
@@ -655,6 +715,12 @@ struct corner_t
                     break;
                 case corner_state::heat_transfer:
                     if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_corners, "corner_q_transfer"); 
+                    break;
+                case corner_state::normal:
+                    if (normal.size() == 0) this->normal = DCArrayKokkos<double>(num_corners, num_dims, "corner_normal");
+                    break;
+                case corner_state::volume:
+                    if (volume.size() == 0) this->volume  = DCArrayKokkos<double>(num_corners, "corner_volume");
                     break;
                 default:
                     std::cout<<"Desired corner state not understood in corner_t initialize"<<std::endl;
@@ -828,28 +894,29 @@ struct State_t
     // ---------------------------------------------------------------------
     //    state data on mesh declarations
     // ---------------------------------------------------------------------
-    node_t node;
-    GaussPoint_t GaussPoints;
-    corner_t corner;
+    node_t node;              ///< access as node.coords(node_gid,dim)
+    GaussPoint_t GaussPoints; ///< access as GaussPoints.vol(gauss_pt_gid)
+    corner_t corner;          ///< access as corner.force(corner_gid,dim)
 
     // ---------------------------------------------------------------------
-    //    material to mesh maps
+    //    material to mesh maps and mesh to material maps
     // ---------------------------------------------------------------------
-    CArray<MaterialToMeshMap_t> MaterialToMeshMaps;   ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
+    CArray<MaterialToMeshMap_t> MaterialToMeshMaps; ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
+    MeshtoMaterialMap_t MeshtoMaterialMaps;          ///< acces as MeshtoMaterialMaps.mat_id(elem, mat_lid)
 
     // ---------------------------------------------------------------------
     //    material to material maps
     // ---------------------------------------------------------------------
     corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_lid, corn_lid)
-    points_in_mat_t points_in_mat_elem;  ///< for accessing e.g., gauss points mat lid with arbitrary-order FE
-    zones_in_mat_t zones_in_mat_elem;   ///< for accessing sub-zones mat lid with arbitrary-order FE
+    points_in_mat_t points_in_mat_elem;   ///< for accessing e.g., gauss points mat lid with arbitrary-order FE (mat_elem_lid, gauss_lid)
+    zones_in_mat_t zones_in_mat_elem;     ///< for accessing sub-zones mat lid with arbitrary-order FE
 
     // ---------------------------------------------------------------------
     //    material state, compressed, and sequentially accessed
     // ---------------------------------------------------------------------
-    CArray<MaterialPoint_t> MaterialPoints;  ///< access as MaterialPoints(mat_id).var(mat_pt)
+    CArray<MaterialPoint_t> MaterialPoints;   ///< access as MaterialPoints(mat_id).var(mat_pt)
     CArray<MaterialCorner_t> MaterialCorners; ///< access as MaterialCorners(mat_id).var(mat_corner), not used with MPM
-    CArray<MaterialZone_t> MaterialZones;   ///< access as MaterialZones(mat_id).var(mat_zone), only used with arbitrary-order FE
+    CArray<MaterialZone_t> MaterialZones;     ///< access as MaterialZones(mat_id).var(mat_zone), only used with arbitrary-order FE
 }; // end state_t
 
 

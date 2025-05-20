@@ -119,6 +119,7 @@ void SGHRZ::update_energy_rz(
 
        
     }); // end parallel loop over the elements
-
+    Kokkos::fence();
+    
     return;
 } // end subroutine

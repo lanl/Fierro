@@ -104,6 +104,13 @@ namespace model
         directionalMARSRZ = 4   ///<  Directional MARS in RZ
     };
 
+    // erosion model
+    enum EquilibrationModels
+    {
+        noEquilibration = 0,    ///<  no equilibration
+        tiptonEquilibration = 1,  ///< Tipton equilbration
+        userDefinedEquilibration = 2  ///< user defined equilbration
+    };
 
     // Model run locations
     enum RunLocation
@@ -111,6 +118,14 @@ namespace model
         device = 0,     ///<  run on device e.g., GPUs
         host = 1,       ///<  run on the host, which is always the CPU
         dual = 2,       ///<  multi-scale solver, solver is on cpu and solver calls model on device
+    };
+
+    // level set 
+    enum levelSetType
+    {
+        noLevelSet  = 0, ///<  No level set model used
+        evolveFront = 1, ///<  evolve the front in the normal directdion
+        advectFront = 2,    ///<  advect the front using prescribed velocity
     };
 
 } // end model namespace
@@ -172,6 +187,13 @@ static std::map<std::string, model::ErosionModels> erosion_model_map
     { "basic", model::basicErosion },
 };
 
+static std::map<std::string, model::EquilibrationModels> equilibration_model_map
+{
+    { "no_equilibration", model::noEquilibration },
+    { "tipton", model::tiptonEquilibration },
+    { "user_defined", model::userDefinedEquilibration }
+};
+
 static std::map<std::string, model::DissipationModels> dissipation_model_map
 {
     { "no_dissipation", model::noDissipation },
@@ -179,6 +201,13 @@ static std::map<std::string, model::DissipationModels> dissipation_model_map
     { "MARS_rz", model::MARSRZ },
     { "directional_MARS", model::directionalMARS },
     { "directional_MARS_rz", model::directionalMARSRZ },
+};
+
+static std::map<std::string, model::levelSetType> level_set_type_map
+{
+    { "no_level_set", model::noLevelSet },
+    { "evolve_front", model::evolveFront }
+    //{ "advect_front", model::advectFront }
 };
 
 namespace model_init
@@ -236,7 +265,7 @@ struct MaterialEnums_t
 
     // -- erosion --
 
-    // Erosion model type: none or basis
+    // Erosion model type: none or basic
     model::ErosionModels ErosionModels = model::noErosion;
 
 
@@ -244,6 +273,12 @@ struct MaterialEnums_t
 
     // dissipation model
     model::DissipationModels DissipationModels = model::noDissipation;
+
+
+    // -- level set --
+
+    // level set model type: none, evolve, or advect
+    model::levelSetType levelSetType = model::noLevelSet;
 
 }; // end boundary condition enums
 
@@ -340,6 +375,7 @@ struct MaterialFunctions_t
 
 
     // -- Dissipation --
+
     void (*calc_dissipation) (
         const ViewCArrayKokkos<size_t> elem_node_gids,
         const RaggedRightArrayKokkos <double>& dissipation_global_vars,
@@ -359,6 +395,12 @@ struct MaterialFunctions_t
         const size_t mat_point_lid,
         const size_t mat_id) = NULL;
         // in 2D, in place of vol, the elem facial area is passed
+
+
+    // -- level set --
+    // front_velocity = (normal_velocity - curvature*Kappa)
+    double normal_velocity=0.0;    ///< level set velocity in normal direction
+    double curvature_velocity=0.0; ///< level set velocity contribution from curvature
 
 }; // end material_t
 
@@ -401,7 +443,26 @@ struct Material_t
     RaggedRightArrayKokkos<double> dissipation_global_vars; ///< Array holding q1, q1ex, q2, ... for artificial viscosity
     CArrayKokkos<size_t> num_dissipation_global_vars;
 
+
     // ...
+
+
+    // ------------------------------------
+    // models that apply to all materials
+    // ------------------------------------
+
+    // -- material-material equilibration --
+    model::EquilibrationModels EquilibrationModels = model::noEquilibration;
+    CArrayKokkos<double> equilibration_global_vars; ///< Array holding vars for equilibration models
+    size_t num_equilibration_global_vars;
+
+    // -- geometric-material equilibration --
+    model::EquilibrationModels GeoEquilibrationModels = model::noEquilibration;
+    CArrayKokkos<double> geo_equilibration_global_vars; ///< Array holding vars for geo equilibration models
+    size_t num_geo_equilibration_global_vars;
+
+    size_t max_num_mats_per_element = 3; ///< default is to allow up to 3 materials in an element in setup
+
 }; // end MaterialModelVars_t
 
 // ----------------------------------
@@ -421,12 +482,32 @@ static std::vector<std::string> str_material_inps
     "erosion_model",
     "erode_tension_val",
     "erode_density_val",
+    "level_set_type",
+    "normal_velocity",
+    "curvature_velocity"
+};
+
+// ----------------------------------
+// valid inputs for material options
+// ----------------------------------
+static std::vector<std::string> str_multimat_inps
+{
+    "max_num_mats_per_element",
+    "mat_equilibration_model",
+    "mat_equilibration_global_vars",
+    "geo_equilibration_model",
+    "geo_equilibration_global_vars"
 };
 
 // ---------------------------------------------------------------
 // required inputs for material options are specified here.
 // The requirements vary depending on the problem type and solver
 // ---------------------------------------------------------------
+static std::vector<std::string> material_required_inps
+{
+    "id"
+};
+
 static std::vector<std::string> material_hydrodynamics_required_inps
 {
     "id",
@@ -452,6 +533,17 @@ static std::vector<std::string> material_thermal_statics_required_inps
 {
     "id",
     "thermal_global_vars"
+};
+
+static std::vector<std::string> material_level_set_required_inps
+{
+    "id",
+    "level_set_type"
+};
+
+
+static std::vector<std::string> multimat_required_inps
+{
 };
 
 #endif // end Header Guard

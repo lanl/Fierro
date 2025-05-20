@@ -269,6 +269,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialCorners_force,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
+        const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
         const corners_in_mat_t,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
@@ -334,6 +335,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
+        const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
@@ -406,7 +408,8 @@ public:
         const double dt_min,
         const double dt_cfl,
         double&      dt,
-        const double fuzz) const;
+        const double fuzz,
+        const double tiny) const;
 
     // **** Functions defined in user_mat.cpp **** //
     // NOTE: Pull up into high level

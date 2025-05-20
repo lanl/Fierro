@@ -122,11 +122,11 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     DCArrayKokkos<double> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
     DCArrayKokkos<double> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
     DCArrayKokkos<double> tempGlobalDissipationVars(num_materials, 10, "temp_array_dissipation_vars");
-
+    
     Materials.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials, "num_eos_global_vars");
     Materials.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials, "num_strength_global_vars");
-    Materials.num_dissipation_global_vars = CArrayKokkos <size_t> (num_materials, "num_dissipations_vars");
-
+    Materials.num_dissipation_global_vars   = CArrayKokkos <size_t> (num_materials, "num_dissipations_vars");
+   
     // initialize the num of global vars to 0 for all models
     FOR_ALL(mat_id, 0, num_materials, {
 
@@ -153,7 +153,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
         std::vector<std::string> user_str_material_inps;
 
         // extract words from the input file and validate they are correct
-        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_hydrodynamics_required_inps);
+        validate_inputs(inps_yaml, user_str_material_inps, str_material_inps, material_required_inps);
 
         // loop over the words in the material input definition and find the material id
         int mat_id = -1;
@@ -601,7 +601,38 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     break;
                 } // end if
 
-            } // erosion model variables
+            } // dissipation model 
+            // level set model
+            else if (a_word.compare("level_set_type") == 0) {
+                std::string level_set_type = root["materials"][m_id]["material"]["level_set_type"].As<std::string>();
+
+                // set the level set type
+                if (level_set_type_map.find(level_set_type) != level_set_type_map.end()) {
+
+                    // level_set_type_map[level_set_type] returns enum value, e.g., model::erosion
+                    switch(level_set_type_map[level_set_type]){
+                        case model::noLevelSet:
+                            Materials.MaterialEnums.host(mat_id).levelSetType = model::noLevelSet;
+                            break;
+                        case model::evolveFront:
+                            Materials.MaterialEnums.host(mat_id).levelSetType = model::evolveFront;
+                            break;
+                        case model::advectFront:
+                            Materials.MaterialEnums.host(mat_id).levelSetType = model::advectFront;
+                            break;                        
+                        default:
+                            std::cout << "ERROR: invalid level set input: " << level_set_type << std::endl;
+                            throw std::runtime_error("**** Level Set Type Not Understood ****");
+                            break;
+                    } // end switch
+                } 
+                else{
+                    std::cout << "ERROR: invalid erosion type input: " << level_set_type << std::endl;
+                    throw std::runtime_error("**** Erosion model Not Understood ****");
+                    break;
+                } // end if
+
+            } // level set solver type
             //
             else if (a_word.compare("erode_tension_val") == 0) {
                 double erode_tension_val = root["materials"][m_id]["material"]["erode_tension_val"].As<double>();
@@ -617,7 +648,20 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     Materials.MaterialFunctions(mat_id).erode_density_val = erode_density_val;
                 });
             } // erode_density_val
-            
+            else if (a_word.compare("normal_velocity") == 0) {
+                double normal_velocity = root["materials"][m_id]["material"]["normal_velocity"].As<double>();
+
+                RUN({
+                    Materials.MaterialFunctions(mat_id).normal_velocity = normal_velocity;
+                });
+            } // normal velocity to level set front
+            else if (a_word.compare("curvature_velocity") == 0) {
+                double curvature_velocity = root["materials"][m_id]["material"]["curvature_velocity"].As<double>();
+
+                RUN({
+                    Materials.MaterialFunctions(mat_id).curvature_velocity = curvature_velocity;
+                });
+            } // curvature_velocity            
             // exact the eos_global_vars
             else if (a_word.compare("eos_global_vars") == 0) {
                 Yaml::Node & mat_global_vars_yaml = root["materials"][m_id]["material"][a_word];
@@ -714,8 +758,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     Materials.eos_global_vars = RaggedRightArrayKokkos <double> (Materials.num_eos_global_vars, "Materials.eos_global_vars");
     Materials.strength_global_vars = RaggedRightArrayKokkos <double> (Materials.num_strength_global_vars, "Materials.strength_global_vars");
     Materials.dissipation_global_vars = RaggedRightArrayKokkos <double> (Materials.num_dissipation_global_vars, "Materials.dissipation_global_vars");
-
-
+    
     // save the global variables
     FOR_ALL(mat_id, 0, num_materials, {
         
@@ -804,3 +847,186 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     }); // end if check
 
 } // end of function to parse material information
+
+
+// =================================================================================
+//    Parse Material Definitions
+// =================================================================================
+void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
+{
+    
+    // check yaml file for multimaterial_options
+    std::string key_to_find = "multimaterial_options";
+    Yaml::Node& layer0_items = root;
+
+    bool found = false;
+    for (auto layer0_item = layer0_items.Begin(); layer0_item != layer0_items.End(); layer0_item++){  
+        if ((*layer0_item).first == key_to_find) {
+            found = true;
+            break;
+        }
+    } // end for over the items in layer0 of the yaml file
+
+    if(!found) {
+        return;
+    }
+    // file has the multimaterial options input
+
+    Yaml::Node& multimat_yaml = root["multimaterial_options"];
+
+
+    // get the multimat variables names set by the user
+    std::vector<std::string> user_multimat_inputs;
+
+
+    // extract words from the input file and validate they are correct
+    validate_inputs(multimat_yaml, user_multimat_inputs, str_multimat_inps, multimat_required_inps);
+    
+    // loop over the words in the multimaterial input definition
+    for (auto& a_word : user_multimat_inputs) {
+
+        //extract equilibration model
+        if (a_word.compare("max_num_mats_per_element") == 0) {
+            size_t max_num_mats = root["multimaterial_options"]["max_num_mats_per_element"].As<size_t>();
+
+            Materials.max_num_mats_per_element = max_num_mats;
+
+        } //max_num_mats_per_elem
+        else if (a_word.compare("mat_equilibration_model") == 0) {
+            std::string equilibration_model = root["multimaterial_options"]["mat_equilibration_model"].As<std::string>();
+
+            // set the equilibration model
+            if (equilibration_model_map.find(equilibration_model) != equilibration_model_map.end()) {
+
+                // equilibration_model_map[equilibration_model] returns enum value, e.g., model::equilibration
+                switch(equilibration_model_map[equilibration_model]){
+                    case model::tiptonEquilibration:
+                    {
+                        Materials.EquilibrationModels = model::tiptonEquilibration;
+                        break;
+                    }
+                    case model::userDefinedEquilibration:
+                    {
+                        Materials.EquilibrationModels = model::userDefinedEquilibration;
+                        break;
+                    }
+                    case model::noEquilibration:
+                    {
+                        Materials.EquilibrationModels = model::noEquilibration;
+                        break;
+                    }
+                    default:
+                    {
+                        std::cout << "ERROR: invalid equilibration input: " << equilibration_model << std::endl;
+                        throw std::runtime_error("**** Equilibration Model Not Understood ****");
+                        break;
+                    }
+                } // end switch
+
+            } 
+            else{
+                std::cout << "ERROR: invalid equilibration type input: " << equilibration_model<< std::endl;
+                throw std::runtime_error("**** equilibration model Not Understood ****");
+                break;
+            } // end if
+        } // end if equilibration model
+        else if (a_word.compare("geo_equilibration_model") == 0) {
+            std::string equilibration_model = root["multimaterial_options"]["geo_equilibration_model"].As<std::string>();
+
+            // set the equilibration model
+            if (equilibration_model_map.find(equilibration_model) != equilibration_model_map.end()) {
+
+                // equilibration_model_map[equilibration_model] returns enum value, e.g., model::equilibration
+                switch(equilibration_model_map[equilibration_model]){
+                    case model::tiptonEquilibration:
+                    {
+                        Materials.EquilibrationModels = model::tiptonEquilibration;
+                        break;
+                    }
+                    case model::userDefinedEquilibration:
+                    {
+                        Materials.EquilibrationModels = model::userDefinedEquilibration;
+                        break;
+                    }
+                    case model::noEquilibration:
+                    {
+                        Materials.EquilibrationModels = model::noEquilibration;
+                        break;
+                    }
+                    default:
+                    {
+                        std::cout << "ERROR: invalid equilibration input: " << equilibration_model << std::endl;
+                        throw std::runtime_error("**** Equilibration Model Not Understood ****");
+                        break;
+                    }
+                } // end switch
+
+            } 
+            else{
+                std::cout << "ERROR: invalid equilibration type input: " << equilibration_model<< std::endl;
+                throw std::runtime_error("**** equilibration model Not Understood ****");
+                break;
+            } // end if
+        } // end if geo_equilibration model
+        // -----
+        // extract the equilibration_global_vars
+        else if (a_word.compare("mat_equilibration_global_vars") == 0) {
+            Yaml::Node & mat_global_vars_yaml = root["multimaterial_options"]["mat_equilibration_global_vars"];
+
+            size_t num_global_vars = mat_global_vars_yaml.Size();
+            Materials.num_equilibration_global_vars = num_global_vars;
+            Materials.equilibration_global_vars = CArrayKokkos <double> (num_global_vars, "Materials.equilibration_global_vars");
+
+            if(num_global_vars<2){
+                throw std::runtime_error("**** The Tipton material equilibration model requires 2 inputs ****");
+            } // end check on num_global_vars
+
+            // store the global eos model parameters
+            for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                double equilibration_var = root["multimaterial_options"]["mat_equilibration_global_vars"][global_var_id].As<double>();
+                
+                RUN({
+                    Materials.equilibration_global_vars(global_var_id) = equilibration_var;
+                });
+
+            } // end loop over global vars
+        } // "equilibration_global_vars"
+        // -----
+        // extract the geo_equilibration_global_vars
+        else if (a_word.compare("geo_equilibration_global_vars") == 0) {
+            Yaml::Node & mat_global_vars_yaml = root["multimaterial_options"]["geo_equilibration_global_vars"];
+
+            size_t num_global_vars = mat_global_vars_yaml.Size();
+            Materials.num_geo_equilibration_global_vars = num_global_vars;
+            Materials.geo_equilibration_global_vars = CArrayKokkos <double> (num_global_vars, "Materials.geo_equilibration_global_vars");
+
+            if(num_global_vars<2){
+                throw std::runtime_error("**** The Tipton material geo equilibration model requires 2 inputs ****");
+            } // end check on num_global_vars
+
+            // store the global eos model parameters
+            for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                double equilibration_var = root["multimaterial_options"]["geo_equilibration_global_vars"][global_var_id].As<double>();
+                
+                RUN({
+                    Materials.geo_equilibration_global_vars(global_var_id) = equilibration_var;
+                });
+
+            } // end loop over global vars
+        } // "equilibration_global_vars"
+        // -----
+        // print and error because text is unknown
+        else {
+            std::cout << "ERROR: invalid input: " << a_word << std::endl;
+            std::cout << "Valid options are: " << std::endl;
+
+            for (const auto& element : str_multimat_inps) {
+                std::cout << element << std::endl;
+            }
+            throw std::runtime_error("**** Multimaterial Input Not Understood ****");
+        } // end if else sequence
+
+    } // end loop over words
+
+
+} // end of function to parse multimaterial information

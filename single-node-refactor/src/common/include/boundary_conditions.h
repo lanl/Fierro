@@ -61,7 +61,7 @@ enum BCVelocityModels
 {
     noVelocityBC = 0,
     constantVelocityBC = 1,
-    timeVaringVelocityBC = 2,
+    timeVaryingVelocityBC = 2,
     reflectedVelocityBC = 3,
     zeroVelocityBC = 4,
     userDefinedVelocityBC = 5,
@@ -84,7 +84,7 @@ enum BCStressModels
 {
     noStressBC = 0,
     constantStressBC = 1,
-    timeVaringStressBC = 2,
+    timeVaryingStressBC = 2,
     userDefinedStressBC = 3,
 };
 // future model options:
@@ -120,7 +120,7 @@ static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_
 {
     { "none", boundary_conditions::noVelocityBC },
     { "constant", boundary_conditions::constantVelocityBC },
-    { "time_varying", boundary_conditions::timeVaringVelocityBC },
+    { "time_varying", boundary_conditions::timeVaryingVelocityBC },
     { "reflected", boundary_conditions::reflectedVelocityBC },
     { "fixed", boundary_conditions::zeroVelocityBC },
     { "user_defined", boundary_conditions::userDefinedVelocityBC },
@@ -144,7 +144,7 @@ static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_mode
 {
     { "none", boundary_conditions::noStressBC },
     { "constant", boundary_conditions::constantStressBC },
-    { "time_varying", boundary_conditions::timeVaringStressBC },
+    { "time_varying", boundary_conditions::timeVaryingStressBC },
     { "user_defined", boundary_conditions::userDefinedStressBC }
 };
 
@@ -181,6 +181,7 @@ struct BoundaryConditionSetup_t
 struct BoundaryConditionEnums_t
 {
     solver_input::method solver = solver_input::NONE; ///< Numerical solver method
+
     // BC model for velocity
     boundary_conditions::BCVelocityModels BCVelocityModel = boundary_conditions::noVelocityBC;    ///< Type of velocity boundary condition
 

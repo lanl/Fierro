@@ -82,7 +82,9 @@ void fill_regions(
         DCArrayKokkos <double>& gauss_elastic_modulii,
         DCArrayKokkos <double>& gauss_shear_modulii,
         DCArrayKokkos <double>& gauss_poisson_ratios,
+        DCArrayKokkos <double>& gauss_level_set,
         DCArrayKokkos <double>& elem_volfrac,
+        DCArrayKokkos <double>& elem_geo_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
         DCArrayKokkos <size_t>& voxel_elem_mat_id,
@@ -172,12 +174,15 @@ size_t fill_geometric_region(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
+                          const DCArrayKokkos <double>& elem_geo_volfracs,
                           const CArrayKokkos <size_t>& elem_fill_ids,
                           const DCArrayKokkos <size_t>& num_fills_saved_in_elem,
                           const CArrayKokkos<RegionFill_t>& region_fills,
-                          const double combined_volfrac,
+                          const double volfrac,
+                          const double geo_volfrac,
                           const size_t elem_gid,
-                          const size_t fill_id);
+                          const size_t fill_id,
+                          const size_t max_num_mats_per_elem);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -198,6 +203,7 @@ KOKKOS_FUNCTION
 double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
                          const double scalar,
                          const double slope,
+                         const double orig[3],
                          const size_t mesh_gid,
                          const size_t num_dims,
                          const init_conds::init_scalar_conds scalarFieldType);
@@ -224,6 +230,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
                         const ViewCArrayKokkos <double> mesh_coords,
                         const double scalar,
                         const double slope,
+                        const double orig[3],
                         const size_t mesh_gid,
                         const size_t num_dims,
                         const size_t bin,
@@ -243,17 +250,17 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
-                        const ViewCArrayKokkos <double> mesh_coords,
-                        const double scalar,
-                        const double slope,
-                        const size_t mesh_gid,
-                        const size_t num_dims,
-                        const init_conds::init_scalar_conds scalarFieldType);
+void paint_scalar(const DCArrayKokkos<double>& field_scalar,
+                  const ViewCArrayKokkos <double> mesh_coords,
+                  const double scalar,
+                  const double slope,
+                  const size_t mesh_gid,
+                  const size_t num_dims,
+                  const init_conds::init_scalar_conds scalarFieldType);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn paint_vector_rk
+/// \fn paint_vector
 ///
 /// \brief a function to paint a vector fields on the mesh 
 ///
@@ -268,15 +275,15 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
-                     const ViewCArrayKokkos <double>& mesh_coords,
-                     const double u,
-                     const double v,
-                     const double w,
-                     const double scalar,
-                     const size_t mesh_gid,
-                     const size_t num_dims,
-                     const init_conds::init_vector_conds vectorFieldType);
+void paint_vector(const DCArrayKokkos<double>& vector_field,
+                  const ViewCArrayKokkos <double>& mesh_coords,
+                  const double u,
+                  const double v,
+                  const double w,
+                  const double scalar,
+                  const size_t mesh_gid,
+                  const size_t num_dims,
+                  const init_conds::init_vector_conds vectorFieldType);
 
 
 

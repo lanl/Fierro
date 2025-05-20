@@ -57,7 +57,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParameters,
 {
 
     double fuzz  = SimulationParameters.dynamic_options.fuzz;
-    // double tiny  = SimulationParameters.dynamic_options.tiny;
+    double tiny  = SimulationParameters.dynamic_options.tiny;
     double small = SimulationParameters.dynamic_options.small;
 
     double graphics_dt_ival  = SimulationParameters.output_options.graphics_time_step;
@@ -84,7 +84,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParameters,
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was zero
-
+    size_t output_id=0; // the id for the outputs written
+    
     std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value); // Time value = 0.0;
 
@@ -128,6 +129,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParameters,
         SGTM3D_State::required_material_pt_state,
         this->solver_id);
     
+    output_id++; // saved an output file
+
     graphics_time = time_value + graphics_dt_ival;
 
 std::cout << "here after outputs t0 \n";
@@ -199,7 +202,8 @@ std::cout << "here getting time step\n";
                          dt_min,
                          dt_cfl,
                          dt_mat,
-                         fuzz);
+                         fuzz,
+                         tiny);
 
             // ---- save the smallest dt of all materials ---- //
             min_dt_calc = fmin(dt_mat, min_dt_calc);
@@ -391,7 +395,9 @@ std::cout << "update temperature \n";
                                    SGTM3D_State::required_material_pt_state,
                                    this->solver_id);
 
-            graphics_time = time_value + graphics_dt_ival;
+            output_id++;
+            graphics_time = (double)(output_id) * graphics_dt_ival;
+
         } // end if
 
         // end of calculation

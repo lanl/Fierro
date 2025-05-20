@@ -159,6 +159,27 @@ void parse_output_options(Yaml::Node& root,
                     } // end if
 
                 } // end for over variables
+
+                // check that if elem_sie is specified that mass is also specified
+                bool sie_written = false;
+                bool mass_written = false;
+                for (auto field : output_options.output_elem_state){
+
+                    if(field == material_pt_state::specific_internal_energy){
+                        sie_written = true;
+                    }
+                    if(field == material_pt_state::mass){
+                        mass_written = true;
+                    }
+                }
+                if(sie_written == true && mass_written == false){
+                    // add mass to the outputs
+                    output_options.output_elem_state.push_back(material_pt_state::mass);
+                    std::cout << "WARNING: Writing element average specific internal energy requires the material masses. \n";
+                    std::cout << "The element mass was added to graphics outputs. \n";
+                }
+
+
         } // end of elem fields outputs
         else if (a_word.compare("node_field_outputs") == 0) {
                 Yaml::Node & output_vars_yaml = root["output_options"][a_word];

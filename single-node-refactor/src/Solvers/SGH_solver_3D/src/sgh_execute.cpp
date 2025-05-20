@@ -41,6 +41,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.h"
 #include "geometry_new.h"
 #include "mesh_io.h"
+#include "tipton_equilibration.hpp"
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -56,9 +58,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                     State_t& State)
 {
 
-    double fuzz  = SimulationParameters.dynamic_options.fuzz;
-    // double tiny  = SimulationParameters.dynamic_options.tiny;
-    double small = SimulationParameters.dynamic_options.small;
+    double fuzz  = SimulationParameters.dynamic_options.fuzz;   // 1.e-16
+    double tiny  = SimulationParamaters.dynamic_options.tiny;   // 1.e-12
+    double small = SimulationParameters.dynamic_options.small;  // 1.e-8
 
     double graphics_dt_ival  = SimulationParameters.output_options.graphics_time_step;
     int    graphics_cyc_ival = SimulationParameters.output_options.graphics_iteration_step;
@@ -77,6 +79,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
     double time_value = this->time_start;  // was 0.0
     double dt = dt_start;
 
+    // local memory for this solver
+    CArrayKokkos <double> GaussPoint_pres(mesh.num_elems*mesh.num_leg_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_leg_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_leg_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_leg_gauss_in_elem);
+    
+
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
@@ -84,6 +93,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
+    size_t output_id=0; // the id for the outputs written
 
     std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
@@ -154,10 +164,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
         SGH3D_State::required_gauss_pt_state,
         SGH3D_State::required_material_pt_state,
         this->solver_id);
-    
 
+    output_id++; // saved an output file
 
     graphics_time = time_value + graphics_dt_ival;
+
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -193,7 +204,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                          dt_min,
                          dt_cfl,
                          dt_mat,
-                         fuzz);
+                         fuzz,
+                         tiny);
 
             // save the smallest dt of all materials
             min_dt_calc = fmin(dt_mat, min_dt_calc);
@@ -266,6 +278,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                           State.MaterialPoints(mat_id).sspd,
                           State.MaterialCorners(mat_id).force,
                           State.MaterialPoints(mat_id).volfrac,
+                          State.MaterialPoints(mat_id).geo_volfrac,
                           State.corners_in_mat_elem,
                           State.MaterialToMeshMaps(mat_id).elem,
                           num_mat_elems,
@@ -369,6 +382,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
             // ---- Calculate cell volume for next time step ----
             geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
+
+
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
@@ -386,6 +401,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                              State.MaterialPoints(mat_id).sspd,
                              State.MaterialPoints(mat_id).sie,
                              State.MaterialPoints(mat_id).volfrac,
+                             State.MaterialPoints(mat_id).geo_volfrac,
                              State.GaussPoints.vol,
                              State.MaterialPoints(mat_id).mass,
                              State.MaterialPoints(mat_id).eos_state_vars,
@@ -407,6 +423,38 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
             //    2) hypo-elastic strength models are called in get_force
             //    3) strength models must be added by the user in user_mat.cpp
 
+
+            // apply pressure relaxation on material volume fractions
+            if(Materials.EquilibrationModels != model::noEquilibration){
+                TiptonEquilibrationModel::mat_equilibration(
+                    Materials, 
+                    mesh, 
+                    State,
+                    GaussPoint_pres,
+                    GaussPoint_pres_denominator,
+                    GaussPoint_volfrac_min,
+                    GaussPoint_volfrac_limiter,
+                    dt,
+                    rk_alpha,
+                    fuzz,
+                    small);
+            } // end if on applying equilibration
+
+            // apply pressure relaxation on geometric volume fractions
+            if(Materials.GeoEquilibrationModels != model::noEquilibration){
+                TiptonEquilibrationModel::geo_equilibration(
+                    Materials, 
+                    mesh, 
+                    State,
+                    GaussPoint_pres,
+                    GaussPoint_pres_denominator,
+                    GaussPoint_volfrac_min,
+                    GaussPoint_volfrac_limiter,
+                    dt,
+                    rk_alpha,
+                    fuzz,
+                    small);
+            } // end if on applying geometric equilibration
 
         } // end of RK loop
 
@@ -440,8 +488,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                                    SGH3D_State::required_gauss_pt_state,
                                    SGH3D_State::required_material_pt_state,
                                    this->solver_id);
-
-            graphics_time = time_value + graphics_dt_ival;
+            output_id++;
+            graphics_time = (double)(output_id) * graphics_dt_ival;
 
             dt = cached_pregraphics_dt;
         } // end if
