@@ -157,7 +157,7 @@ namespace TiptonEquilibrationModel {
 
             size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
-            update_volfrac_sie (
+            update_volfrac_den_sie (
                 mesh,
                 GaussPoint_pres,
                 GaussPoint_volfrac_limiter,
@@ -166,6 +166,7 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints(mat_id).volfrac,       // material volfrac
                 State.MaterialPoints(mat_id).delta_volfrac, // the change in material volfrac
                 State.MaterialPoints(mat_id).sie,
+                State.MaterialPoints(mat_id).den,
                 State.MaterialPoints(mat_id).mass,
                 State.MaterialToMeshMaps(mat_id).elem,
                 State.points_in_mat_elem,
@@ -271,7 +272,7 @@ namespace TiptonEquilibrationModel {
 
         size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
-        update_volfrac_sie (
+        update_volfrac_den_sie (
             mesh,
             GaussPoint_pres,
             GaussPoint_volfrac_limiter,
@@ -280,6 +281,7 @@ namespace TiptonEquilibrationModel {
             State.MaterialPoints(mat_id).geo_volfrac,       // geo_volfrac 
             State.MaterialPoints(mat_id).delta_geo_volfrac, // change in the geo_volfrac
             State.MaterialPoints(mat_id).sie,
+            State.MaterialPoints(mat_id).den,
             State.MaterialPoints(mat_id).mass,
             State.MaterialToMeshMaps(mat_id).elem,
             State.points_in_mat_elem,
@@ -473,7 +475,7 @@ namespace TiptonEquilibrationModel {
     } // end function
 
 
-    void update_volfrac_sie(
+    void update_volfrac_den_sie(
         const Mesh_t& mesh,
         const CArrayKokkos<double>& GaussPoint_pres,
         const CArrayKokkos <double>& GaussPoint_volfrac_limiter,
@@ -482,6 +484,7 @@ namespace TiptonEquilibrationModel {
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& MaterialPoints_delta_volfrac,
         const DCArrayKokkos<double>& MaterialPoint_sie,
+        const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_mass,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const points_in_mat_t& points_in_mat_elem,
@@ -514,15 +517,18 @@ namespace TiptonEquilibrationModel {
 
                 const double delta_volfrac = GaussPoint_volfrac_limiter(gauss_gid)*MaterialPoints_delta_volfrac(mat_point_storage_lid);
 
-                // calculating volume fraction change 
+                // update volume fraction  
                 double volfrac_new = MaterialPoints_volfrac(mat_point_storage_lid) +  delta_volfrac;  // note: change in volfrac was limited above here
-                MaterialPoints_volfrac(mat_point_storage_lid) = fmin(1.0, fmax(0.0, volfrac_new));                
+                MaterialPoints_volfrac(mat_point_storage_lid) = fmin(1.0, fmax(0.0, volfrac_new));  
+                
+                // update density
+                MaterialPoint_den(mat_point_storage_lid) = MaterialPoint_mass(mat_point_storage_lid)/(volfrac_new*GaussPoint_vol(gauss_gid) + fuzz);
 
                 // update internal energy
                 // dVol/dt = Vol*div
                 double GaussPoint_deltaVol = div*rk_alpha*dt*GaussPoint_vol(gauss_gid);
-                MaterialPoint_sie(mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*delta_volfrac*GaussPoint_deltaVol/MaterialPoint_mass(mat_point_storage_lid);
-
+                //MaterialPoint_sie(mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*delta_volfrac*GaussPoint_deltaVol/(MaterialPoint_mass(mat_point_storage_lid)+fuzz);
+                MaterialPoint_sie(mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*delta_volfrac*GaussPoint_vol(gauss_gid)/(MaterialPoint_mass(mat_point_storage_lid)+1.E-15);
             } // end for gauss point loop 
 
         }); // end parallel loop over all material elems in the mesh
