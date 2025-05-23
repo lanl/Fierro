@@ -241,7 +241,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     switch(map[velocity_model]){
 
                         case boundary_conditions::constantVelocityBC :
-                            std::cout << "Setting velocity bc " << std::endl;
+                            std::cout << "Setting constant velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::constantVelocityBC ;
@@ -249,17 +249,17 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
 
-                        case boundary_conditions::timeVaringVelocityBC:
-                            std::cout << "Setting velocity bc " << std::endl;
+                        case boundary_conditions::timeVaryingVelocityBC:
+                            std::cout << "Setting time varying velocity bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::timeVaringVelocityBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::timeVaryingVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &TimeVaryingVelocityBC::velocity;
                             });
                             break;
                         
                         case boundary_conditions::reflectedVelocityBC:
-                            std::cout << "Setting velocity bc " << std::endl;
+                            std::cout << "Setting reflected velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::reflectedVelocityBC;
@@ -268,7 +268,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::zeroVelocityBC:
-                            std::cout << "Setting velocity bc " << std::endl;
+                            std::cout << "Setting zero velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::zeroVelocityBC;
@@ -276,7 +276,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
                         case boundary_conditions::userDefinedVelocityBC:
-                            std::cout << "Setting velocity bc " << std::endl;
+                            std::cout << "Setting user defined velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::userDefinedVelocityBC;
@@ -284,11 +284,11 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
                         case boundary_conditions::pistonVelocityBC:
-                            std::cout << "Setting velocity bc " << std::endl;
+                            std::cout << "Setting piston velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::pistonVelocityBC;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &UserDefinedVelocityBC::velocity;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &PistonVelocityBC::velocity;
                             });
                             break;                        
                         default:
@@ -311,7 +311,6 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     throw std::runtime_error("**** Boundary Condition Velocity Model Not Understood ****");
                 } // end if
             } // type
-
 
             else if (a_word.compare("temperature_model") == 0) {
                 std::cout << "Inside temperature_model check" << std::endl;
@@ -405,11 +404,11 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
 
-                        case boundary_conditions::timeVaringStressBC:
+                        case boundary_conditions::timeVaryingStressBC:
                             std::cout << "Setting stress bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::timeVaringStressBC;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::timeVaryingStressBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &TimeVaryingStressBC::stress;
                             });
                             break;
@@ -444,9 +443,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     throw std::runtime_error("**** Boundary Condition Stress Model Not Understood ****");
                 } // end if
             } // type of stress model
-            // get boundary condition direction -- host or device
 
-            // get boundary condition location
+            // get boundary condition location -- host or device
             else if (a_word.compare("location") == 0) {
                 std::string location = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 

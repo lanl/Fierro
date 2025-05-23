@@ -339,6 +339,8 @@ struct Mesh_t
         // 1 zone per element
         num_zones_in_elem = 1;
 
+        legendre_in_elem = legendre_in_elem_t(num_leg_gauss_in_elem);
+
         return;
     }; // end method
 

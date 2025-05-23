@@ -39,21 +39,23 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace solver_input
 {
-// solver method
-enum method
-{
-    NONE = 0,
-    SGH3D = 1,
-    SGHRZ = 2,
-    SGTM3D = 3,
-};
+    // solver method
+    enum method
+    {
+        NONE = 0,
+        SGH3D = 1,
+        SGHRZ = 2,
+        SGTM3D = 3,
+        levelSet = 4
+    };
 } // end of namespace
 
 static std::map<std::string, solver_input::method> solver_map
 {
-    { "dynx_FE", solver_input::SGH3D },
+    { "dynx_FE",    solver_input::SGH3D },
     { "dynx_FE_rz", solver_input::SGHRZ },
-    { "thrmex_FE", solver_input::SGTM3D }
+    { "thrmex_FE",  solver_input::SGTM3D },
+    { "level_set",   solver_input::levelSet }
 };
 // quasi-static mechanics FE (qz-FE)
 // quasi-static thermal-mechanical FE  (qz-thmec-FE)

@@ -107,6 +107,7 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParameters, 
 
     // parse the material yaml text into a vector of materials
     parse_materials(root, Materials, SimulationParameters.mesh_input.num_dims);
+    parse_multimaterial_options(root, Materials);
 }
 
 

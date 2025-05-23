@@ -24,7 +24,7 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     output_file_format: ensight #state
-    graphics_time_step: 1.0
+    graphics_time_step: 0.1
     # graphics_iteration_step: 10
 
 solver_options:

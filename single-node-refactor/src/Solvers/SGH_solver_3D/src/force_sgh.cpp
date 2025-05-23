@@ -81,6 +81,7 @@ void SGH3D::get_force(const Material_t& Materials,
                       const DCArrayKokkos<double>& MaterialPoints_sspd,
                       const DCArrayKokkos<double>& MaterialCorners_force,
                       const DCArrayKokkos<double>& MaterialPoints_volfrac,
+                      const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
                       const corners_in_mat_t corners_in_mat_elem,
                       const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                       const size_t num_mat_elems,
@@ -224,16 +225,19 @@ void SGH3D::get_force(const Material_t& Materials,
                         + disp_corner_forces(node_lid, dim);
 
                     // save the material corner force
-                    MaterialCorners_force(mat_corner_lid, dim) = force_component*MaterialPoints_volfrac(mat_point_lid);
+                    MaterialCorners_force(mat_corner_lid, dim) = force_component*MaterialPoints_volfrac(mat_point_lid)*
+                                                                 MaterialPoints_geo_volfrac(mat_point_lid);
 
                      // tally all material forces to the corner
-                    corner_force(corner_gid, dim) += force_component*MaterialPoints_volfrac(mat_point_lid);
+                    corner_force(corner_gid, dim) += force_component*MaterialPoints_volfrac(mat_point_lid)*
+                                                     MaterialPoints_geo_volfrac(mat_point_lid);
                 } // end loop over dimension
             } // end if
 
         } // end for loop over nodes in elem
 
     }); // end parallel for loop over elements
+    Kokkos::fence();
 
     return;
 } // end of routine

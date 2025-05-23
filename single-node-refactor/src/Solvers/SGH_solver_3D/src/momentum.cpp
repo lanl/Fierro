@@ -80,6 +80,7 @@ void SGH3D::update_velocity(double rk_alpha,
                     rk_alpha * dt * node_force(node_gid,dim) / node_mass(node_gid);
         } // end for dim
     }); // end for parallel for over nodes
+    Kokkos::fence();
 
     return;
 } // end subroutine update_velocity

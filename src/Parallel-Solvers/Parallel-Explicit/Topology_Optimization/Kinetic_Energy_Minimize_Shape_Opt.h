@@ -540,6 +540,12 @@ public:
                     // gradients of the element volume
                     FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, rk_level);
 
+                    // cut out the node_gids for this element
+                    ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), 8);
+
+                    // gradients of the element volume
+                    FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, rk_level);
+
                     for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         for(int idim = 0; idim < num_dim; idim++){
                             // compute gradient of local element contribution to v^t*M*v product

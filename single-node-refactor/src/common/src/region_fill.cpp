@@ -56,7 +56,6 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
                       fillElemState_t&  fillElemState)
 {
 
-
     // the number of elems and nodes in the mesh
     const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
@@ -65,29 +64,29 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
-
-
     // Calculate element volume
     geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
 
     // --- move to parsing ---
-    // allowing for up to 3 materials in an element, this needs to be set by the user with 3 as default
-    const size_t num_mats_per_elem = 3;
+    // default allows for up to 3 materials in an element, can be changed in input under multimaterial options
+    const size_t max_num_mats_per_elem = Materials.max_num_mats_per_element;
     // -----------------------
-
 
     // GaussState initialized based on fill instructions
     //   aways 3D
     fillGaussState.initialize(num_gauss_points, 
-                              num_mats_per_elem, 
+                              max_num_mats_per_elem, 
                               3,
                               SimulationParameters.region_setups.fill_gauss_states);
 
     // the elem state is always used, thus always initialized
     fillElemState.initialize(num_elems,
-                             num_mats_per_elem,
+                             max_num_mats_per_elem,
                              num_mats);
+
+    // allocate memory for mat_ids, num_mats_in_elem, and mat_storage_lid 
+    State.MeshtoMaterialMaps.initialize(num_elems, max_num_mats_per_elem); 
 
     // Remember, the solver is initialized prior to this function, creating nodal state
 
@@ -98,7 +97,6 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
     // ---------------------------------------------
     // fill guass point state (den, sie, ...) and nodal state (velocity, temperature, ...) on the mesh
     // ---------------------------------------------
-
     fill_regions(Materials,
                  mesh,
                  State.node.coords,
@@ -114,9 +112,11 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
                  fillGaussState.elastic_modulii,
                  fillGaussState.shear_modulii,
                  fillGaussState.poisson_ratios,
+                 fillGaussState.level_set,
                  fillElemState.volfrac,
-                 fillElemState.mat_id,
-                 fillElemState.num_mats_saved_in_elem,
+                 fillElemState.geo_volfrac,
+                 State.MeshtoMaterialMaps.mat_id,
+                 State.MeshtoMaterialMaps.num_mats_in_elem,
                  voxel_elem_mat_id,
                  SimulationParameters.mesh_input.object_ids,
                  SimulationParameters.region_setups.region_fills,
@@ -144,10 +144,10 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
         FOR_REDUCE_SUM(elem_gid, 0, num_elems, sum_local, {
 
             // loop over the materials in the element
-            for (size_t a_mat_in_elem=0; a_mat_in_elem < fillElemState.num_mats_saved_in_elem(elem_gid); a_mat_in_elem++){
+            for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem(elem_gid); a_mat_in_elem++){
 
                 // check to see if it is mat_id
-                if (fillElemState.mat_id(elem_gid, a_mat_in_elem) == mat_id) {
+                if (State.MeshtoMaterialMaps.mat_id(elem_gid, a_mat_in_elem) == mat_id) {
                     // increment the number of elements the materials live in
                     sum_local++;
                 } // end if a_mat is equal to mat_id
@@ -240,7 +240,9 @@ void fill_regions(
         DCArrayKokkos <double>& gauss_elastic_modulii,
         DCArrayKokkos <double>& gauss_shear_modulii,
         DCArrayKokkos <double>& gauss_poisson_ratios,
+        DCArrayKokkos <double>& gauss_level_set,
         DCArrayKokkos <double>& elem_volfrac,
+        DCArrayKokkos <double>& elem_geo_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
         DCArrayKokkos <size_t>& voxel_elem_mat_id,
@@ -249,7 +251,7 @@ void fill_regions(
         const CArray <RegionFill_host_t>& region_fills_host,
         std::vector <fill_gauss_state>& fill_gauss_states,
         std::vector <fill_node_state>& fill_node_states,
-        const size_t num_mats_per_elem)
+        const size_t max_num_mats_per_elem)
 {
     double voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
@@ -257,9 +259,10 @@ void fill_regions(
 
     size_t num_fills_total = region_fills.size();  // the total number of fills in the input file
 
+
     // local variables to this routine
-    DCArrayKokkos<double> elem_coords(mesh.num_elems, num_mats_per_elem); // 2nd dim is max mats per elem
-    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, num_mats_per_elem);  
+    DCArrayKokkos<double> elem_coords(mesh.num_elems, 3); // aways 3D
+    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, max_num_mats_per_elem);  // 2nd dim is max mats per elem
 
     // Important:
     //  Remember that num_fills_saved_in_elem = num_mats_saved_in_elem
@@ -363,6 +366,7 @@ void fill_regions(
                 double vfrac = get_region_scalar(coords,
                                                  region_fills(fill_id).volfrac,
                                                  region_fills(fill_id).volfrac_slope,
+                                                 region_fills(fill_id).volfrac_origin,
                                                  elem_gid,
                                                  mesh.num_dims,
                                                  region_fills(fill_id).volfrac_field);
@@ -376,14 +380,17 @@ void fill_regions(
                 if (combined_volfrac < 1.0 - 1.0e-8){
 
                     // append the fill id in this element and
-                    // append the elem_volfrac value too
+                    // append the elem_volfrac and elem_geo_volfrac values too
                     append_fills_in_elem(elem_volfrac,
+                                         elem_geo_volfrac,
                                          elem_fill_ids,
                                          elem_num_mats_saved_in_elem,
                                          region_fills,
-                                         combined_volfrac,
+                                         vfrac,
+                                         geo_volfrac,
                                          elem_gid,
-                                         fill_id);
+                                         fill_id,
+                                         max_num_mats_per_elem);
 
                 } else {
 
@@ -395,7 +402,8 @@ void fill_regions(
                     elem_fill_ids(elem_gid, 0) = fill_id;
  
                     // save volume fraction
-                    elem_volfrac(elem_gid, 0) = 1.0;
+                    elem_volfrac(elem_gid, 0) = 1.0;     // a single material in this element for this part
+                    elem_geo_volfrac(elem_gid, 0) = 1.0; // entire element is a part
 
                     elem_num_mats_saved_in_elem(elem_gid) = 1;
                 } // end of 
@@ -450,6 +458,7 @@ void fill_regions(
                                 coords,
                                 region_fills(fill_id).den,
                                 0.0,
+                                region_fills(fill_id).den_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
@@ -460,6 +469,7 @@ void fill_regions(
                                 coords,
                                 region_fills(fill_id).sie,
                                 0.0,
+                                region_fills(fill_id).sie_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
@@ -475,6 +485,7 @@ void fill_regions(
                                 coords,
                                 region_fills(fill_id).ie,
                                 0.0,
+                                region_fills(fill_id).sie_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
@@ -485,6 +496,7 @@ void fill_regions(
                                 coords,
                                 region_fills(fill_id).thermal_conductivity,
                                 0.0,
+                                region_fills(fill_id).thermal_conductivity_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
@@ -495,11 +507,23 @@ void fill_regions(
                                 coords,
                                 region_fills(fill_id).specific_heat,
                                 0.0,
+                                region_fills(fill_id).specific_heat_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
                                 region_fills(fill_id).specific_heat_field);
-            
+          
+                // paint the level set field on the gauss pts of the mesh
+                paint_multi_scalar(gauss_level_set,
+                    coords,
+                    region_fills(fill_id).level_set,
+                    region_fills(fill_id).level_set_slope,
+                    region_fills(fill_id).level_set_origin,
+                    gauss_gid,
+                    mesh.num_dims,
+                    bin,
+                    region_fills(fill_id).level_set_field);
+
             } // end loop over gauss points
 
 
@@ -517,27 +541,27 @@ void fill_regions(
                 // paint the velocity onto the nodes of the mesh
                 if(node_vel.size()>0){
                     // if check is needed as solver state might not match fill instructions
-                    paint_vector_rk(node_vel,
-                                    a_node_coords,
-                                    region_fills(fill_id).u,
-                                    region_fills(fill_id).v,
-                                    region_fills(fill_id).w,
-                                    region_fills(fill_id).speed,
-                                    node_gid,
-                                    mesh.num_dims,
-                                    region_fills(fill_id).vel_field);
+                    paint_vector(node_vel,
+                                 a_node_coords,
+                                 region_fills(fill_id).u,
+                                 region_fills(fill_id).v,
+                                 region_fills(fill_id).w,
+                                 region_fills(fill_id).speed,
+                                 node_gid,
+                                 mesh.num_dims,
+                                 region_fills(fill_id).vel_field);
                 }
              
                 // paint nodal temperature
                 if (node_temp.size()>0){
                     // if check is needed as solver state might not match fill instructions
-                    paint_scalar_rk(node_temp,
-                                    a_node_coords,
-                                    region_fills(fill_id).temperature,
-                                    0.0,
-                                    node_gid,
-                                    mesh.num_dims,
-                                    region_fills(fill_id).temperature_field);
+                    paint_scalar(node_temp,
+                                 a_node_coords,
+                                 region_fills(fill_id).temperature,
+                                 0.0,
+                                 node_gid,
+                                 mesh.num_dims,
+                                 region_fills(fill_id).temperature_field);
                 }
 
             } // end loop over the nodes in elem
@@ -552,6 +576,7 @@ void fill_regions(
     // update host side for elem fill states
     elem_mat_id.update_host();
     elem_volfrac.update_host();
+    elem_geo_volfrac.update_host();
     elem_num_mats_saved_in_elem.update_host();
 
     //---------
@@ -588,7 +613,9 @@ void fill_regions(
             case fill_gauss_state::specific_heat:
                 gauss_specific_heat.update_host();
                 break;
-                
+            case fill_gauss_state::level_set:
+                gauss_level_set.update_host(); 
+                break;    
         } // end switch
     } // end for
 
@@ -639,7 +666,6 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
                           fillElemState_t&  fillElemState)
 {
 
-
     // short hand names
     //const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
@@ -664,18 +690,38 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
     State.GaussPoints.vol.update_host();
     Kokkos::fence();
 
+    // --- set the level set field ---
+    if( State.GaussPoints.level_set.host.size()>0 ){
+        State.GaussPoints.level_set.set_values(1.0e32); // make level set have a default huge
+        Kokkos::fence();
+        State.GaussPoints.level_set.update_host();
+    }
+
+
+    // ------------------------------------------------------
+    // MeshtoMaterial space was allocated in simulations setup
+    // The mat_ids and num_mats_in_elem saved were populated
+    // in fill_regions
+    // ------------------------------------------------------
+     
+
     // the following loop is not thread safe
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-        for (size_t a_mat_in_elem=0; a_mat_in_elem < fillElemState.num_mats_saved_in_elem.host(elem_gid); a_mat_in_elem++){
+
+        for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem.host(elem_gid); a_mat_in_elem++){
 
             // get the material_id in this element
-            size_t mat_id = fillElemState.mat_id.host(elem_gid,a_mat_in_elem);
+            size_t mat_id = State.MeshtoMaterialMaps.mat_id.host(elem_gid,a_mat_in_elem);
 
             // mat elem lid (compressed storage) to save the data to, for this material mat_id
             size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
 
             // --- mapping from material elem lid to elem ---
             State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
+
+            // --- mapping from elem to material index space ---
+            State.MeshtoMaterialMaps.mat_storage_lid.host(elem_gid, a_mat_in_elem) = mat_elem_lid;
+            
 
             // -----------------------
             // Save MaterialPoints
@@ -690,6 +736,10 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
 
                 // --- volume fraction ---
                 State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+                State.MaterialPoints(mat_id).geo_volfrac.host(mat_point_lid) = fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
+
+                const double mat_vol = State.GaussPoints.vol.host(gauss_gid) * 
+                            fillElemState.volfrac.host(elem_gid,a_mat_in_elem)*fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 // --- density and mass ---
                 if( State.MaterialPoints(mat_id).den.host.size()>0 ){
@@ -697,9 +747,9 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
                     // add an array that we set to true or false if we set this state here
                     State.MaterialPoints(mat_id).den.host(mat_point_lid)  = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem);
+
                     State.MaterialPoints(mat_id).mass.host(mat_point_lid) = 
-                            fillGaussState.den.host(gauss_gid,a_mat_in_elem) * 
-                            State.GaussPoints.vol.host(gauss_gid) * fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+                            fillGaussState.den.host(gauss_gid,a_mat_in_elem) * mat_vol;
                 }
 
                 // --- set eroded flag to false ---
@@ -737,6 +787,18 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
                 // --- other material point state here ---
 
 
+                // ------------------
+                // guass point state
+                // ------------------
+
+                // --- set the level set field ---
+                if( State.GaussPoints.level_set.host.size()>0 ){
+                    State.GaussPoints.level_set.host(gauss_gid) = 
+                           fmin(State.GaussPoints.level_set.host(gauss_gid), 
+                                fillGaussState.level_set.host(gauss_gid,a_mat_in_elem)); // use the min level set field
+                }
+
+
             } // end loop over gauss points in element
 
 
@@ -772,6 +834,7 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
             State.MaterialToMeshMaps(mat_id).num_material_elems << " for material " << mat_id << "\n";
         
         State.MaterialPoints(mat_id).volfrac.update_device();
+        State.MaterialPoints(mat_id).geo_volfrac.update_device();
         State.MaterialToMeshMaps(mat_id).elem.update_device();
 
         if (State.MaterialPoints(mat_id).den.host.size()>0){
@@ -1319,20 +1382,23 @@ size_t fill_geometric_region(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
+                          const DCArrayKokkos <double>& elem_geo_volfracs,
                           const CArrayKokkos <size_t>& elem_fill_ids,
                           const DCArrayKokkos <size_t>& num_fills_saved_in_elem,
                           const CArrayKokkos<RegionFill_t>& region_fills,
-                          const double combined_volfrac,
+                          const double volfrac,
+                          const double geo_volfrac,
                           const size_t elem_gid,
-                          const size_t fill_id)
+                          const size_t fill_id,
+                          const size_t max_num_mats_per_elem)
 {
 
     // the number of materials saved to this element, initialized to 0 at start of code
     size_t fill_storage_lid = num_fills_saved_in_elem(elem_gid);
 
     // check on exceeding 3 materials per element
-    if (num_fills_saved_in_elem(elem_gid) > 3){
-        Kokkos::abort("ERROR: exceeded 3 materials in an element when painting regions on the mesh \n");
+    if (num_fills_saved_in_elem(elem_gid) > max_num_mats_per_elem-1){
+        Kokkos::abort("ERROR: exceeded max number of materials in an element when painting regions on the mesh \n Set max_num_mats_per_element to a larger value under multimaterial_options \n");
     } // end if check
 
 
@@ -1367,7 +1433,8 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
 
     // --- append the volfracs and fill ids in elem ---
     elem_fill_ids(elem_gid, fill_storage_lid) = fill_id;
-    elem_volfracs(elem_gid, fill_storage_lid) = combined_volfrac;
+    elem_volfracs(elem_gid, fill_storage_lid) = volfrac;
+    elem_geo_volfracs(elem_gid, fill_storage_lid) = geo_volfrac;
 
     // done with calculating the fill instructions
 
@@ -1393,6 +1460,7 @@ KOKKOS_FUNCTION
 double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
                          const double scalar,
                          const double slope,
+                         const double orig[3],
                          const size_t mesh_gid,
                          const size_t num_dims,
                          const init_conds::init_scalar_conds scalarFieldType)
@@ -1410,34 +1478,27 @@ double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
         case init_conds::radialScalar:
             {
                 // Setting up radial
+                //   vol = slope*sqrt( dx^2 + dy^2 - value )
                 double dir[2];
                 dir[0] = 0.0;
                 dir[1] = 0.0;
                 double radius_val = 0.0;
 
                 for (int dim = 0; dim < 2; dim++) {
-                    dir[dim]    = mesh_coords(dim);
+                    dir[dim]    = (mesh_coords(dim) - orig[dim]);
                     radius_val += mesh_coords(dim) * mesh_coords(dim);
                 } // end for
+                radius_val -= scalar; 
                 radius_val = sqrt(radius_val);
 
-                for (int dim = 0; dim < 2; dim++) {
-                    if (radius_val > 1.0e-14) {
-                        dir[dim] /= (radius_val);
-                    }
-                    else{
-                        dir[dim] = 0.0;
-                    }
-                } // end for
-
-                value_out = scalar * dir[0];
-                value_out = scalar * dir[1];
+                value_out = slope * radius_val;
 
                 break;
             }
         case init_conds::sphericalScalar:
             {
                 // Setting up spherical
+                //   val_out = slope*sqrt( dx^2 + dy^2 + dz^2 - value )
                 double dir[3];
                 dir[0] = 0.0;
                 dir[1] = 0.0;
@@ -1445,21 +1506,14 @@ double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
                 double radius_val = 0.0;
 
                 for (int dim = 0; dim < 3; dim++) {
-                    dir[dim]    = mesh_coords(dim);
+                    dir[dim]    = (mesh_coords(dim) - orig[dim]);
                     radius_val += mesh_coords(dim) * mesh_coords(dim);
                 } // end for
+                radius_val -= scalar; 
                 radius_val = sqrt(radius_val);
 
-                for (int dim = 0; dim < 3; dim++) {
-                    if (radius_val > 1.0e-14) {
-                        dir[dim] /= (radius_val);
-                    }
-                    else{
-                        dir[dim] = 0.0;
-                    }
-                } // end for
+                value_out = slope*radius_val;
 
-                value_out = scalar * radius_val;
                 break;
             }
         case init_conds::xlinearScalar:
@@ -1523,6 +1577,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
                         const ViewCArrayKokkos <double> mesh_coords,
                         const double scalar,
                         const double slope,
+                        const double orig[3],
                         const size_t mesh_gid,
                         const size_t num_dims,
                         const size_t bin,
@@ -1539,57 +1594,38 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
         // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
         case init_conds::radialScalar:
             {
-                // Setting up radial
-                double dir[2];
-                dir[0] = 0.0;
-                dir[1] = 0.0;
+                 // Setting up radial
+                //   vol = slope*(dx^2 + dy^2)- value^2
+                double delta = 0.0;
                 double radius_val = 0.0;
 
                 for (int dim = 0; dim < 2; dim++) {
-                    dir[dim]    = mesh_coords(dim);
-                    radius_val += mesh_coords(dim) * mesh_coords(dim);
+                    delta    = (mesh_coords(dim) - orig[dim]);
+                    radius_val += delta*delta;
                 } // end for
-                radius_val = sqrt(radius_val);
+                radius_val = slope*sqrt(radius_val);
+                radius_val -= scalar*scalar; 
 
-                for (int dim = 0; dim < 2; dim++) {
-                    if (radius_val > 1.0e-14) {
-                        dir[dim] /= (radius_val);
-                    }
-                    else{
-                        dir[dim] = 0.0;
-                    }
-                } // end for
-
-                field_scalar(mesh_gid,bin) = scalar * dir[0];
-                field_scalar(mesh_gid,bin) = scalar * dir[1];
+                field_scalar(mesh_gid,bin) = radius_val;
 
                 break;
             }
         case init_conds::sphericalScalar:
             {
                 // Setting up spherical
-                double dir[3];
-                dir[0] = 0.0;
-                dir[1] = 0.0;
-                dir[2] = 0.0;
+                //   val_out = slope*sqrt( dx^2 + dy^2 + dz^2 ) - value
+                double delta = 0.0;
                 double radius_val = 0.0;
 
-                for (int dim = 0; dim < 3; dim++) {
-                    dir[dim]    = mesh_coords(dim);
-                    radius_val += mesh_coords(dim) * mesh_coords(dim);
+                for (int dim = 0; dim < num_dims; dim++) {
+                    delta    = (mesh_coords(dim) - orig[dim]);
+                    radius_val += delta*delta;
                 } // end for
-                radius_val = sqrt(radius_val);
+                radius_val = slope*sqrt(radius_val);
+                radius_val -= scalar; 
 
-                for (int dim = 0; dim < 3; dim++) {
-                    if (radius_val > 1.0e-14) {
-                        dir[dim] /= (radius_val);
-                    }
-                    else{
-                        dir[dim] = 0.0;
-                    }
-                } // end for
+                field_scalar(mesh_gid,bin) = radius_val;
 
-                field_scalar(mesh_gid,bin) = scalar * radius_val;
                 break;
             }
         case init_conds::xlinearScalar:
@@ -1635,7 +1671,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn paint_scalar_rk
+/// \fn paint_scalar
 ///
 /// \brief a function to paint a scalar on the mesh
 ///
@@ -1647,13 +1683,13 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
-                     const ViewCArrayKokkos <double> mesh_coords,
-                     const double scalar,
-                     const double slope,
-                     const size_t mesh_gid,
-                     const size_t num_dims,
-                     const init_conds::init_scalar_conds scalarFieldType)
+void paint_scalar(const DCArrayKokkos<double>& field_scalar,
+                  const ViewCArrayKokkos <double> mesh_coords,
+                  const double scalar,
+                  const double slope,
+                  const size_t mesh_gid,
+                  const size_t num_dims,
+                  const init_conds::init_scalar_conds scalarFieldType)
 {
 
         // --- scalar field ---
@@ -1757,12 +1793,12 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
                 }
         } // end of switch
 
-}  // end function paint_scalar_rk
+}  // end function paint_scalar
 
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn paint_vector_rk
+/// \fn paint_vector
 ///
 /// \brief a function to paint a vector fields on the mesh 
 ///
@@ -1777,15 +1813,15 @@ void paint_scalar_rk(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_vector_rk(const DCArrayKokkos<double>& vector_field,
-                     const ViewCArrayKokkos <double>& mesh_coords,
-                     const double u,
-                     const double v,
-                     const double w,
-                     const double scalar,
-                     const size_t mesh_gid,
-                     const size_t num_dims,
-                     const init_conds::init_vector_conds vectorFieldType)
+void paint_vector(const DCArrayKokkos<double>& vector_field,
+                  const ViewCArrayKokkos <double>& mesh_coords,
+                  const double u,
+                  const double v,
+                  const double w,
+                  const double scalar,
+                  const size_t mesh_gid,
+                  const size_t num_dims,
+                  const init_conds::init_vector_conds vectorFieldType)
 {
 
         // --- vector ---
@@ -2124,7 +2160,7 @@ void init_press_sspd_stress(const Material_t& Materials,
         FOR_ALL(mat_point_lid, 0, num_mat_pts, {
 
             // setting shear modulii to zero, corresponds to a gas
-            for(size_t i; i<3; i++){
+            for(size_t i=0; i<3; i++){
                 MaterialPoints_shear_modulii(mat_point_lid,i) = 0.0;
             } // end for
 
