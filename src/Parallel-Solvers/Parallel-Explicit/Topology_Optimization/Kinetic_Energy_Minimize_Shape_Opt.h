@@ -540,9 +540,6 @@ public:
                     // gradients of the element volume
                     FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, rk_level);
 
-                    // cut out the node_gids for this element
-                    ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), 8);
-
                     // gradients of the element volume
                     FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, rk_level);
 

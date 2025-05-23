@@ -347,6 +347,9 @@ struct node_t
                 case node_state::gradient_level_set:
                     if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<double>(num_nodes, num_dims, "node_grad_levelset");
                     break;
+                case node_state::gradient_level_set:
+                    if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<double>(num_nodes, num_dims, "node_grad_levelset");
+                    break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
                     throw std::runtime_error("**** Error in State Field Name ****");
