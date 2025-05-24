@@ -667,9 +667,9 @@ double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_ma
 ///
 /////////////////////////////////////////////////////////////////////////////
 double sum_domain_kinetic_energy(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass)
+    const DistributedDCArray<double>& node_vel,
+    const DistributedDCArray<double>& node_coords,
+    const DistributedDCArray<double>& node_mass)
 {
     // extensive KE
     double KE_sum = 0.0;
@@ -722,8 +722,8 @@ double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass
 ///
 /////////////////////////////////////////////////////////////////////////////
 double sum_domain_node_mass(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass)
+    const DistributedDCArray<double>& node_coords,
+    const DistributedDCArray<double>& node_mass)
 {
     double mass_domain = 0.0;
     double mass_loc_domain;

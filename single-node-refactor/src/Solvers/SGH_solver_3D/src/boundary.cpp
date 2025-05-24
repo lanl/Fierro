@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::boundary_velocity(const Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
-                              DCArrayKokkos<double>& node_vel,
+                              DistributedDCArray<double>& node_vel,
                               const double time_value) const
 {
     size_t num_vel_bdy_sets = BoundaryConditions.num_vel_bdy_sets_in_solver.host(this->solver_id);
@@ -96,7 +96,7 @@ void SGH3D::boundary_velocity(const Mesh_t&      mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::boundary_contact(const Mesh_t& mesh,
                              const BoundaryCondition_t& BoundaryConditions,
-                             DCArrayKokkos<double>& node_vel,
+                             DistributedDCArray<double>& node_vel,
                              const double time_value) const
 {
     return;
@@ -119,7 +119,7 @@ void SGH3D::boundary_contact(const Mesh_t& mesh,
 void SGH3D::boundary_stress(const Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               DCArrayKokkos<double>& node_bdy_force,
-                              DCArrayKokkos<double>& node_coords,
+                              DistributedDCArray<double>& node_coords,
                               const double time_value) const
 {
 

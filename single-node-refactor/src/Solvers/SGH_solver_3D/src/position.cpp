@@ -51,10 +51,10 @@ void SGH3D::update_position(double rk_alpha,
     double dt,
     const size_t num_dims,
     const size_t num_nodes,
-    DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_coords_n0,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_vel_n0) const
+    DistributedDCArray<double>& node_coords,
+    DistributedDCArray<double>& node_coords_n0,
+    const DistributedDCArray<double>& node_vel,
+    const DistributedDCArray<double>& node_vel_n0) const
 {
     // loop over all the nodes in the mesh
     FOR_ALL(node_gid, 0, num_nodes, {

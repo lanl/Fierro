@@ -230,24 +230,24 @@ public:
     void boundary_temperature(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_temp,
+        DistributedDCArray<double>&     node_temp,
         const double time_value) const;
 
     void boundary_convection(
         const Mesh_t& mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        const DCArrayKokkos<double>& node_temp,
-        const DCArrayKokkos<double>& node_flux,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_temp,
+        const DistributedDCArray<double>& node_flux,
+        const DistributedDCArray<double>& node_coords,
         const double time_value) const;
 
 
     void boundary_radiation(
         const Mesh_t& mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        const DCArrayKokkos<double>& node_temp,
-        const DCArrayKokkos<double>& node_flux,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_temp,
+        const DistributedDCArray<double>& node_flux,
+        const DistributedDCArray<double>& node_coords,
         const double time_value) const;
 
     void boundary_heat_flux(
@@ -261,10 +261,10 @@ public:
         const double rk_alpha,
         const double dt,
         const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_vel_n0,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_coords_n0,
+        const DistributedDCArray<double>& node_vel,
+        const DistributedDCArray<double>& node_vel_n0,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_coords_n0,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_sie_n0,
         const DCArrayKokkos<double>& MaterialPoints_mass,
@@ -289,8 +289,8 @@ public:
         const Material_t& Materials,
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_temp,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_temp,
         const DCArrayKokkos<double>& MaterialPoints_q_flux,
         const DCArrayKokkos<double>& corner_q_flux,
         const DCArrayKokkos<double>& MaterialPoints_conductivity,
@@ -309,7 +309,7 @@ public:
         const Material_t& Materials,
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_coords,
         const DCArrayKokkos<double>& corner_q_flux,
         const DCArrayKokkos<double>& sphere_position,
         const corners_in_mat_t corners_in_mat_elem,
@@ -327,10 +327,10 @@ public:
         double dt,
         const size_t num_dims,
         const size_t num_nodes,
-        DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_coords_n0,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_vel_n0) const;
+        DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_coords_n0,
+        const DistributedDCArray<double>& node_vel,
+        const DistributedDCArray<double>& node_vel_n0) const;
 
 
     // **** Functions defined in momentum.cpp **** //
@@ -346,8 +346,8 @@ public:
     void update_state(
         const Material_t& Materials,
         const Mesh_t&     mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_pres,
         const DCArrayKokkos<double>& MaterialPoints_stress,
@@ -366,12 +366,12 @@ public:
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
     void rk_init(
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_coords_n0,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_vel_n0,
-        DCArrayKokkos<double>& node_temp,
-        DCArrayKokkos<double>& node_temp_n0,
+        DistributedDCArray<double>& node_coords,
+        DistributedDCArray<double>& node_coords_n0,
+        DistributedDCArray<double>& node_vel,
+        DistributedDCArray<double>& node_vel_n0,
+        DistributedDCArray<double>& node_temp,
+        DistributedDCArray<double>& node_temp_n0,
         DCArrayKokkos<double>& MaterialPoints_q_flux,
         DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,
@@ -381,8 +381,8 @@ public:
 
     void get_timestep(
         Mesh_t& mesh,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
+        DistributedDCArray<double>& node_coords,
+        DistributedDCArray<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
         DCArrayKokkos<double>& MaterialPoints_sspd,
         DCArrayKokkos<double>& MaterialPoints_conductivity,

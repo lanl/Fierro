@@ -234,7 +234,7 @@ public:
     void boundary_stress(const Mesh_t& mesh,
                     const BoundaryCondition_t& BoundaryConditions,
                     DCArrayKokkos<double>& node_bdy_force,
-                    DCArrayKokkos<double>& node_coords,
+                    DistributedDCArray<double>& node_coords,
                     const double time_value) const;    
 
     // **** Functions defined in energy_sgh.cpp **** //
@@ -242,8 +242,8 @@ public:
         const double  rk_alpha,
         const double  dt,
         const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_vel_n0,
+        const DistributedDCArray<double>& node_vel,
+        const DistributedDCArray<double>& node_vel_n0,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_sie_n0,
         const DCArrayKokkos<double>& MaterialPoints_mass,
@@ -260,8 +260,8 @@ public:
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos<bool>&   GaussPoints_eroded,
         const DCArrayKokkos<double>& corner_force,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_pres,
@@ -285,34 +285,34 @@ public:
         double dt,
         const size_t num_dims,
         const size_t num_nodes,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_coords_n0,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_vel_n0) const;
+        DistributedDCArray<double>& node_coords,
+        DistributedDCArray<double>& node_coords_n0,
+        const DistributedDCArray<double>& node_vel,
+        const DistributedDCArray<double>& node_vel_n0) const;
 
     // **** Functions defined in momentum.cpp **** //
     void update_velocity(
         double rk_alpha,
         double dt,
         const Mesh_t& mesh,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_vel_n0,
-        const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& node_force,
+        DistributedDCArray<double>& node_vel,
+        DistributedDCArray<double>& node_vel_n0,
+        const DistributedDCArray<double>& node_mass,
+        const DistributedDCArray<double>& node_force,
         const DCArrayKokkos<double>& corner_force) const;
 
     void get_velgrad(
         DCArrayKokkos<double>& vel_grad,
         const Mesh_t mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& elem_vol) const;
 
     void get_divergence(
         DCArrayKokkos<double>& GaussPoints_div,
         const Mesh_t mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vol) const;
 
     KOKKOS_FUNCTION
@@ -325,8 +325,8 @@ public:
     void update_state(
         const Material_t& Materials,
         const Mesh_t&     mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_pres,
@@ -354,8 +354,8 @@ public:
         const Material_t& Materials,
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_sie,
@@ -379,10 +379,10 @@ public:
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
     void rk_init(
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_coords_n0,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_vel_n0,
+        DistributedDCArray<double>& node_coords,
+        DistributedDCArray<double>& node_coords_n0,
+        DistributedDCArray<double>& node_vel,
+        DistributedDCArray<double>& node_vel_n0,
         DCArrayKokkos<double>& MaterialPoints_sie,
         DCArrayKokkos<double>& MaterialPoints_sie_n0,
         DCArrayKokkos<double>& MaterialPoints_stress,
@@ -394,8 +394,8 @@ public:
 
     void get_timestep(
         Mesh_t& mesh,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
+        DistributedDCArray<double>& node_coords,
+        DistributedDCArray<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
         DCArrayKokkos<double>& MaterialPoints_sspd,
         DCArrayKokkos<bool>&   MaterialPoints_eroded,
@@ -436,8 +436,8 @@ public:
         const double sie,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
+        const DistributedDCArray<double>&    node_coords,
+        const DistributedDCArray<double>&    node_vel,
         const double vol,
         const double dt,
         const double rk_alpha);
@@ -448,16 +448,16 @@ double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_ma
     const size_t num_mat_points);
 
 double sum_domain_kinetic_energy(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass);
+    const DistributedDCArray<double>& node_vel,
+    const DistributedDCArray<double>& node_coords,
+    const DistributedDCArray<double>& node_mass);
 
 double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
     const size_t num_mat_points);
 
 double sum_domain_node_mass(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass);
+    const DistributedDCArray<double>& node_coords,
+    const DistributedDCArray<double>& node_mass);
 
 void set_corner_force_zero(const Mesh_t& mesh,
     const DCArrayKokkos<double>& corner_force);
