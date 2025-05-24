@@ -312,6 +312,9 @@ struct node_t
                 case node_state::heat_transfer:
                     if (q_transfer.size() == 0) this->q_transfer = DistributedDCArray<double>(num_nodes, "node_q_transfer");
                     break;
+                case node_state::gradient_level_set:
+                    if (gradient_level_set.size() == 0) this->gradient_level_set = DistributedDCArray<double>(num_nodes, num_dims, "node_grad_levelset");
+                    break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
                     throw std::runtime_error("**** Error in State Field Name ****");
@@ -345,10 +348,7 @@ struct node_t
                     if (q_transfer.size() == 0) this->q_transfer = DistributedDCArray<double>(partitioned_map, "node_q_transfer");
                     break;
                 case node_state::gradient_level_set:
-                    if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<double>(num_nodes, num_dims, "node_grad_levelset");
-                    break;
-                case node_state::gradient_level_set:
-                    if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<double>(num_nodes, num_dims, "node_grad_levelset");
+                    if (gradient_level_set.size() == 0) this->gradient_level_set = DistributedDCArray<double>(partitioned_map, num_dims, "node_grad_levelset");
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;

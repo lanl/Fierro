@@ -179,12 +179,12 @@ void Driver::initialize()
             solvers.push_back(sgtm_solver_3d);
 
         } // end if SGTM solver
-        else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::levelSet) {
+        else if (SimulationParameters.solver_inputs[solver_id].method == solver_input::levelSet) {
 
             std::cout << "Initializing level set solver" << std::endl;
             LevelSet* level_set_solver = new LevelSet(); 
         
-            level_set_solver->initialize(SimulationParamaters, 
+            level_set_solver->initialize(SimulationParameters, 
                                          Materials, 
                                          mesh, 
                                          BoundaryConditions,
@@ -333,7 +333,7 @@ void Driver::setup_solver_vars(T& a_solver,
 
 
     // the final time of the simulation
-    double time_final = this->SimulationParamaters.dynamic_options.time_final;
+    double time_final = this->SimulationParameters.dynamic_options.time_final;
 
     // save the solver_id
     a_solver->solver_id = solver_id;
@@ -345,7 +345,7 @@ void Driver::setup_solver_vars(T& a_solver,
     // setting the ending times are tricky, requiring logic
             
     // set the start and ending times
-    double t_end = this->SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
+    double t_end = this->SimulationParameters.solver_inputs[solver_id].time_end;  // default is t=0
     if(solver_id==0){
         a_solver->time_start = 0.0;
 

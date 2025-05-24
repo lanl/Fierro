@@ -123,7 +123,7 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
                  SimulationParameters.region_setups.region_fills_host,
                  SimulationParameters.region_setups.fill_gauss_states,
                  SimulationParameters.region_setups.fill_node_states,
-                 num_mats_per_elem);
+                 max_num_mats_per_elem);
 
 
     // note: the device and host side are updated in the above function

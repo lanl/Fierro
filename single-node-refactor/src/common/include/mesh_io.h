@@ -366,16 +366,16 @@ public:
         std::cout << "File extension is: " << extension << std::endl;
 
         if(extension == "geo"){ // Ensight meshfile extension
-            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            //read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
         }
         else if(extension == "inp"){ // Abaqus meshfile extension
-            read_Abaqus_mesh(mesh, State, num_dims);
+            //read_Abaqus_mesh(mesh, State, num_dims);
         }
         else if(extension == "vtk"){ // vtk file format
             read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
         }
         else if(extension == "vtu"){ // vtu file format
-            read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            //read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
         }
         else{
             throw std::runtime_error("**** Mesh file extension not understood ****");
@@ -396,144 +396,144 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_ensight_mesh(Mesh_t& mesh,
-                           GaussPoint_t& GaussPoints,
-                           node_t&   node,
-                           corner_t& corner,
-                           mesh_input_t& mesh_inps,
-                           int num_dims)
-    {
-        FILE* in;
-        char  ch;
+    // void read_ensight_mesh(Mesh_t& mesh,
+    //                        GaussPoint_t& GaussPoints,
+    //                        node_t&   node,
+    //                        corner_t& corner,
+    //                        mesh_input_t& mesh_inps,
+    //                        int num_dims)
+    // {
+    //     FILE* in;
+    //     char  ch;
 
-        size_t num_nodes_in_elem = 1;
-        for (int dim = 0; dim < num_dims; dim++) {
-            num_nodes_in_elem *= 2;
-        }
+    //     size_t num_nodes_in_elem = 1;
+    //     for (int dim = 0; dim < num_dims; dim++) {
+    //         num_nodes_in_elem *= 2;
+    //     }
 
-        // read the mesh    WARNING: assumes a .geo file
-        in = fopen(mesh_file_, "r");
+    //     // read the mesh    WARNING: assumes a .geo file
+    //     in = fopen(mesh_file_, "r");
 
-        // skip 8 lines
-        for (int j = 1; j <= 8; j++) {
-            int i = 0;
-            while ((ch = (char)fgetc(in)) != '\n') {
-                i++;
-            }
-        }
+    //     // skip 8 lines
+    //     for (int j = 1; j <= 8; j++) {
+    //         int i = 0;
+    //         while ((ch = (char)fgetc(in)) != '\n') {
+    //             i++;
+    //         }
+    //     }
 
-        // --- Read in the nodes in the mesh ---
+    //     // --- Read in the nodes in the mesh ---
 
-        size_t num_nodes = 0;
+    //     size_t num_nodes = 0;
 
-        fscanf(in, "%lu", &num_nodes);
-        printf("Number of nodes read in %lu\n", num_nodes);
-
-        
-        mesh.initialize_nodes(num_nodes);
-
-        // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dims, required_node_state);
-
-        // read the initial mesh coordinates
-        // x-coords
-        for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords.host(node_id, 0));
-            node.coords.host(node_id, 0)*= mesh_inps.scale_x;
-        }
-
-        // y-coords
-        for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords.host(node_id, 1));
-            node.coords.host(node_id, 1)*= mesh_inps.scale_y;
-        }
-
-        // z-coords
-        for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            if (num_dims == 3) {
-                fscanf(in, "%le", &node.coords.host(node_id, 2));
-                node.coords.host(node_id, 2)*= mesh_inps.scale_z;
-            }
-            else{
-                double dummy;
-                fscanf(in, "%le", &dummy);
-            }
-        } // end for
-
-
-        // Update device nodal positions
-        node.coords.update_device();
-
-        ch = (char)fgetc(in);
-
-        // skip 1 line
-        for (int j = 1; j <= 1; j++) {
-            int i = 0;
-            while ((ch = (char)fgetc(in)) != '\n') {
-                i++;
-            }
-        }
-
-        // --- read in the elements in the mesh ---
-        size_t num_elems = 0;
-
-        fscanf(in, "%lu", &num_elems);
-        printf("Number of elements read in %lu\n", num_elems);
-
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dims);
-        // GaussPoints.initialize(num_elems, 3); // always 3D here, even for 2D
+    //     fscanf(in, "%lu", &num_nodes);
+    //     printf("Number of nodes read in %lu\n", num_nodes);
 
         
-        // for each cell read the list of associated nodes
-        for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-                fscanf(in, "%lu", &mesh.nodes_in_elem.host(elem_gid, node_lid));  // %d vs zu
+    //     mesh.initialize_nodes(num_nodes);
 
-                // shift to start node index space at 0
-                mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
-            }
-        }
+    //     // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
+    //     std::vector<node_state> required_node_state = { node_state::coords };
+    //     node.initialize(num_nodes, num_dims, required_node_state);
 
-        // Convert from ensight to IJK mesh
-        int convert_ensight_to_ijk[8];
-        convert_ensight_to_ijk[0] = 0;
-        convert_ensight_to_ijk[1] = 1;
-        convert_ensight_to_ijk[2] = 3;
-        convert_ensight_to_ijk[3] = 2;
-        convert_ensight_to_ijk[4] = 4;
-        convert_ensight_to_ijk[5] = 5;
-        convert_ensight_to_ijk[6] = 7;
-        convert_ensight_to_ijk[7] = 6;
+    //     // read the initial mesh coordinates
+    //     // x-coords
+    //     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
+    //         fscanf(in, "%le", &node.coords.host(node_id, 0));
+    //         node.coords.host(node_id, 0)*= mesh_inps.scale_x;
+    //     }
 
-        int tmp_ijk_indx[8];
+    //     // y-coords
+    //     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
+    //         fscanf(in, "%le", &node.coords.host(node_id, 1));
+    //         node.coords.host(node_id, 1)*= mesh_inps.scale_y;
+    //     }
 
-        for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-                tmp_ijk_indx[node_lid] = mesh.nodes_in_elem.host(elem_gid, convert_ensight_to_ijk[node_lid]);
-            }
+    //     // z-coords
+    //     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
+    //         if (num_dims == 3) {
+    //             fscanf(in, "%le", &node.coords.host(node_id, 2));
+    //             node.coords.host(node_id, 2)*= mesh_inps.scale_z;
+    //         }
+    //         else{
+    //             double dummy;
+    //             fscanf(in, "%le", &dummy);
+    //         }
+    //     } // end for
 
-            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-                mesh.nodes_in_elem.host(elem_gid, node_lid) = tmp_ijk_indx[node_lid];
-            }
-        }
-        // update device side
-        mesh.nodes_in_elem.update_device();
 
-        // initialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dims);
+    //     // Update device nodal positions
+    //     node.coords.update_device();
 
-        // Close mesh input file
-        fclose(in);
+    //     ch = (char)fgetc(in);
 
-        // Build connectivity
-        mesh.build_connectivity();
+    //     // skip 1 line
+    //     for (int j = 1; j <= 1; j++) {
+    //         int i = 0;
+    //         while ((ch = (char)fgetc(in)) != '\n') {
+    //             i++;
+    //         }
+    //     }
 
-        return;
-    } // end read ensight mesh
+    //     // --- read in the elements in the mesh ---
+    //     size_t num_elems = 0;
+
+    //     fscanf(in, "%lu", &num_elems);
+    //     printf("Number of elements read in %lu\n", num_elems);
+
+    //     // initialize elem variables
+    //     mesh.initialize_elems(num_elems, num_dims);
+    //     // GaussPoints.initialize(num_elems, 3); // always 3D here, even for 2D
+
+        
+    //     // for each cell read the list of associated nodes
+    //     for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+    //         for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+    //             fscanf(in, "%lu", &mesh.nodes_in_elem.host(elem_gid, node_lid));  // %d vs zu
+
+    //             // shift to start node index space at 0
+    //             mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
+    //         }
+    //     }
+
+    //     // Convert from ensight to IJK mesh
+    //     int convert_ensight_to_ijk[8];
+    //     convert_ensight_to_ijk[0] = 0;
+    //     convert_ensight_to_ijk[1] = 1;
+    //     convert_ensight_to_ijk[2] = 3;
+    //     convert_ensight_to_ijk[3] = 2;
+    //     convert_ensight_to_ijk[4] = 4;
+    //     convert_ensight_to_ijk[5] = 5;
+    //     convert_ensight_to_ijk[6] = 7;
+    //     convert_ensight_to_ijk[7] = 6;
+
+    //     int tmp_ijk_indx[8];
+
+    //     for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+    //         for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+    //             tmp_ijk_indx[node_lid] = mesh.nodes_in_elem.host(elem_gid, convert_ensight_to_ijk[node_lid]);
+    //         }
+
+    //         for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+    //             mesh.nodes_in_elem.host(elem_gid, node_lid) = tmp_ijk_indx[node_lid];
+    //         }
+    //     }
+    //     // update device side
+    //     mesh.nodes_in_elem.update_device();
+
+    //     // initialize corner variables
+    //     int num_corners = num_elems * mesh.num_nodes_in_elem;
+    //     mesh.initialize_corners(num_corners);
+    //     // corner.initialize(num_corners, num_dims);
+
+    //     // Close mesh input file
+    //     fclose(in);
+
+    //     // Build connectivity
+    //     mesh.build_connectivity();
+
+    //     return;
+    // } // end read ensight mesh
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -547,154 +547,154 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_Abaqus_mesh(Mesh_t& mesh,
-                          State_t& State,
-                          int num_dims)
-    {
+    // void read_Abaqus_mesh(Mesh_t& mesh,
+    //                       State_t& State,
+    //                       int num_dims)
+    // {
 
-        std::cout<<"Reading abaqus input file for mesh"<<std::endl;
-        std::ifstream inputFile(mesh_file_);
-        if (!inputFile.is_open()) {
-            std::cerr << "Failed to open the file." << std::endl;
+    //     std::cout<<"Reading abaqus input file for mesh"<<std::endl;
+    //     std::ifstream inputFile(mesh_file_);
+    //     if (!inputFile.is_open()) {
+    //         std::cerr << "Failed to open the file." << std::endl;
 
-        }
+    //     }
 
-        std::vector<Node> nodes;
-        std::vector<Element> elements;
+    //     std::vector<Node> nodes;
+    //     std::vector<Element> elements;
 
-        std::string line;
-        bool readingNodes = false;
-        bool readingElements = false;
+    //     std::string line;
+    //     bool readingNodes = false;
+    //     bool readingElements = false;
 
-        while (std::getline(inputFile, line)) {
-            if (line.find("*Node") != std::string::npos) {
-                readingNodes = true;
-                std::cout<<"Found *Node"<<std::endl;
+    //     while (std::getline(inputFile, line)) {
+    //         if (line.find("*Node") != std::string::npos) {
+    //             readingNodes = true;
+    //             std::cout<<"Found *Node"<<std::endl;
 
-            } 
-            else if (readingNodes && !line.find("*") ) { // End of nodes
-                readingNodes = false;
-            } 
-            else if (readingNodes) {
-                // std::cout<<"Reading Nodes"<<std::endl;
-                std::istringstream iss(line);
-                std::ws(iss); // Skip leading whitespace
-                std::string token;
-                Node node;
+    //         } 
+    //         else if (readingNodes && !line.find("*") ) { // End of nodes
+    //             readingNodes = false;
+    //         } 
+    //         else if (readingNodes) {
+    //             // std::cout<<"Reading Nodes"<<std::endl;
+    //             std::istringstream iss(line);
+    //             std::ws(iss); // Skip leading whitespace
+    //             std::string token;
+    //             Node node;
 
-                if (!(iss >> node.id && std::getline(iss, token, ',') && iss >> node.x &&
-                    std::getline(iss, token, ',') && iss >> node.y &&
-                    std::getline(iss, token, ',') && iss >> node.z)) {
-                    std::cerr << "Failed to parse line: " << line << std::endl;
-                    continue; // Skip this line if parsing failed
-                }
-                nodes.push_back(node);
-            }
+    //             if (!(iss >> node.id && std::getline(iss, token, ',') && iss >> node.x &&
+    //                 std::getline(iss, token, ',') && iss >> node.y &&
+    //                 std::getline(iss, token, ',') && iss >> node.z)) {
+    //                 std::cerr << "Failed to parse line: " << line << std::endl;
+    //                 continue; // Skip this line if parsing failed
+    //             }
+    //             nodes.push_back(node);
+    //         }
 
-            if (line.find("*Element") != std::string::npos) {
-                readingElements = true;
-                std::cout<<"Found *Element*"<<std::endl;
-            } 
-            else if (readingElements &&  !line.find("*") ) { // End of elements
-                readingElements = false;
-            } 
-            else if (readingElements ) {
-                std::istringstream iss(line);
-                Element element;
-                std::string token;
+    //         if (line.find("*Element") != std::string::npos) {
+    //             readingElements = true;
+    //             std::cout<<"Found *Element*"<<std::endl;
+    //         } 
+    //         else if (readingElements &&  !line.find("*") ) { // End of elements
+    //             readingElements = false;
+    //         } 
+    //         else if (readingElements ) {
+    //             std::istringstream iss(line);
+    //             Element element;
+    //             std::string token;
 
-                if (!(iss >> element.id)){
-                    std::cout << "Failed to parse line: " << line << std::endl;
-                    continue; // Skip this line if parsing failed
-                } 
+    //             if (!(iss >> element.id)){
+    //                 std::cout << "Failed to parse line: " << line << std::endl;
+    //                 continue; // Skip this line if parsing failed
+    //             } 
 
-                while ((std::getline(iss, token, ','))) { 
-                    // Now extract the integer, ignoring any trailing whitespace
-                    int val;
-                    iss >> val;
-                    element.connectivity.push_back(val);
-                }
+    //             while ((std::getline(iss, token, ','))) { 
+    //                 // Now extract the integer, ignoring any trailing whitespace
+    //                 int val;
+    //                 iss >> val;
+    //                 element.connectivity.push_back(val);
+    //             }
 
-                // Convert from abaqus to IJK mesh
-                int convert_abq_to_ijk[8];
-                convert_abq_to_ijk[0] = 0;
-                convert_abq_to_ijk[1] = 1;
-                convert_abq_to_ijk[2] = 3;
-                convert_abq_to_ijk[3] = 2;
-                convert_abq_to_ijk[4] = 4;
-                convert_abq_to_ijk[5] = 5;
-                convert_abq_to_ijk[6] = 7;
-                convert_abq_to_ijk[7] = 6;
+    //             // Convert from abaqus to IJK mesh
+    //             int convert_abq_to_ijk[8];
+    //             convert_abq_to_ijk[0] = 0;
+    //             convert_abq_to_ijk[1] = 1;
+    //             convert_abq_to_ijk[2] = 3;
+    //             convert_abq_to_ijk[3] = 2;
+    //             convert_abq_to_ijk[4] = 4;
+    //             convert_abq_to_ijk[5] = 5;
+    //             convert_abq_to_ijk[6] = 7;
+    //             convert_abq_to_ijk[7] = 6;
 
-                int tmp_ijk_indx[8];
+    //             int tmp_ijk_indx[8];
 
-                for (int node_lid = 0; node_lid < 8; node_lid++) {
-                    tmp_ijk_indx[node_lid] = element.connectivity[convert_abq_to_ijk[node_lid]];
-                }
+    //             for (int node_lid = 0; node_lid < 8; node_lid++) {
+    //                 tmp_ijk_indx[node_lid] = element.connectivity[convert_abq_to_ijk[node_lid]];
+    //             }
 
-                for (int node_lid = 0; node_lid < 8; node_lid++){
-                    element.connectivity[node_lid] = tmp_ijk_indx[node_lid];
-                }
+    //             for (int node_lid = 0; node_lid < 8; node_lid++){
+    //                 element.connectivity[node_lid] = tmp_ijk_indx[node_lid];
+    //             }
 
-                elements.push_back(element);
-            }
-        }
+    //             elements.push_back(element);
+    //         }
+    //     }
 
-        inputFile.close();
+    //     inputFile.close();
 
-        size_t num_nodes = nodes.size();
+    //     size_t num_nodes = nodes.size();
 
-        printf("Number of nodes read in %lu\n", num_nodes);
+    //     printf("Number of nodes read in %lu\n", num_nodes);
 
-        // initialize node variables
-        mesh.initialize_nodes(num_nodes);
+    //     // initialize node variables
+    //     mesh.initialize_nodes(num_nodes);
 
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
+    //     // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
+    //     std::vector<node_state> required_node_state = { node_state::coords };
 
-        State.node.initialize(num_nodes, num_dims, required_node_state);
-
-
-        // Copy nodes to mesh
-        for(int node_gid = 0; node_gid < num_nodes; node_gid++){
-            State.node.coords.host(node_gid, 0) = nodes[node_gid].x;
-            State.node.coords.host(node_gid, 1) = nodes[node_gid].y;
-            State.node.coords.host(node_gid, 2) = nodes[node_gid].z;
-        }
-
-        // Update device nodal positions
-        State.node.coords.update_device();
+    //     State.node.initialize(num_nodes, num_dims, required_node_state);
 
 
-        // --- read in the elements in the mesh ---
-        size_t num_elems = elements.size();
-        printf("Number of elements read in %lu\n", num_elems);
+    //     // Copy nodes to mesh
+    //     for(int node_gid = 0; node_gid < num_nodes; node_gid++){
+    //         State.node.coords.host(node_gid, 0) = nodes[node_gid].x;
+    //         State.node.coords.host(node_gid, 1) = nodes[node_gid].y;
+    //         State.node.coords.host(node_gid, 2) = nodes[node_gid].z;
+    //     }
 
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dims);
+    //     // Update device nodal positions
+    //     State.node.coords.update_device();
 
 
-        // for each cell read the list of associated nodes
-        for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-            for (int node_lid = 0; node_lid < 8; node_lid++) {
-                mesh.nodes_in_elem.host(elem_gid, node_lid) = elements[elem_gid].connectivity[node_lid];
+    //     // --- read in the elements in the mesh ---
+    //     size_t num_elems = elements.size();
+    //     printf("Number of elements read in %lu\n", num_elems);
 
-                // shift to start node index space at 0
-                mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
-            }
-        }
+    //     // initialize elem variables
+    //     mesh.initialize_elems(num_elems, num_dims);
 
-        // update device side
-        mesh.nodes_in_elem.update_device();
 
-        // initialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // State.corner.initialize(num_corners, num_dims);
+    //     // for each cell read the list of associated nodes
+    //     for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+    //         for (int node_lid = 0; node_lid < 8; node_lid++) {
+    //             mesh.nodes_in_elem.host(elem_gid, node_lid) = elements[elem_gid].connectivity[node_lid];
 
-        // Build connectivity
-        mesh.build_connectivity();
-    } // end read abaqus mesh
+    //             // shift to start node index space at 0
+    //             mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
+    //         }
+    //     }
+
+    //     // update device side
+    //     mesh.nodes_in_elem.update_device();
+
+    //     // initialize corner variables
+    //     int num_corners = num_elems * mesh.num_nodes_in_elem;
+    //     mesh.initialize_corners(num_corners);
+    //     // State.corner.initialize(num_corners, num_dims);
+
+    //     // Build connectivity
+    //     mesh.build_connectivity();
+    // } // end read abaqus mesh
 
 
     /////////////////////////////////////////////////////////////////////////////
@@ -962,17 +962,17 @@ public:
         long long int node_gid;
         bool zero_index_base = true;
         real_t dof_value;
+        real_t unit_scaling = 1;
 
         CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer;
 
 
         // read the mesh
         // --- Read the number of nodes in the mesh --- //
-        size_t num_nodes = 0;
+        size_t global_num_nodes = 0;
         if (myrank == 0)
         {
             std::cout << " NUM DIM is " << num_dims << std::endl;
-            in = new std::ifstream();
             in.open(mesh_file_);
             bool found = false;
 
@@ -987,9 +987,9 @@ public:
                 //      POINTS %d float
                 if (substring == "POINTS")
                 {
-                    line_parse >> num_nodes;
-                    std::cout << "declared node count: " << num_nodes << std::endl;
-                    if (num_nodes <= 0)
+                    line_parse >> global_num_nodes;
+                    std::cout << "declared node count: " << global_num_nodes << std::endl;
+                    if (global_num_nodes <= 0)
                     {
                         throw std::runtime_error("ERROR, NO NODES IN MESH");
                     }
@@ -1004,7 +1004,7 @@ public:
         } // end if(myrank==0)
 
         // broadcast number of nodes
-        MPI_Bcast(&num_nodes, 1, MPI_LONG_LONG_INT, 0, world);
+        MPI_Bcast(&global_num_nodes, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 
         // host_vec_array node_coords = dual_node_coords.view_host();
         // notify that the host view is going to be modified in the file readin
@@ -1013,7 +1013,7 @@ public:
         // old swage method
         // mesh->init_nodes(local_nrows); // add 1 for index starting at 1
 
-        //std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
+        //std::cout << "Num nodes assigned to task " << myrank << " = " << num_local_nodes << std::endl;
 
         // read the initial mesh coordinates
         // x-coords
@@ -1026,13 +1026,13 @@ public:
             num_nodes_in_elem *= 2;
         }
 
-        words_per_line = num_dims;
-        elem_words_per_line = num_nodes_in_elem;
+        int words_per_line = num_dims;
+        int elem_words_per_line = num_nodes_in_elem;
 
         // allocate read buffer
         read_buffer = CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_LINES, words_per_line, MAX_WORD);
 
-        dof_limit = num_nodes;
+        dof_limit = global_num_nodes;
         buffer_iterations = dof_limit / BUFFER_LINES;
         if (dof_limit % BUFFER_LINES != 0)
         {
@@ -1041,19 +1041,19 @@ public:
 
         // read coords
         read_index_start = 0;
-        size_t nlocal_nodes;
+        size_t num_local_nodes;
         DistributedMap map;
         { //scoped so temp FArray data is auto deleted to save memory
             //allocate pre-partition node coords using contiguous decomposition
             //FArray type used since CArray type still doesnt support zoltan2 decomposition
-            DistributedDFArray node_coords_distributed(num_nodes, num_dims);
+            DistributedDFArray<real_t> node_coords_distributed(global_num_nodes, num_dims);
 
             // construct contiguous parallel row map now that we know the number of nodes
             map = node_coords_distributed.pmap;
             // map->describe(*fos,Teuchos::VERB_EXTREME);
 
             // set the vertices in the mesh read in
-            nlocal_nodes = map.size();
+            num_local_nodes = map.size();
             for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
             {
                 // pack buffer on rank 0
@@ -1079,7 +1079,7 @@ public:
                 else if (myrank == 0)
                 {
                     buffer_loop = 0;
-                    while (buffer_iteration * BUFFER_LINES + buffer_loop < num_nodes) {
+                    while (buffer_iteration * BUFFER_LINES + buffer_loop < global_num_nodes) {
                         getline(in, read_line);
                         line_parse.clear();
                         line_parse.str(read_line);
@@ -1097,9 +1097,9 @@ public:
                 }
 
                 // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-                MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * words_per_line * MAX_WORD, MPI_CHAR, 0, world);
+                MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * words_per_line * MAX_WORD, MPI_CHAR, 0, MPI_COMM_WORLD);
                 // broadcast how many nodes were read into this buffer iteration
-                MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, world);
+                MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
                 // debug_print
                 // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
@@ -1114,17 +1114,17 @@ public:
                     // set global node id (ensight specific order)
                     node_gid = read_index_start + scan_loop;
                     // let map decide if this node id belongs locally; if yes store data
-                    if (map->isNodeGlobalElement(node_gid))
+                    if (map.isProcessGlobalIndex(node_gid))
                     {
                         // set local node index in this mpi rank
-                        node_rid = map->getLocalElement(node_gid);
+                        node_rid = map.getLocalIndex(node_gid);
                         // extract nodal position from the read buffer
                         // for tecplot format this is the three coords in the same line
                         dof_value = atof(&read_buffer(scan_loop, 0, 0));
                         node_coords_distributed.host(node_rid, 0) = dof_value * unit_scaling;
                         dof_value = atof(&read_buffer(scan_loop, 1, 0));
                         node_coords_distributed.host(node_rid, 1) = dof_value * unit_scaling;
-                        if (num_dim == 3)
+                        if (num_dims == 3)
                         {
                             dof_value = atof(&read_buffer(scan_loop, 2, 0));
                             node_coords_distributed.host(node_rid, 2) = dof_value * unit_scaling;
@@ -1140,13 +1140,13 @@ public:
             //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
             std::vector<node_state> required_node_state = { node_state::coords };
             map = node_coords_distributed.pmap;
-            node.post_repartition_initialize(partitioned_map, num_dims, required_node_state);
+            node.post_repartition_initialize(map, num_dims, required_node_state);
         }
 
         //initialize some mesh data
-        mesh.initialize_nodes(num_nodes);
-        nlocal_nodes = partitioned_map.size();
-        mesh.nlocal_nodes = nlocal_nodes;
+        mesh.initialize_nodes(global_num_nodes);
+        num_local_nodes = map.size();
+        mesh.num_local_nodes = num_local_nodes;
         
         // debug print of nodal data
 
@@ -1155,7 +1155,7 @@ public:
         std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
         for (int inode = 0; inode < local_nrows; inode++){
             std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
-        for (int istride = 0; istride < num_dim; istride++){
+        for (int istride = 0; istride < num_dims; istride++){
             std::cout << node_coords(inode,istride) << " , ";
         }
         std::cout << " }"<< std::endl;
@@ -1203,7 +1203,7 @@ public:
         } // end if(myrank==0)
 
         // broadcast number of elements
-        MPI_Bcast(&global_num_elems, 1, MPI_LONG_LONG_INT, 0, world);
+        MPI_Bcast(&global_num_elems, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 
         //initialize num elem in mesh struct
 
@@ -1280,9 +1280,9 @@ public:
             }
 
             // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-            MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * elem_words_per_line * MAX_WORD, MPI_CHAR, 0, world);
+            MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * elem_words_per_line * MAX_WORD, MPI_CHAR, 0, MPI_COMM_WORLD);
             // broadcast how many nodes were read into this buffer iteration
-            MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, world);
+            MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
             // store element connectivity that belongs to this rank
             // loop through read buffer
@@ -1393,7 +1393,7 @@ public:
         mesh.initialize_elems(num_elems, num_nodes_in_elem, element_map);
 
         // copy temporary element storage to distributed storage
-        DistributedDCArray nodes_in_elem = mesh.nodes_in_elem;
+        DistributedDCArray<size_t> nodes_in_elem = mesh.nodes_in_elem;
 
         for (int ielem = 0; ielem < num_elems; ielem++)
         {
@@ -1412,8 +1412,8 @@ public:
 
         // Convert ensight index system to the ijk finite element numbering convention
         // for vertices in cell
-        CArrayKokkos<size_t, Kokkos::LayoutRight, Kokkos::HostSpace> convert_ensight_to_ijk(max_nodes_per_element);
-        CArrayKokkos<size_t, Kokkos::LayoutRight, Kokkos::HostSpace> tmp_ijk_indx(max_nodes_per_element);
+        CArrayKokkos<size_t, Kokkos::LayoutRight, Kokkos::HostSpace> convert_ensight_to_ijk(num_nodes_in_elem);
+        CArrayKokkos<size_t, Kokkos::LayoutRight, Kokkos::HostSpace> tmp_ijk_indx(num_nodes_in_elem);
         convert_ensight_to_ijk(0) = 0;
         convert_ensight_to_ijk(1) = 1;
         convert_ensight_to_ijk(2) = 3;
@@ -1466,306 +1466,306 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_vtu_mesh(Mesh_t& mesh,
-                    GaussPoint_t& GaussPoints,
-                    node_t&   node,
-                    corner_t& corner,
-                    mesh_input_t& mesh_inps,
-                    int num_dims)
-    {
+    // void read_vtu_mesh(Mesh_t& mesh,
+    //                 GaussPoint_t& GaussPoints,
+    //                 node_t&   node,
+    //                 corner_t& corner,
+    //                 mesh_input_t& mesh_inps,
+    //                 int num_dims)
+    // {
 
-        std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
+    //     std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
     
-        int i;           // used for writing information to file
-        int node_gid;    // the global id for the point
-        int elem_gid;    // the global id for the elem
+    //     int i;           // used for writing information to file
+    //     int node_gid;    // the global id for the point
+    //     int elem_gid;    // the global id for the elem
 
 
-        //
-        int Pn_order = mesh_inps.p_order;
-        size_t num_nodes_in_elem = 1;
-        for (int dim = 0; dim < num_dims; dim++) {
-            num_nodes_in_elem *= (Pn_order + 1);
-        }
+    //     //
+    //     int Pn_order = mesh_inps.p_order;
+    //     size_t num_nodes_in_elem = 1;
+    //     for (int dim = 0; dim < num_dims; dim++) {
+    //         num_nodes_in_elem *= (Pn_order + 1);
+    //     }
         
-        bool found;
+    //     bool found;
         
-        std::ifstream in;  // FILE *in;
-        in.open(mesh_file_);
+    //     std::ifstream in;  // FILE *in;
+    //     in.open(mesh_file_);
         
 
-        // --- extract the number of points and cells from the XML file ---
-        int num_nodes;
-        int num_elems;
-        found = extract_num_points_and_cells_xml(num_nodes,
-                                                 num_elems,
-                                                 in);
-        if(found==false){
-            throw std::runtime_error("ERROR: number of points and/or cells not found in the XML file!");
-            //std::cout << "ERROR: number of points and cells not found in the XML file!" << std::endl;
-        }
-        std::cout << "Number of nodes in the mesh file: " << num_nodes << std::endl;
-        std::cout << "Number of elements in the mesh file: " << num_elems << std::endl;
+    //     // --- extract the number of points and cells from the XML file ---
+    //     int num_nodes;
+    //     int num_elems;
+    //     found = extract_num_points_and_cells_xml(num_nodes,
+    //                                              num_elems,
+    //                                              in);
+    //     if(found==false){
+    //         throw std::runtime_error("ERROR: number of points and/or cells not found in the XML file!");
+    //         //std::cout << "ERROR: number of points and cells not found in the XML file!" << std::endl;
+    //     }
+    //     std::cout << "Number of nodes in the mesh file: " << num_nodes << std::endl;
+    //     std::cout << "Number of elements in the mesh file: " << num_elems << std::endl;
         
-        //------------------------------------
-        // allocate mesh class nodes and elems
-        mesh.initialize_nodes(num_nodes);
-        mesh.initialize_elems(num_elems, num_dims);
+    //     //------------------------------------
+    //     // allocate mesh class nodes and elems
+    //     mesh.initialize_nodes(num_nodes);
+    //     mesh.initialize_elems(num_elems, num_dims);
 
-        //------------------------------------
-        // allocate node coordinate state
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dims, required_node_state);
+    //     //------------------------------------
+    //     // allocate node coordinate state
+    //     std::vector<node_state> required_node_state = { node_state::coords };
+    //     node.initialize(num_nodes, num_dims, required_node_state);
 
-        //------------------------------------
-        // allocate the elem object id array
-        mesh_inps.object_ids = DCArrayKokkos <int> (num_elems, "ObjectIDs");
+    //     //------------------------------------
+    //     // allocate the elem object id array
+    //     mesh_inps.object_ids = DCArrayKokkos <int> (num_elems, "ObjectIDs");
 
 
-        // ------------------------
-        // Mesh file storage order:
-        //     objectId
-        //     Points
-        //     connectivity
-        //     offsets
-        //     types
-        // ------------------------
+    //     // ------------------------
+    //     // Mesh file storage order:
+    //     //     objectId
+    //     //     Points
+    //     //     connectivity
+    //     //     offsets
+    //     //     types
+    //     // ------------------------
         
-        // temporary arrays
-        DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
-        DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
-        DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
+    //     // temporary arrays
+    //     DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
+    //     DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
+    //     DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
 
 
-        // for all fields, we stop recording when we get to "<"
-        std::string stop = "<";
+    //     // for all fields, we stop recording when we get to "<"
+    //     std::string stop = "<";
 
-        // the size of 1D storage from reading the mesh file
-        size_t size;
+    //     // the size of 1D storage from reading the mesh file
+    //     size_t size;
 
-        // ---
-        //  Object ids
-        // ---
+    //     // ---
+    //     //  Object ids
+    //     // ---
 
-        // the object id in the element
-        // array dims are (num_elems)
-        found = extract_values_xml(mesh_inps.object_ids.host.pointer(),
-                                "\"ObjectId\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
-            //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
-        }
-        mesh_inps.object_ids.update_device();
+    //     // the object id in the element
+    //     // array dims are (num_elems)
+    //     found = extract_values_xml(mesh_inps.object_ids.host.pointer(),
+    //                             "\"ObjectId\"",
+    //                             stop,
+    //                             in,
+    //                             size);
+    //     if(found==false){
+    //         throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
+    //         //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
+    //     }
+    //     mesh_inps.object_ids.update_device();
 
 
-        // ---
-        //  Nodal coordinates of mesh
-        // ---
+    //     // ---
+    //     //  Nodal coordinates of mesh
+    //     // ---
 
-        // coordinates of the node
-        // array dims are (num_nodes,dims)
-        // must use the quotes around Points to read the point values
-        found = extract_values_xml(node_coords.host.pointer(),
-                                "\"Points\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            throw std::runtime_error("**** ERROR: mesh nodes were not found in the XML file! ****");
-            //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
-        }
-        if (size!=num_nodes*3){
-            throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
-            //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
-        }
-        node_coords.update_device();
+    //     // coordinates of the node
+    //     // array dims are (num_nodes,dims)
+    //     // must use the quotes around Points to read the point values
+    //     found = extract_values_xml(node_coords.host.pointer(),
+    //                             "\"Points\"",
+    //                             stop,
+    //                             in,
+    //                             size);
+    //     if(found==false){
+    //         throw std::runtime_error("**** ERROR: mesh nodes were not found in the XML file! ****");
+    //         //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+    //     }
+    //     if (size!=num_nodes*3){
+    //         throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
+    //         //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
+    //     }
+    //     node_coords.update_device();
 
-        // dimensional scaling of the mesh
-        const double scl_x = mesh_inps.scale_x;
-        const double scl_y = mesh_inps.scale_y;
-        const double scl_z = mesh_inps.scale_z;
+    //     // dimensional scaling of the mesh
+    //     const double scl_x = mesh_inps.scale_x;
+    //     const double scl_y = mesh_inps.scale_y;
+    //     const double scl_z = mesh_inps.scale_z;
 
-        // save the node coordinates to the state array
-        FOR_ALL(node_gid, 0, mesh.num_nodes, {
+    //     // save the node coordinates to the state array
+    //     FOR_ALL(node_gid, 0, mesh.num_nodes, {
             
-            // save the nodal coordinates
-            node.coords(node_gid, 0) = scl_x*node_coords(node_gid, 0); // double
-            node.coords(node_gid, 1) = scl_y*node_coords(node_gid, 1); // double
-            if(num_dims==3){
-                node.coords(node_gid, 2) = scl_z*node_coords(node_gid, 2); // double
-            }
+    //         // save the nodal coordinates
+    //         node.coords(node_gid, 0) = scl_x*node_coords(node_gid, 0); // double
+    //         node.coords(node_gid, 1) = scl_y*node_coords(node_gid, 1); // double
+    //         if(num_dims==3){
+    //             node.coords(node_gid, 2) = scl_z*node_coords(node_gid, 2); // double
+    //         }
 
-        }); // end for parallel nodes
-        node.coords.update_host();
+    //     }); // end for parallel nodes
+    //     node.coords.update_host();
 
 
-        // ---
-        //  Nodes in the element 
-        // ---
+    //     // ---
+    //     //  Nodes in the element 
+    //     // ---
 
-        // fill temporary nodes in the element array
-        // array dims are (num_elems,num_nodes_in_elem)
-        found = extract_values_xml(connectivity.host.pointer(),
-                                "\"connectivity\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            std::cout << "ERROR: mesh connectivity was not found in the XML file!" << std::endl;
-        }
-        connectivity.update_device();
+    //     // fill temporary nodes in the element array
+    //     // array dims are (num_elems,num_nodes_in_elem)
+    //     found = extract_values_xml(connectivity.host.pointer(),
+    //                             "\"connectivity\"",
+    //                             stop,
+    //                             in,
+    //                             size);
+    //     if(found==false){
+    //         std::cout << "ERROR: mesh connectivity was not found in the XML file!" << std::endl;
+    //     }
+    //     connectivity.update_device();
 
-        // array dims are the (num_elems) 
-        //    8  = pixal i,j,k linear quad format
-        //    9  = linear quad ensight ordering
-        //    12 = linear ensight hex ordering
-        //    72 = VTK_LAGRANGE_HEXAHEDRON
-        // ....
-        found = extract_values_xml(elem_types.host.pointer(),
-                                "\"types\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            std::cout << "ERROR: element types were not found in the XML file!" << std::endl;
-        }
-        elem_types.update_device();
+    //     // array dims are the (num_elems) 
+    //     //    8  = pixal i,j,k linear quad format
+    //     //    9  = linear quad ensight ordering
+    //     //    12 = linear ensight hex ordering
+    //     //    72 = VTK_LAGRANGE_HEXAHEDRON
+    //     // ....
+    //     found = extract_values_xml(elem_types.host.pointer(),
+    //                             "\"types\"",
+    //                             stop,
+    //                             in,
+    //                             size);
+    //     if(found==false){
+    //         std::cout << "ERROR: element types were not found in the XML file!" << std::endl;
+    //     }
+    //     elem_types.update_device();
 
-        // check that the element type is supported by Fierro
-        FOR_ALL (elem_gid, 0, mesh.num_elems, {
-            if(elem_types(elem_gid) == element_types::linear_quad || 
-               elem_types(elem_gid) == element_types::linear_hex_ijk ||
-               elem_types(elem_gid) == element_types::linear_hex ||
-               elem_types(elem_gid) == element_types::arbitrary_hex )
-            {
-                // at least one of them is true
-            }
-            else 
-            {
-               // unknown element used
-               Kokkos::abort("Unknown element type in the mesh \n");
-            }
-        });
+    //     // check that the element type is supported by Fierro
+    //     FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    //         if(elem_types(elem_gid) == element_types::linear_quad || 
+    //            elem_types(elem_gid) == element_types::linear_hex_ijk ||
+    //            elem_types(elem_gid) == element_types::linear_hex ||
+    //            elem_types(elem_gid) == element_types::arbitrary_hex )
+    //         {
+    //             // at least one of them is true
+    //         }
+    //         else 
+    //         {
+    //            // unknown element used
+    //            Kokkos::abort("Unknown element type in the mesh \n");
+    //         }
+    //     });
 
-        // Convert from ensight linear hex to a IJK mesh
-        CArrayKokkos <size_t> convert_ensight_to_ijk(8, "convert_ensight_to_ijk");
+    //     // Convert from ensight linear hex to a IJK mesh
+    //     CArrayKokkos <size_t> convert_ensight_to_ijk(8, "convert_ensight_to_ijk");
 
-        // Convert the arbitrary order hex to a IJK mesh
-        DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(mesh.num_nodes_in_elem, "convert_pn_vtk_to_ijk");
+    //     // Convert the arbitrary order hex to a IJK mesh
+    //     DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(mesh.num_nodes_in_elem, "convert_pn_vtk_to_ijk");
 
-        //build the connectivity for element type 12
-        // elem_types.host(0)
-        switch(elem_types.host(0)){
+    //     //build the connectivity for element type 12
+    //     // elem_types.host(0)
+    //     switch(elem_types.host(0)){
 
-            case element_types::linear_quad:
-                // the node order is correct, no changes required
+    //         case element_types::linear_quad:
+    //             // the node order is correct, no changes required
 
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    //             FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
-                    }
+    //                 for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+    //                     mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
+    //                 }
                     
-                }); // end for
+    //             }); // end for
 
-                break;
-                // next case
+    //             break;
+    //             // next case
 
-            case element_types::linear_hex_ijk:
+    //         case element_types::linear_hex_ijk:
 
-                // read the node ids in the element, no maps required
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    //             // read the node ids in the element, no maps required
+    //             FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
-                    }
+    //                 for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+    //                     mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
+    //                 }
                     
-                }); // end for
+    //             }); // end for
 
-                break;
-                // next case
+    //             break;
+    //             // next case
 
-            case element_types::linear_hex:
+    //         case element_types::linear_hex:
 
-                RUN({
-                    convert_ensight_to_ijk(0) = 0;
-                    convert_ensight_to_ijk(1) = 1;
-                    convert_ensight_to_ijk(2) = 3;
-                    convert_ensight_to_ijk(3) = 2;
-                    convert_ensight_to_ijk(4) = 4;
-                    convert_ensight_to_ijk(5) = 5;
-                    convert_ensight_to_ijk(6) = 7;
-                    convert_ensight_to_ijk(7) = 6;
-                });
+    //             RUN({
+    //                 convert_ensight_to_ijk(0) = 0;
+    //                 convert_ensight_to_ijk(1) = 1;
+    //                 convert_ensight_to_ijk(2) = 3;
+    //                 convert_ensight_to_ijk(3) = 2;
+    //                 convert_ensight_to_ijk(4) = 4;
+    //                 convert_ensight_to_ijk(5) = 5;
+    //                 convert_ensight_to_ijk(6) = 7;
+    //                 convert_ensight_to_ijk(7) = 6;
+    //             });
 
-                // read the node ids in the element
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    //             // read the node ids in the element
+    //             FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_ensight_to_ijk(node_lid));
-                    }
+    //                 for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+    //                     mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_ensight_to_ijk(node_lid));
+    //                 }
                     
-                }); // end for
+    //             }); // end for
 
-                break;
-                // next case
+    //             break;
+    //             // next case
 
-            case element_types::arbitrary_hex:
+    //         case element_types::arbitrary_hex:
 
-                // re-order the nodes to be in i,j,k format for Fierro
-                size_t this_node = 0;
-                for (int k=0; k<=Pn_order; k++){
-                    for (int j=0; j<=Pn_order; j++){
-                        for (int i=0; i<=Pn_order; i++){
+    //             // re-order the nodes to be in i,j,k format for Fierro
+    //             size_t this_node = 0;
+    //             for (int k=0; k<=Pn_order; k++){
+    //                 for (int j=0; j<=Pn_order; j++){
+    //                     for (int i=0; i<=Pn_order; i++){
                             
-                            // convert this_node index to the FE index convention
-                            int order[3] = {Pn_order, Pn_order, Pn_order};
-                            int this_index = PointIndexFromIJK(i, j, k, order);
+    //                         // convert this_node index to the FE index convention
+    //                         int order[3] = {Pn_order, Pn_order, Pn_order};
+    //                         int this_index = PointIndexFromIJK(i, j, k, order);
                             
-                            // store the points in this elem according the the finite
-                            // element numbering convention
-                            convert_pn_vtk_to_ijk.host(this_index) = this_node;
+    //                         // store the points in this elem according the the finite
+    //                         // element numbering convention
+    //                         convert_pn_vtk_to_ijk.host(this_index) = this_node;
                             
-                            // increment the point counting index
-                            this_node = this_node + 1;
+    //                         // increment the point counting index
+    //                         this_node = this_node + 1;
                             
-                        } // end for icount
-                    } // end for jcount
-                }  // end for kcount
-                convert_pn_vtk_to_ijk.update_device();
-                Kokkos::fence();
+    //                     } // end for icount
+    //                 } // end for jcount
+    //             }  // end for kcount
+    //             convert_pn_vtk_to_ijk.update_device();
+    //             Kokkos::fence();
 
-                // read the node ids in the element
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    //             // read the node ids in the element
+    //             FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_pn_vtk_to_ijk(node_lid));
-                    }
+    //                 for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+    //                     mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_pn_vtk_to_ijk(node_lid));
+    //                 }
                     
-                }); // end for
+    //             }); // end for
 
-                break;
-                // next case
+    //             break;
+    //             // next case
 
-        } // end switch
-        mesh.nodes_in_elem.update_host();
-
-
-        // initialize corner variables
-        size_t num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
+    //     } // end switch
+    //     mesh.nodes_in_elem.update_host();
 
 
-        // Build connectivity
-        mesh.build_connectivity();
+    //     // initialize corner variables
+    //     size_t num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+    //     mesh.initialize_corners(num_corners);
 
 
-        in.close();
+    //     // Build connectivity
+    //     mesh.build_connectivity();
+
+
+    //     in.close();
             
-    } // end of VTMread function
+    // } // end of VTMread function
 
 
 }; // end of Mesh reader class
@@ -1812,10 +1812,10 @@ public:
     {
         if (SimulationParameters.mesh_input.num_dims == 2) {
             if (SimulationParameters.mesh_input.type == mesh_input::Polar) {
-                build_2d_polar(mesh, GaussPoints, node, corner, SimulationParameters);
+                //build_2d_polar(mesh, GaussPoints, node, corner, SimulationParameters);
             }
             else if (SimulationParameters.mesh_input.type == mesh_input::Box) {
-                build_2d_box(mesh, GaussPoints, node, corner, SimulationParameters);
+                //build_2d_box(mesh, GaussPoints, node, corner, SimulationParameters);
             }
             else{
                 std::cout << "**** 2D MESH TYPE NOT SUPPORTED **** " << std::endl;
@@ -1828,7 +1828,7 @@ public:
             }
         }
         else if (SimulationParameters.mesh_input.num_dims == 3) {
-            build_3d_box(mesh, GaussPoints, node, corner, SimulationParameters);
+            //build_3d_box(mesh, GaussPoints, node, corner, SimulationParameters);
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
@@ -1848,118 +1848,118 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_box(Mesh_t& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParameters) const
-    {
-        printf("Creating a 2D box mesh \n");
+    // void build_2d_box(Mesh_t& mesh,
+    //     GaussPoint_t& GaussPoints,
+    //     node_t&   node,
+    //     corner_t& corner,
+    //     SimulationParameters_t& SimulationParameters) const
+    // {
+    //     printf("Creating a 2D box mesh \n");
 
-        const int num_dim = 2;
+    //     const int num_dim = 2;
 
-        const double lx = SimulationParameters.mesh_input.length[0];
-        const double ly = SimulationParameters.mesh_input.length[1];
+    //     const double lx = SimulationParameters.mesh_input.length[0];
+    //     const double ly = SimulationParameters.mesh_input.length[1];
 
-        const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
+    //     const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+    //     const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
 
-        const int num_points_i = num_elems_i + 1; // num points in x
-        const int num_points_j = num_elems_j + 1; // num points in y
+    //     const int num_points_i = num_elems_i + 1; // num points in x
+    //     const int num_points_j = num_elems_j + 1; // num points in y
 
-        const int num_nodes = num_points_i * num_points_j;
+    //     const int num_nodes = num_points_i * num_points_j;
 
-        const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
-        const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
+    //     const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
+    //     const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
 
-        const int num_elems = num_elems_i * num_elems_j;
+    //     const int num_elems = num_elems_i * num_elems_j;
 
-        std::vector<double> origin(num_dim);
-        // SimulationParameters.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
+    //     std::vector<double> origin(num_dim);
+    //     // SimulationParameters.mesh_input.origin.update_host();
+    //     for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
-        // --- 2D parameters ---
-        // const int num_faces_in_elem  = 4;  // number of faces in elem
-        // const int num_points_in_elem = 4;  // number of points in elem
-        // const int num_points_in_face = 2;  // number of points in a face
-        // const int num_edges_in_elem  = 4;  // number of edges in a elem
+    //     // --- 2D parameters ---
+    //     // const int num_faces_in_elem  = 4;  // number of faces in elem
+    //     // const int num_points_in_elem = 4;  // number of points in elem
+    //     // const int num_points_in_face = 2;  // number of points in a face
+    //     // const int num_edges_in_elem  = 4;  // number of edges in a elem
 
-        // --- mesh node ordering ---
-        // Convert ijk index system to the finite element numbering convention
-        // for vertices in elem
-        auto convert_point_number_in_quad = CArray<int>(4);
-        convert_point_number_in_quad(0) = 0;
-        convert_point_number_in_quad(1) = 1;
-        convert_point_number_in_quad(2) = 3;
-        convert_point_number_in_quad(3) = 2;
+    //     // --- mesh node ordering ---
+    //     // Convert ijk index system to the finite element numbering convention
+    //     // for vertices in elem
+    //     auto convert_point_number_in_quad = CArray<int>(4);
+    //     convert_point_number_in_quad(0) = 0;
+    //     convert_point_number_in_quad(1) = 1;
+    //     convert_point_number_in_quad(2) = 3;
+    //     convert_point_number_in_quad(3) = 2;
 
-        // intialize node variables
-        mesh.initialize_nodes(num_nodes);
+    //     // intialize node variables
+    //     mesh.initialize_nodes(num_nodes);
 
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
+    //     // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
+    //     std::vector<node_state> required_node_state = { node_state::coords };
+    //     node.initialize(num_nodes, num_dim, required_node_state);
 
-        // --- Build nodes ---
+    //     // --- Build nodes ---
 
-        // populate the point data structures
-        for (int j = 0; j < num_points_j; j++) {
-            for (int i = 0; i < num_points_i; i++) {
-                // global id for the point
-                int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
+    //     // populate the point data structures
+    //     for (int j = 0; j < num_points_j; j++) {
+    //         for (int i = 0; i < num_points_i; i++) {
+    //             // global id for the point
+    //             int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
 
-                // store the point coordinates
-                node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-            } // end for i
-        } // end for j
+    //             // store the point coordinates
+    //             node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+    //             node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+    //         } // end for i
+    //     } // end for j
 
 
-        node.coords.update_device();
+    //     node.coords.update_device();
 
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+    //     // initialize elem variables
+    //     mesh.initialize_elems(num_elems, num_dim);
 
-        // populate the elem center data structures
-        for (int j = 0; j < num_elems_j; j++) {
-            for (int i = 0; i < num_elems_i; i++) {
-                // global id for the elem
-                int elem_gid = get_id(i, j, 0, num_elems_i, num_elems_j);
+    //     // populate the elem center data structures
+    //     for (int j = 0; j < num_elems_j; j++) {
+    //         for (int i = 0; i < num_elems_i; i++) {
+    //             // global id for the elem
+    //             int elem_gid = get_id(i, j, 0, num_elems_i, num_elems_j);
 
-                // store the point IDs for this elem where the range is
-                // (i:i+1, j:j+1 for a linear quad
-                int this_point = 0;
+    //             // store the point IDs for this elem where the range is
+    //             // (i:i+1, j:j+1 for a linear quad
+    //             int this_point = 0;
 
-                for (int jcount = j; jcount <= j + 1; jcount++) {
-                    for (int icount = i; icount <= i + 1; icount++) {
-                        // global id for the points
-                        int node_gid = get_id(icount, jcount, 0, num_points_i, num_points_j);
+    //             for (int jcount = j; jcount <= j + 1; jcount++) {
+    //                 for (int icount = i; icount <= i + 1; icount++) {
+    //                     // global id for the points
+    //                     int node_gid = get_id(icount, jcount, 0, num_points_i, num_points_j);
 
-                        // convert this_point index to the FE index convention
-                        int this_index = convert_point_number_in_quad(this_point);
+    //                     // convert this_point index to the FE index convention
+    //                     int this_index = convert_point_number_in_quad(this_point);
 
-                        // store the points in this elem according the the finite
-                        // element numbering convention
-                        mesh.nodes_in_elem.host(elem_gid, this_index) = node_gid;
+    //                     // store the points in this elem according the the finite
+    //                     // element numbering convention
+    //                     mesh.nodes_in_elem.host(elem_gid, this_index) = node_gid;
 
-                        // increment the point counting index
-                        this_point = this_point + 1;
-                    } // end for icount
-                } // end for jcount
-            } // end for i
-        } // end for j
+    //                     // increment the point counting index
+    //                     this_point = this_point + 1;
+    //                 } // end for icount
+    //             } // end for jcount
+    //         } // end for i
+    //     } // end for j
 
-        // update device side
-        mesh.nodes_in_elem.update_device();
+    //     // update device side
+    //     mesh.nodes_in_elem.update_device();
 
-        // intialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
+    //     // intialize corner variables
+    //     int num_corners = num_elems * mesh.num_nodes_in_elem;
+    //     mesh.initialize_corners(num_corners);
+    //     // corner.initialize(num_corners, num_dim);
 
-        // Build connectivity
-        mesh.build_connectivity();
-    } // end build_2d_box
+    //     // Build connectivity
+    //     mesh.build_connectivity();
+    // } // end build_2d_box
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -1974,127 +1974,127 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_polar(Mesh_t& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParameters) const
-    {
-        printf("Creating a 2D polar mesh \n");
+    // void build_2d_polar(Mesh_t& mesh,
+    //     GaussPoint_t& GaussPoints,
+    //     node_t&   node,
+    //     corner_t& corner,
+    //     SimulationParameters_t& SimulationParameters) const
+    // {
+    //     printf("Creating a 2D polar mesh \n");
 
-        int num_dim     = 2;
+    //     int num_dim     = 2;
 
-        const double inner_radius = SimulationParameters.mesh_input.inner_radius;
-        const double outer_radius = SimulationParameters.mesh_input.outer_radius;
+    //     const double inner_radius = SimulationParameters.mesh_input.inner_radius;
+    //     const double outer_radius = SimulationParameters.mesh_input.outer_radius;
 
-        const double start_angle = PI / 180.0 * SimulationParameters.mesh_input.starting_angle;
-        const double end_angle   = PI / 180.0 * SimulationParameters.mesh_input.ending_angle;
+    //     const double start_angle = PI / 180.0 * SimulationParameters.mesh_input.starting_angle;
+    //     const double end_angle   = PI / 180.0 * SimulationParameters.mesh_input.ending_angle;
 
-        const int num_elems_i = SimulationParameters.mesh_input.num_radial_elems;
-        const int num_elems_j = SimulationParameters.mesh_input.num_angular_elems;
+    //     const int num_elems_i = SimulationParameters.mesh_input.num_radial_elems;
+    //     const int num_elems_j = SimulationParameters.mesh_input.num_angular_elems;
 
-        const int num_points_i = num_elems_i + 1; // num points in x
-        const int num_points_j = num_elems_j + 1; // num points in y
+    //     const int num_points_i = num_elems_i + 1; // num points in x
+    //     const int num_points_j = num_elems_j + 1; // num points in y
 
-        const int num_nodes = num_points_i * num_points_j;
+    //     const int num_nodes = num_points_i * num_points_j;
 
-        const double dx = (outer_radius - inner_radius) / ((double)num_elems_i);  // len/(elems)
-        const double dy = (end_angle - start_angle) / ((double)num_elems_j);  // len/(elems)
+    //     const double dx = (outer_radius - inner_radius) / ((double)num_elems_i);  // len/(elems)
+    //     const double dy = (end_angle - start_angle) / ((double)num_elems_j);  // len/(elems)
 
-        const int num_elems = num_elems_i * num_elems_j;
+    //     const int num_elems = num_elems_i * num_elems_j;
 
-        std::vector<double> origin(num_dim);
+    //     std::vector<double> origin(num_dim);
 
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
+    //     for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
-        // --- 2D parameters ---
-        // const int num_faces_in_elem  = 4;  // number of faces in elem
-        // const int num_points_in_elem = 4;  // number of points in elem
-        // const int num_points_in_face = 2;  // number of points in a face
-        // const int num_edges_in_elem  = 4;  // number of edges in a elem
+    //     // --- 2D parameters ---
+    //     // const int num_faces_in_elem  = 4;  // number of faces in elem
+    //     // const int num_points_in_elem = 4;  // number of points in elem
+    //     // const int num_points_in_face = 2;  // number of points in a face
+    //     // const int num_edges_in_elem  = 4;  // number of edges in a elem
 
-        // --- mesh node ordering ---
-        // Convert ijk index system to the finite element numbering convention
-        // for vertices in elem
-        auto convert_point_number_in_quad = CArray<int>(4);
-        convert_point_number_in_quad(0) = 0;
-        convert_point_number_in_quad(1) = 1;
-        convert_point_number_in_quad(2) = 3;
-        convert_point_number_in_quad(3) = 2;
+    //     // --- mesh node ordering ---
+    //     // Convert ijk index system to the finite element numbering convention
+    //     // for vertices in elem
+    //     auto convert_point_number_in_quad = CArray<int>(4);
+    //     convert_point_number_in_quad(0) = 0;
+    //     convert_point_number_in_quad(1) = 1;
+    //     convert_point_number_in_quad(2) = 3;
+    //     convert_point_number_in_quad(3) = 2;
 
-        // intialize node variables
-        mesh.initialize_nodes(num_nodes);
+    //     // intialize node variables
+    //     mesh.initialize_nodes(num_nodes);
 
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
+    //     // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
+    //     std::vector<node_state> required_node_state = { node_state::coords };
+    //     node.initialize(num_nodes, num_dim, required_node_state);
 
-        // populate the point data structures
-        for (int j = 0; j < num_points_j; j++) {
-            for (int i = 0; i < num_points_i; i++) {
-                // global id for the point
-                int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
+    //     // populate the point data structures
+    //     for (int j = 0; j < num_points_j; j++) {
+    //         for (int i = 0; i < num_points_i; i++) {
+    //             // global id for the point
+    //             int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
 
-                double r_i     = inner_radius + (double)i * dx;
-                double theta_j = start_angle + (double)j * dy;
+    //             double r_i     = inner_radius + (double)i * dx;
+    //             double theta_j = start_angle + (double)j * dy;
 
-                // store the point coordinates
-                node.coords.host(node_gid, 0) = origin[0] + r_i * cos(theta_j);
-                node.coords.host(node_gid, 1) = origin[1] + r_i * sin(theta_j);
+    //             // store the point coordinates
+    //             node.coords.host(node_gid, 0) = origin[0] + r_i * cos(theta_j);
+    //             node.coords.host(node_gid, 1) = origin[1] + r_i * sin(theta_j);
 
-                if(node.coords.host(node_gid, 0) < 0.0){
-                    throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
-                }
+    //             if(node.coords.host(node_gid, 0) < 0.0){
+    //                 throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
+    //             }
 
-            } // end for i
-        } // end for j
+    //         } // end for i
+    //     } // end for j
 
 
-        node.coords.update_device();
+    //     node.coords.update_device();
 
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+    //     // initialize elem variables
+    //     mesh.initialize_elems(num_elems, num_dim);
 
-        // populate the elem center data structures
-        for (int j = 0; j < num_elems_j; j++) {
-            for (int i = 0; i < num_elems_i; i++) {
-                // global id for the elem
-                int elem_gid = get_id(i, j, 0, num_elems_i, num_elems_j);
+    //     // populate the elem center data structures
+    //     for (int j = 0; j < num_elems_j; j++) {
+    //         for (int i = 0; i < num_elems_i; i++) {
+    //             // global id for the elem
+    //             int elem_gid = get_id(i, j, 0, num_elems_i, num_elems_j);
 
-                // store the point IDs for this elem where the range is
-                // (i:i+1, j:j+1 for a linear quad
-                int this_point = 0;
+    //             // store the point IDs for this elem where the range is
+    //             // (i:i+1, j:j+1 for a linear quad
+    //             int this_point = 0;
 
-                for (int jcount = j; jcount <= j + 1; jcount++) {
-                    for (int icount = i; icount <= i + 1; icount++) {
-                        // global id for the points
-                        int node_gid = get_id(icount, jcount, 0, num_points_i, num_points_j);
+    //             for (int jcount = j; jcount <= j + 1; jcount++) {
+    //                 for (int icount = i; icount <= i + 1; icount++) {
+    //                     // global id for the points
+    //                     int node_gid = get_id(icount, jcount, 0, num_points_i, num_points_j);
 
-                        // convert this_point index to the FE index convention
-                        int this_index = convert_point_number_in_quad(this_point);
+    //                     // convert this_point index to the FE index convention
+    //                     int this_index = convert_point_number_in_quad(this_point);
 
-                        // store the points in this elem according the the finite
-                        // element numbering convention
-                        mesh.nodes_in_elem.host(elem_gid, this_index) = node_gid;
+    //                     // store the points in this elem according the the finite
+    //                     // element numbering convention
+    //                     mesh.nodes_in_elem.host(elem_gid, this_index) = node_gid;
 
-                        // increment the point counting index
-                        this_point = this_point + 1;
-                    } // end for icount
-                } // end for jcount
-            } // end for i
-        } // end for j
+    //                     // increment the point counting index
+    //                     this_point = this_point + 1;
+    //                 } // end for icount
+    //             } // end for jcount
+    //         } // end for i
+    //     } // end for j
 
-        // update device side
-        mesh.nodes_in_elem.update_device();
+    //     // update device side
+    //     mesh.nodes_in_elem.update_device();
 
-        // intialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
+    //     // intialize corner variables
+    //     int num_corners = num_elems * mesh.num_nodes_in_elem;
+    //     mesh.initialize_corners(num_corners);
+    //     // corner.initialize(num_corners, num_dim);
 
-        // Build connectivity
-        mesh.build_connectivity();
-    } // end build_2d_box
+    //     // Build connectivity
+    //     mesh.build_connectivity();
+    // } // end build_2d_box
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -2109,125 +2109,125 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_box(Mesh_t& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParameters) const
-    {
-        printf("Creating a 3D box mesh \n");
+    // void build_3d_box(Mesh_t& mesh,
+    //     GaussPoint_t& GaussPoints,
+    //     node_t&   node,
+    //     corner_t& corner,
+    //     SimulationParameters_t& SimulationParameters) const
+    // {
+    //     printf("Creating a 3D box mesh \n");
 
-        const int num_dim = 3;
+    //     const int num_dim = 3;
 
-        // SimulationParameters.mesh_input.length.update_host();
-        const double lx = SimulationParameters.mesh_input.length[0];
-        const double ly = SimulationParameters.mesh_input.length[1];
-        const double lz = SimulationParameters.mesh_input.length[2];
+    //     // SimulationParameters.mesh_input.length.update_host();
+    //     const double lx = SimulationParameters.mesh_input.length[0];
+    //     const double ly = SimulationParameters.mesh_input.length[1];
+    //     const double lz = SimulationParameters.mesh_input.length[2];
 
-        // SimulationParameters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
+    //     // SimulationParameters.mesh_input.num_elems.update_host();
+    //     const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+    //     const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
+    //     const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
 
-        const int num_points_i = num_elems_i + 1; // num points in x
-        const int num_points_j = num_elems_j + 1; // num points in y
-        const int num_points_k = num_elems_k + 1; // num points in y
+    //     const int num_points_i = num_elems_i + 1; // num points in x
+    //     const int num_points_j = num_elems_j + 1; // num points in y
+    //     const int num_points_k = num_elems_k + 1; // num points in y
 
-        const int num_nodes = num_points_i * num_points_j * num_points_k;
+    //     const int num_nodes = num_points_i * num_points_j * num_points_k;
 
-        const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
-        const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
-        const double dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
+    //     const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
+    //     const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
+    //     const double dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
 
-        const int num_elems = num_elems_i * num_elems_j * num_elems_k;
+    //     const int num_elems = num_elems_i * num_elems_j * num_elems_k;
 
-        std::vector<double> origin(num_dim);
-        // SimulationParameters.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
+    //     std::vector<double> origin(num_dim);
+    //     // SimulationParameters.mesh_input.origin.update_host();
+    //     for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
-        // --- 3D parameters ---
-        // const int num_faces_in_elem  = 6;  // number of faces in elem
-        // const int num_points_in_elem = 8;  // number of points in elem
-        // const int num_points_in_face = 4;  // number of points in a face
-        // const int num_edges_in_elem  = 12; // number of edges in a elem
-
-
-        // initialize mesh node variables
-        mesh.initialize_nodes(num_nodes);
-
-         // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
-
-        // --- Build nodes ---
-
-        // populate the point data structures
-        for (int k = 0; k < num_points_k; k++) {
-            for (int j = 0; j < num_points_j; j++) {
-                for (int i = 0; i < num_points_i; i++) {
-                    // global id for the point
-                    int node_gid = get_id(i, j, k, num_points_i, num_points_j);
-
-                    // store the point coordinates
-                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
-                } // end for i
-            } // end for j
-        } // end for k
+    //     // --- 3D parameters ---
+    //     // const int num_faces_in_elem  = 6;  // number of faces in elem
+    //     // const int num_points_in_elem = 8;  // number of points in elem
+    //     // const int num_points_in_face = 4;  // number of points in a face
+    //     // const int num_edges_in_elem  = 12; // number of edges in a elem
 
 
-        node.coords.update_device();
+    //     // initialize mesh node variables
+    //     mesh.initialize_nodes(num_nodes);
 
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+    //      // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
+    //     std::vector<node_state> required_node_state = { node_state::coords };
+    //     node.initialize(num_nodes, num_dim, required_node_state);
 
-        // --- Build elems  ---
+    //     // --- Build nodes ---
 
-        // populate the elem center data structures
-        for (int k = 0; k < num_elems_k; k++) {
-            for (int j = 0; j < num_elems_j; j++) {
-                for (int i = 0; i < num_elems_i; i++) {
-                    // global id for the elem
-                    int elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
+    //     // populate the point data structures
+    //     for (int k = 0; k < num_points_k; k++) {
+    //         for (int j = 0; j < num_points_j; j++) {
+    //             for (int i = 0; i < num_points_i; i++) {
+    //                 // global id for the point
+    //                 int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
-                    // store the point IDs for this elem where the range is
-                    // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
-                    int this_point = 0;
-                    for (int kcount = k; kcount <= k + 1; kcount++) {
-                        for (int jcount = j; jcount <= j + 1; jcount++) {
-                            for (int icount = i; icount <= i + 1; icount++) {
-                                // global id for the points
-                                int node_gid = get_id(icount, jcount, kcount,
-                                                  num_points_i, num_points_j);
+    //                 // store the point coordinates
+    //                 node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+    //                 node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+    //                 node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
+    //             } // end for i
+    //         } // end for j
+    //     } // end for k
 
-                                // convert this_point index to the FE index convention
-                                int this_index = this_point; //convert_point_number_in_Hex(this_point);
 
-                                // store the points in this elem according the the finite
-                                // element numbering convention
-                                mesh.nodes_in_elem.host(elem_gid, this_index) = node_gid;
+    //     node.coords.update_device();
 
-                                // increment the point counting index
-                                this_point = this_point + 1;
-                            } // end for icount
-                        } // end for jcount
-                    }  // end for kcount
-                } // end for i
-            } // end for j
-        } // end for k
+    //     // initialize elem variables
+    //     mesh.initialize_elems(num_elems, num_dim);
 
-        // update device side
-        mesh.nodes_in_elem.update_device();
+    //     // --- Build elems  ---
 
-        // initialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
+    //     // populate the elem center data structures
+    //     for (int k = 0; k < num_elems_k; k++) {
+    //         for (int j = 0; j < num_elems_j; j++) {
+    //             for (int i = 0; i < num_elems_i; i++) {
+    //                 // global id for the elem
+    //                 int elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
 
-        // Build connectivity
-        mesh.build_connectivity();
-    } // end build_3d_box
+    //                 // store the point IDs for this elem where the range is
+    //                 // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
+    //                 int this_point = 0;
+    //                 for (int kcount = k; kcount <= k + 1; kcount++) {
+    //                     for (int jcount = j; jcount <= j + 1; jcount++) {
+    //                         for (int icount = i; icount <= i + 1; icount++) {
+    //                             // global id for the points
+    //                             int node_gid = get_id(icount, jcount, kcount,
+    //                                               num_points_i, num_points_j);
+
+    //                             // convert this_point index to the FE index convention
+    //                             int this_index = this_point; //convert_point_number_in_Hex(this_point);
+
+    //                             // store the points in this elem according the the finite
+    //                             // element numbering convention
+    //                             mesh.nodes_in_elem.host(elem_gid, this_index) = node_gid;
+
+    //                             // increment the point counting index
+    //                             this_point = this_point + 1;
+    //                         } // end for icount
+    //                     } // end for jcount
+    //                 }  // end for kcount
+    //             } // end for i
+    //         } // end for j
+    //     } // end for k
+
+    //     // update device side
+    //     mesh.nodes_in_elem.update_device();
+
+    //     // initialize corner variables
+    //     int num_corners = num_elems * mesh.num_nodes_in_elem;
+    //     mesh.initialize_corners(num_corners);
+    //     // corner.initialize(num_corners, num_dim);
+
+    //     // Build connectivity
+    //     mesh.build_connectivity();
+    // } // end build_3d_box
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -2242,164 +2242,164 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_HexN_box(Mesh_t& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParameters) const
-    {
-        printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
-        const int num_dim = 3;
+    // void build_3d_HexN_box(Mesh_t& mesh,
+    //     GaussPoint_t& GaussPoints,
+    //     node_t&   node,
+    //     corner_t& corner,
+    //     SimulationParameters_t& SimulationParameters) const
+    // {
+    //     printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
+    //     const int num_dim = 3;
 
-        // SimulationParameters.mesh_input.length.update_host();
-        const double lx = SimulationParameters.mesh_input.length[0];
-        const double ly = SimulationParameters.mesh_input.length[1];
-        const double lz = SimulationParameters.mesh_input.length[2];
+    //     // SimulationParameters.mesh_input.length.update_host();
+    //     const double lx = SimulationParameters.mesh_input.length[0];
+    //     const double ly = SimulationParameters.mesh_input.length[1];
+    //     const double lz = SimulationParameters.mesh_input.length[2];
 
-        // SimulationParameters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
+    //     // SimulationParameters.mesh_input.num_elems.update_host();
+    //     const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+    //     const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
+    //     const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
 
-        // creating zones for the Pn order
-        const int Pn_order = SimulationParameters.mesh_input.p_order;
+    //     // creating zones for the Pn order
+    //     const int Pn_order = SimulationParameters.mesh_input.p_order;
         
-        if (Pn_order > 19) {
-            printf("Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
-            return;
-        }
+    //     if (Pn_order > 19) {
+    //         printf("Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
+    //         return;
+    //     }
 
-        const int num_zones_i = Pn_order*num_elems_i;
-        const int num_zones_j = Pn_order*num_elems_j;
-        const int num_zones_k = Pn_order*num_elems_k;
+    //     const int num_zones_i = Pn_order*num_elems_i;
+    //     const int num_zones_j = Pn_order*num_elems_j;
+    //     const int num_zones_k = Pn_order*num_elems_k;
         
-        const int num_points_i = num_zones_i+1; // num points in x accounting for Pn
-        const int num_points_j = num_zones_j+1; // num points in y accounting for Pn
-        const int num_points_k = num_zones_k+1; // num points in y accounting for Pn
+    //     const int num_points_i = num_zones_i+1; // num points in x accounting for Pn
+    //     const int num_points_j = num_zones_j+1; // num points in y accounting for Pn
+    //     const int num_points_k = num_zones_k+1; // num points in y accounting for Pn
         
         
-        const double dx = lx/((double)num_zones_i);  // len/(num_zones_i)
-        const double dy = ly/((double)num_zones_j);  // len/(num_zones_j)
-        const double dz = lz/((double)num_zones_k);  // len/(num_zones_k)
+    //     const double dx = lx/((double)num_zones_i);  // len/(num_zones_i)
+    //     const double dy = ly/((double)num_zones_j);  // len/(num_zones_j)
+    //     const double dz = lz/((double)num_zones_k);  // len/(num_zones_k)
         
-        const int num_elems = num_elems_i*num_elems_j*num_elems_k;
-        // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
+    //     const int num_elems = num_elems_i*num_elems_j*num_elems_k;
+    //     // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
 
-        std::vector<double> origin(num_dim);
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
+    //     std::vector<double> origin(num_dim);
+    //     for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
-        // --- 3D parameters ---
-        // const int num_faces_in_zone = 6;   // number of faces in zone
-        // const int num_points_in_zone = 8;  // number of points in zone
-        // const int num_points_in_face = 4;  // number of points in a face
+    //     // --- 3D parameters ---
+    //     // const int num_faces_in_zone = 6;   // number of faces in zone
+    //     // const int num_points_in_zone = 8;  // number of points in zone
+    //     // const int num_points_in_face = 4;  // number of points in a face
         
-        // p_order   = 1, 2, 3, 4, 5
-        // num_nodes = 2, 3, 4, 5, 6
-        const int num_1D_points = Pn_order+1;
-        const int num_points_in_elem = num_1D_points*num_1D_points*num_1D_points;
+    //     // p_order   = 1, 2, 3, 4, 5
+    //     // num_nodes = 2, 3, 4, 5, 6
+    //     const int num_1D_points = Pn_order+1;
+    //     const int num_points_in_elem = num_1D_points*num_1D_points*num_1D_points;
            
         
-        // --- elem ---
-        auto elem_coords = CArray <double> (num_elems, num_dim);
-        auto elem_point_list = CArray <int> (num_elems, num_points_in_elem);
+    //     // --- elem ---
+    //     auto elem_coords = CArray <double> (num_elems, num_dim);
+    //     auto elem_point_list = CArray <int> (num_elems, num_points_in_elem);
         
         
-        // --- point ---
-        int num_points = num_points_i * num_points_j * num_points_k;
-        auto pt_coords = CArray <double> (num_points, num_dim);
+    //     // --- point ---
+    //     int num_points = num_points_i * num_points_j * num_points_k;
+    //     auto pt_coords = CArray <double> (num_points, num_dim);
 
 
-        // --- Build nodes ---
+    //     // --- Build nodes ---
         
-        // initialize node variables
-        mesh.initialize_nodes(num_points);
+    //     // initialize node variables
+    //     mesh.initialize_nodes(num_points);
 
-        // 
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_points, num_dim, required_node_state);
-        // populate the point data structures
-        for (int k = 0; k < num_points_k; k++){
-            for (int j = 0; j < num_points_j; j++){
-                for (int i = 0; i < num_points_i; i++){
+    //     // 
+    //     std::vector<node_state> required_node_state = { node_state::coords };
+    //     node.initialize(num_points, num_dim, required_node_state);
+    //     // populate the point data structures
+    //     for (int k = 0; k < num_points_k; k++){
+    //         for (int j = 0; j < num_points_j; j++){
+    //             for (int i = 0; i < num_points_i; i++){
 
                 
-                    // global id for the point
-                    int node_gid = get_id(i, j, k, num_points_i, num_points_j);
+    //                 // global id for the point
+    //                 int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
-                    // store the point coordinates
-                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
+    //                 // store the point coordinates
+    //                 node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+    //                 node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+    //                 node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
                     
-                } // end for k
-            } // end for i
-        } // end for j
+    //             } // end for k
+    //         } // end for i
+    //     } // end for j
 
 
-        node.coords.update_device();
+    //     node.coords.update_device();
 
 
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+    //     // initialize elem variables
+    //     mesh.initialize_elems(num_elems, num_dim);
 
-        // --- Build elems  ---
+    //     // --- Build elems  ---
         
-        // populate the elem center data structures accounting for Pn
-        for (int k=0; k<num_elems_k; k++){
-            for (int j=0; j<num_elems_j; j++){
-                for (int i=0; i<num_elems_i; i++){
+    //     // populate the elem center data structures accounting for Pn
+    //     for (int k=0; k<num_elems_k; k++){
+    //         for (int j=0; j<num_elems_j; j++){
+    //             for (int i=0; i<num_elems_i; i++){
                   
-                    // global id for the elem
-                    size_t elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
+    //                 // global id for the elem
+    //                 size_t elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
                     
-                    // store the point IDs for this elem where the range is
-                    // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
-                    // (i:(i+1)*Pn_order, j:(j+1)*Pn_order, k:(k+1)*Pn_order) for a Pn hexahedron
-                    int node_lid = 0;
+    //                 // store the point IDs for this elem where the range is
+    //                 // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
+    //                 // (i:(i+1)*Pn_order, j:(j+1)*Pn_order, k:(k+1)*Pn_order) for a Pn hexahedron
+    //                 int node_lid = 0;
                     
-                    int k_local = 0;
-                    for (int kcount=k*Pn_order; kcount<=(k+1)*Pn_order; kcount++){
+    //                 int k_local = 0;
+    //                 for (int kcount=k*Pn_order; kcount<=(k+1)*Pn_order; kcount++){
                         
-                        int j_local = 0;
-                        for (int jcount=j*Pn_order; jcount<=(j+1)*Pn_order; jcount++){
+    //                     int j_local = 0;
+    //                     for (int jcount=j*Pn_order; jcount<=(j+1)*Pn_order; jcount++){
                             
-                            int i_local = 0;
-                            for (int icount=i*Pn_order; icount<=(i+1)*Pn_order; icount++){
+    //                         int i_local = 0;
+    //                         for (int icount=i*Pn_order; icount<=(i+1)*Pn_order; icount++){
                                 
-                                // global id for the points
-                                size_t node_gid = get_id(icount, jcount, kcount,
-                                                  num_points_i, num_points_j);
+    //                             // global id for the points
+    //                             size_t node_gid = get_id(icount, jcount, kcount,
+    //                                               num_points_i, num_points_j);
 
-                                // Saved using i,j,k indexing
-                                mesh.nodes_in_elem.host(elem_gid, node_lid) = node_gid;
+    //                             // Saved using i,j,k indexing
+    //                             mesh.nodes_in_elem.host(elem_gid, node_lid) = node_gid;
                                 
-                                // increment the point counting index
-                                node_lid = node_lid + 1;
+    //                             // increment the point counting index
+    //                             node_lid = node_lid + 1;
                                 
-                                i_local++;
-                            } // end for icount
+    //                             i_local++;
+    //                         } // end for icount
                             
-                            j_local++;
-                        } // end for jcount
+    //                         j_local++;
+    //                     } // end for jcount
                         
-                        k_local ++;
-                    }  // end for kcount
-                } // end for i
-            } // end for j
-        } // end for k
+    //                     k_local ++;
+    //                 }  // end for kcount
+    //             } // end for i
+    //         } // end for j
+    //     } // end for k
 
-        // update device side
-        mesh.nodes_in_elem.update_device();
+    //     // update device side
+    //     mesh.nodes_in_elem.update_device();
 
-        // initialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
+    //     // initialize corner variables
+    //     int num_corners = num_elems * mesh.num_nodes_in_elem;
+    //     mesh.initialize_corners(num_corners);
+    //     // corner.initialize(num_corners, num_dim);
 
-        // Build connectivity
-        mesh.build_connectivity();
+    //     // Build connectivity
+    //     mesh.build_connectivity();
 
-    }
+    // }
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -3264,7 +3264,8 @@ public:
                                             mat_sie_id,
                                             mat_sspd_id,
                                             mat_mass_id,
-                                            mat_volfrac_id,  
+                                            mat_volfrac_id,
+                                            mat_geo_volfrac_id,  
                                             mat_eroded_id,
                                             mat_stress_id,
                                             mat_conductivity_id,
@@ -5113,7 +5114,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void build_material_elem_node_lists(
         const Mesh_t& mesh,
-        const DCArrayKokkos<double>& state_node_coords,
+        const DistributedDCArray<double>& state_node_coords,
         DCArrayKokkos<double>& mat_node_coords,
         DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,

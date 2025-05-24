@@ -255,10 +255,10 @@ struct Mesh_t
     legendre_in_elem_t legendre_in_elem; ///< Gauss Legendre points in an element
 
     // ---- Node Data Definitions ---- //
-    size_t num_nodes; ///< Global Number of nodes in the mesh
-    size_t nlocal_nodes; ///< number of nodes local to this process
-    size_t nall_nodes; ///< number of local + ghost nodes on this process
-    size_t nghost_nodes; ///< number of ghost nodes on this process
+    size_t global_num_nodes; ///< Global Number of nodes in the mesh
+    size_t num_nodes; ///<  number of local + ghost nodes on this process
+    size_t num_local_nodes; ///< number of nodes local to this process
+    size_t num_ghost_nodes; ///< number of ghost nodes on this process
 
     //distributed map definitions
     DistributedMap node_map; ///< partition of local nodes (stores global node IDs on each process)
@@ -351,7 +351,8 @@ struct Mesh_t
         const size_t num_zones_in_elem_inp,
         const size_t num_nodes_in_zone_inp,
         const size_t num_surfs_in_elem_inp,
-        const size_t num_dims_inp)
+        const size_t num_dims_inp,
+        const DistributedMap input_element_map)
     {
         num_dims  = num_dims_inp;
         num_elems = num_elems_inp;
@@ -364,7 +365,7 @@ struct Mesh_t
 
         num_zones = num_zones_in_elem * num_elems;
 
-        nodes_in_elem    = DCArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.nodes_in_elem");
+        nodes_in_elem    = DistributedDCArray<size_t>(element_map, num_nodes_in_elem, "mesh.nodes_in_elem");
         corners_in_elem  = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
         zones_in_elem    = zones_in_elem_t(num_zones_in_elem);
         surfs_in_elem    = CArrayKokkos<size_t>(num_elems, num_surfs_in_elem, "mesh.surfs_in_zone");
