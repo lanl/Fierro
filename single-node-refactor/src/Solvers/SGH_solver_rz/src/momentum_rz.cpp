@@ -53,9 +53,9 @@ void SGHRZ::update_velocity_rz(
     double rk_alpha,
     double dt,
     const Mesh_t& mesh,
-    DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_vel_n0,
-    const DCArrayKokkos<double>& node_mass,
+    DistributedDCArray<double>& node_vel,
+    const DistributedDCArray<double>& node_vel_n0,
+    const DistributedDCArray<double>& node_mass,
     const DCArrayKokkos<double>& corner_force) const
 {
     const size_t num_dims = 2;
@@ -105,8 +105,8 @@ void SGHRZ::update_velocity_rz(
 void SGHRZ::get_velgrad_rz(
     DCArrayKokkos<double>& elem_vel_grad,
     const Mesh_t mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const DistributedDCArray<double>& node_coords,
+    const DistributedDCArray<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---
@@ -248,8 +248,8 @@ void SGHRZ::get_velgrad_rz(ViewCArrayKokkos<double>& vel_grad,
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::get_divergence_rz(DCArrayKokkos<double>& elem_div,
     const Mesh_t mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const DistributedDCArray<double>& node_coords,
+    const DistributedDCArray<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---

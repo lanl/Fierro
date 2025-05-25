@@ -52,10 +52,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::rk_init_rz(
-    DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_coords_n0,
-    DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& node_vel_n0,
+    DistributedDCArray<double>& node_coords,
+    DistributedDCArray<double>& node_coords_n0,
+    DistributedDCArray<double>& node_vel,
+    DistributedDCArray<double>& node_vel_n0,
     DCArrayKokkos<double>& MaterialPoints_sie,
     DCArrayKokkos<double>& MaterialPoints_sie_n0,
     DCArrayKokkos<double>& MaterialPoints_stress,
@@ -110,8 +110,8 @@ void SGHRZ::rk_init_rz(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::get_timestep_rz(Mesh_t& mesh,
-                            DCArrayKokkos<double>& node_coords,
-                            DCArrayKokkos<double>& node_vel,
+                            DistributedDCArray<double>& node_coords,
+                            DistributedDCArray<double>& node_vel,
                             DCArrayKokkos<double>& GaussPoints_vol,
                             DCArrayKokkos<double>& MaterialPoints_sspd,
                             DCArrayKokkos<bool>&   MaterialPoints_eroded,

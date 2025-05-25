@@ -627,8 +627,8 @@ double sum_domain_node_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
-                                 const DCArrayKokkos<double>& node_coords,
-                                 const DCArrayKokkos<double>& node_mass,
+                                 const DistributedDCArray<double>& node_coords,
+                                 const DistributedDCArray<double>& node_mass,
                                  double num_nodes)
 {
     // save the nodal mass
@@ -656,8 +656,8 @@ void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_areal_mass_rz(const Mesh_t& mesh,
-                             const DCArrayKokkos<double>& node_coords,
-                             const DCArrayKokkos<double>& node_mass,
+                             const DistributedDCArray<double>& node_coords,
+                             const DistributedDCArray<double>& node_mass,
                              const CArrayKokkos<double> node_extensive_mass,
                              double tiny)
 {

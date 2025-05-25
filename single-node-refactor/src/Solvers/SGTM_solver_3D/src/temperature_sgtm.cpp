@@ -54,10 +54,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::update_temperature(
     const Mesh_t& mesh,
     const DCArrayKokkos<double>& corner_q_transfer,
-    const DCArrayKokkos<double>& node_temp,
-    const DCArrayKokkos<double>& node_temp_n0,
-    const DCArrayKokkos<double>& node_mass,
-    const DCArrayKokkos<double>& node_q_transfer,
+    const DistributedDCArray<double>& node_temp,
+    const DistributedDCArray<double>& node_temp_n0,
+    const DistributedDCArray<double>& node_mass,
+    const DistributedDCArray<double>& node_q_transfer,
     const DCArrayKokkos<double>& mat_pt_sepcific_heat,
     const double rk_alpha,
     const double dt) const

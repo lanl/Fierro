@@ -52,7 +52,7 @@ void SGTM3D::update_position(
     double dt,
     const size_t num_dims,
     const size_t num_nodes,
-    DCArrayKokkos<double>& node_coords,
+    DistributedDCArray<double>& node_coords,
     const DCArrayKokkos<double>& node_coords_n0,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_vel_n0) const

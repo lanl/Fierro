@@ -63,8 +63,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::update_state(
     const Material_t& Materials,
     const Mesh_t&     mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const DistributedDCArray<double>& node_coords,
+    const DistributedDCArray<double>& node_vel,
     const DCArrayKokkos<double>& MaterialPoints_den,
     const DCArrayKokkos<double>& MaterialPoints_pres,
     const DCArrayKokkos<double>& MaterialPoints_stress,

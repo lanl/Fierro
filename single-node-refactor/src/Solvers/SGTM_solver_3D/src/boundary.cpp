@@ -100,9 +100,9 @@ void SGTM3D::boundary_temperature(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_convection(const Mesh_t& mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
-                                 const DCArrayKokkos<double>& node_temp,
-                                 const DCArrayKokkos<double>& node_flux,
-                                 const DCArrayKokkos<double>& node_coords,
+                                 const DistributedDCArray<double>& node_temp,
+                                 const DistributedDCArray<double>& node_flux,
+                                 const DistributedDCArray<double>& node_coords,
                                  const double time_value) const
 {
     // ---- Loop over boundary sets ---- //
@@ -240,9 +240,9 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_radiation(const Mesh_t& mesh,
                                 const BoundaryCondition_t& BoundaryConditions,
-                                const DCArrayKokkos<double>& node_temp,
-                                const DCArrayKokkos<double>& node_flux,
-                                const DCArrayKokkos<double>& node_coords,
+                                const DistributedDCArray<double>& node_temp,
+                                const DistributedDCArray<double>& node_flux,
+                                const DistributedDCArray<double>& node_coords,
                                 const double time_value) const
 {
     // ---- Loop over boundary sets ---- //
@@ -388,7 +388,7 @@ void SGTM3D::boundary_radiation(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_heat_flux(const Mesh_t& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
-                                  DCArrayKokkos<double>& node_temp,
+                                  DistributedDCArray<double>& node_temp,
                                   const double time_value) const
 {
     // // Loop over boundary sets

@@ -53,7 +53,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::init_corner_node_masses_zero_rz(const Mesh_t& mesh,
-                                            const DCArrayKokkos<double>& node_mass,
+                                            const DistributedDCArray<double>& node_mass,
                                             const DCArrayKokkos<double>& corner_mass) const
 {
                     
@@ -157,8 +157,8 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParameters,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass_rz(const Material_t& Materials,
                          const Mesh_t& mesh,
-                         const DCArrayKokkos<double>& node_coords,
-                         const DCArrayKokkos<double>& node_mass,
+                         const DistributedDCArray<double>& node_coords,
+                         const DistributedDCArray<double>& node_mass,
                          const DCArrayKokkos<double>& corner_mass,
                          const DCArrayKokkos<double>& MaterialPoints_den,
                          const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -205,8 +205,8 @@ void calc_corner_mass_rz(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass_rz(const Mesh_t& mesh,
-                    const DCArrayKokkos<double>& node_coords,
-                    const DCArrayKokkos<double>& node_mass,
+                    const DistributedDCArray<double>& node_coords,
+                    const DistributedDCArray<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass)
 {
 
