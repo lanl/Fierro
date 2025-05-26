@@ -56,7 +56,7 @@ void SGH3D::update_velocity(double rk_alpha,
     DistributedDCArray<double>& node_vel_n0,
     const DistributedDCArray<double>& node_mass,
     const DistributedDCArray<double>& node_force,
-    const DistributedDCArray<double>& corner_force) const
+    const DCArrayKokkos<double>& corner_force) const
 {
     const size_t num_dims = mesh.num_dims;
 
@@ -102,7 +102,7 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
     const Mesh_t mesh,
     const DistributedDCArray<double>& node_coords,
     const DistributedDCArray<double>& node_vel,
-    const DistributedDCArray<double>& elem_vol) const
+    const DCArrayKokkos<double>& elem_vol) const
 {
     const size_t num_nodes_in_elem = 8;
     const size_t num_dims = 3;

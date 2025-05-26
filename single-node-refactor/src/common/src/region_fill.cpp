@@ -229,7 +229,7 @@ void fill_regions(
         const Mesh_t& mesh,
         const DistributedDCArray <double>& node_coords,
         DistributedDCArray <double>& node_vel,
-        DCArrayKokkos <double>& node_temp,
+        DistributedDCArray <double>& node_temp,
         DCArrayKokkos <double>& gauss_den,
         DCArrayKokkos <double>& gauss_sie,
         DCArrayKokkos <bool>&   gauss_use_sie,

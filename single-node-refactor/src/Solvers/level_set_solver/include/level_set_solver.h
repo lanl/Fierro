@@ -176,7 +176,7 @@ public:
     // **** Functions defined in solver_functions.cpp **** //
     void nodal_gradient(
         const Mesh_t mesh,
-        const DCArrayKokkos<double>& Node_coords,
+        const DistributedDCArray<double>& Node_coords,
         const DCArrayKokkos<double>& node_level_set_vel,
         const DCArrayKokkos<double>& Node_grad_level_set,
         const DCArrayKokkos<double>& Corner_normal,
@@ -218,7 +218,7 @@ public:
     void get_timestep(
         const Mesh_t& mesh,
         const Material_t& Materials,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
@@ -236,7 +236,7 @@ public:
     void get_timestep_2D(
         const Mesh_t& mesh,
         const Material_t& Materials,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
@@ -257,7 +257,7 @@ public:
     void boundary_velocity(
         const Mesh_t&  mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        DCArrayKokkos<double>& node_vel,
+        DCArrayKokkos<double>& node_level_set_vel,
         const double time_value,
         const double small) const;
 

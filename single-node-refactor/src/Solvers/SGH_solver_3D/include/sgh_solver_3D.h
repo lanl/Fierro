@@ -222,13 +222,13 @@ public:
     void boundary_velocity(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_vel,
+        DistributedDCArray<double>&     node_vel,
         const double time_value) const;
 
     void boundary_contact(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_vel,
+        DistributedDCArray<double>&     node_vel,
         const double time_value) const;
 
     void boundary_stress(const Mesh_t& mesh,

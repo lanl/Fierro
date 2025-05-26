@@ -45,7 +45,7 @@ namespace NoDissipationModel {
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
                                   const DCArrayKokkos<bool>&   MaterialPoints_eroded,
-                                  const DCArrayKokkos<double>& node_vel,
+                                  const DistributedDCArray<double>& node_vel,
                                   const DCArrayKokkos<double>& MaterialPoints_den,
                                   const DCArrayKokkos<double>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,

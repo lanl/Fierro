@@ -69,9 +69,9 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
 void fill_regions(
         const Material_t& Materials,
         const Mesh_t& mesh,
-        const DCArrayKokkos <double>& node_coords,
-        DCArrayKokkos <double>& node_vel,
-        DCArrayKokkos <double>& node_temp,
+        const DistributedDCArray <double>& node_coords,
+        DistributedDCArray <double>& node_vel,
+        DistributedDCArray <double>& node_temp,
         DCArrayKokkos <double>& gauss_den,
         DCArrayKokkos <double>& gauss_sie,
         DCArrayKokkos <bool>& gauss_use_sie,
@@ -250,7 +250,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_scalar(const DCArrayKokkos<double>& field_scalar,
+void paint_scalar(const DistributedDCArray<double>& field_scalar,
                   const ViewCArrayKokkos <double> mesh_coords,
                   const double scalar,
                   const double slope,
@@ -275,7 +275,7 @@ void paint_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_vector(const DCArrayKokkos<double>& vector_field,
+void paint_vector(const DistributedDCArray<double>& vector_field,
                   const ViewCArrayKokkos <double>& mesh_coords,
                   const double u,
                   const double v,

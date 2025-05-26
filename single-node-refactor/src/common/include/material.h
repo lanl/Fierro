@@ -40,6 +40,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace mtr;
 
+template <typename T>
+using DistributedDCArray = TpetraDCArray<T>;
 namespace model
 {
     // strength model types
@@ -322,8 +324,8 @@ struct MaterialFunctions_t
     // Material strength model function pointers
     void (*calc_stress)(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const DCArrayKokkos<double>  &node_coords,
-        const DCArrayKokkos<double>  &node_vel,
+        const DistributedDCArray<double>  &node_coords,
+        const DistributedDCArray<double>  &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DCArrayKokkos<double>  &MaterialPoints_pres,
         const DCArrayKokkos<double>  &MaterialPoints_stress,
@@ -381,7 +383,7 @@ struct MaterialFunctions_t
         const RaggedRightArrayKokkos <double>& dissipation_global_vars,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DCArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& MaterialPoints_den,
         const DCArrayKokkos<double>& MaterialPoints_sspd,
         const ViewCArrayKokkos<double>& disp_corner_forces,

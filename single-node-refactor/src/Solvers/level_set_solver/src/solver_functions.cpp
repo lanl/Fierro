@@ -53,7 +53,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::nodal_gradient(
         const Mesh_t mesh,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_coords,
         const DCArrayKokkos<double>& node_level_set_vel,
         const DCArrayKokkos<double>& node_grad_level_set,
         const DCArrayKokkos<double>& corner_normal,
