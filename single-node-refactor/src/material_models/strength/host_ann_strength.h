@@ -221,7 +221,7 @@ namespace HostANNStrengthModel {
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
         const DistributedDCArray <double> &node_coords,
         const DistributedDCArray <double> &node_vel,
-        const DCArrayKokkos<size_t>  &nodes_in_elem,
+        const DistributedDCArray<size_t>  &nodes_in_elem,
         const DCArrayKokkos<double>  &MaterialPoints_pres,
         const DCArrayKokkos<double>  &MaterialPoints_stress,
         const DCArrayKokkos<double>  &MaterialPoints_stress_n0,

@@ -386,8 +386,8 @@ void init_press_sspd_stress(const Material_t& Materials,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass(const Material_t& Materials,
                       const Mesh_t& mesh,
-                      const DCArrayKokkos<double>& node_coords,
-                      const DCArrayKokkos<double>& node_mass,
+                      const DistributedDCArray<double>& node_coords,
+                      const DistributedDCArray<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
                       const DCArrayKokkos<double>& MaterialPoints_mass,
                       const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -409,8 +409,8 @@ void calc_corner_mass(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass(const Mesh_t& mesh,
-                    const DCArrayKokkos<double>& node_coords,
-                    const DCArrayKokkos<double>& node_mass,
+                    const DistributedDCArray<double>& node_coords,
+                    const DistributedDCArray<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass);
 
 
@@ -418,7 +418,7 @@ void calc_node_mass(const Mesh_t& mesh,
 
 void init_corner_node_masses_zero(
         const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_mass,
+        const DistributedDCArray<double>& node_mass,
         const DCArrayKokkos<double>& corner_mass);
 
 #endif

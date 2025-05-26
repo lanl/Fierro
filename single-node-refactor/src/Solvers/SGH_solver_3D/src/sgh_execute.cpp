@@ -59,7 +59,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
 {
 
     double fuzz  = SimulationParameters.dynamic_options.fuzz;   // 1.e-16
-    double tiny  = SimulationParamaters.dynamic_options.tiny;   // 1.e-12
+    double tiny  = SimulationParameters.dynamic_options.tiny;   // 1.e-12
     double small = SimulationParameters.dynamic_options.small;  // 1.e-8
 
     double graphics_dt_ival  = SimulationParameters.output_options.graphics_time_step;

@@ -233,7 +233,7 @@ public:
 
     void boundary_stress(const Mesh_t& mesh,
                     const BoundaryCondition_t& BoundaryConditions,
-                    DCArrayKokkos<double>& node_bdy_force,
+                    DistributedDCArray<double>& node_bdy_force,
                     DistributedDCArray<double>& node_coords,
                     const double time_value) const;    
 
