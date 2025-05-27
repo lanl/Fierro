@@ -177,8 +177,8 @@ public:
     void nodal_gradient(
         const Mesh_t mesh,
         const DistributedDCArray<double>& Node_coords,
-        const DCArrayKokkos<double>& node_level_set_vel,
-        const DCArrayKokkos<double>& Node_grad_level_set,
+        const DistributedDCArray<double>& node_level_set_vel,
+        const DistributedDCArray<double>& Node_grad_level_set,
         const DCArrayKokkos<double>& Corner_normal,
         const DCArrayKokkos<double>& Corner_volume,
         const DCArrayKokkos<double>& GaussPoints_level_set,
@@ -189,8 +189,8 @@ public:
     void update_level_set(
             const Mesh_t& mesh,
             const Material_t& Materials,
-            const DCArrayKokkos<double>& node_level_set_vel,
-            const DCArrayKokkos<double>& Node_grad_level_set,
+            const DistributedDCArray<double>& node_level_set_vel,
+            const DistributedDCArray<double>& Node_grad_level_set,
             const DCArrayKokkos<double>& GaussPoints_level_set,
             const DCArrayKokkos<double>& GaussPoints_level_set_n,
             const DCArrayKokkos<double>& GaussPoints_vol,
@@ -257,7 +257,7 @@ public:
     void boundary_velocity(
         const Mesh_t&  mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        DCArrayKokkos<double>& node_level_set_vel,
+        DistributedDCArray<double>& node_level_set_vel,
         const double time_value,
         const double small) const;
 

@@ -75,6 +75,7 @@ if (FIERRO_ENABLE_TRILINOS)
 else()
   find_package(Kokkos REQUIRED)
   list(APPEND LINKING_LIBRARIES Kokkos::kokkos)
+  add_definitions(-DHAVE_KOKKOS=1)
 endif()
 find_package(Matar REQUIRED)
 

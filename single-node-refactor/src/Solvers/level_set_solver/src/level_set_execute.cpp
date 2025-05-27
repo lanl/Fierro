@@ -57,7 +57,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 {
 
     // arrays local to this solver
-    DCArrayKokkos <double> node_level_set_vel(mesh.num_nodes, mesh.num_dims);
+    DistributedDCArray <double> node_level_set_vel(mesh.global_num_nodes, mesh.num_dims);
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
     double tiny  = SimulationParamaters.dynamic_options.tiny;

@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_temperature(const Mesh_t& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
-                                  DCArrayKokkos<double>& node_temp,
+                                  DistributedDCArray<double>& node_temp,
                                   const double time_value) const
 {
     // ---- Loop over boundary sets ---- //

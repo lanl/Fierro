@@ -54,8 +54,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void LevelSet::nodal_gradient(
         const Mesh_t mesh,
         const DistributedDCArray<double>& node_coords,
-        const DCArrayKokkos<double>& node_level_set_vel,
-        const DCArrayKokkos<double>& node_grad_level_set,
+        const DistributedDCArray<double>& node_level_set_vel,
+        const DistributedDCArray<double>& node_grad_level_set,
         const DCArrayKokkos<double>& corner_normal,
         const DCArrayKokkos<double>& corner_volume,
         const DCArrayKokkos<double>& GaussPoints_level_set,
@@ -201,8 +201,8 @@ void LevelSet::nodal_gradient(
 void LevelSet::update_level_set(
     const Mesh_t& mesh,
     const Material_t& Materials,
-    const DCArrayKokkos<double>& node_level_set_vel,
-    const DCArrayKokkos<double>& node_grad_level_set,
+    const DistributedDCArray<double>& node_level_set_vel,
+    const DistributedDCArray<double>& node_grad_level_set,
     const DCArrayKokkos<double>& GaussPoints_level_set,
     const DCArrayKokkos<double>& GaussPoints_level_set_n0,
     const DCArrayKokkos<double>& GaussPoints_vol,

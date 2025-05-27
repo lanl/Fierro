@@ -253,7 +253,7 @@ public:
     void boundary_heat_flux(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_temp,
+        DistributedDCArray<double>&     node_temp,
         const double time_value) const;
 
     // **** Functions defined in energy_sgtm.cpp **** //
@@ -276,10 +276,10 @@ public:
     void update_temperature(
             const Mesh_t& mesh,
             const DCArrayKokkos<double>& corner_q_transfer,
-            const DCArrayKokkos<double>& node_temp,
-            const DCArrayKokkos<double>& node_temp_n0,
-            const DCArrayKokkos<double>& node_mass,
-            const DCArrayKokkos<double>& node_q_transfer,
+            const DistributedDCArray<double>& node_temp,
+            const DistributedDCArray<double>& node_temp_n0,
+            const DistributedDCArray<double>& node_mass,
+            const DistributedDCArray<double>& node_q_transfer,
             const DCArrayKokkos<double>& mat_pt_sepcific_heat,
             const double rk_alpha,
             const double dt) const;
@@ -338,8 +338,8 @@ public:
         double rk_alpha,
         double dt,
         const Mesh_t& mesh,
-        DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_mass,
+        DistributedDCArray<double>& node_vel,
+        const DistributedDCArray<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
 
     // **** Functions defined in properties.cpp **** //
@@ -372,7 +372,7 @@ public:
         DistributedDCArray<double>& node_vel_n0,
         DistributedDCArray<double>& node_temp,
         DistributedDCArray<double>& node_temp_n0,
-        DCArrayKokkos<double>& MaterialPoints_q_flux,
+        DistributedDCArray<double>& MaterialPoints_q_flux,
         DCArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,
         const size_t num_elems,
