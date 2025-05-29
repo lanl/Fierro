@@ -257,22 +257,22 @@ public:
         const double time_value) const;
 
     // **** Functions defined in energy_sgtm.cpp **** //
-    void update_temperature(
-        const double rk_alpha,
-        const double dt,
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_vel_n0,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_coords_n0,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
-        const DCArrayKokkos<double>& MaterialPoints_sie_n0,
-        const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<double>& MaterialCorners_force,
-        const corners_in_mat_t corners_in_mat_elem,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const size_t num_mat_elems,
-        const size_t mat_id) const;
+    //void update_temperature(
+    //    const double rk_alpha,
+    //    const double dt,
+    //    const Mesh_t& mesh,
+    //    const DCArrayKokkos<double>& node_vel,
+    //    const DCArrayKokkos<double>& node_vel_n0,
+    //    const DCArrayKokkos<double>& node_coords,
+    //    const DCArrayKokkos<double>& node_coords_n0,
+    //    const DCArrayKokkos<double>& MaterialPoints_sie,
+    //    const DCArrayKokkos<double>& MaterialPoints_sie_n0,
+    //    const DCArrayKokkos<double>& MaterialPoints_mass,
+    //    const DCArrayKokkos<double>& MaterialCorners_force,
+    //    const corners_in_mat_t corners_in_mat_elem,
+    //    const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    //    const size_t num_mat_elems,
+    //    const size_t mat_id) const;
 
     void update_temperature(
             const Mesh_t& mesh,

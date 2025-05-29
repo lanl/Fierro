@@ -161,7 +161,7 @@ void calc_corner_mass_rz(const Material_t& Materials,
                          const DCArrayKokkos<double>& corner_mass,
                          const DCArrayKokkos<double>& MaterialPoints_den,
                          const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                         const size_t num_mat_elems
+                         const size_t num_mat_elems,
                          const size_t mat_id)
 {
 

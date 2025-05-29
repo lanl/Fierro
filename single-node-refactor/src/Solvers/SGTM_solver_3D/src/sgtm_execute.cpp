@@ -269,7 +269,7 @@ std::cout << "checking: get_heat_flux \n";
                     State.corners_in_mat_elem,
                     State.MaterialPoints(mat_id).eroded,
                     State.MaterialToMeshMaps.elem,
-                    State.MaterialToMeshMaps.num_material_elem(mat_id),
+                    State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                     mat_id,
                     fuzz,
                     small,
@@ -287,7 +287,7 @@ std::cout << "checking: moving_flux \n";
                     sphere_position,
                     State.corners_in_mat_elem,
                     State.MaterialToMeshMaps.elem,
-                    State.MaterialToMeshMaps.num_material_elem(mat_id),
+                    State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                     mat_id,
                     fuzz,
                     small,
@@ -323,8 +323,7 @@ std::cout << "update temperature \n";
                 State.node.q_transfer,
                 State.MaterialPoints(0).specific_heat, // Note: Need to make this a node field, and calculate in the material loop
                 rk_alpha,
-                dt,
-                mat_id);
+                dt);
 
 
             // ---- apply temperature boundary conditions to the boundary patches----

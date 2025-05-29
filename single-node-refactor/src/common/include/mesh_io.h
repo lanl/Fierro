@@ -2709,7 +2709,7 @@ public:
 
                 for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
-                    const size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id)
+                    const size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
 
                     // only save material data if the mat lives on the mesh, ie. has state allocated
                     if (num_mat_elems>0){
