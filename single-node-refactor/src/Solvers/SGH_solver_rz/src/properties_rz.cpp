@@ -84,7 +84,7 @@ void SGHRZ::update_state_rz(
     const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
     const DCArrayKokkos<bool>&   MaterialPoints_eroded,
     const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-    const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const double time_value,
     const double dt,
     const double rk_alpha,
@@ -102,7 +102,7 @@ void SGHRZ::update_state_rz(
     FOR_ALL(mat_elem_lid, 0, num_material_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
 
         // get the material points for this material 
@@ -128,7 +128,7 @@ void SGHRZ::update_state_rz(
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
 
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
 
             // get the material points for this material 
@@ -175,7 +175,7 @@ void SGHRZ::update_state_rz(
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
 
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
 
             // get the material points for this material 
@@ -235,7 +235,7 @@ void SGHRZ::update_state_rz(
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_material_elems, {
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
             // get the material points for this material
             // Note, with the SGH method, they are equal
@@ -319,7 +319,7 @@ void SGHRZ::update_stress(const Material_t& Materials,
                           const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                           const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
                           const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-                          const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                          const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                           const size_t num_mat_elems,
                           const size_t mat_id,
                           const double fuzz,
@@ -359,7 +359,7 @@ void SGHRZ::update_stress(const Material_t& Materials,
         FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
 
             // the material point index = the material elem index for a 1-point element
             size_t mat_point_lid = mat_elem_lid;

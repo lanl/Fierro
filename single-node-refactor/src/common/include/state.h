@@ -413,17 +413,34 @@ struct MeshtoMaterialMap_t
 /////////////////////////////////////////////////////////////////////////////
 struct MaterialToMeshMap_t
 {
-    size_t num_material_elems;        ///< returns the exact number of matpts
+    DCArrayKokkos <size_t> num_material_elems;        ///< returns the exact number of matpts
+    DCArrayKokkos <size_t> num_material_elems_buffer; ///< returns the exact number of matpts
 
-    DCArrayKokkos<size_t> elem;       ///< returns the elem for this material
+    DRaggedRightArrayKokkos<size_t> elem;       ///< returns the elem for this material
 
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
-    void initialize(size_t num_elem_max)
+    void initialize()
     {
         if (elem.size() == 0){ 
-            this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
+            this->elem = DRaggedRightArrayKokkos<size_t>(this->num_material_elems_buffer, "material_pt_to_elem");
         }
+
     }; // end method
+
+    void initialize_num_mats(size_t num_mats)
+    {
+        // Note: num_material_elems is allocated in problem setup
+        if (num_material_elems.size() == 0){
+            this->num_material_elems = DCArrayKokkos <size_t> (num_mats); 
+        }
+
+        // Note: num_material_elems_buffer is allocated in problem setup, the values are set in solver initialize
+        if (num_material_elems_buffer.size() == 0){
+            this->num_material_elems_buffer = DCArrayKokkos <size_t> (num_mats); 
+        }
+
+    }; // end method
+
 }; // end MaterialtoMeshMaps_t
 
 
@@ -863,7 +880,7 @@ struct State_t
     // ---------------------------------------------------------------------
     //    material to mesh maps and mesh to material maps
     // ---------------------------------------------------------------------
-    CArray<MaterialToMeshMap_t> MaterialToMeshMaps; ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
+    MaterialToMeshMap_t MaterialToMeshMaps; ///< access as MaterialToMeshMaps.elem(mat_id, mat_storage_lid)
     MeshtoMaterialMap_t MeshtoMaterialMaps;          ///< acces as MeshtoMaterialMaps.mat_id(elem, mat_lid)
 
     // ---------------------------------------------------------------------

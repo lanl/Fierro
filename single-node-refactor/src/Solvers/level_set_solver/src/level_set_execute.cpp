@@ -150,8 +150,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                         Materials,
                         State.node.coords,
                         State.GaussPoints.vol,
-                        State.MaterialToMeshMaps(mat_id).elem,
-                        State.MaterialToMeshMaps(mat_id).num_material_elems,
+                        State.MaterialToMeshMaps.elem,
+                        State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                         mat_id,
                         time_value,
                         graphics_time,
@@ -170,8 +170,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                         Materials,
                         State.node.coords,
                         State.GaussPoints.vol,
-                        State.MaterialToMeshMaps(mat_id).elem,
-                        State.MaterialToMeshMaps(mat_id).num_material_elems,
+                        State.MaterialToMeshMaps.elem,
+                        State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                         mat_id,
                         time_value,
                         graphics_time,
@@ -222,9 +222,10 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                 // save the values at t_n
                 rk_init(State.GaussPoints.level_set,
                         State.GaussPoints.level_set_n0,
-                        State.MaterialToMeshMaps(mat_id).elem,
+                        State.MaterialToMeshMaps.elem,
                         mesh.num_dims,
-                        State.MaterialPoints(mat_id).num_material_points);
+                        State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                        mat_id);
             }
 
         } // end for mat_id
@@ -268,8 +269,6 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 
                 if (Materials.MaterialEnums.host(mat_id).levelSetType == model::evolveFront){
 
-                    size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
                     // update level set
                     update_level_set(
                         mesh,
@@ -280,8 +279,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                         State.GaussPoints.level_set_n0,
                         State.GaussPoints.vol,
                         State.corner.normal,
-                        State.MaterialToMeshMaps(mat_id).elem,
-                        num_mat_elems,
+                        State.MaterialToMeshMaps.elem,
+                        State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                         mat_id,
                         fuzz,
                         small,

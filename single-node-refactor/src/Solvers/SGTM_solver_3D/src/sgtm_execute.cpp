@@ -193,8 +193,8 @@ std::cout << "here getting time step\n";
                          State.MaterialPoints(mat_id).den,
                          State.MaterialPoints(mat_id).specific_heat,
                          State.MaterialPoints(mat_id).eroded,
-                         State.MaterialToMeshMaps(mat_id).elem,
-                         State.MaterialToMeshMaps(mat_id).num_material_elems,
+                         State.MaterialToMeshMaps.elem,
+                         State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                          time_value,
                          graphics_time,
                          time_final,
@@ -203,7 +203,8 @@ std::cout << "here getting time step\n";
                          dt_cfl,
                          dt_mat,
                          fuzz,
-                         tiny);
+                         tiny,
+                         mat_id);
 
             // ---- save the smallest dt of all materials ---- //
             min_dt_calc = fmin(dt_mat, min_dt_calc);
@@ -254,8 +255,6 @@ std::cout << "checking: rk_init \n";
             // ---- Calculate the corner heat flux from conduction per material ---- //
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-                size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
 std::cout << "checking: get_heat_flux \n";
                 get_heat_flux(
                     Materials,
@@ -269,8 +268,8 @@ std::cout << "checking: get_heat_flux \n";
                     State.corner.q_transfer,
                     State.corners_in_mat_elem,
                     State.MaterialPoints(mat_id).eroded,
-                    State.MaterialToMeshMaps(mat_id).elem,
-                    num_mat_elems,
+                    State.MaterialToMeshMaps.elem,
+                    State.MaterialToMeshMaps.num_material_elem(mat_id),
                     mat_id,
                     fuzz,
                     small,
@@ -287,8 +286,8 @@ std::cout << "checking: moving_flux \n";
                     State.corner.q_transfer,
                     sphere_position,
                     State.corners_in_mat_elem,
-                    State.MaterialToMeshMaps(mat_id).elem,
-                    num_mat_elems,
+                    State.MaterialToMeshMaps.elem,
+                    State.MaterialToMeshMaps.num_material_elem(mat_id),
                     mat_id,
                     fuzz,
                     small,
@@ -324,7 +323,8 @@ std::cout << "update temperature \n";
                 State.node.q_transfer,
                 State.MaterialPoints(0).specific_heat, // Note: Need to make this a node field, and calculate in the material loop
                 rk_alpha,
-                dt);
+                dt,
+                mat_id);
 
 
             // ---- apply temperature boundary conditions to the boundary patches----

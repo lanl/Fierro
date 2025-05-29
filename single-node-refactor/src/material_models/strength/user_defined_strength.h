@@ -68,7 +68,7 @@ namespace UserDefinedStrengthModel {
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_material_points,
         const size_t mat_id)
     {
@@ -106,7 +106,7 @@ namespace UserDefinedStrengthModel {
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
         const double vol,
@@ -136,7 +136,7 @@ namespace UserDefinedStrengthModel {
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_material_points,
         const size_t mat_ids)
     {
@@ -173,7 +173,7 @@ namespace NotionalStrengthModel {
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_material_points,
         const size_t mat_id)
     {
@@ -210,7 +210,7 @@ namespace NotionalStrengthModel {
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
         const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
         const double vol,
@@ -232,7 +232,7 @@ namespace NotionalStrengthModel {
         const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_material_points,
         const size_t mat_ids)
     {

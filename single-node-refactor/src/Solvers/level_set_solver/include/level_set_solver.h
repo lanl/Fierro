@@ -195,7 +195,7 @@ public:
             const DCArrayKokkos<double>& GaussPoints_level_set_n,
             const DCArrayKokkos<double>& GaussPoints_vol,
             const DCArrayKokkos<double>& Corner_normal,
-            const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+            const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
             const size_t num_mat_elems,
             const size_t mat_id,
             const double fuzz,
@@ -211,7 +211,7 @@ public:
     void rk_init(
         DCArrayKokkos<double>& GaussPoints_level_set,
         DCArrayKokkos<double>& GaussPoints_level_set_n0,
-        DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_dims,
         const size_t num_mat_points) const;
 
@@ -220,7 +220,7 @@ public:
         const Material_t& Materials,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
         const double time_value,
@@ -238,7 +238,7 @@ public:
         const Material_t& Materials,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
         const double time_value,
