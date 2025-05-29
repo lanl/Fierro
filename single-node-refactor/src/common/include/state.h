@@ -414,9 +414,9 @@ struct MeshtoMaterialMap_t
 struct MaterialToMeshMap_t
 {
     DCArrayKokkos <size_t> num_material_elems;        ///< returns the exact number of matpts
-    DCArrayKokkos <size_t> num_material_elems_buffer; ///< returns the exact number of matpts
+    DCArrayKokkos <size_t> num_material_elems_buffer; ///< returns the number of matpts plus buffer
 
-    DRaggedRightArrayKokkos<size_t> elem;       ///< returns the elem for this material
+    DRaggedRightArrayKokkos<size_t> elem;             ///< returns the elem for this material
 
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize()
@@ -434,7 +434,7 @@ struct MaterialToMeshMap_t
             this->num_material_elems = DCArrayKokkos <size_t> (num_mats, "num_material_elems"); 
         }
 
-        // Note: num_material_elems_buffer is allocated in problem setup, the values are set in solver initialize
+        // Note: num_material_elems_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
         if (num_material_elems_buffer.size() == 0){
             this->num_material_elems_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_elems_with_buffer"); 
         }
