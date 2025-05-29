@@ -2264,7 +2264,7 @@ void calc_corner_mass(const Material_t& Materials,
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id,mat_elem_lid);  
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);  
 
         // calculate the fraction of matpt mass to scatter to each corner
         double corner_frac = 1.0/((double)mesh.num_nodes_in_elem);  // =1/8

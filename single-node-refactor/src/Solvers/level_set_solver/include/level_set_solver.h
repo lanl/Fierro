@@ -213,7 +213,8 @@ public:
         DCArrayKokkos<double>& GaussPoints_level_set_n0,
         DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_dims,
-        const size_t num_mat_points) const;
+        const size_t num_mat_elems,
+        const size_t mat_id) const;
 
     void get_timestep(
         const Mesh_t& mesh,

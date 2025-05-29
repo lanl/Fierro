@@ -422,7 +422,7 @@ struct MaterialToMeshMap_t
     void initialize()
     {
         if (elem.size() == 0){ 
-            this->elem = DRaggedRightArrayKokkos<size_t>(this->num_material_elems_buffer, "material_pt_to_elem");
+            this->elem = DRaggedRightArrayKokkos<size_t>(this->num_material_elems_buffer, "material_space_to_elem");
         }
 
     }; // end method
@@ -431,12 +431,12 @@ struct MaterialToMeshMap_t
     {
         // Note: num_material_elems is allocated in problem setup
         if (num_material_elems.size() == 0){
-            this->num_material_elems = DCArrayKokkos <size_t> (num_mats); 
+            this->num_material_elems = DCArrayKokkos <size_t> (num_mats, "num_material_elems"); 
         }
 
         // Note: num_material_elems_buffer is allocated in problem setup, the values are set in solver initialize
         if (num_material_elems_buffer.size() == 0){
-            this->num_material_elems_buffer = DCArrayKokkos <size_t> (num_mats); 
+            this->num_material_elems_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_elems_with_buffer"); 
         }
 
     }; // end method
