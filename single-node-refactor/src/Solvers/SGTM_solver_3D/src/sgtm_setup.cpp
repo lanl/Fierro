@@ -86,7 +86,6 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
 
     // calculate corner and node masses on the mesh
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-        size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
         calc_corner_mass(Materials,
                          mesh,
@@ -94,8 +93,9 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                          State.node.mass,
                          State.corner.mass,
                          State.MaterialPoints(mat_id).mass,
-                         State.MaterialToMeshMaps(mat_id).elem,
-                         num_mat_elems);
+                         State.MaterialToMeshMaps.elem,
+                         State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                         mat_id);
     } // end for mat_id
 
     calc_node_mass(mesh,

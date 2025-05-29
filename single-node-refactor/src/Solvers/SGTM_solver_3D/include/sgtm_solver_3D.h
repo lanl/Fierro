@@ -270,8 +270,9 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialCorners_force,
         const corners_in_mat_t corners_in_mat_elem,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const size_t num_mat_elems) const;
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t num_mat_elems,
+        const size_t mat_id) const;
 
     void update_temperature(
             const Mesh_t& mesh,
@@ -297,7 +298,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_temp_grad,
         const corners_in_mat_t corners_in_mat_elem,
         const DCArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
         const double fuzz,
@@ -313,7 +314,7 @@ public:
         const DCArrayKokkos<double>& corner_q_flux,
         const DCArrayKokkos<double>& sphere_position,
         const corners_in_mat_t corners_in_mat_elem,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
         const double fuzz,
@@ -357,7 +358,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialPoints_statev,
         const DCArrayKokkos<bool>&   GaussPoints_eroded,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const double dt,
         const double rk_alpha,
         const size_t num_material_elems,
@@ -389,7 +390,7 @@ public:
         DCArrayKokkos<double>& MaterialPoints_density,
         DCArrayKokkos<double>& MaterialPoints_specific_heat,
         DCArrayKokkos<bool>&   MaterialPoints_eroded,
-        DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         size_t num_mat_elems,
         double time_value,
         const double graphics_time,
@@ -399,7 +400,8 @@ public:
         const double dt_cfl,
         double&      dt,
         const double fuzz,
-        const double tiny) const;
+        const double tiny,
+        const size_t mat_id) const;
 
 };
 
