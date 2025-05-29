@@ -207,7 +207,6 @@ if [ "$build_action" = "full-app" ]; then
     elif [ "$trilinos" = "enabled" ]; then    
         source trilinos-install.sh ${kokkos_build_type}  ${intel_mkl} ${debug}
     fi
-    source matar-install.sh ${kokkos_build_type} ${debug} ${trilinos}
     source cmake_build.sh ${solver} ${debug} ${trilinos}
 elif [ "$build_action" = "install-kokkos" ]; then
     source kokkos-install.sh ${kokkos_build_type}
