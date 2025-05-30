@@ -82,7 +82,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                          const DCArrayKokkos<double>& MaterialPoints_volfrac,
                          const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
                          const corners_in_mat_t corners_in_mat_elem,
-                         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                         const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                          const size_t num_mat_elems,
                          const size_t mat_id,
                          const double fuzz,
@@ -100,7 +100,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
        
         // get mesh elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
 
         size_t gauss_gid = elem_gid; // 1 gauss point per element
 

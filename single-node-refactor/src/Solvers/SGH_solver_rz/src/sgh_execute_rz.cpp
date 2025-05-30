@@ -200,8 +200,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                             State.GaussPoints.vol,
                             State.MaterialPoints(mat_id).sspd,
                             State.MaterialPoints(mat_id).eroded,
-                            State.MaterialToMeshMaps(mat_id).elem,
-                            State.MaterialToMeshMaps(mat_id).num_material_elems,
+                            State.MaterialToMeshMaps.elem,
+                            State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                             time_value,
                             graphics_time,
                             time_final,
@@ -210,7 +210,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                             dt_cfl,
                             dt_mat,
                             fuzz,
-                            tiny);
+                            tiny,
+                            mat_id);
             
 
             // save the smallest dt of all materials
@@ -232,7 +233,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------------
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
         // ---------------------------------------------------------------------
-        for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+        for (size_t mat_id=0; mat_id<num_mats; mat_id++){
             // save the values at t_n
             rk_init_rz(State.node.coords,
                        State.node.coords_n0,
@@ -271,8 +272,6 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             for(size_t mat_id=0; mat_id<num_mats; mat_id++){
 
-                size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
                 get_force_rz(Materials,
                                 mesh,
                                 State.GaussPoints.vol,
@@ -290,8 +289,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 State.MaterialPoints(mat_id).volfrac,
                                 State.MaterialPoints(mat_id).geo_volfrac,
                                 State.corners_in_mat_elem,
-                                State.MaterialToMeshMaps(mat_id).elem,
-                                num_mat_elems,
+                                State.MaterialToMeshMaps.elem,
+                                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                                 mat_id,
                                 fuzz,
                                 tiny,
@@ -315,8 +314,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                   State.MaterialPoints(mat_id).eos_state_vars,
                                   State.MaterialPoints(mat_id).strength_state_vars,
                                   State.MaterialPoints(mat_id).shear_modulii,
-                                  State.MaterialToMeshMaps(mat_id).elem,
-                                  num_mat_elems,
+                                  State.MaterialToMeshMaps.elem,
+                                  State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                                   mat_id,
                                   fuzz,
                                   small,
@@ -360,8 +359,9 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                  State.MaterialPoints(mat_id).mass,
                                  State.MaterialCorners(mat_id).force,
                                  State.corners_in_mat_elem,
-                                 State.MaterialToMeshMaps(mat_id).elem,
-                                 State.MaterialToMeshMaps(mat_id).num_material_elems);
+                                 State.MaterialToMeshMaps.elem,
+                                 State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                                 mat_id);
             } // end for mat_id
 
             // ---- Update nodal positions ----
@@ -379,9 +379,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 
             // ---- Calculate MaterialPoints state (den, pres, sound speed, stress) for next time step ----
-            for(size_t mat_id=0; mat_id<num_mats; mat_id++){
-
-                size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;           
+            for(size_t mat_id=0; mat_id<num_mats; mat_id++){          
 
                 update_state_rz(Materials,
                                 mesh,
@@ -402,12 +400,12 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 State.MaterialPoints(mat_id).strength_state_vars,
                                 State.MaterialPoints(mat_id).eroded,
                                 State.MaterialPoints(mat_id).shear_modulii,
-                                State.MaterialToMeshMaps(mat_id).elem,
+                                State.MaterialToMeshMaps.elem,
                                 time_value,
                                 dt,
                                 rk_alpha,
                                 cycle,
-                                num_mat_elems,
+                                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                                 mat_id);
 
             } // end for mat_id

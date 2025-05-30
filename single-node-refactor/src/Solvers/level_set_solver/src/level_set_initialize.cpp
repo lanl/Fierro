@@ -74,20 +74,16 @@
     //  Allocation of state must include a buffer with ALE
     // -----
 
-    // IMPORTANT, make buffer a parser input variable
-    // for ALE, add a buffer to num_elems_for_mat, like 10% of num_elems up to num_elems.
-    const size_t buffer = 0; // memory buffer to push back into
+    State.MaterialToMeshMaps.initialize();
 
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
         const size_t num_mat_pts_in_elem = mesh.num_leg_gauss_in_elem; 
 
-        size_t num_elems_for_mat = State.MaterialToMeshMaps(mat_id).num_material_elems + buffer; // has a memory buffer for ALE
+        const size_t num_elems_for_mat_buffer = State.MaterialToMeshMaps.num_material_elems_buffer.host(mat_id); // has a memory buffer for ALE
+        const size_t num_points_for_mat  = num_elems_for_mat_buffer * num_mat_pts_in_elem;
+        const size_t num_corners_for_mat = num_elems_for_mat_buffer * mesh.num_nodes_in_elem;
 
-        size_t num_points_for_mat  = num_elems_for_mat * num_mat_pts_in_elem;
-        size_t num_corners_for_mat = num_elems_for_mat * mesh.num_nodes_in_elem;
-
-        State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat);
         State.MaterialPoints(mat_id).initialize(num_points_for_mat, mesh.num_dims, LevelSet_State::required_material_pt_state); 
         // zones are not used with solver
 
