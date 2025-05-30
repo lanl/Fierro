@@ -73,12 +73,12 @@ void SGTM3D::get_heat_flux(
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_temp,
-    const DCArrayKokkos<double>& MaterialPoints_q_flux,
-    const DCArrayKokkos<double>& MaterialPoints_conductivity,
-    const DCArrayKokkos<double>& MaterialPoints_temp_grad,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_q_flux,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_temp_grad,
     const DCArrayKokkos<double>& corner_q_transfer,
     const corners_in_mat_t corners_in_mat_elem,
-    const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+    const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
     const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
     const size_t num_mat_elems,
     const size_t mat_id,
@@ -130,7 +130,7 @@ void SGTM3D::get_heat_flux(
         // ---- Change element state if above some melting temperature ---- //
         if(avg_temp >= 900){
             // printf("Melted!");
-            MaterialPoints_eroded(mat_elem_lid) = true;
+            MaterialPoints_eroded(mat_id, mat_elem_lid) = true;
         } 
 
         // ---- Calculate the temperature gradient ---- //
@@ -153,14 +153,14 @@ void SGTM3D::get_heat_flux(
         }
 
         // ---- Save the temperature gradient to the material point for writing out ---- //
-        MaterialPoints_temp_grad(elem_gid, 0) = temp_grad(0);
-        MaterialPoints_temp_grad(elem_gid, 1) = temp_grad(1);
-        MaterialPoints_temp_grad(elem_gid, 2) = temp_grad(2);
+        MaterialPoints_temp_grad(mat_id, elem_gid, 0) = temp_grad(0);
+        MaterialPoints_temp_grad(mat_id, elem_gid, 1) = temp_grad(1);
+        MaterialPoints_temp_grad(mat_id, elem_gid, 2) = temp_grad(2);
 
         // ---- Calculate the heat flux at the material point ---- //
-        double conductivity = MaterialPoints_conductivity(mat_point_lid); // NOTE: Consider moving this to properties and evaluate instead of save
+        double conductivity = MaterialPoints_conductivity(mat_id, mat_point_lid); // NOTE: Consider moving this to properties and evaluate instead of save
         for(int dim = 0; dim < mesh.num_dims; dim++){
-            MaterialPoints_q_flux(mat_point_lid, dim) = -1.0 * conductivity * temp_grad(dim);
+            MaterialPoints_q_flux(mat_id, mat_point_lid, dim) = -1.0 * conductivity * temp_grad(dim);
         }
 
         // --- Calculate flux through each corner the corners \lambda_{c} = q_z \cdot \hat B_c   ---- //
@@ -179,7 +179,7 @@ void SGTM3D::get_heat_flux(
 
             // Dot the flux into the corner normal
             for(int dim = 0; dim < mesh.num_dims; dim++){
-                corner_q_transfer(corner_gid) += MaterialPoints_q_flux(mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
+                corner_q_transfer(corner_gid) += MaterialPoints_q_flux(mat_id, mat_point_lid, dim) * (1.0*b_matrix(node_lid, dim));
             }
         }
     }); // end parallel for loop over elements associated with the given material

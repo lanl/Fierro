@@ -110,11 +110,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // extensive IE
     for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
 
-        IE_t0 += sum_domain_internal_energy(State.MaterialPoints(mat_id).mass,
-                                            State.MaterialPoints(mat_id).sie,
-                                            num_mat_points);
+        IE_t0 += sum_domain_internal_energy(State.MaterialPoints.mass,
+                                            State.MaterialPoints.sie,
+                                            State.MaterialPoints.num_material_points.host(mat_id)
+                                            mat_id);
     } // end loop over mat_id
 
     // extensive KE
@@ -130,10 +130,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     double mass_domain_nodes_t0    = 0.0;
 
     for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
 
-        double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints(mat_id).mass,
-                                                          num_mat_points);
+        double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints.mass,
+                                                          State.MaterialPoints.num_material_points.host(mat_id),
+                                                          mat_id);
 
         mass_domain_all_mats_t0 += mass_domain_mat;
         printf("material %zu mass in domain = %f \n", mat_id, mass_domain_mat);
@@ -193,8 +193,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                          State.node.coords,
                          State.node.vel,
                          State.GaussPoints.vol,
-                         State.MaterialPoints(mat_id).sspd,
-                         State.MaterialPoints(mat_id).eroded,
+                         State.MaterialPoints.sspd,
+                         State.MaterialPoints.eroded,
                          State.MaterialToMeshMaps.elem,
                          State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                          time_value,
@@ -232,14 +232,14 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.node.coords_n0,
                     State.node.vel,
                     State.node.vel_n0,
-                    State.MaterialPoints(mat_id).sie,
-                    State.MaterialPoints(mat_id).sie_n0,
-                    State.MaterialPoints(mat_id).stress,
-                    State.MaterialPoints(mat_id).stress_n0,
+                    State.MaterialPoints.sie,
+                    State.MaterialPoints.sie_n0,
+                    State.MaterialPoints.stress,
+                    State.MaterialPoints.stress_n0,
                     mesh.num_dims,
                     mesh.num_elems,
                     mesh.num_nodes,
-                    State.MaterialPoints(mat_id).num_material_points);
+                    State.MaterialPoints.num_material_points.host(mat_id));
         } // end for mat_id
 
 
@@ -266,18 +266,18 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                           mesh,
                           State.GaussPoints.vol,
                           State.GaussPoints.vel_grad,
-                          State.MaterialPoints(mat_id).eroded,
+                          State.MaterialPoints.eroded,
                           State.corner.force,
                           State.node.coords,
                           State.node.vel,
-                          State.MaterialPoints(mat_id).den,
-                          State.MaterialPoints(mat_id).sie,
-                          State.MaterialPoints(mat_id).pres,
-                          State.MaterialPoints(mat_id).stress,
-                          State.MaterialPoints(mat_id).sspd,
-                          State.MaterialCorners(mat_id).force,
-                          State.MaterialPoints(mat_id).volfrac,
-                          State.MaterialPoints(mat_id).geo_volfrac,
+                          State.MaterialPoints.den,
+                          State.MaterialPoints.sie,
+                          State.MaterialPoints.pres,
+                          State.MaterialPoints.stress,
+                          State.MaterialPoints.sspd,
+                          State.MaterialCorners.force,
+                          State.MaterialPoints.volfrac,
+                          State.MaterialPoints.geo_volfrac,
                           State.corners_in_mat_elem,
                           State.MaterialToMeshMaps.elem,
                           State.MaterialToMeshMaps.num_material_elems.host(mat_id),
@@ -294,15 +294,15 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                   State.node.coords,
                                   State.node.vel,
                                   State.GaussPoints.vel_grad,
-                                  State.MaterialPoints(mat_id).den,
-                                  State.MaterialPoints(mat_id).sie,
-                                  State.MaterialPoints(mat_id).pres,
-                                  State.MaterialPoints(mat_id).stress,
-                                  State.MaterialPoints(mat_id).stress_n0,
-                                  State.MaterialPoints(mat_id).sspd,
-                                  State.MaterialPoints(mat_id).eos_state_vars,
-                                  State.MaterialPoints(mat_id).strength_state_vars,
-                                  State.MaterialPoints(mat_id).shear_modulii,
+                                  State.MaterialPoints.den,
+                                  State.MaterialPoints.sie,
+                                  State.MaterialPoints.pres,
+                                  State.MaterialPoints.stress,
+                                  State.MaterialPoints.stress_n0,
+                                  State.MaterialPoints.sspd,
+                                  State.MaterialPoints.eos_state_vars,
+                                  State.MaterialPoints.strength_state_vars,
+                                  State.MaterialPoints.shear_modulii,
                                   State.MaterialToMeshMaps.elem,
                                   State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                                   mat_id,
@@ -359,10 +359,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                               mesh,
                               State.node.vel,
                               State.node.vel_n0,
-                              State.MaterialPoints(mat_id).sie,
-                              State.MaterialPoints(mat_id).sie_n0,
-                              State.MaterialPoints(mat_id).mass,
-                              State.MaterialCorners(mat_id).force,
+                              State.MaterialPoints.sie,
+                              State.MaterialPoints.sie_n0,
+                              State.MaterialPoints.mass,
+                              State.MaterialCorners.force,
                               State.corners_in_mat_elem,
                               State.MaterialToMeshMaps.elem,
                               State.MaterialToMeshMaps.num_material_elems.host(mat_id),
@@ -392,20 +392,20 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                              State.node.coords,
                              State.node.vel,
                              State.GaussPoints.vel_grad,
-                             State.MaterialPoints(mat_id).den,
-                             State.MaterialPoints(mat_id).pres,
-                             State.MaterialPoints(mat_id).stress,
-                             State.MaterialPoints(mat_id).stress_n0,
-                             State.MaterialPoints(mat_id).sspd,
-                             State.MaterialPoints(mat_id).sie,
-                             State.MaterialPoints(mat_id).volfrac,
-                             State.MaterialPoints(mat_id).geo_volfrac,
+                             State.MaterialPoints.den,
+                             State.MaterialPoints.pres,
+                             State.MaterialPoints.stress,
+                             State.MaterialPoints.stress_n0,
+                             State.MaterialPoints.sspd,
+                             State.MaterialPoints.sie,
+                             State.MaterialPoints.volfrac,
+                             State.MaterialPoints.geo_volfrac,
                              State.GaussPoints.vol,
-                             State.MaterialPoints(mat_id).mass,
-                             State.MaterialPoints(mat_id).eos_state_vars,
-                             State.MaterialPoints(mat_id).strength_state_vars,
-                             State.MaterialPoints(mat_id).eroded,
-                             State.MaterialPoints(mat_id).shear_modulii,
+                             State.MaterialPoints.mass,
+                             State.MaterialPoints.eos_state_vars,
+                             State.MaterialPoints.strength_state_vars,
+                             State.MaterialPoints.eroded,
+                             State.MaterialPoints.shear_modulii,
                              State.MaterialToMeshMaps.elem,
                              time_value,
                              dt,
@@ -511,11 +511,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // extensive IE
     for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
-
-        IE_tend += sum_domain_internal_energy(State.MaterialPoints(mat_id).mass,
-                                              State.MaterialPoints(mat_id).sie,
-                                              num_mat_points);
+        IE_tend += sum_domain_internal_energy(State.MaterialPoints.mass,
+                                              State.MaterialPoints.sie,
+                                              State.MaterialPoints.num_material_points.host(mat_id),
+                                              mat_id);
     } // end loop over mat_id
 
     // extensive KE
@@ -535,10 +534,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     double mass_domain_nodes_tend    = 0.0;
 
     for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
 
-        double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints(mat_id).mass,
-                                                          num_mat_points);
+        double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints.mass,
+                                                          State.MaterialPoints.num_material_points.host(mat_id),
+                                                          mat_id);
 
         mass_domain_all_mats_tend += mass_domain_mat;
     } // end for
@@ -632,16 +631,18 @@ double max_Eigen3D(const ViewCArrayKokkos<double> tensor)
 }
 
 // a function to tally the internal energy
-double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<double>& MaterialPoints_sie,
-    size_t num_mat_points)
+double sum_domain_internal_energy(
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+    const size_t num_mat_points,
+    const size_t mat_id)
 {
     double IE_sum = 0.0;
     double IE_loc_sum;
 
     // loop over the material points and tally IE
     FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
-        IE_loc_sum += MaterialPoints_mass(matpt_lid) * MaterialPoints_sie(matpt_lid);
+        IE_loc_sum += MaterialPoints_mass(mat_id,matpt_lid) * MaterialPoints_sie(mat_id,matpt_lid);
     }, IE_sum);
     Kokkos::fence();
 
@@ -664,10 +665,11 @@ double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_ma
 /// \return <return type and definition description if not void>
 ///
 /////////////////////////////////////////////////////////////////////////////
-double sum_domain_kinetic_energy(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass)
+double sum_domain_kinetic_energy(
+    const Mesh_t& mesh,
+    const DRaggedRightArrayKokkos<double>& node_vel,
+    const DRaggedRightArrayKokkos<double>& node_coords,
+    const DRaggedRightArrayKokkos<double>& node_mass)
 {
     // extensive KE
     double KE_sum = 0.0;
@@ -689,14 +691,16 @@ double sum_domain_kinetic_energy(const Mesh_t& mesh,
 } // end function
 
 // a function to tally the material point masses
-double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
-    const size_t num_mat_points)
+double sum_domain_material_mass(
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+    const size_t num_mat_points,
+    const size_t mat_id)
 {
     double mass_domain = 0.0;
     double mass_loc_domain;
 
     FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, mass_loc_domain, {
-        mass_loc_domain += MaterialPoints_mass(matpt_lid);
+        mass_loc_domain += MaterialPoints_mass(mat_id,matpt_lid);
     }, mass_domain);
     Kokkos::fence();
 

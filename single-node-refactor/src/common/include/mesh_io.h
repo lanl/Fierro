@@ -1932,65 +1932,64 @@ public:
         const size_t num_mats = State.MaterialPoints.size();
 
         // material point values
-        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
             
-            //  Update host data for mat_pt state
-            for (auto field : material_pt_states){
-                switch(field){
-                    // scalar vars to write out
-                    case material_pt_state::density:
-                        State.MaterialPoints(mat_id).den.update_host();
-                        break;
-                    case material_pt_state::pressure:
-                        State.MaterialPoints(mat_id).pres.update_host();
-                        break;
-                    case material_pt_state::specific_internal_energy:
-                        State.MaterialPoints(mat_id).sie.update_host();
-                        break;
-                    case material_pt_state::sound_speed:
-                        State.MaterialPoints(mat_id).sspd.update_host();
-                        break;
-                    case material_pt_state::mass:
-                        State.MaterialPoints(mat_id).mass.update_host();
-                        break;
-                    case material_pt_state::volume_fraction:
-                        State.MaterialPoints(mat_id).volfrac.update_host();
-                        State.MaterialPoints(mat_id).geo_volfrac.update_host();
-                        break;
-                    case material_pt_state::eroded_flag:
-                        State.MaterialPoints(mat_id).eroded.update_host();
-                        break;
-                    // tensor vars to write out
-                    case material_pt_state::stress:
-                        State.MaterialPoints(mat_id).stress.update_host();
-                        break;
-                  
-                    // additional vars for thermal-mechanical solver
-                    case material_pt_state::thermal_conductivity:
-                        State.MaterialPoints(mat_id).conductivity.update_host();
-                        break;
-                    
-                    case material_pt_state::specific_heat:
-                        State.MaterialPoints(mat_id).specific_heat.update_host();
-                        break;
+        //  Update host data for mat_pt state
+        for (auto field : material_pt_states){
+            switch(field){
+                // scalar vars to write out
+                case material_pt_state::density:
+                    State.MaterialPoints.den.update_host();
+                    break;
+                case material_pt_state::pressure:
+                    State.MaterialPoints.pres.update_host();
+                    break;
+                case material_pt_state::specific_internal_energy:
+                    State.MaterialPoints.sie.update_host();
+                    break;
+                case material_pt_state::sound_speed:
+                    State.MaterialPoints.sspd.update_host();
+                    break;
+                case material_pt_state::mass:
+                    State.MaterialPoints.mass.update_host();
+                    break;
+                case material_pt_state::volume_fraction:
+                    State.MaterialPoints.volfrac.update_host();
+                    State.MaterialPoints.geo_volfrac.update_host();
+                    break;
+                case material_pt_state::eroded_flag:
+                    State.MaterialPoints.eroded.update_host();
+                    break;
+                // tensor vars to write out
+                case material_pt_state::stress:
+                    State.MaterialPoints.stress.update_host();
+                    break;
+                
+                // additional vars for thermal-mechanical solver
+                case material_pt_state::thermal_conductivity:
+                    State.MaterialPoints.conductivity.update_host();
+                    break;
+                
+                case material_pt_state::specific_heat:
+                    State.MaterialPoints.specific_heat.update_host();
+                    break;
 
-                    // add other variables here
-                    
-                    // not used
-                    case material_pt_state::elastic_modulii:
-                        break;
-                    case material_pt_state::shear_modulii:
-                        break;
-                    case material_pt_state::poisson_ratios:
-                        break;
-                    case material_pt_state::heat_flux:
-                        break;
-                    default:
-                        std::cout<<"Desired material point state not understood in outputs"<<std::endl;
-                } // end switch
-            } // end for over mat_pt_states
+                // add other variables here
+                
+                // not used
+                case material_pt_state::elastic_modulii:
+                    break;
+                case material_pt_state::shear_modulii:
+                    break;
+                case material_pt_state::poisson_ratios:
+                    break;
+                case material_pt_state::heat_flux:
+                    break;
+                default:
+                    std::cout<<"Desired material point state not understood in outputs"<<std::endl;
+            } // end switch
+        } // end for over mat_pt_states
 
-        } // end for mat_id
+
 
         // update gauss point values
         for (auto field : gauss_pt_states){
@@ -2562,7 +2561,7 @@ public:
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
             // material point and guass point state are concatenated together
-            concatenate_elem_fields(State.MaterialPoints(mat_id),
+            concatenate_elem_fields(State.MaterialPoints,
                                     State.GaussPoints,
                                     elem_scalar_fields,
                                     elem_tensor_fields,
@@ -2724,7 +2723,7 @@ public:
 
 
                         // concatenate material fields into a single array
-                        concatenate_mat_fields(State.MaterialPoints(mat_id),
+                        concatenate_mat_fields(State.MaterialPoints,
                                                mat_elem_scalar_fields,
                                                mat_elem_tensor_fields,
                                                State.MaterialToMeshMaps.elem,
@@ -2909,20 +2908,19 @@ public:
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states)
     {
-        size_t num_mats = State.MaterialPoints.size();
+        size_t num_mats = State.MaterialPoints.den.dim(0);
 
         // ---- Update host data ----
 
         // material point values
-        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            State.MaterialPoints(mat_id).den.update_host();
-            State.MaterialPoints(mat_id).pres.update_host();
-            State.MaterialPoints(mat_id).stress.update_host();
-            State.MaterialPoints(mat_id).sspd.update_host();
-            State.MaterialPoints(mat_id).sie.update_host();
-            State.MaterialPoints(mat_id).mass.update_host();
-            State.MaterialPoints(mat_id).eroded.update_host();
-        } // end for mat_id
+        State.MaterialPoints.den.update_host();
+        State.MaterialPoints.pres.update_host();
+        State.MaterialPoints.stress.update_host();
+        State.MaterialPoints.sspd.update_host();
+        State.MaterialPoints.sie.update_host();
+        State.MaterialPoints.mass.update_host();
+        State.MaterialPoints.eroded.update_host();
+
 
         // gauss point values
         State.GaussPoints.vol.update_host();
@@ -3006,16 +3004,16 @@ public:
                 size_t elem_gid = State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid);
 
                 // save outputs
-                elem_fields(elem_gid, 0) = State.MaterialPoints(mat_id).den.host(mat_elem_lid);
-                elem_fields(elem_gid, 1) = State.MaterialPoints(mat_id).pres.host(mat_elem_lid);
-                elem_fields(elem_gid, 2) = State.MaterialPoints(mat_id).sie.host(mat_elem_lid);
+                elem_fields(elem_gid, 0) = State.MaterialPoints.den.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 1) = State.MaterialPoints.pres.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 2) = State.MaterialPoints.sie.host(mat_id, mat_elem_lid);
                 // 3 is guass point vol
-                elem_fields(elem_gid, 4) = State.MaterialPoints(mat_id).mass.host(mat_elem_lid);
-                elem_fields(elem_gid, 5) = State.MaterialPoints(mat_id).sspd.host(mat_elem_lid);
+                elem_fields(elem_gid, 4) = State.MaterialPoints.mass.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 5) = State.MaterialPoints.sspd.host(mat_id, mat_elem_lid);
                 // 6 is elem speed
                 elem_fields(elem_gid, 7) = (double)mat_id;
                 // 8 is the e_switch
-                elem_fields(elem_gid, 9) = (double)State.MaterialPoints(mat_id).eroded.host(mat_elem_lid);
+                elem_fields(elem_gid, 9) = (double)State.MaterialPoints.eroded.host(mat_id, mat_elem_lid);
             } // end for mat elems storage
         } // end parallel loop over materials
 
@@ -3328,17 +3326,15 @@ public:
         // ---- Update host data ----
 
         // material point values
-        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            State.MaterialPoints(mat_id).den.update_host();
-            State.MaterialPoints(mat_id).pres.update_host();
-            State.MaterialPoints(mat_id).stress.update_host();
-            State.MaterialPoints(mat_id).sspd.update_host();
-            State.MaterialPoints(mat_id).sie.update_host();
-            State.MaterialPoints(mat_id).mass.update_host();
-            State.MaterialPoints(mat_id).conductivity.update_host();
-            State.MaterialPoints(mat_id).temp_grad.update_host();
-            State.MaterialPoints(mat_id).eroded.update_host();
-        } // end for mat_id
+        State.MaterialPoints.den.update_host();
+        State.MaterialPoints.pres.update_host();
+        State.MaterialPoints.stress.update_host();
+        State.MaterialPoints.sspd.update_host();
+        State.MaterialPoints.sie.update_host();
+        State.MaterialPoints.mass.update_host();
+        State.MaterialPoints.conductivity.update_host();
+        State.MaterialPoints.temp_grad.update_host();
+        State.MaterialPoints.eroded.update_host();
 
 
         // gauss point values
@@ -3431,19 +3427,19 @@ public:
                 size_t elem_gid = State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid);
 
                 // save outputs
-                elem_fields(elem_gid, 0) = State.MaterialPoints(mat_id).den.host(mat_elem_lid);
-                elem_fields(elem_gid, 1) = State.MaterialPoints(mat_id).pres.host(mat_elem_lid);
-                elem_fields(elem_gid, 2) = State.MaterialPoints(mat_id).sie.host(mat_elem_lid);
+                elem_fields(elem_gid, 0) = State.MaterialPoints.den.host(mat_id,mat_elem_lid);
+                elem_fields(elem_gid, 1) = State.MaterialPoints.pres.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 2) = State.MaterialPoints.sie.host(mat_id, mat_elem_lid);
                 // 3 is guass point vol
-                elem_fields(elem_gid, 4) = State.MaterialPoints(mat_id).mass.host(mat_elem_lid);
-                elem_fields(elem_gid, 5) = State.MaterialPoints(mat_id).sspd.host(mat_elem_lid);
+                elem_fields(elem_gid, 4) = State.MaterialPoints.mass.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 5) = State.MaterialPoints.sspd.host(mat_id, mat_elem_lid);
                 // 6 is elem speed
                 elem_fields(elem_gid, 7) = (double)mat_id;
                 // 8 is the e_switch
-                elem_fields(elem_gid, 9) = (double)State.MaterialPoints(mat_id).eroded.host(mat_elem_lid);
-                elem_fields(elem_gid, 10) = (double)State.MaterialPoints(mat_id).temp_grad.host(elem_gid,0);
-                elem_fields(elem_gid, 11) = (double)State.MaterialPoints(mat_id).temp_grad.host(elem_gid,1);
-                elem_fields(elem_gid, 12) = (double)State.MaterialPoints(mat_id).temp_grad.host(elem_gid,2);
+                elem_fields(elem_gid, 9) = (double)State.MaterialPoints.eroded.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 10) = (double)State.MaterialPoints.temp_grad.host(mat_id, elem_gid,0);
+                elem_fields(elem_gid, 11) = (double)State.MaterialPoints.temp_grad.host(mat_id, elem_gid,1);
+                elem_fields(elem_gid, 12) = (double)State.MaterialPoints.temp_grad.host(mat_id, elem_gid,2);
             } // end for mat elems storage
         } // end parallel loop over materials
 
@@ -3651,7 +3647,7 @@ public:
     /// \brief A function to calculate the average of elem fields and concatentate into 1 array
     ///
     ///
-    /// \param MaterialPointsOfMatID a struct containing the material point state arrays
+    /// \param MaterialPoints a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
     /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
@@ -3660,7 +3656,7 @@ public:
     /// \param mat_id the index for the material
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void concatenate_elem_fields(const MaterialPoint_t& MaterialPointsOfMatID,
+    void concatenate_elem_fields(const MaterialPoint_t& MaterialPoints,
                                  const GaussPoint_t& GaussPoints,
                                  DCArrayKokkos<double>& elem_scalar_fields,
                                  DCArrayKokkos<double>& elem_tensor_fields,
@@ -3696,9 +3692,9 @@ public:
                         size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(den_id, elem_gid) += MaterialPointsOfMatID.den(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.volfrac(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
+                        elem_scalar_fields(den_id, elem_gid) += MaterialPoints.den(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::pressure:
@@ -3708,9 +3704,9 @@ public:
                         size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(pres_id, elem_gid) += MaterialPointsOfMatID.pres(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.volfrac(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
+                        elem_scalar_fields(pres_id, elem_gid) += MaterialPoints.pres(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::specific_internal_energy:
@@ -3721,8 +3717,8 @@ public:
 
                         // field
                         // extensive ie here, but after this function, it will become specific ie
-                        elem_scalar_fields(sie_id, elem_gid) += MaterialPointsOfMatID.mass(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.sie(mat_elem_lid);
+                        elem_scalar_fields(sie_id, elem_gid) += MaterialPoints.mass(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.sie(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::sound_speed:
@@ -3732,9 +3728,9 @@ public:
                         size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(sspd_id, elem_gid) += MaterialPointsOfMatID.sspd(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.volfrac(mat_elem_lid)*
-                                                                MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
+                        elem_scalar_fields(sspd_id, elem_gid) += MaterialPoints.sspd(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::mass:
@@ -3744,7 +3740,7 @@ public:
                         size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(mass_id, elem_gid) += MaterialPointsOfMatID.mass(mat_elem_lid);
+                        elem_scalar_fields(mass_id, elem_gid) += MaterialPoints.mass(mat_id, mat_elem_lid);
                     });
                     break;
                 // ---------------    
@@ -3764,9 +3760,9 @@ public:
 
                                 // stress tensor 
                                 elem_tensor_fields(stress_id, elem_gid, i, j) +=
-                                                MaterialPointsOfMatID.stress(mat_elem_lid,i,j) *
-                                                MaterialPointsOfMatID.volfrac(mat_elem_lid)*
-                                                MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
+                                                MaterialPoints.stress(mat_id, mat_elem_lid,i,j) *
+                                                MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                             } // end for
                         } // end for
                     });
@@ -3780,9 +3776,9 @@ public:
                         size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(conductivity_id, elem_gid) += MaterialPointsOfMatID.conductivity(mat_elem_lid)*
-                                                                             MaterialPointsOfMatID.volfrac(mat_elem_lid)*
-                                                                             MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
+                        elem_scalar_fields(conductivity_id, elem_gid) += MaterialPoints.conductivity(mat_id, mat_elem_lid)*
+                                                                             MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                                             MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
 
@@ -3793,9 +3789,9 @@ public:
                         size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(specific_heat_id, elem_gid) += MaterialPointsOfMatID.specific_heat(mat_elem_lid)*
-                                                                              MaterialPointsOfMatID.volfrac(mat_elem_lid)*
-                                                                              MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
+                        elem_scalar_fields(specific_heat_id, elem_gid) += MaterialPoints.specific_heat(mat_id, mat_elem_lid)*
+                                                                              MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                                              MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
 
@@ -3879,7 +3875,7 @@ public:
     /// \brief A function to concatentate material fields into 1 array
     ///
     ///
-    /// \param MaterialPointsOfMatID a struct containing the material point state arrays
+    /// \param MaterialPoints a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
     /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
@@ -3888,7 +3884,7 @@ public:
     /// \param mat_id the index for the material
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void concatenate_mat_fields(const MaterialPoint_t& MaterialPointsOfMatID,
+    void concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
                                 DCArrayKokkos<double>& mat_elem_scalar_fields,
                                 DCArrayKokkos<double>& mat_elem_tensor_fields,
                                 const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -3917,14 +3913,14 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mat_den_id, mat_elem_lid) = MaterialPointsOfMatID.den(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_den_id, mat_elem_lid) = MaterialPoints.den(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::pressure:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mat_pres_id, mat_elem_lid) = MaterialPointsOfMatID.pres(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_pres_id, mat_elem_lid) = MaterialPoints.pres(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::specific_internal_energy:
@@ -3932,21 +3928,21 @@ public:
 
                         // field
                         // extensive ie here, but after this function, it will become specific ie
-                        mat_elem_scalar_fields(mat_sie_id, mat_elem_lid) = MaterialPointsOfMatID.sie(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_sie_id, mat_elem_lid) = MaterialPoints.sie(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::sound_speed:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mat_sspd_id, mat_elem_lid) = MaterialPointsOfMatID.sspd(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_sspd_id, mat_elem_lid) = MaterialPoints.sspd(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::mass:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mat_mass_id, mat_elem_lid) = MaterialPointsOfMatID.mass(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_mass_id, mat_elem_lid) = MaterialPoints.mass(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::volume_fraction:
@@ -3955,7 +3951,7 @@ public:
 
                         // field
                         // this is the volume fraction of a material within a part
-                        mat_elem_scalar_fields(mat_volfrac_id, mat_elem_lid) = MaterialPointsOfMatID.volfrac(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_volfrac_id, mat_elem_lid) = MaterialPoints.volfrac(mat_id, mat_elem_lid);
                     });
 
                     // geometric volume fraction
@@ -3963,14 +3959,14 @@ public:
 
                         // field
                         // this is the geometric volume fraction (interface reconstruction)
-                        mat_elem_scalar_fields(mat_geo_volfrac_id, mat_elem_lid) = MaterialPointsOfMatID.geo_volfrac(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_geo_volfrac_id, mat_elem_lid) = MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::eroded_flag:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mat_eroded_id, mat_elem_lid) = (double)MaterialPointsOfMatID.eroded(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_eroded_id, mat_elem_lid) = (double)MaterialPoints.eroded(mat_id, mat_elem_lid);
                     });
                     break;
                 // ---------------    
@@ -3987,7 +3983,7 @@ public:
 
                                 // stress tensor 
                                 mat_elem_tensor_fields(mat_stress_id, mat_elem_lid, i, j) =
-                                                MaterialPointsOfMatID.stress(mat_elem_lid,i,j);
+                                                MaterialPoints.stress(mat_id, mat_elem_lid,i,j);
                             } // end for
                         } // end for
                     });
@@ -4001,7 +3997,7 @@ public:
                         size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
                         // field
-                        mat_elem_scalar_fields(mat_conductivity_id, elem_gid) += MaterialPointsOfMatID.conductivity(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_conductivity_id, elem_gid) += MaterialPoints.conductivity(mat_id, mat_elem_lid);
                     });
                     break;
 
@@ -4012,7 +4008,7 @@ public:
                         size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
                         // field
-                        mat_elem_scalar_fields(mat_specific_heat_id, elem_gid) += MaterialPointsOfMatID.specific_heat(mat_elem_lid);
+                        mat_elem_scalar_fields(mat_specific_heat_id, elem_gid) += MaterialPoints.specific_heat(mat_id, mat_elem_lid);
                     });
                     break;
 
@@ -4040,7 +4036,7 @@ public:
     /// \brief A function to calculate the average of elem fields
     ///
     ///
-    /// \param MaterialPointsOfMatID a struct containing the material point state arrays
+    /// \param Node a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
     /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
@@ -4704,14 +4700,12 @@ public:
         // ---- Update host data ----
         size_t num_mats = State.MaterialPoints.size();
 
-        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            State.MaterialPoints(mat_id).den.update_host();
-            State.MaterialPoints(mat_id).pres.update_host();
-            State.MaterialPoints(mat_id).stress.update_host();
-            State.MaterialPoints(mat_id).sspd.update_host();
-            State.MaterialPoints(mat_id).sie.update_host();
-            State.MaterialPoints(mat_id).mass.update_host();
-        } // end for mat_id
+        State.MaterialPoints.den.update_host();
+        State.MaterialPoints.pres.update_host();
+        State.MaterialPoints.stress.update_host();
+        State.MaterialPoints.sspd.update_host();
+        State.MaterialPoints.sie.update_host();
+        State.MaterialPoints.mass.update_host();
 
         State.GaussPoints.vol.update_host();
 
@@ -4794,12 +4788,12 @@ public:
                          elem_coords[2],
                          rad2,
                          rad3,
-                         State.MaterialPoints(mat_id).den.host(mat_elem_lid),
-                         State.MaterialPoints(mat_id).pres.host(mat_elem_lid),
-                         State.MaterialPoints(mat_id).sie.host(mat_elem_lid),
-                         State.MaterialPoints(mat_id).sspd.host(mat_elem_lid),
+                         State.MaterialPoints.den.host(mat_id, mat_elem_lid),
+                         State.MaterialPoints.pres.host(mat_id, mat_elem_lid),
+                         State.MaterialPoints.sie.host(mat_id, mat_elem_lid),
+                         State.MaterialPoints.sspd.host(mat_id, mat_elem_lid),
                          State.GaussPoints.vol.host(elem_gid),
-                         State.MaterialPoints(mat_id).mass.host(mat_elem_lid) );
+                         State.MaterialPoints.mass.host(mat_id, mat_elem_lid) );
 
             } // end for elements
 

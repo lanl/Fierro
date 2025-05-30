@@ -55,25 +55,26 @@ void SGH3D::rk_init(
     DCArrayKokkos<double>& node_coords_n0,
     DCArrayKokkos<double>& node_vel,
     DCArrayKokkos<double>& node_vel_n0,
-    DCArrayKokkos<double>& MaterialPoints_sie,
-    DCArrayKokkos<double>& MaterialPoints_sie_n0,
-    DCArrayKokkos<double>& MaterialPoints_stress,
-    DCArrayKokkos<double>& MaterialPoints_stress_n0,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
     const size_t num_dims,
     const size_t num_elems,
     const size_t num_nodes,
-    const size_t num_mat_points) const
+    const size_t num_mat_points
+    const size_t mat_id) const
 {
     // save elem quantities
     FOR_ALL(matpt_lid, 0, num_mat_points, {
         // stress is always 3D even with 2D-RZ
         for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 3; j++) {
-                MaterialPoints_stress_n0(matpt_lid, i, j) = MaterialPoints_stress(matpt_lid, i, j);
+                MaterialPoints_stress_n0(mat_id, matpt_lid, i, j) = MaterialPoints_stress(mat_id, matpt_lid, i, j);
             }
         }  // end for
 
-        MaterialPoints_sie_n0(matpt_lid) = MaterialPoints_sie(matpt_lid);
+        MaterialPoints_sie_n0(mat_id, matpt_lid) = MaterialPoints_sie(mat_id, matpt_lid);
     }); // end parallel for
 
     // save nodal quantities
@@ -182,9 +183,9 @@ void SGH3D::get_timestep(Mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
+        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_id, mat_elem_lid) + fuzz);
 
-        if (MaterialPoints_eroded(mat_elem_lid) == true) {
+        if (MaterialPoints_eroded(mat_id, mat_elem_lid) == true) {
             dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
         }
 
