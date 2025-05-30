@@ -2100,8 +2100,8 @@ void paint_node_scalar(const double scalar,
 /////////////////////////////////////////////////////////////////////////////
 void init_state_vars(const Material_t& Materials,
                      const Mesh_t& mesh,
-                     const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                     const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                     const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                     const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
                      const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                      const size_t num_mat_pts,
                      const size_t mat_id)
@@ -2160,13 +2160,13 @@ void init_state_vars(const Material_t& Materials,
 void init_press_sspd_stress(const Material_t& Materials,
                             const Mesh_t& mesh,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-                            const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                            const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-                            const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                            DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                            DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+                            DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-                            const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+                            DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
                             const size_t num_mat_pts,
                             const size_t mat_id)
 {
@@ -2174,12 +2174,12 @@ void init_press_sspd_stress(const Material_t& Materials,
     // --- Shear modulus ---
     // loop over the material points
 
-    if (MaterialPoints_shear_modulii.size() > 0) {
+    if (MaterialPoints_shear_modulii.host.size()>0) {
         FOR_ALL(mat_point_lid, 0, num_mat_pts, {
 
             // setting shear modulii to zero, corresponds to a gas
             for(size_t i=0; i<3; i++){
-                MaterialPoints_shear_modulii(mat_id, mat_point_lid,i) = 0.0;
+                MaterialPoints_shear_modulii(mat_id, mat_point_lid, i) = 0.0;
             } // end for
 
         });
@@ -2261,7 +2261,7 @@ void calc_corner_mass(const Material_t& Materials,
                       const DCArrayKokkos<double>& node_coords,
                       const DCArrayKokkos<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
-                      const DCArrayKokkos<double>& MaterialPoints_mass,
+                      const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
                       const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                       const size_t num_mat_elems,
                       const size_t mat_id)
@@ -2279,7 +2279,7 @@ void calc_corner_mass(const Material_t& Materials,
         // partion the mass to the corners
         for(size_t corner_lid=0; corner_lid<mesh.num_nodes_in_elem; corner_lid++){
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-            corner_mass(corner_gid) += corner_frac*MaterialPoints_mass(mat_elem_lid);
+            corner_mass(corner_gid) += corner_frac*MaterialPoints_mass(mat_id, mat_elem_lid);
         } // end for
 
     }); // end parallel for over mat elem local ids
