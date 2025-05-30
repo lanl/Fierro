@@ -65,28 +65,14 @@
                                        BoundaryCondition_t& Boundary,
                                        State_t& State) const
  {
-	const size_t num_nodes = mesh.num_nodes;
-    const size_t num_dims = mesh.num_dims;
-
-    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
     // -----
-    //  Allocation of state must include a buffer with ALE
+    //  Allocation of state includes the buffer set in region_fill.cpp, it's needed for ALE
     // -----
 
     State.MaterialToMeshMaps.initialize();
+    State.MaterialPoints.initialize(mesh.num_dims, LevelSet_State::required_material_pt_state); 
+    // corners are not used
+    // zones are not used
 
-    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-
-        const size_t num_mat_pts_in_elem = mesh.num_leg_gauss_in_elem; 
-
-        const size_t num_elems_for_mat_buffer = State.MaterialToMeshMaps.num_material_elems_buffer.host(mat_id); // has a memory buffer for ALE
-        const size_t num_points_for_mat  = num_elems_for_mat_buffer * num_mat_pts_in_elem;
-        const size_t num_corners_for_mat = num_elems_for_mat_buffer * mesh.num_nodes_in_elem;
-
-        State.MaterialPoints(mat_id).initialize(num_points_for_mat, mesh.num_dims, LevelSet_State::required_material_pt_state); 
-        // zones are not used with solver
-
-    } // end for mat_id
- 
  } // end solver initialization

@@ -52,7 +52,7 @@ using namespace mtr; // matar namespace
 
 namespace LevelSet_State
 {
-    // Node state to be initialized for the SGH solver
+    // Node state to be initialized for the levelset solver
     static const std::vector<node_state> required_node_state = 
     {
         node_state::coords, 
@@ -60,14 +60,14 @@ namespace LevelSet_State
         node_state::velocity
     };
 
-    // Gauss point state to be initialized for the SGH solver
+    // Gauss point state to be initialized for the levelset solver
     static const std::vector<gauss_pt_state> required_gauss_pt_state = 
     { 
         gauss_pt_state::level_set,
         gauss_pt_state::volume
     };
 
-    // Material point state to be initialized for the SGH solver
+    // Material point state to be initialized for the levelset solver
     static const std::vector<material_pt_state> required_material_pt_state =
     {
         material_pt_state::volume_fraction
@@ -75,7 +75,7 @@ namespace LevelSet_State
     // nothing is needed on material pt state index space
 
 
-    // Corner state to be initialized for the SGH solver
+    // Corner state to be initialized for the levelset solver
     static const std::vector<corner_state> required_corner_state = 
     { 
         corner_state::normal,
@@ -127,7 +127,7 @@ public:
     ///
     /// \fn setup
     ///
-    /// \brief Calls setup_sgh_rz, which initializes state and material data
+    /// \brief Calls setup_levelset_rz, which initializes state and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
     void setup(SimulationParameters_t& SimulationParamaters, 
