@@ -29,8 +29,8 @@ endif()
 
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE RelWithDebInfo)
- # set(CMAKE_BUILD_TYPE Release)
+ # set(CMAKE_BUILD_TYPE RelWithDebInfo)
+  set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
 
 include_directories(../lib/Elements/matar)
@@ -40,20 +40,22 @@ add_subdirectory(../lib/Elements/matar cbin)
 # include_directories(Mesh-Builder)
 # add_subdirectory(Mesh-Builder)
 
+find_package(MPI REQUIRED)
+add_definitions(-DHAVE_MPI=1)
+set(LINKING_LIBRARIES MPI::MPI_CXX)
+if (GPU_AWARE_MPI)
+    add_definitions(-DHAVE_GPU_AWARE_MPI)
+#   elseif (GPU_SHARED_MEM)
+#       add_definitions(-DHAVE_GPU_SHARED_MEM)
+endif()
 if (FIERRO_ENABLE_TRILINOS)
+
   find_package(Trilinos REQUIRED) #new
   # Assume if the CXX compiler exists, the rest do too.
-  if (EXISTS ${Trilinos_CXX_COMPILER})
     set(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER})
     set(CMAKE_C_COMPILER ${Trilinos_C_COMPILER})
     set(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER})
-  endif()
-  if(NOT DISTRIBUTION)
-    # Make sure to use same compilers and flags as Trilinos
-    set(CMAKE_CXX_FLAGS  "${Trilinos_CXX_COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
-    set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
-    set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
-  endif()
+
 
   message("\nFound Trilinos!  Here are the details: ")
   message("   Trilinos_DIR = ${Trilinos_DIR}")
@@ -71,7 +73,7 @@ if (FIERRO_ENABLE_TRILINOS)
 
   include_directories(${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
   list(APPEND LINKING_LIBRARIES Trilinos::all_selected_libs)
-  add_definitions(-DTRILINOS_INTERFACE=1 -DHAVE_MPI=1 -DHAVE_KOKKOS=1)
+  add_definitions(-DTRILINOS_INTERFACE=1 -DHAVE_KOKKOS=1)
 else()
   find_package(Kokkos REQUIRED)
   list(APPEND LINKING_LIBRARIES Kokkos::kokkos)

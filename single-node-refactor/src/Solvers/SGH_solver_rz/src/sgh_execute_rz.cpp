@@ -551,7 +551,7 @@ double sum_domain_internal_energy_rz(const DCArrayKokkos<double>& MaterialPoints
 } // end function 
 
 double sum_domain_kinetic_energy_rz(const Mesh_t& mesh,
-                                    const DCArrayKokkos<double>& node_vel,
+                                    const DistributedDCArray<double>& node_vel,
                                     const CArrayKokkos<double>& node_extensive_mass)
 {
     // extensive KE
