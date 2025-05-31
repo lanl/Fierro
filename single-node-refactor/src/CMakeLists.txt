@@ -54,6 +54,10 @@ endif()
 include_directories(common/include)
 add_subdirectory(common)
 
+# Add remap files
+include_directories(remap/include)
+add_subdirectory(remap)
+
 # Add SGH Solver
 include_directories(Solvers/SGH_solver_3D/include)
 add_subdirectory(Solvers/SGH_solver_3D)
@@ -70,5 +74,5 @@ add_subdirectory(Solvers/SGTM_solver_3D)
 include_directories(Solvers/level_set_solver/include)
 add_subdirectory(Solvers/level_set_solver)
 
-add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${EQUILIBRATION_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files} ${SGTM_3D_SRC_Files} ${LVLSET_SRC_Files})
+add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${REMAP_Files} ${EQUILIBRATION_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files} ${SGTM_3D_SRC_Files} ${LVLSET_SRC_Files})
 target_link_libraries(Fierro PRIVATE matar Kokkos::kokkos) 
