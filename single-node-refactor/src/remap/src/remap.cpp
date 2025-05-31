@@ -38,4 +38,3 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "material.h"
 #include "state.h"
 
-

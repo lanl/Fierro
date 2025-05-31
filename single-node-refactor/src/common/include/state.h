@@ -707,6 +707,90 @@ struct MaterialCorner_t
 
 
 
+
+// Possible material point states, used to initialize MaterialPoint_t
+enum class material_surf_pt_state
+{
+    density,
+    stress,
+    specific_internal_energy,
+    mass,
+    volume_fraction
+};
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct MaterialSurfPoint_t
+///
+/// \brief Stores state information associated with the material on a surface
+///
+/////////////////////////////////////////////////////////////////////////////
+struct MaterialSurfPoint_t
+{
+    DCArrayKokkos <size_t> num_material_surf_points;        ///< the actual number of material surf points, omitting the buffer
+    DCArrayKokkos <size_t> num_material_surf_points_buffer; ///< number of material surf points plus a buffer
+
+    DRaggedRightArrayKokkos<double> den;    ///< MaterialSurfPoint density
+
+    DRaggedRightArrayKokkos<double> stress;    ///< MaterialSurfPoint stress
+    
+    DRaggedRightArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
+ 
+    DRaggedRightArrayKokkos<double> mass;   ///< MaterialSurfPoint mass
+
+    // Material Models are stored on Material points
+    DRaggedRightArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS, accessed as (mat_id, elem_lid, var_lid)
+    DRaggedRightArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
+
+    DRaggedRightArrayKokkos<double> volfrac;       ///< MaterialSurfPoint volume fraction
+    DRaggedRightArrayKokkos<double> geo_volfrac;   ///< change in MaterialSurfPoint geometric (part) volume fraction (interface reconstruction)
+
+    void initialize_num_mats(size_t num_mats)
+    {
+        // Note: num_material_surf_points is allocated in problem setup
+        if (num_material_surf_points.size() == 0){
+            this->num_material_surf_points = DCArrayKokkos <size_t> (num_mats, "num_material_surf_points"); 
+        }
+
+        // Note: num_material_surf_points_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
+        if (num_material_surf_points_buffer.size() == 0){
+            this->num_material_surf_points_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_surf_points_with_buffer"); 
+        }
+
+    }; // end method
+
+    // initialization method (num_dims)
+    void initialize(size_t num_dims, std::vector<material_surf_pt_state> material_surf_pt_states)
+    {
+
+        for (auto field : material_surf_pt_states){
+            switch(field){
+                case material_surf_pt_state::density:
+                    if (den.size() == 0) this->den = DRaggedRightArrayKokkos<double>(this->num_material_surf_points_buffer, "material_point_density");
+                    break;
+                case material_surf_pt_state::stress:
+                    if (stress.size() == 0) this->stress = DRaggedRightArrayKokkos<double>(this->num_material_surf_points_buffer, num_dims, num_dims, "material_point_stress");  
+                    break;
+                case material_surf_pt_state::mass:
+                    if (mass.size() == 0) this->mass = DRaggedRightArrayKokkos<double>(this->num_material_surf_points_buffer, "material_surf_point_mass");
+                    break;
+                case material_surf_pt_state::volume_fraction:
+                    if (volfrac.size() == 0) this->volfrac = DRaggedRightArrayKokkos<double>(this->num_material_surf_points_buffer, "material_surf_point_volfrac");
+                    if (geo_volfrac.size() == 0) this->geo_volfrac = DRaggedRightArrayKokkos<double>(this->num_material_surf_points_buffer, "material_surf_point_geo_volfrac");
+                    break;
+                case material_surf_pt_state::specific_internal_energy:
+                    if (sie.size() == 0)  this->sie = DRaggedRightArrayKokkos<double>(this->num_material_surf_points_buffer, "material_surf_point_sie");
+                    break;
+                default:
+                    std::cout<<"Desired material surface point state not understood in MaterialSurfPoint_t initialize"<<std::endl;
+                    throw std::runtime_error("**** Error in State Field Name ****");
+            }
+        }
+    }; // end method
+
+}; // end MaterialSurfPoint
+
+
+
 // Possible material corner states, used to initialize MaterialCorner_t
 enum class corner_state
 {
