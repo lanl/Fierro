@@ -32,59 +32,10 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgtm_solver_3D.h"
+#include "remap.h"
+#include "matar.h"
 #include "mesh.h"
+#include "material.h"
 #include "state.h"
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn update_temperature
-///
-/// \brief Evolves the nodal temperature based on nodal heat fluxes
-///
-/// \param The simulation mesh
-/// \param The corner heat flux. NOTE: This is a scalar flux
-/// \param The temperature at the nodes
-/// \param The mass at the nodes
-/// \param The heat flux at the nodes
-/// \param The RK integration alpha value
-/// \param Time step size
-///
-/////////////////////////////////////////////////////////////////////////////
-void SGTM3D::update_temperature(
-    const Mesh_t& mesh,
-    const DCArrayKokkos<double>& corner_q_transfer,
-    const DCArrayKokkos<double>& node_temp,
-    const DCArrayKokkos<double>& node_temp_n0,
-    const DCArrayKokkos<double>& node_mass,
-    const DCArrayKokkos<double>& node_q_transfer,
-    const DRaggedRightArrayKokkos<double>& mat_pt_specific_heat,
-    const double rk_alpha,
-    const double dt) const
-{
-    // ---- loop over all the nodes in the mesh ---- //
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        
-        // ---- loop over all corners around the node and calculate total flux through that node (divergence) ---- //
-        for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
-            
-            // Get corner gid
-            size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
-            node_q_transfer(node_gid) += corner_q_transfer(corner_gid);
 
-        } // end for corner_lid
-
-        // ---- Calculate the average specific heat for all materials surrounding a node ---- //
-        double Cp = 0.0;
-        for(int elem_lid = 0; elem_lid < mesh.num_corners_in_node(node_gid); elem_lid++){ // NOTE: num_corners_in_node = num_elems_in_node
-            size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
-            Cp += mat_pt_specific_heat(0,elem_gid)/mesh.num_corners_in_node(node_gid);  // WARNING: this is only material 0!!!!!!
-        }
-
-        // ---- Update the nodal temperature ---- //
-        node_temp(node_gid) = node_temp_n0(node_gid) + rk_alpha * dt * node_q_transfer(node_gid) / (node_mass(node_gid)*Cp);
-
-    }); // end for parallel for over nodes
-
-    return;
-} // end subroutine
