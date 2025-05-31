@@ -708,7 +708,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     Kokkos::fence();
 
     // --- set the level set field ---
-    if( State.GaussPoints.level_set.host.size()>0 ){
+    if( State.GaussPoints.level_set.size()>0 ){
         State.GaussPoints.level_set.set_values(1.0e32); // make level set have a default huge
         Kokkos::fence();
         State.GaussPoints.level_set.update_host();
@@ -759,7 +759,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                             fillElemState.volfrac.host(elem_gid,a_mat_in_elem)*fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 // --- density and mass ---
-                if( State.MaterialPoints.den.host.size()>0 ){
+                if( State.MaterialPoints.den.size()>0 ){
 
                     // add an array that we set to true or false if we set this state here
                     State.MaterialPoints.den.host(mat_id,mat_point_lid)  = 
@@ -770,12 +770,12 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 }
 
                 // --- set eroded flag to false ---
-                if( State.MaterialPoints.eroded.host.size()>0 ){
+                if( State.MaterialPoints.eroded.size()>0 ){
                     State.MaterialPoints.eroded.host(mat_id,mat_point_lid) = false; // set to default
                 }
 
                 // --- specific internal energy ---
-                if( State.MaterialPoints.sie.host.size()>0 ){
+                if( State.MaterialPoints.sie.size()>0 ){
                     // save state, that is integrated in time
                     
                         if(fillGaussState.use_sie.host(gauss_gid,a_mat_in_elem)){
@@ -790,13 +790,13 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 }
 
                 // --- thermal conductivity ---
-                if( State.MaterialPoints.conductivity.host.size()>0 ){
+                if( State.MaterialPoints.conductivity.size()>0 ){
                     State.MaterialPoints.conductivity.host(mat_id,mat_point_lid) = 
                                 fillGaussState.thermal_conductivity.host(gauss_gid,a_mat_in_elem); 
                 }
 
                 // --- specific heat ---
-                if( State.MaterialPoints.specific_heat.host.size()>0 ){
+                if( State.MaterialPoints.specific_heat.size()>0 ){
                     State.MaterialPoints.specific_heat.host(mat_id,mat_point_lid) = 
                                 fillGaussState.specific_heat.host(gauss_gid,a_mat_in_elem); 
                 }
@@ -809,7 +809,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 // ------------------
 
                 // --- set the level set field ---
-                if( State.GaussPoints.level_set.host.size()>0 ){
+                if( State.GaussPoints.level_set.size()>0 ){
                     State.GaussPoints.level_set.host(gauss_gid) = 
                            fmin(State.GaussPoints.level_set.host(gauss_gid), 
                                 fillGaussState.level_set.host(gauss_gid,a_mat_in_elem)); // use the min level set field
@@ -823,7 +823,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             // Save MaterialZones
             // -----------------------
 
-            if( State.MaterialZones.sie.host.size()>0 ){
+            if( State.MaterialZones.sie.size()>0 ){
                 // IMPORTANT:
                 // For higher-order FE, least squares fit the sie at gauss points to get zone values
                 //for(gauss_lid in elem){ 
@@ -856,27 +856,27 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     State.MaterialPoints.volfrac.update_device();
     State.MaterialPoints.geo_volfrac.update_device();
 
-    if (State.MaterialPoints.den.host.size()>0){
+    if (State.MaterialPoints.den.size()>0){
         State.MaterialPoints.den.update_device();
         State.MaterialPoints.mass.update_device();
     }
 
-    if (State.MaterialPoints.sie.host.size()>0){
+    if (State.MaterialPoints.sie.size()>0){
         State.MaterialPoints.sie.update_device();
     }
-    if (State.MaterialZones.sie.host.size()>0){
+    if (State.MaterialZones.sie.size()>0){
         State.MaterialZones.sie.update_device();
     }
     
-    if (State.MaterialPoints.eroded.host.size()>0){
+    if (State.MaterialPoints.eroded.size()>0){
         State.MaterialPoints.eroded.update_device();
     }
 
-    if (State.MaterialPoints.conductivity.host.size()>0){
+    if (State.MaterialPoints.conductivity.size()>0){
         State.MaterialPoints.conductivity.update_device();
     }
 
-    if (State.MaterialPoints.specific_heat.host.size()>0){
+    if (State.MaterialPoints.specific_heat.size()>0){
         State.MaterialPoints.specific_heat.update_device();
     }
 
@@ -2174,7 +2174,7 @@ void init_press_sspd_stress(const Material_t& Materials,
     // --- Shear modulus ---
     // loop over the material points
 
-    if (MaterialPoints_shear_modulii.host.size()>0) {
+    if (MaterialPoints_shear_modulii.size()>0) {
         FOR_ALL(mat_point_lid, 0, num_mat_pts, {
 
             // setting shear modulii to zero, corresponds to a gas

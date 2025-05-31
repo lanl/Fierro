@@ -57,7 +57,7 @@ void SGTM3D::rk_init(
     DCArrayKokkos<double>& node_vel_n0,
     DCArrayKokkos<double>& node_temp,
     DCArrayKokkos<double>& node_temp_n0,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_q_flux,
+    DCArrayKokkos<double>& node_q_flux,
     DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
     const size_t num_dims,
     const size_t num_elems,

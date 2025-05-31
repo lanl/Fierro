@@ -113,7 +113,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         IE_t0 += sum_domain_internal_energy(State.MaterialPoints.mass,
                                             State.MaterialPoints.sie,
-                                            State.MaterialPoints.num_material_points.host(mat_id)
+                                            State.MaterialPoints.num_material_points.host(mat_id),
                                             mat_id);
     } // end loop over mat_id
 
@@ -239,7 +239,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     mesh.num_dims,
                     mesh.num_elems,
                     mesh.num_nodes,
-                    State.MaterialPoints.num_material_points.host(mat_id));
+                    State.MaterialPoints.num_material_points.host(mat_id),
+                    mat_id);
         } // end for mat_id
 
 
@@ -667,9 +668,9 @@ double sum_domain_internal_energy(
 /////////////////////////////////////////////////////////////////////////////
 double sum_domain_kinetic_energy(
     const Mesh_t& mesh,
-    const DRaggedRightArrayKokkos<double>& node_vel,
-    const DRaggedRightArrayKokkos<double>& node_coords,
-    const DRaggedRightArrayKokkos<double>& node_mass)
+    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_coords,
+    const DCArrayKokkos<double>& node_mass)
 {
     // extensive KE
     double KE_sum = 0.0;
