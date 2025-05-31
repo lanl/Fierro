@@ -1929,7 +1929,7 @@ public:
         //  Update host 
         // *******************
 
-        const size_t num_mats = State.MaterialPoints.size();
+        const size_t num_mats = State.MaterialPoints.num_material_points.size();
 
         // material point values
             
@@ -2908,7 +2908,7 @@ public:
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states)
     {
-        size_t num_mats = State.MaterialPoints.den.dim(0);
+        size_t num_mats = State.MaterialPoints.num_material_points.size();
 
         // ---- Update host data ----
 
@@ -3321,7 +3321,7 @@ public:
         std::vector<material_pt_state> material_pt_states)
     {
 
-        size_t num_mats = State.MaterialPoints.size();
+        size_t num_mats = State.MaterialPoints.num_material_points.size();
 
         // ---- Update host data ----
 
@@ -4698,7 +4698,7 @@ public:
 
         // Update host data
         // ---- Update host data ----
-        size_t num_mats = State.MaterialPoints.size();
+        size_t num_mats = State.MaterialPoints.num_material_points.size();
 
         State.MaterialPoints.den.update_host();
         State.MaterialPoints.pres.update_host();

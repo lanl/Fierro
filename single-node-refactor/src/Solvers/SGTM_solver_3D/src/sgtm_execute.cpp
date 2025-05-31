@@ -239,7 +239,7 @@ std::cout << "checking: rk_init \n";
                     mesh.num_dims,
                     mesh.num_elems,
                     mesh.num_nodes,
-                    State.MaterialPoints.num_material_points);
+                    State.MaterialPoints.num_material_points.host(mat_id));
         } // end for mat_id
 
         // ---- Integrate the solution forward to t(n+1) via Runge Kutta (RK) method ---- //
@@ -321,7 +321,7 @@ std::cout << "update temperature \n";
                 State.node.temp_n0,
                 State.node.mass,
                 State.node.q_transfer,
-                State.MaterialPoints(0).specific_heat, // Note: Need to make this a node field, and calculate in the material loop
+                State.MaterialPoints.specific_heat, // Note: Need to make this a node field, and calculate in the material loop
                 rk_alpha,
                 dt);
 

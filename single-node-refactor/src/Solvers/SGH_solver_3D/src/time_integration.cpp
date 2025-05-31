@@ -62,7 +62,7 @@ void SGH3D::rk_init(
     const size_t num_dims,
     const size_t num_elems,
     const size_t num_nodes,
-    const size_t num_mat_points
+    const size_t num_mat_points,
     const size_t mat_id) const
 {
     // save elem quantities
@@ -111,8 +111,8 @@ void SGH3D::get_timestep(Mesh_t& mesh,
                        DCArrayKokkos<double>& node_coords,
                        DCArrayKokkos<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,
-                       DCArrayKokkos<double>& MaterialPoints_sspd,
-                       DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                       DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                       DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                        DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                        size_t num_mat_elems,
                        double time_value,

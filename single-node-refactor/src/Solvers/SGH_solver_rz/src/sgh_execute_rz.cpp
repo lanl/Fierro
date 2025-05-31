@@ -245,7 +245,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                        mesh.num_dims,
                        mesh.num_elems,
                        mesh.num_nodes,
-                       State.MaterialPoints.num_material_points.host(mat_id));
+                       State.MaterialPoints.num_material_points.host(mat_id),
+                       mat_id);
         } // end for mat_id
 
         // integrate solution forward in time
