@@ -163,7 +163,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     // ---------------------------------------
     //  allocation of maps and state
     // ---------------------------------------
-    State.MaterialToMeshMaps = CArray<MaterialToMeshMap_t>(num_mats); 
+    State.MaterialToMeshMaps.initialize_num_mats(num_mats); // allocates num_mats and num_mats_buffer that has a memory buffer
 
     State.MaterialPoints  = CArray<MaterialPoint_t>(num_mats); 
 
@@ -182,12 +182,22 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
         const size_t num_mat_pts_in_elem = mesh.num_leg_gauss_in_elem;  // mat_pts = guass points
 
-        // the following always have the exact memory needed, they omit a buffer.  The buffer is when allocating mat_pts state
-        State.MaterialToMeshMaps(mat_id).num_material_elems = num_elems_saved_for_mat.host(mat_id);
-        State.MaterialPoints(mat_id).num_material_points    = num_elems_saved_for_mat.host(mat_id) * num_mat_pts_in_elem;
-        State.MaterialCorners(mat_id).num_material_corners  = num_elems_saved_for_mat.host(mat_id) * mesh.num_nodes_in_elem;
-        State.MaterialZones(mat_id).num_material_zones      = num_elems_saved_for_mat.host(mat_id) * mesh.num_zones_in_elem;
+        // num_mat_elems is the exact number, it ignores a buffer. The num_mat_elems_buffer has a buffer for e.g., remap 
+        State.MaterialToMeshMaps.num_material_elems.host(mat_id) = num_elems_saved_for_mat.host(mat_id);
+
+        // IMPORTANT, make buffer a parser input variable
+        // for ALE, add a buffer to num_elems_for_mat, like 10% of num_elems up to num_elems.
+        // the num_elems_buffer is used when allocating the size of all material state
+        size_t buffer = 0;
+        State.MaterialToMeshMaps.num_material_elems_buffer.host(mat_id) = num_elems_saved_for_mat.host(mat_id) + buffer;
+
+        // actual storage, that is, the actual number of mat_points, mat_corners, etc
+        State.MaterialPoints(mat_id).num_material_points   = num_elems_saved_for_mat.host(mat_id) * num_mat_pts_in_elem;
+        State.MaterialCorners(mat_id).num_material_corners = num_elems_saved_for_mat.host(mat_id) * mesh.num_nodes_in_elem;
+        State.MaterialZones(mat_id).num_material_zones     = num_elems_saved_for_mat.host(mat_id) * mesh.num_zones_in_elem;
     } // end
+    State.MaterialToMeshMaps.num_material_elems.update_device();
+    State.MaterialToMeshMaps.num_material_elems_buffer.update_device();
 
     // done, the solver init functions will be called after this function via the driver
 
@@ -717,7 +727,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
 
             // --- mapping from material elem lid to elem ---
-            State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
+            State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid) = elem_gid;
 
             // --- mapping from elem to material index space ---
             State.MeshtoMaterialMaps.mat_storage_lid.host(elem_gid, a_mat_in_elem) = mat_elem_lid;
@@ -825,17 +835,18 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
         } // end loop over materials in this element
     } // end serial for loop over all elements
-    
+    State.MaterialToMeshMaps.elem.update_device();
+
 
     // copy the state to the device
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
         std::cout << "Number of elements = " << 
-            State.MaterialToMeshMaps(mat_id).num_material_elems << " for material " << mat_id << "\n";
+            State.MaterialToMeshMaps.num_material_elems.host(mat_id) << " for material " << mat_id << "\n";
         
         State.MaterialPoints(mat_id).volfrac.update_device();
         State.MaterialPoints(mat_id).geo_volfrac.update_device();
-        State.MaterialToMeshMaps(mat_id).elem.update_device();
+
 
         if (State.MaterialPoints(mat_id).den.host.size()>0){
             State.MaterialPoints(mat_id).den.update_device();
@@ -2084,7 +2095,7 @@ void init_state_vars(const Material_t& Materials,
                      const Mesh_t& mesh,
                      const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
                      const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-                     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                     const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                      const size_t num_mat_pts,
                      const size_t mat_id)
 {
@@ -2244,15 +2255,16 @@ void calc_corner_mass(const Material_t& Materials,
                       const DCArrayKokkos<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
                       const DCArrayKokkos<double>& MaterialPoints_mass,
-                      const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                      const size_t num_mat_elems)
+                      const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                      const size_t num_mat_elems,
+                      const size_t mat_id)
 {
 
 
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);  
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);  
 
         // calculate the fraction of matpt mass to scatter to each corner
         double corner_frac = 1.0/((double)mesh.num_nodes_in_elem);  // =1/8
