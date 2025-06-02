@@ -665,13 +665,13 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
                 if (cycle == last_time_step) {
                     if (myrank == 0) {
-                        printf("cycle = %d, time = %f, time step = %f \n", cycle, current_time, global_dt);
+                        printf("cycle = %d, time = %12.5e, time step = %12.5e \n", cycle, current_time, global_dt);
                     }
                 }
                 // print time step every 20 cycles
                 else if (cycle % print_cycle == 0) {
                     if (myrank == 0) {
-                        printf("cycle = %d, time = %f, time step = %f \n", cycle, current_time, global_dt);
+                        printf("cycle = %d, time = %12.5e, time step = %12.5e \n", cycle, current_time, global_dt);
                     }
                 } // end if
             }

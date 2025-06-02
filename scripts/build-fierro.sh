@@ -191,7 +191,7 @@ echo "Solver - ${solver}"
 echo "Kokkos backend - ${kokkos_build_type}"
 echo "Intel MKL library - ${intel_mkl}"
 echo "Machine - ${machine}"
-if [ "${solver}" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" || [ "${solver}" = "explicit-lsnp-evpfft" ]; then
+if [ "${solver}" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ] || [ "${solver}" = "explicit-lsnp-evpfft" ]; then
     echo "HEFFTE - ${heffte_build_type}"
 fi
 echo "make -j ${build_cores}"
@@ -205,7 +205,7 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 if [ "$build_action" = "full-app" ]; then
     source uncrustify-install.sh
     source trilinos-install.sh ${kokkos_build_type} ${machine} ${intel_mkl}
-    if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" || [ "${solver}" = "explicit-lsnp-evpfft" ]; then
+    if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ] || [ "${solver}" = "explicit-lsnp-evpfft" ]; then
         source hdf5-install.sh
         source heffte-install.sh ${heffte_build_type} ${machine}
     fi
