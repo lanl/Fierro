@@ -602,6 +602,8 @@ public:
     Teuchos::RCP<MV> all_cached_node_velocities_distributed;
     Teuchos::RCP<MV> node_masses_distributed;
     Teuchos::RCP<MV> cached_design_gradients_distributed;
+    Teuchos::RCP<MV> cached_lambda_dot_distributed, all_cached_lambda_dot_distributed;
+    Teuchos::RCP<MV> cached_psi_dot_distributed;
     Teuchos::RCP<MV> ghost_node_masses_distributed;
     Teuchos::RCP<MV> all_adjoint_vector_distributed, adjoint_vector_distributed;
     Teuchos::RCP<MV> all_phi_adjoint_vector_distributed, phi_adjoint_vector_distributed;

@@ -122,10 +122,13 @@ FEA_Module_SGH::FEA_Module_SGH(
         corner_gradient_storage                = Solver_Pointer->corner_gradient_storage;
         relative_element_densities             = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
         all_adjoint_vector_distributed         = Teuchos::rcp(new MV(all_node_map, num_dim));
+        all_cached_lambda_dot_distributed      = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         adjoint_vector_distributed             = Teuchos::rcp(new MV(*all_adjoint_vector_distributed, map));
+        cached_lambda_dot_distributed          = Teuchos::rcp(new MV(*all_cached_lambda_dot_distributed, map));
         all_phi_adjoint_vector_distributed     = Teuchos::rcp(new MV(all_node_map, num_dim));
         phi_adjoint_vector_distributed         = Teuchos::rcp(new MV(*all_phi_adjoint_vector_distributed, map));
         psi_adjoint_vector_distributed         = Teuchos::rcp(new MV(all_element_map, 1));
+        cached_psi_dot_distributed             = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
     }
 
     if (simparam->topology_optimization_on || simparam->shape_optimization_on || simparam->num_dims == 2) {

@@ -661,17 +661,21 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                 current_element_internal_energy  = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             }
 
+            
+            vec_array cached_lambda_dot = cached_lambda_dot_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array cached_psi_dot    = cached_psi_dot_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+
             // print
             if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
                 if (cycle == last_time_step) {
                     if (myrank == 0) {
-                        printf("cycle = %d, time = %12.5e, time step = %12.5e \n", cycle, current_time, global_dt);
+                        printf("cycle = %d, time = %f, time step = %f \n", cycle, current_time, global_dt);
                     }
                 }
                 // print time step every 20 cycles
                 else if (cycle % print_cycle == 0) {
                     if (myrank == 0) {
-                        printf("cycle = %d, time = %12.5e, time step = %12.5e \n", cycle, current_time, global_dt);
+                        printf("cycle = %d, time = %f, time step = %f \n", cycle, current_time, global_dt);
                     }
                 } // end if
             }
@@ -1276,6 +1280,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                                         matrix_contribution -
                                         phi_midpoint_adjoint_vector(node_gid, idim);
                         current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / node_mass(node_gid) + previous_adjoint_vector(node_gid, idim);
+                        cached_lambda_dot(node_gid, idim) = rate_of_change/node_mass(node_gid);
                     }
                 }); // end parallel for
             }
@@ -1305,6 +1310,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                                         matrix_contribution -
                                         phi_midpoint_adjoint_vector(node_gid, idim);
                         current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / node_mass(node_gid) + previous_adjoint_vector(node_gid, idim);
+                        cached_lambda_dot(node_gid, idim) = rate_of_change/node_mass(node_gid);
                     }
                 }); // end parallel for
             }
@@ -1358,12 +1364,15 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                 // debug
                 // std::cout << "PSI RATE OF CHANGE " << rate_of_change << std::endl;
                 psi_current_adjoint_vector(elem_gid, 0) = -rate_of_change * global_dt/ elem_mass(elem_gid) + psi_previous_adjoint_vector(elem_gid, 0);
+                cached_psi_dot(elem_gid,0) = rate_of_change/ elem_mass(elem_gid);
             }); // end parallel for
             Kokkos::fence();
 
             boundary_adjoint(*mesh, boundary, current_adjoint_vector, phi_current_adjoint_vector, psi_current_adjoint_vector);
             comm_adjoint_vector(cycle);
             comm_phi_adjoint_vector(cycle);
+            //comms on cached lambda dot
+            all_cached_lambda_dot_distributed->doImport(*cached_lambda_dot_distributed, *importer, Tpetra::INSERT);
             
             if(!use_solve_checkpoints){
                 // save data from time-step completion
@@ -1602,6 +1611,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 next_velocity_vector    = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 next_adjoint_vector     = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             }
+            vec_array cached_lambda_dot = all_cached_lambda_dot_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
 
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                 real_t lambda_dot_current;
@@ -1628,7 +1638,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                         lambda_dot_current = lambda_dot_next = (next_adjoint_vector(node_id, idim) - current_adjoint_vector(node_id, idim)) / global_dt;
                         // lambda_dot_current = current_velocity_vector(node_id,idim) + damping_constant*current_adjoint_vector(node_id,idim)/node_mass(node_id) - current_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
                         // lambda_dot_next = next_velocity_vector(node_id,idim) + damping_constant*next_adjoint_vector(node_id,idim)/node_mass(node_id) - next_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
-                        inner_product += elem_mass(elem_id) * (lambda_dot_current + lambda_dot_current) * current_element_velocities(ifill, idim) / 2;
+                        inner_product += elem_mass(elem_id) * cached_lambda_dot(node_id,idim) * current_element_velocities(ifill, idim);
                     }
                 }
 
@@ -1672,6 +1682,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 next_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 next_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             }
+            vec_array cached_psi_dot    = cached_psi_dot_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
 
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                 real_t psi_dot_current;
@@ -1681,7 +1692,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 real_t inner_product;
 
                 psi_dot_current = (next_psi_adjoint_vector(elem_id, 0) - current_psi_adjoint_vector(elem_id, 0)) / global_dt;
-                inner_product   = elem_mass(elem_id) * (psi_dot_current + psi_dot_current) * current_element_internal_energy(elem_id, 0) / 2;
+                inner_product   = elem_mass(elem_id) * cached_psi_dot(elem_id,0) * (current_element_internal_energy(elem_id, 0) + next_element_internal_energy(elem_id, 0))/2;
 
                 for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     // compute gradient of local element contribution to v^t*M*v product
