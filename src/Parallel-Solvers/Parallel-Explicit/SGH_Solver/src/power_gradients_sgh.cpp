@@ -268,7 +268,7 @@ void FEA_Module_SGH::get_power_dgradient_sgh(double rk_alpha,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_vel,
     const DViewCArrayKokkos<double>& node_coords,
-    DViewCArrayKokkos<double>& elem_sie,
+    const DViewCArrayKokkos<double>& elem_sie,
     const DViewCArrayKokkos<double>& elem_mass,
     const DViewCArrayKokkos<double>& corner_force,
     DCArrayKokkos<real_t> elem_power_dgradients)
@@ -330,7 +330,7 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_vel,
     const DViewCArrayKokkos<double>& node_coords,
-    DViewCArrayKokkos<double>& elem_sie,
+    const DViewCArrayKokkos<double>& elem_sie,
     const DViewCArrayKokkos<double>& elem_mass,
     const DViewCArrayKokkos<double>& corner_force)
 {
@@ -402,7 +402,7 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_vel,
     const DViewCArrayKokkos<double>& node_coords,
-    DViewCArrayKokkos<double>& elem_sie,
+    const DViewCArrayKokkos<double>& elem_sie,
     const DViewCArrayKokkos<double>& elem_mass,
     const DViewCArrayKokkos<double>& corner_force)
 {
@@ -489,7 +489,7 @@ void FEA_Module_SGH::get_power_egradient_sgh(double rk_alpha,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_vel,
     const DViewCArrayKokkos<double>& node_coords,
-    DViewCArrayKokkos<double>& elem_sie,
+    const DViewCArrayKokkos<double>& elem_sie,
     const DViewCArrayKokkos<double>& elem_mass,
     const DViewCArrayKokkos<double>& corner_force)
 {

@@ -545,23 +545,6 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
         // }); // end parallel for loop over elements
     }
 
-    /*
-    //accumulate node values from corner storage
-    force_gradient_design->putScalar(0);
-
-    vec_array force_gradient_design_view = force_gradient_design->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-    FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-        size_t corner_id;
-        for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
-            corner_id = corners_in_node(node_id,icorner);
-            force_gradient_design_view(node_id,0) += corner_vector_storage(corner_id, 0);
-            force_gradient_design_view(node_id,1) += corner_vector_storage(corner_id, 1);
-            force_gradient_design_view(node_id,2) += corner_vector_storage(corner_id, 2);
-        }
-    }); // end parallel for
-    Kokkos::fence();
-    */
-
     return;
 } // end of routine
 
@@ -973,23 +956,6 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos<material_t>& ma
         size_t mat_id = elem_mat_id(elem_gid);
     }
     // }); // end parallel for loop over elements
-
-    /*
-    //accumulate node values from corner storage
-    force_gradient_design->putScalar(0);
-
-    vec_array force_gradient_design_view = force_gradient_design->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-    FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-        size_t corner_id;
-        for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
-            corner_id = corners_in_node(node_id,icorner);
-            force_gradient_design_view(node_id,0) += corner_vector_storage(corner_id, 0);
-            force_gradient_design_view(node_id,1) += corner_vector_storage(corner_id, 1);
-            force_gradient_design_view(node_id,2) += corner_vector_storage(corner_id, 2);
-        }
-    }); // end parallel for
-    Kokkos::fence();
-    */
 
     return;
 } // end of routine
@@ -1508,23 +1474,6 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
         size_t mat_id = elem_mat_id(elem_gid);
     }
     // }); // end parallel for loop over elements
-
-    /*
-    //accumulate node values from corner storage
-    force_gradient_design->putScalar(0);
-
-    vec_array force_gradient_design_view = force_gradient_design->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-    FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-        size_t corner_id;
-        for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
-            corner_id = corners_in_node(node_id,icorner);
-            force_gradient_design_view(node_id,0) += corner_vector_storage(corner_id, 0);
-            force_gradient_design_view(node_id,1) += corner_vector_storage(corner_id, 1);
-            force_gradient_design_view(node_id,2) += corner_vector_storage(corner_id, 2);
-        }
-    }); // end parallel for
-    Kokkos::fence();
-    */
 
     return;
 } // end of routine
@@ -2075,23 +2024,6 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos<material_t>& ma
         size_t mat_id = elem_mat_id(elem_gid);
     }
     // }); // end parallel for loop over elements
-
-    /*
-    //accumulate node values from corner storage
-    force_gradient_design->putScalar(0);
-
-    vec_array force_gradient_design_view = force_gradient_design->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-    FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-        size_t corner_id;
-        for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
-            corner_id = corners_in_node(node_id,icorner);
-            force_gradient_design_view(node_id,0) += corner_vector_storage(corner_id, 0);
-            force_gradient_design_view(node_id,1) += corner_vector_storage(corner_id, 1);
-            force_gradient_design_view(node_id,2) += corner_vector_storage(corner_id, 2);
-        }
-    }); // end parallel for
-    Kokkos::fence();
-    */
 
     return;
 } // end of routine
