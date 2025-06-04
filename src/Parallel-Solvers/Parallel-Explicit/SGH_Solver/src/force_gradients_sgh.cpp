@@ -941,7 +941,7 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos<material_t>& ma
 
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++) {
-                Force_Gradient_Energies(elem_gid, node_lid * num_dims + dim) = corner_vector_storage(corner_gid, dim) =
+                Force_Gradient_Energies(elem_gid, node_lid * num_dims + dim) =
                     area_normal(node_lid, 0) * tau_gradient(0, dim)
                     + area_normal(node_lid, 1) * tau_gradient(1, dim)
                     + area_normal(node_lid, 2) * tau_gradient(2, dim)
