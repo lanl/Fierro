@@ -90,10 +90,15 @@ public:
 
     void sgh_solve();
 
+    void update_dependent_variables_and_gradients(const DViewCArrayKokkos<double>& node_coords,
+                                                  const DViewCArrayKokkos<double>& node_vel,
+                                                  const DViewCArrayKokkos<double>& elem_sie,
+                                                  const size_t cycle);
+
     void update_dependent_variables(const DViewCArrayKokkos<double>& node_coords,
-                                    const DViewCArrayKokkos<double>& node_vel,
-                                    const DViewCArrayKokkos<double>& elem_sie,
-                                    const size_t cycle);
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& elem_sie,
+    const size_t cycle);
 
     void get_force_sgh(const DCArrayKokkos<material_t>& material,
                        const mesh_t& mesh,
