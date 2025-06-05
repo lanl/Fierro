@@ -56,12 +56,22 @@ void SGH3D::update_velocity(double rk_alpha,
     DCArrayKokkos<double>& node_vel_n0,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& node_force,
-    const DCArrayKokkos<double>& corner_force) const
+    const DCArrayKokkos<double>& corner_force,
+    const CArrayKokkos<contact_node_t>& contact_nodes) const
 {
     const size_t num_dims = mesh.num_dims;
 
     // walk over the nodes to update the velocity
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
+
+        // adding in contact force
+        if (doing_contact)
+        {
+            const contact_node_t &contact_node = contact_nodes(node_gid);
+            for (size_t dim = 0; dim < num_dims; dim++) {
+                node_force(node_gid, dim) += contact_node.contact_force(dim);
+            }
+        } // end for dim
 
         // loop over all corners around the node and calculate the nodal force
         for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {

@@ -102,7 +102,22 @@ void SGH3D::boundary_contact(const Mesh_t& mesh,
     return;
 } // end boundary_contact function
 
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn boundary_contact_force
+///
+/// \brief Runs contact detection, contact check, and contact force
+///
+/// \param The time step size
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGH3D:: boundary_contact_force(const double &del_t)
+{
+    contact_bank.sort();
+    contact_bank.get_contact_pairs(del_t);
+    contact_bank.force_resolution(del_t);
+    contact_bank.remove_pairs(del_t);
+} // end boundary_contact_force function
 
 /////////////////////////////////////////////////////////////////////////////
 ///
