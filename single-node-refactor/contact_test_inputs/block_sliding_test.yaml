@@ -11,6 +11,7 @@ dynamic_options:
 mesh_options:
   source: file
   file_path: contact_test_inputs/contact_test.geo
+  num_dims: 3
 
 #mesh_options:
 #  source: generate
@@ -29,7 +30,7 @@ output_options:
 
 solver_options:
   - solver:
-      method: SGH
+      method: dynx_FE
       id: 0
       # solver_vars:
       #  - blah
@@ -43,60 +44,78 @@ boundary_conditions:
       solver_id: 0
       surface: 
           type: z_plane
-      direction: z_dir
-      value: 0.0
-      type: reflected
+          plane_position: 0.0
+      velocity_model: reflected
+      velocity_bc_global_vars:
+          - 0
+          - 0
+          - 0
 
   # global contact condition (this should be used when it is not clear what the contact surface(s) will be)
   - boundary_condition:
-      solver: SGH
-      geometry: global
-      type: contact
+      solver_id: 0
+      surface:
+          type: global
+      stress_model: global_contact
+
 
 materials:
   - material:
       id: 0
-      eos_model: ideal_gas
+      eos_model_type: decoupled
+      eos_model: gamma_law_gas
       # strength_model: none
-      elastic_modulus: 10
-      poisson_ratio: 0.3
-      q1: 1.0
-      q2: 1.333
-      q1ex: 1.0
-      q2ex: 1.333
+      dissipation_model: MARS
+      dissipation_global_vars:
+          - 1.0   # q1
+          - 1.0   # q1ex
+          - 1.333 # q2
+          - 1.333 # q2ex
+          - 0.1     # phi_min
+          - 1.0   # phi_curl
       eos_global_vars:
-        - 10
-        - 1.0E-14
-        - 1.0
+          - 10 #1.666666666666667
+          - 1.0E-14
+          - 1.0
 
 regions:
-  - fill_volume:
-      type: global
+  - region:
+      volume:
+        type: global
       material_id: 0
-      den: 1.0
-      sie: 1.e-10
-      velocity: cartesian
-      u: 0.0
-      v: 0.0
-      w: 0.0
-
-
+      solver_id: 0
+      density:
+        type: uniform
+        value: 1.0
+      specific_internal_energy:
+        type: uniform
+        value: 1.e-10
+      velocity:
+        type: cartesian
+        u: 0.0
+        v: 0.0
+        w: 0.0
+      volume_fraction:
+        type: uniform
+        value: 1.0
 
   # top block initial velocity conditions
-  - fill_volume:
+  - region:
+    volume:
       type: box
-      origin: [0.0, 0.0, 0.0]
       x1: -0.25
       x2: 0.25
       y1: -0.25
       y2: 0.25
       z1: 1
       z2: 1.5
-      material_id: 0
-      den: 10.0
-      # ie: 0.25833839995946534
-      sie: 1.e-5
-      velocity: cartesian
+    solver_id: 0
+    material_id: 0
+    velocity: 
+      type: cartesian
       u: 0.0
       v: 0.2
       w: -0.001
+    volume_fraction:
+      type: uniform
+      value: 1.0
