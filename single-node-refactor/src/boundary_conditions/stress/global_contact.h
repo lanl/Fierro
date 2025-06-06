@@ -32,8 +32,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_STRESS_CONST_H
-#define BOUNDARY_STRESS_CONST_H
+#ifndef BOUNDARY_STRESS_NONE_H
+#define BOUNDARY_STRESS_NONE_H
 
 #include "boundary_conditions.h"
 
@@ -41,19 +41,11 @@ struct BoundaryConditionEnums_t;
 
 namespace globalContact
 {
-
-// add an enum for boundary statevars and global vars
-// Voight notion
-enum BCVars
-{
-
-};
-
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary stress is constant
+/// \fn Boundary stress does not exist, its a free surface
 ///
-/// \brief This is a function to set the stress in the normal dir to a value
+/// \brief This is a function for a free surface, the default case
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
@@ -73,10 +65,11 @@ static void stress(const Mesh_t& mesh,
     const ViewCArrayKokkos <double>& corner_surf_force,
     const ViewCArrayKokkos <double>& corner_surf_normal,
     const double time_value,
-    const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
+
+
     return;
 } // end stress
 } // end namespace

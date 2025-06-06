@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: contact_test_inputs/contact_test.geo
+  file_path: contact_test.geo
   num_dims: 3
 
 #mesh_options:
@@ -95,27 +95,28 @@ regions:
         u: 0.0
         v: 0.0
         w: 0.0
-      volume_fraction:
-        type: uniform
-        value: 1.0
 
   # top block initial velocity conditions
   - region:
-    volume:
-      type: box
-      x1: -0.25
-      x2: 0.25
-      y1: -0.25
-      y2: 0.25
-      z1: 1
-      z2: 1.5
-    solver_id: 0
-    material_id: 0
-    velocity: 
-      type: cartesian
-      u: 0.0
-      v: 0.2
-      w: -0.001
-    volume_fraction:
-      type: uniform
-      value: 1.0
+      volume:
+        type: box
+        origin: [0.0, 0.0, 0.0]
+        x1: -0.25
+        x2: 0.25
+        y1: -0.25
+        y2: 0.25
+        z1: 1
+        z2: 1.5
+      material_id: 0
+      solver_id: 0
+      density:
+        type: uniform
+        value: 1.0
+      specific_internal_energy:
+        type: uniform
+        value: 1.e-10
+      velocity: 
+        type: cartesian
+        u: 0.0
+        v: 0.2
+        w: -0.001
