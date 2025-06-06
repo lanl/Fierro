@@ -1533,7 +1533,7 @@ void Explicit_Solver::setup_topology_optimization_problem(){
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
   directions_distributed->putScalar(-1);
-  directions_distributed->randomize(-1,1);
+  //directions_distributed->randomize(-1,1);
   host_vec_array directions_view = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //constraints due to specified user regions
   const size_t num_fills = simparam.optimization_options.volume_bound_constraints.size();
@@ -1577,7 +1577,7 @@ void Explicit_Solver::setup_topology_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  //solver.solve(*fos);
+  solver.solve(*fos);
 
   //print final constraint satisfaction
   //fea_elasticity->compute_element_masses(design_densities,false);
