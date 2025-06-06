@@ -336,8 +336,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // apply contact forces to boundary patches
             if (doing_contact) 
             {
-                contact_bank.update_nodes(mesh, State.node, State.corner);
-                boundary_contact(dt*rk_alpha);
+                contact_bank.update_nodes(mesh, State);
+                boundary_contact_force(dt*rk_alpha);
             }
 
             // ---- Update nodal velocities ---- //

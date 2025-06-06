@@ -113,18 +113,13 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 
     // Setting up contact
     for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
-        BoundaryCondition_t bound = Boundary(i);
-        if (bound.surface.type == boundary_conditions::contact && bound.BdyTag == boundary_conditions::global) {
+        if (Boundary.allow_contact) {
             std::cout << "Setting up global contact" << std::endl;
             doing_contact = true;
 
-            contact_bank.initialize(mesh, mesh.bdy_patches, State.node, State.corner);
+            contact_bank.initialize(mesh, mesh.bdy_patches, State);
             // run_contact_tests(contact_bank, mesh, node, corner, sim_param);
             break;
-        } else if (bound.surface.type == boundary_conditions::contact && bound.BdyTag != boundary_conditions::global) {
-            doing_contact = true;
-            std::cerr << "Contact boundary conditions are only supported for global at the moment." << std::endl;
-            exit(1);
         }
     }
 

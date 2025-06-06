@@ -421,6 +421,10 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &UserDefinedStressBC::stress;
                             });
                             break;
+
+                        case boundary_conditions::globalContact:
+                            std::cout << "Setting stress bc " << std::endl;
+                            BoundaryConditions.allow_contact = true;
                       
                         default:
                             

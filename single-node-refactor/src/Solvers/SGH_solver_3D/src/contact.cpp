@@ -946,7 +946,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
 
                           for (int k = 0; k < 3; k++)
                           {
-                              sum_sq += pow(nodes.coords(0, n1, k) - nodes.coords(0, n2, k), 2);
+                              sum_sq += pow(State.node.coords(0, n1, k) - State.node.coords(0, n2, k), 2);
                           }
 
                           node_distances(i, j) = sqrt(sum_sq);
@@ -956,7 +956,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
 
     double result = 0.0;
     double local_min = 1.0e10;
-    REDUCE_MIN(i, 0, num_contact_patches,
+    FOR_REDUCE_MIN(i, 0, num_contact_patches,
                j, 0, contact_patch_t::num_nodes_in_patch, local_min, {
                    if (local_min > node_distances(i, j))
                    {
@@ -969,7 +969,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
     // Find the total number of nodes (this is should always be less than or equal to mesh.num_bdy_nodes)
     size_t local_max_index = 0;
     size_t max_index = 0;
-    REDUCE_MAX(i, 0, num_contact_patches,
+    FOR_REDUCE_MAX(i, 0, num_contact_patches,
                j, 0, contact_patch_t::num_nodes_in_patch, local_max_index, {
                    if (local_max_index < contact_patches(i).nodes_gid(j))
                    {
@@ -1026,7 +1026,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
             contact_node_t &node_obj = contact_nodes(node_gid);
             // todo: for some reason, these non-matar types do not update in the contact_patches_t::update_nodes func
             //       this is only a problem if the node mass is changing
-            node_obj.mass = nodes.mass(node_gid);
+            node_obj.mass = State.node.mass(node_gid);
             node_obj.gid = node_gid;
             contact_patch.nodes_obj(j) = node_obj;
             if (node_count(node_gid) == 1)
@@ -1068,7 +1068,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
     }
 
     // Update the node members
-    update_nodes(mesh, State.nodes, State.corners);
+    update_nodes(mesh, State);
 
 }  // end initialize
 
@@ -1079,13 +1079,13 @@ void contact_patches_t::update_nodes(const Mesh_t &mesh, State_t& State)
         const size_t &node_gid = nodes_gid(i);
         contact_node_t &contact_node = contact_nodes(node_gid);
         contact_node.gid = node_gid;
-        contact_node.mass = nodes.mass(node_gid);
+        contact_node.mass = State.node.mass(node_gid);
 
         // Update pos, vel, acc, and internal force
         for (int j = 0; j < 3; j++)
         {
-            contact_node.pos(j) = State.nodes.coords(0, node_gid, j);
-            contact_node.vel(j) = State.nodes.vel(0, node_gid, j);
+            contact_node.pos(j) = State.node.coords(0, node_gid, j);
+            contact_node.vel(j) = State.node.vel(0, node_gid, j);
 
             // zero forces
             contact_node.contact_force(j) = 0.0;
@@ -1132,84 +1132,84 @@ void contact_patches_t::sort()
 
     // Find the max and min for each dimension
     double local_x_max = 0.0;
-    REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_x_max, {
+    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_x_max, {
         if (local_x_max < points(0, i))
         {
             local_x_max = points(0, i);
         }
     }, x_max);
     double local_y_max = 0.0;
-    REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_y_max, {
+    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_y_max, {
         if (local_y_max < points(1, i))
         {
             local_y_max = points(1, i);
         }
     }, y_max);
     double local_z_max = 0.0;
-    REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_z_max, {
+    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_z_max, {
         if (local_z_max < points(2, i))
         {
             local_z_max = points(2, i);
         }
     }, z_max);
     double local_x_min = 0.0;
-    REDUCE_MIN_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_x_min, {
+    FOR_REDUCE_MIN_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_x_min, {
         if (local_x_min > points(0, i))
         {
             local_x_min = points(0, i);
         }
     }, x_min);
     double local_y_min = 0.0;
-    REDUCE_MIN_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_y_min, {
+    FOR_REDUCE_MIN_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_y_min, {
         if (local_y_min > points(1, i))
         {
             local_y_min = points(1, i);
         }
     }, y_min);
     double local_z_min = 0.0;
-    REDUCE_MIN_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_z_min, {
+    FOR_REDUCE_MIN_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_z_min, {
         if (local_z_min > points(2, i))
         {
             local_z_min = points(2, i);
         }
     }, z_min);
     double local_vx_max = 0.0;
-    REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_vx_max, {
+    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_vx_max, {
         if (local_vx_max < velocities(0, i))
         {
             local_vx_max = velocities(0, i);
         }
     }, vx_max);
     double local_vy_max = 0.0;
-    REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_vy_max, {
+    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_vy_max, {
         if (local_vy_max < velocities(1, i))
         {
             local_vy_max = velocities(1, i);
         }
     }, vy_max);
     double local_vz_max = 0.0;
-    REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_vz_max, {
+    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_vz_max, {
         if (local_vz_max < velocities(2, i))
         {
             local_vz_max = velocities(2, i);
         }
     }, vz_max);
     double local_ax_max = 0.0;
-    REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_ax_max, {
+    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_ax_max, {
         if (local_ax_max < accelerations(0, i))
         {
             local_ax_max = accelerations(0, i);
         }
     }, ax_max);
     double local_ay_max = 0.0;
-    REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_ay_max, {
+    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_ay_max, {
         if (local_ay_max < accelerations(1, i))
         {
             local_ay_max = accelerations(1, i);
         }
     }, ay_max);
     double local_az_max = 0.0;
-    REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_az_max, {
+    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_az_max, {
         if (local_az_max < accelerations(2, i))
         {
             local_az_max = accelerations(2, i);
@@ -1762,7 +1762,7 @@ contact_node_t::contact_node_t(const ViewCArrayKokkos<double> &pos, const ViewCA
     }
 }
 
-void run_contact_tests(contact_patches_t &contact_patches_obj, const mesh_t &mesh, State_t& State, const simulation_parameters_t &sim_params)
+void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mesh, State_t& State, const SimulationParameters_t &sim_params)
 {
     double err_tol = 1.0e-6;  // error tolerance
 

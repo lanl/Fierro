@@ -30,6 +30,7 @@ output_options:
 solver_options:
   - solver:
       method: SGH
+      id: 0
       # solver_vars:
       #  - blah
       #  - blah
@@ -39,8 +40,9 @@ boundary_conditions:
 
   # Tag Z plane
   - boundary_condition:
-      solver: SGH
-      geometry: z_plane
+      solver_id: 0
+      surface: 
+          type: z_plane
       direction: z_dir
       value: 0.0
       type: reflected
