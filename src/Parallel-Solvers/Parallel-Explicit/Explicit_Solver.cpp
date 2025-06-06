@@ -1532,8 +1532,27 @@ void Explicit_Solver::setup_topology_optimization_problem(){
    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
-  directions_distributed->putScalar(-0.1);
-  directions_distributed->randomize(-0.8,1);
+  directions_distributed->putScalar(-1);
+  directions_distributed->randomize(-1,1);
+  host_vec_array directions_view = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //constraints due to specified user regions
+  const size_t num_fills = simparam.optimization_options.volume_bound_constraints.size();
+  const_host_vec_array node_coords_view = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const DCArrayKokkos <Optimization_Bound_Constraint_Region> mat_fill = simparam.optimization_options.optimization_bound_constraint_volumes;
+
+  for(int ifill = 0; ifill < num_fills; ifill++){
+    for(int inode = 0; inode < nlocal_nodes; inode++){
+      real_t node_coords[3];
+      node_coords[0] = node_coords_view(inode,0);
+      node_coords[1] = node_coords_view(inode,1);
+      node_coords[2] = node_coords_view(inode,2);
+      bool fill_this = mat_fill(ifill).volume.contains(node_coords);
+      if(fill_this){
+        if(mat_fill(ifill).set_lower_density_bound==mat_fill(ifill).set_upper_density_bound)
+          directions_view(inode,0) = 0;
+      }
+    }//node for
+  }//fill region for
   Kokkos::View <real_t*, array_layout, HostSpace, memory_traits> direction_norm("gradient norm",1);
   directions_distributed->norm2(direction_norm);
   directions_distributed->scale(1/direction_norm(0));
@@ -1558,7 +1577,7 @@ void Explicit_Solver::setup_topology_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  solver.solve(*fos);
+  //solver.solve(*fos);
 
   //print final constraint satisfaction
   //fea_elasticity->compute_element_masses(design_densities,false);
