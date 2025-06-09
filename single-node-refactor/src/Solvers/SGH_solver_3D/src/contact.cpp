@@ -886,7 +886,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
             contact_patch.nodes_gid(j) = nodes_in_patch(i, j);
         }
     }  // end for
-
+    
     // todo: This if statement might need a closer look
     // Setting up the iso-parametric coordinates for all patch objects
     if (mesh.num_nodes_in_patch == 4)
@@ -917,7 +917,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
         std::cerr << "Error: higher order elements are not yet tested for contact" << std::endl;
         exit(1);
     }  // end if
-
+    
     // Determine the bucket size. This is defined as 1.001*min_node_distance
     CArrayKokkos<double> node_distances(num_contact_patches, contact_patch_t::num_nodes_in_patch);
     FOR_ALL_CLASS(i, 0, num_contact_patches,
@@ -946,14 +946,14 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
 
                           for (int k = 0; k < 3; k++)
                           {
-                              sum_sq += pow(State.node.coords(0, n1, k) - State.node.coords(0, n2, k), 2);
+                              sum_sq += pow(State.node.coords(n1, k) - State.node.coords(n2, k), 2);
                           }
 
                           node_distances(i, j) = sqrt(sum_sq);
                       }
                   });
     Kokkos::fence();
-
+    
     double result = 0.0;
     double local_min = 1.0e10;
     FOR_REDUCE_MIN(i, 0, num_contact_patches,
@@ -965,7 +965,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
                }, result);
 
     contact_patches_t::bucket_size = 0.999*result;
-
+    
     // Find the total number of nodes (this is should always be less than or equal to mesh.num_bdy_nodes)
     size_t local_max_index = 0;
     size_t max_index = 0;
@@ -979,13 +979,13 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
     Kokkos::fence();
 
     CArrayKokkos<size_t> node_count(max_index + 1);
-
+    
     // zero node_count
     FOR_ALL(i, 0, max_index + 1, {
         node_count(i) = 0;
     });
     Kokkos::fence();
-
+    
     for (int i = 0; i < num_contact_patches; i++)
     {
         contact_patch_t &contact_patch = contact_patches(i);
@@ -999,7 +999,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
             }
         }
     }
-
+    
     // todo: instead of these arrays being accessed through the node gid directly, they can be made much smaller with a
     //       size of num_contact_nodes. The nsort member should simply be a sorted array of local indices (see the
     //       final portion of sort()). Then, use nodes_gid to get the global index to be used for mesh_t, node_t, and
@@ -1066,10 +1066,10 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
         });
         Kokkos::fence();
     }
-
+    
     // Update the node members
     update_nodes(mesh, State);
-
+    
 }  // end initialize
 
 void contact_patches_t::update_nodes(const Mesh_t &mesh, State_t& State)
@@ -1084,8 +1084,8 @@ void contact_patches_t::update_nodes(const Mesh_t &mesh, State_t& State)
         // Update pos, vel, acc, and internal force
         for (int j = 0; j < 3; j++)
         {
-            contact_node.pos(j) = State.node.coords(0, node_gid, j);
-            contact_node.vel(j) = State.node.vel(0, node_gid, j);
+            contact_node.pos(j) = State.node.coords(node_gid, j);
+            contact_node.vel(j) = State.node.vel(node_gid, j);
 
             // zero forces
             contact_node.contact_force(j) = 0.0;
@@ -1216,7 +1216,7 @@ void contact_patches_t::sort()
         }
     }, az_max);
     Kokkos::fence();
-
+    
     // If the max velocity is zero, then we want to set it to a small value. The max velocity and acceleration are used
     // for creating a capture box around the contact patch. We want there to be at least some thickness to the box.
     double* vel_max[3] = {&vx_max, &vy_max, &vz_max};
@@ -1227,7 +1227,7 @@ void contact_patches_t::sort()
             *i = 1.0e-3; // Set to a small value
         }
     }
-
+    
     // Define Sx, Sy, and Sz
     Sx = floor((x_max - x_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
     Sy = floor((y_max - y_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
@@ -1242,24 +1242,25 @@ void contact_patches_t::sort()
     nsort = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
     npoint = CArrayKokkos<size_t>(nb);
     CArrayKokkos<size_t> nsort_lid(contact_patches_t::num_contact_nodes);
-
+    
     // Find the bucket id for each node by constructing lbox
     FOR_ALL_CLASS(i, 0, contact_patches_t::num_contact_nodes, {
         size_t node_gid = nodes_gid(i);
+        
         const contact_node_t &node = contact_nodes(node_gid);
         double x = node.pos(0);
         double y = node.pos(1);
         double z = node.pos(2);
-
+        
         size_t Si_x = floor((x - x_min)/bucket_size);
         size_t Si_y = floor((y - y_min)/bucket_size);
         size_t Si_z = floor((z - z_min)/bucket_size);
-
+        
         lbox(i) = Si_z*Sx*Sy + Si_y*Sx + Si_x;
         nbox(lbox(i)) += 1;  // increment nbox
     });
     Kokkos::fence();
-
+    
     // Calculate the pointer for each bucket into a sorted list of nodes
     for (size_t i = 1; i < nb; i++)
     {

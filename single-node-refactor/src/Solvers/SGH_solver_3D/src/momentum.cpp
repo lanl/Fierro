@@ -70,8 +70,8 @@ void SGH3D::update_velocity(double rk_alpha,
             const contact_node_t &contact_node = contact_nodes(node_gid);
             for (size_t dim = 0; dim < num_dims; dim++) {
                 node_force(node_gid, dim) += contact_node.contact_force(dim);
-            }
-        } // end for dim
+            } // end for dim
+        }
 
         // loop over all corners around the node and calculate the nodal force
         for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
