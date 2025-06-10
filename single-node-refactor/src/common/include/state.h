@@ -418,6 +418,11 @@ struct MaterialToMeshMap_t
 
     DRaggedRightArrayKokkos<size_t> elem;             ///< returns the elem for this material
 
+    DCArrayKokkos <size_t> num_material_patches;        ///< returns the exact number of mat patches
+    DCArrayKokkos <size_t> num_material_patches_buffer; ///< returns the number of mat patches plus buffer
+
+    DRaggedRightArrayKokkos<size_t> patches;            ///< returns the patch gid for this material
+
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize()
     {
@@ -437,6 +442,16 @@ struct MaterialToMeshMap_t
         // Note: num_material_elems_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
         if (num_material_elems_buffer.size() == 0){
             this->num_material_elems_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_elems_with_buffer"); 
+        }
+
+        // Note: num_material_patches is allocated in problem setup
+        if (num_material_patches.size() == 0){
+            this->num_material_patches = DCArrayKokkos <size_t> (num_mats, "num_material_patches"); 
+        }
+
+        // Note: num_material_patches_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
+        if (num_material_patches_buffer.size() == 0){
+            this->num_material_patches_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_patches_with_buffer"); 
         }
 
     }; // end method

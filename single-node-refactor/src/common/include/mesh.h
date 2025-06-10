@@ -245,7 +245,7 @@ struct Mesh_t
     CArrayKokkos<size_t> num_elems_in_elem; ///< Number of elements connected to an element
 
     CArrayKokkos<size_t> patches_in_elem; ///< Patches in an element (including internal patches)
-    CArrayKokkos<size_t> surfs_in_elem; ///< Surfaces on an element
+    CArrayKokkos<size_t> surfs_in_elem; ///< Surfaces of an element
 
     // CArrayKokkos <size_t> zones_in_elem; ///< Zones in an element
     zones_in_elem_t zones_in_elem; ///< Zones in an element
