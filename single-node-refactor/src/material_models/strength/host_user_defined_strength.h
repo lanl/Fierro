@@ -81,7 +81,7 @@ namespace HostUserDefinedStrengthModel {
             size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_points_lid); // might be used with some models
 
             // first index is matpt, second index is the number of vars
-            size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dim(1); 
+            size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
             
             for(size_t var=0; var<num_strength_state_vars; var++){
                 MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = 0.0;
@@ -188,7 +188,7 @@ namespace HostNotionalStrengthModel {
             size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_points_lid); // might be used with some models
             
             // first index is matpt, second index is the number of vars
-            size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dim(1); 
+            size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
             
             for(size_t var=0; var<num_strength_state_vars; var++){
                 MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = 0.0;
