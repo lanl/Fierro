@@ -249,8 +249,9 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_mass,
         const DCArrayKokkos<double>& MaterialCorners_force,
         const corners_in_mat_t corners_in_mat_elem,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-        const size_t num_mat_elems) const;
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t num_mat_elems,
+        const size_t mat_id) const;
 
     // **** Functions defined in force_sgh.cpp **** //
     void get_force(
@@ -271,7 +272,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
         const corners_in_mat_t,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
         const double fuzz,
@@ -342,7 +343,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
         const DCArrayKokkos<bool>&   MaterialPoints_eroded,
         const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const double time_value,
         const double dt,
         const double rk_alpha,
@@ -366,7 +367,7 @@ public:
         const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
         const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
         const double fuzz,
@@ -399,7 +400,7 @@ public:
         DCArrayKokkos<double>& GaussPoints_vol,
         DCArrayKokkos<double>& MaterialPoints_sspd,
         DCArrayKokkos<bool>&   MaterialPoints_eroded,
-        DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         size_t num_mat_elems,
         double time_value,
         const double graphics_time,
@@ -409,7 +410,8 @@ public:
         const double dt_cfl,
         double&      dt,
         const double fuzz,
-        const double tiny) const;
+        const double tiny,
+        const size_t mat_id) const;
 
     // **** Functions defined in user_mat.cpp **** //
     // NOTE: Pull up into high level

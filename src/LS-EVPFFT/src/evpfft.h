@@ -131,6 +131,12 @@ public:
   MatrixTypeRealHost cns;
   MatrixTypeRealDual schcnon;
 #endif
+  MatrixTypeRealDual sigma0;
+  MatrixTypeRealDual sigma1;
+  MatrixTypeRealDual thet0_j2;
+  MatrixTypeRealDual thet1_j2;
+  MatrixTypeIntDual nrs_j2;
+  MatrixTypeRealDual edotp0_j2;
 
   MatrixTypeRealHost twsh;
   MatrixTypeIntHost nsm;
@@ -166,6 +172,7 @@ public:
   int iupdate;
   int iuphard;
   MatrixTypeIntDual igas;
+  MatrixTypeIntDual iJ2;
   int iwfields;
   int iwstep;
 
@@ -209,6 +216,7 @@ public:
   MatrixTypeRealDual velgradref;
   MatrixTypeRealDual xnode;
   MatrixTypeRealDual Ghat;
+  MatrixTypeRealDual sigma0gr;
 #ifdef NON_SCHMID_EFFECTS
   MatrixTypeRealDual schnon;
 #endif

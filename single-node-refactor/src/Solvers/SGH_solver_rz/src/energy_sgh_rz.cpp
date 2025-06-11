@@ -65,8 +65,9 @@ void SGHRZ::update_energy_rz(
       const DCArrayKokkos<double>& MaterialPoints_mass,
       const DCArrayKokkos<double>& MaterialCorners_force,
       const corners_in_mat_t corners_in_mat_elem,
-      const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-      const size_t num_mat_elems
+      const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+      const size_t num_mat_elems,
+      const size_t mat_id
     ) const
 {
 
@@ -74,7 +75,7 @@ void SGHRZ::update_energy_rz(
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_lid = mat_elem_lid;

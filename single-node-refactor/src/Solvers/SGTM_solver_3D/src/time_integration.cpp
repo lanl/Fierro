@@ -108,7 +108,7 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
                        DCArrayKokkos<double>& MaterialPoints_density,
                        DCArrayKokkos<double>& MaterialPoints_specific_heat,
                        DCArrayKokkos<bool>&   MaterialPoints_eroded,
-                       DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                       DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                        size_t num_mat_elems,
                        double time_value,
                        const double graphics_time,
@@ -118,7 +118,8 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
                        const double dt_cfl,
                        double&      dt,
                        const double fuzz,
-                       const double tiny) const
+                       const double tiny,
+                       const size_t mat_id) const
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
@@ -126,7 +127,7 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
     double dt_lcl;
     double min_dt_calc;
     FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);

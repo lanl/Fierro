@@ -79,12 +79,13 @@ namespace TiptonEquilibrationModel {
         const DCArrayKokkos<double>& MaterialPoint_pres,
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sspd,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
         const double fuzz,
-        const size_t num_mat_elems);
+        const size_t num_mat_elems,
+        const size_t mat_id);
 
 
     void calc_gauss_point_averages( 
@@ -107,14 +108,15 @@ namespace TiptonEquilibrationModel {
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sspd,
         const DCArrayKokkos<double>& MaterialPoint_mass,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
         const double fuzz,
         const CArrayKokkos<double> &equilibration_global_vars,
         const size_t num_global_vars,
-        const size_t num_mat_elems);        
+        const size_t num_mat_elems,
+        const size_t mat_id);        
 
 
         void update_volfrac_den_sie (
@@ -128,12 +130,13 @@ namespace TiptonEquilibrationModel {
             const DCArrayKokkos<double>& MaterialPoint_sie,
             const DCArrayKokkos<double>& MaterialPoint_den,
             const DCArrayKokkos<double>& MaterialPoint_mass,
-            const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+            const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
             const points_in_mat_t& points_in_mat_elem,
             const double dt,
             const double rk_alpha,
             const double fuzz,
-            const size_t num_mat_elems);    
+            const size_t num_mat_elems,
+            const size_t mat_id);    
 
 } // end namespace
 

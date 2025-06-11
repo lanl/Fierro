@@ -27,39 +27,58 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
   MatrixTypeRealHost hselfx(10);
   MatrixTypeRealHost hlatex(10,10);
   int nmodesx,kount,nm,modex,nsmx,nrsx;
-  int isectwx,nsysx;
+  int isectwx,nsysx,nrs_j2x;
   real_t covera,gamd0x,twshx,tau0xf,tau0xb,tau1x,thet0x,thet1x;
   real_t snor,qnor,prod;
+  real_t edotp0_j2x,sigma0x,sigma1x,thet0_j2x,thet1_j2x;
 
   ur1 >> prosa; CLEAR_LINE(ur1);
   ur1 >> icryst(iph); CLEAR_LINE(ur1);
-  for (int i = 1; i <= 3; i++) {
-    ur1 >> cdim(i);
-  }
-  CLEAR_LINE(ur1);
-  covera = cdim(3)/cdim(1);
+  if (icryst(iph).substr(0,2) == "J2" || icryst(iph).substr(0,2) == "j2") {
 
-  ur1 >> nmodesx; CLEAR_LINE(ur1);
-  ur1 >> nmodes(iph); CLEAR_LINE(ur1);
-  for (int i = 1; i <= mode.size(); i++) mode(i) = 0;
-  for (int i = 1; i <= nmodes(iph); i++) {
-    ur1 >> mode(i);
-  }
-  CLEAR_LINE(ur1);
+    iJ2.host(iph) = 1;
 
-  ntwmod(iph) = 0;
-  nsyst.host(iph)  = 0;
-  ntwsys(iph) = 0;
-  kount = 1;
+    ur1 >> nrs_j2x >> edotp0_j2x; CLEAR_LINE(ur1);
+    ur1 >> sigma0x >> sigma1x >> thet0_j2x >> thet1_j2x; CLEAR_LINE(ur1);
 
-  //
-  //     START READING DEFORMATION MODES FROM FILECRYS
-  //
-  //nm = 0;
-  //label_100: {
-  //  do {
-  //    nm++;
-  for (int nm = 1; nm <= nmodesx; nm++) {
+    nrs_j2.host(iph) = nrs_j2x;
+    edotp0_j2.host(iph) = edotp0_j2x;
+    sigma0.host(iph) = sigma0x;
+    sigma1.host(iph) = sigma1x;
+    thet0_j2.host(iph) = thet0_j2x;
+    thet1_j2.host(iph) = thet1_j2x;
+
+  } else { // else for if (icryst(iph).substr(0,2) == "J2" || icryst(iph).substr(0,2) == "j2") {
+
+    iJ2.host(iph) = 0;
+
+    for (int i = 1; i <= 3; i++) {
+      ur1 >> cdim(i);
+    }
+    CLEAR_LINE(ur1);
+    covera = cdim(3)/cdim(1);
+
+    ur1 >> nmodesx; CLEAR_LINE(ur1);
+    ur1 >> nmodes(iph); CLEAR_LINE(ur1);
+    for (int i = 1; i <= mode.size(); i++) mode(i) = 0;
+    for (int i = 1; i <= nmodes(iph); i++) {
+      ur1 >> mode(i);
+    }
+    CLEAR_LINE(ur1);
+
+    ntwmod(iph) = 0;
+    nsyst.host(iph)  = 0;
+    ntwsys(iph) = 0;
+    kount = 1;
+
+    //
+    //     START READING DEFORMATION MODES FROM FILECRYS
+    //
+    //nm = 0;
+    //label_100: {
+    //  do {
+    //    nm++;
+    for (int nm = 1; nm <= nmodesx; nm++) {
 
       ur1 >> prosa; CLEAR_LINE(ur1);
       ur1 >> modex >> nsmx >> nrsx >> gamd0x >> twshx >> isectwx; CLEAR_LINE(ur1);
@@ -134,16 +153,16 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
     //===============non_schmid_effects ===================================    
     // NOTE: the reading sequence here might be wrong.
     // But was duplicated form the original fortran code verbatim. 
-    for (int kmo = 1; kmo <= nmodes(iph); kmo++) {
-      CLEAR_LINE(ur1);
-      ur1 >> cns(1,kmo,iph) >> cns(2,kmo,iph) 
-             >> cns(3,kmo,iph) >> cns(4,kmo,iph);
-      // FIXME: the commented out line below leads to use of uninitialised cns(_,_,_)
-      // in the later part of this function. But this is the way it appears
-      // in the original fortran code. It was modified as below. 
-      //cns(5,1,1) = -( cns(3,kmo,iph) + cns(4,kmo,iph) );
-      cns(5,kmo,iph) = -( cns(3,kmo,iph) + cns(4,kmo,iph) );
-    }
+      for (int kmo = 1; kmo <= nmodes(iph); kmo++) {
+        CLEAR_LINE(ur1);
+        ur1 >> cns(1,kmo,iph) >> cns(2,kmo,iph) 
+               >> cns(3,kmo,iph) >> cns(4,kmo,iph);
+        // FIXME: the commented out line below leads to use of uninitialised cns(_,_,_)
+        // in the later part of this function. But this is the way it appears
+        // in the original fortran code. It was modified as below. 
+        //cns(5,1,1) = -( cns(3,kmo,iph) + cns(4,kmo,iph) );
+        cns(5,kmo,iph) = -( cns(3,kmo,iph) + cns(4,kmo,iph) );
+      }
     //=====================================================================
 #endif
 
@@ -255,39 +274,40 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
       } // end for js
 
       kount++;
-    //} while (nm < nmodesx); // end of do/while loop
-  //} // end of label_100 scope
-  } // end for (nm)
+      //} while (nm < nmodesx); // end of do/while loop
+    //} // end of label_100 scope
+    } // end for (nm)
 
-  //     INITIALIZE SELF & LATENT HARDENING COEFS FOR EACH SYSTEM OF THE PHASE.
-  //     ABSOLUTE UNITS ARE ACCOUNTED FOR BY MODULATING FACTOR IN HARDENING LAW.
+    //     INITIALIZE SELF & LATENT HARDENING COEFS FOR EACH SYSTEM OF THE PHASE.
+    //     ABSOLUTE UNITS ARE ACCOUNTED FOR BY MODULATING FACTOR IN HARDENING LAW.
 
-  int i = 0;
-  int j;
-  for (int im = 1; im <= nmodes(iph); im++) {
-    for (int is = 1; is <= nsm(im,iph); is++) {
-      i += 1;
-      j = 0;
-      for (int jm = 1; jm <= nmodes(iph); jm++) {
-        for (int js = 1; js <= nsm(jm,iph); js++) {
-          j += 1;
-          hard.host(i,j,iph) = hlatex(im,jm);
+    int i = 0;
+    int j;
+    for (int im = 1; im <= nmodes(iph); im++) {
+      for (int is = 1; is <= nsm(im,iph); is++) {
+        i += 1;
+        j = 0;
+        for (int jm = 1; jm <= nmodes(iph); jm++) {
+          for (int js = 1; js <= nsm(jm,iph); js++) {
+            j += 1;
+            hard.host(i,j,iph) = hlatex(im,jm);
+          }
+        }
+        hard.host(i,i,iph) = hselfx(im);
+      }
+    }
+
+    //     VERIFICATION OF TWINNING DATA TO BE SURE PROGRAM WILL RUN PROPERLY
+    if (nmodes(iph) > 1) {
+      for (int i = 2; i <= nsyst.host(iph); i++) {
+        if (twsh(i,iph) == 0.0 && twsh(i-1,iph) != 0.0) {
+          printf(" WARNING! THE TWINNING MODES MUST FOLLOW THE \n");
+          printf(" SLIP MODES   -->   REORDER CRYSTAL FILE ");
+          exit(1);
         }
       }
-      hard.host(i,i,iph) = hselfx(im);
     }
-  }
-
-  //     VERIFICATION OF TWINNING DATA TO BE SURE PROGRAM WILL RUN PROPERLY
-  if (nmodes(iph) > 1) {
-    for (int i = 2; i <= nsyst.host(iph); i++) {
-      if (twsh(i,iph) == 0.0 && twsh(i-1,iph) != 0.0) {
-        printf(" WARNING! THE TWINNING MODES MUST FOLLOW THE \n");
-        printf(" SLIP MODES   -->   REORDER CRYSTAL FILE ");
-        exit(1);
-      }
-    }
-  }
+  } // end for if (icryst(iph).substr(0,2) == "J2" || icryst(iph).substr(0,2) == "j2")
 
   ur1.close();  
 }

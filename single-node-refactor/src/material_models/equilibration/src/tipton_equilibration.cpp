@@ -91,8 +91,6 @@ namespace TiptonEquilibrationModel {
         // calculate weigted average pressure at gauss points
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
             // build numerator and denominator
             build_gauss_point_averages( 
                 mesh,
@@ -103,12 +101,13 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints(mat_id).pres,
                 State.MaterialPoints(mat_id).den,
                 State.MaterialPoints(mat_id).sspd,
-                State.MaterialToMeshMaps(mat_id).elem,
+                State.MaterialToMeshMaps.elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
                 my_fuzz,
-                num_mat_elems);
+                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                mat_id);
 
         } // end for mat_id
 
@@ -124,8 +123,6 @@ namespace TiptonEquilibrationModel {
         // calculate volfrac change and limiter on the change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
             calc_volfrac_change (
                 mesh,
                 GaussPoint_pres,
@@ -140,23 +137,24 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints(mat_id).den,
                 State.MaterialPoints(mat_id).sspd,
                 State.MaterialPoints(mat_id).mass,
-                State.MaterialToMeshMaps(mat_id).elem,
+                State.MaterialToMeshMaps.elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
                 my_fuzz,
                 Materials.equilibration_global_vars,
                 Materials.num_equilibration_global_vars,
-                num_mat_elems);
+                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                mat_id);
 
         } // end for mat_id
 
 
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
-            size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
+        
+        size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+            
             update_volfrac_den_sie (
                 mesh,
                 GaussPoint_pres,
@@ -168,12 +166,13 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints(mat_id).sie,
                 State.MaterialPoints(mat_id).den,
                 State.MaterialPoints(mat_id).mass,
-                State.MaterialToMeshMaps(mat_id).elem,
+                State.MaterialToMeshMaps.elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
                 my_fuzz,
-                num_mat_elems);
+                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                mat_id);
 
         } // end for mat_id
 
@@ -206,24 +205,23 @@ namespace TiptonEquilibrationModel {
         // calculate weigted average pressure at gauss points
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-        size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
-        // build numerator and denominator
-        build_gauss_point_averages( 
-            mesh,
-            GaussPoint_pres,
-            GaussPoint_pres_denominator,
-            GaussPoint_volfrac_min,
-            State.MaterialPoints(mat_id).geo_volfrac,  // geo_volfrac
-            State.MaterialPoints(mat_id).pres,
-            State.MaterialPoints(mat_id).den,
-            State.MaterialPoints(mat_id).sspd,
-            State.MaterialToMeshMaps(mat_id).elem,
-            State.points_in_mat_elem,
-            dt,
-            rk_alpha,
-            fuzz,
-            num_mat_elems);
+            // build numerator and denominator
+            build_gauss_point_averages( 
+                mesh,
+                GaussPoint_pres,
+                GaussPoint_pres_denominator,
+                GaussPoint_volfrac_min,
+                State.MaterialPoints(mat_id).geo_volfrac,  // geo_volfrac
+                State.MaterialPoints(mat_id).pres,
+                State.MaterialPoints(mat_id).den,
+                State.MaterialPoints(mat_id).sspd,
+                State.MaterialToMeshMaps.elem,
+                State.points_in_mat_elem,
+                dt,
+                rk_alpha,
+                fuzz,
+                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                mat_id);
 
         } // end for mat_id
 
@@ -239,38 +237,35 @@ namespace TiptonEquilibrationModel {
         // calculate geo_volfrac change and limiter on the change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-        size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
-
-        calc_volfrac_change (
-            mesh,
-            GaussPoint_pres,
-            GaussPoint_pres_denominator,
-            GaussPoint_volfrac_min,
-            GaussPoint_volfrac_limiter,
-            State.GaussPoints.vel_grad,
-            State.GaussPoints.vol,
-            State.MaterialPoints(mat_id).geo_volfrac,       // geo_volfrac 
-            State.MaterialPoints(mat_id).delta_geo_volfrac, // change in the geo_volfrac 
-            State.MaterialPoints(mat_id).pres,
-            State.MaterialPoints(mat_id).den,
-            State.MaterialPoints(mat_id).sspd,
-            State.MaterialPoints(mat_id).mass,
-            State.MaterialToMeshMaps(mat_id).elem,
-            State.points_in_mat_elem,
-            dt,
-            rk_alpha,
-            fuzz,
-            Materials.equilibration_global_vars,
-            Materials.num_equilibration_global_vars,
-            num_mat_elems);
+            calc_volfrac_change (
+                mesh,
+                GaussPoint_pres,
+                GaussPoint_pres_denominator,
+                GaussPoint_volfrac_min,
+                GaussPoint_volfrac_limiter,
+                State.GaussPoints.vel_grad,
+                State.GaussPoints.vol,
+                State.MaterialPoints(mat_id).geo_volfrac,       // geo_volfrac 
+                State.MaterialPoints(mat_id).delta_geo_volfrac, // change in the geo_volfrac 
+                State.MaterialPoints(mat_id).pres,
+                State.MaterialPoints(mat_id).den,
+                State.MaterialPoints(mat_id).sspd,
+                State.MaterialPoints(mat_id).mass,
+                State.MaterialToMeshMaps.elem,
+                State.points_in_mat_elem,
+                dt,
+                rk_alpha,
+                fuzz,
+                Materials.equilibration_global_vars,
+                Materials.num_equilibration_global_vars,
+                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                mat_id);
 
         } // end for mat_id
 
 
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
-        size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
 
         update_volfrac_den_sie (
             mesh,
@@ -308,19 +303,20 @@ namespace TiptonEquilibrationModel {
         const DCArrayKokkos<double>& MaterialPoint_pres,
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sspd,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
         const double fuzz,
-        const size_t num_mat_elems)
+        const size_t num_mat_elems,
+        const size_t mat_id)
     {
 
         // loop over all ellements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
             // loop over gauss points in this element
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
@@ -406,21 +402,22 @@ namespace TiptonEquilibrationModel {
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sspd,
         const DCArrayKokkos<double>& MaterialPoint_mass,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
         const double fuzz,
         const CArrayKokkos<double> &equilibration_global_vars,
         const size_t num_global_vars,
-        const size_t num_mat_elems)
+        const size_t num_mat_elems,
+        const size_t mat_id)
     {
 
         // loop over all ellements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
             // loop over gauss points in this element
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
@@ -486,19 +483,20 @@ namespace TiptonEquilibrationModel {
         const DCArrayKokkos<double>& MaterialPoint_sie,
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_mass,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
         const double fuzz,
-        const size_t num_mat_elems)
+        const size_t num_mat_elems,
+        const size_t mat_id)
     {
 
         // loop over all ellements the material lives in
         FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
             // loop over gauss points in this element
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
