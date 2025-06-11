@@ -153,7 +153,7 @@ namespace TiptonEquilibrationModel {
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
         
-        size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
             
             update_volfrac_den_sie (
                 mesh,
@@ -267,23 +267,29 @@ namespace TiptonEquilibrationModel {
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-        update_volfrac_den_sie (
-            mesh,
-            GaussPoint_pres,
-            GaussPoint_volfrac_limiter,
-            State.GaussPoints.vel_grad,
-            State.GaussPoints.vol,
-            State.MaterialPoints(mat_id).geo_volfrac,       // geo_volfrac 
-            State.MaterialPoints(mat_id).delta_geo_volfrac, // change in the geo_volfrac
-            State.MaterialPoints(mat_id).sie,
-            State.MaterialPoints(mat_id).den,
-            State.MaterialPoints(mat_id).mass,
-            State.MaterialToMeshMaps(mat_id).elem,
-            State.points_in_mat_elem,
-            dt,
-            rk_alpha,
-            fuzz,
-            num_mat_elems);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+
+
+            update_volfrac_den_sie (
+                mesh,
+                GaussPoint_pres,
+                GaussPoint_volfrac_limiter,
+                State.GaussPoints.vel_grad,
+                State.GaussPoints.vol,
+                State.MaterialPoints(mat_id).volfrac,       // material volfrac
+                State.MaterialPoints(mat_id).delta_volfrac, // the change in material volfrac
+                State.MaterialPoints(mat_id).sie,
+                State.MaterialPoints(mat_id).den,
+                State.MaterialPoints(mat_id).mass,
+                State.MaterialToMeshMaps.elem,
+                State.points_in_mat_elem,
+                dt,
+                rk_alpha,
+                fuzz, // WARNING: This is not the same as my_fuzz
+                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                mat_id);
+
+
 
         } // end for mat_id
 
