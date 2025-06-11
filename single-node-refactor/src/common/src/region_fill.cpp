@@ -159,6 +159,9 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
         num_elems_saved_for_mat.host(mat_id) = sum_total;
     } // end for
 
+    num_elems_saved_for_mat.update_device();
+    Kokkos::fence();
+
 
     // ---------------------------------------
     //  allocation of maps and state
@@ -195,14 +198,16 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
         State.MaterialCorners.num_material_corners_buffer.host(mat_id)  = (num_elems_saved_for_mat.host(mat_id)+buffer) * mesh.num_nodes_in_elem;
         State.MaterialZones.num_material_zones_buffer.host(mat_id)      = (num_elems_saved_for_mat.host(mat_id)+buffer) * mesh.num_zones_in_elem;
     } // end
+
     // copy to device the actual sizes
     State.MaterialToMeshMaps.num_material_elems.update_device();
-    State.MaterialCorners.num_material_corners.update_device();
+    State.MaterialPoints.num_material_points.update_device();
     State.MaterialCorners.num_material_corners.update_device();
     State.MaterialZones.num_material_zones.update_device();
+
     // copy to the device the actual+buffer sizes
     State.MaterialToMeshMaps.num_material_elems_buffer.update_device();
-    State.MaterialCorners.num_material_corners_buffer.update_device();
+    State.MaterialPoints.num_material_points_buffer.update_device();
     State.MaterialCorners.num_material_corners_buffer.update_device();
     State.MaterialZones.num_material_zones_buffer.update_device();
 
