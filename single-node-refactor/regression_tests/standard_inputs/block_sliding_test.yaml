@@ -1,16 +1,16 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 1.0
-  dt_min: 0.5
-  dt_max: 0.5
-  dt_start: 1.e-2
+  time_final: 3.0
+  dt_min: 1e-6
+  dt_max: 0.05
+  dt_start: 1.e-5
   cycle_stop: 300000
 
 
 mesh_options:
   source: file
-  file_path: contact_test2.geo
+  file_path: standard_inputs/meshes/block_sliding.geo
   num_dims: 3
 
 #mesh_options:
@@ -24,8 +24,8 @@ mesh_options:
 
 output_options:
   timer_output_level: thorough
-  output_file_format: ensight
-  graphics_time_step: 0.5
+  output_file_format: state
+  graphics_time_step: 3.0
   # graphics_iteration_step: 10
 
 solver_options:
@@ -57,6 +57,7 @@ boundary_conditions:
       surface:
           type: global
       stress_model: global_contact
+
 
 materials:
   - material:
@@ -94,28 +95,29 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
+    
 
   # top block initial velocity conditions
   - region:
       volume:
         type: box
         origin: [0.0, 0.0, 0.0]
-        x1: 0
-        x2: 1
-        y1: 1
-        y2: 2
-        z1: 0
-        z2: 1
+        x1: -0.25
+        x2: 0.25
+        y1: -0.25
+        y2: 0.25
+        z1: 1
+        z2: 1.5
       material_id: 0
       solver_id: 0
       density:
         type: uniform
-        value: 1.0
+        value: 10.0
       specific_internal_energy:
         type: uniform
-        value: 1.e-10
+        value: 1.e-5
       velocity: 
         type: cartesian
         u: 0.0
-        v: -0.5
-        w: 0.0
+        v: 0.2
+        w: -0.001

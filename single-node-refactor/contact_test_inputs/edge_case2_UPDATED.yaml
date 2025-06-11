@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: contact_test2.geo
+  file_path: edge_case2.geo
   num_dims: 3
 
 #mesh_options:
@@ -100,22 +100,22 @@ regions:
       volume:
         type: box
         origin: [0.0, 0.0, 0.0]
-        x1: 0
-        x2: 1
-        y1: 1
-        y2: 2
-        z1: 0
-        z2: 1
+        x1: -0.5
+        x2: 0.0
+        y1: 0.1
+        y2: 1.0
+        z1: 2.5
+        z2: 3.5
       material_id: 0
       solver_id: 0
       density:
         type: uniform
-        value: 1.0
+        value: 10.0
       specific_internal_energy:
         type: uniform
-        value: 1.e-10
+        value: 1.e-5
       velocity: 
         type: cartesian
         u: 0.0
-        v: -0.5
-        w: 0.0
+        v: 0.0
+        w: -1.0

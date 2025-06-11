@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: contact_test2.geo
+  file_path: standard_inputs/meshes/slanted_contact.geo
   num_dims: 3
 
 #mesh_options:
@@ -24,8 +24,8 @@ mesh_options:
 
 output_options:
   timer_output_level: thorough
-  output_file_format: ensight
-  graphics_time_step: 0.5
+  output_file_format: state
+  graphics_time_step: 1.0
   # graphics_iteration_step: 10
 
 solver_options:
@@ -100,12 +100,12 @@ regions:
       volume:
         type: box
         origin: [0.0, 0.0, 0.0]
-        x1: 0
-        x2: 1
-        y1: 1
-        y2: 2
-        z1: 0
-        z2: 1
+        x1: 0.0
+        x2: 0.5
+        y1: 1.0
+        y2: 2.0
+        z1: 1.8
+        z2: 2.9
       material_id: 0
       solver_id: 0
       density:
@@ -117,5 +117,5 @@ regions:
       velocity: 
         type: cartesian
         u: 0.0
-        v: -0.5
+        v: -1.5
         w: 0.0
