@@ -561,7 +561,7 @@ void fill_regions(
                                  mesh.num_dims,
                                  region_fills(fill_id).vel_field);
                 }
-             
+                
                 // paint nodal temperature
                 if (node_temp.size()>0){
                     // if check is needed as solver state might not match fill instructions
@@ -1844,7 +1844,6 @@ void paint_vector(const DCArrayKokkos<double>& vector_field,
                     if (num_dims == 3) {
                         vector_field(mesh_gid, 2) = w;
                     }
-
                     break;
                 }
             // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
