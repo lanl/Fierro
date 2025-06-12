@@ -119,7 +119,7 @@ namespace TiptonEquilibrationModel {
         const size_t mat_id);        
 
 
-        void update_volfrac_sie (
+        void update_volfrac_den_sie (
             const Mesh_t& mesh,
             const CArrayKokkos<double>& GaussPoint_pres,
             const CArrayKokkos <double>& GaussPoint_volfrac_limiter,
@@ -127,6 +127,7 @@ namespace TiptonEquilibrationModel {
             const DCArrayKokkos<double>& GaussPoint_vol,
             const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
             const DRaggedRightArrayKokkos<double>& MaterialPoints_delta_volfrac,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
             const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
             const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
             const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
