@@ -527,7 +527,7 @@ namespace TiptonEquilibrationModel {
                 MaterialPoints_volfrac(mat_id, mat_point_storage_lid) = fmin(1.0, fmax(0.0, volfrac_new));                
 
                 // update density (correcction here, the density is now updated)
-                MaterialPoint_den(mat_id, mat_point_storage_lid) = MaterialPoint_mass(mat_id, mat_point_storage_lid)/(MaterialPoints_volfrac(mat_id, mat_point_storage_lid)*GaussPoint_vol(gauss_gid) + fuzz);
+                MaterialPoints_den(mat_id, mat_point_storage_lid) = MaterialPoints_mass(mat_id, mat_point_storage_lid)/(MaterialPoints_volfrac(mat_id, mat_point_storage_lid)*GaussPoint_vol(gauss_gid) + fuzz);
 
                 // update internal energy
                 // dVol/dt = Vol*div
