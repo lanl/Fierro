@@ -64,19 +64,18 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
     std::cout << "Calculating pressure, sound speed, and stress" << std::endl;
     // calculate pressure, sound speed, and stress for each material
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
 
         init_press_sspd_stress(Materials,
                             mesh,
-                            State.MaterialPoints(mat_id).den,
-                            State.MaterialPoints(mat_id).pres,
-                            State.MaterialPoints(mat_id).stress,
-                            State.MaterialPoints(mat_id).sspd,
-                            State.MaterialPoints(mat_id).sie,
-                            State.MaterialPoints(mat_id).eos_state_vars,    
-                            State.MaterialPoints(mat_id).strength_state_vars,
-                            State.MaterialPoints(mat_id).shear_modulii,
-                            num_mat_points,
+                            State.MaterialPoints.den,
+                            State.MaterialPoints.pres,
+                            State.MaterialPoints.stress,
+                            State.MaterialPoints.sspd,
+                            State.MaterialPoints.sie,
+                            State.MaterialPoints.eos_state_vars,    
+                            State.MaterialPoints.strength_state_vars,
+                            State.MaterialPoints.shear_modulii,
+                            State.MaterialPoints.num_material_points.host(mat_id),
                             mat_id);
 
     } // for loop over mat_id
@@ -92,7 +91,7 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                          State.node.coords,
                          State.node.mass,
                          State.corner.mass,
-                         State.MaterialPoints(mat_id).mass,
+                         State.MaterialPoints.mass,
                          State.MaterialToMeshMaps.elem,
                          State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                          mat_id);
