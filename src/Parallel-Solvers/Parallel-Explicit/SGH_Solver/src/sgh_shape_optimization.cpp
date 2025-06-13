@@ -1572,7 +1572,7 @@ void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const 
             
             //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
             //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
-            compute_topology_optimization_gradient_tally(design_coords_distributed, cached_design_gradients_distributed, cycle, global_dt);
+            compute_shape_optimization_gradient_tally(design_coords_distributed, cached_design_gradients_distributed, cycle, global_dt);
 
             if(cycle==0){
                 //RE-ENABLE STATE SETUP FOR T=0 if IVP term involves computed properties
