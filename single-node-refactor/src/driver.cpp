@@ -106,6 +106,9 @@ void Driver::initialize()
         exit(0);
     }
 
+    //build relevant partition maps for ghost nodes, elements, etc.
+    mesh.init_maps();
+
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
 

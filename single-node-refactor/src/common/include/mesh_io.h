@@ -1140,7 +1140,7 @@ public:
             //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
             std::vector<node_state> required_node_state = { node_state::coords };
             map = node_coords_distributed.pmap;
-            node.post_repartition_initialize(map, num_dims, required_node_state);
+            node.initialize(map, num_dims, required_node_state);
         }
 
         //initialize some mesh data
@@ -1398,7 +1398,7 @@ public:
         for (int ielem = 0; ielem < num_elems; ielem++)
         {
             for (int inode = 0; inode < elem_words_per_line; inode++)
-            {
+            {   //assign local indices to element-node connectivity (stores global indices until ghost maps are made later)
                 nodes_in_elem.host(ielem, inode) = element_temp[ielem * elem_words_per_line + inode];
             }
         }

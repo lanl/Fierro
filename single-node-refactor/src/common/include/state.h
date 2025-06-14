@@ -322,7 +322,8 @@ struct node_t
         }
     }; // end method
 
-    void post_repartition_initialize(DistributedMap partitioned_map, size_t num_dims, std::vector<node_state> node_states)
+    //initialize overload with a partitioned map
+    void initialize(DistributedMap partitioned_map, size_t num_dims, std::vector<node_state> node_states)
     {
         for (auto field : node_states){
             switch(field){
