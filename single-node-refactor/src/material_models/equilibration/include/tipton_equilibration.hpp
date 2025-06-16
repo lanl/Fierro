@@ -119,17 +119,25 @@ namespace TiptonEquilibrationModel {
         const size_t mat_id);        
 
 
-        void update_volfrac_den_sie (
+        void update_state_equilibration (
             const Mesh_t& mesh,
+            const Material_t& Materials,
             const CArrayKokkos<double>& GaussPoint_pres,
             const CArrayKokkos <double>& GaussPoint_volfrac_limiter,
             const DCArrayKokkos<double>& GaussPoint_vel_grad,
             const DCArrayKokkos<double>& GaussPoint_vol,
-            const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
-            const DRaggedRightArrayKokkos<double>& MaterialPoints_delta_volfrac,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac_inout,       // the modified value by equilibration
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_delta_volfrac_inout, // the modified value by equilibration
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac_in,          // unmodified value
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_delta_volfrac_in,    // unmodified value
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
             const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
             const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
             const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
             const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
             const points_in_mat_t& points_in_mat_elem,
             const double dt,
