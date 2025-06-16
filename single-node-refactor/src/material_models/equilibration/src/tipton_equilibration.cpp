@@ -152,8 +152,10 @@ namespace TiptonEquilibrationModel {
 
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
-            update_volfrac_sie (
+        
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            
+            update_volfrac_den_sie (
                 mesh,
                 GaussPoint_pres,
                 GaussPoint_volfrac_limiter,
@@ -162,6 +164,7 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints(mat_id).volfrac,       // material volfrac
                 State.MaterialPoints(mat_id).delta_volfrac, // the change in material volfrac
                 State.MaterialPoints(mat_id).sie,
+                State.MaterialPoints(mat_id).den,
                 State.MaterialPoints(mat_id).mass,
                 State.MaterialToMeshMaps.elem,
                 State.points_in_mat_elem,
@@ -264,23 +267,29 @@ namespace TiptonEquilibrationModel {
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-            update_volfrac_sie (
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+
+
+            update_volfrac_den_sie (
                 mesh,
                 GaussPoint_pres,
                 GaussPoint_volfrac_limiter,
                 State.GaussPoints.vel_grad,
                 State.GaussPoints.vol,
-                State.MaterialPoints(mat_id).geo_volfrac,       // geo_volfrac 
-                State.MaterialPoints(mat_id).delta_geo_volfrac, // change in the geo_volfrac
+                State.MaterialPoints(mat_id).volfrac,       // material volfrac
+                State.MaterialPoints(mat_id).delta_volfrac, // the change in material volfrac
                 State.MaterialPoints(mat_id).sie,
+                State.MaterialPoints(mat_id).den,
                 State.MaterialPoints(mat_id).mass,
                 State.MaterialToMeshMaps.elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
-                fuzz,
+                fuzz, // WARNING: This is not the same as my_fuzz
                 State.MaterialToMeshMaps.num_material_elems.host(mat_id),
                 mat_id);
+
+
 
         } // end for mat_id
 
@@ -469,7 +478,7 @@ namespace TiptonEquilibrationModel {
     } // end function
 
 
-    void update_volfrac_sie(
+    void update_volfrac_den_sie(
         const Mesh_t& mesh,
         const CArrayKokkos<double>& GaussPoint_pres,
         const CArrayKokkos <double>& GaussPoint_volfrac_limiter,
@@ -478,6 +487,7 @@ namespace TiptonEquilibrationModel {
         const DCArrayKokkos<double>& MaterialPoints_volfrac,
         const DCArrayKokkos<double>& MaterialPoints_delta_volfrac,
         const DCArrayKokkos<double>& MaterialPoint_sie,
+        const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_mass,
         const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const points_in_mat_t& points_in_mat_elem,
@@ -511,15 +521,18 @@ namespace TiptonEquilibrationModel {
 
                 const double delta_volfrac = GaussPoint_volfrac_limiter(gauss_gid)*MaterialPoints_delta_volfrac(mat_point_storage_lid);
 
-                // calculating volume fraction change 
+                // update volume fraction  
                 double volfrac_new = MaterialPoints_volfrac(mat_point_storage_lid) +  delta_volfrac;  // note: change in volfrac was limited above here
-                MaterialPoints_volfrac(mat_point_storage_lid) = fmin(1.0, fmax(0.0, volfrac_new));                
+                MaterialPoints_volfrac(mat_point_storage_lid) = fmin(1.0, fmax(0.0, volfrac_new));  
+                
+                // update density
+                MaterialPoint_den(mat_point_storage_lid) = MaterialPoint_mass(mat_point_storage_lid)/(volfrac_new*GaussPoint_vol(gauss_gid) + fuzz);
 
                 // update internal energy
                 // dVol/dt = Vol*div
                 double GaussPoint_deltaVol = div*rk_alpha*dt*GaussPoint_vol(gauss_gid);
-                MaterialPoint_sie(mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*delta_volfrac*GaussPoint_deltaVol/MaterialPoint_mass(mat_point_storage_lid);
-
+                //MaterialPoint_sie(mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*delta_volfrac*GaussPoint_deltaVol/(MaterialPoint_mass(mat_point_storage_lid)+fuzz);
+                MaterialPoint_sie(mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*delta_volfrac*GaussPoint_vol(gauss_gid)/(MaterialPoint_mass(mat_point_storage_lid)+1.E-15);
             } // end for gauss point loop 
 
         }); // end parallel loop over all material elems in the mesh
