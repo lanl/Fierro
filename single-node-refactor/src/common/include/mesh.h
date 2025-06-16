@@ -231,7 +231,7 @@ struct Mesh_t
     // ---- Element Data Definitions ---- //
     size_t global_num_elems;   ///< Global number of elements in the mesh
     size_t num_elems;  ///< number of local+shared elements on this process (forces usually employ this)
-    size_t nlocal_elems; ///< number of local elements on this process (output and reductions for energy usually employ this)
+    size_t num_local_elems; ///< number of local elements on this process (output and reductions for energy usually employ this)
     size_t num_nodes_in_elem;   ///< Number of nodes in an element
     size_t num_patches_in_elem; ///< Number of patches in an element
     size_t num_surfs_in_elem;   ///< Number of surfaces in an element
@@ -481,78 +481,43 @@ struct Mesh_t
         // remove elements from the local set so that each rank has a unique set of global ids
 
         // local elements belonging to the non-overlapping element distribution to each rank with buffer
-        Kokkos::DualView<GO*, array_layout, device_type, memory_traits> Initial_Element_Global_Indices("Initial_Element_Global_Indices", num_elems);
+        DCArrayKokkos<long long int> Initial_Element_Global_Indices(num_elems, "Initial_Element_Global_Indices");
 
         size_t nonoverlapping_count = 0;
         int    my_element_flag;
-
-        // loop through local element set
-        if (num_dim == 2)
+        for (int ielem = 0; ielem < num_elems; ielem++)
         {
-            for (int ielem = 0; ielem < num_elems; ielem++)
-            {
-                element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
-                num_nodes_in_elem = elem2D->num_nodes();
+            my_element_flag = 1;
 
-                my_element_flag = 1;
-                for (int lnode = 0; lnode < num_nodes_in_elem; lnode++)
+            for (int lnode = 0; lnode < num_nodes_in_elem; lnode++)
+            {
+                node_gid = nodes_in_elem(ielem, lnode);
+                if (ghost_node_map.isProcessGlobalIndex(node_gid))
                 {
-                    node_gid = nodes_in_elem(ielem, lnode);
-                    if (ghost_node_map->isNodeGlobalElement(node_gid))
+                    local_node_index = ghost_node_map.getLocalIndex(node_gid);
+                    if (ghost_node_ranks.host(local_node_index) < myrank)
                     {
-                        local_node_index = ghost_node_map->getLocalElement(node_gid);
-                        if (ghost_node_ranks.h_view(local_node_index) < myrank)
-                        {
-                            my_element_flag = 0;
-                        }
+                        my_element_flag = 0;
                     }
-                }
-                if (my_element_flag)
-                {
-                    Initial_Element_Global_Indices.h_view(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
                 }
             }
-        }
-
-        if (num_dim == 3)
-        {
-            for (int ielem = 0; ielem < num_elems; ielem++)
+            if (my_element_flag)
             {
-                element_select->choose_3Delem_type(Element_Types(ielem), elem);
-                num_nodes_in_elem = elem->num_nodes();
-
-                my_element_flag = 1;
-
-                for (int lnode = 0; lnode < num_nodes_in_elem; lnode++)
-                {
-                    node_gid = nodes_in_elem(ielem, lnode);
-                    if (ghost_node_map->isNodeGlobalElement(node_gid))
-                    {
-                        local_node_index = ghost_node_map->getLocalElement(node_gid);
-                        if (ghost_node_ranks.h_view(local_node_index) < myrank)
-                        {
-                            my_element_flag = 0;
-                        }
-                    }
-                }
-                if (my_element_flag)
-                {
-                    Initial_Element_Global_Indices.h_view(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
-                }
+                Initial_Element_Global_Indices.host(nonoverlapping_count++) = all_element_map.getGlobalIndex(ielem);
             }
         }
 
         // copy over from buffer to compressed storage
-        Kokkos::DualView<GO*, array_layout, device_type, memory_traits> Element_Global_Indices("Element_Global_Indices", nonoverlapping_count);
+        DCArrayKokkos<long long int> Element_Global_Indices(nonoverlapping_count, "Element_Global_Indices");
         for (int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++)
         {
-            Element_Global_Indices.h_view(ibuffer) = Initial_Element_Global_Indices.h_view(ibuffer);
+            Element_Global_Indices.host(ibuffer) = Initial_Element_Global_Indices.host(ibuffer);
         }
-        nlocal_elem_non_overlapping = nonoverlapping_count;
-        Element_Global_Indices.modify_host();
-        Element_Global_Indices.sync_device();
+        num_local_elems = nonoverlapping_count;
+        Element_Global_Indices.update_device();
+
         // create nonoverlapping element map
-        element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), Element_Global_Indices.d_view, 0, comm));
+        element_map = DistributedMap(Element_Global_Indices);
 
         // sort element connectivity so nonoverlaps are sequentially found first
         // define initial sorting of global indices
@@ -561,116 +526,55 @@ struct Mesh_t
 
         for (int ielem = 0; ielem < num_elems; ielem++)
         {
-            Initial_Element_Global_Indices.h_view(ielem) = all_element_map->getGlobalElement(ielem);
+            Initial_Element_Global_Indices.host(ielem) = all_element_map.getGlobalIndex(ielem);
         }
 
         // re-sort so local elements in the nonoverlapping map are first in storage
-        CArrayKokkos<GO, array_layout, HostSpace, memory_traits> Temp_Nodes(max_nodes_per_element);
+        CArrayKokkos<long long int, Kokkos::LayoutLeft, HostSpace> Temp_Nodes(num_nodes_in_elem);
 
-        GO  temp_element_gid, current_element_gid;
+        long long int  temp_element_gid, current_element_gid;
         int last_storage_index = num_elems - 1;
 
-        for (int ielem = 0; ielem < nlocal_elem_non_overlapping; ielem++)
+        for (int ielem = 0; ielem < num_local_elems; ielem++)
         {
-            current_element_gid = Initial_Element_Global_Indices.h_view(ielem);
+            current_element_gid = Initial_Element_Global_Indices.host(ielem);
             // if this element is not part of the non overlap list then send it to the end of the storage and swap the element at the end
-            if (!element_map->isNodeGlobalElement(current_element_gid))
+            if (!element_map.isProcessGlobalIndex(current_element_gid))
             {
                 temp_element_gid = current_element_gid;
-                for (int lnode = 0; lnode < max_nodes_per_element; lnode++)
+                for (int lnode = 0; lnode < num_nodes_in_elem; lnode++)
                 {
-                    Temp_Nodes(lnode) = nodes_in_elem(ielem, lnode);
+                    Temp_Nodes(lnode) = nodes_in_elem.host(ielem, lnode);
                 }
-                Initial_Element_Global_Indices.h_view(ielem) = Initial_Element_Global_Indices.h_view(last_storage_index);
-                Initial_Element_Global_Indices.h_view(last_storage_index) = temp_element_gid;
-                for (int lnode = 0; lnode < max_nodes_per_element; lnode++)
+                Initial_Element_Global_Indices.host(ielem) = Initial_Element_Global_Indices.host(last_storage_index);
+                Initial_Element_Global_Indices.host(last_storage_index) = temp_element_gid;
+                for (int lnode = 0; lnode < num_nodes_in_elem; lnode++)
                 {
-                    nodes_in_elem(ielem, lnode) = nodes_in_elem(last_storage_index, lnode);
-                    nodes_in_elem(last_storage_index, lnode) = Temp_Nodes(lnode);
+                    nodes_in_elem.host(ielem, lnode) = nodes_in_elem.host(last_storage_index, lnode);
+                    nodes_in_elem.host(last_storage_index, lnode) = Temp_Nodes(lnode);
                 }
                 last_storage_index--;
 
                 // test if swapped element is also not part of the non overlap map; if so lower loop counter to repeat the above
-                temp_element_gid = Initial_Element_Global_Indices.h_view(ielem);
-                if (!element_map->isNodeGlobalElement(temp_element_gid))
+                temp_element_gid = Initial_Element_Global_Indices.host(ielem);
+                if (!element_map.isProcessGlobalIndex(temp_element_gid))
                 {
                     ielem--;
                 }
             }
         }
         // reset all element map to its re-sorted version
-        Initial_Element_Global_Indices.modify_host();
-        Initial_Element_Global_Indices.sync_device();
+        Initial_Element_Global_Indices.update_device();
+        nodes_in_elem.update_device();
 
-        all_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), Initial_Element_Global_Indices.d_view, 0, comm));
+        all_element_map = DistributedMap(Initial_Element_Global_Indices);
+        //redefine nodes_in_elem so partition map of the distributed array is synchronized with permuted dual view contents
+        DistributedDCArray nodes_in_elem_temp(all_element_map, num_nodes_in_elem);
+        nodes_in_elem_temp.replace_kokkos_dual_view(nodes_in_elem.get_kokkos_dual_view());
+        nodes_in_elem = nodes_in_elem_temp;
+
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);
         // all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
-
-        // all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
-        // construct dof map that follows from the node map (used for distributed matrix and vector objects later)
-        Kokkos::DualView<GO*, array_layout, device_type, memory_traits> local_dof_indices("local_dof_indices", num_local_nodes * num_dim);
-        for (int i = 0; i < num_local_nodes; i++)
-        {
-            for (int j = 0; j < num_dim; j++)
-            {
-                local_dof_indices.h_view(i * num_dim + j) = map->getGlobalElement(i) * num_dim + j;
-            }
-        }
-
-        local_dof_indices.modify_host();
-        local_dof_indices.sync_device();
-        local_dof_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_nodes * num_dim, local_dof_indices.d_view, 0, comm) );
-
-        // construct dof map that follows from the all_node map (used for distributed matrix and vector objects later)
-        Kokkos::DualView<GO*, array_layout, device_type, memory_traits> all_dof_indices("all_dof_indices", num_nodes * num_dim);
-        for (int i = 0; i < num_nodes; i++)
-        {
-            for (int j = 0; j < num_dim; j++)
-            {
-                all_dof_indices.h_view(i * num_dim + j) = all_node_map->getGlobalElement(i) * num_dim + j;
-            }
-        }
-
-        all_dof_indices.modify_host();
-        all_dof_indices.sync_device();
-        // pass invalid global count so the map reduces the global count automatically
-        all_dof_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), all_dof_indices.d_view, 0, comm) );
-
-        // debug print of map
-        // debug print
-
-        std::ostream& out = std::cout;
-
-        Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-        // if(myrank==0)
-        // *fos << "Ghost Node Map :" << std::endl;
-        // all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
-        // *fos << std::endl;
-        // std::fflush(stdout);
-
-        // Count how many elements connect to each local node
-        node_nconn_distributed = Teuchos::rcp(new MCONN(map, 1));
-        // active view scope
-        {
-            host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-            for (int inode = 0; inode < num_local_nodes; inode++)
-            {
-                node_nconn(inode, 0) = 0;
-            }
-
-            for (int ielem = 0; ielem < num_elems; ielem++)
-            {
-                for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                {
-                    node_gid = nodes_in_elem(ielem, inode);
-                    if (map->isNodeGlobalElement(node_gid))
-                    {
-                        node_nconn(map->getLocalElement(node_gid), 0)++;
-                    }
-                }
-            }
-        }
-
         // create distributed multivector of the local node data and all (local + ghost) node storage
 
         all_node_coords_distributed   = Teuchos::rcp(new MV(all_node_map, num_dim));
@@ -684,7 +588,6 @@ struct Mesh_t
 
         // comms to get ghosts
         all_node_coords_distributed->doImport(*node_coords_distributed, *importer, Tpetra::INSERT);
-        // all_node_nconn_distributed->doImport(*node_nconn_distributed, importer, Tpetra::INSERT);
 
         dual_nodes_in_elem.sync_device();
         dual_nodes_in_elem.modify_device();
@@ -693,36 +596,17 @@ struct Mesh_t
 
         // construct map of nodes that belong to the non-overlapping element set (contained by ghost + local node set but not all of them)
         std::set<GO> nonoverlap_elem_node_set;
-        if (nlocal_elem_non_overlapping)
+        if (num_local_elems)
         {
-            // search through local elements for global node indices not owned by this MPI rank
-            if (num_dim == 2)
+            for (int cell_rid = 0; cell_rid < num_local_elems; cell_rid++)
             {
-                for (int cell_rid = 0; cell_rid < nlocal_elem_non_overlapping; cell_rid++)
+                // set nodes per element
+                element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
+                num_nodes_in_elem = elem->num_nodes();
+                for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
                 {
-                    // set nodes per element
-                    element_select->choose_2Delem_type(Element_Types(cell_rid), elem2D);
-                    num_nodes_in_elem = elem2D->num_nodes();
-                    for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-                    {
-                        node_gid = nodes_in_elem(cell_rid, node_lid);
-                        nonoverlap_elem_node_set.insert(node_gid);
-                    }
-                }
-            }
-
-            if (num_dim == 3)
-            {
-                for (int cell_rid = 0; cell_rid < nlocal_elem_non_overlapping; cell_rid++)
-                {
-                    // set nodes per element
-                    element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
-                    num_nodes_in_elem = elem->num_nodes();
-                    for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-                    {
-                        node_gid = nodes_in_elem(cell_rid, node_lid);
-                        nonoverlap_elem_node_set.insert(node_gid);
-                    }
+                    node_gid = nodes_in_elem(cell_rid, node_lid);
+                    nonoverlap_elem_node_set.insert(node_gid);
                 }
             }
         }
