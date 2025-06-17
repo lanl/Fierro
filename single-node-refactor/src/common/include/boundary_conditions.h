@@ -51,7 +51,8 @@ enum BdyTag
     yPlane = 1,     // tag an y-plane
     zPlane = 2,     // tag an z-plane
     cylinder = 3,   // tag an cylindrical surface
-    sphere = 4      // tag a spherical surface
+    sphere = 4,     // tag a spherical surface
+    global = 5      // tag the full boundary for contact
 };
 // future options
 //     read_file = 5   // read from a file currently unsupported
@@ -86,6 +87,7 @@ enum BCStressModels
     constantStressBC = 1,
     timeVaryingStressBC = 2,
     userDefinedStressBC = 3,
+    globalContact = 4,
 };
 // future model options:
 //    displacementBC                            
@@ -109,7 +111,8 @@ static std::map<std::string, boundary_conditions::BdyTag> bc_surface_map
     { "y_plane", boundary_conditions::yPlane },
     { "z_plane", boundary_conditions::zPlane },
     { "cylinder", boundary_conditions::cylinder },
-    { "sphere", boundary_conditions::sphere }
+    { "sphere", boundary_conditions::sphere },
+    { "global", boundary_conditions::global }
 };
 // future options
 //     { "read_file", boundary_conditions::read_file }
@@ -145,7 +148,8 @@ static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_mode
     { "none", boundary_conditions::noStressBC },
     { "constant", boundary_conditions::constantStressBC },
     { "time_varying", boundary_conditions::timeVaryingStressBC },
-    { "user_defined", boundary_conditions::userDefinedStressBC }
+    { "user_defined", boundary_conditions::userDefinedStressBC },
+    { "global_contact", boundary_conditions::globalContact },
 };
 
 
@@ -264,6 +268,9 @@ struct BoundaryConditionFunctions_t
 struct BoundaryCondition_t
 {
     size_t num_bcs; // the number of boundary conditions
+
+    // boolean for whether contact should occur
+    bool allow_contact = false;
 
     // making a psuedo dual ragged right
     DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver_id, bc_lid)

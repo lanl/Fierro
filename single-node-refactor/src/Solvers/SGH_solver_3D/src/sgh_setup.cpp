@@ -111,5 +111,17 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                    State.node.mass,
                    State.corner.mass);
 
+    // Setting up contact
+    for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
+        if (Boundary.allow_contact) {
+            std::cout << "Setting up global contact" << std::endl;
+            doing_contact = true;
+
+            contact_bank.initialize(mesh, mesh.bdy_patches, State);
+            // run_contact_tests(contact_bank, mesh, node, corner, sim_param);
+            break;
+        }
+    }
+
     
 } // end SGH setup
