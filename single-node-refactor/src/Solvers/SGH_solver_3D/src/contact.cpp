@@ -319,7 +319,7 @@ bool contact_patch_t::get_contact_point(const contact_node_t &node, double &xi_v
         eta_val = sol[1];
         del_tc = sol[2];
     }  // end solver loop
-
+    
     if (iters == max_iter - 1)
     {
         return false;
@@ -423,7 +423,6 @@ bool contact_patch_t::contact_check(const contact_node_t &node, const double &de
 
     // Get the solution
     bool solution_found = get_contact_point(node, xi_val, eta_val, del_tc);
-
     if (solution_found && fabs(xi_val) <= 1.0 + edge_tol && fabs(eta_val) <= 1.0 + edge_tol && del_tc >= 0.0 - tol &&
         del_tc <= del_t + tol)
     {
@@ -1661,7 +1660,7 @@ void contact_patches_t::force_resolution(const double &del_t)
             if (pair.contact_type == contact_pair_t::contact_types::frictionless)
             {
                 pair.frictionless_increment(del_t);
-                pair.distribute_frictionless_force(1.0);  // if not doing serial, then this would be called in the second loop
+                pair.distribute_frictionless_force(0.75);  // if not doing serial, then this would be called in the second loop
                 forces_view(j) = pair.fc_inc;
             } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
         }
