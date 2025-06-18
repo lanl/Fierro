@@ -386,24 +386,72 @@ struct node_t
                         this->local_coords_n0 = DistributedDCArray<double>(this->coords_n0,subview_map);
                         break;
                     case node_state::velocity:
+                        //store local data with existing managed view made by mesh read for now
+                        this->local_vel = this->vel;
+                        this->local_vel_n0 = this->vel_n0;
+                        //storage for nlocal+nghost
                         this->vel = DistributedDCArray<double>(partitioned_map, num_dims, "node_velocity");
                         this->vel_n0 = DistributedDCArray<double>(partitioned_map, num_dims, "node_velocity_n0");
+                        //assign local data to new storage
+                        super_vector_initialization(this->vel, this->local_vel, subview_map.size());
+                        super_vector_initialization(this->vel_n0, this->local_vel_n0, subview_map.size());
+                        //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                        this->local_vel = DistributedDCArray<double>(this->vel,subview_map);
+                        this->local_vel_n0 = DistributedDCArray<double>(this->vel_n0,subview_map);
                         break;
                     case node_state::force:
+                        //store local data with existing managed view made by mesh read for now
+                        this->local_force = this->force;
+                        //storage for nlocal+nghost
                         this->force = DistributedDCArray<double>(partitioned_map, num_dims, "node_force");
+                        //assign local data to new storage
+                        super_vector_initialization(this->force, this->local_force, subview_map.size());
+                        //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                        this->local_force = DistributedDCArray<double>(this->force,subview_map);
                         break;
                     case node_state::mass:
+                        //store local data with existing managed view made by mesh read for now
+                        this->local_mass = this->mass;
+                        //storage for nlocal+nghost
                         this->mass = DistributedDCArray<double>(partitioned_map, "node_mass");
+                        //assign local data to new storage
+                        super_vector_initialization(this->mass, this->local_mass, subview_map.size());
+                        //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                        this->local_mass = DistributedDCArray<double>(this->mass,subview_map);
                         break;
                     case node_state::temp:
+                        //store local data with existing managed view made by mesh read for now
+                        this->local_temp = this->temp;
+                        this->local_temp_n0 = this->temp_n0;
+                        //storage for nlocal+nghost
                         this->temp = DistributedDCArray<double>(partitioned_map, "node_temp");
                         this->temp_n0 = DistributedDCArray<double>(partitioned_map, "node_temp_n0");
+                        //assign local data to new storage
+                        super_vector_initialization(this->temp, this->local_temp, subview_map.size());
+                        super_vector_initialization(this->temp_n0, this->local_temp_n0, subview_map.size());
+                        //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                        this->local_temp = DistributedDCArray<double>(this->temp,subview_map);
+                        this->local_temp_n0 = DistributedDCArray<double>(this->temp_n0,subview_map);
                         break;
                     case node_state::heat_transfer:
+                        //store local data with existing managed view made by mesh read for now
+                        this->local_q_transfer = this->q_transfer;
+                        //storage for nlocal+nghost
                         this->q_transfer = DistributedDCArray<double>(partitioned_map, "node_q_transfer");
+                        //assign local data to new storage
+                        super_vector_initialization(this->q_transfer, this->local_q_transfer, subview_map.size());
+                        //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                        this->local_q_transfer = DistributedDCArray<double>(this->q_transfer,subview_map);
                         break;
                     case node_state::gradient_level_set:
+                        //store local data with existing managed view made by mesh read for now
+                        this->local_gradient_level_set = this->gradient_level_set;
+                        //storage for nlocal+nghost
                         this->gradient_level_set = DistributedDCArray<double>(partitioned_map, num_dims, "node_grad_levelset");
+                        //assign local data to new storage
+                        super_vector_initialization(this->gradient_level_set, this->local_gradient_level_set, subview_map.size());
+                        //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                        this->local_gradient_level_set = DistributedDCArray<double>(this->gradient_level_set,subview_map);
                         break;
                     default:
                         std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
