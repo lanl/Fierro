@@ -479,7 +479,7 @@ namespace TiptonEquilibrationModel {
                 else {
                     // single material 
                     MaterialPoints_delta_volfrac(mat_id, mat_point_storage_lid) = 0.0; 
-                    GaussPoint_volfrac_limiter(gauss_pt_lid) = 1.0;  
+                    GaussPoint_volfrac_limiter(gauss_gid) = 1.0;  
                 } // end check if multiple materials are present
 
             } // end for gauss point loop 
