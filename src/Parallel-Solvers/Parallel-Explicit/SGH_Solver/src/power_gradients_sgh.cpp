@@ -496,7 +496,9 @@ void FEA_Module_SGH::get_power_egradient_sgh(double rk_alpha,
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     int num_dims = simparam->num_dims;
 
-    // initialize gradient storage
+    //store specific power for augmented lagrangian integral
+    vec_array element_specific_power = element_specific_power_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);// initialize gradient storage
+
     FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
         Power_Gradient_Energies(elem_gid) = 0;
     }); // end parallel loop over the elements
@@ -504,6 +506,7 @@ void FEA_Module_SGH::get_power_egradient_sgh(double rk_alpha,
     // loop over all the elements in the mesh
     FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
 
+        double elem_power = 0.0;
         // --- tally the contribution from each corner to the element ---
 
         // Loop over the nodes in the element
@@ -524,9 +527,12 @@ void FEA_Module_SGH::get_power_egradient_sgh(double rk_alpha,
             // calculate the Power=F dot V for this corner
             for (size_t dim = 0; dim < num_dims; dim++) {
                 Power_Gradient_Energies(elem_gid) -= Force_Gradient_Energies(elem_gid, node_lid * num_dims + dim) * node_radius * node_vel(rk_level, node_gid, dim);
+                // calculate the specific Power=F dot V / M for this corner
+                elem_power += corner_force(corner_gid, dim) * node_radius * node_vel(rk_level, node_gid, dim);
             } // end for dim
         } // end for node_lid
+        element_specific_power(elem_gid,0) = -elem_power/elem_mass(elem_gid);
     }); // end parallel loop over the elements
-
+    Kokkos::fence();
     return;
 } // end subroutine

@@ -126,6 +126,9 @@ FEA_Module_SGH::FEA_Module_SGH(
         all_phi_adjoint_vector_distributed     = Teuchos::rcp(new MV(all_node_map, num_dim));
         phi_adjoint_vector_distributed         = Teuchos::rcp(new MV(*all_phi_adjoint_vector_distributed, map));
         psi_adjoint_vector_distributed         = Teuchos::rcp(new MV(all_element_map, 1));
+        all_node_accelerations_distributed     = Teuchos::rcp(new MV(all_node_map, num_dim));
+        node_accelerations_distributed         = Teuchos::rcp(new MV(*all_node_accelerations_distributed, map));
+        element_specific_power_distributed     = Teuchos::rcp(new MV(all_element_map, 1));
     }
 
     if (simparam->topology_optimization_on || simparam->shape_optimization_on || simparam->num_dims == 2) {

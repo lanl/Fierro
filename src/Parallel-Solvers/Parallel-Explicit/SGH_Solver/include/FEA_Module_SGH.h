@@ -518,8 +518,8 @@ public:
 
     void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
 
-    void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
-                                                      unsigned long cycle, real_t global_dt);
+    void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, const Teuchos::RCP<MV> design_gradients_distributed, const Teuchos::RCP<MV> adjoint_distributed,
+                                                      const Teuchos::RCP<MV> phi_adjoint_distributed, const Teuchos::RCP<MV> psi_adjoint_distributed, const real_t weight, const real_t global_dt);
 
     void compute_topology_optimization_gradient_IVP(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
                                                       unsigned long cycle, real_t global_dt);
@@ -609,6 +609,8 @@ public:
     Teuchos::RCP<MV> previous_node_coords_distributed;
     Teuchos::RCP<MV> initial_node_velocities_distributed;
     Teuchos::RCP<MV> all_node_velocities_distributed;
+    Teuchos::RCP<MV> node_accelerations_distributed;
+    Teuchos::RCP<MV> all_node_accelerations_distributed;
     Teuchos::RCP<MV> all_cached_node_velocities_distributed;
     Teuchos::RCP<MV> node_masses_distributed;
     Teuchos::RCP<MV> cached_design_gradients_distributed;
@@ -620,6 +622,7 @@ public:
     Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed, midpoint_phi_adjoint_vector_distributed, cached_phi_adjoint_gradient_distributed;
     Teuchos::RCP<MV> previous_psi_adjoint_vector_distributed, midpoint_psi_adjoint_vector_distributed, cached_psi_adjoint_gradient_distributed;
     Teuchos::RCP<MV> element_internal_energy_distributed;
+    Teuchos::RCP<MV> element_specific_power_distributed;
     Teuchos::RCP<MV> previous_element_internal_energy_distributed;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_coordinate_data;

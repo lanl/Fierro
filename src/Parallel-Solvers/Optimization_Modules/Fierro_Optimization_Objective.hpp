@@ -158,7 +158,7 @@ public:
   virtual void density_gradient_term(vec_array& gradient_vector, const DViewCArrayKokkos<double>& node_mass,
                                      const DViewCArrayKokkos<double>& elem_mass, const DViewCArrayKokkos<double>& node_vel,
                                      const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
-                                     const size_t& rk_level, const real_t& global_dt = 0){}
+                                     const size_t& rk_level,const real_t& weight, const real_t& global_dt = 0){}
 
 
 }; // class ObjectiveMMA 

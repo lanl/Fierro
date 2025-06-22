@@ -565,6 +565,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
     const DCArrayKokkos<material_t> material = simparam->material;
     const int num_dim = simparam->num_dims;
     bool use_solve_checkpoints = simparam->optimization_options.use_solve_checkpoints;
+    bool use_simpson = simparam->optimization_options.use_simpson;
     bool use_gradient_tally = simparam->optimization_options.use_gradient_tally;
     const size_t    num_lcs = module_params->loading_conditions.size();
     real_t    global_dt, current_time;
@@ -697,7 +698,36 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             Kokkos::fence();
             // set state according to phase data at this timestep
             update_dependent_variables_and_gradients(node_coords, node_vel, elem_sie, cycle);
-            
+            if(use_simpson){
+                get_force_dgradient_sgh(material,
+                                    *mesh,
+                                    node_coords,
+                                    node_vel,
+                                    elem_den,
+                                    elem_sie,
+                                    elem_pres,
+                                    elem_stress,
+                                    elem_sspd,
+                                    elem_vol,
+                                    elem_div,
+                                    elem_mat_id,
+                                    1.0,
+                                    cycle);
+
+                get_power_dgradient_sgh(1.0,
+                                    *mesh,
+                                    node_vel,
+                                    node_coords,
+                                    elem_sie,
+                                    elem_mass,
+                                    corner_force,
+                                    elem_power_dgradients);
+                
+                //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+                //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
+                compute_topology_optimization_gradient_tally(design_densities_distributed, cached_design_gradients_distributed,
+                    previous_adjoint_vector_distributed, previous_phi_adjoint_vector_distributed, previous_psi_adjoint_vector_distributed ,1.0/3.0, global_dt);
+            }
 
             const_vec_array previous_adjoint_vector;
             const_vec_array phi_previous_adjoint_vector;
@@ -1401,9 +1431,39 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
             boundary_adjoint(*mesh, boundary, current_adjoint_vector, phi_current_adjoint_vector, psi_current_adjoint_vector);
             comm_adjoint_vector(cycle);
             comm_phi_adjoint_vector(cycle);
+            if(use_simpson){
+                get_force_dgradient_sgh(material,
+                                        *mesh,
+                                        node_coords,
+                                        node_vel,
+                                        elem_den,
+                                        elem_sie,
+                                        elem_pres,
+                                        elem_stress,
+                                        elem_sspd,
+                                        elem_vol,
+                                        elem_div,
+                                        elem_mat_id,
+                                        1.0,
+                                        cycle);
+
+                    get_power_dgradient_sgh(1.0,
+                                    *mesh,
+                                    node_vel,
+                                    node_coords,
+                                    elem_sie,
+                                    elem_mass,
+                                    corner_force,
+                                    elem_power_dgradients);
+                    
+                    //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+                    //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
+                    compute_topology_optimization_gradient_tally(design_densities_distributed, cached_design_gradients_distributed,
+                        adjoint_vector_distributed, phi_adjoint_vector_distributed, psi_adjoint_vector_distributed ,1.0/3.0, global_dt);
+            }
             // state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
             // state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
-            //tally contribution to the gradient vector
+            //tally contribution to the gradient vector at the midpoint now that adjoint (not the predictor RK value) is known at next step
             if(use_gradient_tally){
                 // compute gradients at midpoint
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
@@ -1416,6 +1476,20 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
 
                 FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
                     elem_sie(rk_level, elem_gid) = 0.5 * (previous_element_internal_energy(elem_gid, 0) + current_element_internal_energy(elem_gid, 0));
+                });
+                Kokkos::fence();
+                const_vec_array all_current_adjoint_vector = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array all_current_phi_adjoint_vector = all_phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        midpoint_adjoint_vector(node_gid, idim)    = 0.5 * (all_current_adjoint_vector(node_gid, idim) + previous_adjoint_vector(node_gid, idim));
+                        phi_midpoint_adjoint_vector(node_gid, idim) = 0.5 * (all_current_phi_adjoint_vector(node_gid, idim) + phi_previous_adjoint_vector(node_gid, idim));
+                    }
+                });
+                Kokkos::fence();
+
+                FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+                    psi_midpoint_adjoint_vector(elem_gid,0) = 0.5 * (psi_current_adjoint_vector(elem_gid, 0) + psi_previous_adjoint_vector(elem_gid, 0));
                 });
                 Kokkos::fence();
                 
@@ -1454,7 +1528,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
                 
                 //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
                 //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
-                compute_topology_optimization_gradient_tally(design_densities_distributed, cached_design_gradients_distributed, cycle, global_dt);
+                real_t pass_weight = 2.0;
+                if(use_simpson){
+                    pass_weight = 4.0/3.0;
+                }
+                compute_topology_optimization_gradient_tally(design_densities_distributed, cached_design_gradients_distributed, midpoint_adjoint_vector_distributed, midpoint_phi_adjoint_vector_distributed, midpoint_psi_adjoint_vector_distributed ,pass_weight, global_dt);
 
                 if(cycle==0){
                     //RE-ENABLE STATE SETUP FOR T=0 if IVP term involves computed properties
@@ -1613,8 +1691,12 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(Teuchos::RCP<con
 ///
 /////////////////////////////////////////////////////////////////////////////
 
-void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed,
-                                                                  Teuchos::RCP<MV> design_gradients_distributed, unsigned long cycle, real_t global_dt)
+void FEA_Module_SGH::compute_topology_optimization_gradient_tally(const Teuchos::RCP<const MV> design_densities_distributed,
+                                                                  const Teuchos::RCP<MV> design_gradients_distributed,
+                                                                  const Teuchos::RCP<MV> all_adjoint_distributed,
+                                                                  const Teuchos::RCP<MV> all_phi_adjoint_distributed,
+                                                                  const Teuchos::RCP<MV> psi_adjoint_distributed,
+                                                                  const real_t weight, const real_t global_dt)
 {
     const int num_dim  = simparam->num_dims;
     int    num_corners = rnum_elem * num_nodes_in_elem;
@@ -1629,30 +1711,16 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
         const_vec_array design_densities = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
         //tally contribution from design density gradient term
-        objective_function->density_gradient_term(design_gradients, node_mass, elem_mass, node_vel, node_coords, elem_sie, rk_level, global_dt);
+        objective_function->density_gradient_term(design_gradients, node_mass, elem_mass, node_vel, node_coords, elem_sie, rk_level, weight, global_dt);
 
         // compute adjoint vector for this data point; use velocity midpoint
         // view scope
         {
-            
-            const_vec_array current_velocity_vector;
-            const_vec_array next_velocity_vector;
-            const_vec_array current_adjoint_vector;
-            const_vec_array next_adjoint_vector;
-            if(use_solve_checkpoints){
                 //note that these are assigned backwards because the adjoint loop progresses backwards
-                current_velocity_vector = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_adjoint_vector  = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                next_velocity_vector    = previous_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                next_adjoint_vector     = previous_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
-            else{   
-                current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_adjoint_vector  = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                next_velocity_vector    = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                next_adjoint_vector     = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
-
+            const_vec_array current_adjoint_vector  = all_adjoint_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            
+            
+            const_vec_array node_accelerations = all_node_accelerations_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                 real_t lambda_dot_current;
                 real_t lambda_dot_next;
@@ -1660,32 +1728,20 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 size_t corner_id;
                 real_t inner_product;
                 // std::cout << elem_mass(elem_id) <<std::endl;
-                // current_nodal_velocities
-                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
-                    node_id = nodes_in_elem(elem_id, inode);
-                    // midpoint rule for integration being used; add velocities and divide by 2
-                    current_element_velocities(inode, 0) = (current_velocity_vector(node_id, 0) + next_velocity_vector(node_id, 0)) / 2;
-                    current_element_velocities(inode, 1) = (current_velocity_vector(node_id, 1) + next_velocity_vector(node_id, 1)) / 2;
-                    if (num_dim == 3) {
-                        current_element_velocities(inode, 2) = (current_velocity_vector(node_id, 2) + next_velocity_vector(node_id, 2)) / 2;
-                    }
-                }
 
                 inner_product = 0;
                 for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
                     node_id = nodes_in_elem(elem_id, ifill);
                     for (int idim = 0; idim < num_dim; idim++) {
-                        lambda_dot_current = lambda_dot_next = (next_adjoint_vector(node_id, idim) - current_adjoint_vector(node_id, idim)) / global_dt;
-                        // lambda_dot_current = current_velocity_vector(node_id,idim) + damping_constant*current_adjoint_vector(node_id,idim)/node_mass(node_id) - current_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
-                        // lambda_dot_next = next_velocity_vector(node_id,idim) + damping_constant*next_adjoint_vector(node_id,idim)/node_mass(node_id) - next_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
-                        inner_product += elem_mass(elem_id) * lambda_dot_current * current_element_velocities(ifill, idim);
+                        
+                        inner_product += elem_mass(elem_id) * current_adjoint_vector(node_id, idim) * node_accelerations(node_id,idim);
                     }
                 }
 
                 for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     // compute gradient of local element contribution to v^t*M*v product
                     corner_id = elem_id * num_nodes_in_elem + inode;
-                    corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                    corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
                 }
             }); // end parallel for
             Kokkos::fence();
@@ -1696,7 +1752,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 size_t corner_id;
                 for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
-                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
+                    design_gradients(node_id, 0) += 0.5 * weight* global_dt * corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
                 }
             }); // end parallel for
             Kokkos::fence();
@@ -1705,24 +1761,10 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
         // compute adjoint vector for this data point; use velocity midpoint
         // view scope
         {
-            const_vec_array current_element_internal_energy;
-            const_vec_array current_psi_adjoint_vector;
-            const_vec_array next_element_internal_energy;
-            const_vec_array next_psi_adjoint_vector;
-            if(use_solve_checkpoints){
-                //note that these are assigned backwards because the adjoint loop progresses backwards
-                current_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_psi_adjoint_vector   = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                next_element_internal_energy = previous_element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                next_psi_adjoint_vector = previous_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
-            else{   
-                current_element_internal_energy = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_psi_adjoint_vector   = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                next_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                next_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
-
+            //note that these are assigned backwards because the adjoint loop progresses backwards
+            const_vec_array current_psi_adjoint_vector   = psi_adjoint_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            
+            const_vec_array element_specific_power = element_specific_power_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
                 real_t psi_dot_current;
                 real_t psi_dot_next;
@@ -1730,13 +1772,12 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 size_t corner_id;
                 real_t inner_product;
 
-                psi_dot_current = (next_psi_adjoint_vector(elem_id, 0) - current_psi_adjoint_vector(elem_id, 0)) / global_dt;
-                inner_product   = elem_mass(elem_id) * psi_dot_current * (current_element_internal_energy(elem_id, 0) + next_element_internal_energy(elem_id, 0))/2;
+                inner_product   = elem_mass(elem_id) * element_specific_power(elem_id,0) * current_psi_adjoint_vector(elem_id, 0);
 
                 for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     // compute gradient of local element contribution to v^t*M*v product
                     corner_id = elem_id * num_nodes_in_elem + inode;
-                    corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                    corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
                 }
             }); // end parallel for
             Kokkos::fence();
@@ -1747,7 +1788,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 size_t corner_id;
                 for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
-                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem;
+                    design_gradients(node_id, 0) += 0.5 * weight* global_dt * corner_value_storage(corner_id) / (double)num_nodes_in_elem;
                 }
             }); // end parallel for
             Kokkos::fence();
@@ -1756,20 +1797,9 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
         //compute terms with gradient of force and gradient of specific internal energy w.r.t design density
         // view scope
         {
-            const_vec_array current_adjoint_vector, previous_adjoint_vector;
-            const_vec_array current_psi_adjoint_vector, previous_psi_adjoint_vector;
-            if(use_solve_checkpoints){
-                current_adjoint_vector = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                previous_adjoint_vector = previous_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                previous_psi_adjoint_vector = previous_psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
-            else{   
-                current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                previous_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle+1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
+            const_vec_array current_adjoint_vector = all_adjoint_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array current_psi_adjoint_vector = psi_adjoint_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            
 
             // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
@@ -1782,7 +1812,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                     node_id   = nodes_in_elem(elem_id, ifill);
                     corner_id = elem_id * num_nodes_in_elem + ifill;
                     for (int idim = 0; idim < num_dim; idim++) {
-                        inner_product += corner_vector_storage(corner_id, idim) * 0.5*(current_adjoint_vector(node_id, idim)+previous_adjoint_vector(node_id, idim));
+                        inner_product += corner_vector_storage(corner_id, idim) * current_adjoint_vector(node_id, idim);
                     }
                 }
 
@@ -1800,7 +1830,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 size_t corner_id;
                 for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
-                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) * global_dt;
+                    design_gradients(node_id, 0) += -0.5 * weight* global_dt * corner_value_storage(corner_id);
                 }
             }); // end parallel for
             Kokkos::fence();
@@ -1811,7 +1841,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 size_t corner_id;
                 real_t inner_product;
 
-                inner_product = 0.5*(current_psi_adjoint_vector(elem_id, 0)+previous_psi_adjoint_vector(elem_id, 0)) * elem_power_dgradients(elem_id);
+                inner_product = current_psi_adjoint_vector(elem_id, 0) * elem_power_dgradients(elem_id);
 
                 for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     // compute gradient of local element contribution to v^t*M*v product
@@ -1827,7 +1857,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_tally(Teuchos::RCP<c
                 size_t corner_id;
                 for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
-                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) * global_dt;
+                    design_gradients(node_id, 0) += -0.5 * weight* global_dt * corner_value_storage(corner_id);
                 }
             }); // end parallel for
             Kokkos::fence();
@@ -1863,76 +1893,16 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_IVP(Teuchos::RCP<con
 
         // compute initial condition contribution from velocities
         // view scope
-        {
-            const_vec_array current_velocity_vector;
-            const_vec_array current_adjoint_vector;
-            if(use_solve_checkpoints){
-                current_velocity_vector = all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_adjoint_vector  = all_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
-            else{   
-                current_velocity_vector = (*forward_solve_velocity_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_adjoint_vector  = (*adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
-
-            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
-                real_t lambda_dot;
-                size_t node_id;
-                size_t corner_id;
-                real_t inner_product;
-                // std::cout << elem_mass(elem_id) <<std::endl;
-                // current_nodal_velocities
-                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
-                    node_id = nodes_in_elem(elem_id, inode);
-                    // midpoint rule for integration being used; add velocities and divide by 2
-                    current_element_velocities(inode, 0) = current_velocity_vector(node_id, 0);
-                    current_element_velocities(inode, 1) = current_velocity_vector(node_id, 1);
-                    if (num_dim == 3) {
-                        current_element_velocities(inode, 2) = current_velocity_vector(node_id, 2);
-                    }
-                }
-
-                inner_product = 0;
-                for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
-                    node_id = nodes_in_elem(elem_id, ifill);
-                    for (int idim = 0; idim < num_dim; idim++) {
-                        inner_product += elem_mass(elem_id) * current_adjoint_vector(node_id, idim) * current_element_velocities(ifill, idim);
-                    }
-                }
-
-                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
-                    // compute gradient of local element contribution to v^t*M*v product
-                    corner_id = elem_id * num_nodes_in_elem + inode;
-                    corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
-                }
-            }); // end parallel for
-            Kokkos::fence();
-
-            // accumulate node values from corner storage
-            // multiply
-            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-                size_t corner_id;
-                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
-                    corner_id = corners_in_node(node_id, icorner);
-                    design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
-                }
-            }); // end parallel for
-            Kokkos::fence();
-        } // end view scope
+        
 
         // compute initial condition contribution from internal energies
         // view scope
         {
             const_vec_array current_element_internal_energy;
             const_vec_array current_psi_adjoint_vector;
-            if(use_solve_checkpoints){
-                current_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
-            else{   
-                current_element_internal_energy = (*forward_solve_internal_energy_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                current_psi_adjoint_vector = (*psi_adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            }
+            current_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            
 
             // (*psi_adjoint_vector_data)[100]->describe(*fos,Teuchos::VERB_EXTREME);
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
@@ -1943,16 +1913,16 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_IVP(Teuchos::RCP<con
                 // std::cout << elem_mass(elem_id) <<std::endl;
 
                 if (elem_extensive_initial_energy_condition(elem_id)) {
-                    inner_product = 0;
+                    inner_product = -elem_mass(elem_id) * current_psi_adjoint_vector(elem_id, 0) * current_element_internal_energy(elem_id, 0)/ relative_element_densities(elem_id);
                 }
                 else{
-                    inner_product = elem_mass(elem_id) * current_psi_adjoint_vector(elem_id, 0) * current_element_internal_energy(elem_id, 0);
+                    inner_product = 0;
                 }
 
                 for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     // compute gradient of local element contribution to v^t*M*v product
                     corner_id = elem_id * num_nodes_in_elem + inode;
-                    corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
+                    corner_value_storage(corner_id) = inner_product;
                 }
             }); // end parallel for
             Kokkos::fence();
@@ -3735,6 +3705,14 @@ void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lowe
     }); // end for parallel for over nodes
 }
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_dependent_variables_and_gradients
+///
+/// \brief update variables that depend on state and gradient matrices
+///
+/////////////////////////////////////////////////////////////////////////////
+
 void FEA_Module_SGH::update_dependent_variables_and_gradients(const DViewCArrayKokkos<double>& node_coords,
                                                 const DViewCArrayKokkos<double>& node_vel,
                                                 const DViewCArrayKokkos<double>& elem_sie,
@@ -3841,6 +3819,62 @@ void FEA_Module_SGH::update_dependent_variables_and_gradients(const DViewCArrayK
                       1.0,
                       cycle);
     }
+    
+    const size_t num_lcs  = module_params->loading.size();
+    //compute accelerations
+    if(num_lcs){
+        vec_array node_accelerations = node_accelerations_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            double node_force[3];
+            for (size_t dim = 0; dim < num_dim; dim++) {
+                node_force[dim] = 0.0;
+            } // end for dim
+
+            // loop over all corners around the node and calculate the nodal force
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
+                // Get corner gid
+                size_t corner_gid = corners_in_node(node_gid, corner_lid);
+
+                // loop over dimension
+                for (size_t dim = 0; dim < num_dim; dim++) {
+                    node_force[dim] += corner_force(corner_gid, dim) + corner_external_force(corner_gid, dim);
+                } // end for dim
+            } // end for corner_lid
+
+            // update the velocity
+            for (int dim = 0; dim < num_dim; dim++) {
+                node_accelerations(node_gid,dim) = node_force[dim] / node_mass(node_gid);
+            } // end for dim
+        }); // end for parallel for over nodes
+    }
+    else{
+        vec_array node_accelerations = node_accelerations_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            double node_force[3];
+            for (size_t dim = 0; dim < num_dim; dim++) {
+                node_force[dim] = 0.0;
+            } // end for dim
+
+            // loop over all corners around the node and calculate the nodal force
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
+                // Get corner gid
+                size_t corner_gid = corners_in_node(node_gid, corner_lid);
+
+                // loop over dimension
+                for (size_t dim = 0; dim < num_dim; dim++) {
+                    node_force[dim] += corner_force(corner_gid, dim);
+                } // end for dim
+            } // end for corner_lid
+
+            // update the velocity
+            for (int dim = 0; dim < num_dim; dim++) {
+                node_accelerations(node_gid,dim) = node_force[dim] / node_mass(node_gid);
+            } // end for dim
+        }); // end for parallel for over nodes
+    }
+    Kokkos::fence();
+    //communicate node accelerations
+    all_node_accelerations_distributed->doImport(*node_accelerations_distributed, *importer, Tpetra::INSERT);
 
     // compute gradient matrices
     get_force_egradient_sgh(material,
@@ -3912,6 +3946,14 @@ void FEA_Module_SGH::update_dependent_variables_and_gradients(const DViewCArrayK
                       elem_mass,
                       corner_force);
 }
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_dependent_variables
+///
+/// \brief update variables that depend on state
+///
+/////////////////////////////////////////////////////////////////////////////
 
 void FEA_Module_SGH::update_dependent_variables(const DViewCArrayKokkos<double>& node_coords,
     const DViewCArrayKokkos<double>& node_vel,
@@ -4019,5 +4061,98 @@ corner_force,
 1.0,
 cycle);
 }
+
+const size_t num_lcs  = module_params->loading.size();
+    //compute accelerations
+    if(num_lcs){
+        vec_array node_accelerations = node_accelerations_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            double node_force[3];
+            for (size_t dim = 0; dim < num_dim; dim++) {
+                node_force[dim] = 0.0;
+            } // end for dim
+
+            // loop over all corners around the node and calculate the nodal force
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
+                // Get corner gid
+                size_t corner_gid = corners_in_node(node_gid, corner_lid);
+
+                // loop over dimension
+                for (size_t dim = 0; dim < num_dim; dim++) {
+                    node_force[dim] += corner_force(corner_gid, dim) + corner_external_force(corner_gid, dim);
+                } // end for dim
+            } // end for corner_lid
+
+            // update the velocity
+            for (int dim = 0; dim < num_dim; dim++) {
+                node_accelerations(node_gid,dim) = node_force[dim] / node_mass(node_gid);
+            } // end for dim
+        }); // end for parallel for over nodes
+    }
+    else{
+        vec_array node_accelerations = node_accelerations_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            double node_force[3];
+            for (size_t dim = 0; dim < num_dim; dim++) {
+                node_force[dim] = 0.0;
+            } // end for dim
+
+            // loop over all corners around the node and calculate the nodal force
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
+                // Get corner gid
+                size_t corner_gid = corners_in_node(node_gid, corner_lid);
+
+                // loop over dimension
+                for (size_t dim = 0; dim < num_dim; dim++) {
+                    node_force[dim] += corner_force(corner_gid, dim);
+                } // end for dim
+            } // end for corner_lid
+
+            // update the velocity
+            for (int dim = 0; dim < num_dim; dim++) {
+                node_accelerations(node_gid,dim) = node_force[dim] / node_mass(node_gid);
+            } // end for dim
+        }); // end for parallel for over nodes
+    }
+
+    //communicate node accelerations
+    all_node_accelerations_distributed->doImport(*node_accelerations_distributed, *importer, Tpetra::INSERT);
+
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    int num_dims = simparam->num_dims;
+
+    //store specific power for augmented lagrangian integral
+    vec_array element_specific_power = element_specific_power_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);// initialize gradient storage
+
+    // loop over all the elements in the mesh
+    FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+
+        double elem_power = 0.0;
+        // --- tally the contribution from each corner to the element ---
+
+        // Loop over the nodes in the element
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            size_t corner_lid = node_lid;
+
+            // Get node global id for the local node id
+            size_t node_gid = nodes_in_elem(elem_gid, node_lid);
+
+            // Get the corner global id for the local corner id
+            size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
+
+            double node_radius = 1;
+            if (num_dims == 2) {
+                node_radius = node_coords(rk_level, node_gid, 1);
+            }
+
+            // calculate the Power=F dot V for this corner
+            for (size_t dim = 0; dim < num_dims; dim++) {
+                // calculate the specific Power=F dot V / M for this corner
+                elem_power += corner_force(corner_gid, dim) * node_radius * node_vel(rk_level, node_gid, dim);
+            } // end for dim
+        } // end for node_lid
+        element_specific_power(elem_gid,0) = -elem_power/elem_mass(elem_gid);
+    }); // end parallel loop over the elements
+    Kokkos::fence();
 
 }
