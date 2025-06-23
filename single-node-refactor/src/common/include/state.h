@@ -65,6 +65,8 @@ template <typename T>
 using DistributedDFArray = TpetraDFArray<T>;
 template <typename T>
 using DistributedDCArray = TpetraDCArray<T>;
+template <typename T>
+using CommunicationPlan = TpetraLRCommunicationPlan<T>;
 
 
 template <typename T>

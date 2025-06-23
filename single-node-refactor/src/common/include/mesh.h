@@ -268,6 +268,9 @@ struct Mesh_t
     DistributedMap element_map; ///< partition of uniquely owned + shared elements (stores global node IDs on each process)
     DistributedMap nonoverlap_element_node_map; // map of node indices belonging to unique element map
 
+    //communication plans
+    CommunicationPlan<real_t> node_coords_comms;
+
     RaggedRightArrayKokkos<size_t> corners_in_node; ///< Corners connected to a node
     CArrayKokkos<size_t> num_corners_in_node;       ///< Number of corners connected to a node
     RaggedRightArrayKokkos<size_t> elems_in_node; ///< Elements connected to a given node
@@ -576,18 +579,16 @@ struct Mesh_t
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);
         // all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
         // create distributed multivector of the local node data and all (local + ghost) node storage
+        std::vector<node_state> required_node_state = { node_state::coords };
+        //constructs local + ghost coords array with local coords as a subview for first nlocal entrie
+        node.initialize(all_node_map, num_dims, required_node_state, node_map);
 
-        all_node_coords_distributed   = Teuchos::rcp(new MV(all_node_map, num_dim));
-        ghost_node_coords_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
+        /* create forward comms objects; setup for new map pairs should only be done here, construct using these existing comm plans
+           for any new pair of vectors requiring the same map pairs and comm mode afterwards*/
+        forward_comms_setup();
 
-        // create import object using local node indices map and all indices map
-        comm_importer_setup();
-
-        // create export objects for reverse comms
-        comm_exporter_setup();
-
-        // comms to get ghosts
-        all_node_coords_distributed->doImport(*node_coords_distributed, *importer, Tpetra::INSERT);
+        // create reverse comms
+        //reverse_comms_setup();
 
         // construct map of nodes that belong to the non-overlapping element set (contained by ghost + local node set but not all of them)
         std::set<long long int> nonoverlap_elem_node_set;
@@ -626,6 +627,35 @@ struct Mesh_t
         {
             std::cout << "End of map setup " << std::endl;
         }
+    }
+
+    /* ----------------------------------------------------------------------
+    Setup Tpetra importers for comms
+    ------------------------------------------------------------------------- */
+
+    void forward_comms_setup()
+    {
+        // create import object using local node indices map and ghost indices map
+        node_coords_comms = CommunicationPlan(node.coords, node.local_coords);
+
+        // output map and importers
+        //sorted_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_nodes, 0, comm));
+        //node_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(map, sorted_map));
+        // sorted element mapping
+        //sorted_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_elem, 0, comm));
+        //element_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(all_element_map, sorted_element_map));;
+    }
+
+    /* ----------------------------------------------------------------------
+    Setup Tpetra exporters for reverse comms
+    ------------------------------------------------------------------------- */
+
+    void reverse_comms_setup()
+    {   
+        //currently don't use anything like force tallies from ghost nodes
+        //only use in TO solver was a BC flag
+        // create import object using local node indices map and ghost indices map
+        //exporter = Teuchos::rcp(new Tpetra::Export<LO, GO>(all_node_map, map));
     }
 
     // build the corner mesh connectivity arrays
