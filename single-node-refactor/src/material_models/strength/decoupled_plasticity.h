@@ -1,5 +1,3 @@
-
-
 /**********************************************************************************************
 � 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
@@ -66,6 +64,17 @@ namespace HypoPlasticityModel {
 
     const double fuzz = 1.e-16;
     
+    /**
+     * @brief Initialize the strength state variables for the material points.
+     *
+     * @param MaterialPoints_eos_state_vars   State variables for the equation of state at each material point.
+     * @param MaterialPoints_strength_state_vars   State variables for the strength model at each material point.
+     * @param eos_global_vars   Global variables for the equation of state.
+     * @param strength_global_vars   Global variables for the strength model.
+     * @param MaterialToMeshMaps_elem   Mapping from material points to mesh elements.
+     * @param num_material_points   Number of material points for this material.
+     * @param mat_id   Material ID.
+     */
     static void init_strength_state_vars(
         const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
@@ -80,6 +89,37 @@ namespace HypoPlasticityModel {
     }  // end of init_strength_state_vars
 
 
+    /**
+     * @brief Calculate the deviatoric stress tensor for the hypo-plasticity response.
+     *
+     * Evolves the deviatoric stress tensor using the Jaumann rate and applies J2 plasticity yield condition.
+     *
+     * @param GaussPoints_vel_grad   Velocity gradient at Gauss points.
+     * @param node_coords   Coordinates of the nodes.
+     * @param node_vel   Velocities of the nodes.
+     * @param nodes_in_elem   Node indices in the element.
+     * @param MaterialPoints_pres   Pressure at material points.
+     * @param MaterialPoints_stress   Stress tensor at material points (output).
+     * @param MaterialPoints_stress_n0   Stress tensor at material points from previous time step.
+     * @param MaterialPoints_sspd   Sound speed at material points.
+     * @param MaterialPoints_eos_state_vars   State variables for the equation of state at material points.
+     * @param MaterialPoints_strength_state_vars   State variables for the strength model at material points.
+     * @param MaterialPoints_den   Density at the material point.
+     * @param MaterialPoints_sie   Specific internal energy at the material point.
+     * @param MaterialPoints_shear_modulii   Shear modulus at material points.
+     * @param MaterialToMeshMaps_elem   Mapping from material points to mesh elements.
+     * @param eos_global_vars   Global variables for the equation of state.
+     * @param strength_global_vars   Global variables for the strength model.
+     * @param vol   Volume of the element.
+     * @param dt   Time step size.
+     * @param rk_alpha   Runge-Kutta time integration coefficient.
+     * @param time   Current simulation time.
+     * @param cycle   Current simulation cycle.
+     * @param MaterialPoints_lid   Local ID of the material point.
+     * @param mat_id   Material ID.
+     * @param gauss_gid   Global ID of the Gauss point.
+     * @param elem_gid   Global ID of the element.
+     */
     KOKKOS_FUNCTION
     static void calc_stress(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
@@ -184,9 +224,9 @@ namespace HypoPlasticityModel {
 
         // D = 1/2(vel_grad + vel_grad^T)
         for (int i = 0; i < num_dims; i++) {
-        for (int j = 0; j < num_dims; j++) {
-            D(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) + GaussPoints_vel_grad(gauss_gid,j, i));
-        }
+            for (int j = 0; j < num_dims; j++) {
+                D(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) + GaussPoints_vel_grad(gauss_gid,j, i));
+            }
         }
         
         double div = 0;
@@ -197,9 +237,9 @@ namespace HypoPlasticityModel {
         
         // W = 1/2(GaussPoints_vel_grad gauss_gid,- GaussPoints_vel_grad^gauss_gid,T)
         for (int i = 0; i < num_dims; i++) {
-        for (int j = 0; j < num_dims; j++) {
-            W(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) - GaussPoints_vel_grad(gauss_gid,j, i));
-        }
+            for (int j = 0; j < num_dims; j++) {
+                W(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) - GaussPoints_vel_grad(gauss_gid,j, i));
+            }
         }
 
         
@@ -211,7 +251,7 @@ namespace HypoPlasticityModel {
         //    de'/dt = D - div/3.0 * I
         //
         // ----------------------------------------------------------------------
-        
+
         // Set up identity matrix
         double eye_size[num_dims * num_dims];
         ViewCArrayKokkos <double> eye(eye_size, num_dims, num_dims);
@@ -316,6 +356,17 @@ namespace HypoPlasticityRZModel {
 
     const double fuzz = 1.e-16;
 
+    /**
+     * @brief Initialize the strength state variables for the material points (RZ version).
+     *
+     * @param MaterialPoints_eos_state_vars   State variables for the equation of state at each material point.
+     * @param MaterialPoints_strength_state_vars   State variables for the strength model at each material point.
+     * @param eos_global_vars   Global variables for the equation of state.
+     * @param strength_global_vars   Global variables for the strength model.
+     * @param MaterialToMeshMaps_elem   Mapping from material points to mesh elements.
+     * @param num_material_points   Number of material points.
+     * @param mat_id   Material ID.
+     */
     static void init_strength_state_vars(
         const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
@@ -331,6 +382,37 @@ namespace HypoPlasticityRZModel {
     }  // end of init_strength_state_vars
 
 
+    /**
+     * @brief Calculate the deviatoric stress tensor for the hypo-elastic-plastic response in RZ geometry.
+     *
+     * Evolves the deviatoric stress tensor using the Jaumann rate and applies J2 plasticity yield condition for RZ geometry.
+     *
+     * @param GaussPoints_vel_grad   Velocity gradient at Gauss points.
+     * @param node_coords   Coordinates of the nodes.
+     * @param node_vel   Velocities of the nodes.
+     * @param nodes_in_elem   Node indices in the element.
+     * @param MaterialPoints_pres   Pressure at material points.
+     * @param MaterialPoints_stress   Stress tensor at material points (output).
+     * @param MaterialPoints_stress_n0   Stress tensor at material points from previous time step.
+     * @param MaterialPoints_sspd   Sound speed at material points.
+     * @param MaterialPoints_eos_state_vars   State variables for the equation of state at material points.
+     * @param MaterialPoints_strength_state_vars   State variables for the strength model at material points.
+     * @param MaterialPoints_den   Density at the material point.
+     * @param MaterialPoints_sie   Specific internal energy at the material point.
+     * @param MaterialPoints_shear_modulii   Shear modulus at material points.
+     * @param MaterialToMeshMaps_elem   Mapping from material points to mesh elements.
+     * @param eos_global_vars   Global variables for the equation of state.
+     * @param strength_global_vars   Global variables for the strength model.
+     * @param vol   Volume of the element.
+     * @param dt   Time step size.
+     * @param rk_alpha   Runge-Kutta time integration coefficient.
+     * @param time   Current simulation time.
+     * @param cycle   Current simulation cycle.
+     * @param MaterialPoints_lid   Local ID of the material point.
+     * @param mat_id   Material ID.
+     * @param gauss_gid   Global ID of the Gauss point.
+     * @param elem_gid   Global ID of the element.
+     */
     KOKKOS_FUNCTION
     static void calc_stress(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
@@ -378,10 +460,10 @@ namespace HypoPlasticityRZModel {
         ViewCArrayKokkos <double> s_dev(&s_dev_1D[0], 3, 3); // deviatoric stress from this timestep
 
         for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            s_dev_n(i, j) = stress_n(i, j);
-            s_dev(i, j) = stress(i, j);
-        }
+            for (int j = 0; j < 3; j++) {
+                s_dev_n(i, j) = stress_n(i, j);
+                s_dev(i, j) = stress(i, j);
+            }
         }
 
         // subtract 1/3*trace*I from the stress tensor to get the stress deviators
@@ -411,16 +493,16 @@ namespace HypoPlasticityRZModel {
         
         // D = 1/2(vel_grad + vel_grad^T)
         for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            D(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) + GaussPoints_vel_grad(gauss_gid,j, i));
-        }
+            for (int j = 0; j < 3; j++) {
+                D(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) + GaussPoints_vel_grad(gauss_gid,j, i));
+            }
         }
         
         // W = 1/2(vel_grad - vel_grad^T)
         for (int i = 0; i < num_dims; i++) {
-        for (int j = 0; j < num_dims; j++) {
-            W(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) - GaussPoints_vel_grad(gauss_gid,j, i));
-        }
+            for (int j = 0; j < num_dims; j++) {
+                W(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) - GaussPoints_vel_grad(gauss_gid,j, i));
+            }
         }
         
         
@@ -459,16 +541,16 @@ namespace HypoPlasticityRZModel {
         ViewCArrayKokkos <double> eye(eye_size, 3, 3);
         // now calculate the identity matrix of s_dev
         for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            
-            if (i == j) {
-                eye(i,j) = 1;
-            }
-            else {
-                eye(i, j) = 0;
-            } // end if
-            
-        } // end for j
+            for (int j = 0; j < 3; j++) {
+                
+                if (i == j) {
+                    eye(i,j) = 1;
+                }
+                else {
+                    eye(i, j) = 0;
+                } // end if
+                
+            } // end for j
         }  // end for i
         
         
@@ -478,9 +560,9 @@ namespace HypoPlasticityRZModel {
             
             // Now calculate Jaumann for each element
             for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                stress_dev_rhs(i, j) = 2.0 * G_stress * (D(i, j) - ((div / 3.0) * eye(i, j)));
-            }
+                for (int j = 0; j < 3; j++) {
+                    stress_dev_rhs(i, j) = 2.0 * G_stress * (D(i, j) - ((div / 3.0) * eye(i, j)));
+                }
             }
             
             // ----------------------
@@ -496,9 +578,9 @@ namespace HypoPlasticityRZModel {
 
             // calculate the next stress
             for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                s_dev(i, j) = s_dev_n(i, j) + (rk_alpha * dt * stress_dev_rhs(i, j));
-            } // end for j
+                for (int j = 0; j < 3; j++) {
+                    s_dev(i, j) = s_dev_n(i, j) + (rk_alpha * dt * stress_dev_rhs(i, j));
+                } // end for j
             } // end for i
             
             
@@ -513,9 +595,9 @@ namespace HypoPlasticityRZModel {
             double J2 = 0.0;
 
             for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                J2 += s_dev(i, j) * s_dev(i, j);
-            } // end for j
+                for (int j = 0; j < 3; j++) {
+                    J2 += s_dev(i, j) * s_dev(i, j);
+                } // end for j
             } // end for i
             J2 = J2 / 2.0;
 
@@ -524,18 +606,18 @@ namespace HypoPlasticityRZModel {
 
 
             if (factor < 1.0) {
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                s_dev(i, j) *= factor;
+                for (int i = 0; i < 3; i++) {
+                    for (int j = 0; j < 3; j++) {
+                    s_dev(i, j) *= factor;
+                    }
                 }
-            }
             } // end if
 
             // set the stress
             for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                stress(i, j) = s_dev(i, j);
-            }
+                for (int j = 0; j < 3; j++) {
+                    stress(i, j) = s_dev(i, j);
+                }
             }
             
 
@@ -563,18 +645,18 @@ namespace HypoPlasticityRZModel {
 
             // calculate the next stress
             for (int i = 0; i < num_dims; i++) {
-            for (int j = 0; j < num_dims; j++) {
-                s_dev(i, j) = s_dev_n(i, j) + (rk_alpha * dt * stress_dev_rhs(i, j));
-            }
+                for (int j = 0; j < num_dims; j++) {
+                    s_dev(i, j) = s_dev_n(i, j) + (rk_alpha * dt * stress_dev_rhs(i, j));
+                }
             }
 
             // scale to be on the yield surface, J2 plasticity
             double J2 = 0.0;
             
             for (int i = 0; i < num_dims; i++) {
-            for (int j = 0; j < num_dims; j++) {
-                J2 += s_dev(i, j) * s_dev(i, j);
-            }
+                for (int j = 0; j < num_dims; j++) {
+                    J2 += s_dev(i, j) * s_dev(i, j);
+                }
             }
 
             double K = J2 - ((2.0/3.0)*(Y_stress*Y_stress));
@@ -586,11 +668,11 @@ namespace HypoPlasticityRZModel {
             // WARNING testing
 
             if (K > 0.0) {
-            s_dev(0, 0) *= factor;
-            s_dev(1, 1) *= factor;
-            s_dev(2, 2) *= factor;
-            s_dev(0, 1) *= factor;
-            s_dev(1, 0) *= factor;
+                s_dev(0, 0) *= factor;
+                s_dev(1, 1) *= factor;
+                s_dev(2, 2) *= factor;
+                s_dev(0, 1) *= factor;
+                s_dev(1, 0) *= factor;
             }
             // set the new stress
             stress(0, 0) = s_dev(0, 0);
