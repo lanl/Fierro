@@ -60,13 +60,14 @@ void SGHRZ::update_energy_rz(
       const DistributedDCArray<double>& node_vel_n0,
       const DistributedDCArray<double>& node_coords,
       const DistributedDCArray<double>& node_coords_n0,
-      const DCArrayKokkos<double>& MaterialPoints_sie,
-      const DCArrayKokkos<double>& MaterialPoints_sie_n0,
-      const DCArrayKokkos<double>& MaterialPoints_mass,
-      const DCArrayKokkos<double>& MaterialCorners_force,
+      const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+      const DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
+      const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+      const DRaggedRightArrayKokkos<double>& MaterialCorners_force,
       const corners_in_mat_t corners_in_mat_elem,
-      const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-      const size_t num_mat_elems
+      const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+      const size_t num_mat_elems,
+      const size_t mat_id
     ) const
 {
 
@@ -74,7 +75,7 @@ void SGHRZ::update_energy_rz(
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_lid = mat_elem_lid;
@@ -108,14 +109,14 @@ void SGHRZ::update_energy_rz(
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
 
                 double half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * 0.5;
-                MaterialPoints_power += MaterialCorners_force(mat_corner_lid, dim) * node_radius * half_vel;
+                MaterialPoints_power += MaterialCorners_force(mat_id, mat_corner_lid, dim) * node_radius * half_vel;
 
             } // end for dim
         } // end for node_lid
 
         // update the specific energy
-        MaterialPoints_sie(mat_point_lid) = MaterialPoints_sie_n0(mat_point_lid) -
-                                rk_alpha * dt / MaterialPoints_mass(mat_point_lid) * MaterialPoints_power;
+        MaterialPoints_sie(mat_id, mat_point_lid) = MaterialPoints_sie_n0(mat_id, mat_point_lid) -
+                                rk_alpha * dt / MaterialPoints_mass(mat_id, mat_point_lid) * MaterialPoints_power;
 
        
     }); // end parallel loop over the elements

@@ -69,20 +69,20 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                          const Mesh_t& mesh,
                          const DCArrayKokkos<double>& GaussPoints_vol,
                          const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                         const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                          const DCArrayKokkos<double>& corner_force,
                          const DistributedDCArray<double>& node_coords,
                          const DistributedDCArray<double>& node_vel,
-                         const DCArrayKokkos<double>& MaterialPoints_den,
-                         const DCArrayKokkos<double>& MaterialPoints_sie,
-                         const DCArrayKokkos<double>& MaterialPoints_pres,
-                         const DCArrayKokkos<double>& MaterialPoints_stress,
-                         const DCArrayKokkos<double>& MaterialPoints_sspd,
-                         const DCArrayKokkos<double>& MaterialCorners_force,
-                         const DCArrayKokkos<double>& MaterialPoints_volfrac,
-                         const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
+                         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+                         const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+                         const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                         const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+                         const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                         const DRaggedRightArrayKokkos<double>& MaterialCorners_force,
+                         const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
+                         const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
                          const corners_in_mat_t corners_in_mat_elem,
-                         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                         const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                          const size_t num_mat_elems,
                          const size_t mat_id,
                          const double fuzz,
@@ -100,7 +100,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
        
         // get mesh elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
 
         size_t gauss_gid = elem_gid; // 1 gauss point per element
 
@@ -124,7 +124,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
 
         // create a view of the stress_matrix
-        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(mat_point_lid, 0, 0), 3, 3);
+        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(mat_id, mat_point_lid, 0, 0), 3, 3);
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
@@ -172,7 +172,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
         if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
             // loop is always over 3 even for 2D RZ
             for (int i = 0; i < 3; i++) {
-                tau(i, i) -= MaterialPoints_pres(mat_point_lid);
+                tau(i, i) -= MaterialPoints_pres(mat_id, mat_point_lid);
             } // end for
         }
 
@@ -215,10 +215,10 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
             
             // loop over dimensions and calc corner forces
-            if (MaterialPoints_eroded(mat_point_lid) == true) { 
+            if (MaterialPoints_eroded(mat_id, mat_point_lid) == true) { 
                 for (int dim = 0; dim < num_dims; dim++) {
                     corner_force(corner_gid, dim) = 0.0;
-                    MaterialCorners_force(mat_corner_lid, dim) = 0.0;
+                    MaterialCorners_force(mat_id, mat_corner_lid, dim) = 0.0;
                 }
             }
             else{
@@ -230,12 +230,12 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                         + disp_corner_forces(node_lid, dim);
 
                     // save the material corner force
-                    MaterialCorners_force(mat_corner_lid, dim) = force_component*MaterialPoints_volfrac(mat_point_lid)*
-                                                                 MaterialPoints_geo_volfrac(mat_point_lid);
+                    MaterialCorners_force(mat_id, mat_corner_lid, dim) = force_component*MaterialPoints_volfrac(mat_id, mat_point_lid)*
+                                                                 MaterialPoints_geo_volfrac(mat_id, mat_point_lid);
 
                     // tally all forces to the corner
-                    corner_force(corner_gid, dim) += force_component*MaterialPoints_volfrac(mat_point_lid)*
-                                                     MaterialPoints_geo_volfrac(mat_point_lid);
+                    corner_force(corner_gid, dim) += force_component*MaterialPoints_volfrac(mat_id, mat_point_lid)*
+                                                     MaterialPoints_geo_volfrac(mat_id, mat_point_lid);
 
                 } // end loop over dimension
 
@@ -254,15 +254,21 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                     double force_term_1 = tau(1, 0) * corner_areas(corner_lid) / radius_elem; 
                     //force_term_1 = tau(1, 0) * 0.25*elem_area / node_radius; // Wilkins
                     
-                    corner_force(corner_gid, 0) += force_term_1*MaterialPoints_volfrac(mat_point_lid);
-                    MaterialCorners_force(mat_corner_lid, 0) += force_term_1;
+                    corner_force(corner_gid, 0) += force_term_1*MaterialPoints_volfrac(mat_id, mat_point_lid)*
+                                                                 MaterialPoints_geo_volfrac(mat_id, mat_point_lid);
+
+                    MaterialCorners_force(mat_id, mat_corner_lid, 0) += force_term_1*MaterialPoints_volfrac(mat_id, mat_point_lid)*
+                                                                 MaterialPoints_geo_volfrac(mat_id, mat_point_lid);
 
                     // (sigma_RR - sigma_theta) / R_p
                     double force_term_2 = (tau(1, 1) - tau(2, 2)) * corner_areas(corner_lid) /radius_elem;
                     //force_term_2 = (tau(1, 1) - tau(2, 2)) * 0.25*elem_area / node_radius; // Wilkins
 
-                    corner_force(corner_gid, 1) += force_term_2*MaterialPoints_volfrac(mat_point_lid);
-                    MaterialCorners_force(mat_corner_lid, 1) += force_term_2;
+                    corner_force(corner_gid, 1) += force_term_2*MaterialPoints_volfrac(mat_id, mat_point_lid)*
+                                                                 MaterialPoints_geo_volfrac(mat_id, mat_point_lid);
+                                                                 
+                    MaterialCorners_force(mat_id, mat_corner_lid, 1) += force_term_2*MaterialPoints_volfrac(mat_id, mat_point_lid)*
+                                                                 MaterialPoints_geo_volfrac(mat_id, mat_point_lid);;
 
                 //} // end if radius >0
 

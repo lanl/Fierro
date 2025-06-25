@@ -62,8 +62,8 @@ namespace UserDefinedEquilibrationModel
 {
 
     static void equilibrate (
-        const DCArrayKokkos<bool>& MaterialPoints_volfrac,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<bool>& MaterialPoints_volfrac,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoint_pres,
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sie,

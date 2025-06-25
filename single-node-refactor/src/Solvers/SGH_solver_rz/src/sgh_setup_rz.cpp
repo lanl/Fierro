@@ -92,19 +92,17 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParameters,
     // calculate pressure, sound speed, and stress for each material
     for(int mat_id=0; mat_id<num_mats; mat_id++){
 
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
-
         init_press_sspd_stress(Materials,
                             mesh,
-                            State.MaterialPoints(mat_id).den,
-                            State.MaterialPoints(mat_id).pres,
-                            State.MaterialPoints(mat_id).stress,
-                            State.MaterialPoints(mat_id).sspd,
-                            State.MaterialPoints(mat_id).sie,
-                            State.MaterialPoints(mat_id).eos_state_vars,
-                            State.MaterialPoints(mat_id).strength_state_vars,
-                            State.MaterialPoints(mat_id).shear_modulii,
-                            num_mat_points,
+                            State.MaterialPoints.den,
+                            State.MaterialPoints.pres,
+                            State.MaterialPoints.stress,
+                            State.MaterialPoints.sspd,
+                            State.MaterialPoints.sie,
+                            State.MaterialPoints.eos_state_vars,
+                            State.MaterialPoints.strength_state_vars,
+                            State.MaterialPoints.shear_modulii,
+                            State.MaterialPoints.num_material_points.host(mat_id),
                             mat_id);
 
     } // for loop over mat_id
@@ -119,17 +117,16 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParameters,
     // calculate the corner massess if 2D
 
     for(int mat_id=0; mat_id<num_mats; mat_id++){
-
-        size_t num_mat_elems = State.MaterialToMeshMaps(mat_id).num_material_elems;
         
         calc_corner_mass_rz(Materials,
                             mesh,
                             State.node.coords,
                             State.node.mass,
                             State.corner.mass,
-                            State.MaterialPoints(mat_id).den,
-                            State.MaterialToMeshMaps(mat_id).elem,
-                            num_mat_elems);
+                            State.MaterialPoints.den,
+                            State.MaterialToMeshMaps.elem,
+                            State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                            mat_id);
     } // end for mat_id
 
     calc_node_mass_rz(mesh,
@@ -160,15 +157,16 @@ void calc_corner_mass_rz(const Material_t& Materials,
                          const DistributedDCArray<double>& node_coords,
                          const DistributedDCArray<double>& node_mass,
                          const DCArrayKokkos<double>& corner_mass,
-                         const DCArrayKokkos<double>& MaterialPoints_den,
-                         const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                         const size_t num_mat_elems)
+                         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+                         const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                         const size_t num_mat_elems,
+                         const size_t mat_id)
 {
 
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
 
         // facial area of the corners
         double corner_areas_array[4];
@@ -181,7 +179,7 @@ void calc_corner_mass_rz(const Material_t& Materials,
         // loop over the corners of the element and calculate the mass
         for (size_t corner_lid = 0; corner_lid < 4; corner_lid++) {
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-            corner_mass(corner_gid) += corner_areas(corner_lid) * MaterialPoints_den(mat_elem_lid); // node radius is added later
+            corner_mass(corner_gid) += corner_areas(corner_lid) * MaterialPoints_den(mat_id, mat_elem_lid); // node radius is added later
         } // end for over corners
     });
 
