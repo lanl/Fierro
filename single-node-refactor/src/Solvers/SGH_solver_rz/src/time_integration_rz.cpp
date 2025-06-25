@@ -56,14 +56,15 @@ void SGHRZ::rk_init_rz(
     DistributedDCArray<double>& node_coords_n0,
     DistributedDCArray<double>& node_vel,
     DistributedDCArray<double>& node_vel_n0,
-    DCArrayKokkos<double>& MaterialPoints_sie,
-    DCArrayKokkos<double>& MaterialPoints_sie_n0,
-    DCArrayKokkos<double>& MaterialPoints_stress,
-    DCArrayKokkos<double>& MaterialPoints_stress_n0,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
     const size_t num_dims,
     const size_t num_elems,
     const size_t num_nodes,
-    const size_t num_mat_points) const
+    const size_t num_mat_points,
+    const size_t mat_id) const
 {
 
     // save elem quantities
@@ -72,11 +73,11 @@ void SGHRZ::rk_init_rz(
         // stress is always 3D even with 2D-RZ
         for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 3; j++) {
-                MaterialPoints_stress_n0(matpt_lid, i, j) = MaterialPoints_stress(matpt_lid, i, j);
+                MaterialPoints_stress_n0(mat_id, matpt_lid, i, j) = MaterialPoints_stress(mat_id, matpt_lid, i, j);
             }
         }  // end for
 
-        MaterialPoints_sie_n0(matpt_lid) = MaterialPoints_sie(matpt_lid);
+        MaterialPoints_sie_n0(mat_id, matpt_lid) = MaterialPoints_sie(mat_id, matpt_lid);
     }); // end parallel for
 
     // save nodal quantities
@@ -113,9 +114,9 @@ void SGHRZ::get_timestep_rz(Mesh_t& mesh,
                             DistributedDCArray<double>& node_coords,
                             DistributedDCArray<double>& node_vel,
                             DCArrayKokkos<double>& GaussPoints_vol,
-                            DCArrayKokkos<double>& MaterialPoints_sspd,
-                            DCArrayKokkos<bool>&   MaterialPoints_eroded,
-                            DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                            DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                            DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
+                            DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                             size_t num_mat_elems,
                             double time_value,
                             const double graphics_time,
@@ -125,7 +126,8 @@ void SGHRZ::get_timestep_rz(Mesh_t& mesh,
                             const double dt_cfl,
                             double&      dt,
                             const double fuzz,
-                            const double tiny) const
+                            const double tiny,
+                            const size_t mat_id) const
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
@@ -134,7 +136,7 @@ void SGHRZ::get_timestep_rz(Mesh_t& mesh,
     double min_dt_calc;
     FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
 
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid); 
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
 
         double coords0[8];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 4, 2);
@@ -170,10 +172,10 @@ void SGHRZ::get_timestep_rz(Mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
+        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_id, mat_elem_lid) + fuzz);
 
 
-        if (MaterialPoints_eroded(mat_elem_lid) == true){
+        if (MaterialPoints_eroded(mat_id, mat_elem_lid) == true){
             dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
         }
 

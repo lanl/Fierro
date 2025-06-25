@@ -75,16 +75,17 @@ namespace TiptonEquilibrationModel {
         const CArrayKokkos<double>& GaussPoint_pres,
         const CArrayKokkos<double>& GaussPoint_pres_denominator,
         const CArrayKokkos<double>& GaussPoint_volfrac_min,
-        const DCArrayKokkos<double>& MaterialPoints_volfrac,
-        const DCArrayKokkos<double>& MaterialPoint_pres,
-        const DCArrayKokkos<double>& MaterialPoint_den,
-        const DCArrayKokkos<double>& MaterialPoint_sspd,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
         const double fuzz,
-        const size_t num_mat_elems);
+        const size_t num_mat_elems,
+        const size_t mat_id);
 
 
     void calc_gauss_point_averages( 
@@ -101,38 +102,49 @@ namespace TiptonEquilibrationModel {
         const CArrayKokkos <double>& GaussPoint_volfrac_limiter,
         const DCArrayKokkos<double>& GaussPoint_vel_grad,
         const DCArrayKokkos<double>& GaussPoint_vol,
-        const DCArrayKokkos<double>& MaterialPoints_volfrac,
-        const DCArrayKokkos<double>& MaterialPoints_delta_volfrac,
-        const DCArrayKokkos<double>& MaterialPoint_pres,
-        const DCArrayKokkos<double>& MaterialPoint_den,
-        const DCArrayKokkos<double>& MaterialPoint_sspd,
-        const DCArrayKokkos<double>& MaterialPoint_mass,
-        const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_delta_volfrac,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
         const double fuzz,
         const CArrayKokkos<double> &equilibration_global_vars,
         const size_t num_global_vars,
-        const size_t num_mat_elems);        
+        const size_t num_mat_elems,
+        const size_t mat_id);        
 
 
-        void update_volfrac_sie (
+        void update_state_equilibration (
             const Mesh_t& mesh,
+            const Material_t& Materials,
             const CArrayKokkos<double>& GaussPoint_pres,
             const CArrayKokkos <double>& GaussPoint_volfrac_limiter,
             const DCArrayKokkos<double>& GaussPoint_vel_grad,
             const DCArrayKokkos<double>& GaussPoint_vol,
-            const DCArrayKokkos<double>& MaterialPoints_volfrac,
-            const DCArrayKokkos<double>& MaterialPoints_delta_volfrac,
-            const DCArrayKokkos<double>& MaterialPoint_sie,
-            const DCArrayKokkos<double>& MaterialPoint_mass,
-            const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac_inout,       // the modified value by equilibration
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_delta_volfrac_inout, // the modified value by equilibration
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac_in,          // unmodified value
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_delta_volfrac_in,    // unmodified value
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+            const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+            const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
             const points_in_mat_t& points_in_mat_elem,
             const double dt,
             const double rk_alpha,
             const double fuzz,
-            const size_t num_mat_elems);    
+            const size_t num_mat_elems,
+            const size_t mat_id);    
 
 } // end namespace
 

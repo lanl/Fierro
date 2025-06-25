@@ -56,6 +56,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "user_defined_eos.h"
 #include "void_eos.h"
 #include "host_user_defined_eos.h"
+#include "elasticity.h"
 
 // ----
 #if __has_include("analytic_defined_eos.h")
@@ -68,6 +69,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "user_defined_strength.h"
 #include "host_user_defined_strength.h"
 #include "host_ann_strength.h"
+#include "decoupled_plasticity.h"
 
 // ----
 #if __has_include("decoupled_strength.h")
@@ -285,7 +287,15 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                             });
                             Materials.MaterialEnums.host(mat_id).EOSModels = model::voidEOS;
                             break;
+                        case model::linearElasticEOS:
+                            RUN({
+                                Materials.MaterialFunctions(mat_id).calc_pressure    = &LinearElasticEOS::calc_pressure;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &LinearElasticEOS::calc_sound_speed;
 
+                                Materials.MaterialEnums(mat_id).EOSModels = model::linearElasticEOS;
+                            });
+                            Materials.MaterialEnums.host(mat_id).EOSModels = model::linearElasticEOS;
+                            break;
                         case model::userDefinedEOS:
                             RUN({
                                 Materials.MaterialFunctions(mat_id).calc_pressure    = &UserDefinedEOSModel::calc_pressure;
@@ -432,6 +442,47 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                             // note: default run location for initialization is always host
 
                             break;
+                        // call elastic plastic model
+                        case model::hypoPlasticityStrength:
+
+                            if(num_dims == 2){
+                                std::cout << "ERROR: specified 2D but this is a 3D strength model: " << strength_model << std::endl;
+                                throw std::runtime_error("**** Strength model is not valid in 2D ****");
+                            }
+
+                            // set the stress function
+                            RUN({
+                                Materials.MaterialFunctions(mat_id).calc_stress = &HypoPlasticityModel::calc_stress;
+                            });
+                            // note: default run location for strength is device
+
+                            // set the strength initialization function
+                            Materials.MaterialFunctions.host(mat_id).init_strength_state_vars = &HypoPlasticityModel::init_strength_state_vars;
+                            // note: default run location for initialization is always host
+
+                            break;  
+
+                        
+                        case model::hypoPlasticityStrengthRZ:
+
+                            if(num_dims == 3){
+                                std::cout << "ERROR: specified 3D but this is a 2D-RZ strength model: " << strength_model << std::endl;
+                                throw std::runtime_error("**** Strength model is not valid in 3D ****");
+                            }
+
+                            RUN({
+                                Materials.MaterialFunctions(mat_id).calc_stress = &HypoPlasticityRZModel::calc_stress;
+                            });
+                            // note: default run location for strength is device
+
+                            // set the strength initialization function
+                            Materials.MaterialFunctions.host(mat_id).init_strength_state_vars = &HypoPlasticityRZModel::init_strength_state_vars;
+                            // note: default run location for initialization is always host
+
+                            break;  
+
+                        // add other elastic plastic models here, e.g., Johnson-Cook strength etc.
+                        // ....
 #ifdef DECOUPLED_STRENGTH_H
                         // call elastic plastic model
                         case model::hypoElasticPlasticStrength:

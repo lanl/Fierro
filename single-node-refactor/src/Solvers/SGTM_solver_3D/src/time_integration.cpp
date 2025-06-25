@@ -57,8 +57,8 @@ void SGTM3D::rk_init(
     DistributedDCArray<double>& node_vel_n0,
     DistributedDCArray<double>& node_temp,
     DistributedDCArray<double>& node_temp_n0,
-    DistributedDCArray<double>& MaterialPoints_q_flux,
-    DCArrayKokkos<double>& MaterialPoints_stress,
+    DistributedDCArray<double>& node_q_flux,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
     const size_t num_dims,
     const size_t num_elems,
     const size_t num_nodes,
@@ -103,12 +103,12 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
                        DistributedDCArray<double>& node_coords,
                        DistributedDCArray<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,
-                       DCArrayKokkos<double>& MaterialPoints_sspd,
-                       DCArrayKokkos<double>& MaterialPoints_conductivity,
-                       DCArrayKokkos<double>& MaterialPoints_density,
-                       DCArrayKokkos<double>& MaterialPoints_specific_heat,
-                       DCArrayKokkos<bool>&   MaterialPoints_eroded,
-                       DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                       DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                       DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
+                       DRaggedRightArrayKokkos<double>& MaterialPoints_density,
+                       DRaggedRightArrayKokkos<double>& MaterialPoints_specific_heat,
+                       DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
+                       DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                        size_t num_mat_elems,
                        double time_value,
                        const double graphics_time,
@@ -118,7 +118,8 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
                        const double dt_cfl,
                        double&      dt,
                        const double fuzz,
-                       const double tiny) const
+                       const double tiny,
+                       const size_t mat_id) const
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
@@ -126,7 +127,7 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
     double dt_lcl;
     double min_dt_calc;
     FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
 
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);
@@ -182,8 +183,8 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
         // dt_cfl = 1.0; // WARNING: Fix once evolving position
 
         // Thermal diffusivity
-        double alpha = MaterialPoints_conductivity(mat_elem_lid) / 
-            (MaterialPoints_density(mat_elem_lid)*MaterialPoints_specific_heat(mat_elem_lid));
+        double alpha = MaterialPoints_conductivity(mat_id, mat_elem_lid) / 
+            (MaterialPoints_density(mat_id, mat_elem_lid)*MaterialPoints_specific_heat(mat_id, mat_elem_lid));
 
         // Local dt calc based on thermal conductivity (VN Stability)
         double h = (dist_min); // maybe half?

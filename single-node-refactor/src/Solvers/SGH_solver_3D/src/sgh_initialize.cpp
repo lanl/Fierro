@@ -81,34 +81,17 @@ void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParamete
                 	                  BoundaryCondition_t& Boundary,
                 	                  State_t& State) const
 {
-	const size_t num_nodes = mesh.num_nodes;
-    const size_t num_dims = 3;
-
-    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
     // -----
-    //  Allocation of state must include a buffer with ALE
+    //  Allocation of state includes a buffer, set in region_fill.cpp, which is for ALE
     // -----
-
-    // IMPORTANT, make buffer a parser input variable
-    // for ALE, add a buffer to num_elems_for_mat, like 10% of num_elems up to num_elems.
-    const size_t buffer = 0; // memory buffer to push back into
-
-    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-
-        const size_t num_mat_pts_in_elem = mesh.num_leg_gauss_in_elem; 
-
-        size_t num_elems_for_mat = State.MaterialToMeshMaps(mat_id).num_material_elems + buffer; // has a memory buffer for ALE
-
-        size_t num_points_for_mat  = num_elems_for_mat * num_mat_pts_in_elem;
-        size_t num_corners_for_mat = num_elems_for_mat * mesh.num_nodes_in_elem;
-
-        State.MaterialToMeshMaps(mat_id).initialize(num_elems_for_mat);
-        State.MaterialPoints(mat_id).initialize(num_points_for_mat, 3, SGH3D_State::required_material_pt_state); // note: dims is always 3 
-        State.MaterialCorners(mat_id).initialize(num_corners_for_mat, 3, SGH3D_State::required_material_corner_state);
-        // zones are not used with solver
-
-    } // end for mat_id
+    
+    State.MaterialToMeshMaps.initialize();
+    State.MaterialPoints.initialize(3, SGH3D_State::required_material_pt_state); // note: dims is always 3 
+    State.MaterialCorners.initialize(3, SGH3D_State::required_material_corner_state);
+    // zones are not used
+    
+    // NOTE: Material points are populated in the material_state_setup funcion
 
     // check that the fills specify the required material point state fields
     bool filled_material_state_A =

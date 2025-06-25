@@ -560,17 +560,34 @@ struct MeshtoMaterialMap_t
 /////////////////////////////////////////////////////////////////////////////
 struct MaterialToMeshMap_t
 {
-    size_t num_material_elems;        ///< returns the exact number of matpts
+    DCArrayKokkos <size_t> num_material_elems;        ///< returns the exact number of matpts
+    DCArrayKokkos <size_t> num_material_elems_buffer; ///< returns the number of matpts plus buffer
 
-    DCArrayKokkos<size_t> elem;       ///< returns the elem for this material
+    DRaggedRightArrayKokkos<size_t> elem;             ///< returns the elem for this material
 
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
-    void initialize(size_t num_elem_max)
+    void initialize()
     {
         if (elem.size() == 0){ 
-            this->elem = DCArrayKokkos<size_t>(num_elem_max, "material_pt_to_elem");
+            this->elem = DRaggedRightArrayKokkos<size_t>(this->num_material_elems_buffer, "material_space_to_elem");
         }
+
     }; // end method
+
+    void initialize_num_mats(size_t num_mats)
+    {
+        // Note: num_material_elems is allocated in problem setup
+        if (num_material_elems.size() == 0){
+            this->num_material_elems = DCArrayKokkos <size_t> (num_mats, "num_material_elems"); 
+        }
+
+        // Note: num_material_elems_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
+        if (num_material_elems_buffer.size() == 0){
+            this->num_material_elems_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_elems_with_buffer"); 
+        }
+
+    }; // end method
+
 }; // end MaterialtoMeshMaps_t
 
 
@@ -602,95 +619,113 @@ enum class material_pt_state
 /////////////////////////////////////////////////////////////////////////////
 struct MaterialPoint_t
 {
-    size_t num_material_points;    ///< the actual number of material points, omitting the buffer
+    DCArrayKokkos <size_t> num_material_points;    ///< the actual number of material points, omitting the buffer
+    DCArrayKokkos <size_t> num_material_points_buffer; ///< number of material points plus a buffer
 
-    DCArrayKokkos<double> den;    ///< MaterialPoint density
-    DCArrayKokkos<double> pres;   ///< MaterialPoint pressure
+    DRaggedRightArrayKokkos<double> den;    ///< MaterialPoint density
+    DRaggedRightArrayKokkos<double> pres;   ///< MaterialPoint pressure
 
-    DCArrayKokkos<double> stress;    ///< MaterialPoint stress
-    DCArrayKokkos<double> stress_n0; ///< MaterialPoint stress at t=n0 of time integration
+    DRaggedRightArrayKokkos<double> stress;    ///< MaterialPoint stress
+    DRaggedRightArrayKokkos<double> stress_n0; ///< MaterialPoint stress at t=n0 of time integration
 
-    DCArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
-    DCArrayKokkos<double> sie_n0; ///< coefficients for the sie in strong form at t=n0 of time integration
+    DRaggedRightArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
+    DRaggedRightArrayKokkos<double> sie_n0; ///< coefficients for the sie in strong form at t=n0 of time integration
 
-    DCArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
-    DCArrayKokkos<double> mass;   ///< MaterialPoint mass
+    DRaggedRightArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
+    DRaggedRightArrayKokkos<double> mass;   ///< MaterialPoint mass
 
-    DCArrayKokkos<double> q_flux; ///< Divergence of heat flux
-    DCArrayKokkos<double> conductivity; ///< Thermal conductivity
-    DCArrayKokkos<double> specific_heat; ///< Specific Heat
+    DRaggedRightArrayKokkos<double> q_flux; ///< Divergence of heat flux
+    DRaggedRightArrayKokkos<double> conductivity;  ///< Thermal conductivity
+    DRaggedRightArrayKokkos<double> specific_heat; ///< Specific Heat
 
-    DCArrayKokkos<double> elastic_modulii;  ///<  MaterialPoint elastic modulii Exx, Eyy, Ezz
-    DCArrayKokkos<double> shear_modulii;    ///<  MaterialPoint shear modulii Gxy, Gxz, Gyz
-    DCArrayKokkos<double> poisson_ratios;   ///<  MaterialPoint poisson ratios nu_xy, nu_xz, nu_yz
+    DRaggedRightArrayKokkos<double> elastic_modulii;  ///<  MaterialPoint elastic modulii Exx, Eyy, Ezz
+    DRaggedRightArrayKokkos<double> shear_modulii;    ///<  MaterialPoint shear modulii Gxy, Gxz, Gyz
+    DRaggedRightArrayKokkos<double> poisson_ratios;   ///<  MaterialPoint poisson ratios nu_xy, nu_xz, nu_yz
     
 
     // Material Models are stored on Material points
-    DCArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS
-    DCArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
+    DRaggedRightArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS, accessed as (mat_id, elem_lid, var_lid)
+    DRaggedRightArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
 
-    DCArrayKokkos<double> temp_grad;     ///< Temperature gradient
-    DCArrayKokkos<double> volfrac;       ///< MaterialPoint volume fraction
-    DCArrayKokkos<double> delta_volfrac; ///< change in MaterialPoint volume fraction
-    DCArrayKokkos<double> geo_volfrac;   ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
-    DCArrayKokkos<double> delta_geo_volfrac; ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
-    DCArrayKokkos<bool> eroded;              ///< MaterialPoint eroded or not flag
+    DRaggedRightArrayKokkos<double> temp_grad;     ///< Temperature gradient
+    DRaggedRightArrayKokkos<double> volfrac;       ///< MaterialPoint volume fraction
+    DRaggedRightArrayKokkos<double> delta_volfrac; ///< change in MaterialPoint volume fraction
+    DRaggedRightArrayKokkos<double> geo_volfrac;   ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
+    DRaggedRightArrayKokkos<double> delta_geo_volfrac; ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
+    DRaggedRightArrayKokkos<bool> eroded;              ///< MaterialPoint eroded or not flag
 
-    // initialization method (num_pts_max, num_dims)
-    void initialize(size_t num_pts_max, size_t num_dims, std::vector<material_pt_state> material_pt_states)
+
+    void initialize_num_mats(size_t num_mats)
     {
+        // Note: num_material_points is allocated in problem setup
+        if (num_material_points.size() == 0){
+            this->num_material_points = DCArrayKokkos <size_t> (num_mats, "num_material_points"); 
+        }
 
-        this->temp_grad = DCArrayKokkos<double>(num_pts_max, 3, "material_point_temperature_gradient"); //WARNING: Bug here, WIP
+        // Note: num_material_points_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
+        if (num_material_points_buffer.size() == 0){
+            this->num_material_points_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_points_with_buffer"); 
+        }
+
+    }; // end method
+
+    // initialization method (num_dims)
+    void initialize(size_t num_dims, std::vector<material_pt_state> material_pt_states)
+    {
+        // WARNING: this should be moved to for loop over mat_pt_states
+        if (temp_grad.size() == 0){
+            this->temp_grad = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_point_temperature_gradient"); 
+        }
 
         for (auto field : material_pt_states){
             switch(field){
                 case material_pt_state::density:
-                    if (den.size() == 0) this->den = DCArrayKokkos<double>(num_pts_max, "material_point_density");
+                    if (den.size() == 0) this->den = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_density");
                     break;
                 case material_pt_state::pressure:
-                    if (pres.size() == 0) this->pres = DCArrayKokkos<double>(num_pts_max, "material_point_pressure");
+                    if (pres.size() == 0) this->pres = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_pressure");
                     break;
                 case material_pt_state::stress:
-                    if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_pts_max, num_dims, num_dims, "material_point_stress");  
-                    if (stress_n0.size() == 0) this->stress_n0 = DCArrayKokkos<double>(num_pts_max, num_dims, num_dims, "material_point_stress_n0"); 
+                    if (stress.size() == 0) this->stress = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, num_dims, "material_point_stress");  
+                    if (stress_n0.size() == 0) this->stress_n0 = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, num_dims, "material_point_stress_n0"); 
                     break;
                 case material_pt_state::elastic_modulii:
-                    if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<double>(num_pts_max, 3, "material_elastic_modulii");
+                    if (elastic_modulii.size() == 0) this->elastic_modulii = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_elastic_modulii");
                     break;
                 case material_pt_state::shear_modulii:
-                    if (shear_modulii.size() == 0) this->shear_modulii = DCArrayKokkos<double>(num_pts_max, 3, "material_shear_modulii");
+                    if (shear_modulii.size() == 0) this->shear_modulii = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_shear_modulii");
                     break;
                 case material_pt_state::poisson_ratios:
-                    if (poisson_ratios.size() == 0) this->poisson_ratios = DCArrayKokkos<double>(num_pts_max, 3, "material_poisson_ratios");
+                    if (poisson_ratios.size() == 0) this->poisson_ratios = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_poisson_ratios");
                     break;
                 case material_pt_state::sound_speed:
-                    if (sspd.size() == 0) this->sspd = DCArrayKokkos<double>(num_pts_max, "material_point_sspd");
+                    if (sspd.size() == 0) this->sspd = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_sspd");
                     break;
                 case material_pt_state::mass:
-                    if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_pts_max, "material_point_mass");
+                    if (mass.size() == 0) this->mass = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_mass");
                     break;
                 case material_pt_state::volume_fraction:
-                    if (volfrac.size() == 0) this->volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac");
-                    if (geo_volfrac.size() == 0) this->geo_volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_geo_volfrac");
+                    if (volfrac.size() == 0) this->volfrac = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_volfrac");
+                    if (geo_volfrac.size() == 0) this->geo_volfrac = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_geo_volfrac");
                     // changes in volume fraction
-                    if (delta_volfrac.size() == 0) this->delta_volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_volfrac_delta");
-                    if (delta_geo_volfrac.size() == 0) this->delta_geo_volfrac = DCArrayKokkos<double>(num_pts_max, "material_point_geo_volfrac_delta");
+                    if (delta_volfrac.size() == 0) this->delta_volfrac = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_volfrac_delta");
+                    if (delta_geo_volfrac.size() == 0) this->delta_geo_volfrac = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_geo_volfrac_delta");
                     break;
                 case material_pt_state::specific_internal_energy:
-                    if (sie.size() == 0)  this->sie = DCArrayKokkos<double>(num_pts_max, "material_point_sie");
-                    if (sie_n0.size() == 0) this->sie_n0 = DCArrayKokkos<double>(num_pts_max, "material_point_sie_n0");
+                    if (sie.size() == 0)  this->sie = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_sie");
+                    if (sie_n0.size() == 0) this->sie_n0 = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_sie_n0");
                     break;
                 case material_pt_state::heat_flux:
-                    if (q_flux.size() == 0) this->q_flux = DCArrayKokkos<double>(num_pts_max, num_dims, "material_point_q_flux");
+                    if (q_flux.size() == 0) this->q_flux = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, "material_point_q_flux");
                     break;
                 case material_pt_state::thermal_conductivity:
-                    if (conductivity.size() == 0) this->conductivity = DCArrayKokkos<double>(num_pts_max, "material_point_thermal_conductivity");
+                    if (conductivity.size() == 0) this->conductivity = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_thermal_conductivity");
                     break;
                 case material_pt_state::specific_heat:
-                    if (specific_heat.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_pts_max, "material_point_specific_heat");
+                    if (specific_heat.size() == 0) this->specific_heat = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_specific_heat");
                     break;
                 case material_pt_state::eroded_flag:
-                    if (eroded.size() == 0) this->eroded = DCArrayKokkos<bool>(num_pts_max, "material_point_eroded");
+                    if (eroded.size() == 0) this->eroded = DRaggedRightArrayKokkos<bool>(this->num_material_points_buffer, "material_point_eroded");
                     break;
                 default:
                     std::cout<<"Desired material point state not understood in MaterialPoint_t initialize"<<std::endl;
@@ -718,19 +753,35 @@ enum class material_zone_state
 /////////////////////////////////////////////////////////////////////////////
 struct MaterialZone_t
 {
-    size_t num_material_zones;    ///< the actual number of material zones, omitting the buffer
+    DCArrayKokkos <size_t> num_material_zones; ///< the actual number of material zones, omitting the buffer
+    DCArrayKokkos <size_t> num_material_zones_buffer; ///< the number of material zones plus a buffer
 
-    DCArrayKokkos<double> sie;     ///< coefficients for the sie polynomial field
-    DCArrayKokkos<double> sie_n0;  ///< coefficients for the sie polynomial field at t=n0 of time integration
+    DRaggedRightArrayKokkos<double> sie;     ///< coefficients for the sie polynomial field
+    DRaggedRightArrayKokkos<double> sie_n0;  ///< coefficients for the sie polynomial field at t=n0 of time integration
+
+
+    void initialize_num_mats(size_t num_mats)
+    {
+        // Note: num_material_zones is allocated in problem setup
+        if (num_material_zones.size() == 0){
+            this->num_material_zones = DCArrayKokkos <size_t> (num_mats, "num_material_zones"); 
+        }
+
+        // Note: num_material_zones_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
+        if (num_material_zones_buffer.size() == 0){
+            this->num_material_zones_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_zones_with_buffer"); 
+        }
+
+    }; // end method
 
     // initialization method for arbitrary-order FE (num_zones)
-    void initialize_Pn(size_t num_zones_max, std::vector<material_zone_state> material_zone_states)
+    void initialize_Pn(std::vector<material_zone_state> material_zone_states)
     {
         for (auto field : material_zone_states){
             switch(field){
                 case material_zone_state::specific_internal_energy:
-                    if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_zones_max, "material_zone_sie");
-                    if (sie_n0.size() == 0) this->sie_n0 = DCArrayKokkos<double>(num_zones_max, "material_zone_sie_n0");
+                    if (sie.size() == 0) this->sie = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_sie");
+                    if (sie_n0.size() == 0) this->sie_n0 = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_sie_n0");
                     break;
                 default:
                     std::cout<<"Desired material zone state not understood in MaterialZone_t initialize"<<std::endl;
@@ -739,6 +790,7 @@ struct MaterialZone_t
         }
         
     }; // end method
+
 }; // end MaterialZone_t
 
 
@@ -759,22 +811,38 @@ enum class material_corner_state
 /////////////////////////////////////////////////////////////////////////////
 struct MaterialCorner_t
 {
-    size_t num_material_corners;   ///< the actual number of material corners, omitting the buffer
+    DCArrayKokkos<size_t>num_material_corners;   ///< the actual number of material corners, omitting the buffer
+    DCArrayKokkos<size_t>num_material_corners_buffer;   ///< the number of material corners plus a buffer
 
-    DCArrayKokkos<double> force;   ///< Corner force for the material
+    DRaggedRightArrayKokkos<double> force;   ///< Corner force for the material
 
-    DCArrayKokkos<double> q_transfer;  ///< Corner heat tranfer per material
+    DRaggedRightArrayKokkos<double> q_transfer;  ///< Corner heat tranfer per material
+
+    
+    void initialize_num_mats(size_t num_mats)
+    {
+        // Note: num_material_corners is allocated in problem setup
+        if (num_material_corners.size() == 0){
+            this->num_material_corners = DCArrayKokkos <size_t> (num_mats, "num_material_corners"); 
+        }
+
+        // Note: num_material_corners_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
+        if (num_material_corners_buffer.size() == 0){
+            this->num_material_corners_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_corners_with_buffer"); 
+        }
+
+    }; // end method
 
     // initialization method (num_corners, num_dims)
-    void initialize(size_t num_corners_max, size_t num_dims, std::vector<material_corner_state> material_corner_states)
+    void initialize(size_t num_dims, std::vector<material_corner_state> material_corner_states)
     {
         for (auto field : material_corner_states){
             switch(field){
                 case material_corner_state::force:
-                    if (force.size() == 0) this->force = DCArrayKokkos<double>(num_corners_max, num_dims, "material_corner_force");
+                    if (force.size() == 0) this->force = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, num_dims, "material_corner_force");
                     break;
                 case material_corner_state::heat_transfer:
-                    if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_corners_max, "material_corner_q_transfer"); 
+                    if (q_transfer.size() == 0) this->q_transfer =DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_q_transfer"); 
                     break;
                 default:
                     std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;
@@ -1010,8 +1078,8 @@ struct State_t
     // ---------------------------------------------------------------------
     //    material to mesh maps and mesh to material maps
     // ---------------------------------------------------------------------
-    CArray<MaterialToMeshMap_t> MaterialToMeshMaps; ///< access as MaterialToMeshMaps(mat_id).elem(mat_storage_lid)
-    MeshtoMaterialMap_t MeshtoMaterialMaps;          ///< acces as MeshtoMaterialMaps.mat_id(elem, mat_lid)
+    MaterialToMeshMap_t MaterialToMeshMaps; ///< access as MaterialToMeshMaps.elem(mat_id, mat_storage_lid)
+    MeshtoMaterialMap_t MeshtoMaterialMaps; ///< acces as MeshtoMaterialMaps.mat_id(elem, mat_lid)
 
     // ---------------------------------------------------------------------
     //    material to material maps
@@ -1023,9 +1091,9 @@ struct State_t
     // ---------------------------------------------------------------------
     //    material state, compressed, and sequentially accessed
     // ---------------------------------------------------------------------
-    CArray<MaterialPoint_t> MaterialPoints;   ///< access as MaterialPoints(mat_id).var(mat_pt)
-    CArray<MaterialCorner_t> MaterialCorners; ///< access as MaterialCorners(mat_id).var(mat_corner), not used with MPM
-    CArray<MaterialZone_t> MaterialZones;     ///< access as MaterialZones(mat_id).var(mat_zone), only used with arbitrary-order FE
+    MaterialPoint_t MaterialPoints;   ///< access as MaterialPoints.var(mat_id, mat_pt)
+    MaterialCorner_t MaterialCorners; ///< access as MaterialCorners.var(mat_id, mat_corner)
+    MaterialZone_t MaterialZones;     ///< access as MaterialZones.var(mat_id, mat_zone), only used with arbitrary-order FE
 }; // end state_t
 
 template <typename T>

@@ -159,17 +159,17 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
         num_elems_saved_for_mat.host(mat_id) = sum_total;
     } // end for
 
+    num_elems_saved_for_mat.update_device();
+    Kokkos::fence();
+
 
     // ---------------------------------------
     //  allocation of maps and state
     // ---------------------------------------
-    State.MaterialToMeshMaps = CArray<MaterialToMeshMap_t>(num_mats); 
-
-    State.MaterialPoints  = CArray<MaterialPoint_t>(num_mats); 
-
-    State.MaterialCorners = CArray<MaterialCorner_t>(num_mats); 
-    
-    State.MaterialZones = CArray<MaterialZone_t>(num_mats); 
+    State.MaterialToMeshMaps.initialize_num_mats(num_mats); // allocates num_mats and num_mats_buffer that has a memory buffer
+    State.MaterialPoints.initialize_num_mats(num_mats);  // allocates num_mats and num_mats_buffer that has a memory buffer
+    State.MaterialCorners.initialize_num_mats(num_mats); // allocates num_mats and num_mats_buffer that has a memory buffer
+    State.MaterialZones.initialize_num_mats(num_mats);   // allocates num_mats and num_mats_buffer that has a memory buffer
 
     // data structures to access indices in other material index spaces
     State.corners_in_mat_elem = corners_in_mat_t(mesh.num_nodes_in_elem);
@@ -182,12 +182,34 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
 
         const size_t num_mat_pts_in_elem = mesh.num_leg_gauss_in_elem;  // mat_pts = guass points
 
-        // the following always have the exact memory needed, they omit a buffer.  The buffer is when allocating mat_pts state
-        State.MaterialToMeshMaps(mat_id).num_material_elems = num_elems_saved_for_mat.host(mat_id);
-        State.MaterialPoints(mat_id).num_material_points    = num_elems_saved_for_mat.host(mat_id) * num_mat_pts_in_elem;
-        State.MaterialCorners(mat_id).num_material_corners  = num_elems_saved_for_mat.host(mat_id) * mesh.num_nodes_in_elem;
-        State.MaterialZones(mat_id).num_material_zones      = num_elems_saved_for_mat.host(mat_id) * mesh.num_zones_in_elem;
+        // The actual storage, that is, the actual number of mat_elems, mat_points, mat_corners, etc.  No buffer!
+        // The exact size plus a buffer is for e.g., remap.  The buffers are shortly below here.
+        State.MaterialToMeshMaps.num_material_elems.host(mat_id) = num_elems_saved_for_mat.host(mat_id);
+        State.MaterialPoints.num_material_points.host(mat_id)   = num_elems_saved_for_mat.host(mat_id) * num_mat_pts_in_elem;
+        State.MaterialCorners.num_material_corners.host(mat_id) = num_elems_saved_for_mat.host(mat_id) * mesh.num_nodes_in_elem;
+        State.MaterialZones.num_material_zones.host(mat_id)     = num_elems_saved_for_mat.host(mat_id) * mesh.num_zones_in_elem;
+
+        // IMPORTANT, make buffer a parser input variable
+        // for ALE, add a buffer to num_elems_for_mat, like 10% of num_elems up to num_elems.
+        // the num_elems_buffer is used when allocating the size of all material state
+        size_t buffer = 0;
+        State.MaterialToMeshMaps.num_material_elems_buffer.host(mat_id) = num_elems_saved_for_mat.host(mat_id)+buffer;
+        State.MaterialPoints.num_material_points_buffer.host(mat_id)    = (num_elems_saved_for_mat.host(mat_id)+buffer) * num_mat_pts_in_elem;
+        State.MaterialCorners.num_material_corners_buffer.host(mat_id)  = (num_elems_saved_for_mat.host(mat_id)+buffer) * mesh.num_nodes_in_elem;
+        State.MaterialZones.num_material_zones_buffer.host(mat_id)      = (num_elems_saved_for_mat.host(mat_id)+buffer) * mesh.num_zones_in_elem;
     } // end
+
+    // copy to device the actual sizes
+    State.MaterialToMeshMaps.num_material_elems.update_device();
+    State.MaterialPoints.num_material_points.update_device();
+    State.MaterialCorners.num_material_corners.update_device();
+    State.MaterialZones.num_material_zones.update_device();
+
+    // copy to the device the actual+buffer sizes
+    State.MaterialToMeshMaps.num_material_elems_buffer.update_device();
+    State.MaterialPoints.num_material_points_buffer.update_device();
+    State.MaterialCorners.num_material_corners_buffer.update_device();
+    State.MaterialZones.num_material_zones_buffer.update_device();
 
     // done, the solver init functions will be called after this function via the driver
 
@@ -691,7 +713,7 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
     Kokkos::fence();
 
     // --- set the level set field ---
-    if( State.GaussPoints.level_set.host.size()>0 ){
+    if( State.GaussPoints.level_set.size()>0 ){
         State.GaussPoints.level_set.set_values(1.0e32); // make level set have a default huge
         Kokkos::fence();
         State.GaussPoints.level_set.update_host();
@@ -717,7 +739,7 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
             size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
 
             // --- mapping from material elem lid to elem ---
-            State.MaterialToMeshMaps(mat_id).elem.host(mat_elem_lid) = elem_gid;
+            State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid) = elem_gid;
 
             // --- mapping from elem to material index space ---
             State.MeshtoMaterialMaps.mat_storage_lid.host(elem_gid, a_mat_in_elem) = mat_elem_lid;
@@ -735,52 +757,52 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
                 size_t mat_point_lid = mat_elem_lid + gauss_lid; // for more than 1 gauss point, this increments
 
                 // --- volume fraction ---
-                State.MaterialPoints(mat_id).volfrac.host(mat_point_lid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
-                State.MaterialPoints(mat_id).geo_volfrac.host(mat_point_lid) = fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
+                State.MaterialPoints.volfrac.host(mat_id,mat_point_lid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+                State.MaterialPoints.geo_volfrac.host(mat_id,mat_point_lid) = fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 const double mat_vol = State.GaussPoints.vol.host(gauss_gid) * 
                             fillElemState.volfrac.host(elem_gid,a_mat_in_elem)*fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 // --- density and mass ---
-                if( State.MaterialPoints(mat_id).den.host.size()>0 ){
+                if( State.MaterialPoints.den.size()>0 ){
 
                     // add an array that we set to true or false if we set this state here
-                    State.MaterialPoints(mat_id).den.host(mat_point_lid)  = 
+                    State.MaterialPoints.den.host(mat_id,mat_point_lid)  = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem);
 
-                    State.MaterialPoints(mat_id).mass.host(mat_point_lid) = 
+                    State.MaterialPoints.mass.host(mat_id,mat_point_lid) = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem) * mat_vol;
                 }
 
                 // --- set eroded flag to false ---
-                if( State.MaterialPoints(mat_id).eroded.host.size()>0 ){
-                    State.MaterialPoints(mat_id).eroded.host(mat_point_lid) = false; // set to default
+                if( State.MaterialPoints.eroded.size()>0 ){
+                    State.MaterialPoints.eroded.host(mat_id,mat_point_lid) = false; // set to default
                 }
 
                 // --- specific internal energy ---
-                if( State.MaterialPoints(mat_id).sie.host.size()>0 ){
+                if( State.MaterialPoints.sie.size()>0 ){
                     // save state, that is integrated in time
                     
                         if(fillGaussState.use_sie.host(gauss_gid,a_mat_in_elem)){
-                            State.MaterialPoints(mat_id).sie.host(mat_point_lid) = 
+                            State.MaterialPoints.sie.host(mat_id,mat_point_lid) = 
                                 fillGaussState.sie.host(gauss_gid,a_mat_in_elem);
                         }
                         else {
-                            State.MaterialPoints(mat_id).sie.host(mat_point_lid) = 
-                                fillGaussState.ie.host(gauss_gid,a_mat_in_elem)/State.MaterialPoints(mat_id).mass.host(mat_point_lid);
+                            State.MaterialPoints.sie.host(mat_id,mat_point_lid) = 
+                                fillGaussState.ie.host(gauss_gid,a_mat_in_elem)/State.MaterialPoints.mass.host(mat_id,mat_point_lid);
                         }
                     
                 }
 
                 // --- thermal conductivity ---
-                if( State.MaterialPoints(mat_id).conductivity.host.size()>0 ){
-                    State.MaterialPoints(mat_id).conductivity.host(mat_point_lid) = 
+                if( State.MaterialPoints.conductivity.size()>0 ){
+                    State.MaterialPoints.conductivity.host(mat_id,mat_point_lid) = 
                                 fillGaussState.thermal_conductivity.host(gauss_gid,a_mat_in_elem); 
                 }
 
                 // --- specific heat ---
-                if( State.MaterialPoints(mat_id).specific_heat.host.size()>0 ){
-                    State.MaterialPoints(mat_id).specific_heat.host(mat_point_lid) = 
+                if( State.MaterialPoints.specific_heat.size()>0 ){
+                    State.MaterialPoints.specific_heat.host(mat_id,mat_point_lid) = 
                                 fillGaussState.specific_heat.host(gauss_gid,a_mat_in_elem); 
                 }
 
@@ -792,7 +814,7 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
                 // ------------------
 
                 // --- set the level set field ---
-                if( State.GaussPoints.level_set.host.size()>0 ){
+                if( State.GaussPoints.level_set.size()>0 ){
                     State.GaussPoints.level_set.host(gauss_gid) = 
                            fmin(State.GaussPoints.level_set.host(gauss_gid), 
                                 fillGaussState.level_set.host(gauss_gid,a_mat_in_elem)); // use the min level set field
@@ -806,7 +828,7 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
             // Save MaterialZones
             // -----------------------
 
-            if( State.MaterialZones(mat_id).sie.host.size()>0 ){
+            if( State.MaterialZones.sie.size()>0 ){
                 // IMPORTANT:
                 // For higher-order FE, least squares fit the sie at gauss points to get zone values
                 //for(gauss_lid in elem){ 
@@ -814,7 +836,7 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
                 //}
 
                 // save state
-                State.MaterialZones(mat_id).sie.host(elem_gid) = 0.0;  // a place holder, make least squares fit value
+                State.MaterialZones.sie.host(mat_id,elem_gid) = 0.0;  // a place holder, make least squares fit value
    
 
             } // 
@@ -825,46 +847,47 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
 
         } // end loop over materials in this element
     } // end serial for loop over all elements
-    
+    State.MaterialToMeshMaps.elem.update_device();
+
 
     // copy the state to the device
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
         std::cout << "Number of elements = " << 
-            State.MaterialToMeshMaps(mat_id).num_material_elems << " for material " << mat_id << "\n";
-        
-        State.MaterialPoints(mat_id).volfrac.update_device();
-        State.MaterialPoints(mat_id).geo_volfrac.update_device();
-        State.MaterialToMeshMaps(mat_id).elem.update_device();
+            State.MaterialToMeshMaps.num_material_elems.host(mat_id) << " for material " << mat_id << "\n";
+    
+    } // end for loop over mats
 
-        if (State.MaterialPoints(mat_id).den.host.size()>0){
-            State.MaterialPoints(mat_id).den.update_device();
-            State.MaterialPoints(mat_id).mass.update_device();
-        }
+    State.MaterialPoints.volfrac.update_device();
+    State.MaterialPoints.geo_volfrac.update_device();
 
-        if (State.MaterialPoints(mat_id).sie.host.size()>0){
-            State.MaterialPoints(mat_id).sie.update_device();
-        }
-        if (State.MaterialZones(mat_id).sie.host.size()>0){
-            State.MaterialZones(mat_id).sie.update_device();
-        }
-        
-        if (State.MaterialPoints(mat_id).eroded.host.size()>0){
-            State.MaterialPoints(mat_id).eroded.update_device();
-        }
+    if (State.MaterialPoints.den.size()>0){
+        State.MaterialPoints.den.update_device();
+        State.MaterialPoints.mass.update_device();
+    }
 
-        if (State.MaterialPoints(mat_id).conductivity.host.size()>0){
-            State.MaterialPoints(mat_id).conductivity.update_device();
-        }
+    if (State.MaterialPoints.sie.size()>0){
+        State.MaterialPoints.sie.update_device();
+    }
+    if (State.MaterialZones.sie.size()>0){
+        State.MaterialZones.sie.update_device();
+    }
+    
+    if (State.MaterialPoints.eroded.size()>0){
+        State.MaterialPoints.eroded.update_device();
+    }
 
-        if (State.MaterialPoints(mat_id).specific_heat.host.size()>0){
-            State.MaterialPoints(mat_id).specific_heat.update_device();
-        }
+    if (State.MaterialPoints.conductivity.size()>0){
+        State.MaterialPoints.conductivity.update_device();
+    }
 
-        // -----
-        // add other state here
+    if (State.MaterialPoints.specific_heat.size()>0){
+        State.MaterialPoints.specific_heat.update_device();
+    }
 
-    } // end for
+    // -----
+    // add other state here
+
     Kokkos::fence();
 
  
@@ -2082,9 +2105,9 @@ void paint_node_scalar(const double scalar,
 /////////////////////////////////////////////////////////////////////////////
 void init_state_vars(const Material_t& Materials,
                      const Mesh_t& mesh,
-                     const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                     const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-                     const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                     const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                     const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                     const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                      const size_t num_mat_pts,
                      const size_t mat_id)
 {
@@ -2141,14 +2164,14 @@ void init_state_vars(const Material_t& Materials,
 /////////////////////////////////////////////////////////////////////////////
 void init_press_sspd_stress(const Material_t& Materials,
                             const Mesh_t& mesh,
-                            const DCArrayKokkos<double>& MaterialPoints_den,
-                            const DCArrayKokkos<double>& MaterialPoints_pres,
-                            const DCArrayKokkos<double>& MaterialPoints_stress,
-                            const DCArrayKokkos<double>& MaterialPoints_sspd,
-                            const DCArrayKokkos<double>& MaterialPoints_sie,
-                            const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                            const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-                            const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
+                            const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+                            DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                            DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+                            DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                            const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+                            const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                            const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                            DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
                             const size_t num_mat_pts,
                             const size_t mat_id)
 {
@@ -2156,12 +2179,12 @@ void init_press_sspd_stress(const Material_t& Materials,
     // --- Shear modulus ---
     // loop over the material points
 
-    if (MaterialPoints_shear_modulii.size() > 0) {
+    if (MaterialPoints_shear_modulii.size()>0) {
         FOR_ALL(mat_point_lid, 0, num_mat_pts, {
 
             // setting shear modulii to zero, corresponds to a gas
             for(size_t i=0; i<3; i++){
-                MaterialPoints_shear_modulii(mat_point_lid,i) = 0.0;
+                MaterialPoints_shear_modulii(mat_id, mat_point_lid, i) = 0.0;
             } // end for
 
         });
@@ -2178,7 +2201,7 @@ void init_press_sspd_stress(const Material_t& Materials,
                 // ===============
                 //  Call the strength model here
                 // ===============
-                MaterialPoints_stress(mat_point_lid, i, j) = 0.0;
+                MaterialPoints_stress(mat_id, mat_point_lid, i, j) = 0.0;
             }
         }  // end for i,j
                             
@@ -2198,8 +2221,8 @@ void init_press_sspd_stress(const Material_t& Materials,
                                         mat_id,
                                         MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
-                                        MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(mat_point_lid),
+                                        MaterialPoints_den(mat_id, mat_point_lid),
+                                        MaterialPoints_sie(mat_id, mat_point_lid),
                                         Materials.eos_global_vars);   
 
         // --- Sound Speed ---                               
@@ -2210,8 +2233,8 @@ void init_press_sspd_stress(const Material_t& Materials,
                                         mat_id,
                                         MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
-                                        MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(mat_point_lid),
+                                        MaterialPoints_den(mat_id, mat_point_lid),
+                                        MaterialPoints_sie(mat_id, mat_point_lid),
                                         MaterialPoints_shear_modulii,
                                         Materials.eos_global_vars);
     }); // end pressure and sound speed
@@ -2243,16 +2266,17 @@ void calc_corner_mass(const Material_t& Materials,
                       const DistributedDCArray<double>& node_coords,
                       const DistributedDCArray<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
-                      const DCArrayKokkos<double>& MaterialPoints_mass,
-                      const DCArrayKokkos<size_t>& MaterialToMeshMaps_elem,
-                      const size_t num_mat_elems)
+                      const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+                      const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                      const size_t num_mat_elems,
+                      const size_t mat_id)
 {
 
 
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_elem_lid);  
+        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);  
 
         // calculate the fraction of matpt mass to scatter to each corner
         double corner_frac = 1.0/((double)mesh.num_nodes_in_elem);  // =1/8
@@ -2260,7 +2284,7 @@ void calc_corner_mass(const Material_t& Materials,
         // partion the mass to the corners
         for(size_t corner_lid=0; corner_lid<mesh.num_nodes_in_elem; corner_lid++){
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-            corner_mass(corner_gid) += corner_frac*MaterialPoints_mass(mat_elem_lid);
+            corner_mass(corner_gid) += corner_frac*MaterialPoints_mass(mat_id, mat_elem_lid);
         } // end for
 
     }); // end parallel for over mat elem local ids
