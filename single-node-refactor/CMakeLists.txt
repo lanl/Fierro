@@ -100,12 +100,7 @@ include_directories(src/common)
 include_directories(src/input)
 add_subdirectory(src/input)
 
-
-
 add_subdirectory(src)
-
-
-
 
 # Add uninstall target
 if(NOT TARGET uninstall)

@@ -107,14 +107,16 @@ void Driver::initialize()
     }
 
     //build relevant partition maps for ghost nodes, elements, etc.
-    mesh.init_maps();
+    mesh.init_maps(State.node);
 
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
 
+    //make bcs MPI parallel?
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
+
     build_boundry_node_sets(mesh);
 
 

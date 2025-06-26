@@ -269,7 +269,7 @@ struct Mesh_t
     DistributedMap nonoverlap_element_node_map; // map of node indices belonging to unique element map
 
     //communication plans
-    CommunicationPlan<real_t> node_coords_comms;
+    CommPlan<real_t> node_coords_comms;
 
     RaggedRightArrayKokkos<size_t> corners_in_node; ///< Corners connected to a node
     CArrayKokkos<size_t> num_corners_in_node;       ///< Number of corners connected to a node
@@ -389,11 +389,9 @@ struct Mesh_t
     /* ----------------------------------------------------------------------
     Initialize Ghost and Non-Overlapping Element Maps
     ------------------------------------------------------------------------- */
-    void init_maps()
+    void init_maps(node_t& node)
     {
-        int  num_dim = simparam.num_dims;
         int  local_node_index, current_column_index;
-        int  num_nodes_in_elem;
         long long int   node_gid;
         int myrank, nranks;
         MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
@@ -401,6 +399,7 @@ struct Mesh_t
 
         num_ghost_nodes=0;
         DCArrayKokkos<long long int> ghost_nodes;
+        DCArrayKokkos<int> ghost_node_ranks;
         if (num_elems >= 1)
         {
             // Construct set of ghost nodes; start with a buffer with upper limit
@@ -409,7 +408,6 @@ struct Mesh_t
             for (int cell_rid = 0; cell_rid < num_elems; cell_rid++)
             {
                 // set nodes per element
-                num_nodes_in_elem = elem->num_nodes();
                 for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
                 {
                     node_gid = nodes_in_elem(cell_rid, node_lid); //nodes in elem still stores global indices
@@ -424,6 +422,8 @@ struct Mesh_t
             // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
 
             num_ghost_nodes = ghost_node_set.size();
+            int  ighost = 0;
+            auto it     = ghost_node_set.begin();
 
             // create a Map for ghost node indices
             ghost_nodes = DCArrayKokkos<long long int>(num_ghost_nodes, "ghost_nodes"); //pass this into map object
@@ -436,8 +436,6 @@ struct Mesh_t
             //Use the ranks to break ties in shared element assignment for a unique element map used in elem set reductions later
             //this wont be that great at load balancing element counts but its simple and works for now
             ghost_node_ranks = DCArrayKokkos<int>(num_ghost_nodes, "ghost_nodes_ranks");
-            int  ighost = 0;
-            auto it     = ghost_node_set.begin();
 
             // debug print of ghost nodes
             // std::cout << " GHOST NODE SET ON TASK " << myrank << std::endl;
@@ -461,7 +459,7 @@ struct Mesh_t
         DCArrayKokkos<long long int> all_nodes;
         if(num_nodes){
             // CArrayKokkos<GO, array_layout, device_type, memory_traits> all_node_indices(num_nodes, "all_node_indices");
-            all_nodes = DCArrayKokkos<long long int>DCArrayKokkos<long long int>(num_nodes, "num_nodes");
+            all_nodes = DCArrayKokkos<long long int>(num_nodes, "num_nodes");
             for (int i = 0; i < num_nodes; i++)
             {
                 if (i < num_local_nodes)
@@ -506,7 +504,7 @@ struct Mesh_t
             }
             if (my_element_flag)
             {
-                Initial_Element_Global_Indices.host(nonoverlapping_count++) = all_element_map.getGlobalIndex(ielem);
+                Initial_Element_Global_Indices.host(nonoverlapping_count++) = element_map.getGlobalIndex(ielem);
             }
         }
 
@@ -529,7 +527,7 @@ struct Mesh_t
 
         for (int ielem = 0; ielem < num_elems; ielem++)
         {
-            Initial_Element_Global_Indices.host(ielem) = all_element_map.getGlobalIndex(ielem);
+            Initial_Element_Global_Indices.host(ielem) = element_map.getGlobalIndex(ielem);
         }
 
         // re-sort so local elements in the nonoverlapping map are first in storage
@@ -570,14 +568,14 @@ struct Mesh_t
         Initial_Element_Global_Indices.update_device();
         nodes_in_elem.update_device();
 
-        all_element_map = DistributedMap(Initial_Element_Global_Indices);
+        element_map = DistributedMap(Initial_Element_Global_Indices);
         //redefine nodes_in_elem so partition map of the distributed array is synchronized with permuted dual view contents
-        DistributedDCArray nodes_in_elem_temp(all_element_map, num_nodes_in_elem);
+        DistributedDCArray<size_t> nodes_in_elem_temp(element_map, num_nodes_in_elem);
         nodes_in_elem_temp.replace_kokkos_dual_view(nodes_in_elem.get_kokkos_dual_view());
         nodes_in_elem = nodes_in_elem_temp;
 
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);
-        // all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
+        // element_map->describe(*fos,Teuchos::VERB_EXTREME);
         // create distributed multivector of the local node data and all (local + ghost) node storage
         std::vector<node_state> required_node_state = { node_state::coords };
         //constructs local + ghost coords array with local coords as a subview for first nlocal entrie
@@ -585,10 +583,10 @@ struct Mesh_t
 
         /* create forward comms objects; setup for new map pairs should only be done here, construct using these existing comm plans
            for any new pair of vectors requiring the same map pairs and comm mode afterwards*/
-        forward_comms_setup();
+        forward_comms_setup(node);
 
         // create reverse comms
-        //reverse_comms_setup();
+        //reverse_comms_setup(node);
 
         // construct map of nodes that belong to the non-overlapping element set (contained by ghost + local node set but not all of them)
         std::set<long long int> nonoverlap_elem_node_set;
@@ -608,7 +606,7 @@ struct Mesh_t
         // by now the set contains, with no repeats, all the global node indices belonging to the non overlapping element list on this MPI rank
         // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
         size_t nnonoverlap_elem_nodes = nonoverlap_elem_node_set.size();
-        DCArrayKokkosw<long long int> nonoverlap_elem_nodes(nnonoverlap_elem_nodes, "nonoverlap_elem_nodes");
+        DCArrayKokkos<long long int> nonoverlap_elem_nodes(nnonoverlap_elem_nodes, "nonoverlap_elem_nodes");
         if(nnonoverlap_elem_nodes){
             int  inonoverlap_elem_node = 0;
             auto it = nonoverlap_elem_node_set.begin();
@@ -633,24 +631,24 @@ struct Mesh_t
     Setup Tpetra importers for comms
     ------------------------------------------------------------------------- */
 
-    void forward_comms_setup()
+    void forward_comms_setup(node_t& node)
     {
         // create import object using local node indices map and ghost indices map
-        node_coords_comms = CommunicationPlan(node.coords, node.local_coords);
+        node_coords_comms = CommPlan<real_t>(node.coords, node.local_coords);
 
         // output map and importers
         //sorted_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_nodes, 0, comm));
         //node_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(map, sorted_map));
         // sorted element mapping
         //sorted_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_elem, 0, comm));
-        //element_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(all_element_map, sorted_element_map));;
+        //element_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(element_map, sorted_element_map));;
     }
 
     /* ----------------------------------------------------------------------
     Setup Tpetra exporters for reverse comms
     ------------------------------------------------------------------------- */
 
-    void reverse_comms_setup()
+    void reverse_comms_setup(node_t& node)
     {   
         //currently don't use anything like force tallies from ghost nodes
         //only use in TO solver was a BC flag
