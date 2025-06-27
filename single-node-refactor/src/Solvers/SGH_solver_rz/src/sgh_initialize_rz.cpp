@@ -41,7 +41,7 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParameters,
                 	   Material_t& Materials, 
                 	   Mesh_t& mesh, 
                 	   BoundaryCondition_t& Boundary,
-                	   State_t& State) const
+                	   State_t& State)
 {
 	size_t num_nodes = mesh.num_nodes;
     size_t num_gauss_pts = mesh.num_elems;

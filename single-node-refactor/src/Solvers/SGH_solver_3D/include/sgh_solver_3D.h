@@ -146,6 +146,10 @@ public:
 
     ~SGH3D() = default;
 
+    //member variables
+    CommPlan<real_t> node_velocity_comms;
+    CommPlan<real_t> node_mass_comms;
+
     /////////////////////////////////////////////////////////////////////////////
     ///
     /// \fn Initialize
@@ -157,7 +161,7 @@ public:
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
-                    State_t& State) const override;
+                    State_t& State) override;
 
 
     void initialize_material_state(SimulationParameters_t& SimulationParameters, 
@@ -449,8 +453,10 @@ public:
 double sum_domain_internal_energy(
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+    const MaterialToMeshMap_t& MaterialToMeshMaps,
     const size_t num_mat_points,
-    const size_t mat_id);
+    const size_t mat_id,
+    const size_t num_local_elems);
 
 double sum_domain_kinetic_energy(
     const Mesh_t& mesh,

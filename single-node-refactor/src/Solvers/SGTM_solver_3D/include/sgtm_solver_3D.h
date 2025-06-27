@@ -168,7 +168,7 @@ public:
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
-                    State_t& State) const override;
+                    State_t& State) override;
 
     void initialize_material_state(SimulationParameters_t& SimulationParameters, 
                 	               Material_t& Materials, 

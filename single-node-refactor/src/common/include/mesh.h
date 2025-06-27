@@ -518,7 +518,7 @@ struct Mesh_t
         Element_Global_Indices.update_device();
 
         // create nonoverlapping element map
-        element_map = DistributedMap(Element_Global_Indices);
+        local_element_map = DistributedMap(Element_Global_Indices);
 
         // sort element connectivity so nonoverlaps are sequentially found first
         // define initial sorting of global indices
@@ -540,7 +540,7 @@ struct Mesh_t
         {
             current_element_gid = Initial_Element_Global_Indices.host(ielem);
             // if this element is not part of the non overlap list then send it to the end of the storage and swap the element at the end
-            if (!element_map.isProcessGlobalIndex(current_element_gid))
+            if (!local_element_map.isProcessGlobalIndex(current_element_gid))
             {
                 temp_element_gid = current_element_gid;
                 for (int lnode = 0; lnode < num_nodes_in_elem; lnode++)
@@ -584,6 +584,7 @@ struct Mesh_t
         /* create forward comms objects; setup for new map pairs should only be done here, construct using these existing comm plans
            for any new pair of vectors requiring the same map pairs and comm mode afterwards*/
         forward_comms_setup(node);
+        node_coords_comms.execute_comms();
 
         // create reverse comms
         //reverse_comms_setup(node);

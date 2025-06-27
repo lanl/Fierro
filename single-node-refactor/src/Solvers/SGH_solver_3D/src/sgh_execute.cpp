@@ -102,6 +102,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
     double IE_t0 = 0.0;
     double KE_t0 = 0.0;
     double TE_t0 = 0.0;
+    double local_IE_t0 = 0.0;
+    double local_KE_t0 = 0.0;
 
     double cached_pregraphics_dt = fuzz;
 
@@ -111,17 +113,24 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
     // extensive IE
     for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
 
-        IE_t0 += sum_domain_internal_energy(State.MaterialPoints.mass,
+        local_IE_t0 += sum_domain_internal_energy(State.MaterialPoints.mass,
                                             State.MaterialPoints.sie,
+                                            State.MaterialToMeshMaps,
                                             State.MaterialPoints.num_material_points.host(mat_id),
-                                            mat_id);
+                                            mat_id,
+                                            mesh.num_local_elems);
     } // end loop over mat_id
 
     // extensive KE
-    KE_t0 = sum_domain_kinetic_energy(mesh,
+    local_KE_t0 = sum_domain_kinetic_energy(mesh,
                                       State.node.vel,
                                       State.node.coords,
                                       State.node.mass);
+
+    //collect KE and TE sums across all processes
+    MPI_Allreduce(&local_IE_t0, &IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&local_KE_t0, &KE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
 
@@ -212,7 +221,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
             min_dt_calc = fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
 
-        dt = min_dt_calc;  // save this dt time step
+        //Find the minimum timestep across all MPI processes
+        MPI_Allreduce(&min_dt_calc, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
@@ -350,6 +360,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
 
             // ---- apply contact boundary conditions to the boundary patches----
             boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
+
+            //update node velocity on ghosts
+            node_velocity_comms.execute_comms();
 
             // mpi_coms();
 
@@ -508,21 +521,29 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
     double IE_tend = 0.0;
     double KE_tend = 0.0;
     double TE_tend = 0.0;
+    double local_IE_tend = 0.0;
+    double local_KE_tend = 0.0;
 
     // extensive IE
     for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-        IE_tend += sum_domain_internal_energy(State.MaterialPoints.mass,
+        local_IE_tend += sum_domain_internal_energy(State.MaterialPoints.mass,
                                               State.MaterialPoints.sie,
+                                              State.MaterialToMeshMaps,
                                               State.MaterialPoints.num_material_points.host(mat_id),
-                                              mat_id);
+                                              mat_id,
+                                              mesh.num_local_elems);
     } // end loop over mat_id
 
     // extensive KE
-    KE_tend = sum_domain_kinetic_energy(mesh,
+    local_KE_tend = sum_domain_kinetic_energy(mesh,
                                         State.node.vel,
                                         State.node.coords,
                                         State.node.mass);
+    
+    MPI_Allreduce(&local_IE_t0, &IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&local_KE_t0, &KE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
     // extensive TE
     TE_tend = IE_tend + KE_tend;
 
@@ -635,14 +656,17 @@ double max_Eigen3D(const ViewCArrayKokkos<double> tensor)
 double sum_domain_internal_energy(
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+    const MaterialToMeshMap_t& MaterialToMeshMaps,
     const size_t num_mat_points,
-    const size_t mat_id)
+    const size_t mat_id,
+    const size_t num_local_elems)
 {
     double IE_sum = 0.0;
     double IE_loc_sum;
 
     // loop over the material points and tally IE
     FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
+        if(MaterialToMeshMaps.elem(mat_id, matpt_lid) < num_local_elems)
         IE_loc_sum += MaterialPoints_mass(mat_id,matpt_lid) * MaterialPoints_sie(mat_id,matpt_lid);
     }, IE_sum);
     Kokkos::fence();
@@ -675,11 +699,13 @@ double sum_domain_kinetic_energy(
     // extensive KE
     double KE_sum = 0.0;
     double KE_loc_sum;
+    int num_dims = mesh.num_dims;
+    int num_local_nodes = mesh.num_local_nodes;
 
-    FOR_REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
+    FOR_REDUCE_SUM(node_gid, 0, num_local_nodes, KE_loc_sum, {
         double ke = 0;
 
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+        for (size_t dim = 0; dim < num_dims; dim++) {
             ke += node_vel(node_gid, dim) * node_vel(node_gid, dim); // 1/2 at end
         } // end for
 

@@ -63,7 +63,7 @@ public:
                             Material_t& Materials, 
                             Mesh_t& mesh, 
                             BoundaryCondition_t& Boundary,
-                            State_t& State) const = 0;
+                            State_t& State) {}
 
     virtual void initialize_material_state(SimulationParameters_t& SimulationParameters, 
                 	                      Material_t& Materials, 
