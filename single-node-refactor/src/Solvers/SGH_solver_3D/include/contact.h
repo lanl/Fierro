@@ -320,8 +320,11 @@ struct contact_patches_t
 {
     CArrayKokkos<contact_patch_t> contact_patches;  // patches that will be checked for contact
     CArrayKokkos<contact_node_t> contact_nodes;  // all nodes that are in contact_patches (accessed through node gid)
+    CArrayKokkos<contact_patch_t> penetration_patches;  // patches that will be checked for boundary penetration
+    CArrayKokkos<contact_node_t> penetration_nodes;  // all nodes that are in penetration_patches (accessed through node gid)
     CArrayKokkos<size_t> patches_gid;  // global patch ids
     CArrayKokkos<size_t> nodes_gid;  // global node ids
+    CArrayKokkos<size_t> pen_nodes_gid;  // global node ids for nodes in penetration patches
     size_t num_contact_patches;  // total number of patches that will be checked for contact
     RaggedRightArrayKokkos<size_t> patches_in_node;  // each row is the node gid and the columns are the patches (local to contact_patches) that the node is in
     CArrayKokkos<size_t> num_patches_in_node;  // the strides for patches_in_node
@@ -361,6 +364,7 @@ struct contact_patches_t
 
     static double bucket_size;  // bucket size (defined as 1.001*min_node_distance)
     static size_t num_contact_nodes;  // total number of contact nodes (always less than or equal to mesh.num_bdy_nodes)
+    static size_t num_pen_nodes; // total number of nodes being considered for penetration checks
     double x_max = 0.0;  // maximum x coordinate
     double y_max = 0.0;  // maximum y coordinate
     double z_max = 0.0;  // maximum z coordinate
@@ -417,6 +421,23 @@ struct contact_patches_t
     /// \param num_nodes_found number of nodes that could potentially contact the patch (used to access possible_nodes)
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void find_nodes(contact_patch_t &contact_patch, const double &del_t, size_t &num_nodes_found);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn penetration_check
+    ///
+    /// \brief Finds whether a node is penetrating a boundary element
+    ///
+    /// The node being considered will have its position checked against the patches of the boundary element being
+    /// checked based upon its position and the normal vector of each patch that is part of the element 
+    /// that the boundary patch corresponds to.
+    ///
+    /// \param node Contact node object being checked for penetration
+    /// \param surfaces The 6 surfaces of the hex element being checked for penetration
+    ///
+    /// \return true if the node is penetrating the element; false otherwise
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    KOKKOS_FUNCTION
+    bool penetration_check(const contact_node_t node, const ViewCArrayKokkos <contact_patch_t> surfaces) const;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn get_contact_pairs
