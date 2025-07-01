@@ -334,6 +334,12 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // call body forces routine
 
+            // apply contact forces to boundary patches
+            if (doing_contact) 
+            {
+                contact_bank.update_nodes(mesh, State);
+                boundary_contact_force(dt*rk_alpha);
+            }
 
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
@@ -343,7 +349,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.node.vel_n0,
                             State.node.mass,
                             State.node.force,
-                            State.corner.force);
+                            State.corner.force,
+                            contact_bank.contact_nodes);
 
             // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);

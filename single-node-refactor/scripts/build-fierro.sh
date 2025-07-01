@@ -24,7 +24,7 @@ show_help() {
     echo " "
     echo "          SGH                         builds the SGH solver"
     echo " "
-    echo "      --kokkos_build_type             The desired kokkos parallel backend to use. The default is 'serial'"
+    echo "      --kokkos_build_type             The desired kokkos parallel backend to use. The default is 'openmp'"
     echo " "
     echo "          serial                      Serial Kokkos backend"
     echo "          openmp                      OpenMP Kokkos backend"
