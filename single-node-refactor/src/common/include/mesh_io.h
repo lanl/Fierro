@@ -1828,7 +1828,7 @@ public:
             }
         }
         else if (SimulationParameters.mesh_input.num_dims == 3) {
-            //build_3d_box(mesh, GaussPoints, node, corner, SimulationParameters);
+            build_3d_box(mesh, GaussPoints, node, corner, SimulationParameters);
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
@@ -2109,125 +2109,163 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    // void build_3d_box(Mesh_t& mesh,
-    //     GaussPoint_t& GaussPoints,
-    //     node_t&   node,
-    //     corner_t& corner,
-    //     SimulationParameters_t& SimulationParameters) const
-    // {
-    //     printf("Creating a 3D box mesh \n");
+    void build_3d_box(Mesh_t& mesh,
+        GaussPoint_t& GaussPoints,
+        node_t&   node,
+        corner_t& corner,
+        SimulationParameters_t& SimulationParameters) const
+    {   
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+        /*currently we just build the global mesh data on rank 0 and then broadcast relevant data to each rank
+          before the global mesh data on rank 0 falls out of scope*/
+        int global_num_nodes, global_num_elems;
 
-    //     const int num_dim = 3;
+        const int num_dims = 3;
+        size_t num_nodes_in_elem = 1;
+        for (int dim = 0; dim < num_dims; dim++) {
+            num_nodes_in_elem *= 2;
+        }
+        if(myrank==0){
+            printf("Creating a 3D box mesh \n");
 
-    //     // SimulationParameters.mesh_input.length.update_host();
-    //     const double lx = SimulationParameters.mesh_input.length[0];
-    //     const double ly = SimulationParameters.mesh_input.length[1];
-    //     const double lz = SimulationParameters.mesh_input.length[2];
+            // SimulationParameters.mesh_input.length.update_host();
+            const double lx = SimulationParameters.mesh_input.length[0];
+            const double ly = SimulationParameters.mesh_input.length[1];
+            const double lz = SimulationParameters.mesh_input.length[2];
 
-    //     // SimulationParameters.mesh_input.num_elems.update_host();
-    //     const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
-    //     const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
-    //     const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
+            // SimulationParameters.mesh_input.num_elems.update_host();
+            const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+            const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
+            const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
 
-    //     const int num_points_i = num_elems_i + 1; // num points in x
-    //     const int num_points_j = num_elems_j + 1; // num points in y
-    //     const int num_points_k = num_elems_k + 1; // num points in y
+            const int num_points_i = num_elems_i + 1; // num points in x
+            const int num_points_j = num_elems_j + 1; // num points in y
+            const int num_points_k = num_elems_k + 1; // num points in y
 
-    //     const int num_nodes = num_points_i * num_points_j * num_points_k;
+            global_num_nodes = num_points_i * num_points_j * num_points_k;
 
-    //     const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
-    //     const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
-    //     const double dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
+            const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
+            const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
+            const double dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
 
-    //     const int num_elems = num_elems_i * num_elems_j * num_elems_k;
+            const int global_num_elems = num_elems_i * num_elems_j * num_elems_k;
 
-    //     std::vector<double> origin(num_dim);
-    //     // SimulationParameters.mesh_input.origin.update_host();
-    //     for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
+            std::vector<double> origin(num_dims);
+            // SimulationParameters.mesh_input.origin.update_host();
+            for (int i = 0; i < num_dims; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
-    //     // --- 3D parameters ---
-    //     // const int num_faces_in_elem  = 6;  // number of faces in elem
-    //     // const int num_points_in_elem = 8;  // number of points in elem
-    //     // const int num_points_in_face = 4;  // number of points in a face
-    //     // const int num_edges_in_elem  = 12; // number of edges in a elem
+            // --- 3D parameters ---
+            // const int num_faces_in_elem  = 6;  // number of faces in elem
+            // const int num_points_in_elem = 8;  // number of points in elem
+            // const int num_points_in_face = 4;  // number of points in a face
+            // const int num_edges_in_elem  = 12; // number of edges in a elem
+            
+            // node coords data on rank 0 for all global nodes
+            DCArrayKokkos<double> global_coords(global_num_nodes, num_dims, "global_mesh_build_node_coordinates");
 
+            // --- Build nodes ---
 
-    //     // initialize mesh node variables
-    //     mesh.initialize_nodes(num_nodes);
+            // populate the point data structures
+            for (int k = 0; k < num_points_k; k++) {
+                for (int j = 0; j < num_points_j; j++) {
+                    for (int i = 0; i < num_points_i; i++) {
+                        // global id for the point
+                        int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
-    //      // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
-    //     std::vector<node_state> required_node_state = { node_state::coords };
-    //     node.initialize(num_nodes, num_dim, required_node_state);
-
-    //     // --- Build nodes ---
-
-    //     // populate the point data structures
-    //     for (int k = 0; k < num_points_k; k++) {
-    //         for (int j = 0; j < num_points_j; j++) {
-    //             for (int i = 0; i < num_points_i; i++) {
-    //                 // global id for the point
-    //                 int node_gid = get_id(i, j, k, num_points_i, num_points_j);
-
-    //                 // store the point coordinates
-    //                 node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-    //                 node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-    //                 node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
-    //             } // end for i
-    //         } // end for j
-    //     } // end for k
+                        // store the point coordinates
+                        global_coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                        global_coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+                        global_coords.host(node_gid, 2) = origin[2] + (double)k * dz;
+                    } // end for i
+                } // end for j
+            } // end for k
 
 
-    //     node.coords.update_device();
+            global_coords.update_device();
 
-    //     // initialize elem variables
-    //     mesh.initialize_elems(num_elems, num_dim);
+            // initialize elem variables
+            DCArrayKokkos<size_t> global_nodes_in_elem(global_num_elems, num_nodes_in_elem, "global_mesh_build_nodes_in_elem");
 
-    //     // --- Build elems  ---
+            // --- Build elems  ---
 
-    //     // populate the elem center data structures
-    //     for (int k = 0; k < num_elems_k; k++) {
-    //         for (int j = 0; j < num_elems_j; j++) {
-    //             for (int i = 0; i < num_elems_i; i++) {
-    //                 // global id for the elem
-    //                 int elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
+            // populate the elem center data structures
+            for (int k = 0; k < num_elems_k; k++) {
+                for (int j = 0; j < num_elems_j; j++) {
+                    for (int i = 0; i < num_elems_i; i++) {
+                        // global id for the elem
+                        int elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
 
-    //                 // store the point IDs for this elem where the range is
-    //                 // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
-    //                 int this_point = 0;
-    //                 for (int kcount = k; kcount <= k + 1; kcount++) {
-    //                     for (int jcount = j; jcount <= j + 1; jcount++) {
-    //                         for (int icount = i; icount <= i + 1; icount++) {
-    //                             // global id for the points
-    //                             int node_gid = get_id(icount, jcount, kcount,
-    //                                               num_points_i, num_points_j);
+                        // store the point IDs for this elem where the range is
+                        // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
+                        int this_point = 0;
+                        for (int kcount = k; kcount <= k + 1; kcount++) {
+                            for (int jcount = j; jcount <= j + 1; jcount++) {
+                                for (int icount = i; icount <= i + 1; icount++) {
+                                    // global id for the points
+                                    int node_gid = get_id(icount, jcount, kcount,
+                                                    num_points_i, num_points_j);
 
-    //                             // convert this_point index to the FE index convention
-    //                             int this_index = this_point; //convert_point_number_in_Hex(this_point);
+                                    // convert this_point index to the FE index convention
+                                    int this_index = this_point; //convert_point_number_in_Hex(this_point);
 
-    //                             // store the points in this elem according the the finite
-    //                             // element numbering convention
-    //                             mesh.nodes_in_elem.host(elem_gid, this_index) = node_gid;
+                                    // store the points in this elem according the the finite
+                                    // element numbering convention
+                                    global_nodes_in_elem.host(elem_gid, this_index) = node_gid;
 
-    //                             // increment the point counting index
-    //                             this_point = this_point + 1;
-    //                         } // end for icount
-    //                     } // end for jcount
-    //                 }  // end for kcount
-    //             } // end for i
-    //         } // end for j
-    //     } // end for k
+                                    // increment the point counting index
+                                    this_point = this_point + 1;
+                                } // end for icount
+                            } // end for jcount
+                        }  // end for kcount
+                    } // end for i
+                } // end for j
+            } // end for k
+        }
 
-    //     // update device side
-    //     mesh.nodes_in_elem.update_device();
+        //distribute partitioned data from the global mesh build data on rank 0
+        size_t num_local_nodes;
+        DistributedMap map;
+        { //scoped so temp FArray data is auto deleted to save memory
+            //allocate pre-partition node coords using contiguous decomposition
+            //FArray type used since CArray type still doesnt support zoltan2 decomposition
+            DistributedDFArray<real_t> node_coords_distributed(global_num_nodes, num_dims);
 
-    //     // initialize corner variables
-    //     int num_corners = num_elems * mesh.num_nodes_in_elem;
-    //     mesh.initialize_corners(num_corners);
-    //     // corner.initialize(num_corners, num_dim);
+            // construct contiguous parallel row map now that we know the number of nodes
+            map = node_coords_distributed.pmap;
+            // map->describe(*fos,Teuchos::VERB_EXTREME);
 
-    //     // Build connectivity
-    //     mesh.build_connectivity();
-    // } // end build_3d_box
+            // set the vertices in the mesh read in
+            num_local_nodes = map.size();
+            // end of coordinate readin
+            node_coords_distributed.update_device();
+            // repartition node distribution
+            node_coords_distributed.repartition_vector();
+            //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
+            std::vector<node_state> required_node_state = { node_state::coords };
+            map = node_coords_distributed.pmap;
+            node.initialize(map, num_dims, required_node_state);
+        }
+
+        // initialize mesh node variables
+        mesh.initialize_nodes(global_num_nodes);
+        num_local_nodes = map.size();
+        mesh.num_local_nodes = num_local_nodes;
+
+        // update device side
+        mesh.nodes_in_elem.update_device();
+        
+        mesh.global_num_elems = global_num_elems;
+
+        // initialize corner variables
+        int num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+        // corner.initialize(num_corners, num_dim);
+
+        // Build connectivity
+        mesh.build_connectivity();
+    } // end build_3d_box
 
     /////////////////////////////////////////////////////////////////////////////
     ///

@@ -323,7 +323,7 @@ struct Mesh_t
     // initialization methods
     void initialize_nodes(const size_t num_nodes_inp)
     {
-        num_nodes = num_nodes_inp;
+        global_num_nodes = num_nodes_inp;
 
         return;
     }; // end method
