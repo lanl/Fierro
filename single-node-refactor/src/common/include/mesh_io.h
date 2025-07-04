@@ -2122,6 +2122,16 @@ public:
           before the global mesh data on rank 0 falls out of scope*/
         int global_num_nodes, global_num_elems;
 
+        int local_node_index, current_column_index;
+        int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
+        int negative_index_found = 0;
+        int global_negative_index_found = 0;
+
+        size_t read_index_start, node_rid, elem_gid;
+        long long int node_gid;
+        real_t dof_value;
+        real_t unit_scaling = 1;
+
         const int num_dims = 3;
         size_t num_nodes_in_elem = 1;
         for (int dim = 0; dim < num_dims; dim++) {
@@ -2163,7 +2173,7 @@ public:
             // const int num_edges_in_elem  = 12; // number of edges in a elem
             
             // node coords data on rank 0 for all global nodes
-            DCArrayKokkos<double> global_coords(global_num_nodes, num_dims, "global_mesh_build_node_coordinates");
+            CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace> global_coords(global_num_nodes, num_dims, "global_mesh_build_node_coordinates");
 
             // --- Build nodes ---
 
@@ -2175,18 +2185,16 @@ public:
                         int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
                         // store the point coordinates
-                        global_coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                        global_coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-                        global_coords.host(node_gid, 2) = origin[2] + (double)k * dz;
+                        global_coords(node_gid, 0) = origin[0] + (double)i * dx;
+                        global_coords(node_gid, 1) = origin[1] + (double)j * dy;
+                        global_coords(node_gid, 2) = origin[2] + (double)k * dz;
                     } // end for i
                 } // end for j
             } // end for k
 
 
-            global_coords.update_device();
-
             // initialize elem variables
-            DCArrayKokkos<size_t> global_nodes_in_elem(global_num_elems, num_nodes_in_elem, "global_mesh_build_nodes_in_elem");
+            DCArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace> global_nodes_in_elem(global_num_elems, num_nodes_in_elem, "global_mesh_build_nodes_in_elem");
 
             // --- Build elems  ---
 
@@ -2212,7 +2220,7 @@ public:
 
                                     // store the points in this elem according the the finite
                                     // element numbering convention
-                                    global_nodes_in_elem.host(elem_gid, this_index) = node_gid;
+                                    global_nodes_in_elem(elem_gid, this_index) = node_gid;
 
                                     // increment the point counting index
                                     this_point = this_point + 1;
@@ -2227,6 +2235,18 @@ public:
         //distribute partitioned data from the global mesh build data on rank 0
         size_t num_local_nodes;
         DistributedMap map;
+        // read coords
+        read_index_start = 0;
+        size_t num_local_nodes;
+        
+        buffer_iterations = global_num_nodes / BUFFER_LINES;
+        if (global_num_nodes % BUFFER_LINES != 0)
+        {
+            buffer_iterations++;
+        }
+
+        read_buffer = CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_LINES, num_dims);
+
         { //scoped so temp FArray data is auto deleted to save memory
             //allocate pre-partition node coords using contiguous decomposition
             //FArray type used since CArray type still doesnt support zoltan2 decomposition
@@ -2238,6 +2258,75 @@ public:
 
             // set the vertices in the mesh read in
             num_local_nodes = map.size();
+            for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+            {
+                // pack buffer on rank 0
+                if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+                {
+                    for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                    {
+
+                        for (int idim = 0; idim < num_dims; idim++)
+                        {
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_LINES + buffer_loop, idim);
+                        }
+                    }
+                }
+                else if (myrank == 0)
+                {
+                    buffer_loop = 0;
+                    while (buffer_iteration * BUFFER_LINES + buffer_loop < global_num_nodes) {
+                        for (int idim = 0; idim < num_dims; idim++)
+                        {
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_LINES + buffer_loop, idim);
+                        }
+                        buffer_loop++;
+                    }
+                }
+
+                // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+                MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * num_dims, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                // broadcast how many nodes were read into this buffer iteration
+                MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+                // debug_print
+                // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+                // for(int iprint=0; iprint < buffer_loop; iprint++)
+                // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+                // return;
+
+                // determine which data to store in the swage mesh members (the local node data)
+                // loop through read buffer
+                for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+                {
+                    // set global node id (ensight specific order)
+                    node_gid = read_index_start + scan_loop;
+                    // let map decide if this node id belongs locally; if yes store data
+                    if (map.isProcessGlobalIndex(node_gid))
+                    {
+                        // set local node index in this mpi rank
+                        node_rid = map.getLocalIndex(node_gid);
+                        // extract nodal position from the read buffer
+                        // for tecplot format this is the three coords in the same line
+                        dof_value = read_buffer(scan_loop,0);
+                        node_coords_distributed.host(node_rid, 0) = dof_value * unit_scaling;
+                        dof_value = read_buffer(scan_loop,1);
+                        node_coords_distributed.host(node_rid, 1) = dof_value * unit_scaling;
+                        if (num_dims == 3)
+                        {
+                            dof_value = read_buffer(scan_loop,2);
+                            node_coords_distributed.host(node_rid, 2) = dof_value * unit_scaling;
+                        }
+                    }
+                }
+                read_index_start += BUFFER_LINES;
+            }
             // end of coordinate readin
             node_coords_distributed.update_device();
             // repartition node distribution
@@ -2248,20 +2337,305 @@ public:
             node.initialize(map, num_dims, required_node_state);
         }
 
-        // initialize mesh node variables
+        //initialize some mesh data
         mesh.initialize_nodes(global_num_nodes);
         num_local_nodes = map.size();
         mesh.num_local_nodes = num_local_nodes;
-
-        // update device side
-        mesh.nodes_in_elem.update_device();
         
+        // debug print of nodal data
+
+        // debug print nodal positions and indices
+        /*
+        std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
+        for (int inode = 0; inode < local_nrows; inode++){
+            std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
+        for (int istride = 0; istride < num_dims; istride++){
+            std::cout << node_coords(inode,istride) << " , ";
+        }
+        std::cout << " }"<< std::endl;
+        }
+        */
+
+        // check that local assignments match global total
+
+        // read in element info (ensight file format is organized in element type sections)
+        // loop over this later for several element type sections
+
+        size_t global_num_elems  = 0;
+        size_t num_elems = 0;
+        CArrayKokkos<int, Kokkos::LayoutRight, Kokkos::HostSpace> node_store(num_nodes_in_elem);
+
+        // --- read the number of cells in the mesh ---
+        // --- Read the number of vertices in the mesh --- //
+        if (myrank == 0)
+        {
+            bool found = false;
+            while (found == false&&in.good()) {
+                std::getline(in, read_line);
+                line_parse.str("");
+                line_parse.clear();
+                line_parse << read_line;
+                line_parse >> substring;
+
+                // looking for the following text:
+                //      CELLS num_cells size
+                if (substring == "CELLS")
+                {
+                    line_parse >> global_num_elems;
+                    std::cout << "declared element count: " << global_num_elems << std::endl;
+                    if (global_num_elems <= 0)
+                    {
+                        throw std::runtime_error("ERROR, NO ELEMENTS IN MESH");
+                    }
+                    found = true;
+                } // end if
+            } // end while
+
+            if (!found){
+                throw std::runtime_error("ERROR: Failed to find CELLS");
+            } // end if
+        } // end if(myrank==0)
+
+        // broadcast number of elements
+        MPI_Bcast(&global_num_elems, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+
+        //initialize num elem in mesh struct
+
+        if (myrank == 0)
+        {
+            std::cout << "before mesh initialization" << std::endl;
+        }
+
+        // read in element connectivity
+        // we're gonna reallocate for the words per line expected for the element connectivity
+        read_buffer = CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_LINES, elem_words_per_line, MAX_WORD);
+
+        // calculate buffer iterations to read number of lines
+        buffer_iterations = global_num_elems / BUFFER_LINES;
+        int assign_flag;
+
+        // dynamic buffer used to store elements before we know how many this rank needs
+        std::vector<size_t> element_temp(BUFFER_LINES * elem_words_per_line);
+        std::vector<size_t> global_indices_temp(BUFFER_LINES);
+        size_t buffer_max = BUFFER_LINES * elem_words_per_line;
+        size_t indices_buffer_max = BUFFER_LINES;
+
+        if (global_num_elems % BUFFER_LINES != 0)
+        {
+            buffer_iterations++;
+        }
+        read_index_start = 0;
+        // std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+        {
+            // pack buffer on rank 0
+            if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+            {
+                for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                {
+                    getline(in, read_line);
+                    line_parse.clear();
+                    line_parse.str(read_line);
+                    // disregard node count line since we're using one element type per mesh
+                    line_parse >> substring;
+                    for (int iword = 0; iword < elem_words_per_line; iword++)
+                    {
+                        // read portions of the line into the substring variable
+                        line_parse >> substring;
+                        // debug print
+                        // std::cout<<" "<< substring;
+                        // assign the substring variable as a word of the read buffer
+                        strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                    }
+                    // std::cout <<std::endl;
+                }
+            }
+            else if (myrank == 0)
+            {
+                buffer_loop = 0;
+                while (buffer_iteration * BUFFER_LINES + buffer_loop < global_num_elems) {
+                    getline(in, read_line);
+                    line_parse.clear();
+                    line_parse.str(read_line);
+                    line_parse >> substring;
+                    for (int iword = 0; iword < elem_words_per_line; iword++)
+                    {
+                        // read portions of the line into the substring variable
+                        line_parse >> substring;
+                        // debug print
+                        // std::cout<<" "<< substring;
+                        // assign the substring variable as a word of the read buffer
+                        strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                    }
+                    // std::cout <<std::endl;
+                    buffer_loop++;
+                    // std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
+                }
+            }
+
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * elem_words_per_line * MAX_WORD, MPI_CHAR, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // store element connectivity that belongs to this rank
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                // add this element to the local list if any of its nodes belong to this rank according to the map
+                // get list of nodes for each element line and check if they belong to the map
+                assign_flag = 0;
+                for (int inode = 0; inode < elem_words_per_line; inode++)
+                {
+                    // as we loop through the nodes belonging to this element we store them
+                    // if any of these nodes belongs to this rank this list is used to store the element locally
+                    node_gid = atoi(&read_buffer(scan_loop, inode, 0));
+                    if (zero_index_base)
+                    {
+                        node_store(inode) = node_gid; // subtract 1 since file index start is 1 but code expects 0
+                    }
+                    else
+                    {
+                        node_store(inode) = node_gid - 1; // subtract 1 since file index start is 1 but code expects 0
+                    }
+                    if (node_store(inode) < 0)
+                    {
+                        negative_index_found = 1;
+                    }
+                    // first we add the elements to a dynamically allocated list
+                    if (zero_index_base)
+                    {
+                        if (map.isProcessGlobalIndex(node_gid) && !assign_flag)
+                        {
+                            assign_flag = 1;
+                            num_elems++;
+                        }
+                    }
+                    else
+                    {
+                        if (map.isProcessGlobalIndex(node_gid - 1) && !assign_flag)
+                        {
+                            assign_flag = 1;
+                            num_elems++;
+                        }
+                    }
+                }
+
+                if (assign_flag)
+                {
+                    for (int inode = 0; inode < elem_words_per_line; inode++)
+                    {
+                        if ((num_elems - 1) * elem_words_per_line + inode >= buffer_max)
+                        {
+                            element_temp.resize((num_elems - 1) * elem_words_per_line + inode + BUFFER_LINES * elem_words_per_line);
+                            buffer_max = (num_elems - 1) * elem_words_per_line + inode + BUFFER_LINES * elem_words_per_line;
+                        }
+                        element_temp[(num_elems - 1) * elem_words_per_line + inode] = node_store(inode);
+                        // std::cout << "VECTOR STORAGE FOR ELEM " << num_elems << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
+                    }
+                    // assign global element id to temporary list
+                    if (num_elems - 1 >= indices_buffer_max)
+                    {
+                        global_indices_temp.resize(num_elems - 1 + BUFFER_LINES);
+                        indices_buffer_max = num_elems - 1 + BUFFER_LINES;
+                    }
+                    global_indices_temp[num_elems - 1] = elem_gid;
+                }
+            }
+            read_index_start += BUFFER_LINES;
+        }
+
+        //set global and local shared element counts
         mesh.global_num_elems = global_num_elems;
 
+        // construct partition mapping for shared elements on each process
+        DCArrayKokkos<long long int> All_Element_Global_Indices(num_elems);
+        // copy temporary global indices storage to view storage
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            All_Element_Global_Indices.host(ielem) = global_indices_temp[ielem];
+            if (global_indices_temp[ielem] < 0)
+            {
+                negative_index_found = 1;
+            }
+        }
+
+        MPI_Allreduce(&negative_index_found, &global_negative_index_found, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        if (global_negative_index_found)
+        {
+            if (myrank == 0)
+            {
+                std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
+            MPI_Finalize();
+            exit(0);
+        }
+
+        // delete temporary element connectivity and index storage
+        std::vector<size_t>().swap(element_temp);
+        std::vector<size_t>().swap(global_indices_temp);
+
+        All_Element_Global_Indices.update_device();
+
+        // construct global map of local and shared elements (since different ranks can own the same elements due to the local node map)
+        DistributedMap element_map = DistributedMap(All_Element_Global_Indices);
+
+        //initialize elem data structures
+        mesh.initialize_elems(num_elems, num_nodes_in_elem, element_map);
+
+        // copy temporary element storage to distributed storage
+        DistributedDCArray<size_t> nodes_in_elem = mesh.nodes_in_elem;
+
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            for (int inode = 0; inode < elem_words_per_line; inode++)
+            {   //assign local indices to element-node connectivity (stores global indices until ghost maps are made later)
+                nodes_in_elem.host(ielem, inode) = element_temp[ielem * elem_words_per_line + inode];
+            }
+        }
+
+        // element type selection (subject to change)
+        // ---- Set Element Type ---- //
+        // allocate element type memory
+        // elements::elem_type_t* elem_choice;
+
+        int NE = 1; // number of element types in problem
+
+        // Convert ensight index system to the ijk finite element numbering convention
+        // for vertices in cell
+        CArrayKokkos<size_t, Kokkos::LayoutRight, Kokkos::HostSpace> convert_ensight_to_ijk(num_nodes_in_elem);
+        CArrayKokkos<size_t, Kokkos::LayoutRight, Kokkos::HostSpace> tmp_ijk_indx(num_nodes_in_elem);
+        convert_ensight_to_ijk(0) = 0;
+        convert_ensight_to_ijk(1) = 1;
+        convert_ensight_to_ijk(2) = 3;
+        convert_ensight_to_ijk(3) = 2;
+        convert_ensight_to_ijk(4) = 4;
+        convert_ensight_to_ijk(5) = 5;
+        convert_ensight_to_ijk(6) = 7;
+        convert_ensight_to_ijk(7) = 6;
+
+        for (int cell_rid = 0; cell_rid < num_elems; cell_rid++)
+        {
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
+            {
+                tmp_ijk_indx(node_lid) = nodes_in_elem.host(cell_rid, convert_ensight_to_ijk(node_lid));
+            }
+
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
+            {
+                nodes_in_elem.host(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
+            }
+        }
+        
+
+        nodes_in_elem.update_device();
+
         // initialize corner variables
-        int num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+        size_t num_corners = num_elems * num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
 
         // Build connectivity
         mesh.build_connectivity();
