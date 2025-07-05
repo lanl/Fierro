@@ -109,6 +109,9 @@ void Driver::initialize()
     //build relevant partition maps for ghost nodes, elements, etc.
     mesh.init_maps(State.node);
 
+    // Build connectivity
+    mesh.build_connectivity();
+
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
 

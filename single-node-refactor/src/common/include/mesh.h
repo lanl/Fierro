@@ -574,6 +574,15 @@ struct Mesh_t
         nodes_in_elem_temp.replace_kokkos_dual_view(nodes_in_elem.get_kokkos_dual_view());
         nodes_in_elem = nodes_in_elem_temp;
 
+        //convert global ids stored in nodes_in_elem to local node ids spanning 0:num_nodes on this process
+        for(int ielem= 0; ielem < num_elems; ielem++) {
+            for(int inode = 0; inode < num_nodes_in_elem; inode++){
+                nodes_in_elem(ielem, inode) = all_node_map.getLocalIndex(nodes_in_elem(ielem, inode));
+            }
+        }
+
+        nodes_in_elem.update_device();
+
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);
         // create distributed multivector of the local node data and all (local + ghost) node storage
