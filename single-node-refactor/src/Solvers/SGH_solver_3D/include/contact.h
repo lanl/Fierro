@@ -423,6 +423,19 @@ struct contact_patches_t
     void find_nodes(contact_patch_t &contact_patch, const double &del_t, size_t &num_nodes_found);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn initial_penetration
+    ///
+    /// \brief Finds nodes that are penetrating in the initial configuration
+    ///
+    /// Special case of find_nodes designed to find contact_pairs when nodes are penetrating
+    /// with no velocity or acceleration in the initial configuration
+    ///
+    /// \param State Necessary to pull nodal coords for defining penetration depth cap criterion
+    /// \param mesh Necessary to pull total number of nodes
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void initial_penetration(State_t& State, const Mesh_t &mesh);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn penetration_check
     ///
     /// \brief Finds whether a node is penetrating a boundary element
@@ -432,12 +445,13 @@ struct contact_patches_t
     /// that the boundary patch corresponds to.
     ///
     /// \param node Contact node object being checked for penetration
-    /// \param surfaces The 6 surfaces of the hex element being checked for penetration
+    /// \param surfaces The 6 surfaces of the hex element being checked for penetration (view of penetration patches)
+    /// \param surf_lid The index of contact patch based on contact_patches to pull row from penetration_patces
     ///
     /// \return true if the node is penetrating the element; false otherwise
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     KOKKOS_FUNCTION
-    bool penetration_check(const contact_node_t node, const ViewCArrayKokkos <contact_patch_t> surfaces) const;
+    bool penetration_check(const contact_node_t node, const CArrayKokkos <contact_patch_t> &surfaces, const int surf_lid) const;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn get_contact_pairs

@@ -425,46 +425,13 @@ bool contact_patch_t::contact_check(const contact_node_t &node, const double &de
     // Get the solution
     bool solution_found = get_contact_point(node, xi_val, eta_val, del_tc);
 
-    // checking for penetration
-    // getting normal vector at beginning of step
-    double patch_normal_arr[3];
-    ViewCArrayKokkos<double> patch_normal(&patch_normal_arr[0], 3);
-    get_normal(xi_val, eta_val, 0, patch_normal);
-
-    // getting vector of patch point of contact to node location
-    double patchref[2];
-    patchref[0] = xi_val;
-    patchref[1] = eta_val;
-    ViewCArrayKokkos<double> p_ref(&patchref[0], 2);
-    construct_basis(A, 0);
-    double patchglob[3];
-    ViewCArrayKokkos<double> p_glob(&patchglob[0], 3);
-    ref_to_physical(p_ref,A,p_glob);
-    CArrayKokkos<double> patch_to_node(3);
-    patch_to_node(0) = node.pos(0) - p_glob(0);
-    patch_to_node(1) = node.pos(1) - p_glob(1);
-    patch_to_node(2) = node.pos(2) - p_glob(2);
-
-    // dot product of outer normal and vector from patch to node
-    // if this dot product is negative the node should be penetrating
-    double pencheck = patch_to_node(0)*patch_normal(0) + patch_to_node(1)*patch_normal(1) + patch_to_node(2)*patch_normal(2);
-    bool penetration = false;
-    if (pencheck < 0 - tol) {
-        penetration = true;
-    }
-
     // checking if solutions falls within bounds for MAKING contact
-    // elseif solution shows PENETRATION
     // else solution does NOT require a contact pair to be formed
     if (solution_found && fabs(xi_val) <= 1.0 + edge_tol && fabs(eta_val) <= 1.0 + edge_tol && del_tc >= 0.0 - tol &&
         del_tc <= del_t + tol)
     {
         return true;
     }
-    else if (solution_found && fabs(xi_val) <= 1.0 + edge_tol && fabs(eta_val) <= 1.0 + edge_tol && penetration == true && del_tc < 0 - tol)
-    {
-        return false;
-    } 
     else
     {
         return false;
@@ -902,7 +869,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
 
     // set up array for penetration patches to check, for each boundary patch considered for contact, must consider
     // all 6 faces ofthe hex element
-    penetration_patches = CArrayKokkos<contact_patch_t>(num_contact_patches,6);
+    penetration_patches = CArrayKokkos<contact_patch_t>(num_contact_patches,5);
 
     CArrayKokkos<size_t> nodes_in_patch(num_contact_patches, mesh.num_nodes_in_patch);
     FOR_ALL_CLASS(i, 0, num_contact_patches,
@@ -927,11 +894,67 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
             contact_patch.nodes_gid(j) = nodes_in_patch(i, j);
         }
 
-        // populating penetration patches for each boundary patch
+        // finding contact patch local id wrt the element (assuming that a boundary patch is only part of one element)
+        size_t patch_lid;
         for (int j = 0; j < 6; j++) {
-            contact_patch_t &penetration_patch = penetration_patches(i,j);
-            penetration_patch.gid = mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),j);
+            if (contact_patch.gid == mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),j)) {
+                patch_lid = j;
+                break;
+            }
+        }
 
+        // defining which patch should be left out of penetration column definition (isoparametric opposite of boundary patch lid)
+        CArrayKokkos <size_t> patches_for_column(5);
+        switch (patch_lid) {
+            case(0):
+                patches_for_column(0) = 0;
+                patches_for_column(1) = 2;
+                patches_for_column(2) = 3;
+                patches_for_column(3) = 4;
+                patches_for_column(4) = 5;
+                break;
+            case(1):
+                patches_for_column(0) = 1;
+                patches_for_column(1) = 2;
+                patches_for_column(2) = 3;
+                patches_for_column(3) = 4;
+                patches_for_column(4) = 5;
+                break;
+            case(2):
+                patches_for_column(0) = 0;
+                patches_for_column(1) = 1;
+                patches_for_column(2) = 2;
+                patches_for_column(3) = 4;
+                patches_for_column(4) = 5;
+                break;
+            case(3):
+                patches_for_column(0) = 0;
+                patches_for_column(1) = 1;
+                patches_for_column(2) = 3;
+                patches_for_column(3) = 4;
+                patches_for_column(4) = 5;
+                break;
+            case(4):
+                patches_for_column(0) = 0;
+                patches_for_column(1) = 1;
+                patches_for_column(2) = 2;
+                patches_for_column(3) = 3;
+                patches_for_column(4) = 4;
+                break;
+            case(5):
+                patches_for_column(0) = 0;
+                patches_for_column(1) = 1;
+                patches_for_column(2) = 2;
+                patches_for_column(3) = 3;
+                patches_for_column(4) = 5;
+                break;
+        }
+        std::cout << patch_lid << "   " << contact_patch.gid << "   ";
+        // populating penetration patches for each boundary patch
+        for (int j = 0; j < 5; j++) {
+            contact_patch_t &penetration_patch = penetration_patches(i,j);
+            penetration_patch.gid = mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),patches_for_column(j));
+            std::cout << penetration_patch.gid << "   ";
             penetration_patch.nodes_gid = CArrayKokkos<size_t>(mesh.num_nodes_in_patch);
             penetration_patch.nodes_obj = CArrayKokkos<contact_node_t>(mesh.num_nodes_in_patch);
             for (size_t k = 0; k < mesh.num_nodes_in_patch; k++)
@@ -939,7 +962,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
                 penetration_patch.nodes_gid(k) = mesh.nodes_in_patch(mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),j),k);
             }
         }
-
+        std::cout << std::endl;
     }  // end for
     
     // todo: This if statement might need a closer look
@@ -967,7 +990,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
             }
 
             // populating penetration patches for each boundary patch
-            for (int j = 0; j < 6; j++) {
+            for (int j = 0; j < 5; j++) {
                 contact_patch_t &penetration_patch = penetration_patches(i,j);
                 penetration_patch.xi = CArrayKokkos<double>(4);
                 penetration_patch.eta = CArrayKokkos<double>(4);
@@ -1069,9 +1092,9 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
     // Find the total number of nodes in penetration patches
     size_t local_max_index_pen = 0;
     size_t max_index_pen = 0;
-    // second loop of 6 is for hex elements
+    // second loop of 5 is for hex elements
     FOR_REDUCE_MAX(i, 0, num_contact_patches,
-               j, 0, (size_t) 6,
+               j, 0, (size_t) 5,
                k, 0, contact_patch_t::num_nodes_in_patch, local_max_index_pen, {
                    if (local_max_index_pen < penetration_patches(i,j).nodes_gid(k))
                    {
@@ -1083,10 +1106,10 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
     CArrayKokkos<size_t> pen_node_count(max_index_pen + 1);
     pen_node_count.set_values(0);
     
-    // second loop of 6 is for hex elements
+    // second loop of 5 is for hex elements
     for (int i = 0; i < num_contact_patches; i++)
     {
-        for (int j = 0; j < 6; j++) {
+        for (int j = 0; j < 5; j++) {
             contact_patch_t &penetration_patch = penetration_patches(i,j);
             for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
             {
@@ -1145,7 +1168,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
     pen_nodes_gid = CArrayKokkos<size_t>(contact_patches_t::num_pen_nodes);
     node_lid = 0;
     for (int i = 0; i < num_contact_patches; i++) {
-        for (int j = 0; j < 6; j++) {
+        for (int j = 0; j < 5; j++) {
             contact_patch_t &penetration_patch = penetration_patches(i,j);
             for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++) {
                 size_t node_gid = penetration_patch.nodes_gid(k);
@@ -1194,6 +1217,14 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
     
     // Update the node members
     update_nodes(mesh, State);
+
+    /* for (int i = 0; i < num_contact_patches; i++) {
+        std::cout << "Contact Patch GID: " << contact_patches(i).gid << " Penetration Patches GID: ";
+        for (int j = 0; j < 5; j++) {
+            std::cout << penetration_patches(i,j).gid << " ";
+        }
+        std::cout << std::endl << std::endl;
+    } */
     
 }  // end initialize
 
@@ -1493,10 +1524,195 @@ void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double 
     }
 }  // end find_nodes
 
-KOKKOS_FUNCTION
-bool contact_patches_t::penetration_check(const contact_node_t node, const ViewCArrayKokkos <contact_patch_t> surfaces) const
+void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
 {
+    // start of finding penetration depth criterion
+    // finding min of nodal x,y,z domains
+    double xmin;
+    double xmax;
+    double ymin;
+    double ymax;
+    double zmin;
+    double zmax;
+    double dim_min;
+    double local_xmin = 0.0;
+    FOR_REDUCE_MIN(i, 0, mesh.num_nodes, local_xmin, {
+        if (local_xmin > State.node.coords(i,0))
+        {
+            local_xmin = State.node.coords(i,0);
+        }
+    }, xmin);
+    double local_ymin = 0.0;
+    FOR_REDUCE_MIN(i, 0, mesh.num_nodes, local_ymin, {
+        if (local_ymin > State.node.coords(i,1))
+        {
+            local_ymin = State.node.coords(i,1);
+        }
+    }, ymin);
+    double local_zmin = 0.0;
+    FOR_REDUCE_MIN(i, 0, mesh.num_nodes, local_zmin, {
+        if (local_zmin > State.node.coords(i,2))
+        {
+            local_zmin = State.node.coords(i,2);
+        }
+    }, zmin);
+    double local_xmax = 0.0;
+    FOR_REDUCE_MAX(i, 0, mesh.num_nodes, local_xmax, {
+        if (local_xmax < State.node.coords(i,0))
+        {
+            local_xmax = State.node.coords(i,0);
+        }
+    }, xmax);
+    double local_ymax = 0.0;
+    FOR_REDUCE_MAX(i, 0, mesh.num_nodes, local_ymax, {
+        if (local_ymax < State.node.coords(i,1))
+        {
+            local_ymax = State.node.coords(i,1);
+        }
+    }, ymax);
+    double local_zmax = 0.0;
+    FOR_REDUCE_MAX(i, 0, mesh.num_nodes, local_zmax, {
+        if (local_zmax < State.node.coords(i,2))
+        {
+            local_zmax = State.node.coords(i,2);
+        }
+    }, zmax);
+    Kokkos::fence();
+    dim_min = std::min(xmax-xmin,ymax-ymin);
+    dim_min = std::min(dim_min,zmax-zmin);
+    
+    // comparing bucket size and mesh size to define penetration depth maximum (cap) for consideration
+    // todo: the multiplication values are currently arbitrary and should be checked for performance
+    double depth_cap = std::min(2*dim_min/3,3*bucket_size);
+    
+    // running find nodes for each contact surface with capture box size set to depth_cap in all directions
+    for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++) {
+        contact_patch_t surf = contact_patches(patch_lid);
+
+        surf.capture_box(depth_cap,depth_cap,depth_cap,0,0,0,1);
+        const CArrayKokkos<double> &bounds = surf.bounds;
+
+        // Determine the buckets that intersect with the capture box
+        size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounds(0) - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+        size_t jbox_max = fmax(0, fmin(Sy - 1, floor((bounds(1) - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+        size_t kbox_max = fmax(0, fmin(Sz - 1, floor((bounds(2) - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+        size_t ibox_min = fmax(0, fmin(Sx - 1, floor((bounds(3) - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+        size_t jbox_min = fmax(0, fmin(Sy - 1, floor((bounds(4) - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+        size_t kbox_min = fmax(0, fmin(Sz - 1, floor((bounds(5) - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+
+        size_t bucket_index = 0;
+        for (size_t i = ibox_min; i < ibox_max + 1; i++)
+        {
+            for (size_t j = jbox_min; j < jbox_max + 1; j++)
+            {
+                for (size_t k = kbox_min; k < kbox_max + 1; k++)
+                {
+                    // todo: If there is a segfault here, then that means that we have more than max_number_buckets.
+                    //       increase that value as this means that there was so much strain that the number of buckets
+                    //       exceeded the value.
+                    surf.buckets(bucket_index) = k*Sx*Sy + j*Sx + i;
+                    bucket_index += 1;
+                }
+            }
+        }
+
+        // Get all nodes in each bucket
+        size_t num_nodes_found = 0;  // local node index for possible_nodes member
+        for (int bucket_lid = 0; bucket_lid < bucket_index; bucket_lid++)
+        {
+            size_t b = surf.buckets(bucket_lid);
+            for (size_t i = 0; i < nbox(b); i++)
+            {
+                size_t node_gid = nsort(npoint(b) + i);
+                bool add_node = true;
+                // If the node is in the current element, then continue; else, add it to possible_nodes
+                for (int j = 0; j < mesh.num_nodes_in_elem; j++)
+                {
+                    if (node_gid == mesh.nodes_in_elem(mesh.elems_in_patch(surf.gid,0)),j)
+                    {
+                        add_node = false;
+                        break;
+                    }
+                    else {
+                        //std::cout << contact_nodes(node_gid).gid << "   " << contact_patches(patch_lid).gid << std::endl;
+                        add_node = penetration_check(contact_nodes(node_gid),penetration_patches,patch_lid);
+                        break;
+                    }
+                }
+
+                if (add_node)
+                {
+                    //contact_patch.possible_nodes(num_nodes_found) = node_gid;
+                    //num_nodes_found += 1;
+                    //std::cout << "Node " << node_gid << " is initially penetrating patch " << surf.gid << " comprised of nodes: " << surf.nodes_gid(0) << " " << surf.nodes_gid(1) << " " << surf.nodes_gid(2) << " " << surf.nodes_gid(3) << std::endl << std::endl;
+                }
+            }
+        }
+    }
+
+} // end initial_penetration
+
+KOKKOS_FUNCTION
+bool contact_patches_t::penetration_check(const contact_node_t node, const CArrayKokkos <contact_patch_t> &surfaces, const int surf_lid) const
+{
+    // define output boolean
     bool penetration = false;
+
+    // defining arrays to use
+    double surf_normal_arr[3];
+    ViewCArrayKokkos<double> surf_normal(&surf_normal_arr[0], 3);
+
+    double surf_centroid[2];
+    surf_centroid[0] = 0;
+    surf_centroid[1] = 0;
+    ViewCArrayKokkos<double> s_centroid(&surf_centroid[0], 2);
+
+    double A_arr[3*contact_patch_t::max_nodes];
+    ViewCArrayKokkos<double> A(&A_arr[0], 3, contact_patch_t::num_nodes_in_patch);
+
+    double surf_glob[3];
+    ViewCArrayKokkos<double> s_glob(&surf_glob[0], 3);
+
+    CArrayKokkos<double> surf_to_node(3);
+
+    double pen_dot_product;
+
+    // checking each surface of the element in penetration_patches(i,:) -> stored in surfaces(i)
+    int count = 0;
+    for (int i = 0; i < 5; i++) {
+        contact_patch_t surf = surfaces(surf_lid,i);
+
+        // getting normal vector at beginning of step
+        surf.get_normal(0, 0, 0, surf_normal);
+
+        // getting vector of surface point of contact to node location
+        surf.construct_basis(A, 0);
+        surf.ref_to_physical(s_centroid,A,s_glob);
+        if (node.gid == 19) {
+            //std::cout << surf.gid  << "   " << surf.nodes_gid(0) << "   "  << surf.nodes_gid(1) << "   "  << surf.nodes_gid(2) << "   "  << surf.nodes_gid(3) << "   " << "   " << s_glob(0) << "   " << s_glob(1) << "   " << s_glob(2) << std::endl;
+        }
+        surf_to_node(0) = node.pos(0) - s_glob(0);
+        surf_to_node(1) = node.pos(1) - s_glob(1);
+        surf_to_node(2) = node.pos(2) - s_glob(2);
+
+        // dot product of outer normal and vector from surface to node
+        // if this dot product is negative the node is penetrating 
+        pen_dot_product = surf_to_node(0)*surf_normal(0) + surf_to_node(1)*surf_normal(1) + surf_to_node(2)*surf_normal(2);
+
+        // counting if an individual surface is penetrated
+        if (pen_dot_product < 0 - tol) {
+            count += 1;
+        }
+
+        // resetting global location of patch point due to mat mul command being += not just =
+        s_glob.set_values(0);
+    }
+
+    // checking if the node is penetrating all the surfaces of the hex element
+    if (count == 5) {
+        penetration = true;
+    }
+    
     return penetration;
 }
 
@@ -1512,6 +1728,7 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
     for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++)
     {
         contact_patch_t &contact_patch = contact_patches(patch_lid);
+
         size_t num_nodes_found;
         find_nodes(contact_patch, del_t, num_nodes_found);
         // todo: original plan was for this to be a parallel loop, but there are collisions in the contact_pairs_access
@@ -1536,6 +1753,10 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
 
             double xi_val, eta_val, del_tc;
             bool is_hitting = contact_patch.contact_check(node, del_t, xi_val, eta_val, del_tc);
+            bool penetrating = penetration_check(node,penetration_patches,patch_lid);
+            if (penetrating) {
+                //std::cout << node.gid << " is penetrating patch with nodes " << contact_patch.nodes_gid(0) << " " << contact_patch.nodes_gid(1) << " " << contact_patch.nodes_gid(2) << " " << contact_patch.nodes_gid(3) << std::endl;
+            }
 
             if (is_hitting && !is_pen_node(node_gid) && !is_patch_node(node_gid))
             {
