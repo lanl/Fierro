@@ -949,20 +949,19 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
                 patches_for_column(4) = 5;
                 break;
         }
-        std::cout << patch_lid << "   " << contact_patch.gid << "   ";
+
         // populating penetration patches for each boundary patch
         for (int j = 0; j < 5; j++) {
             contact_patch_t &penetration_patch = penetration_patches(i,j);
             penetration_patch.gid = mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),patches_for_column(j));
-            std::cout << penetration_patch.gid << "   ";
+            
             penetration_patch.nodes_gid = CArrayKokkos<size_t>(mesh.num_nodes_in_patch);
             penetration_patch.nodes_obj = CArrayKokkos<contact_node_t>(mesh.num_nodes_in_patch);
             for (size_t k = 0; k < mesh.num_nodes_in_patch; k++)
             {
-                penetration_patch.nodes_gid(k) = mesh.nodes_in_patch(mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),j),k);
+                penetration_patch.nodes_gid(k) = mesh.nodes_in_patch(mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),patches_for_column(j)),k);
             }
         }
-        std::cout << std::endl;
     }  // end for
     
     // todo: This if statement might need a closer look
@@ -1684,13 +1683,11 @@ bool contact_patches_t::penetration_check(const contact_node_t node, const CArra
 
         // getting normal vector at beginning of step
         surf.get_normal(0, 0, 0, surf_normal);
-
+        //std::cout << "surface gid:" << surf.gid << "   " << "surface nodes: " << surf.nodes_gid(0) << "   " << surf.nodes_gid(1) << "   " << surf.nodes_gid(2) << "   " << surf.nodes_gid(3) << "   normal vec: " << surf_normal(0) << "   " << surf_normal(1) << "   " << surf_normal(2) << std::endl;
         // getting vector of surface point of contact to node location
         surf.construct_basis(A, 0);
         surf.ref_to_physical(s_centroid,A,s_glob);
-        if (node.gid == 19) {
-            //std::cout << surf.gid  << "   " << surf.nodes_gid(0) << "   "  << surf.nodes_gid(1) << "   "  << surf.nodes_gid(2) << "   "  << surf.nodes_gid(3) << "   " << "   " << s_glob(0) << "   " << s_glob(1) << "   " << s_glob(2) << std::endl;
-        }
+
         surf_to_node(0) = node.pos(0) - s_glob(0);
         surf_to_node(1) = node.pos(1) - s_glob(1);
         surf_to_node(2) = node.pos(2) - s_glob(2);
@@ -1707,7 +1704,7 @@ bool contact_patches_t::penetration_check(const contact_node_t node, const CArra
         // resetting global location of patch point due to mat mul command being += not just =
         s_glob.set_values(0);
     }
-
+    std::cout << std::endl;
     // checking if the node is penetrating all the surfaces of the hex element
     if (count == 5) {
         penetration = true;
@@ -1753,10 +1750,10 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
 
             double xi_val, eta_val, del_tc;
             bool is_hitting = contact_patch.contact_check(node, del_t, xi_val, eta_val, del_tc);
-            bool penetrating = penetration_check(node,penetration_patches,patch_lid);
+            /* bool penetrating = penetration_check(node,penetration_patches,patch_lid);
             if (penetrating) {
                 //std::cout << node.gid << " is penetrating patch with nodes " << contact_patch.nodes_gid(0) << " " << contact_patch.nodes_gid(1) << " " << contact_patch.nodes_gid(2) << " " << contact_patch.nodes_gid(3) << std::endl;
-            }
+            } */
 
             if (is_hitting && !is_pen_node(node_gid) && !is_patch_node(node_gid))
             {
