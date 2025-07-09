@@ -110,5 +110,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParameters,
                    State.node.mass,
                    State.corner.mass);
 
+    //communicate node masses to ghosts
+    node_mass_comms.execute_comms();
     
 } // end SGH setup
