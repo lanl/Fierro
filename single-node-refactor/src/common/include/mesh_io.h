@@ -1033,18 +1033,18 @@ public:
         // read coords
         read_index_start = 0;
         size_t num_local_nodes;
-        DistributedMap map;
+        DistributedMap node_map;
         { //scoped so temp FArray data is auto deleted to save memory
             //allocate pre-partition node coords using contiguous decomposition
             //FArray type used since CArray type still doesnt support zoltan2 decomposition
             DistributedDFArray<real_t> node_coords_distributed(global_num_nodes, num_dims);
 
             // construct contiguous parallel row map now that we know the number of nodes
-            map = node_coords_distributed.pmap;
+            node_map = node_coords_distributed.pmap;
             // map->describe(*fos,Teuchos::VERB_EXTREME);
 
             // set the vertices in the mesh read in
-            num_local_nodes = map.size();
+            num_local_nodes = node_map.size();
             for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
             {
                 // pack buffer on rank 0
@@ -1105,10 +1105,10 @@ public:
                     // set global node id (ensight specific order)
                     node_gid = read_index_start + scan_loop;
                     // let map decide if this node id belongs locally; if yes store data
-                    if (map.isProcessGlobalIndex(node_gid))
+                    if (node_map.isProcessGlobalIndex(node_gid))
                     {
                         // set local node index in this mpi rank
-                        node_rid = map.getLocalIndex(node_gid);
+                        node_rid = node_map.getLocalIndex(node_gid);
                         // extract nodal position from the read buffer
                         // for tecplot format this is the three coords in the same line
                         dof_value = atof(&read_buffer(scan_loop, 0, 0));
@@ -1130,14 +1130,15 @@ public:
             node_coords_distributed.repartition_vector();
             //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
             std::vector<node_state> required_node_state = { node_state::coords };
-            map = node_coords_distributed.pmap;
-            node.initialize(map, num_dims, required_node_state);
+            node_map = node_coords_distributed.pmap;
+            node.initialize(node_map, num_dims, required_node_state);
         }
 
         //initialize some mesh data
         mesh.initialize_nodes(global_num_nodes);
-        num_local_nodes = map.size();
+        num_local_nodes = node_map.size();
         mesh.num_local_nodes = num_local_nodes;
+        mesh.node_map = node_map;
         
         // debug print of nodal data
 
@@ -1304,7 +1305,7 @@ public:
                     // first we add the elements to a dynamically allocated list
                     if (zero_index_base)
                     {
-                        if (map.isProcessGlobalIndex(node_gid) && !assign_flag)
+                        if (node_map.isProcessGlobalIndex(node_gid) && !assign_flag)
                         {
                             assign_flag = 1;
                             num_elems++;
@@ -1312,7 +1313,7 @@ public:
                     }
                     else
                     {
-                        if (map.isProcessGlobalIndex(node_gid - 1) && !assign_flag)
+                        if (node_map.isProcessGlobalIndex(node_gid - 1) && !assign_flag)
                         {
                             assign_flag = 1;
                             num_elems++;
@@ -2210,7 +2211,7 @@ public:
 
         //distribute partitioned data from the global mesh build data on rank 0
         size_t num_local_nodes;
-        DistributedMap map;
+        DistributedMap node_map;
         // read coords
         read_index_start = 0;
         
@@ -2228,11 +2229,11 @@ public:
             DistributedDFArray<real_t> node_coords_distributed(global_num_nodes, num_dims);
 
             // construct contiguous parallel row map now that we know the number of nodes
-            map = node_coords_distributed.pmap;
+            node_map = node_coords_distributed.pmap;
             // map->describe(*fos,Teuchos::VERB_EXTREME);
 
             // set the vertices in the mesh read in
-            num_local_nodes = map.size();
+            num_local_nodes = node_map.size();
             for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
             {
                 // pack buffer on rank 0
@@ -2283,10 +2284,10 @@ public:
                     // set global node id (ensight specific order)
                     node_gid = read_index_start + scan_loop;
                     // let map decide if this node id belongs locally; if yes store data
-                    if (map.isProcessGlobalIndex(node_gid))
+                    if (node_map.isProcessGlobalIndex(node_gid))
                     {
                         // set local node index in this mpi rank
-                        node_rid = map.getLocalIndex(node_gid);
+                        node_rid = node_map.getLocalIndex(node_gid);
                         // extract nodal position from the read buffer
                         // for tecplot format this is the three coords in the same line
                         dof_value = read_buffer(scan_loop,0);
@@ -2308,14 +2309,15 @@ public:
             node_coords_distributed.repartition_vector();
             //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
             std::vector<node_state> required_node_state = { node_state::coords };
-            map = node_coords_distributed.pmap;
-            node.initialize(map, num_dims, required_node_state);
+            node_map = node_coords_distributed.pmap;
+            node.initialize(node_map, num_dims, required_node_state);
         }
 
         //initialize some mesh data
         mesh.initialize_nodes(global_num_nodes);
-        num_local_nodes = map.size();
+        num_local_nodes = node_map.size();
         mesh.num_local_nodes = num_local_nodes;
+        mesh.node_map = node_map;
         
         // debug print of nodal data
 
@@ -2417,7 +2419,7 @@ public:
                     node_gid = read_buffer(scan_loop, inode);
                     node_store(inode) = node_gid; // subtract 1 since file index start is 1 but code expects 0
                     // first we add the elements to a dynamically allocated list
-                    if (map.isProcessGlobalIndex(node_gid) && !assign_flag)
+                    if (node_map.isProcessGlobalIndex(node_gid) && !assign_flag)
                     {
                         assign_flag = 1;
                         num_elems++;

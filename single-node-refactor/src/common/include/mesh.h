@@ -329,12 +329,15 @@ struct Mesh_t
     }; // end method
 
     // initialization methods
-    void initialize_elems(const size_t num_elems_inp, const size_t num_nodes_in_elem, const DistributedMap input_element_map)
+    void initialize_elems(const size_t num_elems_inp, const size_t input_num_nodes_in_elem, const DistributedMap input_element_map)
     {
         num_elems       = num_elems_inp;
         element_map     = input_element_map;
         nodes_in_elem   = DistributedDCArray<size_t>(element_map, num_nodes_in_elem, "mesh.nodes_in_elem");
         corners_in_elem = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
+
+        //number of nodes per element
+        num_nodes_in_elem = input_num_nodes_in_elem;
 
         // 1 Gauss point per element
         num_leg_gauss_in_elem = 1;
@@ -367,6 +370,7 @@ struct Mesh_t
         num_surfs_in_elem     = num_surfs_in_elem_inp;
 
         num_zones = num_zones_in_elem * num_elems;
+        element_map     = input_element_map;
 
         nodes_in_elem    = DistributedDCArray<size_t>(element_map, num_nodes_in_elem, "mesh.nodes_in_elem");
         corners_in_elem  = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
@@ -422,34 +426,44 @@ struct Mesh_t
             // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
 
             num_ghost_nodes = ghost_node_set.size();
-            int  ighost = 0;
-            auto it     = ghost_node_set.begin();
+                if(num_ghost_nodes){
+                    int  ighost = 0;
+                    auto it     = ghost_node_set.begin();
 
-            // create a Map for ghost node indices
-            ghost_nodes = DCArrayKokkos<long long int>(num_ghost_nodes, "ghost_nodes"); //pass this into map object
-            while (it != ghost_node_set.end()) {
-                ghost_nodes.host(ighost++) = *it;
-                it++;
-            }
-            ghost_nodes.update_device();
+                    // create a Map for ghost node indices
+                    ghost_nodes = DCArrayKokkos<long long int>(num_ghost_nodes, "ghost_nodes"); //pass this into map object
+                    while (it != ghost_node_set.end()) {
+                        ghost_nodes.host(ighost++) = *it;
+                        it++;
+                    }
+                    ghost_nodes.update_device();
 
-            //Use the ranks to break ties in shared element assignment for a unique element map used in elem set reductions later
-            //this wont be that great at load balancing element counts but its simple and works for now
-            ghost_node_ranks = DCArrayKokkos<int>(num_ghost_nodes, "ghost_nodes_ranks");
+                    //Use the ranks to break ties in shared element assignment for a unique element map used in elem set reductions later
+                    //this wont be that great at load balancing element counts but its simple and works for now
+                    ghost_node_ranks = DCArrayKokkos<int>(num_ghost_nodes, "ghost_nodes_ranks");
+                }
+                else{
+                    //ensure a size of at least 1 with bogus index to prevent segfault
+                    ghost_nodes = DCArrayKokkos<long long int>(1, "ghost_nodes"); //pass this into map object
+                    ghost_node_ranks = DCArrayKokkos<int>(1, "ghost_nodes_ranks");
 
-            // debug print of ghost nodes
-            // std::cout << " GHOST NODE SET ON TASK " << myrank << std::endl;
-            // for(int i = 0; i < num_ghost_nodes; i++)
-            // std::cout << "{" << i + 1 << "," << ghost_nodes(i) + 1 << "}" << std::endl;
+                }
+                // debug print of ghost nodes
+                // std::cout << " GHOST NODE SET ON TASK " << myrank << std::endl;
+                // for(int i = 0; i < num_ghost_nodes; i++)
+                // std::cout << "{" << i + 1 << "," << ghost_nodes(i) + 1 << "}" << std::endl;
 
-            // find which mpi rank each ghost node belongs to and store the information in a CArrayKokkos
-            // // allocate Teuchos Views since they are the only input available at the moment in the Tpetra map definitions
-            // Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.h_view.data(), num_ghost_nodes);
+                // find which mpi rank each ghost node belongs to and store the information in a CArrayKokkos
+                // // allocate Teuchos Views since they are the only input available at the moment in the Tpetra map definitions
+                // Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.h_view.data(), num_ghost_nodes);
 
-            // Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.h_view.data(), num_ghost_nodes);
-
-            node_map.getRemoteIndexList(ghost_nodes, ghost_node_ranks);
-            ghost_node_ranks.update_device();
+                // Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.h_view.data(), num_ghost_nodes);
+                //node_map.print();
+                node_map.getRemoteIndexList(ghost_nodes, ghost_node_ranks);
+                if(num_ghost_nodes){
+                    ghost_node_ranks.update_device();
+                }
+            
         }
 
         ghost_node_map = DistributedMap(ghost_nodes);
@@ -535,6 +549,7 @@ struct Mesh_t
 
         long long int  temp_element_gid, current_element_gid;
         int last_storage_index = num_elems - 1;
+        
 
         for (int ielem = 0; ielem < num_local_elems; ielem++)
         {
@@ -567,21 +582,30 @@ struct Mesh_t
         // reset all element map to its re-sorted version
         Initial_Element_Global_Indices.update_device();
         nodes_in_elem.update_device();
-
+        
         element_map = DistributedMap(Initial_Element_Global_Indices);
         //redefine nodes_in_elem so partition map of the distributed array is synchronized with permuted dual view contents
         DistributedDCArray<size_t> nodes_in_elem_temp(element_map, num_nodes_in_elem);
-        nodes_in_elem_temp.replace_kokkos_dual_view(nodes_in_elem.get_kokkos_dual_view());
+        //nodes_in_elem_temp.replace_kokkos_dual_view(nodes_in_elem.get_kokkos_dual_view());
+        //nodes_in_elem.print();
+        std::cout << "NUM ELEMS " << num_elems << " NUM NODES IN ELEM " << num_nodes_in_elem << std::endl;
+        for(int ielem= 0; ielem < num_elems; ielem++) {
+            for(int inode = 0; inode < num_nodes_in_elem; inode++){
+                nodes_in_elem_temp.host(ielem, inode) = nodes_in_elem.host(ielem, inode);
+            }
+        }
+        //nodes_in_elem_temp.update_device();
         nodes_in_elem = nodes_in_elem_temp;
 
         //convert global ids stored in nodes_in_elem to local node ids spanning 0:num_nodes on this process
         for(int ielem= 0; ielem < num_elems; ielem++) {
             for(int inode = 0; inode < num_nodes_in_elem; inode++){
-                nodes_in_elem(ielem, inode) = all_node_map.getLocalIndex(nodes_in_elem(ielem, inode));
+                nodes_in_elem.host(ielem, inode) = all_node_map.getLocalIndex(nodes_in_elem(ielem, inode));
             }
         }
 
         nodes_in_elem.update_device();
+        nodes_in_elem.print();
 
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);
