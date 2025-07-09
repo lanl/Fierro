@@ -957,9 +957,45 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
             
             penetration_patch.nodes_gid = CArrayKokkos<size_t>(mesh.num_nodes_in_patch);
             penetration_patch.nodes_obj = CArrayKokkos<contact_node_t>(mesh.num_nodes_in_patch);
-            for (size_t k = 0; k < mesh.num_nodes_in_patch; k++)
-            {
-                penetration_patch.nodes_gid(k) = mesh.nodes_in_patch(mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),patches_for_column(j)),k);
+
+            // pulling node gids based on element connectivity, following convention from diagram in mesh.h (lines 60-96)
+            switch (patches_for_column(j)) {
+                case 0:
+                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),0);
+                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),4);
+                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),6);
+                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),2);
+                    break;
+                case 1:
+                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),1);
+                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),3);
+                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),7);
+                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),5);
+                    break;
+                case 2:
+                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),0);
+                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),1);
+                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),5);
+                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),4);
+                    break;
+                case 3:
+                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),3);
+                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),2);
+                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),6);
+                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),7);
+                    break;
+                case 4:
+                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),0);
+                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),2);
+                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),3);
+                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),1);
+                    break;
+                case 5:
+                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),4);
+                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),5);
+                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),7);
+                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),6);
+                    break;
             }
         }
     }  // end for
@@ -1582,7 +1618,7 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
     
     // comparing bucket size and mesh size to define penetration depth maximum (cap) for consideration
     // todo: the multiplication values are currently arbitrary and should be checked for performance
-    double depth_cap = std::min(2*dim_min/3,3*bucket_size);
+    double depth_cap = std::min(dim_min/2,3*bucket_size);
     
     // running find nodes for each contact surface with capture box size set to depth_cap in all directions
     for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++) {
@@ -1643,7 +1679,7 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
                 {
                     //contact_patch.possible_nodes(num_nodes_found) = node_gid;
                     //num_nodes_found += 1;
-                    //std::cout << "Node " << node_gid << " is initially penetrating patch " << surf.gid << " comprised of nodes: " << surf.nodes_gid(0) << " " << surf.nodes_gid(1) << " " << surf.nodes_gid(2) << " " << surf.nodes_gid(3) << std::endl << std::endl;
+                    std::cout << "Node " << node_gid << " is initially penetrating patch " << surf.gid << " comprised of nodes: " << surf.nodes_gid(0) << " " << surf.nodes_gid(1) << " " << surf.nodes_gid(2) << " " << surf.nodes_gid(3) << std::endl << std::endl;
                 }
             }
         }
@@ -1683,7 +1719,7 @@ bool contact_patches_t::penetration_check(const contact_node_t node, const CArra
 
         // getting normal vector at beginning of step
         surf.get_normal(0, 0, 0, surf_normal);
-        //std::cout << "surface gid:" << surf.gid << "   " << "surface nodes: " << surf.nodes_gid(0) << "   " << surf.nodes_gid(1) << "   " << surf.nodes_gid(2) << "   " << surf.nodes_gid(3) << "   normal vec: " << surf_normal(0) << "   " << surf_normal(1) << "   " << surf_normal(2) << std::endl;
+        
         // getting vector of surface point of contact to node location
         surf.construct_basis(A, 0);
         surf.ref_to_physical(s_centroid,A,s_glob);
@@ -1704,7 +1740,7 @@ bool contact_patches_t::penetration_check(const contact_node_t node, const CArra
         // resetting global location of patch point due to mat mul command being += not just =
         s_glob.set_values(0);
     }
-    std::cout << std::endl;
+
     // checking if the node is penetrating all the surfaces of the hex element
     if (count == 5) {
         penetration = true;
