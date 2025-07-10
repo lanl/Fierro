@@ -1619,6 +1619,21 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
     // comparing bucket size and mesh size to define penetration depth maximum (cap) for consideration
     // todo: the multiplication values are currently arbitrary and should be checked for performance
     double depth_cap = std::min(dim_min/2,3*bucket_size);
+
+    // allocating array to store surfaces a node is penetrating
+    // first columns holds node gid and second through final columns store the surfaces that node is penetrating
+    // todo: is 6 columns for max surfs being penetrated a safe number? 
+    CArrayKokkos <size_t> nodes_pen_surfs(num_contact_nodes,7);
+    
+    // setting all values to an initially impossible number for surf ids (i.e. greater than total number of surfs)
+    // NOTE: mesh.num_surfs only works for first order elements as of 7/10/2025
+    nodes_pen_surfs.set_values(mesh.num_surfs);
+    std::cout << "NUM SURFS IS " << mesh.num_surfs << std::endl;
+
+    // populating node gids
+    FOR_ALL(i,0,num_contact_nodes,{
+        nodes_pen_surfs(i,0) = contact_nodes(i).gid;
+    });
     
     // running find nodes for each contact surface with capture box size set to depth_cap in all directions
     for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++) {
@@ -1669,20 +1684,65 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
                         break;
                     }
                     else {
-                        //std::cout << contact_nodes(node_gid).gid << "   " << contact_patches(patch_lid).gid << std::endl;
                         add_node = penetration_check(contact_nodes(node_gid),penetration_patches,patch_lid);
                         break;
                     }
                 }
 
+                // if node is penetrating store the surface it is penetrating into column of nodes_pen_surfs
                 if (add_node)
                 {
-                    //contact_patch.possible_nodes(num_nodes_found) = node_gid;
-                    //num_nodes_found += 1;
-                    std::cout << "Node " << node_gid << " is initially penetrating patch " << surf.gid << " comprised of nodes: " << surf.nodes_gid(0) << " " << surf.nodes_gid(1) << " " << surf.nodes_gid(2) << " " << surf.nodes_gid(3) << std::endl << std::endl;
+                    for (int j = 0; j < num_contact_nodes; j++) {
+                        if (nodes_pen_surfs(j,0) == node_gid) {
+                            for (int k = 0; k < 6; k++) {
+                                if (nodes_pen_surfs(j,k+1) == mesh.num_surfs) {
+                                    nodes_pen_surfs(j,k+1) = surf.gid;
+                                    break;
+                                }
+                            } // end k
+                        }
+                    } // end j
                 }
+            } // end i
+        } // end bucket_lid
+    } // end patch_lid
+
+    // print check
+    for (int i = 0; i < num_contact_nodes; i++) {
+        for (int j = 0; j < 7; j++) {
+            if (nodes_pen_surfs(i,j) != mesh.num_surfs) {
+                std::cout << nodes_pen_surfs(i,j) << " ";
             }
         }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+    // looping through nodes_pen_surfs and finding most appropriate penetrated surface to pair to
+    
+    // pairing step 2) vector going from penetrating node to centroid of average of centroids
+    // pairing step 3) dot product of vector from (2) with normal of each surf being penetrated by the node
+    // pairing step 4) pair node and surf with max value of dot product from (3)
+    for (int node_lid = 0; node_lid < num_contact_nodes; node_lid++) {
+        // centroid variable for pairing step 1
+        CArrayKokkos <double> centroid(3);
+        centroid.set_values(0);
+
+        // pairing step 1) find centroid corresponding to penetrating node (centroid of element if 1 element, average of centroids if more than 1 element)
+        for (int i = 0; i < mesh.elems_in_node.stride(nodes_pen_surfs(node_lid,0)); i++) {
+            // get the centroid of an individual element
+            // todo: generalize this loop for arbitrary element, this version assumes first order hex element
+            for (int j = 0; j < mesh.num_nodes_in_elem; j++) {
+                centroid(0) += State.node.coords(mesh.nodes_in_elem(mesh.elems_in_node(nodes_pen_surfs(node_lid,0),i),j),0)/8;
+                centroid(1) += State.node.coords(mesh.nodes_in_elem(mesh.elems_in_node(nodes_pen_surfs(node_lid,0),i),j),1)/8;
+                centroid(2) += State.node.coords(mesh.nodes_in_elem(mesh.elems_in_node(nodes_pen_surfs(node_lid,0),i),j),2)/8;
+            }
+        }
+        centroid(0) /= mesh.elems_in_node.stride(nodes_pen_surfs(node_lid,0));
+        centroid(1) /= mesh.elems_in_node.stride(nodes_pen_surfs(node_lid,0));
+        centroid(2) /= mesh.elems_in_node.stride(nodes_pen_surfs(node_lid,0));
+
+        std::cout << nodes_pen_surfs(node_lid,0) << "   " << centroid(0) << " " << centroid(1) << " " << centroid(2) << std::endl;
     }
 
 } // end initial_penetration
