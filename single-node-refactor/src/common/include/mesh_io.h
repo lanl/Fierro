@@ -1132,6 +1132,12 @@ public:
             std::vector<node_state> required_node_state = { node_state::coords };
             node_map = node_coords_distributed.pmap;
             node.initialize(node_map, num_dims, required_node_state);
+            //copy coordinate data from repartitioned FArray into CArray
+            FOR_ALL(node_id, 0, node_map.size(), {
+                for(int idim = 0; idim < num_dims; idim++){
+                    node.coords(node_id,idim) = node_coords_distributed(node_id,idim);
+                }
+            });
         }
 
         //initialize some mesh data
@@ -2116,29 +2122,31 @@ public:
         }
         if(myrank==0){
             printf("Creating a 3D box mesh \n");
+        }
 
-            // SimulationParameters.mesh_input.length.update_host();
-            const double lx = SimulationParameters.mesh_input.length[0];
-            const double ly = SimulationParameters.mesh_input.length[1];
-            const double lz = SimulationParameters.mesh_input.length[2];
+        // SimulationParameters.mesh_input.length.update_host();
+        const double lx = SimulationParameters.mesh_input.length[0];
+        const double ly = SimulationParameters.mesh_input.length[1];
+        const double lz = SimulationParameters.mesh_input.length[2];
 
-            // SimulationParameters.mesh_input.num_elems.update_host();
-            const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
-            const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
-            const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
+        // SimulationParameters.mesh_input.num_elems.update_host();
+        const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+        const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
+        const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
 
-            const int num_points_i = num_elems_i + 1; // num points in x
-            const int num_points_j = num_elems_j + 1; // num points in y
-            const int num_points_k = num_elems_k + 1; // num points in y
+        const int num_points_i = num_elems_i + 1; // num points in x
+        const int num_points_j = num_elems_j + 1; // num points in y
+        const int num_points_k = num_elems_k + 1; // num points in y
 
-            global_num_nodes = num_points_i * num_points_j * num_points_k;
+        global_num_nodes = num_points_i * num_points_j * num_points_k;
 
-            const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
-            const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
-            const double dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
+        const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
+        const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
+        const double dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
 
-            global_num_elems = num_elems_i * num_elems_j * num_elems_k;
-
+        global_num_elems = num_elems_i * num_elems_j * num_elems_k;
+            
+        if(myrank==0){
             std::vector<double> origin(num_dims);
             // SimulationParameters.mesh_input.origin.update_host();
             for (int i = 0; i < num_dims; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
@@ -2311,6 +2319,12 @@ public:
             std::vector<node_state> required_node_state = { node_state::coords };
             node_map = node_coords_distributed.pmap;
             node.initialize(node_map, num_dims, required_node_state);
+            //copy coordinate data from repartitioned FArray into CArray
+            FOR_ALL(node_id, 0, node_map.size(), {
+                for(int idim = 0; idim < num_dims; idim++){
+                    node.coords(node_id,idim) = node_coords_distributed(node_id,idim);
+                }
+            });
         }
 
         //initialize some mesh data
@@ -2318,6 +2332,7 @@ public:
         num_local_nodes = node_map.size();
         mesh.num_local_nodes = num_local_nodes;
         mesh.node_map = node_map;
+        //node.coords.print();
         
         // debug print of nodal data
 
@@ -2449,7 +2464,6 @@ public:
             }
             read_index_start += BUFFER_LINES;
         }
-
         //set global and local shared element counts
         mesh.global_num_elems = global_num_elems;
 
@@ -2483,8 +2497,8 @@ public:
         nodes_in_elem.update_device();
         
         // delete temporary element connectivity and index storage
-        std::vector<size_t>().swap(element_temp);
-        std::vector<size_t>().swap(global_indices_temp);
+        //std::vector<size_t>().swap(element_temp);
+        //std::vector<size_t>().swap(global_indices_temp);
 
         // initialize corner variables
         size_t num_corners = num_elems * num_nodes_in_elem;

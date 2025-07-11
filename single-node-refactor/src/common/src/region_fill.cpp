@@ -59,11 +59,12 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
     // the number of elems and nodes in the mesh
     const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
+    const size_t num_local_elems = mesh.num_local_elems;
     const size_t num_nodes = mesh.num_nodes;
     const size_t num_gauss_points = mesh.num_leg_gauss_in_elem*mesh.num_elems;  
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
-
+    
     // Calculate element volume
     geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
@@ -136,6 +137,7 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
 
     // a counter for the Material index spaces
     DCArrayKokkos<size_t> num_elems_saved_for_mat(num_mats, "num_elems_saved_for_mat");
+    DCArrayKokkos<size_t> num_local_elems_saved_for_mat(num_mats, "num_local_elems_saved_for_mat");
 
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
         size_t sum_local;
@@ -159,7 +161,30 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
         num_elems_saved_for_mat.host(mat_id) = sum_total;
     } // end for
 
+    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+        size_t sum_local;
+        size_t sum_total;
+
+        FOR_REDUCE_SUM(elem_gid, 0, num_local_elems, sum_local, {
+
+            // loop over the materials in the element
+            for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem(elem_gid); a_mat_in_elem++){
+
+                // check to see if it is mat_id
+                if (State.MeshtoMaterialMaps.mat_id(elem_gid, a_mat_in_elem) == mat_id) {
+                    // increment the number of elements the materials live in
+                    sum_local++;
+                } // end if a_mat is equal to mat_id
+
+            } // end loop over materials in elem
+        }, sum_total);
+
+        // material index space size
+        num_local_elems_saved_for_mat.host(mat_id) = sum_total;
+    } // end for
+
     num_elems_saved_for_mat.update_device();
+    num_local_elems_saved_for_mat.update_device();
     Kokkos::fence();
 
 
@@ -186,6 +211,8 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
         // The exact size plus a buffer is for e.g., remap.  The buffers are shortly below here.
         State.MaterialToMeshMaps.num_material_elems.host(mat_id) = num_elems_saved_for_mat.host(mat_id);
         State.MaterialPoints.num_material_points.host(mat_id)   = num_elems_saved_for_mat.host(mat_id) * num_mat_pts_in_elem;
+        State.MaterialToMeshMaps.num_material_local_elems.host(mat_id) = num_local_elems_saved_for_mat.host(mat_id);
+        State.MaterialPoints.num_material_local_points.host(mat_id)   = num_local_elems_saved_for_mat.host(mat_id) * num_mat_pts_in_elem;
         State.MaterialCorners.num_material_corners.host(mat_id) = num_elems_saved_for_mat.host(mat_id) * mesh.num_nodes_in_elem;
         State.MaterialZones.num_material_zones.host(mat_id)     = num_elems_saved_for_mat.host(mat_id) * mesh.num_zones_in_elem;
 
@@ -202,6 +229,8 @@ void simulation_setup(SimulationParameters_t& SimulationParameters,
     // copy to device the actual sizes
     State.MaterialToMeshMaps.num_material_elems.update_device();
     State.MaterialPoints.num_material_points.update_device();
+    State.MaterialToMeshMaps.num_material_local_elems.update_device();
+    State.MaterialPoints.num_material_local_points.update_device();
     State.MaterialCorners.num_material_corners.update_device();
     State.MaterialZones.num_material_zones.update_device();
 
@@ -772,6 +801,7 @@ void material_state_setup(SimulationParameters_t& SimulationParameters,
 
                     State.MaterialPoints.mass.host(mat_id,mat_point_lid) = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem) * mat_vol;
+                    
                 }
 
                 // --- set eroded flag to false ---

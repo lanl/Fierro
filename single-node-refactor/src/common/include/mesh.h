@@ -333,11 +333,12 @@ struct Mesh_t
     {
         num_elems       = num_elems_inp;
         element_map     = input_element_map;
-        nodes_in_elem   = DistributedDCArray<size_t>(element_map, num_nodes_in_elem, "mesh.nodes_in_elem");
-        corners_in_elem = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
 
         //number of nodes per element
         num_nodes_in_elem = input_num_nodes_in_elem;
+
+        nodes_in_elem   = DistributedDCArray<size_t>(element_map, num_nodes_in_elem, "mesh.nodes_in_elem");
+        corners_in_elem = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
 
         // 1 Gauss point per element
         num_leg_gauss_in_elem = 1;
@@ -605,7 +606,6 @@ struct Mesh_t
         }
 
         nodes_in_elem.update_device();
-        nodes_in_elem.print();
 
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);
