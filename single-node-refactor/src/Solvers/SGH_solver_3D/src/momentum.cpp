@@ -61,7 +61,7 @@ void SGH3D::update_velocity(double rk_alpha,
     const size_t num_dims = mesh.num_dims;
 
     // walk over the nodes to update the velocity
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+    FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
 
         // loop over all corners around the node and calculate the nodal force
         for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {

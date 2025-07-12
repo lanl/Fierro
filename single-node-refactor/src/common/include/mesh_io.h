@@ -4181,8 +4181,16 @@ public:
         const size_t num_elems = mesh.num_elems;
         const size_t num_dims  = mesh.num_dims;
 
+        //host version of local element map for argument compatibility
+        HostDistributedMap host_local_element_map;
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_elements;
+        for(int ielem = 0; ielem < mesh.num_local_elems; ielem++){
+            global_indices_of_local_elements(ielem) = mesh.local_element_map.getGlobalIndex(ielem);
+        }
+        host_local_element_map = HostDistributedMap(global_indices_of_local_elements);
+
         // save the cell state to an array for exporting to graphics files
-        auto elem_fields = CArray<double>(num_elems, num_cell_scalar_vars);
+        auto elem_fields = DistributedCArray<double>(host_local_element_map, num_cell_scalar_vars);
         int  elem_switch = 1;
 
         DCArrayKokkos<double> speed(num_elems, "speed");
@@ -4254,9 +4262,17 @@ public:
             elem_switch *= -1;
         } // end for elem_gid
 
+        //host version of local element map for argument compatibility
+        HostDistributedMap host_node_map;
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_nodes;
+        for(int inode = 0; inode < mesh.num_local_nodes; inode++){
+            global_indices_of_local_nodes(inode) = mesh.node_map.getGlobalIndex(inode);
+        }
+        host_node_map = HostDistributedMap(global_indices_of_local_nodes);
+
         // save the vertex vector fields to an array for exporting to graphics files
-        CArray<double> vec_fields(num_nodes, num_point_vec_vars, 3);
-        CArray<double> point_scalar_fields(num_nodes, num_point_scalar_vars);
+        DistributedCArray<double> vec_fields(host_node_map, num_point_vec_vars, 3);
+        DistributedCArray<double> point_scalar_fields(host_node_map, num_point_scalar_vars);
 
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             // position, var 0

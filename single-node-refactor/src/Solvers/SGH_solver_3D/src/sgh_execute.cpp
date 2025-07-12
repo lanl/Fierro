@@ -247,11 +247,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
         MPI_Allreduce(&min_dt_calc, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
         if(myrank==0){
             if (cycle == 0) {
-                printf("cycle = %lu, time = %.8f, time step = %.8f \n", cycle, time_value, dt);
+                printf("cycle = %lu, time = %.12f, time step = %.12f \n", cycle, time_value, dt);
             }
             // print time step every 10 cycles
             else if (cycle % 20 == 0) {
-                printf("cycle = %lu, time = %.8f, time step = %.8f \n", cycle, time_value, dt);
+                printf("cycle = %lu, time = %.12f, time step = %.12f \n", cycle, time_value, dt);
             } // end if
         }
 
@@ -597,7 +597,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
     mass_domain_nodes_tend = sum_domain_node_mass(mesh,
                                                   State.node.coords,
                                                   State.node.mass);
-    
+
+    MPI_Allreduce(&mass_domain_nodes_tend, &global_mass_domain_nodes_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&mass_domain_all_mats_tend, &global_mass_domain_all_mats_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     if(myrank==0){
         printf("material mass conservation error = %f \n", global_mass_domain_all_mats_tend - global_mass_domain_all_mats_t0);

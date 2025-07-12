@@ -61,10 +61,13 @@ enum class fill_gauss_state
 
 //distributed vector type in use
 using DistributedMap = TpetraPartitionMap<>;
+using HostDistributedMap = TpetraPartitionMap<Kokkos::HostSpace>;
 template <typename T>
 using DistributedDFArray = TpetraDFArray<T>;
 template <typename T>
 using DistributedDCArray = TpetraDCArray<T>;
+template <typename T>
+using DistributedCArray = TpetraDCArray<T,Kokkos::LayoutRight,Kokkos::HostSpace>;
 template <typename T>
 using CommPlan = TpetraLRCommunicationPlan<T>;
 

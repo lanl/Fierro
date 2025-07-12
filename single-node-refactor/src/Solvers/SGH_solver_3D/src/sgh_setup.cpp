@@ -59,6 +59,9 @@ void SGH3D::setup(SimulationParameters_t& SimulationParameters,
 {
     // add a flag on whether SGH was set up, if(SGH_setup_already==false)
     
+    //update node velocity on ghosts
+    node_velocity_comms.execute_comms();
+
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
     // calculate pressure, sound speed, and stress for each material
