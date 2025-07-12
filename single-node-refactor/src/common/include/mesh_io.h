@@ -3711,7 +3711,10 @@ public:
         std::vector<material_pt_state> material_pt_states)
     {
         size_t num_mats = State.MaterialPoints.num_material_points.size();
-
+        
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
         // ---- Update host data ----
 
         // material point values
@@ -3759,12 +3762,20 @@ public:
         const size_t num_dims  = mesh.num_dims;
 
         // save the cell state to an array for exporting to graphics files
-        auto elem_fields = CArray<double>(num_elems, num_scalar_vars);
+        
+        //host version of local element map for argument compatibility
+        HostDistributedMap host_local_element_map;
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_elements;
+        for(int ielem = 0; ielem < mesh.num_local_elems; ielem++){
+            global_indices_of_local_elements(ielem) = mesh.local_element_map.getGlobalIndex(ielem);
+        }
+        host_local_element_map = HostDistributedMap(global_indices_of_local_elements);
+        auto elem_fields = DistributedCArray<double>(host_local_element_map, num_scalar_vars);
         int  elem_switch = 1;
 
 
         DCArrayKokkos<double> speed(num_elems, "speed");
-        FOR_ALL(elem_gid, 0, num_elems, {
+        FOR_ALL(elem_gid, 0, mesh.num_local_elems, {
             double elem_vel[3]; // note:initialization with a list won't work
             elem_vel[0] = 0.0;
             elem_vel[1] = 0.0;
@@ -3797,7 +3808,7 @@ public:
 
         // export material centeric data to the elements
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_local_elems.host(mat_id);
 
             for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
                 // 1 material per element
@@ -3828,8 +3839,22 @@ public:
             elem_switch *= -1;
         } // end for elem_gid
 
+        //collective map has all indices on rank 0 and non on other ranks
+        HostDistributedMap collective_elem_map;
+        long long int num_collective_elem_indices = 0;
+        if(myrank==0) num_collective_elem_indices = mesh.global_num_elems;
+        collective_elem_map = HostDistributedMap(mesh.global_num_elems, num_collective_elem_indices);
+        
+        //host version of local element map for argument compatibility
+        HostDistributedMap host_node_map;
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_nodes;
+        for(int inode = 0; inode < mesh.num_local_nodes; inode++){
+            global_indices_of_local_nodes(inode) = mesh.node_map.getGlobalIndex(inode);
+        }
+        host_node_map = HostDistributedMap(global_indices_of_local_nodes);
+
         // save the vertex vector fields to an array for exporting to graphics files
-        CArray<double> vec_fields(num_nodes, num_vec_vars, 3);
+        DistributedCArray<double> vec_fields(host_node_map, num_vec_vars, 3);
 
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             // position, var 0
@@ -3865,6 +3890,11 @@ public:
 
         } // end for loop over vertices
 
+        //collective map has all indices on rank 0 and non on other ranks
+        HostDistributedMap collective_node_map;
+        long long int num_collective_node_indices = 0;
+        if(myrank==0) num_collective_node_indices = mesh.global_num_nodes;
+        collective_node_map = HostDistributedMap(mesh.global_num_nodes, num_collective_node_indices);
 
         //  ---------------------------------------------------------------------------
         //  Setup of file and directoring for exporting
@@ -4122,7 +4152,10 @@ public:
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states)
     {
-
+        
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
         size_t num_mats = State.MaterialPoints.num_material_points.size();
 
         // ---- Update host data ----
@@ -4228,7 +4261,7 @@ public:
 
         // export material centeric data to the elements
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_local_elems.host(mat_id);
 
             for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
                 // 1 material per element
@@ -4255,12 +4288,18 @@ public:
 
         // export element centric data
         double e_switch = 1;
-        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+        for (size_t elem_gid = 0; elem_gid < mesh.num_local_elems; elem_gid++) {
             elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
             elem_fields(elem_gid, 8) = State.GaussPoints.div.host(elem_gid);
             elem_switch *= -1;
         } // end for elem_gid
+
+        //collective map has all indices on rank 0 and non on other ranks
+        HostDistributedMap collective_elem_map;
+        long long int num_collective_elem_indices = 0;
+        if(myrank==0) num_collective_elem_indices = mesh.global_num_elems;
+        collective_elem_map = HostDistributedMap(mesh.global_num_elems, num_collective_elem_indices);
 
         //host version of local element map for argument compatibility
         HostDistributedMap host_node_map;
